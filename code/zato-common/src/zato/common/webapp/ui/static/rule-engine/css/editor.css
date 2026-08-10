@@ -4,6 +4,10 @@
 /* ---------------------------------------------------------- */
 
 .rule-editor {
+    /* The insertion hint dots - a pure green of their own, apart from the
+       theme's muted green and far from the blue keywords */
+    --editor-hint-green: #00b300;
+
     flex: 1;
     display: flex;
     min-width: 0;
@@ -231,31 +235,28 @@
 }
 
 /* A vocabulary card the rule does not use yet points at where it could go -
-   while the pointer rests on the card, a faint blue caret stands at every
-   place a drop could land, the same anchors a drag snaps to. */
+   while the pointer rests on the card and all through a drag, a small green
+   dot breathes gently at every place the drag caret can snap to. */
 .rule-editor .editor-insert-hint {
     position: fixed;
     z-index: 30;
-    width: 2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
     pointer-events: none;
-    background: var(--blue);
-    opacity: 0.45;
+    background: var(--editor-hint-green);
+    animation: editor-hint-pulse 1.6s ease-in-out infinite;
 }
-.rule-editor .editor-insert-hint::before,
-.rule-editor .editor-insert-hint::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 7px;
-    height: 2px;
-    background: var(--blue);
-}
-.rule-editor .editor-insert-hint::before {
-    top: -2px;
-}
-.rule-editor .editor-insert-hint::after {
-    bottom: -2px;
+@keyframes editor-hint-pulse {
+    0%,
+    100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: scale(1.25);
+    }
 }
 
 /* ---------------------------------------------------------- */

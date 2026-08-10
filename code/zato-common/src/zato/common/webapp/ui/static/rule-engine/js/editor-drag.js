@@ -282,6 +282,13 @@ editorView.placeInsertionMarker = function(line, dropName, anchor) {
     entry.element.style.height = (anchor.rowBottom - anchor.rowTop + 2) + 'px';
     entry.key = key;
 
+    // The dot whose place the caret takes steps aside - every other dot
+    // keeps showing where else the caret could go
+    var chosenDotKey = dropName + ':' + key;
+    this.previewMarkers.forEach(function(marker) {
+        marker.element.style.visibility = marker.key === chosenDotKey ? 'hidden' : '';
+    });
+
     caretLog('placeInsertionMarker', 'caret snapped', {
         drop_name: dropName,
         index: anchor.index,
@@ -290,7 +297,9 @@ editorView.placeInsertionMarker = function(line, dropName, anchor) {
         anchor_x: Math.round(anchor.x * 10) / 10,
         row_top: Math.round(anchor.rowTop * 10) / 10,
         row_bottom: Math.round(anchor.rowBottom * 10) / 10,
-        pointer: {x: caretPointer.x, y: caretPointer.y}
+        pointer: {x: caretPointer.x, y: caretPointer.y},
+        hidden_dot: chosenDotKey,
+        dots_total: this.previewMarkers.length
     });
 };
 
@@ -302,8 +311,13 @@ editorView.attachVocabularyDrag = function() {
             var path = element.getAttribute('data-path');
             self.dragState = {path: path};
 
-            // The hover pulse and its snake stop - the drag speaks alone now
-            self.clearPreview();
+            caretLog('dragstart', 'drag begins', {path: path});
+
+            // The dots stay up for the whole drag, showing every place the
+            // caret can snap to - a pending hover put-away must not take
+            // them down mid-drag
+            if (self.potentialHideTimer !== null) { clearTimeout(self.potentialHideTimer); self.potentialHideTimer = null; }
+            self.showPreview();
 
             var attribute = vocabulary.attribute(path);
 
@@ -318,8 +332,10 @@ editorView.attachVocabularyDrag = function() {
         });
 
         element.addEventListener('dragend', function() {
+            caretLog('dragend', 'drag ends', {});
             self.dragState = null;
             self.clearInsertionMarkers();
+            self.clearPreview('dragend');
             self.clearPossibleDrops();
             shared.removeGhost();
         });
@@ -329,33 +345,51 @@ editorView.attachVocabularyDrag = function() {
 // ////////////////////////////////////////////////////////////////////////
 
 // A card the rule does not use yet points at where it could go - while the
-// pointer is on the card, a faint caret stands at every place a drop could
-// land, the same anchors a drag itself snaps to
+// pointer is on the card, a small dot marks every place the drag caret can
+// snap to, one dot per anchor
 editorView.potentialHideTimer = null;
 editorView.previewMarkers = [];
 
-editorView.clearPreview = function() {
-    this.previewMarkers.forEach(function(element) {
-        element.remove();
+// Half the hint dot's size - the dot is centered on its anchor
+editorView.hintRadius = 3;
+
+editorView.clearPreview = function(reason) {
+    if (this.previewMarkers.length > 0) {
+        caretLog('clearPreview', 'dots removed', {reason: reason, count: this.previewMarkers.length});
+    }
+
+    this.previewMarkers.forEach(function(marker) {
+        marker.element.remove();
     });
     this.previewMarkers = [];
 };
 
 editorView.showPreview = function() {
     var self = this;
-    this.clearPreview();
+    this.clearPreview('refresh');
 
     this.elements('.editor-line').forEach(function(line) {
+        var dropName = line.getAttribute('data-drop');
+
         self.slotAnchors(line).forEach(function(anchor) {
+            var middleY = (anchor.rowTop + anchor.rowBottom) / 2;
+
             var element = document.createElement('span');
             element.className = 'editor-insert-hint';
-            element.style.left = (anchor.x - 1) + 'px';
-            element.style.top = (anchor.rowTop - 1) + 'px';
-            element.style.height = (anchor.rowBottom - anchor.rowTop + 2) + 'px';
+            element.style.left = (anchor.x - self.hintRadius) + 'px';
+            element.style.top = (middleY - self.hintRadius) + 'px';
             self.container.appendChild(element);
-            self.previewMarkers.push(element);
+
+            // The key ties the dot to its anchor, so the drag caret can
+            // put away exactly the dot whose place it takes
+            self.previewMarkers.push({
+                element: element,
+                key: dropName + ':' + anchor.index + ':' + anchor.position + ':' + anchor.kind
+            });
         });
     });
+
+    caretLog('showPreview', 'dots placed', {count: this.previewMarkers.length});
 };
 
 // Hovering either side of the same fact lights both - a token in the canvas
@@ -367,7 +401,7 @@ editorView.attachPathHighlight = function() {
 
     // Anything pending from before this render must not fire into the new one
     if (this.potentialHideTimer !== null) { clearTimeout(this.potentialHideTimer); this.potentialHideTimer = null; }
-    this.clearPreview();
+    this.clearPreview('render');
 
     var mark = function(path, isOn) {
         self.elements('[data-path="' + path + '"]').forEach(function(element) {
@@ -377,6 +411,10 @@ editorView.attachPathHighlight = function() {
 
     var askPreview = function() {
 
+        // A drag owns the dots - a hover must not rebuild them and lose
+        // the one the caret is hiding
+        if (self.dragState !== null) { return; }
+
         // Arriving from another unused card cancels its pending put-away,
         // so gliding along the list keeps the hints steady
         if (self.potentialHideTimer !== null) { clearTimeout(self.potentialHideTimer); self.potentialHideTimer = null; }
@@ -385,12 +423,19 @@ editorView.attachPathHighlight = function() {
 
     var dropPreview = function() {
 
+        // Leaving the card is how every drag begins - the put-away this
+        // would schedule was exactly what wiped the dots mid-drag
+        if (self.dragState !== null) {
+            caretLog('dropPreview', 'put-away skipped, drag running', {});
+            return;
+        }
+
         // The put-away waits a beat, so gliding to the next unused card
         // keeps the hints instead of blinking them
         if (self.potentialHideTimer === null) {
             self.potentialHideTimer = setTimeout(function() {
                 self.potentialHideTimer = null;
-                self.clearPreview();
+                self.clearPreview('hover-away');
             }, editorModel.config.potentialDelayMilliseconds);
         }
     };
