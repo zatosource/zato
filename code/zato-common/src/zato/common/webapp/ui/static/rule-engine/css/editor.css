@@ -115,6 +115,14 @@
     box-shadow: 0 0 0 2px var(--blue);
 }
 
+/* Hovering either side of the same fact lights both - the token in the
+   canvas and its vocabulary card answer each other */
+.rule-editor .editor-token.editor-path-match,
+.rule-editor .editor-token.editor-path-match:hover {
+    border-color: var(--blue);
+    background: var(--blue-tint-07);
+}
+
 .rule-editor .editor-and-group {
     display: inline-block;
     border: 1px solid var(--border);

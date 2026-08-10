@@ -65,6 +65,27 @@ editorView.attachVocabularyDrag = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Hovering either side of the same fact lights both - a token in the canvas
+// and the vocabulary card it came from answer each other
+editorView.attachPathHighlight = function() {
+    var self = this;
+
+    var mark = function(path, isOn) {
+        self.elements('[data-path="' + path + '"]').forEach(function(element) {
+            element.classList.toggle('editor-path-match', isOn);
+        });
+    };
+
+    this.elements('.editor-token[data-path], .vocabulary-item[data-path]').forEach(function(element) {
+        var path = element.getAttribute('data-path');
+
+        element.addEventListener('mouseenter', function() { mark(path, true); });
+        element.addEventListener('mouseleave', function() { mark(path, false); });
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 editorView.attachDropLines = function() {
     var self = this;
 

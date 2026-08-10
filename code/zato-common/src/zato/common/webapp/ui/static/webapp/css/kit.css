@@ -610,7 +610,8 @@
 }
 /* Each entry is a small card of its own - a thing that looks like a separate
    solid object reads as movable where a flat row reads as a label. Hovering
-   lifts the card a step, holding it settles it back under the grabbing hand. */
+   deepens its shadow, holding it settles the shadow back under the grabbing
+   hand - the card itself never moves. */
 .rule-engine-ui .vocabulary-item {
     --vocabulary-card-rim: color-mix(in srgb, var(--border) 60%, transparent);
     --vocabulary-card-shadow: 0 1px 2px var(--shadow-inset);
@@ -629,7 +630,6 @@
     border-radius: var(--radius-2);
     box-shadow: var(--vocabulary-card-shadow);
     transition:
-        transform 0.12s,
         box-shadow 0.12s,
         border-color 0.12s;
 }
@@ -638,19 +638,28 @@
 }
 
 /* Only what can actually be picked up speaks the pickup language - the open
-   hand, the lift on hover, the settling back under the closing hand */
+   hand, the deeper shadow on hover, the shadow settling back under the
+   closing hand */
 .rule-engine-ui .vocabulary-item[draggable="true"] {
     cursor: grab;
 }
 .rule-engine-ui .vocabulary-item[draggable="true"]:hover {
     border-color: var(--border);
-    transform: translateY(-1px);
     box-shadow: var(--vocabulary-card-shadow-lifted);
 }
 .rule-engine-ui .vocabulary-item[draggable="true"]:active {
     cursor: grabbing;
-    transform: none;
     box-shadow: var(--vocabulary-card-shadow);
+}
+
+/* Hovering either side of the same fact lights both - the card and the
+   canvas token carrying its path answer each other */
+.rule-engine-ui .vocabulary-item.editor-path-match,
+.rule-engine-ui .vocabulary-item.editor-path-match:hover {
+    color: var(--text);
+    border-color: var(--blue);
+    background: var(--blue-tint-05);
+    box-shadow: var(--vocabulary-card-shadow-lifted);
 }
 .rule-engine-ui .vocabulary-item-type {
     margin-left: auto;
@@ -660,7 +669,7 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
-/* An entry already spent cannot be picked up, so it neither lifts nor lights */
+/* An entry already spent cannot be picked up, so it neither deepens nor lights */
 .rule-engine-ui .vocabulary-item-used {
     opacity: 0.35;
     cursor: default;

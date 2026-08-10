@@ -137,7 +137,11 @@ var editorView = {
         } else {
             var attribute = vocabulary.attribute(condition.subject);
             var subjectText = this.expressionMode ? condition.subject : attribute.phrase;
-            parts.push(this.tokenHtml('editor-token-subject', 'subject-' + conditionIndex, subjectText, subjectAction, false));
+
+            // The path pairs the token with its vocabulary card, so hovering
+            // either one lights the other
+            parts.push(this.tokenHtml('editor-token-subject', 'subject-' + conditionIndex, subjectText,
+                subjectAction + ' data-path="' + condition.subject + '"', false));
         }
 
         parts.push(this.conditionBodyHtml(condition, conditionIndex));
@@ -159,14 +163,18 @@ var editorView = {
         } else {
             var attribute = vocabulary.attribute(action.target);
 
+            // The path pairs the token with its vocabulary card, so hovering
+            // either one lights the other
+            var pairedAttributes = actionAttributes + ' data-path="' + action.target + '"';
+
             if (attribute.type === 'yes/no') {
                 var yesNoText = this.expressionMode
                     ? action.target + ' = ' + action.values[0]
                     : 'set ' + attribute.phrase + ' to ' + action.values[0];
-                parts.push(this.tokenHtml('editor-token-action', chipName, yesNoText, actionAttributes, false));
+                parts.push(this.tokenHtml('editor-token-action', chipName, yesNoText, pairedAttributes, false));
             } else {
                 var verbText = this.expressionMode ? action.target + ' =' : 'set ' + attribute.phrase + ' to';
-                parts.push(this.tokenHtml('editor-token-action', chipName, verbText, actionAttributes, false));
+                parts.push(this.tokenHtml('editor-token-action', chipName, verbText, pairedAttributes, false));
                 parts.push(this.valueChipHtml(listName, actionIndex, 0, action.values[0], attribute));
             }
         }
@@ -317,6 +325,7 @@ var editorView = {
         this.markActiveToken();
         this.attachVocabularyDrag();
         this.attachDropLines();
+        this.attachPathHighlight();
         shared.initTips();
         this.scheduleServerCheck();
         this.openPendingChip();
