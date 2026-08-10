@@ -65,14 +65,33 @@ editorView.attachVocabularyDrag = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// A card the rule does not use yet points at where it could go - every add
+// chip breathes in blue while the pointer is on the card, the same landing
+// places a drag itself would light up
+editorView.potentialHideTimer = null;
+
+editorView.clearPreview = function() {
+    this.elements('.editor-add-chip').forEach(function(chip) {
+        chip.classList.remove('editor-chip-pulse');
+    });
+};
+
+editorView.showPreview = function() {
+    this.elements('.editor-add-chip').forEach(function(chip) {
+        chip.classList.add('editor-chip-pulse');
+    });
+};
+
 // Hovering either side of the same fact lights both - a token in the canvas
 // and the vocabulary card it came from answer each other. A card the rule
-// does not use yet lights the add chips instead - the exact spots it could
-// be inserted at - but only once the pointer rests on the card, so a sweep
-// across the list paints nothing and gliding between unused cards never
-// makes the chips blink.
+// does not use yet pulses the if line's add chip instead, but only once the
+// pointer rests on the card, so a sweep across the list paints nothing.
 editorView.attachPathHighlight = function() {
     var self = this;
+
+    // Anything pending from before this render must not fire into the new one
+    if (this.potentialHideTimer !== null) { clearTimeout(this.potentialHideTimer); this.potentialHideTimer = null; }
+    this.clearPreview();
 
     var mark = function(path, isOn) {
         self.elements('[data-path="' + path + '"]').forEach(function(element) {
@@ -80,39 +99,22 @@ editorView.attachPathHighlight = function() {
         });
     };
 
-    var setPotential = function(isOn) {
-        self.elements('.editor-add-chip').forEach(function(element) {
-            element.classList.toggle('editor-drop-potential', isOn);
-        });
-    };
-
-    var showTimer = null;
-    var hideTimer = null;
-
-    var askPotential = function() {
+    var askPreview = function() {
 
         // Arriving from another unused card cancels its pending put-away,
-        // so the chips stay lit instead of blinking off and on
-        if (hideTimer !== null) { clearTimeout(hideTimer); hideTimer = null; }
-
-        if (showTimer === null) {
-            showTimer = setTimeout(function() {
-                showTimer = null;
-                setPotential(true);
-            }, editorModel.config.potentialDelayMilliseconds);
-        }
+        // so gliding along the list keeps the pulse steady
+        if (self.potentialHideTimer !== null) { clearTimeout(self.potentialHideTimer); self.potentialHideTimer = null; }
+        self.showPreview();
     };
 
-    var dropPotential = function() {
+    var dropPreview = function() {
 
-        // A pointer that only swept across never shows anything
-        if (showTimer !== null) { clearTimeout(showTimer); showTimer = null; }
-
-        // And the put-away itself waits the same beat, for the glide's sake
-        if (hideTimer === null) {
-            hideTimer = setTimeout(function() {
-                hideTimer = null;
-                setPotential(false);
+        // The put-away waits a beat, so gliding to the next unused card
+        // keeps the pulse instead of blinking it
+        if (self.potentialHideTimer === null) {
+            self.potentialHideTimer = setTimeout(function() {
+                self.potentialHideTimer = null;
+                self.clearPreview();
             }, editorModel.config.potentialDelayMilliseconds);
         }
     };
@@ -125,7 +127,7 @@ editorView.attachPathHighlight = function() {
             var tokens = self.elements('.editor-token[data-path="' + path + '"]');
 
             if (isCard && tokens.length === 0) {
-                askPotential();
+                askPreview();
             }
             else {
                 mark(path, true);
@@ -136,7 +138,7 @@ editorView.attachPathHighlight = function() {
             mark(path, false);
 
             var tokens = self.elements('.editor-token[data-path="' + path + '"]');
-            if (isCard && tokens.length === 0) { dropPotential(); }
+            if (isCard && tokens.length === 0) { dropPreview(); }
         });
     });
 };

@@ -19,7 +19,7 @@ var editorModel = {
         attachUsedTip: null,
 
         // How long the pointer rests on an unused vocabulary card before the
-        // add chips light up as its possible landing places - a sweep across
+        // ghost of its would-be clause shows in the if line - a sweep across
         // the list stays quiet
         potentialDelayMilliseconds: 200,
 

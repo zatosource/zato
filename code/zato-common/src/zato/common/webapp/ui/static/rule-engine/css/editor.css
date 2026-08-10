@@ -37,6 +37,8 @@
 }
 
 .rule-editor .editor-line {
+    /* The line anchors the ghost clause floating over it */
+    position: relative;
     border: 1px dashed transparent;
     border-radius: var(--radius-3);
     padding: 2px 6px;
@@ -216,13 +218,61 @@
     border-color: var(--blue);
 }
 
-/* A pointer resting on a vocabulary card the rule does not use yet wakes
-   these chips up as the spots it could be inserted at - dashed and washed,
-   potential rather than presence */
-.rule-editor .editor-add-chip.editor-drop-potential {
+/* A vocabulary card the rule does not use yet points at where it could go -
+   while the pointer rests on the card, every add chip breathes in blue and
+   a snake runs around its border. */
+.rule-editor .editor-add-chip.editor-chip-pulse {
+    position: relative;
     color: var(--blue);
-    border-color: var(--blue-tint-45);
+    border-color: var(--blue);
     background: var(--blue-tint-05);
+    animation: editor-chip-pulse 1.2s ease-in-out infinite;
+}
+@keyframes editor-chip-pulse {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 var(--blue-tint-12);
+    }
+    50% {
+        box-shadow: 0 0 0 3px var(--blue-tint-12);
+    }
+}
+
+/* The snake - a short bright arc with a fading tail, running along a thin
+   ring just outside the chip. The ring is a conic gradient whose start
+   angle spins, and the mask hollows it out so only the rim shows. */
+@property --editor-chip-snake-angle {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+}
+.rule-editor .editor-add-chip.editor-chip-pulse::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    padding: 1px;
+    border-radius: var(--radius-2);
+    pointer-events: none;
+    background: conic-gradient(
+        from var(--editor-chip-snake-angle),
+        transparent 0deg 280deg,
+        var(--blue-tint-12) 310deg,
+        var(--blue) 360deg
+    );
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    animation: editor-chip-snake 1.2s linear infinite;
+}
+@keyframes editor-chip-snake {
+    to {
+        --editor-chip-snake-angle: 360deg;
+    }
 }
 
 /* ---------------------------------------------------------- */
