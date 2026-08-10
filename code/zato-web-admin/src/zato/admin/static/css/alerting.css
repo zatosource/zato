@@ -112,10 +112,14 @@
 /* Alert rules - the editor screen                                */
 /* ------------------------------------------------------------ */
 
-/* The page heading sits above the card and the card takes the rest of the height */
+/* The page heading sits above the card and the card takes the rest of the
+   height - the height is a hard one, the same measure the section stands at,
+   so pulling the editor's split bars reshares the room inside the card and
+   never grows the page itself */
 .alerting-editor-column {
     display: flex;
     flex-direction: column;
+    height: var(--alerting-min-height);
     min-height: 0;
 }
 

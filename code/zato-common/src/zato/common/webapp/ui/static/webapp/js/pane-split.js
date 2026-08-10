@@ -59,12 +59,20 @@ paneSplit.init = function(options) {
         return out;
     };
 
+    // The room as measured when the bar was grabbed - a container that itself
+    // grows with its content would otherwise raise the limit with every move
+    // of a pull, and the pull would never meet it
+    var containerSize = 0;
+
+    var measureContainer = function() {
+        containerSize = isVertical ? container.clientHeight : container.clientWidth;
+    };
+
     // A pane too small to read anything in is shut all the way rather than
     // left ajar - between shut and the least readable size there is nothing
     // to stand at - and neither side gives up the least room it needs
     var clamp = function(size) {
 
-        var containerSize = isVertical ? container.clientHeight : container.clientWidth;
         var maxSize = containerSize - options.minOther;
 
         var isShut = false;
@@ -111,6 +119,7 @@ paneSplit.init = function(options) {
         isPressed = true;
         startPointer = isVertical ? event.clientY : event.clientX;
         startSize = paneSize();
+        measureContainer();
 
         paneTransition = pane.style.transition;
         pane.style.transition = 'none';
@@ -149,6 +158,7 @@ paneSplit.init = function(options) {
         var stored = localStorage.getItem(options.storageKey);
 
         if (stored !== null) {
+            measureContainer();
             currentSize = setSize(parseInt(stored, 10));
         }
     }

@@ -491,12 +491,14 @@
 /* ---------------------------------------------------------- */
 
 /* The split bar above the panel carries the dividing line, the panel
-   itself brings no border of its own to it */
+   itself brings no border of its own to it - and a panel snapped shut
+   to no height at all must show nothing, its head included */
 .rule-engine-ui .problems-panel {
     background: var(--problems-background);
     max-height: 150px;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 .rule-engine-ui .problems-head {
     padding: 7px 24px;
@@ -579,6 +581,7 @@
 /* Shared - vocabulary pane                                   */
 /* ---------------------------------------------------------- */
 
+/* A pane snapped shut to no width at all must show nothing */
 .rule-engine-ui .vocabulary-pane {
     width: 225px;
     flex-shrink: 0;
@@ -586,6 +589,7 @@
     flex-direction: column;
     background: var(--chrome);
     transition: width 0.15s ease;
+    overflow: hidden;
 }
 .rule-engine-ui .vocabulary-head {
     display: flex;
@@ -594,34 +598,9 @@
     padding: 12px 12px 8px 16px;
     font-size: 11px;
     font-weight: 700;
-    color: var(--text4);
+    color: var(--text);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-}
-.rule-engine-ui .vocabulary-collapse {
-    display: flex;
-    align-items: center;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-2);
-    color: var(--text4);
-    cursor: pointer;
-    padding: 3px 5px;
-    font-family: var(--font);
-}
-.rule-engine-ui .vocabulary-collapse:hover {
-    color: var(--text);
-}
-.rule-engine-ui .vocabulary-pane.collapsed {
-    width: 42px;
-}
-.rule-engine-ui .vocabulary-pane.collapsed .vocabulary-head {
-    justify-content: center;
-    padding: 12px 6px 8px;
-}
-.rule-engine-ui .vocabulary-pane.collapsed .vocabulary-head-label,
-.rule-engine-ui .vocabulary-pane.collapsed .vocabulary-list {
-    display: none;
 }
 .rule-engine-ui .vocabulary-entity {
     padding: 7px 16px 3px;
@@ -629,19 +608,49 @@
     font-weight: 700;
     color: var(--text2);
 }
+/* Each entry is a small card of its own - a thing that looks like a separate
+   solid object reads as movable where a flat row reads as a label. Hovering
+   lifts the card a step, holding it settles it back under the grabbing hand. */
 .rule-engine-ui .vocabulary-item {
+    --vocabulary-card-rim: color-mix(in srgb, var(--border) 60%, transparent);
+    --vocabulary-card-shadow: 0 1px 2px var(--shadow-inset);
+    --vocabulary-card-shadow-lifted: 0 2px 6px var(--shadow-soft);
+
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 5px 16px 5px 26px;
+    margin: 3px 14px 3px 24px;
+    padding: 4px 10px;
     font-size: 12px;
     color: var(--text3);
-    cursor: grab;
     font-family: var(--mono);
+    background: var(--input-background);
+    border: 1px solid var(--vocabulary-card-rim);
+    border-radius: var(--radius-2);
+    box-shadow: var(--vocabulary-card-shadow);
+    transition:
+        transform 0.12s,
+        box-shadow 0.12s,
+        border-color 0.12s;
 }
 .rule-engine-ui .vocabulary-item:hover {
-    background-image: var(--hover-veil);
     color: var(--text);
+}
+
+/* Only what can actually be picked up speaks the pickup language - the open
+   hand, the lift on hover, the settling back under the closing hand */
+.rule-engine-ui .vocabulary-item[draggable="true"] {
+    cursor: grab;
+}
+.rule-engine-ui .vocabulary-item[draggable="true"]:hover {
+    border-color: var(--border);
+    transform: translateY(-1px);
+    box-shadow: var(--vocabulary-card-shadow-lifted);
+}
+.rule-engine-ui .vocabulary-item[draggable="true"]:active {
+    cursor: grabbing;
+    transform: none;
+    box-shadow: var(--vocabulary-card-shadow);
 }
 .rule-engine-ui .vocabulary-item-type {
     margin-left: auto;
@@ -651,9 +660,13 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
+/* An entry already spent cannot be picked up, so it neither lifts nor lights */
 .rule-engine-ui .vocabulary-item-used {
     opacity: 0.35;
     cursor: default;
+}
+.rule-engine-ui .vocabulary-item-used:hover {
+    color: var(--text3);
 }
 .rule-engine-ui .vocabulary-item-clickable {
     cursor: pointer;
@@ -876,6 +889,19 @@
     font-family: var(--mono);
     font-size: 11px;
     white-space: nowrap;
+}
+
+/* A vocabulary drag is shown as the token the drop will leave in the rule,
+   not as a copy of the list row - the first drag teaches the whole gesture */
+.rule-engine-ui .drag-ghost-token {
+    padding: 2px 9px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2);
+    background: var(--input-background);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    box-shadow: 0 3px 8px var(--shadow-soft);
 }
 
 /* ---------------------------------------------------------- */

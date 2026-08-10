@@ -46,10 +46,21 @@
     background: var(--blue-tint-07);
 }
 
+/* The moment a drag starts the legal landing places light up quietly */
 .rule-editor .editor-drop-possible {
-    outline: 1px dashed var(--text5);
+    outline: 1px solid var(--blue-tint-35);
     outline-offset: 2px;
     border-radius: var(--radius-3);
+    background: var(--blue-tint-05);
+}
+
+/* And everything that cannot take the drop steps back a step, so the page
+   itself explains where the held thing may land */
+.rule-editor.editor-dragging .toolbar,
+.rule-editor.editor-dragging .problems-panel,
+.rule-editor.editor-dragging .vocabulary-pane {
+    opacity: 0.5;
+    transition: opacity 0.12s;
 }
 
 .rule-editor .editor-group-drop {

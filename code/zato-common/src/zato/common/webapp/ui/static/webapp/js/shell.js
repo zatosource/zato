@@ -12,9 +12,6 @@ shared.initShell = function() {
     var collapseButton = document.getElementById('navigation-collapse-button');
     if (collapseButton !== null) { collapseButton.innerHTML = shared.icon('chevron-left', 14); }
 
-    var vocabularyButton = document.getElementById('vocabulary-collapse-button');
-    if (vocabularyButton !== null) { vocabularyButton.innerHTML = shared.icon('chevron-right', 14); }
-
     shared.initProblemsResize();
     shared.initVocabularyResize();
     shared.initProblemsCollapse();
@@ -57,10 +54,9 @@ shared.attachPaneResize = function(handle, pane, axis) {
     });
 };
 
-// The split bars of the editor's own panes, so their collapse toggles
-// can put them away and bring them back
+// The problems panel's split bar, so the panel's collapse toggle can put
+// it away and bring it back
 shared.problemsSplitBar = null;
-shared.vocabularySplitBar = null;
 
 shared.initProblemsResize = function() {
     var panel = document.querySelector('.problems-panel');
@@ -79,6 +75,7 @@ shared.initProblemsResize = function() {
         axis: 'y',
         minSize: 60,
         minOther: 160,
+        snapSize: 40,
         activeClass: 'pane-split-active',
         storageKey: 'zato.rule-editor.split.problems',
 
@@ -108,11 +105,10 @@ shared.initVocabularyResize = function() {
         axis: 'x',
         minSize: 160,
         minOther: 420,
+        snapSize: 120,
         activeClass: 'pane-split-active',
         storageKey: 'zato.rule-editor.split.vocabulary',
     });
-
-    shared.vocabularySplitBar = bar;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -221,31 +217,6 @@ shared.toggleNavigation = function() {
 
     var iconName = navigation.classList.contains('collapsed') ? 'chevron-right' : 'chevron-left';
     document.getElementById('navigation-collapse-button').innerHTML = shared.icon(iconName, 14);
-};
-
-shared.vocabularyPaneWidth = '';
-
-shared.toggleVocabulary = function() {
-    var pane = document.getElementById('vocabulary-pane');
-    var isCollapsed = pane.classList.toggle('collapsed');
-
-    // The pulled-to width steps aside while the pane is collapsed - an inline
-    // width would beat the collapsed class's own - and comes back with it,
-    // the split bar likewise
-    if (isCollapsed) {
-        shared.vocabularyPaneWidth = pane.style.width;
-        pane.style.width = '';
-    }
-    else {
-        pane.style.width = shared.vocabularyPaneWidth;
-    }
-
-    if (shared.vocabularySplitBar !== null) {
-        shared.vocabularySplitBar.style.display = isCollapsed ? 'none' : '';
-    }
-
-    var iconName = isCollapsed ? 'chevron-left' : 'chevron-right';
-    document.getElementById('vocabulary-collapse-button').innerHTML = shared.icon(iconName, 14);
 };
 
 // ////////////////////////////////////////////////////////////////////////

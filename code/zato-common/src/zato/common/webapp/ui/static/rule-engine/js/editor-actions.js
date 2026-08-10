@@ -508,7 +508,6 @@ editorView.dispatch = function(event, target) {
     if (action === 'open-rule-menu') { this.openRuleMenu(synthetic); }
     if (action === 'open-tests') { this.openTests(); }
     if (action === 'save') { this.save(target); }
-    if (action === 'toggle-vocabulary') { shared.toggleVocabulary(); }
 };
 
 // ////////////////////////////////////////////////////////////////////////

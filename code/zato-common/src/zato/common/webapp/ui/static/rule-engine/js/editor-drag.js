@@ -14,12 +14,19 @@ editorView.clearDropMarks = function() {
 };
 
 editorView.markPossibleDrops = function() {
+
+    // The page itself explains the gesture - the legal landing places light
+    // up and everything that cannot take the drop steps back a step
+    this.container.classList.add('editor-dragging');
+
     this.elements('.editor-line, .editor-group').forEach(function(element) {
         element.classList.add('editor-drop-possible');
     });
 };
 
 editorView.clearPossibleDrops = function() {
+    this.container.classList.remove('editor-dragging');
+
     this.elements('.editor-drop-possible').forEach(function(element) {
         element.classList.remove('editor-drop-possible');
     });
@@ -36,7 +43,12 @@ editorView.attachVocabularyDrag = function() {
             self.dragState = {path: path};
 
             var attribute = vocabulary.attribute(path);
+
+            // The ghost under the pointer is the token the drop will leave
+            // in the rule, not a copy of the list row
             var ghost = shared.makeGhost([attribute.phrase], false);
+            ghost.firstChild.classList.add('drag-ghost-token');
+
             event.dataTransfer.setDragImage(ghost, 16, 12);
             event.dataTransfer.setData('text/plain', 'vocabulary');
             self.markPossibleDrops();
