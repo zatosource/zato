@@ -78,7 +78,10 @@ detail.config = {
     // Lower than this the pane has room for nothing worth reading, so it is shut
     // all the way rather than left standing as a strip - the bar stays where it
     // is and the same pull upward opens it back
-    detailSnapHeight: 60
+    detailSnapHeight: 60,
+
+    // The class the bar wears mid-pull
+    resizeActiveClass: 'message-flow-resizing'
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -479,72 +482,35 @@ detail.hide = function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 // The bar between the drawing and the pane - a press on it and a pull shares
-// the page between the two, neither side ever pushed below what it needs
+// the page between the two, neither side ever pushed below what it needs.
+// The pulling itself is the shared pane split bar, this is where the page's
+// own limits, its snap and its shut state meet it.
 detail.wireResize = function() {
     var config = detail.config;
 
     var page = document.querySelector(config.pageSelector);
-    var bar = document.getElementById(config.resizeBarId);
-    var host = detail.host();
 
-    var isPressed = false;
-    var startPointerY = 0;
-    var startHeight = 0;
+    paneSplit.init({
+        bar: document.getElementById(config.resizeBarId),
+        pane: detail.host(),
+        container: page,
+        axis: 'y',
+        minSize: config.detailMinHeight,
+        minOther: config.canvasMinHeight,
+        snapSize: config.detailSnapHeight,
+        activeClass: config.resizeActiveClass,
 
-    bar.addEventListener('mousedown', function(event) {
-
-        // Only the main button grabs the bar
-        if (event.button !== 0) {
-            return;
-        }
-
-        isPressed = true;
-        startPointerY = event.clientY;
-        startHeight = host.offsetHeight;
-
-        bar.classList.add('message-flow-resizing');
-
-        // The pull must not start selecting the page's text
-        event.preventDefault();
-    });
-
-    window.addEventListener('mousemove', function(event) {
-        if (!isPressed) {
-            return;
-        }
-
-        // Pulling the bar up grows the pane by as much as the pointer travelled
-        var height = startHeight + (startPointerY - event.clientY);
-
-        // Neither side gives up the least room it needs
-        var maxHeight = page.clientHeight - config.canvasMinHeight;
-
-        // A pane too low to read anything in is shut all the way rather than
-        // left ajar, which is the snap - between shut and the least height it
-        // can be read at there is nothing to stand at
-        if (height < config.detailSnapHeight) {
-            height = 0;
-        }
-        else if (height < config.detailMinHeight) {
-            height = config.detailMinHeight;
-        }
-
-        if (height > maxHeight) {
-            height = maxHeight;
-        }
+        // The pane's height lives in the page's own variable, its stylesheet
+        // reads the layout out of it
+        apply: function(height) {
+            page.style.setProperty('--message-flow-detail-height', height + 'px');
+        },
 
         // With no height the pane is fully gone, its border included - a shut
         // pane must not linger as a seam over the page's bottom edge
-        page.classList.toggle('message-flow-detail-shut', height === 0);
-
-        page.style.setProperty('--message-flow-detail-height', height + 'px');
-    });
-
-    window.addEventListener('mouseup', function() {
-        if (isPressed) {
-            isPressed = false;
-            bar.classList.remove('message-flow-resizing');
-        }
+        onSnap: function(isShut) {
+            page.classList.toggle('message-flow-detail-shut', isShut);
+        },
     });
 };
 

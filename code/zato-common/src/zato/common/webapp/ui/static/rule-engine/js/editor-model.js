@@ -15,9 +15,29 @@ var editorModel = {
         // its own tokenizer here, and without one the text stays plain
         documentTextHtml: null,
 
+        // Whether the document view takes typing - the text is parsed on the
+        // server as it changes and, when it parses, becomes the rule itself
+        documentEditable: false,
+
         // The address bar parameter the open view is kept under, so a tab can be
         // bookmarked - null keeps the address bar untouched
         viewURLKey: null,
+
+        // The address bar parameter the open rule is kept under when rules are
+        // switched in place - null keeps the address bar untouched
+        ruleURLKey: null,
+
+        // Whether the editor tracks unsaved changes like an IDE - the dirty state
+        // dims and undims the Save button, working copies live in local storage
+        // and Ctrl-Z and Ctrl-Y walk each rule's own history
+        trackChanges: false,
+
+        // Told whenever the dirty state may have changed - the host paints its
+        // own star and page title from it
+        onDirtyChange: null,
+
+        // Where the working copies live in local storage
+        draftStoragePrefix: 'zato.rule-editor.draft.',
 
         // The host application fills all of these in through editorView.init
         urls: {},
@@ -52,6 +72,10 @@ var editorModel = {
     serverErrors: [],
 
     rule: null,
+
+    // What the editor compares its current state against - the text of the rule
+    // as it stands stored, set when a rule opens and again after every save
+    baselineText: null,
 
     comparatorSymbols: {
         'is': '==',
@@ -91,6 +115,79 @@ var editorModel = {
         return out;
     },
 
+// ////////////////////////////////////////////////////////////////////////
+
+    setBaseline: function() {
+        this.baselineText = this.toText();
+    },
+
+    isDirty: function() {
+        if (!this.config.trackChanges) { return false; }
+        if (this.rule === null) { return false; }
+
+        var out = this.toText() !== this.baselineText;
+        return out;
+    },
+
+// ////////////////////////////////////////////////////////////////////////
+
+    draftKey: function(ruleKey) {
+        return this.config.draftStoragePrefix + this.definitionId + '.' + ruleKey;
+    },
+
+    // An unsaved rule lives in local storage like an IDE's working copy,
+    // so its edits survive rule switches and page reloads alike
+    writeDraft: function() {
+        if (this.ruleKey === null) { return; }
+
+        var entry = {version: this.currentVersion, rule: this.rule};
+        localStorage.setItem(this.draftKey(this.ruleKey), JSON.stringify(entry));
+    },
+
+    clearDraft: function(ruleKey) {
+        if (ruleKey === null) { return; }
+        localStorage.removeItem(this.draftKey(ruleKey));
+    },
+
+    // The working copy of one rule, only while it still builds on the stored
+    // version - a draft older than what was saved meanwhile is let go
+    readDraft: function(ruleKey) {
+        var raw = localStorage.getItem(this.draftKey(ruleKey));
+        if (raw === null) { return null; }
+
+        var entry = JSON.parse(raw);
+
+        if (entry.version !== this.currentVersion) {
+            this.clearDraft(ruleKey);
+            return null;
+        }
+
+        return entry.rule;
+    },
+
+    // Whether a rule carries unsaved work - what the host's select marks with
+    // a star next to the name, a stale copy dropping out through readDraft
+    hasDraft: function(ruleKey) {
+        var out = this.readDraft(ruleKey) !== null;
+        return out;
+    },
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Opens one of the loaded documents in place - the stored document is the
+    // baseline and a live working copy, when one exists, takes over from there
+    openRuleKey: function(key) {
+        this.ruleKey = key;
+        this.rule = this.fromDocument(this.documents[key]);
+
+        if (!this.config.trackChanges) { return; }
+
+        this.setBaseline();
+
+        var draft = this.readDraft(key);
+        if (draft !== null) { this.rule = draft; }
+    },
+
     load: function(onDone) {
         var self = this;
         var wantedRuleset = this.config.ruleset;
@@ -128,7 +225,21 @@ var editorModel = {
                     self.rule = self.newRule(self.config.newRuleName);
                 }
 
-                self.loadVocabulary(onDone);
+                // The baseline and any working copy wait for the vocabulary -
+                // toText quotes values by what the completion terms say, so a
+                // baseline taken before they arrive would not match itself later
+                self.loadVocabulary(function() {
+                    if (self.config.trackChanges && self.rule !== null) {
+                        self.setBaseline();
+
+                        if (self.ruleKey !== null) {
+                            var draft = self.readDraft(self.ruleKey);
+                            if (draft !== null) { self.rule = draft; }
+                        }
+                    }
+
+                    onDone();
+                });
             }, data.reportError);
         }, data.reportError);
     },
@@ -347,6 +458,27 @@ var editorModel = {
         }, onError);
     },
 
+    // The document view's text as typed, sent for validation - a parse that
+    // succeeds becomes the rule itself, a failing one only reports its problems
+    parseText: function(text, onDone, onError) {
+        var self = this;
+
+        var body = {text: text, ruleset_name: this.rulesetName};
+        if (this.vocabularyId !== null) { body.vocabulary_id = this.vocabularyId; }
+
+        data.post(this.config.urls.validate, body, function(payload) {
+            self.serverDocuments = payload.documents;
+            self.serverErrors = payload.errors;
+
+            var keys = Object.keys(payload.documents);
+            if (payload.errors.length === 0 && keys.length > 0) {
+                self.rule = self.fromDocument(payload.documents[keys[0]]);
+            }
+
+            onDone();
+        }, onError);
+    },
+
 // ////////////////////////////////////////////////////////////////////////
 
     mergedDocuments: function() {
@@ -393,7 +525,15 @@ var editorModel = {
         data.post(this.config.urls.save, body, function(payload) {
             self.currentVersion = payload.version;
             self.documents = merged;
+
+            // The stored rule is the new baseline - the working copy goes, under
+            // the key before the save and the one the save may have moved it to
+            self.clearDraft(self.ruleKey);
             self.ruleKey = Object.keys(self.serverDocuments)[0];
+            self.clearDraft(self.ruleKey);
+
+            if (self.config.trackChanges) { self.setBaseline(); }
+
             onDone(payload);
         }, onError);
     },

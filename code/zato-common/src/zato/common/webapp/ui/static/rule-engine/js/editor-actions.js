@@ -378,8 +378,81 @@ editorView.openRuleMenu = function(event) {
     this.openMenu(event.currentTarget, 'Rules of ' + editorModel.rulesetName, items, false);
 };
 
+// ////////////////////////////////////////////////////////////////////////
+
+// The open rule's place in the address bar, so a rule switched to in place
+// stays bookmarkable - only for a host that named the parameter
+editorView.writeRuleToURL = function() {
+    var key = editorModel.config.ruleURLKey;
+    if (key === null) { return; }
+
+    var params = new URLSearchParams(window.location.search);
+    params.set(key, editorModel.ruleKey);
+    history.replaceState(null, '', '?' + params.toString());
+};
+
+// Opens another rule of the loaded ruleset in place - every document is already
+// here, so nothing reloads and nothing flickers. Unsaved work is not lost, the
+// dirty working copy sits in local storage and comes back with the rule.
+editorView.openRule = function(ruleKey) {
+    this.closeMenu();
+    editorModel.openRuleKey(ruleKey);
+    this.writeRuleToURL();
+    this.render();
+};
+
 editorView.openTests = function() {
     window.location.href = editorModel.config.testsUrl + '?ruleset=' + editorModel.definitionId;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Each rule walks its own history - the stacks hold JSON snapshots of the
+// rule, the last one on the undo stack being the state on screen
+editorView.historyFor = function() {
+
+    // A rule not yet saved has no key, so its history lives under its name
+    var key = editorModel.ruleKey === null ? 'new ' + editorModel.config.newRuleName : editorModel.ruleKey;
+
+    if (this.historyByRule[key] === undefined) {
+        this.historyByRule[key] = {undoStack: [], redoStack: []};
+    }
+
+    return this.historyByRule[key];
+};
+
+editorView.undo = function() {
+    var stacks = this.historyFor();
+
+    // The bottom snapshot is what the rule opened with - there is nothing under it
+    if (stacks.undoStack.length < 2) { return; }
+
+    // The state on screen moves over to the redo side ..
+    var current = stacks.undoStack.pop();
+    stacks.redoStack.push(current);
+
+    // .. and the one before it comes back
+    this.restoreSnapshot(stacks.undoStack[stacks.undoStack.length - 1]);
+};
+
+editorView.redo = function() {
+    var stacks = this.historyFor();
+    if (stacks.redoStack.length === 0) { return; }
+
+    var snapshot = stacks.redoStack.pop();
+    stacks.undoStack.push(snapshot);
+
+    this.restoreSnapshot(snapshot);
+};
+
+editorView.restoreSnapshot = function(snapshot) {
+    editorModel.rule = JSON.parse(snapshot);
+
+    // The render must not treat the restored state as a fresh edit,
+    // which would wipe the redo stack
+    this.restoringHistory = true;
+    this.render();
+    this.restoringHistory = false;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -387,6 +460,11 @@ editorView.openTests = function() {
 editorView.save = function(button) {
     var handlers = shared.inFlight(button, function(payload) {
         shared.popover(button, 'Saved as version ' + payload.version + '.', 'green');
+
+        // The rule is clean now - the render lets the change tracking
+        // dim the Save button again and take the star off the name
+        if (editorModel.config.trackChanges) { editorView.render(); }
+
         if (editorModel.config.onSaved !== undefined) { editorModel.config.onSaved(payload); }
     }, function(message) {
         shared.popover(button, message, 'red');
@@ -457,6 +535,15 @@ editorView.bindListeners = function() {
         }
 
         if (editorModel.rule === null) { return; }
+
+        // Ctrl-Z and Ctrl-Y (or Ctrl-Shift-Z) walk the open rule's own history,
+        // only for a host that turned change tracking on
+        if (editorModel.config.trackChanges && (event.ctrlKey || event.metaKey)) {
+            var keyName = event.key.toLowerCase();
+
+            if (keyName === 'z' && !event.shiftKey) { event.preventDefault(); editorView.undo(); return; }
+            if (keyName === 'y' || keyName === 'z') { event.preventDefault(); editorView.redo(); return; }
+        }
 
         if (event.key === 'ArrowRight') { event.preventDefault(); editorView.moveToken(1); }
         if (event.key === 'ArrowLeft') { event.preventDefault(); editorView.moveToken(-1); }

@@ -3,7 +3,6 @@
    every value it reads is defined here. */
 
 .search-clear {
-
     /* The badge's own colours - a quiet grey word on a faint wash */
     --search-clear-text: #6b7280;
     --search-clear-fill: rgba(0, 0, 0, 0.05);
@@ -39,7 +38,6 @@
 }
 
 .search-clear-anchor {
-
     /* The room the box keeps for the badge, how far in from its edge the badge stands,
        and how far the word inside it sits above the badge's own middle */
     --search-clear-room: 58px;

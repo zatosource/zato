@@ -172,10 +172,23 @@ editorModel.buildProblems = function() {
 
 editorModel.serverProblems = function() {
     var out = this.serverErrors.map(function(error) {
-        var where = error.block;
-        if (error.line > 0) { where += ', line ' + error.line; }
 
-        var problem = {severity: error.severity, text: 'In the ' + where + ' block: ' + error.message};
+        // The place reads the way an IDE would say it - the line first, the
+        // block after it only when the server named one
+        var where = [];
+        if (error.line > 0) { where.push('Line ' + error.line); }
+        if (error.block !== '') { where.push('in the ' + error.block + ' block'); }
+
+        // The server's messages point at the offending text with an arrow -
+        // on screen that reads as plain punctuation
+        var text = error.message.split(' -> ').join(': ');
+
+        if (where.length > 0) {
+            var place = where.join(', ');
+            text = place.charAt(0).toUpperCase() + place.slice(1) + ': ' + text;
+        }
+
+        var problem = {severity: error.severity, text: text};
         return problem;
     });
     return out;

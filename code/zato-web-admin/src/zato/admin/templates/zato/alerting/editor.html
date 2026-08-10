@@ -21,6 +21,7 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/highlight.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/shared.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/pane-split.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/shell.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/data.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/vocabulary.js"></script>
@@ -39,6 +40,21 @@ $(document).ready(function() {
     // Floating surfaces attach here rather than to the body, so they sit inside
     // the shared UI's scope and theme even outside the editor's own container
     shared.config.floatingRoot = document.getElementById('rule-engine-floating-root');
+
+    // The heading's rule name is the kit's own select - picking another rule
+    // of the ruleset opens it in this same editor, in place
+    var editorRules = {{ rules_json|safe }};
+    var ruleSelect = null;
+
+    // A star in front of a name marks unsaved work - the open rule's own dirty
+    // state and any other rule's working copy left behind in local storage
+    var starredGroups = function() {
+        var items = editorRules.map(function(entry) {
+            var star = editorModel.hasDraft(entry.value) ? '* ' : '';
+            return {value: entry.value, label: star + entry.label};
+        });
+        return [{group: '', items: items}];
+    };
 
     editorView.init(document.getElementById('rule-editor'), {
         urls: {
@@ -59,7 +75,19 @@ $(document).ready(function() {
         showLivePanel: false,
         viewButtonActiveClass: 'dashboard-tab-active',
         viewURLKey: 'view',
+        ruleURLKey: 'rule',
+        trackChanges: true,
+        onDirtyChange: function(isDirty, ruleName) {
+            var star = isDirty ? '* ' : '';
+            document.title = star + ruleName + ' - Monitoring rule editor';
+
+            // The new-rule page has a plain-text heading and no select
+            if (ruleSelect !== null) {
+                ruleSelect.set_groups(starredGroups());
+            }
+        },
         documentTextHtml: function(text) { return $.fn.zato.highlight.rules_to_html(text); },
+        documentEditable: true,
         csrfToken: $.cookie('csrftoken'),
         navigateToRule: function(rulesetId, ruleKey) {
             window.location.href = '{% url "alert-rules-editor" %}?cluster={{ cluster_id }}&rule=' +
@@ -67,22 +95,40 @@ $(document).ready(function() {
         },
     });
 
-    // The heading's rule name is the kit's own select - picking another
-    // rule of the ruleset opens it in this same editor
-    var editorRules = {{ rules_json|safe }};
-
     if (document.getElementById('rule-select-host') && editorRules.length) {
-        $.fn.zato.dashboard_kit.select.create({
+        ruleSelect = $.fn.zato.dashboard_kit.select.create({
             host: '#rule-select-host',
             trigger_cls: 'dashboard-select-face',
             label: '',
             groups: [{group: '', items: editorRules}],
             value: '{{ rule_key|escapejs }}',
             on_change: function(value) {
-                window.location.href = '{% url "alert-rules-editor" %}?cluster={{ cluster_id }}&rule=' +
-                    encodeURIComponent(value);
+                editorView.openRule(value);
             }
         });
+
+        // The widest name, star included, sets the trigger's width once and
+        // for all - no rule switch and no star ever resizes it
+        var trigger = document.querySelector('#rule-select-host .dashboard-select-trigger');
+        var valueSpan = trigger.querySelector('.dashboard-select-value');
+
+        var probe = document.createElement('span');
+        probe.style.visibility = 'hidden';
+        probe.style.whiteSpace = 'nowrap';
+        trigger.appendChild(probe);
+
+        var widest = 0;
+        editorRules.forEach(function(entry) {
+            probe.textContent = '* ' + entry.label;
+            if (probe.offsetWidth > widest) { widest = probe.offsetWidth; }
+        });
+
+        trigger.removeChild(probe);
+
+        // Whatever the trigger holds besides the name - the chevron and the
+        // gaps - keeps the width it has now
+        var extra = trigger.offsetWidth - valueSpan.offsetWidth;
+        trigger.style.minWidth = (widest + extra) + 'px';
     }
 
     $.fn.zato.dashboard_kit.reveal();

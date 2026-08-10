@@ -16,6 +16,7 @@ shared.initShell = function() {
     if (vocabularyButton !== null) { vocabularyButton.innerHTML = shared.icon('chevron-right', 14); }
 
     shared.initProblemsResize();
+    shared.initVocabularyResize();
     shared.initProblemsCollapse();
 };
 
@@ -28,6 +29,10 @@ shared.attachPaneResize = function(handle, pane, axis) {
         var startY = event.clientY;
         var rectangle = pane.getBoundingClientRect();
         handle.classList.add('pane-resizer-active');
+
+        // A pane animating its own size would trail behind the pointer
+        var paneTransition = pane.style.transition;
+        pane.style.transition = 'none';
 
         var onMove = function(moveEvent) {
             if (axis === 'x') {
@@ -42,6 +47,7 @@ shared.attachPaneResize = function(handle, pane, axis) {
 
         var onUp = function() {
             handle.classList.remove('pane-resizer-active');
+            pane.style.transition = paneTransition;
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onUp);
         };
@@ -51,14 +57,62 @@ shared.attachPaneResize = function(handle, pane, axis) {
     });
 };
 
+// The split bars of the editor's own panes, so their collapse toggles
+// can put them away and bring them back
+shared.problemsSplitBar = null;
+shared.vocabularySplitBar = null;
+
 shared.initProblemsResize = function() {
     var panel = document.querySelector('.problems-panel');
     if (panel === null) { return; }
 
-    var handle = document.createElement('div');
-    handle.className = 'pane-resizer pane-resizer-horizontal';
-    panel.insertBefore(handle, panel.firstChild);
-    shared.attachPaneResize(handle, panel, 'y');
+    // The bar stands between the editor area and the panel, carrying the
+    // dividing line the panel itself no longer draws
+    var bar = document.createElement('div');
+    bar.className = 'pane-split-bar pane-split-bar-horizontal';
+    panel.parentNode.insertBefore(bar, panel);
+
+    paneSplit.init({
+        bar: bar,
+        pane: panel,
+        container: panel.parentNode,
+        axis: 'y',
+        minSize: 60,
+        minOther: 160,
+        activeClass: 'pane-split-active',
+        storageKey: 'zato.rule-editor.split.problems',
+
+        // The panel opens capped by its stylesheet - the first pull, or the
+        // size a past visit kept, takes over from the cap
+        apply: function(size) {
+            panel.style.height = size + 'px';
+            panel.style.maxHeight = 'none';
+        },
+    });
+
+    shared.problemsSplitBar = bar;
+};
+
+shared.initVocabularyResize = function() {
+    var pane = document.getElementById('vocabulary-pane');
+    if (pane === null) { return; }
+
+    var bar = document.createElement('div');
+    bar.className = 'pane-split-bar pane-split-bar-vertical';
+    pane.parentNode.insertBefore(bar, pane);
+
+    paneSplit.init({
+        bar: bar,
+        pane: pane,
+        container: pane.parentNode,
+        axis: 'x',
+        minSize: 160,
+        minOther: 420,
+        activeClass: 'pane-split-active',
+        storageKey: 'zato.rule-editor.split.vocabulary',
+    });
+
+    shared.vocabularySplitBar = bar;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -77,17 +131,46 @@ shared.initProblemsCollapse = function() {
         indicator.innerHTML = shared.icon(collapsed ? 'chevron-up' : 'chevron-down', 12);
     };
 
+    // The pulled-to height steps aside while the panel is collapsed - only the
+    // head shows then - and comes back with the panel, its split bar likewise
+    var storedHeight = '';
+    var storedMaxHeight = '';
+
+    var stashSize = function() {
+        storedHeight = panel.style.height;
+        storedMaxHeight = panel.style.maxHeight;
+        panel.style.height = '';
+        panel.style.maxHeight = '';
+    };
+
+    var applyCollapsed = function(collapsed) {
+        if (collapsed) {
+            stashSize();
+        }
+        else {
+            panel.style.height = storedHeight;
+            panel.style.maxHeight = storedMaxHeight;
+        }
+
+        if (shared.problemsSplitBar !== null) {
+            shared.problemsSplitBar.style.display = collapsed ? 'none' : '';
+        }
+    };
+
     var stored = window.localStorage.getItem('ui-problems-collapsed');
-    if (stored === '1') { panel.classList.add('problems-collapsed'); }
+
+    if (stored === '1') {
+        panel.classList.add('problems-collapsed');
+        applyCollapsed(true);
+    }
+
     drawIndicator();
 
     head.addEventListener('click', function() {
         var collapsed = panel.classList.toggle('problems-collapsed');
         window.localStorage.setItem('ui-problems-collapsed', collapsed ? '1' : '0');
         drawIndicator();
-
-        panel.style.height = '';
-        panel.style.maxHeight = '';
+        applyCollapsed(collapsed);
     });
 };
 
@@ -140,11 +223,28 @@ shared.toggleNavigation = function() {
     document.getElementById('navigation-collapse-button').innerHTML = shared.icon(iconName, 14);
 };
 
+shared.vocabularyPaneWidth = '';
+
 shared.toggleVocabulary = function() {
     var pane = document.getElementById('vocabulary-pane');
-    pane.classList.toggle('collapsed');
+    var isCollapsed = pane.classList.toggle('collapsed');
 
-    var iconName = pane.classList.contains('collapsed') ? 'chevron-left' : 'chevron-right';
+    // The pulled-to width steps aside while the pane is collapsed - an inline
+    // width would beat the collapsed class's own - and comes back with it,
+    // the split bar likewise
+    if (isCollapsed) {
+        shared.vocabularyPaneWidth = pane.style.width;
+        pane.style.width = '';
+    }
+    else {
+        pane.style.width = shared.vocabularyPaneWidth;
+    }
+
+    if (shared.vocabularySplitBar !== null) {
+        shared.vocabularySplitBar.style.display = isCollapsed ? 'none' : '';
+    }
+
+    var iconName = isCollapsed ? 'chevron-left' : 'chevron-right';
     document.getElementById('vocabulary-collapse-button').innerHTML = shared.icon(iconName, 14);
 };
 

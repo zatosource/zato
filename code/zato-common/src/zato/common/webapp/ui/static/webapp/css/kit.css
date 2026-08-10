@@ -490,10 +490,10 @@
 /* Shared - problems panel                                    */
 /* ---------------------------------------------------------- */
 
+/* The split bar above the panel carries the dividing line, the panel
+   itself brings no border of its own to it */
 .rule-engine-ui .problems-panel {
     background: var(--problems-background);
-    border-top: 1px solid var(--problems-border);
-    margin-top: 10px;
     max-height: 150px;
     display: flex;
     flex-direction: column;
@@ -512,9 +512,6 @@
     margin-left: 8px;
 }
 .rule-engine-ui .problems-collapsed .problems-list {
-    display: none;
-}
-.rule-engine-ui .problems-collapsed .pane-resizer {
     display: none;
 }
 .rule-engine-ui .problems-list {
@@ -746,6 +743,101 @@
 .rule-engine-ui .pane-resizer-vertical {
     width: 4px;
     cursor: col-resize;
+}
+
+/* ---------------------------------------------------------- */
+/* Shared - pane split bars                                   */
+/* ---------------------------------------------------------- */
+
+/* The bar between two panes - a hairline through its middle that fades out
+   before the edges, and a small raised pill riding the line as the handle.
+   The colors are the bar's own variables, so any host can retune them. */
+.rule-engine-ui .pane-split-bar {
+    --pane-split-line: var(--border);
+    --pane-split-pill-rim: var(--border);
+    --pane-split-pill-face: var(--panel-raised);
+    --pane-split-pill-rim-lit: var(--blue);
+    --pane-split-pill-face-lit: var(--input-background);
+    --pane-split-pill-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+
+    position: relative;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+}
+.rule-engine-ui .pane-split-bar-horizontal {
+    height: 10px;
+    cursor: row-resize;
+}
+.rule-engine-ui .pane-split-bar-vertical {
+    width: 10px;
+    cursor: col-resize;
+}
+.rule-engine-ui .pane-split-bar-horizontal::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        var(--pane-split-line) 15%,
+        var(--pane-split-line) 85%,
+        transparent
+    );
+}
+.rule-engine-ui .pane-split-bar-vertical::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(
+        180deg,
+        transparent,
+        var(--pane-split-line) 15%,
+        var(--pane-split-line) 85%,
+        transparent
+    );
+}
+.rule-engine-ui .pane-split-bar::after {
+    content: "";
+    position: relative;
+    border-radius: 3px;
+    border: 1px solid var(--pane-split-pill-rim);
+    background: var(--pane-split-pill-face);
+    box-shadow: var(--pane-split-pill-shadow);
+    transition:
+        border-color 0.15s,
+        background-color 0.15s;
+}
+.rule-engine-ui .pane-split-bar-horizontal::after {
+    width: 46px;
+    height: 5px;
+}
+.rule-engine-ui .pane-split-bar-vertical::after {
+    width: 5px;
+    height: 46px;
+}
+
+/* A pointer passing across the bar paints nothing - the lit pill waits out
+   a short delay, and only a pointer that stays gets it. The pull itself is
+   an intentional gesture and answers at once. */
+.rule-engine-ui .pane-split-bar:hover::after {
+    transition-delay: 0.15s;
+}
+.rule-engine-ui .pane-split-bar:hover::after,
+.rule-engine-ui .pane-split-active::after {
+    border-color: var(--pane-split-pill-rim-lit);
+    background: var(--pane-split-pill-face-lit);
+}
+.rule-engine-ui .pane-split-active::after {
+    transition-delay: 0s;
 }
 
 .rule-engine-ui .column-resize-grip {

@@ -173,3 +173,18 @@
     background: var(--primary-dark);
     color: var(--white);
 }
+
+/* A clean rule has nothing to save - the button waits in a soft wash of its
+   own seablue, undimming on the first edit */
+.alerting-editor-card .button-primary:disabled,
+.alerting-editor-card .button-primary:disabled:hover {
+    background: color-mix(in srgb, var(--primary-dark) 12%, var(--white));
+    color: color-mix(in srgb, var(--primary-dark) 45%, var(--white));
+    cursor: not-allowed;
+}
+
+/* The trigger's width is fixed by the widest rule name - the chevron stays
+   pinned to the right edge inside it, whatever name is on show */
+.section-page-heading .dashboard-select-trigger {
+    justify-content: space-between;
+}

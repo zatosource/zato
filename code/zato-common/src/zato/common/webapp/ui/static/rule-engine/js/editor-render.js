@@ -15,6 +15,12 @@ var editorView = {
     menuChoice: -1,
     menuIsMulti: false,
     checkTimer: null,
+    parseTimer: null,
+
+    // Undo and redo stacks per rule, and whether a render is replaying one of
+    // their snapshots rather than showing a fresh edit
+    historyByRule: {},
+    restoringHistory: false,
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -314,6 +320,48 @@ var editorView = {
         shared.initTips();
         this.scheduleServerCheck();
         this.openPendingChip();
+        this.recordHistory();
+        this.refreshChangeState();
+    },
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // One snapshot per distinct state - a render that changed nothing pushes
+    // nothing, and a fresh edit starts a new future, so the redo stack empties
+    recordHistory: function() {
+        if (!editorModel.config.trackChanges || editorModel.rule === null) { return; }
+        if (this.restoringHistory) { return; }
+
+        var stacks = this.historyFor();
+        var snapshot = JSON.stringify(editorModel.rule);
+
+        if (stacks.undoStack.length === 0 || stacks.undoStack[stacks.undoStack.length - 1] !== snapshot) {
+            stacks.undoStack.push(snapshot);
+            stacks.redoStack = [];
+        }
+    },
+
+    // The dirty state drives everything IDE-like - the Save button's dimming,
+    // the working copy in local storage and whatever star the host paints
+    refreshChangeState: function() {
+        if (!editorModel.config.trackChanges || editorModel.rule === null) { return; }
+
+        var isDirty = editorModel.isDirty();
+
+        // The working copy in local storage mirrors the dirty state - an edit
+        // writes it, an undo back to the stored state removes it
+        if (isDirty) {
+            editorModel.writeDraft();
+        }
+        else {
+            editorModel.clearDraft(editorModel.ruleKey);
+        }
+
+        this.element('[data-action="save"]').disabled = !isDirty;
+
+        if (editorModel.config.onDirtyChange !== null) {
+            editorModel.config.onDirtyChange(isDirty, editorModel.rule.name);
+        }
     },
 
 // ////////////////////////////////////////////////////////////////////////

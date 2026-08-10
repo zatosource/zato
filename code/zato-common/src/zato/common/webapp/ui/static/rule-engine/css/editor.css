@@ -347,6 +347,58 @@
     margin: 0;
 }
 
+/* The editable flavour stacks the text and its status line - the status takes
+   only its own height and the text gets all the rest */
+.rule-editor .editor-document-host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-sizing: border-box;
+}
+.rule-editor .editor-document-status {
+    display: flex;
+    justify-content: flex-end;
+    padding: 5px 2px 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text4);
+}
+
+/* The highlighted face and a transparent textarea in the same place, the
+   textarea doing the typing and the face doing the colors, so their font
+   metrics must be one and the same to the pixel */
+.rule-editor .editor-document-edit {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    box-sizing: border-box;
+}
+.rule-editor .editor-document-edit .editor-document {
+    height: 100%;
+}
+.rule-editor .editor-document-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 16px 20px;
+    margin: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-1);
+    background: transparent;
+    color: transparent;
+    caret-color: var(--text2);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    white-space: pre;
+    overflow: auto;
+    resize: none;
+    outline: none;
+    box-shadow: none;
+}
+
 /* ---------------------------------------------------------- */
 /* Editor - live outcomes                                     */
 /* ---------------------------------------------------------- */
