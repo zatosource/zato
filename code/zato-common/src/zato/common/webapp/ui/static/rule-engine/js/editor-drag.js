@@ -2,37 +2,297 @@
 
 (function() {
 
+// Console diagnostics for the caret - throttled so a drag does not flood
+// the console
+var caretLogLast = {};
+var caretPointer = {x: null, y: null};
+document.addEventListener('dragover', function(event) { caretPointer.x = event.clientX; caretPointer.y = event.clientY; }, true);
+var caretLog = function(location, message, data, throttleKey) {
+    if (throttleKey !== undefined) {
+        var now = Date.now();
+        if (caretLogLast[throttleKey] !== undefined && now - caretLogLast[throttleKey] < 250) { return; }
+        caretLogLast[throttleKey] = now;
+    }
+    console.log('[caret] ' + location + ' - ' + message, JSON.stringify(data));
+};
+
 editorView.dragState = null;
 
 // ////////////////////////////////////////////////////////////////////////
 
-editorView.clearDropMarks = function() {
-    this.elements('.editor-line-drop, .editor-group-drop').forEach(function(element) {
-        element.classList.remove('editor-line-drop');
-        element.classList.remove('editor-group-drop');
-    });
-};
-
+// A drag says two things and two things only - the rest of the page steps
+// back, and the hovered line shows one insertion caret snapped to the gap
+// middle nearest the pointer
 editorView.markPossibleDrops = function() {
-
-    // The page itself explains the gesture - the legal landing places light
-    // up and everything that cannot take the drop steps back a step
     this.container.classList.add('editor-dragging');
-
-    this.elements('.editor-line, .editor-group').forEach(function(element) {
-        element.classList.add('editor-drop-possible');
-    });
 };
 
 editorView.clearPossibleDrops = function() {
     this.container.classList.remove('editor-dragging');
-
-    this.elements('.editor-drop-possible').forEach(function(element) {
-        element.classList.remove('editor-drop-possible');
-    });
 };
 
-// ////////////////////////////////////////////////////////////////////////
+// One caret per line, keyed by the line's list name
+editorView.insertionMarkers = {};
+
+editorView.clearInsertionMarkers = function() {
+    var self = this;
+    Object.keys(this.insertionMarkers).forEach(function(name) {
+        self.insertionMarkers[name].element.remove();
+    });
+    this.insertionMarkers = {};
+};
+
+// How far from a row's outermost glyph the caret stands when a slot lies at
+// a row break and has no second text to center between
+editorView.rowEdgeOffset = 8;
+
+// Whether an element paints its own edge - a visible border or background
+// makes the box edge the rendered edge
+editorView.paintsOwnEdge = function(element, side) {
+    var style = window.getComputedStyle(element);
+
+    var borderColor = side === 'right' ? style.borderRightColor : style.borderLeftColor;
+    var borderStyle = side === 'right' ? style.borderRightStyle : style.borderLeftStyle;
+    var hasBorder = borderStyle !== 'none' && borderColor !== 'rgba(0, 0, 0, 0)' && borderColor !== 'transparent';
+
+    var background = style.backgroundColor;
+    var hasBackground = background !== 'rgba(0, 0, 0, 0)' && background !== 'transparent';
+
+    return hasBorder || hasBackground;
+};
+
+// The eye sees glyphs and drawn borders, not layout boxes - a clause box is
+// inflated by transparent token padding and its hidden remove control, so
+// the caret must center between rendered edges instead of box edges
+editorView.visibleEdge = function(element, box, side) {
+
+    // The outermost token of a clause decides its rendered edge - the
+    // hidden remove control after it takes box space but paints nothing
+    var tokens = element.querySelectorAll('.editor-token, .editor-token-input');
+    var target = element;
+    var targetBox = box;
+
+    if (tokens.length > 0) {
+        target = side === 'right' ? tokens[tokens.length - 1] : tokens[0];
+        targetBox = target.getBoundingClientRect();
+    }
+
+    // A chip or a bordered token is seen at its box edge
+    if (this.paintsOwnEdge(target, side)) {
+        return side === 'right' ? targetBox.right : targetBox.left;
+    }
+
+    // Bare text is seen at its outermost glyph
+    var walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+    var node = walker.nextNode();
+    var edge = null;
+
+    while (node !== null) {
+        if (node.textContent.trim() !== '') {
+            var range = document.createRange();
+            range.selectNodeContents(node);
+            var textBox = range.getBoundingClientRect();
+
+            if (textBox.width > 0) {
+                if (side === 'right') {
+                    if (edge === null || textBox.right > edge) { edge = textBox.right; }
+                }
+                else if (edge === null || textBox.left < edge) {
+                    edge = textBox.left;
+                }
+            }
+        }
+        node = walker.nextNode();
+    }
+
+    // A neighbour with no rendered text, e.g. one holding only an input,
+    // falls back to its box edge
+    if (edge === null) {
+        edge = side === 'right' ? targetBox.right : targetBox.left;
+    }
+
+    return edge;
+};
+
+// Every insertion slot of the line as fixed anchor points, each in the
+// middle of the rendered gap between the two words around it. A joiner
+// like "and" is a word of its own standing inside its slot, so that slot
+// offers one anchor on each side of the joiner. A gap across a row break
+// has no shared middle, so it offers two anchors instead - one just past
+// the upper row's last glyph and one just before the lower row's first.
+editorView.slotAnchors = function(line) {
+    var self = this;
+    var anchors = [];
+
+    var chip = line.querySelector('.editor-add-chip');
+
+    // The anchors of one rendered gap between two adjacent words
+    var pushGapAnchors = function(index, position, leftElement, rightElement) {
+        var leftBox = leftElement === null ? null : leftElement.getBoundingClientRect();
+        var rightBox = rightElement.getBoundingClientRect();
+
+        // What the eye sees of each word, not what layout reserves
+        var leftEdge = leftBox === null ? null : self.visibleEdge(leftElement, leftBox, 'right');
+        var rightEdge = self.visibleEdge(rightElement, rightBox, 'left');
+
+        // Wrapped words live on rows of their own, and adjacent rows touch
+        // or overlap by subpixels, so only vertical centers close to each
+        // other mean one shared row
+        var sameRow = false;
+        if (leftBox !== null) {
+            var leftMiddleY = (leftBox.top + leftBox.bottom) / 2;
+            var rightMiddleY = (rightBox.top + rightBox.bottom) / 2;
+            var smallerHeight = Math.min(leftBox.height, rightBox.height);
+            sameRow = Math.abs(leftMiddleY - rightMiddleY) < (smallerHeight / 2);
+        }
+
+        // Words on one row - one anchor in the middle of their gap
+        if (sameRow) {
+            anchors.push({
+                index: index,
+                position: position,
+                kind: 'between',
+                x: (leftEdge + rightEdge) / 2,
+                rowTop: Math.min(leftBox.top, rightBox.top),
+                rowBottom: Math.max(leftBox.bottom, rightBox.bottom)
+            });
+            return;
+        }
+
+        // A row break - the gap stands both at the end of the row above
+        // and at the start of the row below
+        if (leftBox !== null) {
+            anchors.push({
+                index: index,
+                position: position,
+                kind: 'row-end',
+                x: leftEdge + self.rowEdgeOffset,
+                rowTop: leftBox.top,
+                rowBottom: leftBox.bottom
+            });
+        }
+
+        anchors.push({
+            index: index,
+            position: position,
+            kind: 'row-start',
+            x: rightEdge - self.rowEdgeOffset,
+            rowTop: rightBox.top,
+            rowBottom: rightBox.bottom
+        });
+    };
+
+    // Clauses and the separator words between them in document order - a
+    // joiner like the conditions line's "and" or a keyword like the then
+    // line's leading "then" and its between-action "and" all belong to the
+    // slot whose clauses they stand between
+    var groupElements = [];
+    var slotSeparators = [[]];
+    line.querySelectorAll('.editor-group, .editor-token-joiner, .editor-keyword').forEach(function(element) {
+        if (element.classList.contains('editor-group')) {
+            groupElements.push(element);
+            slotSeparators.push([]);
+        }
+        else {
+            slotSeparators[slotSeparators.length - 1].push(element);
+        }
+    });
+
+    var slotCount = groupElements.length + 1;
+
+    for (var index = 0; index < slotCount; index += 1) {
+
+        // The words around the slot in visual order - the previous clause,
+        // then any separator words standing in the slot, then the next
+        // clause or the add chip
+        var words = [];
+        if (index > 0) { words.push(groupElements[index - 1]); }
+
+        slotSeparators[index].forEach(function(separator) { words.push(separator); });
+        words.push(index >= groupElements.length ? chip : groupElements[index]);
+
+        // A slot with no left word at all still gets one anchor before its
+        // only word
+        if (words.length === 1) {
+            pushGapAnchors(index, 0, null, words[0]);
+            continue;
+        }
+
+        for (var position = 0; position < words.length - 1; position += 1) {
+            pushGapAnchors(index, position, words[position], words[position + 1]);
+        }
+    }
+
+    return anchors;
+};
+
+// The anchor the pointer stands closest to - its own row band decides
+// first, the horizontal distance breaks the tie within the band
+editorView.nearestAnchor = function(anchors, clientX, clientY) {
+    var best = null;
+    var bestRowDistance = 0;
+    var bestGapDistance = 0;
+
+    anchors.forEach(function(anchor) {
+        var rowDistance = 0;
+        if (clientY < anchor.rowTop) { rowDistance = anchor.rowTop - clientY; }
+        else if (clientY > anchor.rowBottom) { rowDistance = clientY - anchor.rowBottom; }
+
+        var gapDistance = Math.abs(clientX - anchor.x);
+
+        if (best === null || rowDistance < bestRowDistance || (rowDistance === bestRowDistance && gapDistance < bestGapDistance)) {
+            best = anchor;
+            bestRowDistance = rowDistance;
+            bestGapDistance = gapDistance;
+        }
+    });
+
+    return best;
+};
+
+editorView.placeInsertionMarker = function(line, dropName, anchor) {
+    var self = this;
+
+    // A single caret on the whole canvas - entering one line takes it away
+    // from every other line
+    Object.keys(this.insertionMarkers).forEach(function(name) {
+        if (name !== dropName) {
+            self.insertionMarkers[name].element.remove();
+            delete self.insertionMarkers[name];
+        }
+    });
+
+    var entry = this.insertionMarkers[dropName];
+
+    // The same anchor keeps its caret - the caret only ever jumps from one
+    // anchor to another
+    var key = anchor.index + ':' + anchor.position + ':' + anchor.kind;
+    if (entry !== undefined && entry.key === key) { return; }
+
+    if (entry === undefined) {
+        var element = document.createElement('span');
+        element.className = 'editor-insert-marker';
+        this.container.appendChild(element);
+        entry = {element: element, key: ''};
+        this.insertionMarkers[dropName] = entry;
+    }
+
+    entry.element.style.left = (anchor.x - 1) + 'px';
+    entry.element.style.top = (anchor.rowTop - 1) + 'px';
+    entry.element.style.height = (anchor.rowBottom - anchor.rowTop + 2) + 'px';
+    entry.key = key;
+
+    caretLog('placeInsertionMarker', 'caret snapped', {
+        drop_name: dropName,
+        index: anchor.index,
+        position: anchor.position,
+        kind: anchor.kind,
+        anchor_x: Math.round(anchor.x * 10) / 10,
+        row_top: Math.round(anchor.rowTop * 10) / 10,
+        row_bottom: Math.round(anchor.rowBottom * 10) / 10,
+        pointer: {x: caretPointer.x, y: caretPointer.y}
+    });
+};
 
 editorView.attachVocabularyDrag = function() {
     var self = this;
@@ -41,6 +301,9 @@ editorView.attachVocabularyDrag = function() {
         element.addEventListener('dragstart', function(event) {
             var path = element.getAttribute('data-path');
             self.dragState = {path: path};
+
+            // The hover pulse and its snake stop - the drag speaks alone now
+            self.clearPreview();
 
             var attribute = vocabulary.attribute(path);
 
@@ -56,7 +319,7 @@ editorView.attachVocabularyDrag = function() {
 
         element.addEventListener('dragend', function() {
             self.dragState = null;
-            self.clearDropMarks();
+            self.clearInsertionMarkers();
             self.clearPossibleDrops();
             shared.removeGhost();
         });
@@ -65,26 +328,39 @@ editorView.attachVocabularyDrag = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A card the rule does not use yet points at where it could go - every add
-// chip breathes in blue while the pointer is on the card, the same landing
-// places a drag itself would light up
+// A card the rule does not use yet points at where it could go - while the
+// pointer is on the card, a faint caret stands at every place a drop could
+// land, the same anchors a drag itself snaps to
 editorView.potentialHideTimer = null;
+editorView.previewMarkers = [];
 
 editorView.clearPreview = function() {
-    this.elements('.editor-add-chip').forEach(function(chip) {
-        chip.classList.remove('editor-chip-pulse');
+    this.previewMarkers.forEach(function(element) {
+        element.remove();
     });
+    this.previewMarkers = [];
 };
 
 editorView.showPreview = function() {
-    this.elements('.editor-add-chip').forEach(function(chip) {
-        chip.classList.add('editor-chip-pulse');
+    var self = this;
+    this.clearPreview();
+
+    this.elements('.editor-line').forEach(function(line) {
+        self.slotAnchors(line).forEach(function(anchor) {
+            var element = document.createElement('span');
+            element.className = 'editor-insert-hint';
+            element.style.left = (anchor.x - 1) + 'px';
+            element.style.top = (anchor.rowTop - 1) + 'px';
+            element.style.height = (anchor.rowBottom - anchor.rowTop + 2) + 'px';
+            self.container.appendChild(element);
+            self.previewMarkers.push(element);
+        });
     });
 };
 
 // Hovering either side of the same fact lights both - a token in the canvas
 // and the vocabulary card it came from answer each other. A card the rule
-// does not use yet pulses the if line's add chip instead, but only once the
+// does not use yet shows every landing place instead, but only once the
 // pointer rests on the card, so a sweep across the list paints nothing.
 editorView.attachPathHighlight = function() {
     var self = this;
@@ -102,7 +378,7 @@ editorView.attachPathHighlight = function() {
     var askPreview = function() {
 
         // Arriving from another unused card cancels its pending put-away,
-        // so gliding along the list keeps the pulse steady
+        // so gliding along the list keeps the hints steady
         if (self.potentialHideTimer !== null) { clearTimeout(self.potentialHideTimer); self.potentialHideTimer = null; }
         self.showPreview();
     };
@@ -110,7 +386,7 @@ editorView.attachPathHighlight = function() {
     var dropPreview = function() {
 
         // The put-away waits a beat, so gliding to the next unused card
-        // keeps the pulse instead of blinking it
+        // keeps the hints instead of blinking them
         if (self.potentialHideTimer === null) {
             self.potentialHideTimer = setTimeout(function() {
                 self.potentialHideTimer = null;
@@ -154,56 +430,29 @@ editorView.attachDropLines = function() {
         line.addEventListener('dragover', function(event) {
             if (self.dragState === null) { return; }
             event.preventDefault();
-            self.clearDropMarks();
-            line.classList.add('editor-line-drop');
-        });
 
-        line.addEventListener('dragleave', function() {
-            line.classList.remove('editor-line-drop');
+            var anchors = self.slotAnchors(line);
+            var anchor = self.nearestAnchor(anchors, event.clientX, event.clientY);
+
+            caretLog('dragover', 'anchors and pick', {drop_name: dropName, pointer: {x: event.clientX, y: event.clientY}, anchors: anchors.map(function(a) { return {index: a.index, position: a.position, kind: a.kind, x: Math.round(a.x * 10) / 10, row_top: Math.round(a.rowTop * 10) / 10, row_bottom: Math.round(a.rowBottom * 10) / 10}; }), chosen: {index: anchor.index, position: anchor.position, kind: anchor.kind, x: Math.round(anchor.x * 10) / 10}}, 'anchors-' + dropName);
+
+            self.placeInsertionMarker(line, dropName, anchor);
         });
 
         line.addEventListener('drop', function(event) {
             event.preventDefault();
-            self.clearDropMarks();
             if (self.dragState === null) { return; }
 
-            self.dropAt(dropName, self.dragState.path, self.listLength(dropName));
-            self.dragState = null;
-        });
-    });
-
-    this.elements('.editor-group').forEach(function(group) {
-        var groupName = group.getAttribute('data-group');
-        var separator = groupName.lastIndexOf('-');
-        var dropName = groupName.slice(0, separator);
-        var itemIndex = +groupName.slice(separator + 1);
-
-        group.addEventListener('dragover', function(event) {
-            if (self.dragState === null) { return; }
-            event.preventDefault();
-            event.stopPropagation();
-            self.clearDropMarks();
-            group.classList.add('editor-group-drop');
-        });
-
-        group.addEventListener('drop', function(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            self.clearDropMarks();
-            if (self.dragState === null) { return; }
-
-            self.dropAt(dropName, self.dragState.path, itemIndex + 1);
+            var anchors = self.slotAnchors(line);
+            var anchor = self.nearestAnchor(anchors, event.clientX, event.clientY);
+            self.clearInsertionMarkers();
+            self.dropAt(dropName, self.dragState.path, anchor.index);
             self.dragState = null;
         });
     });
 };
 
 // ////////////////////////////////////////////////////////////////////////
-
-editorView.listLength = function(dropName) {
-    var out = dropName === 'conditions' ? editorModel.rule.conditions.length : editorModel.rule[dropName].length;
-    return out;
-};
 
 editorView.dropAt = function(dropName, path, position) {
     if (dropName === 'conditions') {

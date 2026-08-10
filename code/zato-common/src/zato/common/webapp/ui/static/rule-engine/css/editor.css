@@ -43,21 +43,9 @@
     border-radius: var(--radius-3);
     padding: 2px 6px;
 }
-.rule-editor .editor-line-drop {
-    border-color: var(--blue);
-    background: var(--blue-tint-07);
-}
-
-/* The moment a drag starts the legal landing places light up quietly */
-.rule-editor .editor-drop-possible {
-    outline: 1px solid var(--blue-tint-35);
-    outline-offset: 2px;
-    border-radius: var(--radius-3);
-    background: var(--blue-tint-05);
-}
-
-/* And everything that cannot take the drop steps back a step, so the page
-   itself explains where the held thing may land */
+/* A drag says one thing - everything that cannot take the drop steps back,
+   the canvas stays untouched and only what is directly under the pointer
+   lights up, with a single quiet signal each */
 .rule-editor.editor-dragging .toolbar,
 .rule-editor.editor-dragging .problems-panel,
 .rule-editor.editor-dragging .vocabulary-pane {
@@ -65,17 +53,37 @@
     transition: opacity 0.12s;
 }
 
-.rule-editor .editor-group-drop {
-    outline: 1px dashed var(--blue);
-    outline-offset: 2px;
-    border-radius: var(--radius-3);
-    background: var(--blue-tint-14);
+/* The one drop signal - a text-style insertion caret standing halfway
+   between two clauses, an I-beam with its forks on top and bottom, out of
+   the layout flow, so nothing on the line ever moves */
+.rule-editor .editor-insert-marker {
+    position: fixed;
+    z-index: 30;
+    width: 2px;
+    pointer-events: none;
+    background: var(--text);
+}
+.rule-editor .editor-insert-marker::before,
+.rule-editor .editor-insert-marker::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 7px;
+    height: 2px;
+    background: var(--text);
+}
+.rule-editor .editor-insert-marker::before {
+    top: -2px;
+}
+.rule-editor .editor-insert-marker::after {
+    bottom: -2px;
 }
 
 .rule-editor .editor-keyword {
     color: var(--blue);
     font-weight: 600;
-    margin: 0 2px;
+    margin: 0 10px 0 2px;
 }
 
 /* ---------------------------------------------------------- */
@@ -177,6 +185,10 @@
 .rule-editor .editor-group {
     white-space: nowrap;
     display: inline-block;
+
+    /* Wide enough a gap for the insertion caret with its forks to stand in
+       the middle with clear space on both sides */
+    margin-right: 12px;
 }
 .rule-editor .editor-group-remove {
     color: var(--text5);
@@ -219,60 +231,31 @@
 }
 
 /* A vocabulary card the rule does not use yet points at where it could go -
-   while the pointer rests on the card, every add chip breathes in blue and
-   a snake runs around its border. */
-.rule-editor .editor-add-chip.editor-chip-pulse {
-    position: relative;
-    color: var(--blue);
-    border-color: var(--blue);
-    background: var(--blue-tint-05);
-    animation: editor-chip-pulse 1.2s ease-in-out infinite;
+   while the pointer rests on the card, a faint blue caret stands at every
+   place a drop could land, the same anchors a drag snaps to. */
+.rule-editor .editor-insert-hint {
+    position: fixed;
+    z-index: 30;
+    width: 2px;
+    pointer-events: none;
+    background: var(--blue);
+    opacity: 0.45;
 }
-@keyframes editor-chip-pulse {
-    0%,
-    100% {
-        box-shadow: 0 0 0 0 var(--blue-tint-12);
-    }
-    50% {
-        box-shadow: 0 0 0 3px var(--blue-tint-12);
-    }
-}
-
-/* The snake - a short bright arc with a fading tail, running along a thin
-   ring just outside the chip. The ring is a conic gradient whose start
-   angle spins, and the mask hollows it out so only the rim shows. */
-@property --editor-chip-snake-angle {
-    syntax: "<angle>";
-    inherits: false;
-    initial-value: 0deg;
-}
-.rule-editor .editor-add-chip.editor-chip-pulse::before {
+.rule-editor .editor-insert-hint::before,
+.rule-editor .editor-insert-hint::after {
     content: "";
     position: absolute;
-    inset: -2px;
-    padding: 1px;
-    border-radius: var(--radius-2);
-    pointer-events: none;
-    background: conic-gradient(
-        from var(--editor-chip-snake-angle),
-        transparent 0deg 280deg,
-        var(--blue-tint-12) 310deg,
-        var(--blue) 360deg
-    );
-    -webkit-mask:
-        linear-gradient(#fff 0 0) content-box,
-        linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask:
-        linear-gradient(#fff 0 0) content-box,
-        linear-gradient(#fff 0 0);
-    mask-composite: exclude;
-    animation: editor-chip-snake 1.2s linear infinite;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 7px;
+    height: 2px;
+    background: var(--blue);
 }
-@keyframes editor-chip-snake {
-    to {
-        --editor-chip-snake-angle: 360deg;
-    }
+.rule-editor .editor-insert-hint::before {
+    top: -2px;
+}
+.rule-editor .editor-insert-hint::after {
+    bottom: -2px;
 }
 
 /* ---------------------------------------------------------- */

@@ -11,6 +11,7 @@ var editorModel = {
         savedNoticeText: 'OK, saved',
         savedNoticeMilliseconds: 600,
 
+
         // What the circle in front of a vocabulary card already taking part
         // in the rule says on hover, and the host's own way of wiring that
         // tooltip - called with the circle's element and the text, so each
@@ -141,7 +142,10 @@ var editorModel = {
         if (!this.config.trackChanges) { return false; }
         if (this.rule === null) { return false; }
 
-        var out = this.toText() !== this.baselineText;
+        // Half-built clauses count as unsaved work too - the stored text
+        // cannot hold them, only the working copy in local storage can, so
+        // they must keep the rule dirty for that copy to be written at all
+        var out = this.toText() !== this.baselineText || this.hasUnfinishedParts();
         return out;
     },
 
@@ -449,6 +453,21 @@ var editorModel = {
         var anyThen = this.rule.thenActions.some(function(action) { return self.actionIsComplete(action); });
 
         var out = anyCondition && anyThen;
+        return out;
+    },
+
+    // Whether anything on the screen is still half-built - toText only
+    // serializes complete clauses, so half-built ones live in the working
+    // copy alone and must keep the dirty state on
+    hasUnfinishedParts: function() {
+        var self = this;
+        var unfinishedCondition = this.rule.conditions.some(function(condition) {
+            return !self.conditionIsComplete(condition);
+        });
+        var unfinishedThen = this.rule.thenActions.some(function(action) { return !self.actionIsComplete(action); });
+        var unfinishedElse = this.rule.elseActions.some(function(action) { return !self.actionIsComplete(action); });
+
+        var out = unfinishedCondition || unfinishedThen || unfinishedElse;
         return out;
     },
 
