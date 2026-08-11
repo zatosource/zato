@@ -12,7 +12,9 @@
         save_error_message: 'Could not save',
         test_error_message: 'Could not connect',
         test_spinner_label: 'Testing ..',
+        test_spinner_delay_ms: 250,
         test_details_title: 'Test connection response',
+        test_ok_hold_ms: 600,
         status_fade_delay_ms: 750,
         status_fade_duration_ms: 500
     };
@@ -118,6 +120,25 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
+    // Shows a green message in the status slot and fades it out after hold_ms
+    $.fn.zato.redis.show_status_success = function(message, hold_ms) {
+
+        var status = $('#redis-status');
+        var ui_config = $.fn.zato.redis.config;
+
+        status.removeClass('show fade status-message-success status-message-error');
+        status.text(message).addClass('show status-message-success');
+
+        setTimeout(function() {
+            status.addClass('fade');
+            setTimeout(function() {
+                status.removeClass('show fade status-message-success');
+            }, ui_config.status_fade_duration_ms);
+        }, hold_ms);
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
     $.fn.zato.redis.save = function() {
 
         var values = $.fn.zato.redis.get_config();
@@ -133,13 +154,7 @@
             contentType: 'application/json',
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             success: function() {
-                status.text(ui_config.save_ok_message).addClass('show status-message-success');
-                setTimeout(function() {
-                    status.addClass('fade');
-                    setTimeout(function() {
-                        status.removeClass('show fade status-message-success');
-                    }, ui_config.status_fade_duration_ms);
-                }, ui_config.status_fade_delay_ms);
+                $.fn.zato.redis.show_status_success(ui_config.save_ok_message, ui_config.status_fade_delay_ms);
             },
             error: function(jqXHR) {
                 var msg = $.fn.zato.redis.extract_error(jqXHR, ui_config.save_error_message);
@@ -215,8 +230,17 @@
             url: stored_url_base + '/test',
             data: JSON.stringify({values: values}),
             spinner_label: ui_config.test_spinner_label,
+            show_delay_ms: ui_config.test_spinner_delay_ms,
             details_modal_title: ui_config.test_details_title,
-            parse: $.fn.zato.redis.parse_test_response
+            parse: $.fn.zato.redis.parse_test_response,
+
+            // A successful test does not need the tippy at all - the outcome goes
+            // into the green status message to the left of the link instead.
+            on_success: function(instance, result) {
+                instance.hide();
+                instance.destroy();
+                $.fn.zato.redis.show_status_success(result.label, ui_config.test_ok_hold_ms);
+            }
         });
     };
 

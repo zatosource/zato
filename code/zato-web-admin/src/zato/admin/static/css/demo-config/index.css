@@ -87,7 +87,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Demo config - the Running badge of a change on its way        */
+/* Demo config - the in-flight badge of a change on its way      */
 /* ------------------------------------------------------------ */
 
 /* The badge sits by the sliders a change touches - to the right of the
@@ -101,7 +101,7 @@
     display: inline-block;
 }
 
-/* Once a change is done, a green confirmation stands where Running was,
+/* Once a change is done, a green confirmation stands where the badge was,
    for the moment its JS timer gives it - plain text, not a badge */
 .demo-config-ok {
     display: none;

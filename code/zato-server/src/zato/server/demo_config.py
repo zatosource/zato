@@ -686,6 +686,11 @@ def save_demo_config(server:'ParallelServer', states:'strbooldict') -> 'stranydi
 
     for set_name in Set_Names:
 
+        # A request may carry only some of the sets - the rest is left alone,
+        # which is what lets sliders move independently at the same time
+        if set_name not in states:
+            continue
+
         desired = states[set_name]
 
         # What exists already matches the slider, so there is nothing to do ..

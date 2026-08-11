@@ -103,10 +103,10 @@ class TestRedis:
         # .. run the connection test ..
         page.click(_Test_Link)
 
-        # .. and verify the OK result with the response time appears in the tooltip.
-        tooltip = cast_('any_', page.wait_for_selector('.tippy-content', state='visible', timeout=10000))
-        tooltip_text = tooltip.inner_text()
-        assert 'Connection OK' in tooltip_text, f'Expected "Connection OK" in tooltip, got: {tooltip_text}'
+        # .. and verify the OK result with the response time appears in the green status message.
+        status = cast_('any_', page.wait_for_selector('#redis-status.status-message-success', state='visible', timeout=10000))
+        status_text = status.inner_text()
+        assert 'Connection OK' in status_text, f'Expected "Connection OK" in status, got: {status_text}'
 
 # ################################################################################################################################
 

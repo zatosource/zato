@@ -147,11 +147,12 @@ def run_redis_test(page:'Page', base_url:'str', values:'anydict') -> 'None':
 # ################################################################################################################################
 
 def expect_redis_test_ok(page:'Page') -> 'None':
-    """ Waits for the OK outcome of a connection test - a tooltip over the Test connection link.
+    """ Waits for the OK outcome of a connection test - the green status message
+    to the left of the Test connection link.
     """
-    tooltip = cast_('any_', page.wait_for_selector('.tippy-content', state='visible', timeout=10000))
-    tooltip_text = tooltip.inner_text()
-    assert 'Connection OK' in tooltip_text, f'Expected "Connection OK" in tooltip, got: {tooltip_text}'
+    status = cast_('any_', page.wait_for_selector('#redis-status.status-message-success', state='visible', timeout=10000))
+    status_text = status.inner_text()
+    assert 'Connection OK' in status_text, f'Expected "Connection OK" in status, got: {status_text}'
 
 # ################################################################################################################################
 

@@ -2,10 +2,12 @@
 //
 // One card per demo config set, each with a slider that applies itself the
 // moment it is flipped, plus a master "Everything" slider above the grid.
+// Each change only locks the sliders it touches, so several of them
+// can move independently at the same time.
 // Every card says below its header whether its set is imported and shows
 // count pills linking to the screens its objects live on. While a change
-// is on its way, a Running badge shows by the sliders it touches, and once
-// it is done, a green confirmation takes its place for a moment.
+// is on its way, an Importing or Removing badge shows by the sliders it
+// touches, and once it is done, a green confirmation takes its place for a moment.
 // The server answers each change with the details as they actually are
 // afterwards, which is what the cards are repainted from, and the one
 // "How does it work?" badge below the grid explains the page as a whole.
@@ -28,7 +30,11 @@ config.applyErrorText = 'The change could not be applied';
 config.statusOnLabel = 'Imported';
 config.statusOffLabel = 'Not imported';
 
-// What a finished change confirms where its Running badge was, and for how long
+// What a change in flight says by the sliders it touches, one label per direction
+config.runningImportLabel = 'Importing';
+config.runningRemoveLabel = 'Removing';
+
+// What a finished change confirms where its in-flight badge was, and for how long
 config.okImportedLabel = 'OK, imported';
 config.okRemovedLabel = 'OK, removed';
 config.okVisibleMs = 1000;
@@ -176,42 +182,96 @@ var renderAll = function(data) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-var collectStates = function() {
+// Which sets have a change on its way right now - each request only locks
+// its own sliders, so the others stay free to move at the same time
+var busySets = {};
 
-    var out = {};
+var hasBusySets = function() {
 
-    for(var setIdx = 0; setIdx < config.sets.length; setIdx++) {
-        var setName = config.sets[setIdx];
-        out[setName] = field(setName).is(':checked');
+    for(var setName in busySets) {
+        if(busySets[setName]) {
+            return true;
+        }
     }
 
-    return out;
+    return false;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-var setBusy = function(isBusy, changedSets, isFromMaster) {
-
-    for(var setIdx = 0; setIdx < config.sets.length; setIdx++) {
-        var setName = config.sets[setIdx];
-        field(setName).prop('disabled', isBusy);
-    }
-
-    masterField.prop('disabled', isBusy);
+var markBusy = function(changedSets, isFromMaster) {
 
     for(var changedIdx = 0; changedIdx < changedSets.length; changedIdx++) {
-        var card = document.getElementById('demo-config-card-' + changedSets[changedIdx]);
-        card.classList.toggle('demo-config-busy', isBusy);
+
+        var setName = changedSets[changedIdx];
+        busySets[setName] = true;
+
+        field(setName).prop('disabled', true);
+
+        var card = document.getElementById('demo-config-card-' + setName);
+        card.classList.add('demo-config-busy');
     }
 
-    // The master's own Running badge only shows for changes it started itself
-    var master = document.getElementById('demo-config-master');
-    master.classList.toggle('demo-config-busy', isBusy && isFromMaster);
+    // The master cannot flip everything while any set is still moving
+    masterField.prop('disabled', true);
+
+    // The master's own in-flight badge only shows for changes it started itself
+    if(isFromMaster) {
+        var master = document.getElementById('demo-config-master');
+        master.classList.add('demo-config-busy');
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A finished change confirms itself where its Running badge was,
+var markDone = function(changedSets, isFromMaster) {
+
+    for(var changedIdx = 0; changedIdx < changedSets.length; changedIdx++) {
+
+        var setName = changedSets[changedIdx];
+        delete busySets[setName];
+
+        field(setName).prop('disabled', false);
+
+        var card = document.getElementById('demo-config-card-' + setName);
+        card.classList.remove('demo-config-busy');
+    }
+
+    if(isFromMaster) {
+        var master = document.getElementById('demo-config-master');
+        master.classList.remove('demo-config-busy');
+    }
+
+    // The master frees up once nothing is moving anywhere
+    if(!hasBusySets()) {
+        masterField.prop('disabled', false);
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Each badge about to show says which way its slider just went
+var setRunningLabels = function(desiredStates, changedSets, isFromMaster) {
+
+    for(var changedIdx = 0; changedIdx < changedSets.length; changedIdx++) {
+
+        var setName = changedSets[changedIdx];
+        var labelText = desiredStates[setName] ? config.runningImportLabel : config.runningRemoveLabel;
+
+        document.getElementById('demo-config-running-label-' + setName).textContent = labelText;
+    }
+
+    // A master-driven change moves every set the same way,
+    // so its own badge reads like any of theirs
+    if(isFromMaster) {
+        var masterText = masterField.is(':checked') ? config.runningImportLabel : config.runningRemoveLabel;
+        document.getElementById('demo-config-running-label-all').textContent = masterText;
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// A finished change confirms itself where its in-flight badge was,
 // then steps back out of the way on its own
 var showOkBadge = function(element, text) {
 
@@ -226,9 +286,19 @@ var showOkBadge = function(element, text) {
     }, config.okVisibleMs);
 };
 
-var hideOkBadges = function() {
+// Only the confirmations of the sliders a new change touches step aside -
+// the ones from other changes still running or just finished stay put
+var hideOkBadges = function(changedSets, isFromMaster) {
 
-    var elements = document.querySelectorAll('.demo-config-ok');
+    var elements = [];
+
+    for(var changedIdx = 0; changedIdx < changedSets.length; changedIdx++) {
+        elements.push(document.getElementById('demo-config-ok-' + changedSets[changedIdx]));
+    }
+
+    if(isFromMaster) {
+        elements.push(document.getElementById('demo-config-ok-all'));
+    }
 
     for(var elementIdx = 0; elementIdx < elements.length; elementIdx++) {
         var element = elements[elementIdx];
@@ -265,13 +335,16 @@ var errorTextFromResponse = function(xhr, defaultText) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The request carries only the sets it changes, so several changes
+// can be on their way at the same time without touching each other
 var apply = function(desiredStates, changedSets, isFromMaster) {
 
     // Whatever the last change said is no longer about what is on screen
     errorElement.textContent = '';
-    hideOkBadges();
+    hideOkBadges(changedSets, isFromMaster);
 
-    setBusy(true, changedSets, isFromMaster);
+    setRunningLabels(desiredStates, changedSets, isFromMaster);
+    markBusy(changedSets, isFromMaster);
 
     $.ajax({
         url: config.saveUrl,
@@ -284,11 +357,17 @@ var apply = function(desiredStates, changedSets, isFromMaster) {
         }),
         contentType: 'application/json',
         success: function(response) {
-            setBusy(false, changedSets, isFromMaster);
+            markDone(changedSets, isFromMaster);
 
-            // The cards show what actually exists after the change ..
-            lastData = response.sets;
-            renderAll(lastData);
+            // Only this change's cards are repainted - the others may have
+            // their own changes still on the way, so they are left alone
+            for(var setIdx = 0; setIdx < changedSets.length; setIdx++) {
+                var changedName = changedSets[setIdx];
+                lastData[changedName] = response.sets[changedName];
+                renderCard(changedName, lastData[changedName]);
+            }
+
+            syncMaster(lastData);
 
             // .. and each changed slider confirms what just happened
             var firstOkText = '';
@@ -318,11 +397,19 @@ var apply = function(desiredStates, changedSets, isFromMaster) {
             }
         },
         error: function(xhr) {
-            setBusy(false, changedSets, isFromMaster);
+            markDone(changedSets, isFromMaster);
             errorElement.textContent = errorTextFromResponse(xhr, config.applyErrorText);
 
-            // The sliders go back to what is actually in the cluster
-            renderAll(lastData);
+            // Only this change's sliders go back to what is actually
+            // in the cluster - the others are none of its business
+            for(var setIdx = 0; setIdx < changedSets.length; setIdx++) {
+                var changedName = changedSets[setIdx];
+                if(changedName in lastData) {
+                    renderCard(changedName, lastData[changedName]);
+                }
+            }
+
+            syncMaster(lastData);
         }
     });
 };
@@ -331,7 +418,12 @@ var apply = function(desiredStates, changedSets, isFromMaster) {
 
 $.each(config.sets, function(_ignored, setName) {
     field(setName).on('change', function() {
-        apply(collectStates(), [setName], false);
+
+        // The request speaks only for this one slider
+        var desiredStates = {};
+        desiredStates[setName] = field(setName).is(':checked');
+
+        apply(desiredStates, [setName], false);
     });
 });
 
@@ -345,10 +437,10 @@ masterField.on('change', function() {
     for(var setIdx = 0; setIdx < config.sets.length; setIdx++) {
 
         var setName = config.sets[setIdx];
-        desiredStates[setName] = isOn;
 
-        // Only the sets whose state actually flips show as busy
+        // Only the sets whose state actually flips travel with the request
         if(setName in lastData && lastData[setName].is_present !== isOn) {
+            desiredStates[setName] = isOn;
             changedSets.push(setName);
         }
 
