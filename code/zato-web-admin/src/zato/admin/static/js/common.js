@@ -167,7 +167,6 @@ $.namespace('zato.outgoing.llm.data_table');
 $.namespace('zato.outgoing.odata');
 $.namespace('zato.outgoing.odata.data_table');
 $.namespace('zato.outgoing.odoo');
-$.namespace('zato.outgoing.redis');
 $.namespace('zato.outgoing.sftp');
 $.namespace('zato.outgoing.sftp.command_shell');
 $.namespace('zato.outgoing.sftp.data_table');

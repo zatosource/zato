@@ -1059,6 +1059,20 @@ test-mongodb: ## MongoDB connection tests against a live server, plain and TLS.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mongodb \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-mongodb-simulated: ## MongoDB connection tests against an in-process wire-protocol simulator, fully offline.
+	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-server/mongodb_simulated/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/mongodb_simulated/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mongodb_simulated \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-redis-service: ## Redis tests for the self.redis service API against a local redis-server process, started by the tests.
+	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-server/redis_service/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/redis_service/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_redis_service \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-es: ## Elasticsearch connection tests against a live server, plain and TLS.
 	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-server/es/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \

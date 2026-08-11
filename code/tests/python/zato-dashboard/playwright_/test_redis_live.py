@@ -66,12 +66,9 @@ from amqp_fixtures import rabbitmq_broker # noqa: F401 # pyright: ignore[reportU
 
 logger = logging.getLogger('zato.test.playwright')
 
-_Test_Name_Prefix = 'test.config.db.redis.live.' + rand_string() + '.'
+_Test_Name_Prefix = 'test.redis.live.' + rand_string() + '.'
 
 _Echo_Service = 'demo.echo'
-
-# The prefix the CacheAPI puts in front of every key it stores in Redis
-_Cache_Key_Prefix = 'zato:cache:'
 
 # The fixture service deployed at server boot from fixtures/services
 _Cache_Check_Service = 'test.config-db.cache-check'
@@ -99,12 +96,12 @@ _shared_state = {} # type: dict
 # ################################################################################################################################
 
 def _get_redis_key(port:'int', key:'str', **connect_args:'any_') -> 'any_':
-    """ Reads one cache key straight from a Redis server, bypassing the Zato server
-    entirely, which proves where the cache write physically landed.
+    """ Reads one key straight from a Redis server, bypassing the Zato server
+    entirely, which proves where the write physically landed.
     """
     conn = Redis(host='127.0.0.1', port=port, decode_responses=True, **connect_args)
 
-    out = conn.get(_Cache_Key_Prefix + key)
+    out = conn.get(key)
     conn.close()
 
     return out
@@ -112,7 +109,7 @@ def _get_redis_key(port:'int', key:'str', **connect_args:'any_') -> 'any_':
 # ################################################################################################################################
 
 def _check_cache(api_client:'any_', suffix:'str') -> 'tuple':
-    """ Writes a key through the server's live cache connection via the fixture service
+    """ Writes a key through the server's live Redis connection via the fixture service
     and returns the key along with the value the service read back.
     """
     key = 'test.config-db.cache.' + suffix + '.' + new_cid()
@@ -160,7 +157,7 @@ def webhook_receiver() -> 'any_':
     """ A module-scoped local HTTP receiver for push subscription deliveries.
     """
     receiver_port = find_free_port()
-    output_directory = tempfile.mkdtemp(prefix='zato_test_config_db_redis_')
+    output_directory = tempfile.mkdtemp(prefix='zato_test_redis_')
 
     receiver = WebhookReceiver(receiver_port, output_directory)
     receiver.start()
@@ -209,7 +206,7 @@ def redis_tls_server() -> 'any_':
     """ A local redis-server process that accepts TLS connections only,
     on a dynamic port with throwaway certificates.
     """
-    certificates_dir = tempfile.mkdtemp(prefix='zato-config-db-redis-certificates-')
+    certificates_dir = tempfile.mkdtemp(prefix='zato-redis-certificates-')
     certificate_paths = generate_certificates(certificates_dir)
 
     tls_port = find_free_port()
@@ -243,9 +240,9 @@ def redis_tls_server() -> 'any_':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestConfigDBRedisLive:
-    """ The Redis connection is reconfigured on the fly through the Config DB Redis screen -
-    self.cache moves to the saved server immediately, the configuration is persisted
+class TestRedisLive:
+    """ The Redis connection is reconfigured on the fly through the Redis screen -
+    self.redis moves to the saved server immediately, the configuration is persisted
     in server.conf and survives a restart, TLS works end to end, and neither Redis-backed
     nor AMQP-backed pub/sub topics are disturbed.
     """
@@ -316,7 +313,7 @@ class TestConfigDBRedisLive:
         zato_dashboard:'anydict',
         api_client:'any_',
         ) -> 'None':
-        """ Saving the session's dedicated Redis through the screen makes self.cache
+        """ Saving the session's dedicated Redis through the screen makes self.redis
         write to that server immediately - the key is physically there and it is
         not on the default localhost server.
         """
@@ -335,13 +332,12 @@ class TestConfigDBRedisLive:
             'ssl_verify': True,
         })
 
-        # .. write through self.cache via the fixture service ..
+        # .. write through self.redis via the fixture service ..
         key, value = _check_cache(api_client, 'save')
 
         # .. the key is physically on the saved server ..
         stored = _get_redis_key(session_redis_port, key)
-        assert stored is not None, f'Expected `{key}` on the saved Redis, got nothing'
-        assert json.loads(stored) == value, f'Expected `{value}` on the saved Redis, got: {stored}'
+        assert stored == value, f'Expected `{value}` on the saved Redis, got: {stored}'
 
         # .. and it is not on the default localhost server the cache used before.
         stored_on_default = _get_redis_key(_Default_Redis_Port, key)
@@ -385,7 +381,7 @@ class TestConfigDBRedisLive:
 
         # A REST channel answers ..
         channel_name = _Test_Name_Prefix + 'channel'
-        url_path = '/test/config-db/redis/live/' + rand_string()
+        url_path = '/test/redis/live/' + rand_string()
 
         _ = create_channel(page, base_url, channel_name, _Echo_Service, url_path, {
             'data_format': 'json',
@@ -444,7 +440,7 @@ class TestConfigDBRedisLive:
         zato_dashboard:'anydict',
         api_client:'any_',
         ) -> 'None':
-        """ After a full restart the cache is rebuilt from server.conf and still
+        """ After a full restart the connection is rebuilt from server.conf and still
         writes to the saved Redis - the persistence works end to end.
         """
         session_redis_port = zato_dashboard['queue_bridge_redis_port']
@@ -454,8 +450,7 @@ class TestConfigDBRedisLive:
         key, value = _check_cache(api_client, 'restart')
 
         stored = _get_redis_key(session_redis_port, key)
-        assert stored is not None, f'Expected `{key}` on the saved Redis after the restart, got nothing'
-        assert json.loads(stored) == value, f'Expected `{value}` on the saved Redis after the restart, got: {stored}'
+        assert stored == value, f'Expected `{value}` on the saved Redis after the restart, got: {stored}'
 
 # ################################################################################################################################
 
@@ -483,7 +478,7 @@ class TestConfigDBRedisLive:
         redis_tls_server:'anydict',
         ) -> 'None':
         """ A TLS-only Redis server is tested and saved through the screen -
-        self.cache works over TLS and the key is on the TLS server.
+        self.redis works over TLS and the key is on the TLS server.
         """
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -507,13 +502,12 @@ class TestConfigDBRedisLive:
         # .. save it as the server's connection ..
         save_redis_connection(page, base_url, tls_values)
 
-        # .. self.cache now writes over TLS ..
+        # .. self.redis now writes over TLS ..
         key, value = _check_cache(api_client, 'tls')
 
         # .. and the key is physically on the TLS server.
         stored = _get_redis_key(tls_port, key, ssl=True, ssl_ca_certs=ca_cert)
-        assert stored is not None, f'Expected `{key}` on the TLS Redis, got nothing'
-        assert json.loads(stored) == value, f'Expected `{value}` on the TLS Redis, got: {stored}'
+        assert stored == value, f'Expected `{value}` on the TLS Redis, got: {stored}'
 
 # ################################################################################################################################
 
@@ -540,7 +534,7 @@ class TestConfigDBRedisLive:
 
         save_redis_connection(page, base_url, original_values)
 
-        # The cache works against the restored connection too
+        # The Redis connection works against the restored values too
         _ = _check_cache(api_client, 'restore')
 
 # ################################################################################################################################

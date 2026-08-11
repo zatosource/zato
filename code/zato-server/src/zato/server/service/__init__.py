@@ -45,7 +45,6 @@ from zato.common.util.message import Message
 from zato.common.util.time_ import utcnow
 from zato.common.util.xml_.message import XMLMessage
 from zato.server.commands import CommandsFacade
-from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import AS2Facade, AS4Facade, ESFacade, FHIRFacade, IBMMQFacade, KafkaFacade, GraphQLFacade, \
     KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SchedulerFacade, SFTPFacade, SMBFacade, SOAPFacade
@@ -94,6 +93,7 @@ UUID = UUID # type: ignore
 
 if 0:
     from logging import Logger
+    from redis import Redis
     from zato.common.config_dispatcher import ConfigDispatcher
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
@@ -122,6 +122,7 @@ if 0:
     FTPStore = FTPStore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
+    Redis = Redis
     ServerCryptoManager = ServerCryptoManager
     timedelta = timedelta
     TimeUtil = TimeUtil
@@ -438,7 +439,9 @@ class Service:
     component_enabled_odoo: 'bool'
     component_enabled_email: 'bool'
 
-    cache: 'CacheAPI'
+    redis: 'Redis'
+    kvdb:  'Redis'
+    cache: 'Redis'
 
     def __init__(
         self,
@@ -637,8 +640,10 @@ class Service:
 
         self.response.init(self.cid, io_processor, self.data_format, output_model_class)
 
-        # Cache is always enabled
-        self.cache = self._config_manager.cache_api
+        # The server-wide Redis connection, with kvdb and cache as its aliases
+        self.redis = self._config_manager.cache_api.redis
+        self.kvdb = self.redis
+        self.cache = self.redis
 
         # AS2 facade
         self.as2.init(self.cid, self._config_manager)

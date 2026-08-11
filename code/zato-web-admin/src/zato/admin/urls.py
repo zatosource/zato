@@ -15,7 +15,7 @@ from django.views.static import serve as static_serve
 from zato.admin import settings
 from zato.admin.web.views import account, config_db, datadog, demo_config, destinations, env_variables, grafana_cloud, \
     highlight as highlight_view, http_soap, live_form_updates, log_streaming, logging_, \
-    main, news, openapi_, python_packages, sbom, scheduler, service, updates
+    main, news, openapi_, python_packages, redis_, sbom, scheduler, service, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import as4 as channel_as4
 from zato.admin.web.views.channel.hl7 import dashboard as channel_hl7_dashboard
@@ -396,6 +396,8 @@ urlpatterns += [
 
     url(r'^zato/alerting/rules/$',
         login_required(alerting.index), name='alert-rules'),
+    url(r'^zato/alerting/rules/config/$',
+        login_required(alerting.config), name='alert-rules-config'),
     url(r'^zato/alerting/rules/editor/$',
         login_required(alerting.editor), name='alert-rules-editor'),
     url(r'^zato/alerting/rules/action/$',
@@ -916,24 +918,6 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. MongoDB
-
-    url(r'^zato/outgoing/mongodb/$',
-        login_required(out_mongodb.Index()), name=out_mongodb.Index.url_name),
-    url(r'^zato/outgoing/mongodb/create/$',
-        login_required(out_mongodb.Create()), name=out_mongodb.Create.url_name),
-    url(r'^zato/outgoing/mongodb/edit/$',
-        login_required(out_mongodb.Edit()), name=out_mongodb.Edit.url_name),
-    url(r'^zato/outgoing/mongodb/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_mongodb.Delete()), name=out_mongodb.Delete.url_name),
-    url(r'^zato/outgoing/mongodb/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_mongodb.ping), name='out-mongodb-ping'),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
     # .. Odoo
 
     url(r'^zato/outgoing/odoo/$',
@@ -1219,16 +1203,25 @@ urlpatterns += [
 
     # .. MongoDB
 
-    url(r'^zato/outgoing/mongodb/$',
+    url(r'^zato/mongodb/$',
         login_required(out_mongodb.Index()), name=out_mongodb.Index.url_name),
-    url(r'^zato/outgoing/mongodb/create/$',
+    url(r'^zato/mongodb/create/$',
         login_required(out_mongodb.Create()), name=out_mongodb.Create.url_name),
-    url(r'^zato/outgoing/mongodb/edit/$',
+    url(r'^zato/mongodb/edit/$',
         login_required(out_mongodb.Edit()), name=out_mongodb.Edit.url_name),
-    url(r'^zato/outgoing/mongodb/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+    url(r'^zato/mongodb/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_mongodb.Delete()), name=out_mongodb.Delete.url_name),
-    url(r'^zato/outgoing/mongodb/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+    url(r'^zato/mongodb/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_mongodb.ping), name='out-mongodb-ping'),
+
+    # .. Redis
+
+    url(r'^zato/redis/$',
+        login_required(redis_.index), name='redis'),
+    url(r'^zato/redis/test$',
+        login_required(redis_.test), name='redis-test'),
+    url(r'^zato/redis/save$',
+        login_required(redis_.save), name='redis-save'),
     ]
 
 # ################################################################################################################################
@@ -1769,12 +1762,6 @@ urlpatterns += [
         login_required(config_db.sql_test), name='config-db-sql-test'),
     url(r'^zato/config-db/sql/save$',
         login_required(config_db.sql_save), name='config-db-sql-save'),
-    url(r'^zato/config-db/redis/$',
-        login_required(config_db.redis_index), name='config-db-redis'),
-    url(r'^zato/config-db/redis/test$',
-        login_required(config_db.redis_test), name='config-db-redis-test'),
-    url(r'^zato/config-db/redis/save$',
-        login_required(config_db.redis_save), name='config-db-redis-save'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################

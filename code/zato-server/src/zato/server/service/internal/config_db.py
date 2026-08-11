@@ -314,14 +314,14 @@ class RedisSave(AdminService):
         if password:
             ram_section['password'] = password
 
-        # .. and finally, rebuild the live Redis client behind self.cache.
+        # .. and finally, rebuild the live Redis client behind self.redis.
         self.server.config_manager.reconfigure_redis_cache()
 
-        logger.info('Config DB Redis save: `%s:%s` db `%s`', values['host'], values['port'], values['db'])
+        logger.info('Redis save: `%s:%s` db `%s`', values['host'], values['port'], values['db'])
 
         self.response.payload = {
             'success': True,
-            'message': 'Saved, the cache connection now uses the new configuration',
+            'message': 'Saved, the Redis connection now uses the new configuration',
         }
 
 # ################################################################################################################################

@@ -88,7 +88,7 @@ class ResponseCacheInvalidate(Service):
     name = 'test.response-cache.invalidate'
 
     def handle(self) -> 'None':
-        self.cache.invalidate_response(_data_channel_name)
+        self._config_manager.cache_api.invalidate_response(_data_channel_name)
         self.response.payload = {'ok': True}
 
 # ################################################################################################################################

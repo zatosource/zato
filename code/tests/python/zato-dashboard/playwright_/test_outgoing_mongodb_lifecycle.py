@@ -40,7 +40,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/outgoing/mongodb/?cluster=1&type_=outconn-mongodb'
+_Page_Url_Pattern = '/zato/mongodb/?cluster=1&type_=outconn-mongodb'
 
 _Test_Name_Prefix = 'test.mongodb.' + CryptoManager.generate_hex_string(32) + '.'
 
@@ -371,7 +371,7 @@ class TestOutgoingMongoDBLifecycle:
             row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
 
             with page.expect_response(
-                lambda response: '/zato/outgoing/mongodb/ping/' in response.url, timeout=30000) as response_info:
+                lambda response: '/zato/mongodb/ping/' in response.url, timeout=30000) as response_info:
                 page.click(f'{row_selector} a:has-text("Ping")')
 
             response = response_info.value
@@ -386,7 +386,7 @@ class TestOutgoingMongoDBLifecycle:
             # .. and ping again - the connection must still authenticate,
             # .. proving the empty field did not overwrite the stored password ..
             with page.expect_response(
-                lambda response: '/zato/outgoing/mongodb/ping/' in response.url, timeout=30000) as response_info:
+                lambda response: '/zato/mongodb/ping/' in response.url, timeout=30000) as response_info:
                 page.click(f'{row_selector} a:has-text("Ping")')
 
             response = response_info.value

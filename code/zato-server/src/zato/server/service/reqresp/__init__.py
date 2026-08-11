@@ -303,10 +303,10 @@ class Outgoing:
     fetched from the service's config manager.
     """
     __slots__ = ('amqp', 'as2', 'as4', 'ftp', 'graphql', 'kafka', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'ldap',
-        'redis', '_config_manager')
+        '_config_manager')
 
     def __init__(self, amqp=None, graphql=None, kafka=None, odoo=None, plain_http=None, soap=None, sql=None,
-            ldap=None, redis=None, as2=None, as4=None, config_manager=None):
+            ldap=None, as2=None, as4=None, config_manager=None):
 
         self.amqp = cast_('AMQPFacade', amqp)
 
@@ -327,8 +327,6 @@ class Outgoing:
         self.sql   = cast_('PoolStore', sql)
 
         self.ldap = cast_('stranydict', ldap)
-
-        self.redis = cast_('KVDBAPI', redis)
 
         self._config_manager = cast_('ConfigManager', config_manager)
 

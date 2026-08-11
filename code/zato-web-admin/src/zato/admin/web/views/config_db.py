@@ -18,7 +18,6 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.admin.web.views.settings.config import config_db_redis_page_config
 from zato.common.config_db import apply_env_variables, get_default_env_file_path, persist_env_variables
 from zato.common.json_internal import dumps, loads
 
@@ -139,43 +138,6 @@ def sql_test(req:'any_') -> 'HttpResponse':
 @method_allowed('POST')
 def sql_save(req:'any_') -> 'HttpResponse':
     out = _invoke(req, 'zato.config-db.sql.save')
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def redis_index(req:'any_') -> 'TemplateResponse':
-
-    # The current values of the default Redis connection
-    redis_values = {}
-
-    try:
-        response = req.zato.client.invoke('zato.config-db.redis.get', {})
-        if response.ok:
-            redis_values = response.data['values']
-        else:
-            logger.error('config_db redis_index: invoke failed: %s', response)
-    except Exception:
-        logger.error('config_db redis_index: %s', format_exc())
-
-    return TemplateResponse(req, 'zato/config-db/redis/index.html', {
-        'page_config': config_db_redis_page_config,
-        'redis_values': redis_values,
-    })
-
-# ################################################################################################################################
-
-@method_allowed('POST')
-def redis_test(req:'any_') -> 'HttpResponse':
-    out = _invoke(req, 'zato.config-db.redis.test')
-    return out
-
-# ################################################################################################################################
-
-@method_allowed('POST')
-def redis_save(req:'any_') -> 'HttpResponse':
-    out = _invoke(req, 'zato.config-db.redis.save')
     return out
 
 # ################################################################################################################################

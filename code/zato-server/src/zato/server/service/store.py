@@ -111,6 +111,11 @@ data_class_model_class_name = 'zato.server.service.Model'
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _TestingCacheAPI:
+    redis = None
+
+# ################################################################################################################################
+
 class _TestingConfigManager:
     sql_pool_store = None
     outconn_es = None
@@ -118,7 +123,7 @@ class _TestingConfigManager:
     outconn_mongodb = None
     email_smtp_api = None
     email_imap_api = None
-    cache_api = None
+    cache_api = _TestingCacheAPI()
 
     def __init__(self):
         self.config_store = cast_('ConfigStore', None)

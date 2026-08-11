@@ -16,8 +16,8 @@ from zato.server.service import Service
 # ################################################################################################################################
 
 class CacheCheck(Service):
-    """ Exercises self.cache for the Config DB Redis tests - writes a key through the
-    server's live cache connection and returns what it read back, so a test can then
+    """ Exercises self.redis for the Redis screen tests - writes a key through the
+    server's live Redis connection and returns what it read back, so a test can then
     connect to the expected Redis server directly and confirm the key is physically there.
     """
 
@@ -33,9 +33,9 @@ class CacheCheck(Service):
         key = request['key']
         value = request['value']
 
-        # Write through the live cache connection and read the value back
-        self.cache.set(key, value)
-        read_value = self.cache.get(key)
+        # Write through the live Redis connection and read the value back
+        self.redis.set(key, value)
+        read_value = self.redis.get(key)
 
         self.response.payload = dumps({'read_value': read_value})
 

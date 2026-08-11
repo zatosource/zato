@@ -20,15 +20,15 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/config-db/redis/'
+_Page_Url_Pattern = '/zato/redis/'
 
-_Test_Name_Prefix = 'test.config.db.redis.' + CryptoManager.generate_hex_string(32) + '.'
+_Test_Name_Prefix = 'test.redis.' + CryptoManager.generate_hex_string(32) + '.'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestConfigDBRedis:
-    """ Tests for the Config DB Redis screen.
+class TestRedis:
+    """ Tests for the Redis screen.
     """
 
     def test_01_page_loads(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':

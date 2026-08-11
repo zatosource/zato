@@ -3,9 +3,9 @@
 $(document).ready(function() {
 
     var config = {};
-    config.apiPrefix = '/zato/config-db/redis/';
-    config.testUrl = '/zato/config-db/redis/test';
-    config.saveUrl = '/zato/config-db/redis/save';
+    config.apiPrefix = '/zato/redis/';
+    config.testUrl = '/zato/redis/test';
+    config.saveUrl = '/zato/redis/save';
     config.saveProgressLabel = 'Saving...';
     config.saveErrorLabel = 'Save failed';
     config.testErrorLabel = 'Test failed';
@@ -74,9 +74,9 @@ $(document).ready(function() {
 
     config.tourSteps[0] = {};
     config.tourSteps[0].popover = {};
-    config.tourSteps[0].popover.title = 'Config DB - Redis';
-    config.tourSteps[0].popover.description = 'Configure the default Redis connection, including SSL/TLS. ' +
-        'The settings are stored as environment variables in the server process.';
+    config.tourSteps[0].popover.title = 'Redis';
+    config.tourSteps[0].popover.description = 'Configure the Redis connection that services use, including SSL/TLS. ' +
+        'The settings are stored in the server config file.';
 
     config.tourSteps[1] = {};
     config.tourSteps[1].element = '#check-button';

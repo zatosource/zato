@@ -77,5 +77,5 @@
 
 {% block form_page_js %}
 {{ redis_values|json_script:"redis-values" }}
-<script type="text/javascript" src="/static/js/config-db/redis.js" nonce="{{ CSP_NONCE }}"></script>
+<script type="text/javascript" src="/static/js/redis.js" nonce="{{ CSP_NONCE }}"></script>
 {% endblock %}

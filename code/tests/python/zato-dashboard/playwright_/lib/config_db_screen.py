@@ -23,7 +23,7 @@ if 0:
 # ################################################################################################################################
 
 Sql_Page_Url = '/zato/config-db/sql/'
-Redis_Page_Url = '/zato/config-db/redis/'
+Redis_Page_Url = '/zato/redis/'
 
 # The checkbox fields of both forms - everything else is a text input
 _checkbox_fields = ('ssl', 'ssl_verify')
