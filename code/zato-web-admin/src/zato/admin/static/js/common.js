@@ -416,6 +416,61 @@ $.fn.zato.data_table.on_submit_complete_callback_args = null;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+// Column names whose header and body cells are always centered in data tables
+$.fn.zato.data_table.center_column_names = [
+    'Active',
+    'Auth type',
+    'Client',
+    'Client ID field',
+    'Client secret field',
+    'Current size',
+    'Default',
+    'Extend exp. on get',
+    'Extend exp. on set',
+    'Grant type',
+    'Instance',
+    'Internal',
+    'Max size',
+    'Max item size',
+    'Members',
+    'User',
+    'Use TLS',
+];
+
+// Applies inline centering to each column from center_column_names. It runs on page load
+// and again after a row is created or edited, because rows built in JavaScript
+// would otherwise lack the inline style that the initially rendered rows carry.
+$.fn.zato.data_table.center_columns = function() {
+
+    var table = $('#data-table');
+    var header_row = table.find('thead tr').first();
+
+    header_row.find('th').each(function(col_index) {
+        var header_cell = $(this);
+        var header_text = header_cell.find('a').text().trim();
+
+        if(!$.fn.zato.data_table.center_column_names.includes(header_text)) {
+            return;
+        }
+
+        header_cell.css('text-align', 'center');
+
+        // The header link is a block element with its own padding,
+        // so it needs the same treatment or the label stays offset.
+        header_cell.find('a').css({
+            'text-align': 'center',
+            'display': 'block',
+            'padding-right': '0'
+        });
+
+        table.find('tbody tr').each(function() {
+            $(this).find('td').eq(col_index).css('text-align', 'center');
+        });
+    });
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 // Returns the cell of a given logical column in a row - the index comes from the page's
 // get_columns list, so callers survive any reordering of the table's cells.
 $.fn.zato.data_table.get_cell = function(id, column_name) {
@@ -1382,6 +1437,10 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
             $.fn.zato.data_table.row_updated(json.id);
             $.fn.zato.data_table._bounce_row(tr, 'edit');
         }
+
+        // The new or replaced row was built in JavaScript, so it needs
+        // the same inline column centering the initial rows received on load.
+        $.fn.zato.data_table.center_columns();
     }
 
     $.fn.zato.data_table._on_submit_complete(data, status);
@@ -4534,6 +4593,51 @@ $(window).on('keydown.zato-dialog-esc', function(e) {
 
     // .. and close it, unless closeOnEscape is off, e.g. the how-it-works
     // help mode turns it off while active and handles Escape on its own.
+    var content = topmost.find('.ui-dialog-content');
+    if(content.dialog('option', 'closeOnEscape')) {
+        content.dialog('close');
+    }
+});
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Clicking outside a jQuery UI dialog closes the topmost one, mirroring the Esc
+// fallback above. Clicks on UI that renders outside the dialog's DOM node while
+// logically belonging to it - tooltips, alert popups, tour popovers or the
+// action runner's details modal - must not close anything, hence the filter.
+$(document).on('mousedown.zato-dialog-outside-close', function(e) {
+
+    // Only the primary button counts as a close request
+    if(e.which !== 1) {
+        return;
+    }
+
+    var ignored_selector = '.ui-dialog, [data-tippy-root], #popup_container, .driver-popover, ' +
+        '.invoker-modal-overlay, .ui-datepicker';
+    if($(e.target).closest(ignored_selector).length) {
+        return;
+    }
+
+    // Find the topmost visible dialog by z-index ..
+    var topmost = null;
+    var topmost_z = -1;
+    $('.ui-dialog:visible').each(function() {
+        var z = parseInt($(this).css('z-index'), 10);
+        if(isNaN(z)) {
+            z = 0;
+        }
+        if(z > topmost_z) {
+            topmost_z = z;
+            topmost = $(this);
+        }
+    });
+
+    if(!topmost) {
+        return;
+    }
+
+    // .. and close it, reusing closeOnEscape as the "may be dismissed" flag,
+    // e.g. the how-it-works help mode turns it off while active.
     var content = topmost.find('.ui-dialog-content');
     if(content.dialog('option', 'closeOnEscape')) {
         content.dialog('close');

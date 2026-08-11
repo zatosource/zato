@@ -90,49 +90,7 @@
         // Let users reveal password fields
         $(document).ready(function() {
 
-            const centerAlignColumnNames = [
-                'Active',
-                'Auth type',
-                'Client',
-                'Client ID field',
-                'Client secret field',
-                'Current size',
-                'Default',
-                'Extend exp. on get',
-                'Extend exp. on set',
-                'Grant type',
-                'Instance',
-                'Internal',
-                'Max size',
-                'Max item size',
-                'Members',
-                'User',
-                'Use TLS',
-            ];
-
-            const table = $('#data-table');
-            const headerRow = table.find('thead tr').first();
-
-            headerRow.find('th').each(function(colIndex) {
-                const headerCell = $(this);
-                const headerText = headerCell.find('a').text().trim();
-
-                if(centerAlignColumnNames.includes(headerText)) {
-                    headerCell.css('text-align', 'center');
-
-                    // Adjust the header link to be properly centered
-                    const headerLink = headerCell.find('a');
-                    headerLink.css({
-                        'text-align': 'center',
-                        'display': 'block',
-                        'padding-right': '0'
-                    });
-
-                    table.find('tbody tr').each(function() {
-                        $(this).find('td').eq(colIndex).css('text-align', 'center');
-                    });
-                }
-            });
+            $.fn.zato.data_table.center_columns();
 
             // Session timer
             const sessionDuration = 60 * 60 * 2;
