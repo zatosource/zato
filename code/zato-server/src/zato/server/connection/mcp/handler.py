@@ -22,8 +22,9 @@ from zato.server.connection.mcp import stateless
 from zato.server.connection.mcp.common import _error_invalid_params, _error_invalid_request, _error_method_not_found, \
     _error_parse, _jsonrpc_version, _message_bad_request, _message_invalid_cursor, _message_invalid_params, \
     _message_invalid_request, _message_missing_jsonrpc_version, _message_missing_method, _message_missing_tool_name, \
-    _message_parse_error, _method_tools_call, _server_name, _server_version, make_error_response, \
-    make_success_response, MCPResponse
+    _message_parse_error, _message_prompt_not_found, _method_prompts_get, _method_prompts_list, _method_tools_call, \
+    _server_name, _server_version, make_error_response, make_success_response, MCPResponse
+from zato.server.connection.mcp.prompts import InvalidCursor
 from zato.server.connection.mcp.session import Session_Invalid_Identity, Session_Valid
 from zato.server.connection.mcp.validate import validate_arguments
 
@@ -34,12 +35,14 @@ if 0:
     from zato.common.typing_ import any_, anydict, stranydict, strnone
     from zato.common.util.safeguards.common import SafeguardConfig
     from zato.common.util.truncate.tokens import TokenCapConfig
+    from zato.server.connection.mcp.prompts import SkillPrompts
     from zato.server.connection.mcp.registry import ToolRegistry
     from zato.server.connection.mcp.session import MCPSessionManager
     from zato.server.service.store import ServiceStore
 
     MCPSessionManager = MCPSessionManager
     ServiceStore = ServiceStore
+    SkillPrompts = SkillPrompts
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,7 +89,7 @@ class DispatchResult(NamedTuple):
 
 class MCPHandler:
     """ Handles MCP JSON-RPC 2.0 dispatch for a single MCP gateway.
-    Routes initialize, tools/list, tools/call, and ping methods.
+    Routes initialize, tools/list, tools/call, prompts/list, prompts/get, and ping methods.
     """
 
     def __init__(
@@ -97,6 +100,7 @@ class MCPHandler:
         safeguard_config:'SafeguardConfig',
         token_cap_config:'TokenCapConfig',
         validate_input:'bool',
+        skill_prompts:'SkillPrompts',
         ) -> 'None':
         self.tool_registry = tool_registry
         self.invoke_func = invoke_func
@@ -104,6 +108,7 @@ class MCPHandler:
         self.safeguard_config = safeguard_config
         self.token_cap_config = token_cap_config
         self.validate_input = validate_input
+        self.skill_prompts = skill_prompts
 
 # ################################################################################################################################
 
@@ -200,11 +205,11 @@ class MCPHandler:
             method = parsed.get('method')
 
             # .. record what is being dispatched for the audit log - the method for every
-            # request and, for tool calls, the name of the tool being invoked ..
+            # request and, for tool calls and prompt reads, the name being asked for ..
             if isinstance(method, str):
                 out.method = method
 
-                if method == _method_tools_call:
+                if method in (_method_tools_call, _method_prompts_get):
                     params = parsed.get('params')
 
                     if isinstance(params, dict):
@@ -345,6 +350,18 @@ class MCPHandler:
             out = DispatchResult(body, None)
             return out
 
+        if method == _method_prompts_list:
+
+            body = self._handle_prompts_list(request_id, params)
+            out = DispatchResult(body, None)
+            return out
+
+        if method == _method_prompts_get:
+
+            body = self._handle_prompts_get(request_id, params)
+            out = DispatchResult(body, None)
+            return out
+
         if method == 'ping':
 
             body = self._handle_ping(request_id)
@@ -390,11 +407,17 @@ class MCPHandler:
             out = DispatchResult(body, None)
             return out
 
+        capabilities:'stranydict' = {
+            'tools': {},
+        }
+
+        # The prompts capability is only advertised when there is a prompt to serve at all
+        if self.skill_prompts.has_prompts():
+            capabilities['prompts'] = {}
+
         result:'stranydict' = {
             'protocolVersion': _mcp_protocol_version,
-            'capabilities': {
-                'tools': {},
-            },
+            'capabilities': capabilities,
             'serverInfo': {
                 'name': _server_name,
                 'version': _server_version,
@@ -428,6 +451,74 @@ class MCPHandler:
 
         if next_cursor:
             result['nextCursor'] = next_cursor
+
+        out = make_success_response(request_id, result)
+        return out
+
+# ################################################################################################################################
+
+    def _handle_prompts_list(self, request_id:'any_', params:'anydict') -> 'stranydict':
+        """ Handles the MCP prompts/list request.
+        Answers with the names and descriptions of the skills this gateway serves,
+        cursor-paginated the way tools/list is - the instructions do not travel here.
+        """
+
+        cursor = params.get('cursor')
+
+        try:
+            prompts, next_cursor = self.skill_prompts.get_prompts_page(cursor)
+        except InvalidCursor:
+            out = make_error_response(request_id, _error_invalid_params, _message_invalid_cursor)
+            return out
+
+        result:'stranydict' = {
+            'prompts': prompts,
+        }
+
+        if next_cursor:
+            result['nextCursor'] = next_cursor
+
+        out = make_success_response(request_id, result)
+        return out
+
+# ################################################################################################################################
+
+    def _handle_prompts_get(self, request_id:'any_', params:'anydict') -> 'stranydict':
+        """ Handles the MCP prompts/get request.
+        Answers with the named skill's instructions in the MCP prompt result shape.
+        A name outside the gateway's allow list, or whose file is gone, is invalid params.
+        """
+
+        # Extract the prompt name from the params ..
+        prompt_name = params.get('name')
+
+        if not prompt_name:
+
+            out = make_error_response(request_id, _error_invalid_params, _message_missing_tool_name)
+            return out
+
+        # .. the skill has to be on this gateway's allow list and its file has to be on disk ..
+        document = self.skill_prompts.get_prompt(prompt_name)
+
+        if document is None:
+
+            logger.info('MCP: Prompt not found `%s`', prompt_name)
+            out = make_error_response(request_id, _error_invalid_params, _message_prompt_not_found)
+            return out
+
+        # .. and its instructions go out as the one message of the prompt.
+        result:'stranydict' = {
+            'description': document.description,
+            'messages': [
+                {
+                    'role': 'user',
+                    'content': {
+                        'type': 'text',
+                        'text': document.instructions,
+                    },
+                },
+            ],
+        }
 
         out = make_success_response(request_id, result)
         return out

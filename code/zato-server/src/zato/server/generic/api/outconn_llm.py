@@ -16,9 +16,10 @@ from zato.common.api import LLM
 from zato.common.audit_log.api import AuditLog, AuditSource
 from zato.common.audit_log.calls import record_remote_call
 from zato.common.llm_models import default_model_list, get_model_list
+from zato.common.skills.api import load_skill
 from zato.common.typing_ import cast_
 from zato.server.connection.llm.claude import ClaudeClient
-from zato.server.connection.llm.common import Role_Assistant, Role_User
+from zato.server.connection.llm.common import Role_Assistant, Role_System, Role_User
 from zato.server.connection.llm.gemini import GeminiClient
 from zato.server.connection.llm.openai_ import OpenAIClient
 from zato.server.connection.llm.store import ChatHistoryStore
@@ -165,24 +166,46 @@ class OutconnLLMWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def invoke(self, text:'str') -> 'stranydict':
-        """ A one-shot call - nothing is loaded from or saved to the chat history store.
+    def _build_skill_messages(self, skill:'str') -> 'anylist':
+        """ The system context a user skill's instructions become - the skill is named by its
+        directory under the server's config/repo/skills and read from disk on each call,
+        never cached. A name without a skill raises an exception.
         """
-        messages = [{'role': Role_User, 'content': text}]
-        out = self._invoke_client(messages)
+        if not skill:
+            return []
 
+        document = load_skill(self.server.repo_location, skill)
+
+        if document is None:
+            raise Exception(f'Skill not found `{skill}`')
+
+        out = [{'role': Role_System, 'content': document.instructions}]
         return out
 
 # ################################################################################################################################
 
-    def chat(self, text:'str', chat_id:'str'='') -> 'stranydict':
+    def invoke(self, text:'str', skill:'str'='') -> 'stranydict':
+        """ A one-shot call - nothing is loaded from or saved to the chat history store.
+        A skill's instructions, when one is named, go out as the system context of the call.
+        """
+        messages = self._build_skill_messages(skill)
+        messages.append({'role': Role_User, 'content': text})
+
+        out = self._invoke_client(messages)
+        return out
+
+# ################################################################################################################################
+
+    def chat(self, text:'str', chat_id:'str'='', skill:'str'='') -> 'stranydict':
         """ A multi-turn call - history is kept in Redis under the chat's id. Without a chat_id,
-        nothing is loaded or saved and the call is a one-shot, exactly like invoke.
+        nothing is loaded or saved and the call is a one-shot, exactly like invoke. A skill's
+        instructions, when one is named, go out as the system context of each call and are
+        never written into the history.
         """
 
         # Without a chat id there is no history to speak of ..
         if not chat_id:
-            out = self.invoke(text)
+            out = self.invoke(text, skill)
             return out
 
         # .. the store keeps this chat's history in Redis with the configured expiry ..
@@ -204,7 +227,9 @@ class OutconnLLMWrapper(Wrapper):
             # .. plus the assistant's reply and the current user message counts as the newest turn,
             # .. which is why one message fewer than the full turn count goes out ..
             max_messages = self.config['max_history_turns'] * _messages_per_turn - 1
-            messages_to_send = history[-max_messages:]
+            skill_messages = self._build_skill_messages(skill)
+            trimmed_history = history[-max_messages:]
+            messages_to_send = skill_messages + trimmed_history
 
             # .. call the provider ..
             response = self._invoke_client(messages_to_send)

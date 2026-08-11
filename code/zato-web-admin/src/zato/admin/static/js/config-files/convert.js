@@ -1,4 +1,4 @@
-// Config tables - a csv file turned into an ini file.
+// Config files kit - a csv file turned into an ini file.
 //
 // A file of codes handed over by another system is usually a csv file, and what a service reads
 // through self.config is an ini file, so the link beside Check makes one out of the other - every
@@ -14,7 +14,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var convert = tables.convert;
 var log = tables.log;
 

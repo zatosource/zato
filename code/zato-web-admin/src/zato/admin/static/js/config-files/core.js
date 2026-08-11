@@ -1,23 +1,27 @@
-// Config tables - the page under Services, where the config files a service
-// reads through self.config are browsed and changed.
+// Config files kit - a screen of files on disk, browsed and edited from the dashboard.
 //
-// The page is rendered by zato/service/config-tables.html - the files on the left,
-// the one being looked at in the middle, the column that runs a value through it on
-// the right. This file holds the state and the editor around the textarea. The
-// listing itself is in listing.js, the two lines that size the columns in split.js,
-// the reading of a file in parse.js, the words the page puts on screen in text.js,
-// the Translate column in invoker.js, the drawing it answers a mapping set with in
-// flow.js, the line of the file a part of that drawing stands for in trace.js, where
-// the reader is in url.js, what a file has been typed into but not saved in draft.js, the
-// row of everything the page did in stream.js, the keys an editor is worked with in edit.js,
-// the listing's menu in menu.js, what is done to the file itself in files.js, the bringing
-// in of one in upload.js and the making of an ini file out of a csv one in convert.js.
+// A screen built on the kit is rendered by its own template - the files on the left,
+// the one being looked at in the middle and, when the screen has it, the column that
+// runs a value through the file on the right. This file holds the state and the editor
+// around the textarea. The listing itself is in listing.js, the lines that size the
+// columns in split.js, the reading of an ini file in parse.js, the words the page puts
+// on screen in text.js, the Translate column in invoker.js, the drawing it answers a
+// mapping set with in flow.js, the line of the file a part of that drawing stands for
+// in trace.js, where the reader is in url.js, what a file has been typed into but not
+// saved in draft.js, the row of everything the page did in stream.js, the keys an editor
+// is worked with in edit.js, the listing's menu in menu.js, what is done to the file
+// itself in files.js, the bringing in of one in upload.js and the making of an ini file
+// out of a csv one in convert.js.
+//
+// What tells one screen apart from another - its words, its badges, its suffixes, where
+// its browser storage lives and which of the kit's features it carries - arrives through
+// init as the screen object and lands on the config below.
 
 (function($) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var parse = tables.parse;
 var log = tables.log;
 
@@ -26,16 +30,44 @@ var log = tables.log;
 tables.config = {
 
     // Every element id on the page starts with this
-    idPrefix: 'config-tables-',
+    idPrefix: 'config-files-',
+
+    // What every line of the log is headed by, and where the browser keeps everything
+    // the screen remembers between visits
+    logPrefix: 'config-files',
+    storagePrefix: 'zato.config-files',
+
+    // The features a screen turns on or off - the Translate column with its drawing,
+    // the csv conversion, bringing a file in from your own machine, the Check button,
+    // the Show all switch of the listing's menu and the count after each file's name
+    hasTranslate: true,
+    hasConvert: true,
+    hasUpload: true,
+    hasCheck: true,
+    hasShowAll: true,
+    hasCount: true,
+
+    // A screen whose every file is of the one kind names it here, and its files are
+    // then edited as plain text rather than read as ini files
+    fixedKind: '',
+
+    // How the file on screen is colored, by the name of a function in the shared
+    // highlight module
+    highlighter: 'ini_to_html',
+
+    // What a new file is called before it is renamed, what it is written in and what
+    // it starts with
+    newFileName: 'new-file',
+    newFileSuffix: '.ini',
+    newFileContent: '',
 
     // The table a code list keeps its codes under - a file that holds codes under it is a
     // code list, and every other file is a mapping set
     codesSection: 'codes',
 
-    // What a file a service reads through self.config is written in, and where the browser keeps
-    // the answer to whether the listing has a line for the other files in the directory too
+    // What a file of the screen's own format is written in, which is what the listing
+    // keeps to while Show all is off
     configSuffixList: ['.ini', '.conf', '.yaml', '.yml'],
-    showAllStorageKey: 'zato.config-tables.show-all',
 
     // What a yaml file is called by, which is a kind of its own - it is edited here as text
     // and read by whatever component named it, so it is never read as an ini file
@@ -78,10 +110,10 @@ tables.config = {
 
     // The class the status line wears - plain, once something went through, and
     // once something did not
-    statusPlain: 'config-tables-status',
-    statusOK: 'config-tables-status config-tables-status-ok',
-    statusError: 'config-tables-status config-tables-status-error',
-    statusChecked: 'config-tables-status config-tables-status-ok config-tables-status-strong',
+    statusPlain: 'config-files-status',
+    statusOK: 'config-files-status config-files-status-ok',
+    statusError: 'config-files-status config-files-status-error',
+    statusChecked: 'config-files-status config-files-status-ok config-files-status-strong',
 
     // The units a file size is given in, smallest first, and what each step is
     sizeUnits: ['B', 'KB', 'MB', 'GB'],
@@ -92,7 +124,7 @@ tables.config = {
     backdropReadOnly: 'highlight-backdrop-readonly',
 
     // The class a link wears while there is nothing for it to do
-    linkOff: 'config-tables-link-off'
+    linkOff: 'config-files-link-off'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -102,8 +134,8 @@ tables.state = {
     // Every file on the server, in the order it reports them
     tableList: [],
 
-    // Where the files live
-    userConfDirectory: '',
+    // Where a new file lands
+    defaultDirectory: '',
 
     // Where a change to a file is sent
     persistUrl: '',
@@ -118,8 +150,9 @@ tables.state = {
     // goes back to
     initialContent: {},
 
-    // Whether the listing has a line for every file in the directory or only for the ones a
-    // service reads, which is what it has when the page is opened for the first time
+    // Whether the listing has a line for every file in the directory or only for the ones
+    // of the screen's own format, which is what it has when the page is opened for the
+    // first time
     isShowingAll: false,
 
     // What takes the status line away again, 0 while there is nothing on it to take away
@@ -128,12 +161,27 @@ tables.state = {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The screen's own values, over the kit's defaults, before anything else reads either.
+tables.applyScreen = function(screen) {
+
+    for(var key in screen) {
+        tables.config[key] = screen[key];
+    }
+
+    log.config.prefix = tables.config.logPrefix;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 tables.init = function(inputConfig) {
 
-    var state = tables.state;
+    tables.applyScreen(inputConfig.screen);
 
-    state.tableList = inputConfig.table_list;
-    state.userConfDirectory = inputConfig.user_conf_directory;
+    var state = tables.state;
+    var config = tables.config;
+
+    state.tableList = inputConfig.file_list;
+    state.defaultDirectory = inputConfig.default_directory;
     state.maxEditableSize = inputConfig.max_editable_size;
     state.persistUrl = inputConfig.persist_url;
 
@@ -150,15 +198,25 @@ tables.init = function(inputConfig) {
 
     tables.wire();
     tables.files.init();
-    tables.upload.init();
-    tables.convert.init();
-    tables.invoker.init();
+
+    if(config.hasUpload) {
+        tables.upload.init();
+    }
+
+    if(config.hasConvert) {
+        tables.convert.init();
+    }
+
+    if(config.hasTranslate) {
+        tables.invoker.init();
+    }
+
     tables.menu.init();
     tables.url.init();
 
     log.say('tables.init', {
         tableCount: state.tableList.length,
-        userConfDirectory: state.userConfDirectory,
+        defaultDirectory: state.defaultDirectory,
         maxEditableSize: state.maxEditableSize,
         persistUrl: state.persistUrl,
         error: inputConfig.error,
@@ -178,8 +236,7 @@ tables.open = function() {
 
     var name = tables.url.readFileName();
 
-    // Nothing in the address says which file to open, so the listing's own first line does -
-    // the first file a service reads, not the first thing in the directory
+    // Nothing in the address says which file to open, so the listing's own first line does
     if(!name) {
 
         var shownList = tables.getShownList();
@@ -203,7 +260,12 @@ tables.open = function() {
 
 tables.wire = function() {
 
-    tables.get('check').addEventListener('click', tables.check);
+    var config = tables.config;
+
+    if(config.hasCheck) {
+        tables.get('check').addEventListener('click', tables.check);
+    }
+
     tables.get('save').addEventListener('click', tables.save);
     tables.get('restore').addEventListener('click', tables.restore);
 
@@ -218,8 +280,8 @@ tables.wire = function() {
     // The keys an editor is saved with anywhere else save this file too
     document.addEventListener('keydown', tables.onKeyDown);
 
-    // The file is an ini file, so it is read on screen the way one is
-    $.fn.zato.highlight.attach(tables.get('content'), $.fn.zato.highlight.ini_to_html);
+    // The file is colored the way the screen's own format reads
+    $.fn.zato.highlight.attach(tables.get('content'), $.fn.zato.highlight[config.highlighter]);
 
     tables.split.init();
 
@@ -227,8 +289,11 @@ tables.wire = function() {
     // measured against a file that is already laid out as it will be read
     tables.wash.init();
     tables.gutter.init();
-    tables.flow.init();
-    tables.trace.init();
+
+    if(config.hasTranslate) {
+        tables.flow.init();
+        tables.trace.init();
+    }
 
     // Everything the page does goes on the one row of events, whether it was done to a file or
     // to what is in it, and the keys that walk that row reach the whole page
@@ -374,6 +439,20 @@ tables.isYamlFile = function(table) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Whether the file is edited as text alone, never read as an ini file - every file of a
+// screen with a fixed kind is, and so is a yaml file wherever it appears.
+tables.isPlainText = function(table) {
+
+    if(tables.config.fixedKind) {
+        return true;
+    }
+
+    var out = tables.isYamlFile(table);
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // What the file turns out to be, read off the file itself - a file with a codes table is a code
 // list, whether the codes are in it yet or not, unless that table is there only to group other
 // tables under it, as a file of settings may well do. A file that does not read at all is neither
@@ -465,13 +544,13 @@ tables.renderModified = function() {
 
     tables.get('root-modified').hidden = !isModified;
 
-    var rowList = tables.get('file-list').querySelectorAll('.config-tables-file-row');
+    var rowList = tables.get('file-list').querySelectorAll('.config-files-file-row');
     var starredList = [];
 
     for(var rowIdx = 0; rowIdx < rowList.length; rowIdx++) {
 
         var row = rowList[rowIdx];
-        var star = row.querySelector('.config-tables-file-modified');
+        var star = row.querySelector('.config-files-file-modified');
         var rowTable = tables.getByName(row.dataset.name);
 
         // A row being renamed has the field where its name and star were, and a row of a file
@@ -520,14 +599,16 @@ tables.renderRestore = function() {
 
 tables.renderEmpty = function() {
 
-    tables.renderRoot(tables.state.userConfDirectory);
+    tables.renderRoot(tables.state.defaultDirectory);
 
     tables.get('empty').hidden = false;
     tables.get('editor').hidden = true;
 
     // With no file open there is nothing to run a value through
-    tables.showTranslate(false);
-    tables.invoker.refreshTranslate();
+    if(tables.config.hasTranslate) {
+        tables.showTranslate(false);
+        tables.invoker.refreshTranslate();
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -543,13 +624,17 @@ tables.showTranslate = function(isShown) {
 
 tables.renderEditor = function() {
 
+    var config = tables.config;
     var table = tables.getCurrent();
 
     tables.renderRoot(table.path);
 
     tables.get('empty').hidden = true;
     tables.get('editor').hidden = false;
-    tables.showTranslate(true);
+
+    if(config.hasTranslate) {
+        tables.showTranslate(true);
+    }
 
     var content = tables.get('content');
 
@@ -565,18 +650,23 @@ tables.renderEditor = function() {
 
     content.readOnly = !table.is_editable;
 
-    tables.get('check').disabled = !table.is_editable;
+    if(config.hasCheck) {
+        tables.get('check').disabled = !table.is_editable;
+    }
+
     tables.get('save').disabled = !table.is_editable;
 
     // A csv file is offered the one thing that makes it into a file a service can read
-    tables.convert.render(table);
+    if(config.hasConvert) {
+        tables.convert.render(table);
+    }
 
     // Setting the value from here fires no input event, so the colors and the
     // numbers down the left are brought up to date by hand
     $.fn.zato.highlight.refresh(content);
     tables.gutter.refresh();
     tables.renderModified();
-    content.previousElementSibling.classList.toggle(tables.config.backdropReadOnly, content.readOnly);
+    content.previousElementSibling.classList.toggle(config.backdropReadOnly, content.readOnly);
 
     // The file was left at a step of its own and with the caret somewhere, and it is opened
     // at both. A file too large to edit here is read rather than worked on, so it has neither.
@@ -584,7 +674,9 @@ tables.renderEditor = function() {
         tables.edit.open(table);
     }
 
-    tables.invoker.render(table);
+    if(config.hasTranslate) {
+        tables.invoker.render(table);
+    }
 
     var data = log.buildTable(table);
 
@@ -600,8 +692,8 @@ tables.renderEditor = function() {
 // in a word, and one that does not says which line stopped it.
 tables.check = function() {
 
-    // A yaml file is never read as an ini file, so there is no line to hold it against
-    if(tables.isYamlFile(tables.getCurrent())) {
+    // A file edited as text alone has no line to hold it against
+    if(tables.isPlainText(tables.getCurrent())) {
         tables.setChecked();
         return;
     }
@@ -626,7 +718,7 @@ tables.save = function() {
 
     var table = tables.getCurrent();
     var content = tables.get('content').value;
-    var isYaml = tables.isYamlFile(table);
+    var isPlain = tables.isPlainText(table);
     var parsed = parse.read(content);
 
     log.say('tables.save', {
@@ -649,13 +741,16 @@ tables.save = function() {
 
         tables.renderList();
         tables.renderModified();
-        tables.invoker.refresh(table);
 
-        // What is on disk is what is on screen either way, so what is left to say is whether a
-        // service reading it now would get anything out of it. Which line stopped it is what
-        // Check is for, so it is not said twice. A yaml file is never read as an ini file,
-        // so nothing about it is an error here.
-        if(parsed.errorText && !isYaml) {
+        if(tables.config.hasTranslate) {
+            tables.invoker.refresh(table);
+        }
+
+        // What is on disk is what is on screen either way, so what is left to say is whether
+        // reading it now would get anything out of it. Which line stopped it is what Check
+        // is for, so it is not said twice. A file edited as text alone is never read as an
+        // ini file, so nothing about it is an error here.
+        if(parsed.errorText && !isPlain) {
             tables.setStatus(tables.config.savedErrorMessage, true);
             return;
         }
@@ -710,9 +805,19 @@ tables.putContent = function(table, wanted) {
 // table it is now and how much it holds all come off the file itself.
 tables.applyContents = function(table, content, parsed) {
 
+    var config = tables.config;
+
     table.content = content;
     table.size = content.length;
     table.is_editable = content.length <= tables.state.maxEditableSize;
+
+    // Every file of a screen with a fixed kind is of that kind, whatever is typed into it
+    if(config.fixedKind) {
+        table.kind = config.fixedKind;
+        table.section_count = 0;
+        table.entry_count = 0;
+        return;
+    }
 
     // A yaml file is of its own kind by name alone and its contents are not counted
     // the way an ini file's are

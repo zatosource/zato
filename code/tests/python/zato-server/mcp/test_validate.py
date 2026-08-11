@@ -16,6 +16,7 @@ from zato.common.test import _test_sec_def_id
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params, _mcp_protocol_version
+from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.session import MCPSessionManager
 from zato.server.connection.mcp.validate import validate_arguments
 
@@ -155,7 +156,7 @@ def _make_handler(invoke_func:'callable_', validate_input:'bool') -> 'MCPHandler
     safeguard_config = build_safeguard_config({})
     token_cap_config = build_token_cap_config({})
 
-    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, validate_input) # pyright: ignore[reportArgumentType]
+    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, validate_input, SkillPrompts('', [])) # pyright: ignore[reportArgumentType]
     return out
 
 # ################################################################################################################################

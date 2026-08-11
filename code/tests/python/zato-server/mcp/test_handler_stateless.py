@@ -18,6 +18,7 @@ from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _error_method_not_found, \
     _server_name, _server_version
+from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.session import MCPSessionManager
 from zato.server.connection.mcp.stateless import _error_header_mismatch, _error_unsupported_protocol_version, \
     _meta_key_server_info, _tools_list_cache_scope, _tools_list_ttl_ms
@@ -87,7 +88,7 @@ def _make_handler(registry:'any_'=None, invoke_func:'callable_'=None) -> 'MCPHan
     safeguard_config = build_safeguard_config({})
     token_cap_config = build_token_cap_config({})
 
-    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False)
+    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', []))
     return out
 
 # ################################################################################################################################

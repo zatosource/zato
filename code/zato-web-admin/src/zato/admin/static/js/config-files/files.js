@@ -1,7 +1,7 @@
-// Config tables - what is done to a file rather than to what is in it: adding
+// Config files kit - what is done to a file rather than to what is in it: adding
 // one, renaming it, taking a copy of it and removing it. All of it is started from
-// the listing's menu in menu.js, and the two buttons under the listing start the
-// two that bring a file in. Bringing one in from your own machine is in upload.js.
+// the listing's menu in menu.js, and the buttons under the listing start what
+// brings a file in. Bringing one in from your own machine is in upload.js.
 //
 // A rename happens on the file's own row, in place of its name. Every change goes
 // out through persist, which is the single place the page talks to the server from.
@@ -15,17 +15,13 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var files = tables.files;
 var parse = tables.parse;
 
 // ////////////////////////////////////////////////////////////////////////
 
 files.config = {
-
-    // What a new file is called before it is renamed, and what it is written in
-    newName: 'new-file',
-    suffix: '.ini',
 
     // What a downloaded copy is handed over as
     downloadType: 'text/plain',
@@ -45,18 +41,20 @@ files.init = function() {
 // Adding a file
 // ////////////////////////////////////////////////////////////////////////
 
-// A new file is an empty one, opened the moment it is added - what it turns out
-// to be follows from what is typed into it.
+// A new file starts with whatever the screen starts one with, opened the moment it
+// is added.
 files.add = function() {
 
+    var config = tables.config;
     var name = files.buildFreeName();
-    var table = files.buildTable(name, name + files.config.suffix, tables.state.userConfDirectory, '');
+    var content = config.newFileContent;
+    var table = files.buildTable(name, name + config.newFileSuffix, tables.state.defaultDirectory, content);
 
     // The listing gets the file once the server has it, so a file on screen is a file on disk
     files.persist('add', table, function() {
 
         tables.state.tableList.push(table);
-        tables.state.initialContent[name] = '';
+        tables.state.initialContent[name] = content;
 
         // Adding a file is one more thing the page did, so it is taken back by the same key
         // that takes back the typing that follows it
@@ -98,12 +96,12 @@ files.buildTable = function(name, fileName, directory, content) {
 // after that, so adding one twice in a row does not need a rename in between.
 files.buildFreeName = function() {
 
-    var out = files.config.newName;
+    var out = tables.config.newFileName;
     var takenIdx = 1;
 
     while(tables.getByName(out)) {
         takenIdx++;
-        out = files.config.newName + '-' + takenIdx;
+        out = tables.config.newFileName + '-' + takenIdx;
     }
 
     return out;
@@ -120,11 +118,11 @@ files.buildFreeName = function() {
 files.startRename = function(table) {
 
     var row = files.getRow(table.name);
-    var name = row.querySelector('.config-tables-file-name');
+    var name = row.querySelector('.config-files-file-name');
 
     var input = document.createElement('input');
     input.type = 'text';
-    input.className = 'config-tables-file-rename';
+    input.className = 'config-files-file-rename';
     input.autocomplete = 'off';
     input.value = table.file_name;
 
@@ -164,7 +162,7 @@ files.startRename = function(table) {
 // The file's row as it is on screen now, which is what a rename types into.
 files.getRow = function(name) {
 
-    var selector = '.config-tables-file-row[data-name="' + name + '"]';
+    var selector = '.config-files-file-row[data-name="' + name + '"]';
     var out = tables.get('file-list').querySelector(selector);
 
     return out;
@@ -287,7 +285,7 @@ files.getSuffix = function(fileName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What a service reaches the file by, which is what the file is called up to its first dot,
+// What the file is reached by, which is what it is called up to its first dot,
 // that being what the server reads the name as too.
 files.getStem = function(fileName) {
 
@@ -388,7 +386,7 @@ files.download = function(table) {
 // Every change the page makes goes out through here, which is the one place a
 // round trip to the server is made from. The page catches up with the server only
 // once the server says the change is on disk, so what is on screen after that is
-// what a service reading the same file gets. A change that did not go through says
+// what anything reading the same file gets. A change that did not go through says
 // so on the line under the editor, and onFail is for whoever asked for it to hear
 // that too - going back through the row of events waits on the answer either way.
 files.persist = function(action, table, onDone, extra, onFail) {

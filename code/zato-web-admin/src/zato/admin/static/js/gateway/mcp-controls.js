@@ -110,9 +110,58 @@ $.fn.zato.gateway.mcp.security_badge_picker_config = {
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Skills badge picker configuration - each badge is one user skill directory
+// the gateway serves as an MCP prompt.
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp.skills_badge_picker_config = {
+
+    make_badge: function(item, num) {
+        var badge = $('<div/>', { 'class': 'security-badge', 'data-id': item.id, 'data-name': item.name.toLowerCase() });
+        badge.append($('<span/>', { 'class': 'security-badge-indicator' }));
+        badge.append($('<span/>', { 'class': 'security-badge-number', 'text': num + '.' }));
+        badge.append($('<span/>', { 'class': 'security-badge-name', 'text': item.name }));
+        return badge;
+    },
+
+    sort_items: function(a, b) {
+        return a.name.localeCompare(b.name);
+    },
+
+    is_assigned: function(item) {
+        return item.is_member;
+    },
+
+    filter_badge: function(badge, text_words, type_val) {
+        var name = badge.data('name');
+        var text_match = true;
+
+        for (var word_idx = 0; word_idx < text_words.length; word_idx++) {
+            if (name.indexOf(text_words[word_idx]) === -1) {
+                text_match = false;
+                break;
+            }
+        }
+
+        return text_match;
+    },
+
+    inject_hidden_input: function(form, badge) {
+        var skill_name = badge.data('name');
+        form.append($('<input/>', {
+            type: 'hidden',
+            name: 'mcp_skill_' + skill_name,
+            value: skill_name,
+            'class': 'badge-member-input'
+        }));
+    }
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.gateway.mcp.badge_picker = {};
 $.fn.zato.gateway.mcp.security_badge_picker = {};
+$.fn.zato.gateway.mcp.skills_badge_picker = {};
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -181,6 +230,41 @@ $.fn.zato.gateway.mcp.security_badge_picker.load = function(action, gateway_id) 
 
     $.fn.zato.gateway.mcp.security_badge_picker.fetch(gateway_id, function(items) {
         $.fn.zato.badge_picker.init(sec_action, items, $.fn.zato.gateway.mcp.security_badge_picker_config);
+    }, function() {
+        available_body.html('<span class="badge-zone-empty">Failed to load</span>');
+    });
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp.skills_badge_picker.fetch = function(gateway_id, on_items, on_error) {
+    var url = '/zato/gateway/mcp/get-skill-list/';
+    if (gateway_id) {
+        url += '?gateway_id=' + gateway_id;
+    }
+
+    $.ajax({
+        url: url,
+        method: 'POST',
+        headers: { 'X-CSRFToken': $.cookie('csrftoken') },
+        success: function(data) {
+            var items = (typeof data === 'string') ? $.parseJSON(data) : data;
+            on_items(items);
+        },
+        error: on_error
+    });
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp.skills_badge_picker.load = function(action, gateway_id) {
+    var skills_action = 'skills-' + action;
+
+    var available_body = $('#badge-zone-available-' + skills_action + ' .badge-zone-body');
+    available_body.html('<span class="badge-zone-empty">Loading...</span>');
+
+    $.fn.zato.gateway.mcp.skills_badge_picker.fetch(gateway_id, function(items) {
+        $.fn.zato.badge_picker.init(skills_action, items, $.fn.zato.gateway.mcp.skills_badge_picker_config);
     }, function() {
         available_body.html('<span class="badge-zone-empty">Failed to load</span>');
     });

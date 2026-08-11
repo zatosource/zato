@@ -1,4 +1,4 @@
-// Config tables - the Translate column.
+// Config files kit - the Translate column.
 //
 // It runs against the file on screen rather than the one on the server, which is
 // what makes the answer the one a service reading the same file would get, and
@@ -16,7 +16,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var invoker = tables.invoker;
 var parse = tables.parse;
 
@@ -69,13 +69,13 @@ invoker.init = function() {
     // There is nothing to translate until the fields say what, so the button says as much.
     // A value picked out of what a field offers arrives with the menu closing rather than
     // with a keypress, which is why that is listened for too.
-    $('#config-tables-translate-source, #config-tables-translate-value')
+    $('#config-files-translate-source, #config-files-translate-value')
         .on('input autocompleteclose', invoker.refreshTranslate);
 
     // A value is a key of the table above it, so naming another table is a question of its own.
     // A name settled on is what counts, not every letter of one being typed, so this is read once
     // the field is left or once something has been picked out of what it offers.
-    $('#config-tables-translate-source').on('change autocompleteclose', invoker.readSource);
+    $('#config-files-translate-source').on('change autocompleteclose', invoker.readSource);
 
     tables.combo.init();
 };

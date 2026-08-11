@@ -22,6 +22,7 @@ from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _error_method_not_found, \
     _error_parse, _jsonrpc_version, _mcp_protocol_version
 from zato.server.connection.mcp.registry import ToolRegistry, _internal_prefix
+from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.session import MCPSessionManager
 
 # ################################################################################################################################
@@ -84,7 +85,7 @@ def _make_handler(allowed_tools:'any_' = None) -> 'any_':
     safeguard_config = build_safeguard_config({})
     token_cap_config = build_token_cap_config({})
 
-    handler = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False) # pyright: ignore[reportArgumentType]
+    handler = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', [])) # pyright: ignore[reportArgumentType]
     return handler
 
 # ################################################################################################################################

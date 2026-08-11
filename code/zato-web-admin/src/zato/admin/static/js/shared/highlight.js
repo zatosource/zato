@@ -38,7 +38,16 @@ $.fn.zato.highlight.config = {
     rules_token_pattern: /(d?'(?:\\.|[^'\\])*')|(?<![\w'.-])(-?\d+(?:\.\d+)?)(?![\w'])|\b(true|false|and|or)\b/g,
 
     // What an assignment's target is set apart from its value by
-    rules_assignment_separator: ' = '
+    rules_assignment_separator: ' = ',
+
+    // How a markdown heading opens, the marker a document's frontmatter opens and
+    // closes with, and an inline code span of a markdown line
+    markdown_heading_pattern: /^#{1,6}\s/,
+    frontmatter_marker: '---',
+    markdown_code_pattern: /`[^`]+`/g,
+
+    // What separates a frontmatter key from its value
+    frontmatter_separator: ':'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -188,6 +197,102 @@ $.fn.zato.highlight.ini_value_to_html = function(value) {
     var trailing = value.slice(openingIdx + trimmed.length);
 
     var out = leading + highlight.wrap(className, trimmed) + trailing + comment;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+// The markdown format
+// ////////////////////////////////////////////////////////////////////////
+
+// A whole markdown document, a SKILL.md file included - the frontmatter at the top
+// reads as keys and values, a heading reads the way a section header does, and
+// inline code is set apart from the words around it.
+$.fn.zato.highlight.markdown_to_html = function(text) {
+
+    var highlight = $.fn.zato.highlight;
+    var config = highlight.config;
+
+    var html_lines = [];
+    var lineList = text.split('\n');
+
+    var is_in_frontmatter = false;
+    var is_frontmatter_done = false;
+
+    for(var lineIdx = 0; lineIdx < lineList.length; lineIdx++) {
+
+        var line = lineList[lineIdx];
+
+        // A marker on the very first line opens the frontmatter and the next one closes
+        // it - one anywhere else is a plain line of the document, a horizontal rule
+        var is_marker = line.trim() === config.frontmatter_marker;
+        var is_frontmatter_edge = is_marker && (lineIdx === 0 || is_in_frontmatter);
+
+        if(is_frontmatter_edge && !is_frontmatter_done) {
+
+            if(is_in_frontmatter) {
+                is_frontmatter_done = true;
+            }
+
+            is_in_frontmatter = !is_frontmatter_done;
+
+            html_lines.push(highlight.wrap('highlight-punctuation', line));
+            continue;
+        }
+
+        if(is_in_frontmatter) {
+            html_lines.push(highlight.frontmatter_line_to_html(line));
+            continue;
+        }
+
+        html_lines.push(highlight.markdown_line_to_html(line));
+    }
+
+    var out = html_lines.join('\n');
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// A frontmatter line - a key and its value around the first colon, and a line
+// without one stays plain.
+$.fn.zato.highlight.frontmatter_line_to_html = function(line) {
+
+    var highlight = $.fn.zato.highlight;
+    var separator = highlight.config.frontmatter_separator;
+
+    var separatorIdx = line.indexOf(separator);
+
+    if(separatorIdx === -1) {
+        return highlight.escape(line);
+    }
+
+    var key = line.slice(0, separatorIdx);
+    var value = line.slice(separatorIdx + 1);
+
+    var out = highlight.wrap('highlight-key', key) +
+        highlight.wrap('highlight-punctuation', separator) +
+        highlight.wrap('highlight-string', value);
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// One line of the body - a heading is colored whole, and inline code spans of any
+// other line are set apart from the words around them.
+$.fn.zato.highlight.markdown_line_to_html = function(line) {
+
+    var highlight = $.fn.zato.highlight;
+    var config = highlight.config;
+
+    if(config.markdown_heading_pattern.test(line)) {
+        return highlight.wrap('highlight-section', line);
+    }
+
+    var out = highlight.replace_tokens(line, config.markdown_code_pattern, function(match) {
+        return highlight.wrap('highlight-string', match[0]);
+    });
+
     return out;
 };
 

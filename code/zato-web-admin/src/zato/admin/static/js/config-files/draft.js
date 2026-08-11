@@ -1,4 +1,4 @@
-// Config tables - what a file has been typed into but not saved yet.
+// Config files kit - what a file has been typed into but not saved yet.
 //
 // A change to a file stays a change until it is saved, whichever file is being looked at in
 // the meantime and however the page is reloaded. What was typed is kept beside the file it
@@ -14,7 +14,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var draft = tables.draft;
 var log = tables.log;
 
@@ -22,9 +22,20 @@ var log = tables.log;
 
 draft.config = {
 
-    // Where the drafts are kept between one visit and the next. Files are keyed by their
-    // full path, so two environments served from one browser never read each other's typing.
-    storageKey: 'zato.config-tables.draft'
+    // What follows the screen's own storage prefix in the key the drafts are kept under
+    // between one visit and the next. Files are keyed by their full path, so two
+    // environments served from one browser never read each other's typing.
+    storageSuffix: '.draft'
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Where this screen's drafts are kept, under the screen's own storage prefix, so two screens
+// built on the kit never read each other's typing either.
+draft.buildStorageKey = function() {
+
+    var out = tables.config.storagePrefix + draft.config.storageSuffix;
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -168,7 +179,7 @@ draft.rename = function(previousPath, table) {
 draft.read = function() {
 
     var out = {};
-    var stored = window.localStorage.getItem(draft.config.storageKey);
+    var stored = window.localStorage.getItem(draft.buildStorageKey());
 
     // Nothing has been kept in this browser yet, or what was kept is no longer readable, and
     // either way the files on disk are what the page starts from
@@ -192,7 +203,7 @@ draft.write = function() {
 
     var text = JSON.stringify(draft.state.contentByPath);
 
-    window.localStorage.setItem(draft.config.storageKey, text);
+    window.localStorage.setItem(draft.buildStorageKey(), text);
 };
 
 // ////////////////////////////////////////////////////////////////////////

@@ -10,17 +10,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from dataclasses import dataclass
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import strlist
+# Zato
+from zato.common.skills.api import parse_skill_document
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The frontmatter block of a skill file opens and closes with this marker.
-_frontmatter_marker = '---'
 
 # Skills live in per-source directories next to this module, one SKILL.md each.
 _skills_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'skills')
@@ -51,43 +45,15 @@ def parse_skill(source:'str', data:'str') -> 'Skill':
     everything after it is the instructions.
     """
 
+    # The document itself reads the same way for every kind of skill
+    document = parse_skill_document(data)
+
     # Our response to produce
     out = Skill()
     out.source = source
-
-    # Split the document into the frontmatter and the body ..
-    lines = data.split('\n')
-    body_start_index = 0
-    is_in_frontmatter = False
-
-    for index, line in enumerate(lines):
-
-        # .. the first marker opens the frontmatter ..
-        if line.strip() == _frontmatter_marker:
-
-            if not is_in_frontmatter:
-                is_in_frontmatter = True
-                continue
-
-            # .. and the second one closes it, with the body starting right after.
-            body_start_index = index + 1
-            break
-
-        # .. each frontmatter line is a key and a value around the first colon ..
-        if is_in_frontmatter:
-
-            key, _, value = line.partition(':')
-            key = key.strip()
-            value = value.strip()
-
-            if key == 'name':
-                out.name = value
-            elif key == 'description':
-                out.description = value
-
-    # .. everything after the frontmatter is the instructions.
-    body_lines:'strlist' = lines[body_start_index:]
-    out.instructions = '\n'.join(body_lines).strip()
+    out.name = document.name
+    out.description = document.description
+    out.instructions = document.instructions
 
     return out
 

@@ -1,75 +1,75 @@
 /*
- * Config tables - the file browser, the file being looked at and the column that
- * runs a value through it, side by side. The panel and the buttons are the settings
- * page's own, the badges are the shared badges, the listing's menu is the shared
- * panel menu and the colors of the file itself are the shared highlighting, so what
- * is here is the three columns, the two lines between them, the editor around the
- * textarea.
+ * Config files kit - the file browser, the file being looked at and, on a screen
+ * that has it, the column that runs a value through it, side by side. The panel and
+ * the buttons are the settings page's own, the badges are the shared badges, the
+ * listing's menu is the shared panel menu and the colors of the file itself are the
+ * shared highlighting, so what is here is the columns, the lines between them, the
+ * editor around the textarea.
  */
 
 :root {
-    --config-tables-font-mono: 'Ubuntu Mono', 'DejaVu Sans Mono', 'Menlo', 'Consolas', monospace;
+    --config-files-font-mono: 'Ubuntu Mono', 'DejaVu Sans Mono', 'Menlo', 'Consolas', monospace;
 
     /* How wide the two columns beside the file are. The numbers down the left of the
        file itself start at the room two of them need, and gutter.js sets that to what
        the file in front of the reader actually asks for. */
-    --config-tables-browser-width: 250px;
-    --config-tables-translate-width: 250px;
-    --config-tables-gutter-width: 22px;
+    --config-files-browser-width: 250px;
+    --config-files-translate-width: 250px;
+    --config-files-gutter-width: 22px;
 
     /* The listing's rows - the one being looked at, and the one under the cursor */
-    --config-tables-row-selected: #eaf4ff;
-    --config-tables-row-hover: #f5f9fd;
+    --config-files-row-selected: #eaf4ff;
+    --config-files-row-hover: #f5f9fd;
 
     /* The line numbers, which count the file without competing with it */
-    --config-tables-gutter-number: #a8b3bd;
+    --config-files-gutter-number: #a8b3bd;
 
     /* A copy button pointed at - the badge wash one shade deeper */
-    --config-tables-copy-hover: #cbe4f9;
+    --config-files-copy-hover: #cbe4f9;
 
     /* The room the file keeps before its first character - what the copy button for a
        line reaches over. It is half of what the button needs, so the button hangs by
        its point just short of the text and takes the rest of its room from the air the
        column of the file keeps to its left. */
-    --config-tables-file-inset: 13px;
+    --config-files-file-inset: 13px;
 
     /* The point that says which line the copy button is on - how far it comes out of
        the button, how much of its side it takes up, and the air it keeps between its tip
        and the first character of the file. That air is part of the button's own room, so
        the cursor in it is still on the line the button is for. */
-    --config-tables-point-length: 5px;
-    --config-tables-point-height: 5px;
-    --config-tables-point-gap: 2px;
+    --config-files-point-length: 5px;
+    --config-files-point-height: 5px;
+    --config-files-point-gap: 2px;
 
     /* How far the whole button, point and all, stands off the file over and above that air */
-    --config-tables-copy-shift: 3px;
+    --config-files-copy-shift: 3px;
 
     /* The room the settings column keeps on either side of what is in it. On the left that room
        is what the copy button for a line grows into, so it is part of the strip that line is
        copied from and the two are laid out by the one measure. */
-    --config-tables-side-room: 16px;
+    --config-files-side-room: 16px;
 
     /* What a copy would take, or what a part of the drawing stands for, washed over in the
        file - see through, since it is over the text rather than under it */
-    --config-tables-copy-target: rgba(238, 194, 74, 0.2);
+    --config-files-copy-target: rgba(238, 194, 74, 0.2);
 
     /* The rules that split the page up, in the panel's own weight */
-    --config-tables-divider: 3px solid var(--primary-dark);
+    --config-files-divider: 3px solid var(--primary-dark);
 
     /* The drops of the drawing a mapping set answers with, and the words about them -
        grey, since they are what the drawing is read by rather than what it says, but not
        so pale that they are read twice */
-    --config-tables-flow-line: #9aa7b4;
-    --config-tables-flow-word: #59636e;
+    --config-files-flow-line: #9aa7b4;
+    --config-files-flow-word: #59636e;
 
-    --config-tables-border: #d9dee3;
-    --config-tables-text: #1a1a2e;
+    --config-files-border: #d9dee3;
+    --config-files-text: #1a1a2e;
 
     /* A link with nothing to do - read as far back as a link may go while still being read */
-    --config-tables-link-off: #a8afb6;
-    --config-tables-accent: var(--zato-seablue-light2);
-    --config-tables-ok: #28a745;
-    --config-tables-error: #dc3545;
+    --config-files-link-off: #a8afb6;
+    --config-files-accent: var(--zato-seablue-light2);
+    --config-files-ok: #28a745;
+    --config-files-error: #dc3545;
 }
 
 /* ------------------------------------------------------------ */
@@ -80,7 +80,7 @@
    it keeps the air below the panel that the container's padding gives it above. The air
    on either side is the panel's own, so that the panel is measured against the window
    rather than against what is left of it. */
-.config-tables-container {
+.config-files-container {
     box-sizing: border-box;
     min-height: 0;
     padding-left: 0;
@@ -92,7 +92,7 @@
    and the column that runs a value through it need every bit of that room - and as tall
    as the page, so each column scrolls inside itself rather than the page scrolling as
    a whole */
-.config-tables-panel {
+.config-files-panel {
     display: flex;
     flex-direction: column;
     width: 95%;
@@ -101,7 +101,7 @@
     box-sizing: border-box;
 }
 
-.config-tables-panel .settings-content {
+.config-files-panel .settings-content {
     flex: 1;
     min-height: 0;
 }
@@ -109,10 +109,10 @@
 /* The settings pages give this column 40px of air on either side, which is room for
    a form to breathe in. What is in it here is a file, and the two columns beside it
    already keep their own spacing, so it is brought in to match theirs. */
-.config-tables-panel .settings-main {
+.config-files-panel .settings-main {
     display: flex;
     flex-direction: column;
-    padding: 15px var(--config-tables-side-room) 11px var(--config-tables-side-room);
+    padding: 15px var(--config-files-side-room) 11px var(--config-files-side-room);
     overflow: hidden;
 }
 
@@ -120,15 +120,15 @@
 /* Config tables - the panel header                              */
 /* ------------------------------------------------------------ */
 
-.config-tables-panel-header {
+.config-files-panel-header {
     display: flex;
     align-items: baseline;
     gap: 12px;
     padding: 12px 20px;
-    border-bottom: var(--config-tables-divider);
+    border-bottom: var(--config-files-divider);
 }
 
-.config-tables-panel-header h2 {
+.config-files-panel-header h2 {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
@@ -137,23 +137,23 @@
 }
 
 /* Where the file on screen is on disk, which is read as often as its name is */
-.config-tables-root {
-    font-family: var(--config-tables-font-mono);
+.config-files-root {
+    font-family: var(--config-files-font-mono);
     font-size: 12px;
-    color: var(--config-tables-text);
+    color: var(--config-files-text);
 }
 
 /* The file on screen says something other than the file on disk does, which is said
    the way an editor says it - one star, in the color of something to be seen to */
-.config-tables-modified,
-.config-tables-file-modified {
-    color: var(--config-tables-error);
+.config-files-modified,
+.config-files-file-modified {
+    color: var(--config-files-error);
     font-weight: 600;
 }
 
 /* On a row of the listing the star stands off the name it follows, so the two are read as
    the name and a mark about it rather than as one word */
-.config-tables-file-modified {
+.config-files-file-modified {
     margin-left: 5px;
 }
 
@@ -164,9 +164,9 @@
 /* The width a column is dragged to counts its own padding in, otherwise the width it
    is given and the width it then has on screen are two different numbers and a column
    that is kept and reopened creeps wider every time */
-.config-tables-browser {
+.config-files-browser {
     box-sizing: border-box;
-    flex: 0 0 var(--config-tables-browser-width);
+    flex: 0 0 var(--config-files-browser-width);
     min-width: 0;
     padding: 15px 16px 20px 16px;
     background: var(--background-light);
@@ -175,7 +175,7 @@
 
 /* Dragged shut, the column gives up its padding as well, otherwise its own
    spacing would keep a sliver of it on screen */
-.config-tables-browser-collapsed {
+.config-files-browser-collapsed {
     padding: 0;
     overflow: hidden;
 }
@@ -183,7 +183,7 @@
 /* The line between the listing and the file is the handle that moves it - an
    invisible gutter with the line drawn down its middle, and the line takes the
    accent while it is being dragged or has the keyboard */
-.config-tables-splitter {
+.config-files-splitter {
     position: relative;
     flex: none;
     width: 9px;
@@ -192,7 +192,7 @@
     outline: none;
 }
 
-.config-tables-splitter::before {
+.config-files-splitter::before {
     content: '';
     position: absolute;
     top: 0;
@@ -202,14 +202,14 @@
     background: var(--primary-dark);
 }
 
-.config-tables-splitter:hover::before,
-.config-tables-splitter:focus::before,
-.config-tables-splitter-active::before {
-    background: var(--config-tables-accent);
+.config-files-splitter:hover::before,
+.config-files-splitter:focus::before,
+.config-files-splitter-active::before {
+    background: var(--config-files-accent);
 }
 
 /* The heading and the two actions share one row, the actions at its end */
-.config-tables-browser-header {
+.config-files-browser-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -217,24 +217,24 @@
     margin-bottom: 10px;
 }
 
-.config-tables-browser h3 {
+.config-files-browser h3 {
     margin: 0;
     font-size: 13px;
     font-weight: 600;
     color: var(--primary-dark);
 }
 
-.config-tables-file-list {
+.config-files-file-list {
     margin: 0 0 14px 0;
     padding: 0;
-    font-family: var(--config-tables-font-mono);
+    font-family: var(--config-files-font-mono);
     font-size: 12px;
     list-style: none;
 }
 
 /* The negative margin takes the row's own background out to the column's padding,
    so a row reads as the full width of the listing */
-.config-tables-file-list li {
+.config-files-file-list li {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -246,30 +246,30 @@
 
 /* The file being looked at is the row on the light blue, a shade off the badges
    next to it so the two never compete */
-.config-tables-file-list li:hover {
-    background: var(--config-tables-row-hover);
+.config-files-file-list li:hover {
+    background: var(--config-files-row-hover);
 }
 
-.config-tables-file-list li.config-tables-file-selected {
-    background: var(--config-tables-row-selected);
+.config-files-file-list li.config-files-file-selected {
+    background: var(--config-files-row-selected);
 }
 
 /* Every badge is as wide as the widest of them, so the names line up */
-.config-tables-file-badge {
+.config-files-file-badge {
     flex: 0 0 auto;
     width: 62px;
     box-sizing: border-box;
     text-align: center;
 }
 
-.config-tables-file-name {
+.config-files-file-name {
     flex: 1;
     line-height: 16px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.config-tables-file-count {
+.config-files-file-count {
     color: var(--text-muted);
 }
 
@@ -277,24 +277,24 @@
    in for, border and all, so nothing about the row moves. The type is named along with the
    class, since formalize.css gives every text field a height of its own by the type alone
    and that outweighs a class on its own. */
-input[type="text"].config-tables-file-rename {
+input[type="text"].config-files-file-rename {
     flex: 1;
     box-sizing: border-box;
     height: 16px;
     min-width: 0;
     margin: 0;
     padding: 0 3px;
-    border: 1px solid var(--config-tables-accent);
+    border: 1px solid var(--config-files-accent);
     border-radius: 2px;
-    font-family: var(--config-tables-font-mono);
+    font-family: var(--config-files-font-mono);
     font-size: 12px;
     line-height: normal;
-    color: var(--config-tables-text);
+    color: var(--config-files-text);
     background: var(--white);
 }
 
 /* The directory a run of files sits in, when they are not all in one */
-.config-tables-file-list li.config-tables-file-group {
+.config-files-file-list li.config-files-file-group {
     padding: 10px 0 3px 0;
     font-family: inherit;
     font-size: 11px;
@@ -304,14 +304,14 @@ input[type="text"].config-tables-file-rename {
     cursor: default;
 }
 
-.config-tables-browser-buttons {
+.config-files-browser-buttons {
     display: flex;
     gap: 5px;
 }
 
 /* A heading's row is a shorter thing than a footer's, so what rides along it is
    the small version of the Check button */
-.config-tables-button-small {
+.config-files-button-small {
     padding: 2px 6px;
     font-size: 10px;
 }
@@ -320,24 +320,24 @@ input[type="text"].config-tables-file-rename {
    each file holds first, then the two actions, then the heading, and the badge last of all.
    The name of the file is what the listing is for, so it is the last thing left on screen.
    split.js says which of these the column has room for. */
-.config-tables-browser-hide-count .config-tables-file-count,
-.config-tables-browser-hide-buttons .config-tables-browser-buttons,
-.config-tables-browser-hide-heading h3,
-.config-tables-browser-hide-badge .config-tables-file-badge {
+.config-files-browser-hide-count .config-files-file-count,
+.config-files-browser-hide-buttons .config-files-browser-buttons,
+.config-files-browser-hide-heading h3,
+.config-files-browser-hide-badge .config-files-file-badge {
     display: none;
 }
 
 /* The switch on the listing's menu that says how much of the directory is listed - at the end of
    its row, in the size the wizards use for the sliders in their own popovers, and quiet enough
    to read as part of the row rather than as a form put in it */
-.config-tables-menu-toggle {
+.config-files-menu-toggle {
     --toggle-width: 27.2px;
     --toggle-height: 15.2px;
     --toggle-knob-size: 12px;
     --toggle-knob-offset: 1.6px;
     --toggle-travel: 12px;
-    --toggle-off-background: var(--config-tables-border);
-    --toggle-on-background: var(--config-tables-accent);
+    --toggle-off-background: var(--config-files-border);
+    --toggle-on-background: var(--config-files-accent);
 
     margin-left: auto;
 }
@@ -346,14 +346,14 @@ input[type="text"].config-tables-file-rename {
 /* Config tables - the file being looked at                      */
 /* ------------------------------------------------------------ */
 
-.config-tables-empty {
+.config-files-empty {
     padding: 24px 0;
     font-size: 13px;
     color: var(--text-muted);
 }
 
 /* The file fills its column, with the buttons under it */
-#config-tables-editor {
+#config-files-editor {
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -363,7 +363,7 @@ input[type="text"].config-tables-file-rename {
 /* The numbers to the left of the file, the file itself taking the rest. The copy
    button is placed on it rather than in the column, so that it may be wider than
    the column is. */
-.config-tables-editor-body {
+.config-files-editor-body {
     position: relative;
     display: flex;
     flex: 1;
@@ -372,7 +372,7 @@ input[type="text"].config-tables-file-rename {
 
 /* Nothing reaches past the file's box - the wash over what a copy would take may well
    be over a section that runs past the foot of it */
-#config-tables-editor .highlight-wrapper {
+#config-files-editor .highlight-wrapper {
     flex: 1;
     min-width: 0;
     min-height: 0;
@@ -386,19 +386,19 @@ input[type="text"].config-tables-file-rename {
 /* The numbers are cut off at the top and the bottom of the file rather than
    scrolling on their own, since it is the file they follow. A row is as tall as a
    line of the file, which is what keeps each number level with the line it counts. */
-.config-tables-gutter {
+.config-files-gutter {
     position: relative;
-    flex: 0 0 var(--config-tables-gutter-width);
+    flex: 0 0 var(--config-files-gutter-width);
 
     /* The file's own padding plus the border above it, so the first number is level
        with the first line */
     padding: 11px 0 0 0;
     overflow: hidden;
-    font-family: var(--config-tables-font-mono);
+    font-family: var(--config-files-font-mono);
     user-select: none;
 }
 
-.config-tables-gutter-line {
+.config-files-gutter-line {
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -407,26 +407,26 @@ input[type="text"].config-tables-file-rename {
     cursor: pointer;
 }
 
-.config-tables-gutter-number {
+.config-files-gutter-number {
     font-size: 11px;
-    color: var(--config-tables-gutter-number);
+    color: var(--config-files-gutter-number);
 }
 
 /* The number of the line the cursor is level with, read plainly while the rest of them
    stay in the background */
-.config-tables-gutter-line-at .config-tables-gutter-number {
-    color: var(--config-tables-text);
+.config-files-gutter-line-at .config-files-gutter-number {
+    color: var(--config-files-text);
 }
 
 /* The room to the left of the numbers is part of the strip a line is copied from, which it
    says by wearing the same cursor - it stands beside the numbers, level with the file, over
    nothing but the room the settings column keeps on that side */
-.config-tables-gutter-reach {
+.config-files-gutter-reach {
     position: absolute;
     top: 0;
     bottom: 0;
     right: 100%;
-    width: var(--config-tables-side-room);
+    width: var(--config-files-side-room);
     cursor: pointer;
 }
 
@@ -436,14 +436,14 @@ input[type="text"].config-tables-file-rename {
    It is wider than the numbers are, and what it reaches over is the room the file
    keeps before its first character, which is why that room is as wide as it is. The
    text itself is never covered. */
-.config-tables-gutter-copy {
+.config-files-gutter-copy {
     position: absolute;
     z-index: 2;
 
     /* Hung by the tip of its point, short of the first character of the file by the air
        that tip keeps, so it stands the same distance off whether the numbers are one digit
        wide or four, and grows leftwards over the room the column keeps on that side */
-    right: calc(100% - var(--config-tables-gutter-width) - var(--config-tables-file-inset) + var(--config-tables-point-length) + var(--config-tables-point-gap) + var(--config-tables-copy-shift));
+    right: calc(100% - var(--config-files-gutter-width) - var(--config-files-file-inset) + var(--config-files-point-length) + var(--config-files-point-gap) + var(--config-files-copy-shift));
     display: inline-flex;
     align-items: center;
     height: 18px;
@@ -454,22 +454,22 @@ input[type="text"].config-tables-file-rename {
     visibility: hidden;
 }
 
-.config-tables-gutter-copy-visible {
+.config-files-gutter-copy-visible {
     visibility: visible;
 }
 
 /* The point at the line the button is on, in the button's own wash, which is why the
    two deepen together */
-.config-tables-gutter-copy::after {
+.config-files-gutter-copy::after {
     content: '';
     position: absolute;
     left: 100%;
     top: 50%;
     width: 0;
     height: 0;
-    border-top: var(--config-tables-point-height) solid transparent;
-    border-bottom: var(--config-tables-point-height) solid transparent;
-    border-left: var(--config-tables-point-length) solid var(--zato-badge-blue-background);
+    border-top: var(--config-files-point-height) solid transparent;
+    border-bottom: var(--config-files-point-height) solid transparent;
+    border-left: var(--config-files-point-length) solid var(--zato-badge-blue-background);
     transform: translateY(-50%);
 }
 
@@ -482,17 +482,17 @@ input[type="text"].config-tables-file-rename {
    same thing said from the other side. The overlay the file is read off is opaque, so the
    wash goes over it and is see through, the way a marker over paper is - the caret and the
    file's own border stay above it either way. */
-.config-tables-copy-target {
+.config-files-copy-target {
     position: absolute;
     left: 1px;
     right: 1px;
     z-index: 1;
-    background: var(--config-tables-copy-target);
+    background: var(--config-files-copy-target);
     visibility: hidden;
     pointer-events: none;
 }
 
-.config-tables-copy-target-visible {
+.config-files-copy-target-visible {
     visibility: visible;
 }
 
@@ -500,15 +500,15 @@ input[type="text"].config-tables-file-rename {
    copy of them on the overlay right behind the caret, which is why the two carry
    the very same type and the very same box. The same goes for the answer in the
    Translate column, which is a value of the same kind. */
-#config-tables-content,
-#config-tables-result {
+#config-files-content,
+#config-files-result {
     box-sizing: border-box;
     width: 100%;
     height: 100%;
     padding: 10px;
-    border: 1px solid var(--config-tables-border);
+    border: 1px solid var(--config-files-border);
     border-radius: 3px;
-    font-family: var(--config-tables-font-mono);
+    font-family: var(--config-files-font-mono);
     font-size: 12px;
     line-height: 1.5;
     white-space: pre;
@@ -518,18 +518,18 @@ input[type="text"].config-tables-file-rename {
 
 /* The file keeps more room before its first character than the answer does, since
    that is the room the copy button beside a line number reaches over */
-#config-tables-content,
-#config-tables-editor .highlight-backdrop {
-    padding-left: var(--config-tables-file-inset);
+#config-files-content,
+#config-files-editor .highlight-backdrop {
+    padding-left: var(--config-files-file-inset);
 }
 
 /* The transparent border stands in for the textarea's own, so the first glyph of
    each starts at the same place */
-.config-tables-panel .highlight-backdrop {
+.config-files-panel .highlight-backdrop {
     padding: 10px;
     border: 1px solid transparent;
     border-radius: 3px;
-    font-family: var(--config-tables-font-mono);
+    font-family: var(--config-files-font-mono);
     font-size: 12px;
     line-height: 1.5;
     white-space: pre;
@@ -537,7 +537,7 @@ input[type="text"].config-tables-file-rename {
 
 /* A file the browser does not edit is read off the overlay like any other, on the
    quiet background that says it is not being edited */
-#config-tables-editor .highlight-backdrop-readonly {
+#config-files-editor .highlight-backdrop-readonly {
     background: var(--background-light);
 }
 
@@ -548,59 +548,59 @@ input[type="text"].config-tables-file-rename {
 /* Away from the editor, and stepped in by the width of the numbers, so the row starts and
    ends where the file itself does. What acts on the file is at one end of it and putting
    the file back as it was is at the other. */
-#config-tables-editor-buttons {
+#config-files-editor-buttons {
     margin-top: 16px;
     margin-bottom: 0;
-    padding-left: var(--config-tables-gutter-width);
+    padding-left: var(--config-files-gutter-width);
     align-items: center;
     justify-content: space-between;
 }
 
-#config-tables-editor-buttons .button-wrapper {
+#config-files-editor-buttons .button-wrapper {
     gap: 8px;
 }
 
 /* The two links at the near end of the row - putting the file back as it was, and making an ini
    file of a csv one - in the plain face of a link, since they are the quietest things in the row,
    with a bar between them while both are there */
-.config-tables-editor-options {
+.config-files-editor-options {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-#config-tables-restore,
-#config-tables-convert {
+#config-files-restore,
+#config-files-convert {
     font-size: 12px;
 }
 
-.config-tables-option-bar {
+.config-files-option-bar {
     font-size: 12px;
-    color: var(--config-tables-border);
+    color: var(--config-files-border);
 }
 
-.config-tables-status {
+.config-files-status {
     font-size: 12px;
     color: var(--text-muted);
 }
 
 /* What did not go through stays on screen until it is read, and a press on it is what
    says it has been */
-.config-tables-status-error {
+.config-files-status-error {
     cursor: pointer;
 }
 
-.config-tables-status-ok {
-    color: var(--config-tables-ok);
+.config-files-status-ok {
+    color: var(--config-files-ok);
 }
 
 /* The answer to Check is one word, so it is set in bold to be taken in at a glance */
-.config-tables-status-strong {
+.config-files-status-strong {
     font-weight: 600;
 }
 
-.config-tables-status-error {
-    color: var(--config-tables-error);
+.config-files-status-error {
+    color: var(--config-files-error);
 }
 
 /* ------------------------------------------------------------ */
@@ -609,11 +609,11 @@ input[type="text"].config-tables-file-rename {
 
 /* The third column, on the same quiet background as the listing on the other side
    of the file, with the answer taking the room that the fields above it leave */
-.config-tables-translate-panel {
+.config-files-translate-panel {
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    flex: 0 0 var(--config-tables-translate-width);
+    flex: 0 0 var(--config-files-translate-width);
     min-width: 0;
     padding: 15px 16px 20px 16px;
     background: var(--background-light);
@@ -622,13 +622,13 @@ input[type="text"].config-tables-file-rename {
 
 /* Dragged shut, the column gives up its padding as well, otherwise its own
    spacing would keep a sliver of it on screen */
-.config-tables-translate-collapsed {
+.config-files-translate-collapsed {
     padding: 0;
     overflow: hidden;
 }
 
 /* One under the other, since the column is as narrow as the listing is */
-.config-tables-field {
+.config-files-field {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -637,29 +637,29 @@ input[type="text"].config-tables-file-rename {
 
 /* A code list is one list of values rather than a file of systems, so it has no system
    on either end to ask about - a field laid out as a row needs saying that it is gone */
-.config-tables-field[hidden] {
+.config-files-field[hidden] {
     display: none;
 }
 
-.config-tables-field > label {
+.config-files-field > label {
     font-size: 11px;
     color: var(--text-muted);
 }
 
 /* The copy button sits inside the field, on the room the padding below leaves for
    it at the right-hand end */
-.config-tables-input-row {
+.config-files-input-row {
     position: relative;
     display: flex;
 }
 
-.config-tables-field input[type="text"] {
+.config-files-field input[type="text"] {
     box-sizing: border-box;
     width: 100%;
     padding: 5px 40px 5px 7px;
-    border: 1px solid var(--config-tables-border);
+    border: 1px solid var(--config-files-border);
     border-radius: 3px;
-    font-family: var(--config-tables-font-mono);
+    font-family: var(--config-files-font-mono);
     font-size: 12px;
 }
 
@@ -668,10 +668,10 @@ input[type="text"].config-tables-file-rename {
    The site-wide button chrome - a grey gradient, a border and a white text shadow -
    arrives again on hover and on press, and the one in a gutter is only ever seen
    while hovered, so every state says the same thing here. */
-.config-tables-copy,
-.config-tables-copy:hover,
-.config-tables-copy:active,
-.config-tables-copy:focus {
+.config-files-copy,
+.config-files-copy:hover,
+.config-files-copy:active,
+.config-files-copy:focus {
     flex: none;
     border: none;
     outline: none;
@@ -683,14 +683,14 @@ input[type="text"].config-tables-file-rename {
 }
 
 /* Pointed at, the wash goes one shade deeper and nothing else moves */
-.config-tables-copy:hover {
-    background-color: var(--config-tables-copy-hover);
+.config-files-copy:hover {
+    background-color: var(--config-files-copy-hover);
 }
 
 /* An empty field, or an answer that is not there yet, is nothing to copy, and the button
    beside it says so rather than handing over nothing */
-.config-tables-copy:disabled,
-.config-tables-copy:disabled:hover {
+.config-files-copy:disabled,
+.config-files-copy:disabled:hover {
     background-color: var(--background-light);
     color: var(--text-muted);
     cursor: default;
@@ -699,17 +699,17 @@ input[type="text"].config-tables-file-rename {
 /* The one beside a line number is on screen only while the cursor is on that line, so
    it wears the deeper wash for as long as it is there. The cursor may well be in the
    room beside it rather than on it, and it is still that line's own button. */
-.config-tables-gutter-copy-visible {
-    background-color: var(--config-tables-copy-hover);
+.config-files-gutter-copy-visible {
+    background-color: var(--config-files-copy-hover);
 }
 
-.config-tables-gutter-copy-visible::after {
-    border-left-color: var(--config-tables-copy-hover);
+.config-files-gutter-copy-visible::after {
+    border-left-color: var(--config-files-copy-hover);
 }
 
 /* The same button where there is less room for it - inside a text field and beside
    a line number, both of which are shorter than a line of the page */
-.config-tables-copy-small {
+.config-files-copy-small {
     padding: 1px 4px;
     font-size: 9px;
     letter-spacing: normal;
@@ -718,7 +718,7 @@ input[type="text"].config-tables-file-rename {
 /* Riding inside the field, on the room its right-hand padding leaves. It is as
    short as its own text, which is what keeps it clear of the field's lines above
    and below it. */
-.config-tables-inline-copy {
+.config-files-inline-copy {
     position: absolute;
     top: 50%;
     right: 4px;
@@ -727,7 +727,7 @@ input[type="text"].config-tables-file-rename {
 }
 
 /* As wide as the word on it, at the end of the column, under the fields it reads */
-#config-tables-translate {
+#config-files-translate {
     align-self: flex-end;
 }
 
@@ -735,7 +735,7 @@ input[type="text"].config-tables-file-rename {
 /* Config tables - the answer                                    */
 /* ------------------------------------------------------------ */
 
-.config-tables-result-area {
+.config-files-result-area {
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -743,13 +743,13 @@ input[type="text"].config-tables-file-rename {
     margin-top: 12px;
 }
 
-.config-tables-result-area .highlight-wrapper {
+.config-files-result-area .highlight-wrapper {
     flex: 1;
     min-height: 0;
 }
 
 /* Under the answer and at its right-hand end, where a hand reaching for it is */
-.config-tables-result-buttons {
+.config-files-result-buttons {
     display: flex;
     justify-content: flex-end;
     padding-top: 6px;
@@ -762,7 +762,7 @@ input[type="text"].config-tables-file-rename {
 /* A mapping set answers as a drawing and everything else as text, so one of the two is
    on screen at a time. The text is still what Copy takes, so it is put away rather than
    emptied. */
-.config-tables-flow {
+.config-files-flow {
     display: none;
     flex: 1;
     min-height: 0;
@@ -770,11 +770,11 @@ input[type="text"].config-tables-file-rename {
     overflow: auto;
 }
 
-.config-tables-result-drawn .config-tables-flow {
+.config-files-result-drawn .config-files-flow {
     display: flex;
 }
 
-.config-tables-result-drawn .highlight-wrapper {
+.config-files-result-drawn .highlight-wrapper {
     display: none;
 }
 
@@ -782,7 +782,7 @@ input[type="text"].config-tables-file-rename {
    was laid out at, so a column too narrow for a drawing of long names scrolls rather than
    shrinking what is there to be read. The margin is what centers it, since a box that
    scrolls cuts off what is centered by alignment alone. */
-.config-tables-flow svg {
+.config-files-flow svg {
     margin: auto;
 }
 
@@ -790,71 +790,71 @@ input[type="text"].config-tables-file-rename {
    where they end, so it is drawn and nothing more */
 /* The whole of the box is the table it stands for, the air in it as much as its border,
    so resting anywhere inside it points at that table in the file */
-.config-tables-flow-group {
+.config-files-flow-group {
     fill: none;
     pointer-events: all;
-    stroke: var(--config-tables-border);
+    stroke: var(--config-files-border);
     stroke-width: 1;
     stroke-dasharray: 4 3;
 }
 
 /* A code is the badge the listing gives a file, at the size the drawing has room for */
-.config-tables-flow-chip {
+.config-files-flow-chip {
     fill: var(--zato-badge-blue-background);
     stroke: none;
 }
 
 /* A code and the value are pressed to take a copy of them, so the cursor says as much
    wherever on one of them it is */
-.config-tables-flow-chip,
-.config-tables-flow-chip-text,
-.config-tables-flow-value,
-.config-tables-flow-value-text {
+.config-files-flow-chip,
+.config-files-flow-chip-text,
+.config-files-flow-value,
+.config-files-flow-value-text {
     cursor: pointer;
 }
 
 /* What the file has nothing for, so there is no code to put here */
-.config-tables-flow-chip-note {
+.config-files-flow-chip-note {
     fill: none;
-    stroke: var(--config-tables-border);
+    stroke: var(--config-files-border);
     stroke-width: 1;
     stroke-dasharray: 3 3;
 }
 
 /* What the file maps the code to, in the color it gives a mapping set */
-.config-tables-flow-value {
+.config-files-flow-value {
     fill: var(--zato-badge-amber-background);
     stroke: none;
 }
 
 /* The drop from one part of the story to the next, dashed the way a plan is dashed */
-.config-tables-flow-line {
-    stroke: var(--config-tables-flow-line);
+.config-files-flow-line {
+    stroke: var(--config-files-flow-line);
     stroke-width: 1;
     stroke-dasharray: 3 3;
 }
 
-.config-tables-flow-arrow {
-    fill: var(--config-tables-flow-line);
+.config-files-flow-arrow {
+    fill: var(--config-files-flow-line);
     stroke: none;
 }
 
-.config-tables-flow-caption,
-.config-tables-flow-label,
-.config-tables-flow-note-text {
+.config-files-flow-caption,
+.config-files-flow-label,
+.config-files-flow-note-text {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 10px;
-    fill: var(--config-tables-flow-word);
+    fill: var(--config-files-flow-word);
 }
 
-.config-tables-flow-chip-text {
-    font-family: var(--config-tables-font-mono);
+.config-files-flow-chip-text {
+    font-family: var(--config-files-font-mono);
     font-size: 13px;
     fill: var(--zato-badge-blue-color);
 }
 
-.config-tables-flow-value-text {
-    font-family: var(--config-tables-font-mono);
+.config-files-flow-value-text {
+    font-family: var(--config-files-font-mono);
     font-size: 15px;
     fill: var(--zato-badge-amber-color);
 }
@@ -867,9 +867,9 @@ input[type="text"].config-tables-file-rename {
    reads as the words it is rather than as somewhere to press, and a press does nothing. The panel
    is named along with the class, since the site gives every link a colour by the element itself
    and that outweighs a class on its own. */
-#config-tables-editor-buttons a.config-tables-link-off,
-#config-tables-editor-buttons a.config-tables-link-off:hover {
-    color: var(--config-tables-link-off);
+#config-files-editor-buttons a.config-files-link-off,
+#config-files-editor-buttons a.config-files-link-off:hover {
+    color: var(--config-files-link-off);
     text-decoration: none;
     pointer-events: none;
     cursor: default;

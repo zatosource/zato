@@ -1,4 +1,4 @@
-// Config tables - the numbers down the left of the file, and the copy they turn into.
+// Config files kit - the numbers down the left of the file, and the copy they turn into.
 //
 // The column is only as wide as the numbers in it, so it is measured from the count
 // of lines the file has rather than set to a width that would fit any file. The copy
@@ -28,7 +28,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var gutter = tables.gutter;
 
 // ////////////////////////////////////////////////////////////////////////
@@ -47,16 +47,16 @@ gutter.config = {
     copyTableMessage: 'Table copied to clipboard',
 
     // The classes the parts of the column wear
-    rowClass: 'config-tables-gutter-line',
-    rowAtClass: 'config-tables-gutter-line-at',
-    numberClass: 'config-tables-gutter-number',
-    reachClass: 'config-tables-gutter-reach',
-    buttonClass: 'zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-gutter-copy',
-    buttonVisibleClass: 'config-tables-gutter-copy-visible',
+    rowClass: 'config-files-gutter-line',
+    rowAtClass: 'config-files-gutter-line-at',
+    numberClass: 'config-files-gutter-number',
+    reachClass: 'config-files-gutter-reach',
+    buttonClass: 'zato-badge zato-badge-blue config-files-copy config-files-copy-small config-files-gutter-copy',
+    buttonVisibleClass: 'config-files-gutter-copy-visible',
 
     // The button is the one thing here that a tooltip is anchored by, so it is the
     // one thing here with an id
-    buttonId: 'config-tables-gutter-copy',
+    buttonId: 'config-files-gutter-copy',
 
     // How wide the column is - one digit's worth per digit the last line number has,
     // plus the room its own padding takes
@@ -64,11 +64,11 @@ gutter.config = {
     widthExtra: 8,
 
     // The name of the width the stylesheet lays the column out by
-    widthProperty: '--config-tables-gutter-width',
+    widthProperty: '--config-files-gutter-width',
 
     // The name of the room the file keeps before its first character, which is what the
     // button reaches over and how far past the numbers the cursor is still on a line
-    fileInsetProperty: '--config-tables-file-inset',
+    fileInsetProperty: '--config-files-file-inset',
 
     // What a row says about the line it counts
     lineAttribute: 'data-line',
@@ -201,7 +201,7 @@ gutter.refresh = function() {
 gutter.build = function(lineCount) {
 
     var lines = document.createElement('div');
-    lines.className = 'config-tables-gutter-lines';
+    lines.className = 'config-files-gutter-lines';
 
     for(var lineIdx = 0; lineIdx < lineCount; lineIdx++) {
         lines.appendChild(gutter.buildRow(lineIdx + 1));

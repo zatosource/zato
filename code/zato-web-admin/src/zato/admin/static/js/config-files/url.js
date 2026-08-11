@@ -1,4 +1,4 @@
-// Config tables - where the reader is, kept in the address of the page.
+// Config files kit - where the reader is, kept in the address of the page.
 //
 // The file being read, what is being translated and how far each column is scrolled all go
 // into the fragment of the address, so the page is the same page after a reload, however
@@ -8,14 +8,14 @@
 //
 // A name out of an address is not trusted with anything. The file named in a fragment is
 // only ever looked up among the files the server itself reported, and nothing is built into
-// a path here, so a fragment cannot reach a file outside the directory the server reads
-// its config files from.
+// a path here, so a fragment cannot reach a file outside the directories the server reads
+// the screen's files from.
 
 (function($) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var url = tables.url;
 
 // ////////////////////////////////////////////////////////////////////////
@@ -65,17 +65,21 @@ url.init = function() {
     url.state.current = url.read();
 
     // Everything the reader does to a field is worth keeping, whether or not the answer is
-    // then asked for
-    url.wireField('translate-source', url.config.sourceKey);
-    url.wireField('translate-value', url.config.codeKey);
-    url.wireField('translate-target', url.config.targetKey);
+    // then asked for, and every box on the page that scrolls inside itself is too, since
+    // where a column is scrolled to is as much a part of where the reader is as which file
+    // is open
+    if(tables.config.hasTranslate) {
 
-    // Every box on the page that scrolls inside itself, since where a column is scrolled to
-    // is as much a part of where the reader is as which file is open
+        url.wireField('translate-source', url.config.sourceKey);
+        url.wireField('translate-value', url.config.codeKey);
+        url.wireField('translate-target', url.config.targetKey);
+
+        url.wireScroll('translate-panel', url.config.translateScrollKey);
+        url.wireScroll('flow', url.config.flowScrollKey);
+    }
+
     url.wireScroll('browser', url.config.listScrollKey);
     url.wireScroll('content', url.config.fileScrollKey);
-    url.wireScroll('translate-panel', url.config.translateScrollKey);
-    url.wireScroll('flow', url.config.flowScrollKey);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -268,6 +272,10 @@ url.readFileName = function() {
 // only what the fragment actually says is put back over that.
 url.applyTranslate = function() {
 
+    if(!tables.config.hasTranslate) {
+        return;
+    }
+
     var config = url.config;
     var current = url.state.current;
 
@@ -306,10 +314,14 @@ url.applyScroll = function() {
     var config = url.config;
 
     window.requestAnimationFrame(function() {
+
         url.applyScrollOne('browser', config.listScrollKey);
         url.applyScrollOne('content', config.fileScrollKey);
-        url.applyScrollOne('translate-panel', config.translateScrollKey);
-        url.applyScrollOne('flow', config.flowScrollKey);
+
+        if(tables.config.hasTranslate) {
+            url.applyScrollOne('translate-panel', config.translateScrollKey);
+            url.applyScrollOne('flow', config.flowScrollKey);
+        }
     });
 };
 

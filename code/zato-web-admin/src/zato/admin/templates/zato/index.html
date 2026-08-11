@@ -261,6 +261,7 @@
                             <li class="first-level" >
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">AI &darr;</a>
                                 <ul>
+                                    <li class="child"><a class="menu-link" href="{% url "ai-skills" %}?cluster={{ cluster_id|default:"1" }}">Agent skills</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "gateway-mcp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=gateway-mcp">MCP gateways</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "out-llm" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-llm">LLM connections</a></li>
                                 </ul>
@@ -318,7 +319,9 @@
                                                     <li class="child"><a class="menu-link" href="{% url "channel-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-hl7-mllp">MLLP</a></li>
                                                 </ul>
                                             </li>
+                                            {% if 0 %}
                                             <li class="child"><a class="menu-link" href="{% url "channel-openapi" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-openapi">OpenAPI</a></li>
+                                            {% endif %}
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=channel&amp;transport=plain_http">REST</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
                                         </ul>

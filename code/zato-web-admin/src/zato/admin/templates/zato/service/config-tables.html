@@ -2,16 +2,17 @@
 
 {% comment %}
 Config tables - the config files a service reads through self.config, browsed and
-edited from the dashboard. Three columns, each as wide as the line next to it is
-dragged to: the files with a badge for what each of them is, the one being looked
+edited from the dashboard. The screen is built on the config files kit, with every
+one of its features on: three columns, each as wide as the line next to it is
+dragged to - the files with a badge for what each of them is, the one being looked
 at, and a column that runs a value through it. What is done to a file rather than
 to what is in it comes off the listing's own menu. The view provides:
 
-* cluster_id           - the current cluster
-* table_list_json      - every file with its contents
-* user_conf_directory  - where the files live
-* max_editable_size    - how large a file may be before it is edited outside the browser
-* error                - why the files could not be read, empty when they could
+* cluster_id        - the current cluster
+* file_list_json    - every file with its contents
+* default_directory - where a new file lands
+* max_editable_size - how large a file may be before it is edited outside the browser
+* error             - why the files could not be read, empty when they could
 {% endcomment %}
 
 {% block html_title %}Config tables{% endblock %}
@@ -24,7 +25,7 @@ to what is in it comes off the listing's own menu. The view provides:
 <link rel="stylesheet" type="text/css" href="/static/css/shared/autocomplete.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/highlight.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/drag-scroll.css">
-<link rel="stylesheet" type="text/css" href="/static/css/service/config-tables.css">
+<link rel="stylesheet" type="text/css" href="/static/css/config-files.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -35,33 +36,37 @@ to what is in it comes off the listing's own menu. The view provides:
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/drag-scroll.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/draw.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/draw_zoom.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/log.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/url.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/draft.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/stream.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/edit.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/text.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/split.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/combo.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/zoom.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/flow.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/wash.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/gutter.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/trace.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/listing.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/parse.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/invoker.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/files.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/upload.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/convert.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/menu.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/log.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/url.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/draft.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/stream.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/edit.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/text.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/split.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/combo.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/zoom.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/flow.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/wash.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/gutter.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/trace.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/listing.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/parse.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/invoker.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/files.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/upload.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/convert.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/menu.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-files/core.js"></script>
 
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
-    $.fn.zato.service.config_tables.init({
-        table_list: {{ table_list_json|safe }},
-        user_conf_directory: '{{ user_conf_directory }}',
+    $.fn.zato.config_files.init({
+        screen: {
+            logPrefix: 'config-tables',
+            storagePrefix: 'zato.config-tables'
+        },
+        file_list: {{ file_list_json|safe }},
+        default_directory: '{{ default_directory }}',
         max_editable_size: {{ max_editable_size }},
         persist_url: '{% url "service-config-tables-persist" %}',
         error: '{{ error|escapejs }}'
@@ -72,69 +77,69 @@ $(document).ready(function() {
 
 {% block "content" %}
 
-<div class="settings-container config-tables-container" id="config-tables-container">
-<div class="settings-panel config-tables-panel">
+<div class="settings-container config-files-container" id="config-files-container">
+<div class="settings-panel config-files-panel">
 
-    <div class="config-tables-panel-header">
+    <div class="config-files-panel-header">
         <h2>Config tables</h2>
 
         <!-- The file being read, in full, with the star that says it has been typed into
              since it was last saved -->
-        <span class="config-tables-root">
-            <span id="config-tables-root-path"></span>
-            <span class="config-tables-modified" id="config-tables-root-modified" hidden>*</span>
+        <span class="config-files-root">
+            <span id="config-files-root-path"></span>
+            <span class="config-files-modified" id="config-files-root-modified" hidden>*</span>
         </span>
     </div>
 
-    <div class="settings-content" id="config-tables-content-area">
+    <div class="settings-content" id="config-files-content-area">
 
         <!-- The browser - a right click anywhere in it opens its menu -->
-        <div class="config-tables-browser" id="config-tables-browser">
+        <div class="config-files-browser" id="config-files-browser">
 
             <!-- The two actions ride along the heading, at the end of its row -->
-            <div class="config-tables-browser-header">
+            <div class="config-files-browser-header">
                 <h3>Files</h3>
-                <div class="config-tables-browser-buttons">
-                    <button type="button" class="secondary-button config-tables-button-small" id="config-tables-new">New file</button>
-                    <button type="button" class="secondary-button config-tables-button-small" id="config-tables-upload">Upload file</button>
+                <div class="config-files-browser-buttons">
+                    <button type="button" class="secondary-button config-files-button-small" id="config-files-new">New file</button>
+                    <button type="button" class="secondary-button config-files-button-small" id="config-files-upload">Upload file</button>
                 </div>
             </div>
 
-            <ul class="config-tables-file-list" id="config-tables-file-list"></ul>
+            <ul class="config-files-file-list" id="config-files-file-list"></ul>
 
         </div>
 
         <!-- The line between the listing and the file, which is also what moves it -->
-        <div class="config-tables-splitter" id="config-tables-splitter" tabindex="0"
+        <div class="config-files-splitter" id="config-files-splitter" tabindex="0"
             role="separator" aria-orientation="vertical" aria-label="Resize the listing"></div>
 
         <!-- The file being looked at -->
         <div class="settings-main">
 
-            <div class="config-tables-empty" id="config-tables-empty" hidden></div>
+            <div class="config-files-empty" id="config-files-empty" hidden></div>
 
-            <div id="config-tables-editor">
+            <div id="config-files-editor">
 
                 <!-- The numbers down the left of the file are also how a line, or a
                      whole section of them, is taken a copy of -->
-                <div class="config-tables-editor-body">
-                    <div class="config-tables-gutter" id="config-tables-gutter"></div>
-                    <textarea id="config-tables-content" spellcheck="false"></textarea>
+                <div class="config-files-editor-body">
+                    <div class="config-files-gutter" id="config-files-gutter"></div>
+                    <textarea id="config-files-content" spellcheck="false"></textarea>
                 </div>
 
                 <!-- Putting the file back as it was is at the far end of the row from the
                      two buttons that act on it, and what has just happened is said beside
                      them - a press on that clears it -->
-                <div class="button-container" id="config-tables-editor-buttons">
-                    <div class="config-tables-editor-options">
-                        <a href="javascript:void(0)" id="config-tables-restore">Restore initial values</a>
-                        <span class="config-tables-option-bar" id="config-tables-convert-bar" hidden>|</span>
-                        <a href="javascript:void(0)" id="config-tables-convert" hidden>Convert to .ini</a>
+                <div class="button-container" id="config-files-editor-buttons">
+                    <div class="config-files-editor-options">
+                        <a href="javascript:void(0)" id="config-files-restore">Restore initial values</a>
+                        <span class="config-files-option-bar" id="config-files-convert-bar" hidden>|</span>
+                        <a href="javascript:void(0)" id="config-files-convert" hidden>Convert to .ini</a>
                     </div>
                     <div class="button-wrapper">
-                        <span class="config-tables-status" id="config-tables-status"></span>
-                        <button type="button" class="secondary-button" id="config-tables-check">Check</button>
-                        <button type="button" class="action-button" id="config-tables-save">Save</button>
+                        <span class="config-files-status" id="config-files-status"></span>
+                        <button type="button" class="secondary-button" id="config-files-check">Check</button>
+                        <button type="button" class="action-button" id="config-files-save">Save</button>
                     </div>
                 </div>
 
@@ -143,55 +148,55 @@ $(document).ready(function() {
         </div>
 
         <!-- The line between the file and the Translate column -->
-        <div class="config-tables-splitter" id="config-tables-translate-splitter" tabindex="0"
+        <div class="config-files-splitter" id="config-files-translate-splitter" tabindex="0"
             role="separator" aria-orientation="vertical" aria-label="Resize the Translate column"></div>
 
         <!-- Runs against the file on screen, which is what makes the answer the one
              a service reading the same file gets, while what the two fields offer
              comes off the file as it is on disk -->
-        <div class="config-tables-translate-panel" id="config-tables-translate-panel">
+        <div class="config-files-translate-panel" id="config-files-translate-panel">
 
             <!-- Every field offers what the file on disk holds and takes anything
                  else that is typed into it -->
-            <div class="config-tables-field" id="config-tables-translate-source-field">
-                <label for="config-tables-translate-source">Source</label>
-                <div class="config-tables-input-row">
-                    <input type="text" id="config-tables-translate-source" autocomplete="off">
-                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-inline-copy" id="config-tables-translate-source-copy">Copy</button>
+            <div class="config-files-field" id="config-files-translate-source-field">
+                <label for="config-files-translate-source">Source</label>
+                <div class="config-files-input-row">
+                    <input type="text" id="config-files-translate-source" autocomplete="off">
+                    <button type="button" class="zato-badge zato-badge-blue config-files-copy config-files-copy-small config-files-inline-copy" id="config-files-translate-source-copy">Copy</button>
                 </div>
             </div>
 
-            <div class="config-tables-field">
-                <label for="config-tables-translate-value">Value</label>
-                <div class="config-tables-input-row">
-                    <input type="text" id="config-tables-translate-value" autocomplete="off">
-                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-inline-copy" id="config-tables-translate-value-copy">Copy</button>
+            <div class="config-files-field">
+                <label for="config-files-translate-value">Value</label>
+                <div class="config-files-input-row">
+                    <input type="text" id="config-files-translate-value" autocomplete="off">
+                    <button type="button" class="zato-badge zato-badge-blue config-files-copy config-files-copy-small config-files-inline-copy" id="config-files-translate-value-copy">Copy</button>
                 </div>
             </div>
 
             <!-- Fill it in and the answer says what that system maps the value to,
                  leave it empty and the answer is the value itself -->
-            <div class="config-tables-field" id="config-tables-translate-target-field">
-                <label for="config-tables-translate-target">Target</label>
-                <div class="config-tables-input-row">
-                    <input type="text" id="config-tables-translate-target" autocomplete="off">
-                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-inline-copy" id="config-tables-translate-target-copy">Copy</button>
+            <div class="config-files-field" id="config-files-translate-target-field">
+                <label for="config-files-translate-target">Target</label>
+                <div class="config-files-input-row">
+                    <input type="text" id="config-files-translate-target" autocomplete="off">
+                    <button type="button" class="zato-badge zato-badge-blue config-files-copy config-files-copy-small config-files-inline-copy" id="config-files-translate-target-copy">Copy</button>
                 </div>
             </div>
 
-            <button type="button" class="secondary-button" id="config-tables-translate">Translate</button>
+            <button type="button" class="secondary-button" id="config-files-translate">Translate</button>
 
             <!-- A mapping set answers as a drawing of what maps to what, everything else
                  as text that is edited and taken away the way the file itself is. The
                  text is what Copy takes either way. -->
-            <div class="config-tables-result-area" id="config-tables-result-area">
+            <div class="config-files-result-area" id="config-files-result-area">
 
-                <div class="config-tables-flow zato-drag-scroll" id="config-tables-flow"></div>
+                <div class="config-files-flow zato-drag-scroll" id="config-files-flow"></div>
 
-                <textarea id="config-tables-result" spellcheck="false"></textarea>
+                <textarea id="config-files-result" spellcheck="false"></textarea>
 
-                <div class="config-tables-result-buttons">
-                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy" id="config-tables-result-copy">Copy</button>
+                <div class="config-files-result-buttons">
+                    <button type="button" class="zato-badge zato-badge-blue config-files-copy" id="config-files-result-copy">Copy</button>
                 </div>
 
             </div>
@@ -204,6 +209,6 @@ $(document).ready(function() {
 </div>
 
 <!-- What Upload file opens is the browser's own file picker, which is what this is -->
-<input type="file" id="config-tables-upload-file" hidden>
+<input type="file" id="config-files-upload-file" hidden>
 
 {% endblock %}

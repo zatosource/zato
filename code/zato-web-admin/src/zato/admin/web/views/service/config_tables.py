@@ -8,45 +8,31 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from json import dumps, loads
-from logging import getLogger
 from pathlib import Path
-from traceback import format_exc
-from typing import NamedTuple
-
-# Django
-from django.http import HttpResponse
-from django.http.response import HttpResponseServerError
-from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.util import get_server_user_conf_directory
 from zato.admin.web.views import method_allowed
+from zato.admin.web.views.config_files import build_index_response, ContentInfo, Definition, handle_persist, to_directory
 from zato.common.api import EnvFile, HotDeploy
 from zato.common.user_config import ModuleCtx as UserConfigCtx
 from zato.common.util.api import get_user_config_name
-from zato.common.util.open_ import open_r, open_w
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, strlist, strtuple
+    from django.http import HttpResponse
+    from django.template.response import TemplateResponse
+    from zato.common.typing_ import any_, strlist, strtuple
 
-    anydict = anydict
-    anylist = anylist
     strlist = strlist
     strtuple = strtuple
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger(__name__)
-
 _template_name = 'zato/service/config-tables.html'
-
-# A file larger than this is edited outside the dashboard so its contents are not sent to the browser
-_max_editable_size = 256 * 1024
 
 # The environment variables that point to user configuration directories
 _user_conf_env_keys = ('Zato_User_Conf_Dir', 'ZATO_USER_CONF_DIR')
@@ -80,48 +66,11 @@ _kind_error = 'error'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ContentInfo(NamedTuple):
-    kind: str
-    section_count: int
-    entry_count: int
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _to_directory(path:'str') -> 'str':
-    """ A directory in the form all the directories here are kept and compared in, that is,
-    an absolute path with a trailing separator.
-    """
-    out = os.path.abspath(os.path.expanduser(path)) + os.sep
-    return out
-
-# ################################################################################################################################
-
-def _get_directory_list() -> 'strlist':
-    """ The directories the page reads and writes user configuration in, which are the same
-    ones that the server reads it from - the server's own directory, the directories named
-    in the environment, and the ones inside the projects that the server hot-deploys.
-    """
-    out:'strlist' = []
-
-    _add_directory(out, get_server_user_conf_directory())
-
-    for path in _get_env_path_list(_user_conf_env_keys, ()):
-        _add_directory(out, path)
-
-    for project_root in _get_env_path_list(_project_env_keys, _project_env_prefixes):
-        for path in _get_project_directory_list(project_root):
-            _add_directory(out, path)
-
-    return out
-
-# ################################################################################################################################
-
 def _add_directory(directory_list:'strlist', path:'str') -> 'None':
     """ Adds the directory to the list unless the same directory is in it already, which is
     what a path named twice, or named once under a symlink of its own, comes to.
     """
-    directory = _to_directory(path)
+    directory = to_directory(path)
     real_path = os.path.realpath(directory)
 
     for item in directory_list:
@@ -172,27 +121,6 @@ def _get_project_directory_list(project_root:'str') -> 'strlist':
 
     out.sort()
 
-    return out
-
-# ################################################################################################################################
-
-def _get_full_path(directory:'str', file_name:'str') -> 'str':
-    """ The full path to the file that the request names. A file name names a file and nothing else,
-    and the directory it is in is one of the directories that user configuration is kept in. What
-    the file is called beyond that is not this function's business, a file brought in to be worked
-    on here being a file that does not read as user configuration yet.
-    """
-    base_name = os.path.basename(file_name)
-
-    if base_name != file_name:
-        raise Exception(f'Invalid file name `{file_name}`')
-
-    directory = _to_directory(directory)
-
-    if directory not in _get_directory_list():
-        raise Exception(f'Invalid directory `{directory}`')
-
-    out = os.path.join(directory, base_name)
     return out
 
 # ################################################################################################################################
@@ -286,206 +214,81 @@ def _read_content_info(content:'str') -> 'ContentInfo':
     return out
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-def _build_file_item(directory:'str', file_name:'str', full_path:'str') -> 'anydict':
-    """ One file as the page reads it. A file larger than the browser edits in place is reported
-    without its contents because they would not be used, and so is one that is not text at all,
-    a directory holding whatever the user put in it.
+class ConfigTablesDefinition(Definition):
+    """ The Config tables screen on the kit - the user configuration files that services read
+    through self.config, in the directories that the server reads them from.
     """
-    size = os.path.getsize(full_path)
-    is_editable = size <= _max_editable_size
-    content = ''
-
-    if is_editable:
-        try:
-            with open_r(full_path) as opened:
-                content = opened.read()
-        except UnicodeDecodeError:
-            is_editable = False
-
-    # A yaml file is of its own kind by name alone, everything else says what it is by its contents
-    file_name_lower = file_name.lower()
-
-    if file_name_lower.endswith(_yaml_suffixes):
-        info = ContentInfo(_kind_yaml, 0, 0)
-    else:
-        info = _read_content_info(content)
-
-    out = {
-        'name': get_user_config_name(file_name),
-        'file_name': file_name,
-        'directory': directory,
-        'path': full_path,
-        'kind': info.kind,
-        'section_count': info.section_count,
-        'entry_count': info.entry_count,
-        'size': size,
-        'is_editable': is_editable,
-        'content': content,
-    }
-
-    return out
+    template_name = _template_name
+    log_prefix = 'Config tables'
 
 # ################################################################################################################################
 
-def _get_file_list(directory_list:'strlist') -> 'anylist':
-    """ Every user configuration file in the directories given, with what each of them holds.
-    """
-    out:'anylist' = []
+    def get_directory_list(self) -> 'strlist':
+        """ The server's own directory, the directories named in the environment, and the ones
+        inside the projects that the server hot-deploys.
+        """
+        out:'strlist' = []
 
-    for directory in directory_list:
+        _add_directory(out, get_server_user_conf_directory())
 
-        # A directory that services read from does not have to exist yet ..
-        if not os.path.exists(directory):
-            continue
+        for path in _get_env_path_list(_user_conf_env_keys, ()):
+            _add_directory(out, path)
 
-        # .. and everything in one is a file the page lists, whether it reads as user configuration
-        # yet or not, the one exception being the environment file, which keeps secrets.
-        for file_name in sorted(os.listdir(directory)):
+        for project_root in _get_env_path_list(_project_env_keys, _project_env_prefixes):
+            for path in _get_project_directory_list(project_root):
+                _add_directory(out, path)
 
-            file_name_lower = file_name.lower()
+        return out
 
-            if file_name_lower == EnvFile.Default:
-                continue
+# ################################################################################################################################
 
-            if file_name.startswith('.'):
-                continue
+    def build_content_info(self, file_name:'str', content:'str') -> 'ContentInfo':
 
-            full_path = os.path.join(directory, file_name)
+        # A yaml file is of its own kind by name alone, everything else says what it is by its contents
+        file_name_lower = file_name.lower()
 
-            if not os.path.isfile(full_path):
-                continue
+        if file_name_lower.endswith(_yaml_suffixes):
+            out = ContentInfo(_kind_yaml, 0, 0)
+        else:
+            out = _read_content_info(content)
 
-            item = _build_file_item(directory, file_name, full_path)
-            out.append(item)
+        return out
 
-    return out
+# ################################################################################################################################
+
+    def get_display_name(self, file_name:'str') -> 'str':
+
+        out = get_user_config_name(file_name)
+        return out
+
+# ################################################################################################################################
+
+    def is_listed(self, file_name:'str') -> 'bool':
+        """ Everything in a directory is a file the page lists, whether it reads as user
+        configuration yet or not, the one exception being the environment file, which keeps secrets.
+        """
+        file_name_lower = file_name.lower()
+
+        if file_name_lower == EnvFile.Default:
+            return False
+
+        out = not file_name.startswith('.')
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _save(request_data:'anydict') -> 'anydict':
-    """ Writes the file's contents as the page has them now.
-    """
-    directory = request_data['directory']
-    full_path = _get_full_path(directory, request_data['file_name'])
-
-    os.makedirs(directory, exist_ok=True)
-
-    with open_w(full_path) as opened:
-        _ = opened.write(request_data['data'])
-
-    logger.info('Saved user config file %s', full_path)
-
-    out = {'path': full_path}
-    return out
-
-# ################################################################################################################################
-
-def _create(request_data:'anydict') -> 'anydict':
-    """ Creates a file that was not there before, with the contents that the page starts it with.
-    """
-    directory = request_data['directory']
-    full_path = _get_full_path(directory, request_data['file_name'])
-
-    if os.path.exists(full_path):
-        raise Exception(f'File already exists `{full_path}`')
-
-    os.makedirs(directory, exist_ok=True)
-
-    with open_w(full_path) as opened:
-        _ = opened.write(request_data['data'])
-
-    logger.info('Created user config file %s', full_path)
-
-    out = {'path': full_path}
-    return out
-
-# ################################################################################################################################
-
-def _rename(request_data:'anydict') -> 'anydict':
-    """ Gives the file another name in the directory it is in.
-    """
-    directory = request_data['directory']
-
-    full_path = _get_full_path(directory, request_data['file_name'])
-    new_full_path = _get_full_path(directory, request_data['new_file_name'])
-
-    if os.path.exists(new_full_path):
-        raise Exception(f'File already exists `{new_full_path}`')
-
-    os.rename(full_path, new_full_path)
-
-    logger.info('Renamed user config file %s to %s', full_path, new_full_path)
-
-    out = {'path': new_full_path}
-    return out
-
-# ################################################################################################################################
-
-def _delete(request_data:'anydict') -> 'anydict':
-    """ Removes the file from the directory that services read it from.
-    """
-    full_path = _get_full_path(request_data['directory'], request_data['file_name'])
-
-    if os.path.exists(full_path):
-        os.remove(full_path)
-        logger.info('Deleted user config file %s', full_path)
-
-    out = {'path': full_path}
-    return out
-
-# ################################################################################################################################
-
-# What each action the page takes is carried out by
-_action_handler = {
-    'save': _save,
-    'add': _create,
-    'upload': _create,
-    'rename': _rename,
-    'delete': _delete,
-}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _json_response(data:'anydict', is_ok:'bool'=True) -> 'HttpResponse':
-
-    payload = dumps(data).encode('utf-8')
-    response_class = HttpResponse if is_ok else HttpResponseServerError
-
-    out = response_class(payload, content_type='application/json')
-    return out
+_definition = ConfigTablesDefinition()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
 def index(req:'any_') -> 'TemplateResponse':
-    """ The user configuration files that services read through self.config, one of which
-    is looked at and edited at a time.
-    """
-    directory_list = _get_directory_list()
-    table_list:'anylist' = []
-    error = ''
 
-    try:
-        table_list = _get_file_list(directory_list)
-    except Exception as e:
-        error = str(e)
-        logger.error('Config tables: could not read the files: %s', format_exc())
-
-    return_data = {
-        'cluster_id': req.zato.cluster_id,
-        'table_list_json': dumps(table_list),
-        'user_conf_directory': directory_list[0],
-        'max_editable_size': _max_editable_size,
-        'error': error,
-        'zato_clusters': True,
-        'zato_template_name': _template_name,
-    }
-
-    out = TemplateResponse(req, _template_name, return_data)
+    out = build_index_response(req, _definition)
     return out
 
 # ################################################################################################################################
@@ -493,23 +296,9 @@ def index(req:'any_') -> 'TemplateResponse':
 
 @method_allowed('POST')
 def persist(req:'any_') -> 'HttpResponse':
-    """ Carries out one change that the page has made to a file.
-    """
-    try:
-        request_data = loads(req.body.decode('utf-8'))
-        action = request_data['action']
 
-        if action not in _action_handler:
-            raise Exception(f'Unknown action `{action}`')
-
-        handler = _action_handler[action]
-        data = handler(request_data['data'])
-
-        return _json_response({'success': True, 'data': data})
-
-    except Exception as e:
-        logger.error('Config tables: %s', format_exc())
-        return _json_response({'success': False, 'error': str(e)}, False)
+    out = handle_persist(req, _definition)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

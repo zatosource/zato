@@ -1,4 +1,4 @@
-// Config tables - reading a file the way the server reads it.
+// Config files kit - reading a file the way the server reads it.
 //
 // A file is sections of key and value pairs. A code list keeps every code under
 // the one section, a mapping set keeps one section per name the values come
@@ -14,7 +14,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var parse = tables.parse;
 
 // ////////////////////////////////////////////////////////////////////////

@@ -17,6 +17,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _mcp_protocol_version
+from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.session import MCPSessionManager
 
 # Test corpus
@@ -88,7 +89,7 @@ class MCPBoundary(Boundary):
         safeguard_config = build_safeguard_config({})
         token_cap_config = build_token_cap_config({})
 
-        handler = MCPHandler(registry, invoke_case_service, session_manager, safeguard_config, token_cap_config, False)
+        handler = MCPHandler(registry, invoke_case_service, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', []))
 
         # Every method other than initialize needs a session.
         session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)

@@ -1,4 +1,4 @@
-// Config tables - what the page did, on the console.
+// Config files kit - what the page did, on the console.
 //
 // Everything the page does to a file is logged - the keys pressed, the steps a file goes
 // through, what is unsaved, where the caret is, which file is opened and what is written to the
@@ -14,7 +14,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var log = tables.log;
 
 // ////////////////////////////////////////////////////////////////////////
@@ -25,8 +25,9 @@ log.config = {
     // here - false and nothing at all is said on the console
     isEnabled: true,
 
-    // What every line of the log is headed by
-    prefix: 'config-tables',
+    // What every line of the log is headed by, until the screen's own prefix
+    // lands here through applyScreen
+    prefix: 'config-files',
 
     // What the facts under a heading are set in from its left
     indent: '    '

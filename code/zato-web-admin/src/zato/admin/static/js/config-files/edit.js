@@ -1,4 +1,4 @@
-// Config tables - the keys an editor is worked with, and what each file remembers of being
+// Config files kit - the keys an editor is worked with, and what each file remembers of being
 // worked on.
 //
 // Typing into a file is one more thing the page did, so it goes onto the row of events in
@@ -23,7 +23,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var edit = tables.edit;
 var stream = tables.stream;
 var log = tables.log;
@@ -41,9 +41,9 @@ edit.config = {
     coalesceMS: 500,
     runLength: 24,
 
-    // Where the caret of each file is kept between one visit and the next, and how long after
-    // the last move it is written there
-    caretKey: 'zato.config-tables.caret',
+    // What follows the screen's own storage prefix in the key the carets are kept under
+    // between one visit and the next, and how long after the last move they are written there
+    caretSuffix: '.caret',
     writeMS: 200,
 
     // What is said when the keys that walk the unsaved files have nowhere to walk to
@@ -637,6 +637,16 @@ edit.forget = function(table) {
 // The carets between one visit and the next
 // ////////////////////////////////////////////////////////////////////////
 
+// Where this screen's carets are kept, under the screen's own storage prefix, so two screens
+// built on the kit never open each other's files at each other's places.
+edit.buildCaretKey = function() {
+
+    var out = tables.config.storagePrefix + edit.config.caretSuffix;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // The caret moves with every keystroke, so it is written once the moving has stopped rather
 // than once per key.
 edit.writeCaretSoon = function() {
@@ -658,7 +668,7 @@ edit.writeCaret = function() {
 
     var text = JSON.stringify(edit.state.caretByPath);
 
-    window.localStorage.setItem(edit.config.caretKey, text);
+    window.localStorage.setItem(edit.buildCaretKey(), text);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -666,7 +676,7 @@ edit.writeCaret = function() {
 edit.readCaret = function() {
 
     var out = {};
-    var stored = window.localStorage.getItem(edit.config.caretKey);
+    var stored = window.localStorage.getItem(edit.buildCaretKey());
 
     // Nothing has been kept in this browser yet, or what was kept is no longer readable, and
     // either way every file opens at the end of itself

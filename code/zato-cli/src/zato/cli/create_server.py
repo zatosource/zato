@@ -17,6 +17,7 @@ from zato.common.api import CONTENT_TYPE, Default_Extra_Service_File_Data, Defau
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.llm_models import default_models_yaml, models_file_name
 from zato.common.rule_engine.demo_data import demo_zrules_contents, Demo_Ruleset_Name
+from zato.common.skills.api import example_skill_contents, example_skill_name, skill_file_name
 from zato.common.util.api import as_bool, get_demo_extra_py_fs_locations, get_demo_py_fs_locations
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.open_ import open_r, open_w
@@ -256,6 +257,7 @@ default_odb_pool_size = 60
 directories = (
     'config',
     'config/repo',
+    'config/repo/skills',
     'config/repo/static',
     'logs',
     'pickup',
@@ -497,7 +499,7 @@ class Create(ZatoCommand):
             from shutil import copytree
             from zato.common.alerting.rendering import get_default_template_dir, Template_Dir_Name
 
-            copytree(get_default_template_dir(), os.path.join(repo_dir, Template_Dir_Name))
+            _ = copytree(get_default_template_dir(), os.path.join(repo_dir, Template_Dir_Name))
 
             if show_output:
                 self.logger.debug('Created a repo in {}'.format(repo_dir))
@@ -609,6 +611,15 @@ class Create(ZatoCommand):
                 llm_models_file = open_w(llm_models_loc)
                 _ = llm_models_file.write(default_models_yaml)
                 llm_models_file.close()
+
+            # The starter skill every new environment comes with
+            example_skill_dir = os.path.join(self.target_dir, 'config', 'repo', 'skills', example_skill_name)
+            os.mkdir(example_skill_dir)
+
+            example_skill_loc = os.path.join(example_skill_dir, skill_file_name)
+            example_skill_file = open_w(example_skill_loc)
+            _ = example_skill_file.write(example_skill_contents)
+            example_skill_file.close()
 
             fernet1 = Fernet(secret_key)
 

@@ -1,4 +1,4 @@
-// Config tables - the listing's own menu, opened by a right click on it.
+// Config files kit - the listing's own menu, opened by a right click on it.
 //
 // Everything done to a file rather than to what is in it lives here - a right
 // click on a file offers what can be done to that file, a right click anywhere
@@ -11,7 +11,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var menu = tables.menu;
 
 // ////////////////////////////////////////////////////////////////////////
@@ -19,13 +19,16 @@ var menu = tables.menu;
 menu.config = {
 
     // The menu on screen, of which there is at most one
-    elemId: 'config-tables-menu',
+    elemId: 'config-files-menu',
 
     // How close the menu may come to an edge of the screen
     edgeGap: 4,
 
     // What the header says when the menu is not about any one file
     rootTitle: 'Files',
+
+    // What the Show all switch keeps to while it is off
+    showAllOffLabel: 'Only .ini files',
 
     // The keys the actions answer to, which follow the left hand down its own rows the
     // way the IDE's menu does - Q W E R across the top for what is done to the file
@@ -74,7 +77,7 @@ menu.init = function() {
 // still the file that was being read, and the menu acts on the file it was opened over.
 menu.openFromEvent = function(event) {
 
-    var row = event.target.closest('.config-tables-file-row');
+    var row = event.target.closest('.config-files-file-row');
     var name = '';
 
     if(row) {
@@ -154,17 +157,31 @@ menu.buildHeader = function(name) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// What one press of Delete would take away, said on the menu - the entries the file holds
+// on a screen that counts them, and how much of it there is on one that does not.
+menu.buildDeleteDetail = function(table) {
+
+    if(tables.config.hasCount) {
+        var holds = tables.buildHolds(table.kind, table.entry_count, table.section_count);
+        return ['Holds', holds];
+    }
+
+    return ['Size', tables.formatSize(table.size)];
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // What the menu offers, in the order it offers it - a null is the line between
 // what is done to the file right-clicked and what brings another file in.
 menu.buildItemList = function(name) {
 
     var config = menu.config;
+    var screen = tables.config;
     var out = [];
 
     if(name) {
 
         var table = tables.getByName(name);
-        var holds = tables.buildHolds(table.kind, table.entry_count, table.section_count);
 
         out.push({
             key: config.renameKey,
@@ -195,24 +212,27 @@ menu.buildItemList = function(name) {
             action: menu.buildAction(tables.files.remove, table),
             details: [
                 ['File', table.path],
-                ['Holds', holds]
+                menu.buildDeleteDetail(table)
             ]
         });
 
         // A csv file is offered the one thing that makes it into a file a service can read, the
         // same offer the row of links under the file itself carries
-        if(tables.convert.isOffered(table)) {
+        if(screen.hasConvert) {
 
-            out.push({
-                key: config.convertKey,
-                label: 'Convert to .ini',
-                isDestructive: false,
-                action: menu.buildAction(tables.convert.runOn, table),
-                details: [
-                    ['File', table.path],
-                    ['Saves', 'No']
-                ]
-            });
+            if(tables.convert.isOffered(table)) {
+
+                out.push({
+                    key: config.convertKey,
+                    label: 'Convert to .ini',
+                    isDestructive: false,
+                    action: menu.buildAction(tables.convert.runOn, table),
+                    details: [
+                        ['File', table.path],
+                        ['Saves', 'No']
+                    ]
+                });
+            }
         }
 
         out.push(null);
@@ -224,32 +244,38 @@ menu.buildItemList = function(name) {
         isDestructive: false,
         action: tables.files.add,
         details: [
-            ['Goes into', tables.state.userConfDirectory]
+            ['Goes into', tables.state.defaultDirectory]
         ]
     });
 
-    out.push({
-        key: config.uploadKey,
-        label: 'Upload file',
-        isDestructive: false,
-        action: tables.upload.open,
-        details: [
-            ['Goes into', tables.state.userConfDirectory]
-        ]
-    });
+    if(screen.hasUpload) {
 
-    out.push({
-        key: config.showAllKey,
-        label: 'Show all',
-        isDestructive: false,
-        isToggle: true,
-        isOn: menu.isShowingAll,
-        action: tables.toggleShowAll,
-        details: [
-            ['On', 'All files'],
-            ['Off', 'Only .ini files']
-        ]
-    });
+        out.push({
+            key: config.uploadKey,
+            label: 'Upload file',
+            isDestructive: false,
+            action: tables.upload.open,
+            details: [
+                ['Goes into', tables.state.defaultDirectory]
+            ]
+        });
+    }
+
+    if(screen.hasShowAll) {
+
+        out.push({
+            key: config.showAllKey,
+            label: 'Show all',
+            isDestructive: false,
+            isToggle: true,
+            isOn: menu.isShowingAll,
+            action: tables.toggleShowAll,
+            details: [
+                ['On', 'All files'],
+                ['Off', config.showAllOffLabel]
+            ]
+        });
+    }
 
     return out;
 };
@@ -346,7 +372,7 @@ menu.buildToggle = function(item) {
     var out = document.createElement('input');
 
     out.type = 'checkbox';
-    out.className = 'config-tables-menu-toggle';
+    out.className = 'config-files-menu-toggle';
     out.checked = item.isOn();
     out.tabIndex = -1;
 
@@ -365,7 +391,7 @@ menu.buildToggle = function(item) {
 // that flipped it.
 menu.syncToggle = function(item) {
 
-    var selector = '.grid-panel-item[data-key="' + item.key + '"] .config-tables-menu-toggle';
+    var selector = '.grid-panel-item[data-key="' + item.key + '"] .config-files-menu-toggle';
     var elem = document.getElementById(menu.config.elemId).querySelector(selector);
 
     elem.checked = item.isOn();
@@ -514,7 +540,7 @@ menu.installDrag = function(elem) {
 // as long as the menu is open and nothing else does.
 menu.installDismiss = function(elem, itemList) {
 
-    $(document).on('mousedown.config-tables-menu', function(event) {
+    $(document).on('mousedown.config-files-menu', function(event) {
 
         var isInside = Boolean(event.target.closest('#' + menu.config.elemId));
 
@@ -523,7 +549,7 @@ menu.installDismiss = function(elem, itemList) {
         }
     });
 
-    $(document).on('keydown.config-tables-menu', function(event) {
+    $(document).on('keydown.config-files-menu', function(event) {
 
         if(event.key === 'Escape') {
             menu.close();
@@ -568,8 +594,8 @@ menu.close = function() {
         elem.remove();
     }
 
-    $(document).off('mousedown.config-tables-menu');
-    $(document).off('keydown.config-tables-menu');
+    $(document).off('mousedown.config-files-menu');
+    $(document).off('keydown.config-files-menu');
     $(document).off('mousemove.zato-popup-drag');
     $(document).off('mouseup.zato-popup-drag');
 };

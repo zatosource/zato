@@ -1,4 +1,4 @@
-// Config tables - the row of everything the page has done, and going back and forward through it.
+// Config files kit - the row of everything the page has done, and going back and forward through it.
 //
 // Typing into a file, adding one, renaming one and deleting one are all one kind of thing here:
 // something the page did, in the order it did it. Ctrl-Z takes back whatever the last of them was
@@ -17,7 +17,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var stream = tables.stream;
 var log = tables.log;
 

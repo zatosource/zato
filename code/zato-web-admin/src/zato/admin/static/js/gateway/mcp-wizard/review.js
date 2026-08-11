@@ -392,6 +392,12 @@ review._editServices = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+review._editSkills = function() {
+    wizard.reveal(document.getElementById('mcp-wizard-picker-skills'));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 review._editSecurity = function() {
     wizard.reveal(document.getElementById('mcp-wizard-picker-security'));
 };
@@ -476,6 +482,13 @@ review.render = function() {
         serviceRows.push(['Assigned', config.noneLabel]);
     }
 
+    var skillListRows = review._badgeListRows(ownConfig.skillsPickerAction, 'Skill');
+    var skillRows = [];
+
+    if(!skillListRows.length) {
+        skillRows.push(['Assigned', config.noneLabel]);
+    }
+
     var securityListRows = review._badgeListRows(ownConfig.securityPickerAction, 'Definition');
     var securityRows = [];
 
@@ -516,6 +529,8 @@ review.render = function() {
         {label: groups.basics,         step: 0, rows: basicsRows},
         {label: groups.services,       step: 0, listRows: serviceListRows, rows: serviceRows,
             edit: review._editServices},
+        {label: groups.skills,         step: 0, listRows: skillListRows, rows: skillRows,
+            edit: review._editSkills},
         {label: groups.security,       step: 0, listRows: securityListRows, rows: securityRows,
             edit: review._editSecurity},
         {label: groups.shaping,        step: 1, rows: shapingRows, edit: review._editSizeCaps},

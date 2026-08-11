@@ -14,6 +14,7 @@ from zato.common.audit_log.api import AuditLog
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler
+from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.registry import ToolRegistry
 from zato.server.connection.mcp.session import MCPSessionManager
 
@@ -84,13 +85,26 @@ class GatewayMCPWrapper:
         if validate_input is None:
             validate_input = False
 
+        # .. the skills this gateway serves as prompts - a config without the key serves none,
+        # and the files themselves are read from the server's config/repo/skills on each request ..
+        allowed_skills:'strlist | None' = self.config.get('skills')
+        if allowed_skills is None:
+            allowed_skills = []
+
+        skill_prompts = SkillPrompts(self.server.repo_location, allowed_skills)
+
         # .. build the handler with an invoke function that calls services through the server.
         self.handler = MCPHandler(
-            tool_registry, self._invoke_service, session_manager, safeguard_config, token_cap_config, validate_input)
+            tool_registry, self._invoke_service, session_manager, safeguard_config, token_cap_config, validate_input,
+            skill_prompts)
 
         service_suffix = 'service' if len(allowed_services) == 1 else 'services'
         sorted_services = sorted(allowed_services)
         logger.info('MCP gateway `%s` built with %d allowed %s: %s', self.config.name, len(allowed_services), service_suffix, sorted_services)
+
+        skill_suffix = 'skill' if len(allowed_skills) == 1 else 'skills'
+        sorted_skills = sorted(allowed_skills)
+        logger.info('MCP gateway `%s` serves %d %s as prompts: %s', self.config.name, len(allowed_skills), skill_suffix, sorted_skills)
 
 # ################################################################################################################################
 

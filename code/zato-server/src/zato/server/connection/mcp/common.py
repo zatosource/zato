@@ -27,8 +27,13 @@ _error_invalid_params   = -32602
 # JSON-RPC 2.0 version string
 _jsonrpc_version = '2.0'
 
-# The tools/call method is the only one that carries a tool name
+# The tools/call method is the only tool method that carries a tool name
 _method_tools_call = 'tools/call'
+
+# The prompts methods, of which prompts/get carries a prompt name
+# the way tools/call carries a tool name
+_method_prompts_list = 'prompts/list'
+_method_prompts_get  = 'prompts/get'
 
 # Generic error message returned to clients for all session-related rejections
 _message_bad_request = 'Bad request'
@@ -47,6 +52,9 @@ _message_missing_method = 'Invalid request: missing method'
 
 # Error message returned when the required tool name parameter is absent
 _message_missing_tool_name = 'Missing required parameter: name'
+
+# Error message returned when the prompt name does not point to a skill this gateway serves
+_message_prompt_not_found = 'Prompt not found'
 
 # Error message returned when the cursor parameter is not a valid integer
 _message_invalid_cursor = 'Invalid cursor value'

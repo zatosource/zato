@@ -17,6 +17,7 @@ from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.audit import build_audit_event, Method_Session_Delete, Method_Unknown
 from zato.server.connection.mcp.handler import MCPHandler, _mcp_protocol_version
+from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.session import MCPSessionManager
 
 # ################################################################################################################################
@@ -193,7 +194,7 @@ def _make_handler() -> 'MCPHandler':
     safeguard_config = build_safeguard_config({})
     token_cap_config = build_token_cap_config({})
 
-    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False) # pyright: ignore[reportArgumentType]
+    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', [])) # pyright: ignore[reportArgumentType]
     return out
 
 # ################################################################################################################################

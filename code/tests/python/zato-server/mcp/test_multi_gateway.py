@@ -67,7 +67,7 @@ class GatewayMCPWrapperInit(TestCase):
 
         service_store = Bunch(services={}, name_to_impl_name={})
         config = Bunch(name='test-mcp-gateway')
-        server = Bunch(service_store=service_store)
+        server = Bunch(service_store=service_store, repo_location='')
 
         wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()

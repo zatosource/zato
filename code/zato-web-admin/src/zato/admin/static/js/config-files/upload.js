@@ -1,4 +1,4 @@
-// Config tables - bringing a file in from your own machine.
+// Config files kit - bringing a file in from your own machine.
 //
 // There is nothing to ask about, so nothing is asked - the button opens the browser's own file
 // picker and the file lands where a new file lands, in the directory the files are read from. A
@@ -9,7 +9,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var upload = tables.upload;
 var parse = tables.parse;
 

@@ -1,4 +1,4 @@
-// Config tables - the answer for a mapping set, drawn rather than written.
+// Config files kit - the answer for a mapping set, drawn rather than written.
 //
 // A mapping set holds a table per party, so its answer reads as a story down the middle of
 // the column: the table the value came in from maps it to what the file holds, and that
@@ -22,7 +22,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var flow = tables.flow;
 
 // ////////////////////////////////////////////////////////////////////////
@@ -93,7 +93,7 @@ flow.config = {
     // says that it was copied
     textMark: 'data-flow-text',
     boxMark: 'data-flow-box',
-    copyAnchorId: 'config-tables-flow-copy-anchor',
+    copyAnchorId: 'config-files-flow-copy-anchor',
 
     // Where the words that say so stand - beside the shape, close enough to be reading off it
     // rather than off the drawing. The distance is measured to the box the words are in, and the
@@ -104,18 +104,18 @@ flow.config = {
 
     // The classes the parts of the drawing wear, so what they look like stays in the
     // stylesheet
-    groupClass: 'config-tables-flow-group',
-    captionClass: 'config-tables-flow-caption',
-    chipClass: 'config-tables-flow-chip',
-    chipNoteClass: 'config-tables-flow-chip-note',
-    chipTextClass: 'config-tables-flow-chip-text',
-    noteTextClass: 'config-tables-flow-note-text',
-    valueClass: 'config-tables-flow-value',
-    valueTextClass: 'config-tables-flow-value-text',
-    labelClass: 'config-tables-flow-label',
-    lineClass: 'config-tables-flow-line',
-    arrowClass: 'config-tables-flow-arrow',
-    drawnClass: 'config-tables-result-drawn'
+    groupClass: 'config-files-flow-group',
+    captionClass: 'config-files-flow-caption',
+    chipClass: 'config-files-flow-chip',
+    chipNoteClass: 'config-files-flow-chip-note',
+    chipTextClass: 'config-files-flow-chip-text',
+    noteTextClass: 'config-files-flow-note-text',
+    valueClass: 'config-files-flow-value',
+    valueTextClass: 'config-files-flow-value-text',
+    labelClass: 'config-files-flow-label',
+    lineClass: 'config-files-flow-line',
+    arrowClass: 'config-files-flow-arrow',
+    drawnClass: 'config-files-result-drawn'
 };
 
 // ////////////////////////////////////////////////////////////////////////

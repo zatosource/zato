@@ -26,6 +26,7 @@ wizard.config_own = {
     groups: {
         basics: 'Basics',
         services: 'Services',
+        skills: 'Skills',
         security: 'Security',
         shaping: 'Response shaping',
         gatewayOptions: 'Gateway options',
@@ -38,11 +39,12 @@ wizard.config_own = {
     // connection names are unique per type rather than across all of them
     connectionType: 'gateway-mcp',
 
-    // The action the two badge pickers on step 1 are registered under - it is
-    // what their element ids are derived from, with the security picker
-    // additionally carrying the sec- prefix its loader adds on its own
+    // The action the badge pickers on step 1 are registered under - it is
+    // what their element ids are derived from, with the security and skills
+    // pickers additionally carrying the prefix their loaders add on their own
     pickerAction: 'wizard',
     securityPickerAction: 'sec-wizard',
+    skillsPickerAction: 'skills-wizard',
 
     // What the edit endpoint reads its input under - the edit page's Django
     // form is built with the same prefix and the kit's fieldPrefix follows it
@@ -133,9 +135,11 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         $.fn.zato.gateway.mcp._init_safeguard_toggles(action);
 
         // .. the services and the security definitions the gateway exposes
-        // and authenticates with, each in a badge picker of its own ..
+        // and authenticates with, plus the skills it serves as prompts,
+        // each in a badge picker of its own ..
         $.fn.zato.gateway.mcp.badge_picker.load(ownConfig.pickerAction, itemId);
         $.fn.zato.gateway.mcp.security_badge_picker.load(ownConfig.pickerAction, itemId);
+        $.fn.zato.gateway.mcp.skills_badge_picker.load(ownConfig.pickerAction, itemId);
 
         // .. and a live uniqueness indicator for the URL path - the name
         // has its own check through the kit config above.
@@ -200,6 +204,10 @@ wizard._writeBadgeInputs = function(form) {
     wizard.assignedBadges(ownConfig.securityPickerAction).each(function() {
         $.fn.zato.gateway.mcp.security_badge_picker_config.inject_hidden_input(form, $(this));
     });
+
+    wizard.assignedBadges(ownConfig.skillsPickerAction).each(function() {
+        $.fn.zato.gateway.mcp.skills_badge_picker_config.inject_hidden_input(form, $(this));
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -218,10 +226,14 @@ wizard.helpDescriptions = function() {
     // The page title carries the wizard-wide overview
     out['mcp-wizard-title'] = wizard.titleHelp();
 
-    // The two badge pickers of step 1 ..
+    // The badge pickers of step 1 ..
     out['badge-filter-text-wizard'] = 'The services this gateway exposes as MCP tools. ' +
         'Each assigned service becomes one tool an agent can discover and invoke. ' +
         'Click a badge to move it between the two zones, or drag a whole selection.';
+    out['badge-filter-text-skills-wizard'] = 'The skills this gateway serves as MCP prompts. ' +
+        'Each assigned skill becomes one prompt an agent can discover and read. ' +
+        'Skills are authored on the AI - Skills screen. With none assigned, ' +
+        'the gateway serves tools only.';
     out['badge-filter-text-sec-wizard'] = 'Security definitions used to authenticate incoming MCP requests. ' +
         'More than one can be assigned. With none assigned, the gateway will accept ' +
         'requests from anyone who knows its address.';

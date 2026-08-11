@@ -1,10 +1,11 @@
-// Config tables - the room the three columns get, across and down.
+// Config files kit - the room the columns get, across and down.
 //
-// Across: the listing, the file and the Translate column each take as much of the
-// panel as the line next to it is dragged to, either line goes all the way across,
-// and a line dragged near the edge it belongs to pulls its own column shut rather
-// than leaving a sliver of it. Where each line was left is where it opens the next
-// time. The dragging itself is the shared resizer in js/shared/resizer.js.
+// Across: the listing, the file and - on a screen that has it - the Translate column
+// each take as much of the panel as the line next to it is dragged to, either line
+// goes all the way across, and a line dragged near the edge it belongs to pulls its
+// own column shut rather than leaving a sliver of it. Where each line was left is
+// where it opens the next time. The dragging itself is the shared resizer in
+// js/shared/resizer.js.
 //
 // Down: the panel takes what the window has left under the navigation, less the
 // same air below it as there is above it, so each column scrolls inside itself
@@ -17,7 +18,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var split = tables.split;
 
 // ////////////////////////////////////////////////////////////////////////
@@ -30,14 +31,14 @@ split.config = {
     keyboardStepPercent: 2,
 
     // The class a line wears while it is being dragged
-    activeClass: 'config-tables-splitter-active',
+    activeClass: 'config-files-splitter-active',
 
     // A drag that ends up this near a column's own edge shuts that column
     collapseAtPercent: 8,
 
     // The class a column wears while it is shut
-    browserCollapsedClass: 'config-tables-browser-collapsed',
-    translateCollapsedClass: 'config-tables-translate-collapsed',
+    browserCollapsedClass: 'config-files-browser-collapsed',
+    translateCollapsedClass: 'config-files-translate-collapsed',
 
     // How narrow the listing has to be before it gives up each part of itself, in pixels,
     // and the class it wears once it has - what a file holds goes first and the badge
@@ -47,14 +48,15 @@ split.config = {
     hideHeadingAtPx: 170,
     hideBadgeAtPx: 130,
 
-    hideCountClass: 'config-tables-browser-hide-count',
-    hideButtonsClass: 'config-tables-browser-hide-buttons',
-    hideHeadingClass: 'config-tables-browser-hide-heading',
-    hideBadgeClass: 'config-tables-browser-hide-badge',
+    hideCountClass: 'config-files-browser-hide-count',
+    hideButtonsClass: 'config-files-browser-hide-buttons',
+    hideHeadingClass: 'config-files-browser-hide-heading',
+    hideBadgeClass: 'config-files-browser-hide-badge',
 
-    // Where each of the two splits is kept between visits
-    browserStorageKey: 'zato.config-tables.split',
-    translateStorageKey: 'zato.config-tables.split-translate'
+    // What follows the screen's own storage prefix in the key each split is kept under
+    // between visits
+    browserStorageSuffix: '.split',
+    translateStorageSuffix: '.split-translate'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -74,18 +76,22 @@ split.init = function() {
         panel: tables.get('browser'),
         handle: tables.get('splitter'),
         edge: 'end',
-        storageKey: config.browserStorageKey,
+        storageKey: tables.config.storagePrefix + config.browserStorageSuffix,
         applied: split.applyBrowser
     });
 
-    // The Translate column sits at the end of it, so its line is on its near side
-    split.wire({
-        panel: tables.get('translate-panel'),
-        handle: tables.get('translate-splitter'),
-        edge: 'start',
-        storageKey: config.translateStorageKey,
-        applied: split.applyTranslate
-    });
+    // The Translate column sits at the end of it, so its line is on its near side,
+    // and a screen without the column has no line to wire
+    if(tables.config.hasTranslate) {
+
+        split.wire({
+            panel: tables.get('translate-panel'),
+            handle: tables.get('translate-splitter'),
+            edge: 'start',
+            storageKey: tables.config.storagePrefix + config.translateStorageSuffix,
+            applied: split.applyTranslate
+        });
+    }
 
     // The listing opens at the width it was left at, which says as much about what it has
     // room for as a drag of it does

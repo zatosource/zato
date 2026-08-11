@@ -1,4 +1,4 @@
-// Config tables - what a part of the drawing stands for in the file itself.
+// Config files kit - what a part of the drawing stands for in the file itself.
 //
 // Every code and the value in the drawing carries the lines of the file it was drawn off,
 // so resting on one washes those lines over in the file - the answer and the file it was
@@ -22,7 +22,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var trace = tables.trace;
 var gutter = tables.gutter;
 var wash = tables.wash;

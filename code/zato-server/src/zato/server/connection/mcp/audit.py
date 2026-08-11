@@ -32,6 +32,8 @@ _method_to_event = {
     'initialize':           AuditEvent.MCP_Initialize,
     'tools/list':           AuditEvent.MCP_Tools_List,
     'tools/call':           AuditEvent.MCP_Tools_Call,
+    'prompts/list':         AuditEvent.MCP_Prompts_List,
+    'prompts/get':          AuditEvent.MCP_Prompts_Get,
     'server/discover':      AuditEvent.MCP_Discover,
     Method_Session_Delete:  AuditEvent.MCP_Session_Delete,
 }

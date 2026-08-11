@@ -1,4 +1,4 @@
-// Config tables - the words the page puts on screen.
+// Config files kit - the words the page puts on screen.
 //
 // Everything a line, a status or the Translate column reads is built here, so what
 // the page says is in one place and the rest of it only decides when to say it.
@@ -7,7 +7,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 
 var singleQuote = "'";
 

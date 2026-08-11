@@ -20,9 +20,11 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms import populate_form_initial
 from zato.admin.web.forms.gateway.mcp import CreateForm, EditForm
+from zato.admin.web.util import get_server_directory
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.api import API_Key, GENERIC, Groups, MCP, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME
 from zato.common.defaults import http_plain_server_port
+from zato.common.skills.api import get_skill_name_list
 from zato.common.util.api import asbool
 from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
 from zato.common.util.tcp import get_current_ip
@@ -35,7 +37,7 @@ from zato.common.ext.bunch import Bunch
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strdict
+    from zato.common.typing_ import any_, strdict, strdictlist, strlist, strset
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,6 +46,7 @@ logger = logging.getLogger(__name__)
 
 _service_input_prefix = 'mcp_service_'
 _security_input_prefix = 'mcp_security_'
+_skill_input_prefix = 'mcp_skill_'
 _mcp_group_name_prefix = 'mcp.'
 
 # The multi-step wizard template, serving both the create and the edit page.
@@ -348,6 +351,16 @@ class _CreateEdit(CreateEdit):
         # .. and store them so they end up in opaque data.
         input_dict['services'] = service_names
 
+        # Collect the skills the gateway serves as MCP prompts ..
+        skill_names:'strlist' = []
+
+        for key in self.req.POST:
+            if key.startswith(_skill_input_prefix):
+                skill_names.append(self.req.POST[key])
+
+        # .. and store them so they end up in opaque data too.
+        input_dict['skills'] = skill_names
+
         # Collect security definitions from the security badge picker ..
         security_keys = [key for key in self.req.POST if key.startswith(_security_input_prefix)]
         member_id_list = [self.req.POST[key] for key in security_keys]
@@ -444,7 +457,7 @@ def get_service_list(req:'any_') -> 'HttpResponse':
     logger.info('MCP get_service_list: final assigned_names=%s', assigned_names)
 
     # .. build the output list, skipping internal services ..
-    items = []
+    items:'strdictlist' = []
     for service in response.data:
         name = service['name']
 
@@ -484,7 +497,7 @@ def get_security_list(req:'any_') -> 'HttpResponse':
     })
 
     # .. extract the items, skipping built-in and internal entries ..
-    items = []
+    items:'strdictlist' = []
     for item in response.data:
         name = item['name']
         if name in {'ide_publisher', 'pubapi'} or 'zato.' in name:
@@ -556,6 +569,61 @@ def get_security_list(req:'any_') -> 'HttpResponse':
     # .. and return the JSON response.
     out = dumps(items)
     return HttpResponse(out, content_type='application/json') # type: ignore
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def get_skill_list(req:'any_') -> 'HttpResponse':
+    """ Returns the list of user skills for the skills badge picker, with is_member
+    flags set based on the gateway's allow list.
+    """
+
+    # The gateway ID is provided when editing an existing gateway ..
+    gateway_id = req.GET.get('gateway_id')
+
+    # .. skills live on disk under the server's config/repo directory ..
+    server_directory = get_server_directory()
+    repo_location = os.path.join(server_directory, 'config', 'repo')
+    skill_names = get_skill_name_list(repo_location)
+
+    # .. build the current allow list if editing ..
+    assigned_names:'strset' = set()
+    if gateway_id:
+        gateway_response = req.zato.client.invoke('zato.generic.connection.get-list', {
+            'cluster_id': req.zato.cluster_id,
+            'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
+            'paginate': False,
+        })
+
+        if gateway_response.ok:
+            if gateway_response.data:
+                for gateway_item in gateway_response.data:
+                    if str(gateway_item['id']) == gateway_id:
+
+                        # A gateway saved without the key serves no skills
+                        gateway_skills = gateway_item.get('skills')
+                        if gateway_skills is None:
+                            gateway_skills = []
+
+                        assigned_names = set(gateway_skills)
+                        break
+
+    # .. each skill directory is one badge ..
+    items:'strdictlist' = []
+    for name in skill_names:
+        items.append({
+            'id': name,
+            'name': name,
+            'is_member': name in assigned_names,
+        })
+
+    # .. and return the JSON response.
+    serialized = dumps(items)
+    payload = serialized.encode('utf-8')
+
+    out = HttpResponse(payload, content_type='application/json')
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

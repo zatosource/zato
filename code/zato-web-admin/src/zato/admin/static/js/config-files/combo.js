@@ -1,4 +1,4 @@
-// Config tables - the fields of the Translate column offer what the file holds.
+// Config files kit - the fields of the Translate column offer what the file holds.
 //
 // All of them are editable, so anything at all may be typed into them, and pressing one
 // opens what the file has to offer without a letter being typed first. What is
@@ -15,7 +15,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var combo = tables.combo;
 var parse = tables.parse;
 

@@ -1,4 +1,4 @@
-// Config tables - what is marked in the file and what is brought on screen in it.
+// Config files kit - what is marked in the file and what is brought on screen in it.
 //
 // A run of lines can be washed over, the way a marker goes over paper - what a press beside a
 // line number would take a copy of while the cursor is there, and what a part of the drawing in
@@ -16,7 +16,7 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-var tables = $.fn.zato.service.config_tables;
+var tables = $.fn.zato.config_files;
 var wash = tables.wash;
 
 // ////////////////////////////////////////////////////////////////////////
@@ -24,8 +24,8 @@ var wash = tables.wash;
 wash.config = {
 
     // The classes the wash wears, and the one that brings it on
-    elemClass: 'config-tables-copy-target',
-    visibleClass: 'config-tables-copy-target-visible'
+    elemClass: 'config-files-copy-target',
+    visibleClass: 'config-files-copy-target-visible'
 };
 
 // ////////////////////////////////////////////////////////////////////////

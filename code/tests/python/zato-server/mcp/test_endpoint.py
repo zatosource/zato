@@ -52,6 +52,9 @@ class _MockServer:
         self.service_store = _MockServiceStore()
         self._invoke_responses = {}
 
+        # Where the skill prompts would read the user skills from - no skills in these tests
+        self.repo_location = ''
+
     def invoke(self, service_name:'str', payload:'anydict') -> 'anydict':
         return self._invoke_responses[service_name]
 
