@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from json import loads
 from logging import getLogger
 from threading import RLock
+from time import monotonic
 
 # MSAL
 from msal import ConfidentialClientApplication
@@ -21,6 +22,8 @@ from O365.utils.token import MemoryTokenBackend
 
 # Zato
 from zato.common.api import Microsoft365
+from zato.common.audit_log.calls import record_remote_call
+from zato.common.audit_log.common import AuditSource
 from zato.common.const import SECRETS
 
 # ################################################################################################################################
@@ -60,6 +63,12 @@ class Microsoft365Client:
 
         # Makes sure only one caller builds the account or renews its token.
         self.impl_lock = RLock()
+
+        # The audit log every Graph request is recorded in - the wrapper attaches it
+        # after construction. It starts as None right here, in __init__, because
+        # a lookup of an attribute this class does not have would go through
+        # __getattr__ and trigger the account's construction.
+        self.zato_audit_log = None
 
 # ################################################################################################################################
 
@@ -153,8 +162,44 @@ class Microsoft365Client:
         if not is_authenticated:
             raise Exception(f'Could not authenticate to Microsoft 365 ({self.name})')
 
+        # .. every Graph request of this account is recorded as an audit event ..
+        if self.zato_audit_log:
+            self._wrap_connection(account)
+
         # .. and hand the account back to our caller.
         return account
+
+# ################################################################################################################################
+
+    def _wrap_connection(self, account:'Account') -> 'None':
+        """ Wraps the account's own request method - the one funnel every Graph call
+        of every O365 object goes through - so each call writes one audit event
+        with its outcome and duration, the same shape REST outgoing records.
+        """
+        connection = account.con
+        impl_request = connection.oauth_request
+
+        def audited_request(url:'str', method:'str', **kwargs:'any_') -> 'any_':
+
+            start = monotonic()
+
+            # A failed call is recorded too, before the caller learns about it -
+            # the O365 connection raises on HTTP errors, so exceptions cover them.
+            try:
+                response = impl_request(url, method, **kwargs)
+            except Exception as e:
+                duration_ms = int((monotonic() - start) * 1000)
+                record_remote_call(self.zato_audit_log, AuditSource.Microsoft_Cloud, self.name,
+                    is_ok=False, duration_ms=duration_ms, status=str(e), endpoint=url)
+                raise
+
+            duration_ms = int((monotonic() - start) * 1000)
+            record_remote_call(self.zato_audit_log, AuditSource.Microsoft_Cloud, self.name,
+                is_ok=True, duration_ms=duration_ms, endpoint=url)
+
+            return response
+
+        connection.oauth_request = audited_request
 
 # ################################################################################################################################
 

@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.common.alerting.collectors import new_fact
 from zato.common.alerting.engine import AlertTransports
 from zato.common.alerting.model import AlertAction
 from zato.common.alerting.sweep import build_fact_message, read_outcome, run_sweep
@@ -147,17 +148,11 @@ class TestReadOutcome:
 class TestBuildFactMessage:
 
     def test_only_the_measures_that_were_taken_speak(self) -> 'None':
-        fact = {
-            'source': AuditSource.MLLP_Channel,
-            'object_name': _channel_name,
-            'error_rate': 0.75,
-            'error_count': 3,
-            'total_count': 4,
-            'window_seconds': 300,
-            'outstanding': 0,
-            'oldest_waiting_seconds': 0,
-            'silent_seconds': 0,
-        }
+        fact = new_fact(AuditSource.MLLP_Channel, _channel_name)
+        fact['error_rate'] = 0.75
+        fact['error_count'] = 3
+        fact['total_count'] = 4
+        fact['window_seconds'] = 300
 
         message = build_fact_message('test_incident_on_errors', fact)
 

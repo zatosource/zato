@@ -56,6 +56,11 @@ _b2b_alerting_service_impl_name = 'zato.server.service.internal.b2b.B2BAlerting'
 # The Python path of the service the generic alerting job invokes, created upfront the same way.
 _alerting_service_impl_name = 'zato.server.service.internal.alerting.AlertingRun'
 
+# The Python paths of the three alerting probe services, created upfront the same way.
+_cert_check_service_impl_name = 'zato.server.service.internal.alerting.AlertingCertCheck'
+_ms_health_service_impl_name = 'zato.server.service.internal.alerting.AlertingMicrosoftHealth'
+_canary_service_impl_name = 'zato.server.service.internal.alerting.AlertingCanary'
+
 # The Python paths of the two services the AS2 reliability jobs invoke, created upfront the same way.
 _as2_async_mdn_service_impl_name = 'zato.server.service.internal.as2.DeliverAsyncMDNs'
 _as2_resend_service_impl_name = 'zato.server.service.internal.as2.ResendOverdueMessages'
@@ -117,9 +122,11 @@ def _ensure_interval_job_exists(
     job_name:'str',
     service_name:'str',
     service_impl_name:'str',
-    minutes:'int',
+    minutes:'int' = 0,
+    hours:'int' = 0,
+    is_active:'bool' = True,
     ) -> 'bool':
-    """ Checks if the given minute-interval job exists, creates it if not.
+    """ Checks if the given interval job exists, creates it if not.
     Returns True if created, False if already existed.
     """
 
@@ -151,8 +158,12 @@ def _ensure_interval_job_exists(
     start_date = datetime.now(timezone.utc)
     start_date = start_date.replace(tzinfo=None)
 
-    job = Job(None, job_name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_date, cluster=cluster, service=service)
-    interval = IntervalBasedJob(None, job, minutes=minutes)
+    job = Job(None, job_name, is_active, SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_date, cluster=cluster, service=service)
+
+    if hours:
+        interval = IntervalBasedJob(None, job, hours=hours)
+    else:
+        interval = IntervalBasedJob(None, job, minutes=minutes)
 
     session.add(job)
     session.add(interval)
@@ -284,6 +295,43 @@ def ensure_alerting_job_exists(session:'any_', cluster_id:'int') -> 'bool':
     session.add(interval)
 
     return True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_cert_check_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+    """ Checks if the daily job that measures TLS certificates for alerting exists, creates it
+    if not. Returns True if created, False if already existed.
+    """
+    out = _ensure_interval_job_exists(session, cluster_id, Alerting.Cert_Job_Name, Alerting.Cert_Service,
+        _cert_check_service_impl_name, hours=Alerting.Cert_Job_Interval_Hours)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_ms_health_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+    """ Checks if the job that polls Microsoft service health for alerting exists, creates it
+    if not. Returns True if created, False if already existed.
+    """
+    out = _ensure_interval_job_exists(session, cluster_id, Alerting.Health_Job_Name, Alerting.Health_Service,
+        _ms_health_service_impl_name, minutes=Alerting.Health_Job_Interval_Minutes)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_canary_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+    """ Checks if the file transfer canary job exists, creates it if not - inactive,
+    because the canary writes to remote systems and activating it is the opt-in.
+    Returns True if created, False if already existed.
+    """
+    out = _ensure_interval_job_exists(session, cluster_id, Alerting.Canary_Job_Name, Alerting.Canary_Service,
+        _canary_service_impl_name, minutes=Alerting.Canary_Job_Interval_Minutes, is_active=False)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

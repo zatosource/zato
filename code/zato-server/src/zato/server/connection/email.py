@@ -9,10 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from base64 import b64decode
 from contextlib import contextmanager
+from imaplib import IMAP4
 from io import BytesIO
 from json import dumps
 from logging import getLogger, INFO
 from mimetypes import guess_type as guess_mime_type
+from smtplib import SMTPAuthenticationError
 from time import monotonic
 from traceback import format_exc
 
@@ -59,6 +61,29 @@ _modes = {
     EMAIL.SMTP.MODE.SSL: 'SSL',
     EMAIL.SMTP.MODE.STARTTLS: 'TLS'
 }
+
+# The words an IMAP login rejection speaks in - the protocol has no error codes,
+# so the exception's text is what says the server refused the credentials.
+_imap_auth_error_markers = ('auth', 'login')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _is_auth_error(e:'Exception') -> 'bool':
+    """ Whether an exception speaks of rejected credentials - SMTP replies 535 and 534
+    arrive as SMTPAuthenticationError, while IMAP rejections arrive as IMAP4.error
+    whose text names the authentication. Alerting counts these separately, because
+    their remedy is credentials, not networking.
+    """
+    if isinstance(e, SMTPAuthenticationError):
+        return True
+
+    if isinstance(e, IMAP4.error):
+        text = str(e).lower()
+        out = any(marker in text for marker in _imap_auth_error_markers)
+        return out
+
+    return False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -439,7 +464,8 @@ class SMTPConnection(_Connection):
             out = conn.ping()
         except Exception as e:
             if self.needs_audit:
-                self._insert_ping_event(cid, start, outcome=AuditOutcome.Error, status=str(e))
+                self._insert_ping_event(cid, start, outcome=AuditOutcome.Error, status=str(e),
+                    is_auth_error=_is_auth_error(e))
             raise
 
         # A ping is traffic like any other to the audit log
@@ -450,14 +476,29 @@ class SMTPConnection(_Connection):
 
 # ################################################################################################################################
 
-    def _insert_ping_event(self, cid:'str', start:'float', *, outcome:'str', status:'str'='') -> 'None':
+    def _insert_ping_event(
+        self,
+        cid:'str',
+        start:'float',
+        *,
+        outcome:'str',
+        status:'str' = '',
+        is_auth_error:'bool' = False,
+        ) -> 'None':
         """ Writes one request-sent event describing a ping of this connection.
+        A rejection of the credentials gets the auth-failed event type,
+        because its remedy is different and alerting counts it separately.
         """
         duration_ms = int((monotonic() - start) * 1000)
 
+        if is_auth_error:
+            event_type = AuditEvent.Auth_Failed
+        else:
+            event_type = AuditEvent.Request_Sent
+
         self.audit_log.insert(
             AuditSource.Email_SMTP,
-            AuditEvent.Request_Sent,
+            event_type,
             self.config.name,
             cid=cid,
             endpoint=f'{self.config.host}:{self.config.port}',
@@ -515,7 +556,7 @@ class SMTPConnection(_Connection):
             # .. record the failure before telling the caller ..
             if self.needs_audit:
                 self._insert_send_event(msg, from_, cid, send_start, attachment_envelopes,
-                    outcome=AuditOutcome.Error, status=str(e))
+                    outcome=AuditOutcome.Error, status=str(e), is_auth_error=_is_auth_error(e))
 
             # .. and tell the caller that the message was not sent.
             return False
@@ -547,15 +588,23 @@ class SMTPConnection(_Connection):
         *,
         outcome:'str',
         status:'str' = '',
+        is_auth_error:'bool' = False,
         ) -> 'None':
         """ Writes one message-sent event describing a direct SMTP send, successful or not.
+        A rejection of the credentials gets the auth-failed event type,
+        because its remedy is different and alerting counts it separately.
         """
         duration_ms = int((monotonic() - send_start) * 1000)
         data = _get_send_summary(msg, from_)
 
+        if is_auth_error:
+            event_type = AuditEvent.Auth_Failed
+        else:
+            event_type = AuditEvent.Message_Sent
+
         self.audit_log.insert(
             AuditSource.Email_SMTP,
-            AuditEvent.Message_Sent,
+            event_type,
             self.config.name,
             cid=cid,
             endpoint=_join_addresses(msg.to),
@@ -661,12 +710,19 @@ class GenericIMAPConnection(_IMAPConnection):
                     # .. and hand the message over to the caller.
                     yield (uid, message)
 
-        except Exception:
+        except Exception as e:
 
-            # Record the failure before letting the exception propagate
+            # Record the failure before letting the exception propagate -
+            # a login rejection gets the auth-failed event type, which alerting counts separately
             if self.needs_audit:
                 error = format_exc()
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config.name,
+
+                if _is_auth_error(e):
+                    event_type = AuditEvent.Auth_Failed
+                else:
+                    event_type = AuditEvent.Message_Received
+
+                _insert_imap_audit_event(self.audit_log, event_type, self.config.name,
                     cid=cid, folder=folder, outcome=AuditOutcome.Error, data=error)
             raise
 
@@ -676,14 +732,21 @@ class GenericIMAPConnection(_IMAPConnection):
 
         cid = new_cid_server()
 
-        # A failed ping is recorded too, before the caller learns about it
+        # A failed ping is recorded too, before the caller learns about it -
+        # a login rejection gets the auth-failed event type, which alerting counts separately
         try:
             with self.get_connection() as conn: # type: Imbox
                 _ = conn.connection.noop()
-        except Exception:
+        except Exception as e:
             if self.needs_audit:
                 error = format_exc()
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Request_Sent, self.config.name,
+
+                if _is_auth_error(e):
+                    event_type = AuditEvent.Auth_Failed
+                else:
+                    event_type = AuditEvent.Request_Sent
+
+                _insert_imap_audit_event(self.audit_log, event_type, self.config.name,
                     cid=cid, outcome=AuditOutcome.Error, data=error)
             raise
 

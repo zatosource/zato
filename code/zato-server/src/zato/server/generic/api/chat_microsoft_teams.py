@@ -11,6 +11,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
+from zato.common.audit_log.api import AuditLog
 from zato.common.typing_ import cast_
 from zato.server.connection.cloud.microsoft_teams import MicrosoftTeamsClient
 from zato.server.connection.queue import Wrapper
@@ -36,10 +37,16 @@ class ChatMicrosoftTeamsWrapper(Wrapper):
         config['auth_url'] = config['address']
         super(ChatMicrosoftTeamsWrapper, self).__init__(config, 'Microsoft Teams', server)
 
+        # Every Graph request of this connection is recorded here - what the alerting collectors read.
+        # The Teams client runs all its traffic through an underlying Microsoft 365 client,
+        # so attaching the log there covers every call.
+        self.audit_log = AuditLog(server.name)
+
         # A single client shared by all the services that access this connection directly,
         # e.g. through self.microsoft.teams. This is safe because the underlying Microsoft 365
         # client builds its account lazily, on first use, and refreshes its own tokens.
         self.shared_client = MicrosoftTeamsClient(config)
+        self.shared_client.impl.zato_audit_log = self.audit_log
 
 # ################################################################################################################################
 
@@ -47,6 +54,7 @@ class ChatMicrosoftTeamsWrapper(Wrapper):
 
         try:
             conn = MicrosoftTeamsClient(self.config)
+            conn.impl.zato_audit_log = self.audit_log
             _ = self.client.put_client(conn)
         except Exception:
             logger.warning('Caught an exception while adding a Microsoft Teams client (%s); e:`%s`',

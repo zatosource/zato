@@ -79,7 +79,7 @@ pycryptodome==3.19.1
 pydantic==2.12.5
 pygments==2.20.0
 PyJWT==2.13.0
-pymongo==4.13.0
+pymongo==4.17.0
 PyMySQL==1.1.1
 pyOpenSSL==26.0.0
 pyotp==2.9.0
@@ -89,7 +89,7 @@ python-editor==1.0.1
 python-magic==0.4.27
 pytz==2025.2
 pyyaml==6.0.2
-redis==6.1.0
+redis==8.1.0
 redshift_connector==2.1.15
 regex==2022.3.2
 requests==2.33.0

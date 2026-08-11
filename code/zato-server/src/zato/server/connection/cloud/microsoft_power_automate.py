@@ -9,13 +9,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from http.client import ACCEPTED, CREATED, NO_CONTENT, OK, UNAUTHORIZED
 from logging import getLogger
-from time import time
+from time import monotonic, time
 
 # Requests
 import requests
 
 # Zato
 from zato.common.api import MicrosoftPowerAutomate
+from zato.common.audit_log.calls import record_remote_call
+from zato.common.audit_log.common import AuditSource
 from zato.common.const import SECRETS
 from zato.common.typing_ import cast_
 
@@ -90,6 +92,23 @@ class MicrosoftPowerAutomateClient:
         # When the current token expires, as seconds since the Unix epoch.
         self.token_expires_at = 0.0
 
+        # The audit log every call is recorded in - the wrapper attaches it after construction
+        self.zato_audit_log = None
+
+# ################################################################################################################################
+
+    def _record_call(self, url:'str', start:'float', error:'str'='') -> 'None':
+        """ Records one completed call as an audit event - what the alerting collectors
+        read. A client with no audit log attached, e.g. one built in a test, records nothing.
+        """
+        if self.zato_audit_log is None:
+            return
+
+        duration_ms = int((monotonic() - start) * 1000)
+
+        record_remote_call(self.zato_audit_log, AuditSource.Microsoft_Cloud, self.name,
+            is_ok=not error, duration_ms=duration_ms, status=error, endpoint=url)
+
 # ################################################################################################################################
 
     def _acquire_token(self) -> 'None':
@@ -152,32 +171,43 @@ class MicrosoftPowerAutomateClient:
         """ Invokes any Power Automate endpoint, returning the parsed JSON response, if there was any.
         """
 
-        # Make sure we have a token to send ..
-        self._ensure_token()
-
-        # .. build the full address of the endpoint ..
+        # The full address of the endpoint - built first so a failure can be recorded against it
         url = f'{self.address}{path}'
 
-        # .. each request carries the API version unless the caller chose one explicitly ..
-        query_params = {'api-version': _default.API_Version}
-        if params:
-            query_params.update(params)
+        start = monotonic()
 
-        # .. invoke the endpoint ..
-        headers = self._get_headers()
-        response = self.session.request(method, url, headers=headers, params=query_params, json=data)
+        # A failed call is recorded too, before the caller learns about it
+        try:
 
-        # .. a 401 means our token was rejected, e.g. it was revoked server-side,
-        # .. so obtain a new one and retry the request once ..
-        if response.status_code == UNAUTHORIZED:
-            self._acquire_token()
+            # Make sure we have a token to send ..
+            self._ensure_token()
+
+            # .. each request carries the API version unless the caller chose one explicitly ..
+            query_params = {'api-version': _default.API_Version}
+            if params:
+                query_params.update(params)
+
+            # .. invoke the endpoint ..
             headers = self._get_headers()
             response = self.session.request(method, url, headers=headers, params=query_params, json=data)
 
-        # .. anything outside the success range for this method is an error ..
-        success_codes = _success_codes[method]
-        if response.status_code not in success_codes:
-            raise Exception(f'Power Automate error ({self.name}): {response.status_code} -> {repr(response.text)}')
+            # .. a 401 means our token was rejected, e.g. it was revoked server-side,
+            # .. so obtain a new one and retry the request once ..
+            if response.status_code == UNAUTHORIZED:
+                self._acquire_token()
+                headers = self._get_headers()
+                response = self.session.request(method, url, headers=headers, params=query_params, json=data)
+
+            # .. anything outside the success range for this method is an error ..
+            success_codes = _success_codes[method]
+            if response.status_code not in success_codes:
+                raise Exception(f'Power Automate error ({self.name}): {response.status_code} -> {repr(response.text)}')
+
+        except Exception as e:
+            self._record_call(url, start, str(e))
+            raise
+
+        self._record_call(url, start)
 
         # .. and hand back the parsed response, if the endpoint returned one.
         if response.content:

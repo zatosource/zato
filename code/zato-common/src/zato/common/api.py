@@ -1393,6 +1393,21 @@ class Alerting:
     Job_Interval_Minutes = 1
     Service              = 'zato.alerting.run'
 
+    # The probe jobs - each measures a fact no per-call audit event can produce
+    # and writes ordinary audit events the collectors read. The canary ships
+    # inactive because it writes to remote systems - activating it is the opt-in.
+    Cert_Job_Name            = 'zato.alerting.cert-check'
+    Cert_Job_Interval_Hours  = 24
+    Cert_Service             = 'zato.alerting.cert-check.run'
+
+    Health_Job_Name             = 'zato.alerting.microsoft-health'
+    Health_Job_Interval_Minutes = 15
+    Health_Service              = 'zato.alerting.microsoft-health.run'
+
+    Canary_Job_Name             = 'zato.alerting.canary'
+    Canary_Job_Interval_Minutes = 15
+    Canary_Service              = 'zato.alerting.canary.run'
+
     # The keys the scheduler job's extra data may carry - which SMTP connection
     # sends the emails, its addressing, where the catch-all digest goes
     # and the Dashboard address the links point to.
@@ -1401,7 +1416,11 @@ class Alerting:
     Extra_Default_To    = 'default_to'
     Extra_Dashboard_URL = 'dashboard_url'
 
-    # The rule engine ruleset the alert rules live in and the vocabulary its editor completes from.
+    # The rule engine rulesets the alert rules live in and the vocabulary their editor completes
+    # from. Every ruleset whose name is the prefix itself or starts with the prefix plus
+    # an underscore belongs to alerting - alerts_rest, alerts_sql and so on - and the sweep
+    # matches facts through all of them.
+    Ruleset_Prefix  = 'alerts'
     Ruleset_Name    = 'alerts'
     Vocabulary_Name = 'alerting'
 

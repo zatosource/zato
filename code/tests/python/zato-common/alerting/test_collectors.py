@@ -13,9 +13,12 @@ from datetime import timedelta
 from sqlalchemy import update
 
 # Zato
-from zato.common.alerting.collectors import collect_error_rate_facts, collect_facts, collect_feed_silent_facts, \
-    collect_outstanding_facts, new_fact
+from zato.common.alerting.collectors import collect_auth_failure_facts, collect_canary_facts, collect_certificate_facts, \
+    collect_consecutive_failure_facts, collect_error_rate_facts, collect_facts, collect_feed_silent_facts, \
+    collect_health_facts, collect_latency_facts, collect_outstanding_facts, collect_scheduler_facts, new_fact, \
+    Attr_Days_Left
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.scheduler import Attr_Delay_Ms
 from zato.common.monitoring.health import EndpointMetrics
 from zato.common.util.api import utcnow
 
@@ -206,6 +209,306 @@ class TestFeedSilentFacts:
         assert len(facts) == 1
         assert facts[0]['object_name'] == _channel_name
         assert facts[0]['silent_seconds'] == 900
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestConsecutiveFailureFacts:
+
+    def test_an_unbroken_run_of_errors_is_counted(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_outcome(audit_log, 'consec-1', AuditOutcome.OK)
+        _seed_outcome(audit_log, 'consec-2', AuditOutcome.Error)
+        _seed_outcome(audit_log, 'consec-3', AuditOutcome.Error)
+        _seed_outcome(audit_log, 'consec-4', AuditOutcome.Error)
+
+        facts = collect_consecutive_failure_facts(engine, now)
+
+        assert len(facts) == 1
+        assert facts[0]['consecutive_failures'] == 3
+
+# ################################################################################################################################
+
+    def test_a_success_breaks_the_streak(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # The newest outcome is an error but the one before it is not
+        _seed_outcome(audit_log, 'break-1', AuditOutcome.Error)
+        _seed_outcome(audit_log, 'break-2', AuditOutcome.OK)
+        _seed_outcome(audit_log, 'break-3', AuditOutcome.Error)
+
+        facts = collect_consecutive_failure_facts(engine, now)
+
+        assert len(facts) == 1
+        assert facts[0]['consecutive_failures'] == 1
+
+# ################################################################################################################################
+
+    def test_the_ok_halves_of_paired_events_never_hide_a_streak(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A source that writes paired events - the request half always leaves with an OK
+        # outcome while the response half carries the real one
+        for index in range(3):
+            _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _channel_name,
+                cid=f'paired-{index}', outcome=AuditOutcome.OK)
+            _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Response_Received, _channel_name,
+                cid=f'paired-{index}', outcome=AuditOutcome.Error)
+
+        facts = collect_consecutive_failure_facts(engine, now)
+
+        assert len(facts) == 1
+        assert facts[0]['consecutive_failures'] == 3
+
+# ################################################################################################################################
+
+    def test_a_clean_object_still_reports_a_zero(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_outcome(audit_log, 'clean-1', AuditOutcome.OK)
+
+        facts = collect_consecutive_failure_facts(engine, now)
+
+        assert len(facts) == 1
+        assert facts[0]['consecutive_failures'] == 0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestLatencyFacts:
+
+    def test_the_average_covers_only_events_that_carry_a_duration(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Two completed calls with durations and one request event without one
+        _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Response_Received, _channel_name,
+            cid='lat-1', outcome=AuditOutcome.OK, duration_ms=100)
+        _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Response_Received, _channel_name,
+            cid='lat-2', outcome=AuditOutcome.OK, duration_ms=300)
+        _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _channel_name,
+            cid='lat-3', outcome=AuditOutcome.OK)
+
+        facts = collect_latency_facts(engine, _window_seconds, now)
+
+        assert len(facts) == 1
+        assert facts[0]['avg_duration_ms'] == 200
+        assert facts[0]['window_seconds'] == _window_seconds
+
+# ################################################################################################################################
+
+    def test_traffic_outside_the_window_never_counts(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        event_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Response_Received, _channel_name,
+            cid='lat-old-1', outcome=AuditOutcome.OK, duration_ms=9000)
+        _backdate(event_id, now - timedelta(seconds=_window_seconds + 60))
+
+        facts = collect_latency_facts(engine, _window_seconds, now)
+
+        assert facts == []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestAuthFailureFacts:
+
+    def test_only_the_auth_failed_events_are_counted(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Two credentials rejections and one ordinary failure
+        _ = audit_log.insert(AuditSource.Email_SMTP, AuditEvent.Auth_Failed, _channel_name,
+            cid='auth-1', outcome=AuditOutcome.Error)
+        _ = audit_log.insert(AuditSource.Email_SMTP, AuditEvent.Auth_Failed, _channel_name,
+            cid='auth-2', outcome=AuditOutcome.Error)
+        _ = audit_log.insert(AuditSource.Email_SMTP, AuditEvent.Message_Sent, _channel_name,
+            cid='auth-3', outcome=AuditOutcome.Error)
+
+        facts = collect_auth_failure_facts(engine, _window_seconds, now)
+
+        assert len(facts) == 1
+        assert facts[0]['auth_failure_count'] == 2
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestCertificateFacts:
+
+    def test_the_newest_days_left_measure_surfaces(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # An older measure and a newer one - only the newer one speaks
+        _ = audit_log.insert(AuditSource.Certificate, AuditEvent.Cert_Checked, _channel_name,
+            cid='cert-1', outcome=AuditOutcome.OK, attrs={Attr_Days_Left: 30.0})
+        _ = audit_log.insert(AuditSource.Certificate, AuditEvent.Cert_Checked, _channel_name,
+            cid='cert-2', outcome=AuditOutcome.OK, attrs={Attr_Days_Left: 5.4})
+
+        facts = collect_certificate_facts(engine, now)
+
+        assert len(facts) == 1
+        assert facts[0]['object_name'] == _channel_name
+        assert facts[0]['cert_days_left'] == 5
+
+# ################################################################################################################################
+
+    def test_a_failed_check_reports_nothing_rather_than_a_false_zero(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A handshake that failed wrote an error event with no days-left attr
+        _ = audit_log.insert(AuditSource.Certificate, AuditEvent.Cert_Checked, _channel_name,
+            cid='cert-err-1', outcome=AuditOutcome.Error, status='Connection refused')
+
+        facts = collect_certificate_facts(engine, now)
+
+        assert facts == []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestHealthFacts:
+
+    def test_the_newest_state_of_each_service_surfaces(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A service that recovered and one that degraded
+        _ = audit_log.insert(AuditSource.Microsoft_Health, AuditEvent.Health_Checked, 'Exchange Online',
+            cid='health-1', outcome=AuditOutcome.OK, status='degraded')
+        _ = audit_log.insert(AuditSource.Microsoft_Health, AuditEvent.Health_Checked, 'Exchange Online',
+            cid='health-2', outcome=AuditOutcome.OK, status='')
+        _ = audit_log.insert(AuditSource.Microsoft_Health, AuditEvent.Health_Checked, 'Microsoft Teams',
+            cid='health-3', outcome=AuditOutcome.OK, status='interruption')
+
+        facts = collect_health_facts(engine, now)
+
+        # The recovered service's empty state means healthy, so only the degraded one reports
+        assert len(facts) == 1
+        assert facts[0]['object_name'] == 'Microsoft Teams'
+        assert facts[0]['health_state'] == 'interruption'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestCanaryFacts:
+
+    def test_the_newest_outcome_is_the_current_truth(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A connection whose canary failed and one whose canary recovered
+        _ = audit_log.insert(AuditSource.Canary, AuditEvent.Canary_Executed, _channel_name,
+            cid='canary-1', outcome=AuditOutcome.OK)
+        _ = audit_log.insert(AuditSource.Canary, AuditEvent.Canary_Executed, _channel_name,
+            cid='canary-2', outcome=AuditOutcome.Error, status='Upload failed')
+
+        _ = audit_log.insert(AuditSource.Canary, AuditEvent.Canary_Executed, _other_channel_name,
+            cid='canary-3', outcome=AuditOutcome.Error, status='Upload failed')
+        _ = audit_log.insert(AuditSource.Canary, AuditEvent.Canary_Executed, _other_channel_name,
+            cid='canary-4', outcome=AuditOutcome.OK)
+
+        facts = collect_canary_facts(engine, now)
+        by_name = {fact['object_name']: fact for fact in facts}
+
+        assert len(facts) == 2
+        assert by_name[_channel_name]['canary_failed'] == 1
+        assert by_name[_other_channel_name]['canary_failed'] == 0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestSchedulerFacts:
+
+    def test_the_worst_start_delay_of_the_window_speaks(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _ = audit_log.insert(AuditSource.Scheduler, AuditEvent.Job_Executed, 'billing.sync',
+            cid='sched-1', outcome=AuditOutcome.OK, attrs={Attr_Delay_Ms: 1200})
+        _ = audit_log.insert(AuditSource.Scheduler, AuditEvent.Job_Executed, 'billing.sync',
+            cid='sched-2', outcome=AuditOutcome.OK, attrs={Attr_Delay_Ms: 7400})
+
+        facts = collect_scheduler_facts(engine, _window_seconds, now, {})
+
+        assert len(facts) == 1
+        assert facts[0]['object_name'] == 'billing.sync'
+        assert facts[0]['start_delay_ms'] == 7400
+
+# ################################################################################################################################
+
+    def test_the_overdue_ratio_sizes_itself_against_the_jobs_own_interval(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A job that last ran twenty minutes ago, on a five-minute interval
+        event_id = audit_log.insert(AuditSource.Scheduler, AuditEvent.Job_Executed, 'billing.sync',
+            cid='overdue-1', outcome=AuditOutcome.OK)
+        _backdate(event_id, now - timedelta(seconds=1200))
+
+        facts = collect_scheduler_facts(engine, _window_seconds, now, {'billing.sync': 300})
+
+        assert len(facts) == 1
+        assert facts[0]['overdue_ratio'] == 4.0
+
+# ################################################################################################################################
+
+    def test_a_job_without_an_interval_has_no_notion_of_being_overdue(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        event_id = audit_log.insert(AuditSource.Scheduler, AuditEvent.Job_Executed, 'one.time.job',
+            cid='onetime-1', outcome=AuditOutcome.OK)
+        _backdate(event_id, now - timedelta(seconds=1200))
+
+        facts = collect_scheduler_facts(engine, _window_seconds, now, {})
+
+        assert facts == []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestPerSourceWindows:
+
+    def test_a_source_with_a_window_of_its_own_is_measured_over_it(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A file transfer error older than the default window but within
+        # the file transfer family's own longer one
+        event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, 'sftp.backups',
+            cid='window-1', outcome=AuditOutcome.Error)
+        _backdate(event_id, now - timedelta(seconds=400))
+
+        facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now,
+            window_seconds=300, window_seconds_by_source={AuditSource.File_Outgoing: 600})
+
+        by_name = {fact['object_name']: fact for fact in facts}
+
+        assert by_name['sftp.backups']['error_count'] == 1
+        assert by_name['sftp.backups']['window_seconds'] == 600
 
 # ################################################################################################################################
 # ################################################################################################################################

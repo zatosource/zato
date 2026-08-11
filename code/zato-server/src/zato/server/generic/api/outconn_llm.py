@@ -8,10 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from time import monotonic
 from traceback import format_exc
 
 # Zato
 from zato.common.api import LLM
+from zato.common.audit_log.api import AuditLog, AuditSource
+from zato.common.audit_log.calls import record_remote_call
 from zato.common.llm_models import default_model_list, get_model_list
 from zato.common.typing_ import cast_
 from zato.server.connection.llm.claude import ClaudeClient
@@ -26,9 +29,10 @@ from zato.server.connection.queue import Wrapper
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import stranydict, strnone
+    from zato.common.typing_ import anylist, stranydict, strnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.llm.common import LLMClient
+    anylist = anylist
     LLMClient = LLMClient
 
 # ################################################################################################################################
@@ -85,6 +89,35 @@ class OutconnLLMWrapper(Wrapper):
         config['auth_url'] = config['address']
         super(OutconnLLMWrapper, self).__init__(config, 'LLM', server)
 
+        # Every completed provider call is recorded here - what the alerting collectors read
+        self.audit_log = AuditLog(server.name)
+
+# ################################################################################################################################
+
+    def _invoke_client(self, messages:'anylist') -> 'stranydict':
+        """ Sends one message list to the provider and records the call's outcome
+        and duration as an audit event - the completing event the alerting
+        collectors measure error rates and latency over.
+        """
+        start = monotonic()
+
+        # A failed call is recorded too, before the caller learns about it
+        try:
+            with self.client() as client:
+                client = cast_('LLMClient', client)
+                out = client.invoke(messages)
+        except Exception as e:
+            duration_ms = int((monotonic() - start) * 1000)
+            record_remote_call(self.audit_log, AuditSource.LLM, self.config['name'],
+                is_ok=False, duration_ms=duration_ms, status=str(e), endpoint=self.config['address'])
+            raise
+
+        duration_ms = int((monotonic() - start) * 1000)
+        record_remote_call(self.audit_log, AuditSource.LLM, self.config['name'],
+            is_ok=True, duration_ms=duration_ms, endpoint=self.config['address'])
+
+        return out
+
 # ################################################################################################################################
 
     def add_client(self) -> 'None':
@@ -136,10 +169,7 @@ class OutconnLLMWrapper(Wrapper):
         """ A one-shot call - nothing is loaded from or saved to the chat history store.
         """
         messages = [{'role': Role_User, 'content': text}]
-
-        with self.client() as client:
-            client = cast_('LLMClient', client)
-            out = client.invoke(messages)
+        out = self._invoke_client(messages)
 
         return out
 
@@ -177,9 +207,7 @@ class OutconnLLMWrapper(Wrapper):
             messages_to_send = history[-max_messages:]
 
             # .. call the provider ..
-            with self.client() as client:
-                client = cast_('LLMClient', client)
-                response = client.invoke(messages_to_send)
+            response = self._invoke_client(messages_to_send)
 
             # .. append the assistant's turn and save the full history with a refreshed expiry -
             # .. older turns stay in Redis until expiry but never leave the store.

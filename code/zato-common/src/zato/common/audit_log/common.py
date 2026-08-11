@@ -65,6 +65,18 @@ class AuditSource:
     FHIR          = 'fhir'
     Config        = 'config'
     Scheduler     = 'scheduler'
+    LLM           = 'llm'
+    Odoo          = 'odoo'
+
+    # One source for the whole Microsoft cloud family - 365, Teams, OneDrive,
+    # SharePoint, Power Automate and Fabric - the object name says which connection spoke.
+    Microsoft_Cloud = 'microsoft-cloud'
+
+    # The probe sources - the default scheduler jobs that measure what no
+    # per-call event can, writing ordinary audit events the collectors read.
+    Certificate      = 'certificate'
+    Microsoft_Health = 'microsoft-health'
+    Canary           = 'canary'
 
 # ################################################################################################################################
 
@@ -156,6 +168,16 @@ class AuditEvent:
     Config_Deleted       = 'config-deleted'
     Content_Viewed       = 'content-viewed'
     Job_Executed         = 'job-executed'
+
+    # A call that failed on credentials rather than networking - its own type
+    # because its remedy is different, so alerting counts it separately.
+    Auth_Failed          = 'auth-failed'
+
+    # What the probe jobs write - a certificate's days left, a remote service's
+    # own health state and a canary transfer's outcome.
+    Cert_Checked         = 'cert-checked'
+    Health_Checked       = 'health-checked'
+    Canary_Executed      = 'canary-executed'
 
 # ################################################################################################################################
 

@@ -9,13 +9,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from http.client import ACCEPTED, CREATED, NO_CONTENT, OK, UNAUTHORIZED
 from logging import getLogger
-from time import time
+from time import monotonic, time
 
 # Requests
 import requests
 
 # Zato
 from zato.common.api import MicrosoftFabric
+from zato.common.audit_log.calls import record_remote_call
+from zato.common.audit_log.common import AuditSource
 from zato.common.const import SECRETS
 from zato.common.typing_ import cast_, tuple_
 
@@ -110,6 +112,23 @@ class MicrosoftFabricClient:
 
         # When the current OneLake token expires, as seconds since the Unix epoch.
         self.onelake_token_expires_at = 0.0
+
+        # The audit log every call is recorded in - the wrapper attaches it after construction
+        self.zato_audit_log = None
+
+# ################################################################################################################################
+
+    def _record_call(self, url:'str', start:'float', error:'str'='') -> 'None':
+        """ Records one completed call as an audit event - what the alerting collectors
+        read. A client with no audit log attached, e.g. one built in a test, records nothing.
+        """
+        if self.zato_audit_log is None:
+            return
+
+        duration_ms = int((monotonic() - start) * 1000)
+
+        record_remote_call(self.zato_audit_log, AuditSource.Microsoft_Cloud, self.name,
+            is_ok=not error, duration_ms=duration_ms, status=error, endpoint=url)
 
 # ################################################################################################################################
 
@@ -215,27 +234,38 @@ class MicrosoftFabricClient:
         """ Invokes any Fabric endpoint, returning the parsed JSON response, if there was any.
         """
 
-        # Make sure we have a token to send ..
-        self._ensure_token()
-
-        # .. build the full address of the endpoint ..
+        # The full address of the endpoint - built first so a failure can be recorded against it
         url = f'{self.address}{path}'
 
-        # .. invoke the endpoint ..
-        headers = self._get_headers()
-        response = self.session.request(method, url, headers=headers, params=params, json=data)
+        start = monotonic()
 
-        # .. a 401 means our token was rejected, e.g. it was revoked server-side,
-        # .. so obtain a new one and retry the request once ..
-        if response.status_code == UNAUTHORIZED:
-            self._acquire_token()
+        # A failed call is recorded too, before the caller learns about it
+        try:
+
+            # Make sure we have a token to send ..
+            self._ensure_token()
+
+            # .. invoke the endpoint ..
             headers = self._get_headers()
             response = self.session.request(method, url, headers=headers, params=params, json=data)
 
-        # .. anything outside the success range for this method is an error ..
-        success_codes = _success_codes[method]
-        if response.status_code not in success_codes:
-            raise Exception(f'Fabric error ({self.name}): {response.status_code} -> {repr(response.text)}')
+            # .. a 401 means our token was rejected, e.g. it was revoked server-side,
+            # .. so obtain a new one and retry the request once ..
+            if response.status_code == UNAUTHORIZED:
+                self._acquire_token()
+                headers = self._get_headers()
+                response = self.session.request(method, url, headers=headers, params=params, json=data)
+
+            # .. anything outside the success range for this method is an error ..
+            success_codes = _success_codes[method]
+            if response.status_code not in success_codes:
+                raise Exception(f'Fabric error ({self.name}): {response.status_code} -> {repr(response.text)}')
+
+        except Exception as e:
+            self._record_call(url, start, str(e))
+            raise
+
+        self._record_call(url, start)
 
         # .. and hand back the parsed response, if the endpoint returned one.
         if response.content:
@@ -447,27 +477,38 @@ class MicrosoftFabricClient:
         """ Invokes a OneLake data plane endpoint, retrying once if the token was rejected.
         """
 
-        # Make sure we have a OneLake token to send ..
-        self._ensure_onelake_token()
-
-        # .. build the full address of the endpoint ..
+        # The full address of the endpoint - built first so a failure can be recorded against it
         url = f'{self.onelake_address}{path}'
 
-        # .. invoke the endpoint ..
-        headers = self._get_onelake_headers()
-        response = self.session.request(method, url, headers=headers, params=params, data=data)
+        start = monotonic()
 
-        # .. a 401 means our token was rejected, e.g. it was revoked server-side,
-        # .. so obtain a new one and retry the request once ..
-        if response.status_code == UNAUTHORIZED:
-            self._acquire_onelake_token()
+        # A failed call is recorded too, before the caller learns about it
+        try:
+
+            # Make sure we have a OneLake token to send ..
+            self._ensure_onelake_token()
+
+            # .. invoke the endpoint ..
             headers = self._get_onelake_headers()
             response = self.session.request(method, url, headers=headers, params=params, data=data)
 
-        # .. anything outside the success range for this method is an error ..
-        success_codes = _success_codes[method]
-        if response.status_code not in success_codes:
-            raise Exception(f'OneLake error ({self.name}): {response.status_code} -> {repr(response.text)}')
+            # .. a 401 means our token was rejected, e.g. it was revoked server-side,
+            # .. so obtain a new one and retry the request once ..
+            if response.status_code == UNAUTHORIZED:
+                self._acquire_onelake_token()
+                headers = self._get_onelake_headers()
+                response = self.session.request(method, url, headers=headers, params=params, data=data)
+
+            # .. anything outside the success range for this method is an error ..
+            success_codes = _success_codes[method]
+            if response.status_code not in success_codes:
+                raise Exception(f'OneLake error ({self.name}): {response.status_code} -> {repr(response.text)}')
+
+        except Exception as e:
+            self._record_call(url, start, str(e))
+            raise
+
+        self._record_call(url, start)
 
         out = response
         return out

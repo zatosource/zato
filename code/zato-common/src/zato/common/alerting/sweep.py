@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # One alerting sweep - the scheduler-driven run that measures the audit database
-# and live channel metrics into per-object facts and routes each fact through the
-# `alerts` ruleset the rule engine keeps. A rule that fires names its action in its
+# and live channel metrics into per-object facts and routes each fact through every
+# alert ruleset the rule engine keeps. A rule that fires names its action in its
 # `then` outcomes - `outcome.action = 'incident'` invokes the diagnosis service the
 # way the invoke-service action always did, with the remaining outcome keys travelling
 # as the action config. The dedup store, the audit trace and the dispatch transports
@@ -27,7 +27,6 @@ from zato.common.alerting.engine import process_findings
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, Default_Dedup_Window_Seconds
 from zato.common.api import Alerting, Incidents
 from zato.common.rule_engine.loading import documents_from_version, load_documents
-from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset
 from zato.common.typing_ import list_field
 
 # ################################################################################################################################
@@ -40,7 +39,7 @@ if 0:
     from zato.common.audit_log.api import AuditLog
     from zato.common.rule_engine.models import Rule
     from zato.common.rule_engine.sql import RuleSQLBackend
-    from zato.common.typing_ import anylist, stranydict, strlist
+    from zato.common.typing_ import anylist, stranydict, strintdict, strlist
 
     AlertRule = AlertRule
     AlertTransports = AlertTransports
@@ -51,6 +50,7 @@ if 0:
     Rule = Rule
     RuleSQLBackend = RuleSQLBackend
     stranydict = stranydict
+    strintdict = strintdict
     strlist = strlist
 
 # ################################################################################################################################
@@ -103,35 +103,47 @@ class SweepResult:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def is_alert_ruleset(name:'str') -> 'bool':
+    """ Whether one ruleset name belongs to alerting - the prefix itself, which is the
+    legacy single-ruleset name, or any name led by the prefix and an underscore,
+    the way alerts_rest and its siblings are named.
+    """
+    if name == Alerting.Ruleset_Prefix:
+        return True
+
+    out = name.startswith(Alerting.Ruleset_Prefix + '_')
+    return out
+
+# ################################################################################################################################
+
 def load_alert_rules(backend:'RuleSQLBackend') -> 'rule_engine_rule_list':
-    """ Loads the live version of the `alerts` ruleset from the rule engine store,
-    returning its rules in rule order. No such ruleset or no live version yet
+    """ Loads the live versions of every alert ruleset from the rule engine store -
+    each ruleset whose name carries the alerts prefix - returning their rules
+    in ruleset order, then rule order. No such rulesets or nothing published yet
     means there is nothing to sweep with - an empty list, not an error.
     """
 
     # Our response to produce
     out:'rule_engine_rule_list' = []
 
-    matches = backend.definitions.find_by_name(name=Alerting.Ruleset_Name, object_type=Definition_Type_Ruleset)
+    # Only active rulesets with a live version can be swept with at all
+    published = backend.definitions.list_published_rulesets()
 
-    # The ruleset comes into being at environment creation - none means nothing is configured yet
-    if not matches:
-        return out
+    for definition in published:
 
-    definition = matches[0]
+        # A ruleset outside the alerts family is someone else's business
+        if not is_alert_ruleset(definition.name):
+            continue
 
-    # A ruleset whose live pointer was never set has nothing published to run
-    if not definition.live_version:
-        return out
+        record = backend.versions.get(definition.id, definition.live_version)
+        documents = documents_from_version(record)
 
-    record = backend.versions.get(definition.id, definition.live_version)
-    documents = documents_from_version(record)
+        loaded = load_documents(documents)
 
-    loaded = load_documents(documents)
-
-    for full_name in loaded.rule_names:
-        rule = loaded.manager[full_name]
-        out.append(rule)
+        # Rule full names embed the ruleset name, so rules from many rulesets never collide
+        for full_name in loaded.rule_names:
+            rule = loaded.manager[full_name]
+            out.append(rule)
 
     return out
 
@@ -155,6 +167,30 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
 
     if fact['silent_seconds']:
         parts.append(f'silent for {fact["silent_seconds"]}s')
+
+    if fact['consecutive_failures']:
+        parts.append(f'{fact["consecutive_failures"]} consecutive failure(s)')
+
+    if fact['avg_duration_ms']:
+        parts.append(f'average duration {fact["avg_duration_ms"]}ms')
+
+    if fact['auth_failure_count']:
+        parts.append(f'{fact["auth_failure_count"]} authentication failure(s)')
+
+    if fact['cert_days_left']:
+        parts.append(f'certificate expires in {fact["cert_days_left"]} day(s)')
+
+    if fact['health_state']:
+        parts.append(f'reported health state `{fact["health_state"]}`')
+
+    if fact['canary_failed']:
+        parts.append('the canary check failed')
+
+    if fact['start_delay_ms']:
+        parts.append(f'started {fact["start_delay_ms"]}ms late')
+
+    if fact['overdue_ratio']:
+        parts.append(f'{fact["overdue_ratio"]}x its interval since the last run')
 
     measures = ', '.join(parts)
 
@@ -242,9 +278,10 @@ def run_sweep(
     *,
     default_email:'strlist | None' = None,
     dashboard_url:'str' = '',
+    job_intervals:'strintdict | None' = None,
     ) -> 'SweepResult':
     """ Runs one full sweep - the fact producers measure everything once, each fact runs
-    through each rule of the alerts ruleset, and every match is dispatched through
+    through each rule of every alert ruleset, and every match is dispatched through
     the engine one at a time, so dedup and the audit trace work exactly as before.
     """
 
@@ -253,7 +290,7 @@ def run_sweep(
     out = SweepResult()
     out.dispatched = []
 
-    facts = collect_facts(engine, metrics_by_name, metrics_source, now)
+    facts = collect_facts(engine, metrics_by_name, metrics_source, now, job_intervals=job_intervals)
     out.fact_count = len(facts)
 
     for rule in rules:

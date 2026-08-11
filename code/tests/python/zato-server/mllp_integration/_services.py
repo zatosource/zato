@@ -179,7 +179,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import Alerting
-from zato.common.alerting.seed import alerts_ruleset
 from zato.common.json_internal import dumps, loads
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
@@ -195,24 +194,37 @@ _actor = 'test.alerting'
 # ################################################################################################################################
 
 def _publish_documents(documents, comment):
-    """ Stores the given rule documents as a new version of the alerts ruleset
-    and makes that version live, returning the version number.
+    """ Stores the given rule documents as a new version of the test's own alerts ruleset
+    and makes that version live, returning the version number. The ruleset is created
+    on first use - the sweep picks it up through its name prefix like any other.
     """
     backend = get_backend()
 
     matches = backend.definitions.find_by_name(name=Alerting.Ruleset_Name, object_type=Definition_Type_Ruleset)
-    definition = matches[0]
 
-    record = backend.versions.create(
-        definition_id=definition.id,
-        expected_current_version=definition.current_version,
-        document={Documents_Key: documents},
-        author=_actor,
-        comment=comment,
-    )
-    _ = backend.versions.publish(definition_id=definition.id, version=record.version, actor=_actor)
+    if matches:
+        definition = matches[0]
+        record = backend.versions.create(
+            definition_id=definition.id,
+            expected_current_version=definition.current_version,
+            document={Documents_Key: documents},
+            author=_actor,
+            comment=comment,
+        )
+        version = record.version
+    else:
+        definition = backend.definitions.create(
+            name=Alerting.Ruleset_Name,
+            object_type=Definition_Type_Ruleset,
+            document={Documents_Key: documents},
+            author=_actor,
+            comment=comment,
+        )
+        version = definition.current_version
 
-    return record.version
+    _ = backend.versions.publish(definition_id=definition.id, version=version, actor=_actor)
+
+    return version
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -243,17 +255,20 @@ class TestAlertingRuleSave(Service):
 # ################################################################################################################################
 
 class TestAlertingRuleDelete(Service):
-    """ Restores the seeded default alert rules, so the alerting test leaves
+    """ Archives the test's own alerts ruleset, so the alerting test leaves
     no configuration behind for the other test modules.
     """
     name = 'test.alerting.rule.delete'
 
     def handle(self):
 
-        document = alerts_ruleset()
-        version = _publish_documents(document[Documents_Key], 'Restored default alert rules')
+        backend = get_backend()
+        matches = backend.definitions.find_by_name(name=Alerting.Ruleset_Name, object_type=Definition_Type_Ruleset)
 
-        self.response.payload = dumps({'is_ok': True, 'version': version})
+        for definition in matches:
+            backend.definitions.archive(definition_id=definition.id, actor=_actor)
+
+        self.response.payload = dumps({'is_ok': True})
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -11,6 +11,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
+from zato.common.audit_log.api import AuditLog
 from zato.common.typing_ import cast_
 from zato.server.connection.cloud.microsoft_365 import Microsoft365Client
 from zato.server.connection.queue import Wrapper
@@ -38,10 +39,14 @@ class CloudMicrosoft365Wrapper(Wrapper):
         config['auth_url'] = config['address']
         super(CloudMicrosoft365Wrapper, self).__init__(config, 'Microsoft 365', server)
 
+        # Every Graph request of this connection is recorded here - what the alerting collectors read
+        self.audit_log = AuditLog(server.name)
+
         # A single client shared by all the services that access this connection directly,
         # e.g. through self.microsoft.cloud. This is safe because the client builds
         # its underlying account lazily, on first use, and refreshes its own tokens.
         self.shared_client = Microsoft365Client(config)
+        self.shared_client.zato_audit_log = self.audit_log
 
 # ################################################################################################################################
 
@@ -49,6 +54,7 @@ class CloudMicrosoft365Wrapper(Wrapper):
 
         try:
             conn = Microsoft365Client(self.config)
+            conn.zato_audit_log = self.audit_log
             _ = self.client.put_client(conn)
         except Exception:
             logger.warning('Caught an exception while adding a Microsoft 365 client (%s); e:`%s`',

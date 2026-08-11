@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import time
+from tempfile import gettempdir
 
 # Redis
 from redis import Redis
@@ -49,8 +50,12 @@ class _TestParallelServer:
     """ Carries just what the wrapper reaches for on the real parallel server.
     """
     def __init__(self, cache_api:'CacheAPI') -> 'None':
+        self.name = 'test-llm-server'
         self.config_manager = _TestConfigManager(cache_api)
         self.zato_lock_manager = LockManager('zato-pass-through', 'zato', cast_('any_', None))
+
+        # A directory with no default-models.yaml, so the wrapper reads the default catalog
+        self.user_conf_location = [gettempdir()]
 
 # ################################################################################################################################
 # ################################################################################################################################

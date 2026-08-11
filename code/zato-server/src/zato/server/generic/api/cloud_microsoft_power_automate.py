@@ -11,6 +11,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
+from zato.common.audit_log.api import AuditLog
 from zato.common.typing_ import cast_
 from zato.server.connection.cloud.microsoft_power_automate import MicrosoftPowerAutomateClient
 from zato.server.connection.queue import Wrapper
@@ -36,10 +37,14 @@ class CloudMicrosoftPowerAutomateWrapper(Wrapper):
         config['auth_url'] = config['address']
         super(CloudMicrosoftPowerAutomateWrapper, self).__init__(config, 'Microsoft Power Automate', server)
 
+        # Every call of this connection is recorded here - what the alerting collectors read
+        self.audit_log = AuditLog(server.name)
+
         # A single client shared by all the services that access this connection directly,
         # e.g. through self.microsoft.power_platform. This is safe because the client acquires
         # its tokens lazily and requests sessions maintain their own HTTP connection pools.
         self.shared_client = MicrosoftPowerAutomateClient(config)
+        self.shared_client.zato_audit_log = self.audit_log
 
 # ################################################################################################################################
 
@@ -47,6 +52,7 @@ class CloudMicrosoftPowerAutomateWrapper(Wrapper):
 
         try:
             conn = MicrosoftPowerAutomateClient(self.config)
+            conn.zato_audit_log = self.audit_log
             _ = self.client.put_client(conn)
         except Exception:
             logger.warning('Caught an exception while adding a Microsoft Power Automate client (%s); e:`%s`',
