@@ -1215,9 +1215,10 @@ a.wizard-cancel {
 
 /* A host may ask for its labels in a column of their own, to the left of
    the inputs - every row then reads as one line of a table of keys and
-   values, the labels sharing one width and the inputs starting level */
+   values, the labels sharing one width and the controls closing every
+   line at the popup's right edge, level with the buttons below them */
 .wizard-tippy-labels-left {
-    --wizard-tippy-label-width: 150px;
+    --wizard-tippy-label-width: 130px;
 }
 
 .wizard-tippy-labels-left .wizard-tippy-field {
@@ -1227,13 +1228,24 @@ a.wizard-cancel {
     column-gap: 12px;
 }
 
+/* A short control, like a number field, keeps to the right edge - the
+   full-width ones already reach it on their own */
+.wizard-tippy-labels-left .wizard-tippy-field > input,
+.wizard-tippy-labels-left .wizard-tippy-field > select {
+    justify-self: end;
+}
+
 /* A checkbox row keeps to the same two columns - its text where the other
-   labels stand and its switch where the other inputs begin */
+   labels stand and its switch on the shared right edge */
 .wizard-tippy-labels-left .wizard-tippy-checkbox {
     display: grid;
     grid-template-columns: var(--wizard-tippy-label-width) 1fr;
     column-gap: 12px;
-    justify-items: start;
+    align-items: center;
+}
+
+.wizard-tippy-labels-left .wizard-tippy-checkbox > input {
+    justify-self: end;
 }
 
 .wizard-tippy-labels-left .wizard-tippy-checkbox-text {

@@ -267,8 +267,8 @@ kit.forms.setup = function(wizard, config) {
                 // The title is the drag handle - the whole popover follows it
                 forms._makeDraggable(tippyInstance);
 
-                // The input the popover was opened for takes the cursor, with its
-                // value selected so typing replaces it right away ..
+                // The input the popover was opened for takes the cursor,
+                // its value left as it stands ..
                 var wantedInput = null;
 
                 if(forms._focusInputId) {
@@ -278,12 +278,6 @@ kit.forms.setup = function(wizard, config) {
 
                 if(wantedInput) {
                     wantedInput.focus();
-
-                    // A text or number input offers its value for typing over -
-                    // a select has no such call and its focus is the whole story
-                    if(wantedInput.select) {
-                        wantedInput.select();
-                    }
                     return;
                 }
 

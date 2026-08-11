@@ -1,11 +1,11 @@
 // Alert rules - the rows screen.
 //
-// One slim full-width row per rule family, with a master "Everything"
-// slider above the rows. Every row says whether its family is active and
-// shows the values its rules are driven by, in columns aligned across all
-// the rows. Clicking a value opens the row's popover editor - the wizard
-// kit's own micro-form - on that very field. This is the UI side only -
-// the answers land back in the row, the wiring comes separately.
+// One slim full-width row per rule family. Every row says whether its
+// family is active and shows the values its rules are driven by, in
+// columns aligned across all the rows. Clicking a value opens the row's
+// popover editor - the wizard kit's own micro-form - on that very field.
+// This is the UI side only - the answers land back in the row, the
+// wiring comes separately.
 
 (function($) {
 
@@ -19,6 +19,9 @@ var config = {};
 config.statusOnLabel = 'Active';
 config.statusOffLabel = 'Inactive';
 
+// What the badge offers on a hover - clicking it flips the family
+config.toggleHintLabel = 'Click to toggle';
+
 // What a checkbox value reads as in its cell
 config.checkboxOnLabel = 'On';
 config.checkboxOffLabel = 'Off';
@@ -27,12 +30,7 @@ config.checkboxOffLabel = 'Off';
 config.idPrefix = 'alert-rules-row';
 
 // How wide a row's popover editor stands
-config.popupWidth = '340px';
-
-// What the page-wide help badge explains, anchored at the Everything slider
-config.howItWorksText = 'Slide "Everything" to turn all alert rules on or off. ' +
-    'Click any value to edit the row it belongs to, ' +
-    'and drag a row by its handle to reorder the list.';
+config.popupWidth = '290px';
 
 // Where the hand-picked row order is kept between visits
 config.orderStorageKey = 'zato.alert-rules.order';
@@ -55,7 +53,7 @@ config.fields = {
     auth_failures: {label: 'Auth failures', kind: 'number'},
     warning_failures: {label: 'Warning failures', kind: 'number'},
     critical_failures: {label: 'Critical failures', kind: 'number'},
-    canary_checks: {label: 'Canary checks', kind: 'checkbox'},
+    test_transfers: {label: 'Test transfers', kind: 'checkbox'},
     overdue_multiplier: {label: 'Overdue multiplier', kind: 'number'},
     start_delay: {label: 'Start delay (ms)', kind: 'number'},
     certificate_warning: {label: 'Certificate warning (days)', kind: 'number'},
@@ -78,7 +76,7 @@ config.fieldHelp = {
     auth_failures: 'How many authentication failures in a row raise an alert.',
     warning_failures: 'How many failures in the window raise a warning.',
     critical_failures: 'How many failures in the window count as critical.',
-    canary_checks: 'Whether periodic canary transfers run against each connection.',
+    test_transfers: 'Whether periodic test transfers run against each connection.',
     overdue_multiplier: 'How many intervals late a job may run before an alert.',
     start_delay: 'How many milliseconds late a job may start before an alert.',
     certificate_warning: 'How many days before expiry a certificate raises an alert.',
@@ -96,15 +94,26 @@ config.families = {
     microsoft: {title: 'Microsoft cloud', fields: ['consecutive_failures', 'error_rate', 'health_alerts', 'max_call_time']},
     email: {title: 'Email', fields: ['consecutive_failures', 'error_rate', 'auth_failures']},
     odoo: {title: 'Odoo', fields: ['consecutive_failures', 'error_rate', 'auth_failures', 'max_call_time']},
-    file_transfer: {title: 'File transfer', fields: ['consecutive_failures', 'warning_failures', 'critical_failures', 'canary_checks']},
+    file_transfer: {title: 'File transfer', fields: ['consecutive_failures', 'warning_failures', 'critical_failures', 'test_transfers']},
     scheduler: {title: 'Scheduler', fields: ['error_rate', 'overdue_multiplier', 'start_delay']},
     channels: {title: 'Channels', fields: ['error_rate']},
     common: {title: 'Common', fields: ['certificate_warning', 'outstanding_backlog', 'feed_silence']}
 };
 
-// ////////////////////////////////////////////////////////////////////////
-
-var masterField = $('#id_alert_rules_all');
+// What each family's rules watch, shown at the family's own row header
+config.familyHelp = {
+    rest: 'Alert rules for REST and SOAP outgoing connections - failures in a row, error rates, incidents and slow calls.',
+    sql: 'Alert rules for SQL connection pools - failures in a row, error rates and slow queries.',
+    llm: 'Alert rules for LLM connections - failures in a row, error rates and slow completions.',
+    mcp: 'Alert rules for MCP servers - failures in a row, error rates and slow tool calls.',
+    microsoft: 'Alert rules for Microsoft cloud connections - failures in a row, error rates, service health and slow calls.',
+    email: 'Alert rules for SMTP and IMAP connections - failures in a row, error rates and authentication failures.',
+    odoo: 'Alert rules for Odoo connections - failures in a row, error rates, authentication failures and slow calls.',
+    file_transfer: 'Alert rules for SMB, SFTP and FTP connections - failure counts and periodic test transfers.',
+    scheduler: 'Alert rules for scheduler jobs - error rates, overdue runs and late starts.',
+    channels: 'Alert rules for channels of every kind - the share of failed requests.',
+    common: 'Alert rules that watch the environment as a whole - expiring certificates, backlogs and silent feeds.'
+};
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -230,6 +239,38 @@ $('.alert-rules-grid').on('click', '.alert-rules-param-edit', function() {
     openEditor(this);
 });
 
+// Clicking a row's badge flips its family on or off
+$('.alert-rules-grid').on('click', '.alert-rules-state-toggle', function() {
+
+    var cardElem = this.closest('.alert-rules-set-card');
+    var setName = cardElem.id.replace('alert-rules-card-', '');
+
+    var fieldInput = field(setName);
+    var isOn = !fieldInput.is(':checked');
+    fieldInput.prop('checked', isOn);
+
+    // A re-toggle back to active cancels any dimming still waiting
+    cardElem.classList.remove('alert-rules-set-off-pending');
+
+    renderCard(setName);
+
+    // Deactivating happens under the pointer - only the badge changes for
+    // now, the row keeps its full face until the pointer moves elsewhere
+    if(!isOn) {
+        cardElem.classList.remove('alert-rules-set-off');
+        cardElem.classList.add('alert-rules-set-off-pending');
+    }
+});
+
+// Once the pointer leaves a row whose dimming is waiting, it dims
+$('.alert-rules-grid').on('mouseleave', '.alert-rules-set-card', function() {
+
+    if(this.classList.contains('alert-rules-set-off-pending')) {
+        this.classList.remove('alert-rules-set-off-pending');
+        this.classList.add('alert-rules-set-off');
+    }
+});
+
 // ////////////////////////////////////////////////////////////////////////
 //
 // The state badges and the master slider
@@ -260,23 +301,19 @@ var renderCard = function(setName) {
         statusBadge.textContent = config.statusOffLabel;
     }
 
-    status.appendChild(statusBadge);
-};
+    // The badge is also the way to flip the family - it sits in a link
+    // whose hover offers the same soft hint the value cells give
+    var toggle = document.createElement('a');
+    toggle.href = 'javascript:void(0)';
+    toggle.className = 'wizard-toggle-edit alert-rules-state-toggle';
+    toggle.appendChild(statusBadge);
 
-// ////////////////////////////////////////////////////////////////////////
+    var hint = document.createElement('span');
+    hint.className = 'zato-soft-hint';
+    hint.textContent = config.toggleHintLabel;
+    toggle.appendChild(hint);
 
-// The master slider is on only when every family is
-var syncMaster = function() {
-
-    var allOn = true;
-
-    $.each(config.families, function(setName) {
-        if(!field(setName).is(':checked')) {
-            allOn = false;
-        }
-    });
-
-    masterField.prop('checked', allOn);
+    status.appendChild(toggle);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -286,8 +323,6 @@ var renderAll = function() {
     $.each(config.families, function(setName) {
         renderCard(setName);
     });
-
-    syncMaster();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -350,35 +385,27 @@ Sortable.create(grid, {
 
 // ////////////////////////////////////////////////////////////////////////
 
-masterField.on('change', function() {
-
-    var isOn = masterField.is(':checked');
-
-    $.each(config.families, function(setName) {
-        field(setName).prop('checked', isOn);
-        renderCard(setName);
-    });
-});
-
-// ////////////////////////////////////////////////////////////////////////
-
 // Every row shows its family's state from the moment the page opens,
 // in the order the rows were last dragged into ..
 restoreOrder();
 renderAll();
 
-// .. the page-wide help explains itself at the Everything slider ..
+// .. the help explains each family at its own row header ..
+var helpDescriptions = {};
+
+$.each(config.familyHelp, function(setName, text) {
+    helpDescriptions['id_alert_rules_' + setName] = text;
+});
+
 $.fn.zato.how_it_works.init({
     badgeId: 'alert-rules-how-it-works',
     divId: '#alert-rules',
-    fieldSelector: '.alert-rules-master',
+    fieldSelector: '.alert-rules-set-header',
 
-    // The master row sits at the top of the page, so the one tooltip
-    // goes below it, over the rows it talks about
-    placement: 'bottom',
-    descriptions: {
-        'id_alert_rules_all': config.howItWorksText
-    }
+    // The tooltips go below their anchors, each one's left edge lining
+    // up with the left edge of the thing it describes
+    placement: 'bottom-start',
+    descriptions: helpDescriptions
 });
 
 // .. and the page is shown once it is fully filled in.

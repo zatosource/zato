@@ -29,11 +29,7 @@
         <div class="alert-rules" id="alert-rules">
 
             <div class="alert-rules-master" id="alert-rules-master">
-                <label class="alert-rules-master-label" for="id_alert_rules_all">Alert rules | Everything</label>
-                <input type="checkbox" id="id_alert_rules_all" checked>
-                <span class="dashboard-outcome-badge dashboard-outcome-running alert-rules-running"><span class="badge-running-spinner"></span>Running</span>
-                <span class="alert-rules-ok" id="alert-rules-ok-all"></span>
-                <span class="alert-rules-error" id="alert-rules-error"></span>
+                <span class="alert-rules-master-label">Alert rules</span>
             </div>
 
             <div class="alert-rules-grid">
@@ -227,7 +223,7 @@
                             <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="critical_failures" data-kind="number" data-value="20" data-suffix=""><span class="alert-rules-param-label">Critical failures</span><span class="alert-rules-param-value">20</span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                         <div class="alert-rules-param">
-                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="canary_checks" data-kind="checkbox" data-value="false" data-suffix=""><span class="alert-rules-param-label">Canary checks</span><span class="alert-rules-param-value">Off</span><span class="zato-soft-hint">Click to edit</span></a>
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="test_transfers" data-kind="checkbox" data-value="false" data-suffix=""><span class="alert-rules-param-label">Test transfers</span><span class="alert-rules-param-value">Off</span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                     </div>
                 </div>
@@ -313,7 +309,7 @@
                 <input type="number" id="id_alert-rules-row-auth_failures">
                 <input type="number" id="id_alert-rules-row-warning_failures">
                 <input type="number" id="id_alert-rules-row-critical_failures">
-                <input type="checkbox" id="id_alert-rules-row-canary_checks">
+                <input type="checkbox" id="id_alert-rules-row-test_transfers">
                 <input type="number" id="id_alert-rules-row-overdue_multiplier">
                 <input type="number" id="id_alert-rules-row-start_delay">
                 <input type="number" id="id_alert-rules-row-certificate_warning">

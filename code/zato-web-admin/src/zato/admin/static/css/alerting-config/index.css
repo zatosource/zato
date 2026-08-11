@@ -6,8 +6,7 @@
  * One slim full-width band per rule family - the family's name and state
  * badge stand in a fixed left column, and the values run to the right as
  * one quiet line, each in the same column on every row. Clicking a value
- * opens the row's popover editor on that very field. Above the rows sits
- * the master "Everything" slider, and below them the page-wide help badge.
+ * opens the row's popover editor on that very field.
  */
 
 /* ------------------------------------------------------------ */
@@ -27,13 +26,10 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Alert rules - the master slider                               */
+/* Alert rules - the page heading                                */
 /* ------------------------------------------------------------ */
 
 .alert-rules-master {
-    display: flex;
-    align-items: center;
-    gap: 12px;
     padding: 2px 2px 16px;
 }
 
@@ -41,7 +37,6 @@
     font-weight: 700;
     font-size: 15px;
     color: var(--wizard-text);
-    cursor: pointer;
 }
 
 /* Where a failed change explains itself, with room to wrap */
@@ -56,7 +51,9 @@
 /* ------------------------------------------------------------ */
 
 /* The kit sizes dashboard cards for charts - these are slim quiet bands,
-   the header in a fixed left column and the values filling the rest */
+   the header in a fixed left column and the values filling the rest.
+   Hovering one band gently recedes the others, so the opacity carries
+   a short transition of its own. */
 .dashboard-grid-section .alert-rules-set-card {
     min-height: 0;
     padding: 0.55rem 1.3rem;
@@ -64,13 +61,31 @@
     grid-template-columns: 280px 1fr;
     column-gap: 24px;
     align-items: center;
-    border-color: rgba(69, 84, 96, 0.3);
-    box-shadow: none;
+    border-width: 1px;
+    border-color: rgba(69, 84, 96, 0.55);
+    background: var(--alert-rules-row-bg);
+
+    /* The shadow lifts each row a touch off the page */
+    box-shadow: 0 2px 6px rgba(69, 84, 96, 0.18);
+    transition: opacity 0.15s;
 }
 
+/* Resting on one row steps the other rows back, and leaving the grid
+   brings them all forward again - their names recede further still,
+   the two opacities compounding on the title */
+.alert-rules-grid:hover .alert-rules-set-card:not(:hover) {
+    opacity: 0.55;
+}
+
+.alert-rules-grid:hover .alert-rules-set-card:not(:hover) .alert-rules-set-title {
+    opacity: 0.7;
+}
+
+/* The name and the badge share one text baseline by layout, so neither
+   ever needs nudging against the other */
 .alert-rules-set-header {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: 10px;
 }
 
@@ -99,6 +114,10 @@
     flex-shrink: 0;
     opacity: 0.4;
     transition: opacity 0.15s;
+
+    /* The dot grid has no text baseline to offer the header's baseline
+       alignment, so it centres itself instead */
+    align-self: center;
 }
 
 .alert-rules-set-card:hover .alert-rules-drag-handle {
@@ -132,6 +151,16 @@
     --alert-rules-badge-on-bg: rgba(78, 113, 80, 0.06);
     --alert-rules-badge-off-ink: #7d8794;
     --alert-rules-badge-off-bg: rgba(110, 110, 115, 0.1);
+
+    /* The face every row wears - the hover hints paint their
+       patch with the same one so they never show a seam */
+    --alert-rules-row-bg: #fff;
+}
+
+/* The badge's background stands a touch taller and wider than the stock
+   tag face - the padding is this page's own, the shared face stays as is */
+.alert-rules .dashboard-tag {
+    padding: 3px 9px;
 }
 
 .alert-rules-state-on {
@@ -175,12 +204,17 @@
 /* Alert rules - the status badge after a row's name             */
 /* ------------------------------------------------------------ */
 
-/* The badge stands right after the name, centred on the name's own height,
+/* The badge stands right after the name, on the name's own baseline,
    and the room left over keeps the column's width */
 .alert-rules-set-status {
     flex: 1;
-    display: flex;
-    align-items: center;
+}
+
+/* The badge's own link keeps to the text line so the baseline holds -
+   the wizard link it reuses sizes itself for sliders that are not here */
+.alert-rules-set-status .wizard-toggle-edit {
+    height: auto;
+    line-height: normal;
 }
 
 /* ------------------------------------------------------------ */
@@ -188,10 +222,13 @@
 /* ------------------------------------------------------------ */
 
 /* Four fixed columns shared by every row, so the same kind of value
-   stands at the same place all the way down the page */
+   stands at the same place all the way down the page. A bare 1fr still
+   grows for its own row's nowrap content, each row then splitting the
+   width its own way - minmax(0, 1fr) pins all four tracks to the same
+   quarter on every row, and a long cell runs into the gap instead. */
 .alert-rules-set-body {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 2px 24px;
     align-items: center;
 }
@@ -216,7 +253,7 @@
 
 .alert-rules-param-label {
     font-size: 11px;
-    color: var(--wizard-text-muted);
+    color: var(--wizard-text);
 }
 
 .alert-rules-param-value {
@@ -225,12 +262,19 @@
     color: #52525b;
 }
 
+/* A hovered row says its cells are a way in by wearing the link blue
+   on all of them at once, names and values alike */
+.alert-rules-set-card:hover .alert-rules-param-label,
+.alert-rules-set-card:hover .alert-rules-param-value {
+    color: var(--zato-link-hover);
+}
+
 /* The hint may run past its own column - it paints over whatever stands
    next so it stays readable, and only ever on a hover */
 .alert-rules-param .zato-soft-hint {
     position: relative;
     z-index: 1;
-    background: #fff;
+    background: var(--alert-rules-row-bg);
     margin-left: 0;
 }
 
@@ -256,6 +300,12 @@
 .alert-rules-set-off .alert-rules-set-title,
 .alert-rules-set-off .alert-rules-set-status {
     opacity: 0.4;
+}
+
+/* Hovering an off row brings its badge and toggle hint back to full
+   strength, so the way to switch it back on is easy to spot */
+.alert-rules-set-card.alert-rules-set-off:hover .alert-rules-set-status {
+    opacity: 1;
 }
 
 .alert-rules-set-off .alert-rules-set-body {
