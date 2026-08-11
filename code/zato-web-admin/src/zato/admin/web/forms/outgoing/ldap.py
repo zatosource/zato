@@ -37,7 +37,7 @@ class CreateForm(forms.Form):
     pool_lifetime = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_LIFETIME)
     pool_ha_strategy = forms.ChoiceField(widget=forms.Select(), initial=LDAP.POOL_HA_STRATEGY.ROUND_ROBIN.id)
 
-    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=LDAP.DEFAULT.Username)
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}), initial=LDAP.DEFAULT.Username)
 
     auth_type = forms.ChoiceField(widget=forms.Select())
     sasl_mechanism = forms.ChoiceField(widget=forms.Select())

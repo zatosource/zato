@@ -26,7 +26,7 @@ class CreateForm(forms.Form):
     odata_version = forms.ChoiceField(widget=forms.Select(), initial=ODATA.DEFAULT.ODATA_VERSION)
     auth_type = forms.ChoiceField(widget=forms.Select())
 
-    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), required=False)
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}), required=False)
 
     token_url = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), required=False)
     tenant_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), required=False)

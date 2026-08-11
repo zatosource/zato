@@ -23,7 +23,7 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'style':'width:100%'}))
     delivery_mode = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:25%'}))
     priority = forms.CharField(initial=AMQP.DEFAULT.PRIORITY, widget=forms.TextInput(attrs={'style':'width:5%'}))

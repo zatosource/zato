@@ -41,7 +41,7 @@ class CreateForm(forms.Form):
         widget=forms.TextInput(attrs={'class':'required', 'style':'width:19%'}))
 
     # The username and From address share one row
-    username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:46%'}))
+    username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:46%', 'autocomplete':'off'}))
     from_address = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:46%'}))
 
     # Rarely used options, collapsed by default

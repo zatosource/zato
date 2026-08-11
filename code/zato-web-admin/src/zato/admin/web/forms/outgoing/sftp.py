@@ -22,7 +22,7 @@ class CreateForm(forms.Form):
 
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
-    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}))
     secret = forms.CharField(required=False, strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
     private_key = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))

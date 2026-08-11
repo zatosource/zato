@@ -16,7 +16,7 @@ class CreateForm(forms.Form):
     queue_manager = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial='QM1')
     mq_channel_name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial='DEV.APP.SVRCONN')
     queue = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}))
     ssl = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     cipher_spec = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}),
         initial='ANY_TLS12_OR_HIGHER')

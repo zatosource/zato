@@ -14,10 +14,10 @@ from django import forms
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
-    username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%', 'autocomplete':'off'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
 class EditForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
-    username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%', 'autocomplete':'off'}))

@@ -6,96 +6,84 @@ The fields of one SQL database, rendered once per tab panel. The caller passes:
 * has_enabled - whether this database can be turned off altogether, which only
                 the audit log can
 
-The look comes from the wizard kit - the name row, the labeled field rows and
-the toggle rows are the same ones an HL7 MLLP channel is created through.
+The rows are the Redis screen's - a bold fixed-width label and one input each.
+The connection rows follow the Enabled toggle and the TLS file rows additionally
+follow the Use TLS toggle, both through the classes the JS dims them by.
 {% endcomment %}
 
-<div class="wizard-name-row">
-    <div class="wizard-name-field">
-        <label for="id_{{ database }}_display_name">Name</label>
-        <input type="text" id="id_{{ database }}_display_name" placeholder="A short name for this connection">
-    </div>
-    {% if has_enabled %}
-    <label class="wizard-active-field" for="id_{{ database }}_enabled" data-help-placement="top">
-        Enabled
-        <input type="checkbox" id="id_{{ database }}_enabled">
-    </label>
-    {% endif %}
+<div class="config-db-sql-row">
+    <label class="config-db-sql-label" for="id_{{ database }}_display_name">Name</label>
+    <input type="text" id="id_{{ database }}_display_name" placeholder="A short name for this connection" />
 </div>
 
-<div class="wizard-field-row">
-    <label for="id_{{ database }}_description">Description</label>
-    <input type="text" id="id_{{ database }}_description" placeholder="What this connection is used for">
+<div class="config-db-sql-row">
+    <label class="config-db-sql-label" for="id_{{ database }}_description">Description</label>
+    <input type="text" id="id_{{ database }}_description" placeholder="What this connection is used for" />
 </div>
 
-<div class="wizard-section">
+{% if has_enabled %}
+<div class="config-db-sql-row">
+    <label class="config-db-sql-label" for="id_{{ database }}_enabled">Enabled</label>
+    <input type="checkbox" id="id_{{ database }}_enabled" />
+</div>
+{% endif %}
 
-    <div class="wizard-section-title">Connection</div>
-
-    <div class="wizard-field-row">
-        <label for="id_{{ database }}_type">Type</label>
-        <select id="id_{{ database }}_type" class="config-db-sql-type">
-            <option value="sqlite">SQLite</option>
-            <option value="mysql">MySQL</option>
-            <option value="postgresql">PostgreSQL</option>
-            <option value="oracle">Oracle DB</option>
-        </select>
-    </div>
-
-    <div class="wizard-field-row">
-        <label for="id_{{ database }}_host">Host</label>
-        <input type="text" id="id_{{ database }}_host" placeholder="e.g. localhost">
-    </div>
-
-    <div class="wizard-field-row">
-        <label for="id_{{ database }}_port">Port</label>
-        <input type="text" id="id_{{ database }}_port" class="config-db-sql-port" placeholder="e.g. 5432">
-    </div>
-
-    <div class="wizard-field-row">
-        <label for="id_{{ database }}_name">Database name</label>
-        <input type="text" id="id_{{ database }}_name" placeholder="Database name or SQLite file path">
-    </div>
-
-    <div class="wizard-field-row">
-        <label for="id_{{ database }}_username">Username</label>
-        <input type="text" id="id_{{ database }}_username">
-    </div>
-
-    <div class="wizard-field-row">
-        <label for="id_{{ database }}_password">Password</label>
-        <input type="password" id="id_{{ database }}_password">
-    </div>
-
+<div class="config-db-sql-row config-db-sql-conn-option">
+    <label class="config-db-sql-label" for="id_{{ database }}_type">Type</label>
+    <select id="id_{{ database }}_type" class="config-db-sql-type">
+        <option value="sqlite">SQLite</option>
+        <option value="mysql">MySQL</option>
+        <option value="postgresql">PostgreSQL</option>
+        <option value="oracle">Oracle DB</option>
+    </select>
 </div>
 
-<div class="wizard-section">
+<div class="config-db-sql-row config-db-sql-conn-option">
+    <label class="config-db-sql-label" for="id_{{ database }}_host">Host</label>
+    <input type="text" id="id_{{ database }}_host" placeholder="e.g. localhost" />
+</div>
 
-    <div class="wizard-section-title">TLS</div>
+<div class="config-db-sql-row config-db-sql-conn-option">
+    <label class="config-db-sql-label" for="id_{{ database }}_port">Port</label>
+    <input type="text" id="id_{{ database }}_port" class="config-db-sql-input-short" placeholder="e.g. 5432" />
+</div>
 
-    <div class="wizard-toggle-row">
-        <label class="wizard-toggle-label" for="id_{{ database }}_ssl" data-help-placement="top">Use TLS</label>
-        <input type="checkbox" id="id_{{ database }}_ssl">
-    </div>
+<div class="config-db-sql-row config-db-sql-conn-option">
+    <label class="config-db-sql-label" for="id_{{ database }}_name">Database name</label>
+    <input type="text" id="id_{{ database }}_name" placeholder="Database name or SQLite file path" />
+</div>
 
-    <div class="wizard-field-row">
-        <label for="id_{{ database }}_ssl_ca_file">CA file</label>
-        <input type="text" id="id_{{ database }}_ssl_ca_file" placeholder="Path to the CA certificate file">
-    </div>
+<div class="config-db-sql-row config-db-sql-conn-option">
+    <label class="config-db-sql-label" for="id_{{ database }}_username">Username</label>
+    <input type="text" id="id_{{ database }}_username" autocomplete="off" />
+</div>
 
-    <div class="wizard-field-row">
-        <label for="id_{{ database }}_ssl_cert_file">Certificate file</label>
-        <input type="text" id="id_{{ database }}_ssl_cert_file" placeholder="Path to the client certificate file">
-    </div>
+<div class="config-db-sql-row config-db-sql-conn-option">
+    <label class="config-db-sql-label" for="id_{{ database }}_password">Password</label>
+    <input type="password" id="id_{{ database }}_password" autocomplete="new-password" />
+</div>
 
-    <div class="wizard-field-row">
-        <label for="id_{{ database }}_ssl_key_file">Key file</label>
-        <input type="text" id="id_{{ database }}_ssl_key_file" placeholder="Path to the client key file">
-    </div>
+<div class="config-db-sql-row config-db-sql-conn-option">
+    <label class="config-db-sql-label" for="id_{{ database }}_ssl">Use SSL/TLS</label>
+    <input type="checkbox" id="id_{{ database }}_ssl" />
+</div>
 
-    <div class="wizard-toggle-row">
-        <label class="wizard-toggle-label" for="id_{{ database }}_ssl_verify" data-help-placement="top">Verify it</label>
-        <input type="checkbox" id="id_{{ database }}_ssl_verify" checked>
-    </div>
+<div class="config-db-sql-row config-db-sql-conn-option config-db-sql-ssl-option">
+    <label class="config-db-sql-label" for="id_{{ database }}_ssl_ca_file">SSL CA file</label>
+    <input type="text" id="id_{{ database }}_ssl_ca_file" placeholder="Path to the CA certificate file" />
+</div>
 
+<div class="config-db-sql-row config-db-sql-conn-option config-db-sql-ssl-option">
+    <label class="config-db-sql-label" for="id_{{ database }}_ssl_cert_file">SSL certificate file</label>
+    <input type="text" id="id_{{ database }}_ssl_cert_file" placeholder="Path to the client certificate file" />
+</div>
+
+<div class="config-db-sql-row config-db-sql-conn-option config-db-sql-ssl-option">
+    <label class="config-db-sql-label" for="id_{{ database }}_ssl_key_file">SSL key file</label>
+    <input type="text" id="id_{{ database }}_ssl_key_file" placeholder="Path to the client key file" />
+</div>
+
+<div class="config-db-sql-row config-db-sql-conn-option config-db-sql-ssl-option">
+    <label class="config-db-sql-label" for="id_{{ database }}_ssl_verify">Verify SSL certificate</label>
+    <input type="checkbox" id="id_{{ database }}_ssl_verify" checked />
 </div>

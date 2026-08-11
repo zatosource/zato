@@ -33,9 +33,9 @@ class TestConfigDBSQL:
 
     def test_01_page_loads(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Navigates to the SQL screen and verifies its structure:
-        - the database selector offers the audit log, analytics and pub/sub databases
+        - the tab strip offers the audit log, analytics and pub/sub databases
         - the form shows SQLite as the default type
-        - the Test and Save buttons are present
+        - the Test connection link and the Save button are present
         """
 
         page = logged_in_page
@@ -43,42 +43,42 @@ class TestConfigDBSQL:
 
         # Navigate to the SQL screen ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        _ = page.wait_for_selector('#id_database', state='visible')
+        _ = page.wait_for_selector('#config-db-sql-tabs', state='visible')
 
-        # .. verify the database selector offers both databases ..
-        database_options = page.query_selector_all('#id_database option')
+        # .. verify the tab strip offers all three databases ..
+        tab_buttons = page.query_selector_all('#config-db-sql-tabs .dashboard-tab')
 
-        option_values = [] # type: list
+        tab_names = [] # type: list
 
-        for option in database_options:
-            value = option.get_attribute('value')
-            option_values.append(value)
+        for tab_button in tab_buttons:
+            tab_name = tab_button.get_attribute('data-tab')
+            tab_names.append(tab_name)
 
-        assert option_values == ['audit-log', 'analytics', 'pubsub'], f'Unexpected databases: {option_values}'
+        assert tab_names == ['audit-log', 'analytics', 'pubsub'], f'Unexpected databases: {tab_names}'
 
         # .. by default the audit log database is shown, backed by SQLite ..
-        database_value = page.input_value('#id_database')
-        assert database_value == 'audit-log', f'Expected "audit-log", got: {database_value}'
+        active_tab = page.get_attribute('#config-db-sql-tabs .dashboard-tab-active', 'data-tab')
+        assert active_tab == 'audit-log', f'Expected "audit-log", got: {active_tab}'
 
-        type_value = page.input_value('#id_type')
+        type_value = page.input_value('#id_audit-log_type')
         assert type_value == 'sqlite', f'Expected "sqlite", got: {type_value}'
 
         # .. the SQLite file path points at the audit database file ..
-        name_value = page.input_value('#id_name')
+        name_value = page.input_value('#id_audit-log_name')
         assert name_value.endswith('audit.db'), f'Expected a path ending in audit.db, got: {name_value}'
 
-        # .. and both buttons are present.
-        test_button_text = page.inner_text('#check-button')
-        assert test_button_text.strip() == 'Test', f'Expected "Test", got: {test_button_text}'
+        # .. and both actions are present.
+        test_link_text = page.inner_text('.config-db-sql-test-link')
+        assert test_link_text.strip() == 'Test connection', f'Expected "Test connection", got: {test_link_text}'
 
-        save_button_text = page.inner_text('#update-button')
-        assert save_button_text.strip() == 'Save', f'Expected "Save", got: {save_button_text}'
+        save_button_value = page.input_value('.config-db-sql-save-group input[type="submit"]')
+        assert save_button_value == 'Save', f'Expected "Save", got: {save_button_value}'
 
 # ################################################################################################################################
 
     def test_02_test_connection(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Runs a live connection test against the default SQLite database
-        and verifies the OK result appears.
+        and verifies the OK result appears in the green status message.
         """
 
         page = logged_in_page
@@ -86,18 +86,15 @@ class TestConfigDBSQL:
 
         # Navigate to the SQL screen ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        _ = page.wait_for_selector('#id_database', state='visible')
+        _ = page.wait_for_selector('#config-db-sql-tabs', state='visible')
 
         # .. run the connection test ..
-        page.click('#check-button')
+        page.click('.config-db-sql-test-link')
 
         # .. and verify the OK result with the response time appears.
-        result = cast_('any_', page.wait_for_selector('.test-results .result-status.ok', state='visible', timeout=10000))
-        result_text = result.inner_text()
-        assert result_text == 'OK', f'Expected "OK", got: {result_text}'
-
-        message = page.inner_text('.test-results .result-message')
-        assert 'Connection OK' in message, f'Expected "Connection OK" in message, got: {message}'
+        status = cast_('any_', page.wait_for_selector('#config-db-sql-status.status-message-success', state='visible', timeout=10000))
+        status_text = status.inner_text()
+        assert 'Connection OK' in status_text, f'Expected "Connection OK" in status, got: {status_text}'
 
 # ################################################################################################################################
 
@@ -114,36 +111,35 @@ class TestConfigDBSQL:
 
         # Navigate to the SQL screen ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        _ = page.wait_for_selector('#id_database', state='visible')
+        _ = page.wait_for_selector('#config-db-sql-tabs', state='visible')
 
         # .. fill in the name and description ..
-        page.fill('#id_display_name', display_name)
-        page.fill('#id_description', description)
+        page.fill('#id_audit-log_display_name', display_name)
+        page.fill('#id_audit-log_description', description)
 
         # .. save the form ..
-        page.click('#update-button')
+        page.click('.config-db-sql-save-group input[type="submit"]')
 
         # .. wait for the save confirmation ..
-        _ = page.wait_for_selector('#progress-configure .progress-icon.completed', state='visible', timeout=10000)
-
-        progress_text = page.inner_text('#progress-configure .progress-text')
-        assert 'Saved' in progress_text, f'Expected "Saved" in progress text, got: {progress_text}'
+        status = cast_('any_', page.wait_for_selector('#config-db-sql-status.status-message-success', state='visible', timeout=10000))
+        status_text = status.inner_text()
+        assert 'OK, saved' in status_text, f'Expected "OK, saved" in status, got: {status_text}'
 
         # .. reload the page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        _ = page.wait_for_selector('#id_database', state='visible')
+        _ = page.wait_for_selector('#config-db-sql-tabs', state='visible')
 
         # .. and verify the values came back from the server.
-        name_value = page.input_value('#id_display_name')
+        name_value = page.input_value('#id_audit-log_display_name')
         assert name_value == display_name, f'Expected "{display_name}", got: "{name_value}"'
 
-        description_value = page.input_value('#id_description')
+        description_value = page.input_value('#id_audit-log_description')
         assert description_value == description, f'Expected "{description}", got: "{description_value}"'
 
 # ################################################################################################################################
 
     def test_04_switch_database(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Switches the selector to the analytics database and verifies the form repopulates -
+        """ Opens the analytics tab and verifies its own panel shows -
         the analytics database has its own SQLite file and no name of its own yet.
         """
 
@@ -152,17 +148,17 @@ class TestConfigDBSQL:
 
         # Navigate to the SQL screen ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        _ = page.wait_for_selector('#id_database', state='visible')
+        _ = page.wait_for_selector('#config-db-sql-tabs', state='visible')
 
         # .. switch to the analytics database ..
-        _ = page.select_option('#id_database', 'analytics')
+        page.click('#config-db-sql-tabs .dashboard-tab[data-tab="analytics"]')
 
         # .. its SQLite file path points at the analytics database file ..
-        name_value = page.input_value('#id_name')
+        name_value = page.input_value('#id_analytics_name')
         assert name_value.endswith('analytics.db'), f'Expected a path ending in analytics.db, got: {name_value}'
 
         # .. and the display name saved for the audit log database does not carry over into it.
-        display_name_value = page.input_value('#id_display_name')
+        display_name_value = page.input_value('#id_analytics_display_name')
         assert display_name_value == '', f'Expected an empty name, got: "{display_name_value}"'
 
 # ################################################################################################################################

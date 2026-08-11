@@ -25,7 +25,7 @@ class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
 
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:60%'}))
-    username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}))
     secret = forms.CharField(required=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
     auth_server_url = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Auth_Server_URL)

@@ -22,7 +22,7 @@ class CreateForm(forms.Form):
     address_list = forms.CharField(
         widget=forms.Textarea(attrs={'style':'width:100%; height:70px'}), initial=ES.Default.Address_List)
 
-    username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}))
     secret = forms.CharField(required=False, strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
     timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:12%'}), initial=ES.Default.Timeout)

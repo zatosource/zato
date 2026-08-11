@@ -19,7 +19,7 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     port = forms.CharField(initial=FTP_PORT, widget=forms.TextInput(attrs={'style':'width:10%'}))
-    user = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    user = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}))
     acct = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))
     dircache = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))

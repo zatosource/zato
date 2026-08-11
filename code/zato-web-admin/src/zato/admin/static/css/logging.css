@@ -216,8 +216,6 @@
 }
 
 .logging-form-row .hideShowPassword-toggle {
-    top: 50% !important;
-    transform: translateY(-50%);
     right: 6px !important;
 }
 

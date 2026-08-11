@@ -31,7 +31,7 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     mode = forms.ChoiceField(widget=forms.Select(), choices=_mode_choices)
-    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}))
 
     # Username token
     use_digest = forms.BooleanField(required=False, widget=forms.CheckboxInput())

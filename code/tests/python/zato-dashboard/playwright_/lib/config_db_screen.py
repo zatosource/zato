@@ -26,7 +26,7 @@ Sql_Page_Url = '/zato/config-db/sql/'
 Redis_Page_Url = '/zato/redis/'
 
 # The checkbox fields of both forms - everything else is a text input
-_checkbox_fields = ('ssl', 'ssl_verify')
+_checkbox_fields = ('enabled', 'ssl', 'ssl_verify')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,15 +41,24 @@ def redis_field_selector(field:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _fill_form(page:'Page', values:'anydict') -> 'None':
-    """ Fills the given fields of a Config DB form, leaving everything else as it is.
+def sql_field_selector(database:'str', field:'str') -> 'str':
+    """ Returns the selector of one field of an SQL database's panel, e.g. host of audit-log maps to #id_audit-log_host.
+    """
+    out = f'#id_{database}_{field}'
+    return out
+
+# ################################################################################################################################
+
+def _fill_sql_form(page:'Page', database:'str', values:'anydict') -> 'None':
+    """ Fills the given fields of one SQL database's panel, leaving everything else as it is.
     """
     for field, value in values.items():
+        selector = sql_field_selector(database, field)
 
         if field in _checkbox_fields:
-            page.set_checked(f'#id_{field}', value)
+            page.set_checked(selector, value)
         else:
-            page.fill(f'#id_{field}', str(value))
+            page.fill(selector, str(value))
 
 # ################################################################################################################################
 
@@ -66,25 +75,24 @@ def _fill_redis_form(page:'Page', values:'anydict') -> 'None':
 
 # ################################################################################################################################
 
-def _save_form(page:'Page') -> 'None':
-    """ Clicks Save and waits for the confirmation to appear in the progress list.
+def _save_sql_form(page:'Page') -> 'None':
+    """ Clicks Save and waits for the green confirmation in the status slot.
     """
-    page.click('#update-button')
+    page.click('.config-db-sql-save-group input[type="submit"]')
 
-    _ = page.wait_for_selector('#progress-configure .progress-icon.completed', state='visible', timeout=10000)
-
-    progress_text = page.inner_text('#progress-configure .progress-text')
-    assert 'Saved' in progress_text, f'Expected "Saved" in progress text, got: {progress_text}'
+    status = cast_('any_', page.wait_for_selector('#config-db-sql-status.status-message-success', state='visible', timeout=10000))
+    status_text = status.inner_text()
+    assert 'OK, saved' in status_text, f'Expected "OK, saved" in status, got: {status_text}'
 
 # ################################################################################################################################
 
 def open_sql_screen(page:'Page', base_url:'str', database:'str') -> 'None':
-    """ Navigates to the SQL screen and selects the given database.
+    """ Navigates to the SQL screen and opens the tab of the given database.
     """
     _ = page.goto(f'{base_url}{Sql_Page_Url}')
-    _ = page.wait_for_selector('#id_database', state='visible')
+    _ = page.wait_for_selector('#config-db-sql-tabs', state='visible')
 
-    _ = page.select_option('#id_database', database)
+    page.click(f'#config-db-sql-tabs .dashboard-tab[data-tab="{database}"]')
 
 # ################################################################################################################################
 
@@ -93,8 +101,8 @@ def save_sql_database(page:'Page', base_url:'str', database:'str', values:'anydi
     """
     open_sql_screen(page, base_url, database)
 
-    _fill_form(page, values)
-    _save_form(page)
+    _fill_sql_form(page, database, values)
+    _save_sql_form(page)
 
 # ################################################################################################################################
 
@@ -106,7 +114,8 @@ def get_sql_form_values(page:'Page', base_url:'str', database:'str', fields:'tup
     out = {} # type: anydict
 
     for field in fields:
-        out[field] = page.input_value(f'#id_{field}')
+        selector = sql_field_selector(database, field)
+        out[field] = page.input_value(selector)
 
     return out
 

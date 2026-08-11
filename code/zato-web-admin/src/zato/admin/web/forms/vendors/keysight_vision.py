@@ -19,7 +19,7 @@ class CreateForm(forms.Form):
 
     host = forms.CharField(initial='https://', widget=forms.TextInput(attrs={'style':'width:100%'}))
 
-    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}))
     password = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
     def __init__(self, req=None, prefix=None):

@@ -29,7 +29,7 @@ class CreateForm(forms.Form):
     port = forms.CharField(initial=IMAP4_SSL_PORT, widget=forms.TextInput(attrs={'style':'width:10%'}))
     timeout = forms.CharField(initial=EMAIL.DEFAULT.TIMEOUT, widget=forms.TextInput(attrs={'style':'width:6%'}))
     debug_level = forms.CharField(initial=EMAIL.DEFAULT.IMAP_DEBUG_LEVEL, widget=forms.TextInput(attrs={'style':'width:7%'}))
-    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}))
     mode = forms.ChoiceField(widget=forms.Select())
     get_criteria = forms.CharField(
         initial=EMAIL.DEFAULT.GET_CRITERIA,

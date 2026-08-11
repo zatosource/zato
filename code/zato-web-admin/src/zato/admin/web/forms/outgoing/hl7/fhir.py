@@ -31,7 +31,7 @@ class CreateForm(forms.Form):
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.address_fhir)
     auth_type = forms.ChoiceField(widget=forms.Select())
 
-    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%', 'autocomplete':'off'}))
     password = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
     security_id = forms.ChoiceField(widget=forms.Select())

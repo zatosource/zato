@@ -19,7 +19,7 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     port = forms.CharField(initial=ODOO.DEFAULT.PORT, widget=forms.TextInput(attrs={'style':'width:10%'}))
-    user = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    user = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}))
     database = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     protocol = forms.ChoiceField(widget=forms.Select())
     pool_size = forms.CharField(initial=ODOO.DEFAULT.POOL_SIZE, widget=forms.TextInput(attrs={'style':'width:10%'}))

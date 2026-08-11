@@ -30,7 +30,7 @@ class CreateForm(forms.Form):
     host = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
     port = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
     db_name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
-    username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%', 'autocomplete':'off'}))
     pool_size = forms.IntegerField(initial=10,
         widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:40px'}))
     audit_log = forms.ChoiceField(choices=audit_log_choices, widget=forms.Select(attrs={'style':'width:50%'}))

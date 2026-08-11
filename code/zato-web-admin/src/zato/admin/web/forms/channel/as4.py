@@ -47,7 +47,7 @@ class CreateForm(forms.Form):
     # Security - the certificates and keys are pasted PEM, the private keys and the password
     # are encrypted at rest
     as4_token_type = forms.ChoiceField(required=False, widget=forms.Select())
-    as4_username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    as4_username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}))
     as4_password = forms.CharField(required=False, widget=forms.PasswordInput(attrs={'style':'width:100%'},
         render_value=True))
     as4_signing_key = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))

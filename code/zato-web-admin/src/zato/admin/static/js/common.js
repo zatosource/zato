@@ -91,6 +91,8 @@ $.namespace('zato.cluster');
 $.namespace('zato.cluster.servers');
 $.namespace('zato.common');
 $.namespace('zato.common.security');
+$.namespace('zato.config_db');
+$.namespace('zato.config_db.sql');
 $.namespace('zato.dashboard_kit');
 $.namespace('zato.wizard_kit');
 $.namespace('zato.data_table');

@@ -22,7 +22,7 @@ class CreateForm(forms.Form):
     host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:70%'}))
     port = forms.CharField(widget=forms.TextInput(attrs={'style':'width:12%'}), initial=SMB.DEFAULT.PORT)
 
-    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%', 'autocomplete':'off'}))
     secret = forms.CharField(required=False, strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
     # Off by default - the audit log records every transfer either way,
