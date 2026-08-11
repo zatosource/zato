@@ -191,7 +191,7 @@ def _wait_until_authenticated(mcp_url:'str', auth:'tuple') -> 'None':
 
     while True:
         response = client.jsonrpc('initialize', params={
-            'protocolVersion': '2025-11-05',
+            'protocolVersion': '2025-06-18',
             'capabilities': {},
             'clientInfo': {'name': 'zato-mcp-test', 'version': '1.0'},
         })

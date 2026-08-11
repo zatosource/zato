@@ -43,7 +43,7 @@ _request_timeout = 30
 
 class MCPClient:
     """ Test client for MCP JSON-RPC over HTTP.
-    Provides methods for single requests, batch requests, raw bytes,
+    Provides methods for single requests, array bodies, raw bytes,
     GET notification polling, and DELETE session termination.
     """
 
@@ -105,12 +105,13 @@ class MCPClient:
 
 # ################################################################################################################################
 
-    def jsonrpc_batch(
+    def jsonrpc_array_body(
         self,
         messages:'strdictlist',
         session_id:'strnone' = None,
         ) -> 'requests.Response':
-        """ Sends a JSON-RPC batch request (array of messages) and returns the raw response.
+        """ Sends an array of messages as the request body and returns the raw response.
+        The server rejects array bodies, so this exists for the tests that prove it.
         """
 
         headers = self._build_headers(session_id)
@@ -153,7 +154,7 @@ class MCPClient:
         """
 
         params = {
-            'protocolVersion': '2025-11-05',
+            'protocolVersion': '2025-06-18',
             'capabilities': {},
             'clientInfo': {'name': 'zato-mcp-test', 'version': '1.0'},
         }

@@ -19,9 +19,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Markers used as the method of events that have no JSON-RPC method of their own -
-# a batch carries many methods in one HTTP request and a session delete is a plain HTTP DELETE.
-Method_Batch          = 'batch'
+# Marker used as the method of events that have no JSON-RPC method of their own -
+# a session delete is a plain HTTP DELETE.
 Method_Session_Delete = 'session-delete'
 
 # What a request whose method could not be parsed at all audits as
@@ -33,7 +32,7 @@ _method_to_event = {
     'initialize':           AuditEvent.MCP_Initialize,
     'tools/list':           AuditEvent.MCP_Tools_List,
     'tools/call':           AuditEvent.MCP_Tools_Call,
-    Method_Batch:           AuditEvent.MCP_Batch,
+    'server/discover':      AuditEvent.MCP_Discover,
     Method_Session_Delete:  AuditEvent.MCP_Session_Delete,
 }
 
@@ -48,22 +47,14 @@ _duration_precision = 2
 # ################################################################################################################################
 
 def _find_error(body:'any_') -> 'anydictnone':
-    """ Returns the JSON-RPC error object of a response body - for a batch response,
-    the error of its first erroring element - or None when there is no error at all.
+    """ Returns the JSON-RPC error object of a response body,
+    or None when there is no error at all.
     """
 
-    # A single response carries the error at its top level ..
+    # A response carries the error at its top level - a notification has no body at all.
     if isinstance(body, dict):
         out = body.get('error')
         return out
-
-    # .. a batch is an array of single responses.
-    if isinstance(body, list):
-        for element in body:
-            if isinstance(element, dict):
-                if error := element.get('error'):
-                    out = error
-                    return out
 
     return None
 

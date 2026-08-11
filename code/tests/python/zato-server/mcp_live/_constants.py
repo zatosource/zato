@@ -15,8 +15,17 @@ _error_invalid_request  = -32600
 _error_method_not_found = -32601
 _error_invalid_params   = -32602
 
+# JSON-RPC error code returned when an Mcp-* header does not agree with the request body
+_error_header_mismatch = -32020
+
+# JSON-RPC error code returned when a request asks for a protocol version the server does not speak
+_error_unsupported_protocol_version = -32022
+
 # JSON-RPC protocol version
 _jsonrpc_version = '2.0'
+
+# The stateless MCP protocol revision
+_protocol_version_stateless = '2026-07-28'
 
 # The demo service exposed on the default MCP gateway
 _demo_echo_service = 'demo.echo'

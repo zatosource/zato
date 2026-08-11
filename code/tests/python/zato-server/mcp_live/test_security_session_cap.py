@@ -61,7 +61,7 @@ class TestSessionCap:
 
         # .. the next initialize must be rejected with a generic error ..
         params = {
-            'protocolVersion': '2025-11-05',
+            'protocolVersion': '2025-06-18',
             'capabilities': {},
             'clientInfo': {'name': 'zato-mcp-test', 'version': '1.0'},
         }

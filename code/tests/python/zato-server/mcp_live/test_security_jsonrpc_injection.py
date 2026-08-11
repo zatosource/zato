@@ -18,7 +18,7 @@ import requests
 
 # local
 from _client import MCPClient
-from _constants import _error_method_not_found, _jsonrpc_version
+from _constants import _error_invalid_request, _jsonrpc_version
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,9 +28,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# Maximum number of messages in a large batch test (must not exceed the server's batch cap)
-_large_batch_size = 20
 
 # Size threshold for an oversized payload test
 _oversized_payload_bytes = 1_100_000
@@ -60,32 +57,23 @@ class TestJSONRPCInjection:
     """ Tests for JSON-RPC envelope manipulation and edge cases.
     """
 
-    def test_batch_with_mixed_valid_invalid(self, client:'MCPClient', session_id:'str') -> 'None':
-        """ A batch mixing valid and invalid methods must handle each independently.
+    def test_array_body_rejected_with_valid_session(self, client:'MCPClient', session_id:'str') -> 'None':
+        """ An array body is rejected as one invalid request even when the session is valid -
+        no element of it is ever dispatched.
         """
 
         messages = [
             {'jsonrpc': _jsonrpc_version, 'method': 'ping', 'id': 1},
             {'jsonrpc': _jsonrpc_version, 'method': 'nonexistent.method', 'id': 2},
         ]
-        response = client.jsonrpc_batch(messages, session_id=session_id)
+        response = client.jsonrpc_array_body(messages, session_id=session_id)
         data = response.json()
 
-        assert isinstance(data, list)
-        assert len(data) == 2
+        assert isinstance(data, dict)
+        assert 'error' in data
 
-        # .. find response for each id ..
-        response_by_id = {}
-
-        for item in data:
-            response_by_id[item['id']] = item
-
-        # .. ping should succeed, nonexistent should error.
-        assert 'result' in response_by_id[1]
-        assert 'error' in response_by_id[2]
-
-        error = response_by_id[2]['error']
-        assert error['code'] == _error_method_not_found
+        error = data['error']
+        assert error['code'] == _error_invalid_request
 
 # ################################################################################################################################
 
@@ -155,25 +143,22 @@ class TestJSONRPCInjection:
 
 # ################################################################################################################################
 
-    def test_large_batch_all_processed(self, client:'MCPClient') -> 'None':
-        """ A batch with many messages must process all of them.
+    def test_array_body_rejected_without_session(self, client:'MCPClient') -> 'None':
+        """ An array body sent with no session is rejected the same way.
         """
 
-        messages = []
+        messages = [
+            {'jsonrpc': _jsonrpc_version, 'method': 'ping', 'id': 1},
+        ]
 
-        for request_idx in range(_large_batch_size):
-            message = {
-                'jsonrpc': _jsonrpc_version,
-                'method': 'ping',
-                'id': request_idx,
-            }
-            messages.append(message)
-
-        response = client.jsonrpc_batch(messages)
+        response = client.jsonrpc_array_body(messages)
         data = response.json()
 
-        assert isinstance(data, list)
-        assert len(data) == _large_batch_size
+        assert isinstance(data, dict)
+        assert 'error' in data
+
+        error = data['error']
+        assert error['code'] == _error_invalid_request
 
 # ################################################################################################################################
 # ################################################################################################################################

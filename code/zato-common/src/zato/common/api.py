@@ -1269,6 +1269,18 @@ class GENERIC:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class MCP:
+    """ MCP protocol revisions the gateways speak - the session-based one negotiated
+    through initialize and the stateless one where each request is self-contained.
+    """
+    Protocol_Version_Sessions  = '2025-06-18'
+    Protocol_Version_Stateless = '2026-07-28'
+
+    Protocol_Versions_Supported = [Protocol_Version_Sessions, Protocol_Version_Stateless]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class FileTransfer:
     """ File transfer schedules - each one polls a remote directory of an SFTP or SMB connection
     and invokes a target service once per each file received.

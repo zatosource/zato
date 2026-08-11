@@ -145,9 +145,9 @@ class TestErrors:
 
 # ################################################################################################################################
 
-    def test_batch_with_non_dict_elements(self, client:'MCPClient', session_id:'str') -> 'None':
-        """ A batch mixing non-dict elements with a valid request returns
-        one error per invalid element and still processes the valid one.
+    def test_array_body_returns_invalid_request(self, client:'MCPClient', session_id:'str') -> 'None':
+        """ An array body returns a single invalid-request error -
+        batching is not part of any supported protocol revision.
         """
 
         raw_body = b'[1, "not a request", null, {"jsonrpc": "2.0", "method": "ping", "id": 4}]'
@@ -156,20 +156,11 @@ class TestErrors:
         assert response.status_code == OK
 
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) == 4
+        assert isinstance(data, dict)
+        assert 'error' in data
 
-        # The three non-dict elements must each report an invalid-request error ..
-        for item in data[:3]:
-            assert 'error' in item
-
-            error = item['error']
-            assert error['code'] == _error_invalid_request
-
-        # .. and the valid ping must still succeed.
-        ping_response = data[3]
-        assert 'result' in ping_response
-        assert ping_response['id'] == 4
+        error = data['error']
+        assert error['code'] == _error_invalid_request
 
 # ################################################################################################################################
 

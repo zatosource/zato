@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import BAD_REQUEST, NO_CONTENT, NOT_FOUND, OK
+from http.client import BAD_REQUEST, NOT_FOUND, OK
 from unittest import TestCase
 
 # Hypothesis
@@ -200,7 +200,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
     ))
     @settings(max_examples=200)
     def test_arbitrary_json_array_never_crash(self, arr:'anylist') -> 'None':
-        """ Any JSON array (batch) must produce a response without crashing.
+        """ Any JSON array must produce a response without crashing.
         """
 
         handler = _make_handler()
@@ -218,7 +218,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         """ Any method name not in the known set must return -32601.
         """
 
-        known_methods = {'initialize', 'tools/list', 'tools/call', 'ping'}
+        known_methods = {'initialize', 'tools/list', 'tools/call', 'ping', 'server/discover'}
         _ = assume(method not in known_methods)
 
         handler = _make_handler()
@@ -260,8 +260,8 @@ class JSONRPCEnvelopeFuzzing(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BatchFuzzing(TestCase):
-    """ Hypothesis tests that fuzz batch (array) requests.
+class ArrayBodyFuzzing(TestCase):
+    """ Hypothesis tests that fuzz array bodies - batching is not part of any supported protocol revision.
     """
 
 # ################################################################################################################################
@@ -276,8 +276,8 @@ class BatchFuzzing(TestCase):
         max_size=20,
     ))
     @settings(max_examples=100)
-    def test_batch_of_valid_requests_returns_same_count(self, messages:'anylist') -> 'None':
-        """ A batch of N valid requests must return exactly N responses.
+    def test_array_of_valid_requests_is_rejected(self, messages:'anylist') -> 'None':
+        """ An array of otherwise valid requests must return a single invalid request error.
         """
 
         handler = _make_handler()
@@ -286,31 +286,10 @@ class BatchFuzzing(TestCase):
         response = handler.handle_raw_request(raw, _test_sec_def_id)
 
         self.assertEqual(response.status_code, OK)
-        self.assertIsInstance(response.body, list)
-        self.assertEqual(len(response.body), len(messages))
 
-# ################################################################################################################################
-
-    @given(st.lists(
-        st.fixed_dictionaries({
-            'jsonrpc': st.just('2.0'),
-            'method': st.sampled_from(['notifications/initialized', 'notifications/cancelled']),
-        }),
-        min_size=1,
-        max_size=10,
-    ))
-    @settings(max_examples=50)
-    def test_batch_of_only_notifications_returns_204(self, messages:'anylist') -> 'None':
-        """ A batch containing only notifications (no id) must return 204 No Content.
-        """
-
-        handler = _make_handler()
-        serialized = dumps(messages)
-        raw = serialized.encode('utf8')
-        response = handler.handle_raw_request(raw, _test_sec_def_id)
-
-        self.assertEqual(response.status_code, NO_CONTENT)
-        self.assertIsNone(response.body)
+        body = response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_request)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -111,7 +111,11 @@ def _make_handler(session_manager:'any_'=None) -> 'MCPHandler':
 # ################################################################################################################################
 
 # Standard params for initialize requests in tests
-_initialize_params = {'protocolVersion': '2025-11-05', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
+_initialize_params = {
+    'protocolVersion': _mcp_protocol_version,
+    'capabilities': {},
+    'clientInfo': {'name': 'test', 'version': '1.0'},
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -384,18 +388,18 @@ class HandlerInitializeCreatesSession(TestCase):
         self.assertEqual(session_manager.session_count, 0)
         self.assertIsNone(mcp_response.session_id)
 
-    def test_initialize_in_batch_rejected(self) -> 'None':
-        """ The MCP spec forbids initialize inside a batch.
+    def test_initialize_in_array_body_rejected(self) -> 'None':
+        """ An array body is rejected outright, so no element of it can ever create a session.
         """
 
         session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
 
-        batch = [
+        messages = [
             {'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': {}},
             {'jsonrpc': '2.0', 'method': 'notifications/initialized'},
         ]
-        raw = dumps(batch)
+        raw = dumps(messages)
 
         mcp_response = handler.handle_raw_request(raw, _test_sec_def_id)
 

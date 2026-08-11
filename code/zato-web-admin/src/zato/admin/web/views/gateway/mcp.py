@@ -21,7 +21,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.forms import populate_form_initial
 from zato.admin.web.forms.gateway.mcp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.api import API_Key, GENERIC, Groups, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME
+from zato.common.api import API_Key, GENERIC, Groups, MCP, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME
 from zato.common.defaults import http_plain_server_port
 from zato.common.util.api import asbool
 from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
@@ -632,10 +632,11 @@ def export(req:'any_', id:'str') -> 'HttpResponse':
     tool_response = req.zato.client.invoke('zato.gateway.mcp.get-tool-list', {'services': services})
     tools = tool_response.data
 
-    # .. build the remote endpoint description ..
+    # .. build the remote endpoint description, naming the protocol revisions the gateway speaks ..
     remote = {
         'type': 'streamable-http',
         'url': base_address + url_path,
+        'protocolVersions': MCP.Protocol_Versions_Supported,
     }
 
     if headers:

@@ -15,7 +15,7 @@ from zato.common.json_internal import dumps, loads
 from zato.common.test import _test_sec_def_id
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
-from zato.server.connection.mcp.audit import build_audit_event, Method_Batch, Method_Session_Delete, Method_Unknown
+from zato.server.connection.mcp.audit import build_audit_event, Method_Session_Delete, Method_Unknown
 from zato.server.connection.mcp.handler import MCPHandler, _mcp_protocol_version
 from zato.server.connection.mcp.session import MCPSessionManager
 
@@ -96,7 +96,7 @@ class BuildAuditEvent(TestCase):
             'initialize': AuditEvent.MCP_Initialize,
             'tools/list': AuditEvent.MCP_Tools_List,
             'tools/call': AuditEvent.MCP_Tools_Call,
-            Method_Batch: AuditEvent.MCP_Batch,
+            'server/discover': AuditEvent.MCP_Discover,
             Method_Session_Delete: AuditEvent.MCP_Session_Delete,
         }
 
@@ -147,29 +147,6 @@ class BuildAuditEvent(TestCase):
         data = loads(event['data'])
         self.assertNotIn('error_code', data)
         self.assertNotIn('error_message', data)
-
-    def test_a_batch_with_one_erroring_element_means_the_error_outcome(self) -> 'None':
-
-        body = [
-            {'jsonrpc': '2.0', 'id': 1, 'result': {}},
-            {'jsonrpc': '2.0', 'id': 2, 'error': {'code': -32601, 'message': 'Method not found: `nope`'}},
-        ]
-        event = _build(method=Method_Batch, response_body=body)
-
-        self.assertEqual(event['outcome'], AuditOutcome.Error)
-
-        data = loads(event['data'])
-        self.assertEqual(data['error_code'], -32601)
-
-    def test_a_batch_with_no_errors_means_the_ok_outcome(self) -> 'None':
-
-        body = [
-            {'jsonrpc': '2.0', 'id': 1, 'result': {}},
-            {'jsonrpc': '2.0', 'id': 2, 'result': {}},
-        ]
-        event = _build(method=Method_Batch, response_body=body)
-
-        self.assertEqual(event['outcome'], AuditOutcome.OK)
 
     def test_the_payload_is_never_included(self) -> 'None':
 
@@ -254,19 +231,6 @@ class ResponseMetadata(TestCase):
 
         self.assertEqual(mcp_response.method, 'ping')
         self.assertIsNone(mcp_response.tool_name)
-
-    def test_a_batch_records_the_batch_marker(self) -> 'None':
-
-        handler = _make_handler()
-        session_id = handler.session_manager.create(_mcp_protocol_version, _test_sec_def_id)
-
-        request = [
-            {'jsonrpc': '2.0', 'method': 'ping', 'id': 1},
-            {'jsonrpc': '2.0', 'method': 'ping', 'id': 2},
-        ]
-        mcp_response = handler.handle_raw_request(dumps(request), _test_sec_def_id, session_id=session_id)
-
-        self.assertEqual(mcp_response.method, Method_Batch)
 
     def test_an_unparseable_request_records_no_method(self) -> 'None':
 

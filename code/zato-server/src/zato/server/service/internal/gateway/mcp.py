@@ -45,6 +45,12 @@ _session_response_header = 'Mcp-Session-Id'
 # MCP protocol version header name (lowercase, as stored by HTTPRequestData._extract_headers)
 _protocol_version_header = 'mcp-protocol-version'
 
+# The header naming the JSON-RPC method of a request in the stateless protocol revision
+_mcp_method_header = 'mcp-method'
+
+# The header naming the tool of a tools/call request in the stateless protocol revision
+_mcp_name_header = 'mcp-name'
+
 # WSGI environ key set by the Rust HTTP layer with the resolved client address
 _remote_addr_key = 'zato.http.remote_addr'
 
@@ -199,8 +205,13 @@ class MCPEndpoint(AdminService):
         # .. read the session ID from the request header if present ..
         session_id = self.request.http.headers.get(_session_header)
 
-        # .. read the protocol version header if present, used to detect a version mismatch ..
+        # .. read the protocol version header if present, used to detect a version mismatch
+        # in the session-based revision and to route the stateless revision ..
         protocol_version_header = self.request.http.headers.get(_protocol_version_header)
+
+        # .. read the headers the stateless revision requires - each must agree with the request body ..
+        mcp_method_header = self.request.http.headers.get(_mcp_method_header)
+        mcp_name_header = self.request.http.headers.get(_mcp_name_header)
 
         # .. get the remote address for session logging ..
         remote_address = self.wsgi_environ[_remote_addr_key]
@@ -263,7 +274,8 @@ class MCPEndpoint(AdminService):
         # .. dispatch through the MCP handler, measuring how long it takes for the audit log ..
         start_time = monotonic()
         mcp_response = handler.handle_raw_request(
-            raw_request, sec_def_id, session_id, remote_address, protocol_version_header)
+            raw_request, sec_def_id, session_id, remote_address, protocol_version_header,
+            mcp_method_header, mcp_name_header)
         duration_ms = (monotonic() - start_time) * _ms_per_second
 
         # .. if the handler returned a session ID (from initialize), set it as a response header ..

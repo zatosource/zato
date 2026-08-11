@@ -246,7 +246,7 @@ _event_type_label = {
     AuditEvent.MCP_Tools_List: 'MCP tools list',
     AuditEvent.MCP_Tools_Call: 'MCP tools call',
     AuditEvent.MCP_Session_Delete: 'MCP session delete',
-    AuditEvent.MCP_Batch: 'MCP batch',
+    AuditEvent.MCP_Discover: 'MCP discover',
     AuditEvent.Bulk_Resubmit: 'Bulk resubmit',
     AuditEvent.Config_Created: 'Config created',
     AuditEvent.Config_Edited: 'Config edited',

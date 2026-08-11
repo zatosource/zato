@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from operator import itemgetter
 
 # Zato
 from zato.server.connection.mcp.schema import io_to_json_schema
@@ -103,6 +104,9 @@ class ToolRegistry:
 
             tools.append(tool)
             schema_by_name[service_name] = input_schema
+
+        # .. tools are listed in a deterministic order so clients can cache the list ..
+        tools.sort(key=itemgetter('name'))
 
         # .. replace the cached tools list and the schema lookup with the newly built ones.
         self._cached_tools = tools

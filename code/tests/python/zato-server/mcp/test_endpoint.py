@@ -7,13 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import FORBIDDEN, NO_CONTENT, NOT_FOUND, OK
+from http.client import FORBIDDEN, NOT_FOUND, OK
 from unittest import TestCase
 
 # Zato
 from zato.common.json_internal import dumps, loads
 from zato.common.test import _test_sec_def_id
-from zato.server.connection.mcp.handler import _mcp_protocol_version, MCPHandler
+from zato.server.connection.mcp.handler import _error_invalid_request, _mcp_protocol_version, MCPHandler
 from zato.server.generic.api.gateway_mcp import GatewayMCPWrapper
 from zato.server.service.internal.gateway import mcp as mcp_endpoint_module
 from zato.server.service.internal.gateway.mcp import MCPEndpoint
@@ -542,8 +542,9 @@ class MCPEndpointServiceDispatch(TestCase):
         result = body['result']
         self.assertEqual(result, {})
 
-    def test_dispatch_batch_all_notifications_returns_204(self) -> 'None':
-        """ Verifies that a batch of only notifications returns 204.
+    def test_dispatch_array_body_is_invalid(self) -> 'None':
+        """ Verifies that an array body returns an invalid request error -
+        batching is not part of any supported protocol revision.
         """
 
         server = _MockServer()
@@ -556,16 +557,19 @@ class MCPEndpointServiceDispatch(TestCase):
         wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
-        batch = [
+        messages = [
             {'jsonrpc': '2.0', 'method': 'notifications/initialized'},
         ]
-        raw = dumps(batch)
+        raw = dumps(messages)
 
         assert wrapper.handler is not None
         mcp_response = wrapper.handler.handle_raw_request(raw, _test_sec_def_id)
 
-        self.assertEqual(mcp_response.status_code, NO_CONTENT)
-        self.assertIsNone(mcp_response.body)
+        self.assertEqual(mcp_response.status_code, OK)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_request)
 
 # ################################################################################################################################
 # ################################################################################################################################

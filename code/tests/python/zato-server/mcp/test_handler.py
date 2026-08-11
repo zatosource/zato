@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import NO_CONTENT, OK
+from http.client import OK
 from unittest import TestCase
 
 # Zato
@@ -73,7 +73,11 @@ def _make_request(method:'str', params:'anydictnone' = None, request_id:'any_' =
 # ################################################################################################################################
 
 # Standard params for initialize requests in tests
-_initialize_params = {'protocolVersion': '2025-11-05', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
+_initialize_params = {
+    'protocolVersion': _mcp_protocol_version,
+    'capabilities': {},
+    'clientInfo': {'name': 'test', 'version': '1.0'},
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -599,75 +603,34 @@ class HandleInvalidRequest(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HandleBatch(TestCase):
+class HandleArrayBody(TestCase):
+    """ Tests that array bodies are rejected - batching is not part of any supported protocol revision.
+    """
 
-    def test_batch_with_two_requests(self) -> 'None':
-        """ Verifies that a batch of two requests returns two responses.
+    def test_array_of_requests_is_invalid(self) -> 'None':
+        """ An array of otherwise valid requests returns a single invalid request error.
         """
 
         registry = _MockToolRegistry()
         handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
 
-        batch = [
+        messages = [
             _make_request('ping', request_id=1),
             _make_request('ping', request_id=2),
         ]
-        raw = dumps(batch)
-
-        session_id = _make_session(handler)
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
-
-        self.assertEqual(mcp_response.status_code, OK)
-        self.assertIsInstance(mcp_response.body, list)
-        self.assertEqual(len(mcp_response.body), 2)
-
-        first_response = mcp_response.body[0]
-        second_response = mcp_response.body[1]
-        self.assertEqual(first_response['id'], 1)
-        self.assertEqual(second_response['id'], 2)
-
-    def test_batch_notifications_produce_no_response(self) -> 'None':
-        """ Verifies that a batch of only notifications returns 204 No Content.
-        """
-
-        registry = _MockToolRegistry()
-        handler = _make_handler(registry=registry)
-
-        batch = [
-            {'jsonrpc': '2.0', 'method': 'notifications/initialized'},
-        ]
-        raw = dumps(batch)
-
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id)
-
-        self.assertEqual(mcp_response.status_code, NO_CONTENT)
-        self.assertIsNone(mcp_response.body)
-
-    def test_batch_mixed_requests_and_notifications(self) -> 'None':
-        """ Verifies that a batch with mixed requests and notifications returns only request responses.
-        """
-
-        registry = _MockToolRegistry()
-        handler = _make_handler(registry=registry)
-        session_id = _make_session(handler)
-
-        batch = [
-            _make_request('ping', request_id=1),
-            {'jsonrpc': '2.0', 'method': 'notifications/initialized'},
-        ]
-        raw = dumps(batch)
+        raw = dumps(messages)
 
         mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
-        self.assertIsInstance(mcp_response.body, list)
-        self.assertEqual(len(mcp_response.body), 1)
 
-        first_response = mcp_response.body[0]
-        self.assertEqual(first_response['id'], 1)
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_request)
 
-    def test_empty_batch_is_invalid(self) -> 'None':
-        """ Verifies that an empty batch returns an invalid request error.
+    def test_empty_array_is_invalid(self) -> 'None':
+        """ An empty array returns an invalid request error.
         """
 
         registry = _MockToolRegistry()
@@ -683,104 +646,12 @@ class HandleBatch(TestCase):
         error = body['error']
         self.assertEqual(error['code'], _error_invalid_request)
 
-    def test_batch_individual_errors_do_not_affect_others(self) -> 'None':
-        """ Verifies that individual errors in a batch do not affect other requests.
-        """
-
-        registry = _MockToolRegistry()
-        handler = _make_handler(registry=registry)
-
-        batch = [
-            _make_request('ping', request_id=1),
-            _make_request('nonexistent/method', request_id=2),
-            _make_request('ping', request_id=3),
-        ]
-        raw = dumps(batch)
-
-        session_id = _make_session(handler)
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
-
-        self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(len(mcp_response.body), 3)
-
-        # First and third should succeed
-        first_response = mcp_response.body[0]
-        third_response = mcp_response.body[2]
-        self.assertIn('result', first_response)
-        self.assertIn('result', third_response)
-
-        # Second should be an error
-        second_response = mcp_response.body[1]
-        self.assertIn('error', second_response)
-
-        error = second_response['error']
-        self.assertEqual(error['code'], _error_method_not_found)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class HandleInitializeBatch(TestCase):
-    """ Tests that initialize inside a batch is rejected per the MCP spec.
-    """
-
-    def test_initialize_plus_notification(self) -> 'None':
-        """ The MCP spec says initialize MUST NOT appear in a batch.
-        """
-
-        registry = _MockToolRegistry()
-        handler = _make_handler(registry=registry)
-
-        batch = [
-            _make_request('initialize', request_id=1),
-            {'jsonrpc': '2.0', 'method': 'notifications/initialized'},
-        ]
-        raw = dumps(batch)
-
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id)
-
-        self.assertEqual(mcp_response.status_code, OK)
-        self.assertEqual(mcp_response.body['error']['code'], _error_invalid_request)
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 class HandleMalformedInput(TestCase):
     """ Tests that structurally invalid input produces JSON-RPC errors, never exceptions.
     """
-
-    def test_batch_with_non_dict_elements(self) -> 'None':
-        """ Non-dict batch elements each produce an invalid request error
-        while valid elements in the same batch are still processed.
-        """
-
-        registry = _MockToolRegistry()
-        handler = _make_handler(registry=registry)
-        session_id = _make_session(handler)
-
-        batch = [
-            1,
-            'not a request object',
-            None,
-            _make_request('ping', request_id=4),
-        ]
-        raw = dumps(batch)
-
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
-
-        self.assertEqual(mcp_response.status_code, OK)
-        self.assertIsInstance(mcp_response.body, list)
-        self.assertEqual(len(mcp_response.body), 4)
-
-        # The three non-dict elements must each report an invalid request error ..
-        for response in mcp_response.body[:3]:
-            error = response['error']
-            self.assertEqual(error['code'], _error_invalid_request)
-            self.assertIsNone(response['id'])
-
-        # .. and the valid ping must still succeed.
-        ping_response = mcp_response.body[3]
-        self.assertIn('result', ping_response)
-        self.assertEqual(ping_response['id'], 4)
 
     def test_params_as_list_rejected(self) -> 'None':
         """ A params field that is a list produces an invalid params error.

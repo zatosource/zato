@@ -26,7 +26,7 @@ if 0:
 # ################################################################################################################################
 
 # Protocol version that the server supports
-_supported_protocol_version = '2025-11-05'
+_supported_protocol_version = '2025-06-18'
 
 # Protocol version that the server does not support
 _unsupported_protocol_version = '1999-01-01'

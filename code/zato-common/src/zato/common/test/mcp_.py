@@ -39,7 +39,7 @@ def make_jsonrpc_initialize() -> 'str':
         'id': 1,
         'method': 'initialize',
         'params': {
-            'protocolVersion': '2025-11-05',
+            'protocolVersion': '2025-06-18',
             'capabilities': {},
             'clientInfo': {
                 'name': 'test-client',
