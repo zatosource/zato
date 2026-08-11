@@ -22,6 +22,7 @@ from zato.common.api import SCHEDULER
 from zato.common.as2.mdn import describe_disposition
 from zato.common.audit_log.api import event_table, AuditEvent
 from zato.common.audit_log.common import event_attr_table, event_body_table
+from zato.common.audit_log.resubmit import source_resubmit_actions
 from zato.common.audit_log.scheduler import format_duration_ms, Attr_Current_Run, Attr_Delay_Ms, Log_Kinds
 from zato.common.hl7.display import parse_and_render
 
@@ -86,48 +87,9 @@ _source_outstanding = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Per-source resubmit actions - each source declares which of its events are resubmittable,
-# how the row action is labelled and which service performs it. Every action reads Resubmit
-# to the operator - the service behind it is what tells a resend from a reprocess.
-_as2_resubmit = {
-    AuditEvent.Message_Sent:     {'label': 'Resubmit', 'service': 'zato.audit-log.as2.resend'},
-    AuditEvent.Message_Received: {'label': 'Resubmit', 'service': 'zato.audit-log.as2.reprocess'},
-}
-
-_as4_resubmit = {
-    AuditEvent.Message_Sent:     {'label': 'Resubmit', 'service': 'zato.audit-log.as4.resend'},
-    AuditEvent.Message_Received: {'label': 'Resubmit', 'service': 'zato.audit-log.as4.reprocess'},
-}
-
-# What a channel received is re-run through the channel's own machinery
-_mllp_channel_resubmit = {
-    AuditEvent.Message_Received: {'label': 'Resubmit', 'service': 'zato.audit-log.hl7.reprocess'},
-}
-
-# What an outgoing connection delivered is sent through it again, and a message a channel
-# fanned out to one of its destinations is repeated per hop, that one delivery going out
-# again without the rest of the destinations being involved
-_mllp_outgoing_resubmit = {
-    AuditEvent.Message_Sent: {'label': 'Resubmit', 'service': 'zato.audit-log.hl7.resend'},
-    AuditEvent.Request_Sent: {'label': 'Resubmit', 'service': 'zato.audit-log.resend-hop'},
-}
-
-# One recorded delivery to one destination is repeated on its own, whatever kind of connection
-# it went through - the row says which destination it went to and what repeating it needs.
-_hop_resubmit = {
-    AuditEvent.Request_Sent: {'label': 'Resubmit', 'service': 'zato.audit-log.resend-hop'},
-}
-
-# The sources whose pages carry resubmit actions
-_source_resubmit = {
-    'as2': _as2_resubmit,
-    'as4': _as4_resubmit,
-    'mllp-channel': _mllp_channel_resubmit,
-    'mllp-outgoing': _mllp_outgoing_resubmit,
-    'fhir': _hop_resubmit,
-    'rest-outgoing': _hop_resubmit,
-    'email-smtp': _hop_resubmit,
-}
+# The shared catalog of per-source resubmit actions - this page renders
+# its per-row actions out of it.
+_source_resubmit = source_resubmit_actions
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -190,7 +152,7 @@ _source_row_enrich = {
 
 # ################################################################################################################################
 
-def _get_resubmit_labels() -> 'anydict':
+def get_resubmit_labels() -> 'anydict':
     """ Returns the per-event-type labels of every source's resubmit actions, keyed by source,
     which is what tells the frontend which rows get an action link at all.
     """

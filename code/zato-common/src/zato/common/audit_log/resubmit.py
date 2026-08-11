@@ -21,7 +21,7 @@ from traceback import format_exc
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import AuditEvent, AuditOutcome, event_body_table, event_table, get_audit_engine
+from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, event_body_table, event_table, get_audit_engine
 from zato.common.audit_log.common import AuditBody
 from zato.common.audit_log.dedup import acquire_dedup_key, build_dedup_key, complete_dedup_key, release_dedup_key
 from zato.common.json_internal import dumps, loads
@@ -55,6 +55,73 @@ Row_Resubmitted    = 'resubmitted'
 Row_Would_Resubmit = 'would-resubmit'
 Row_Duplicate      = 'duplicate'
 Row_Error          = 'error'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# What every resubmit action reads to the operator - the service behind it is what
+# tells a resend from a reprocess.
+Resubmit_Label = 'Resubmit'
+
+# Per-source resubmit actions - each source declares which of its events are resubmittable,
+# how the row action is labelled and which service performs it. The audit log page renders
+# its per-row actions out of this catalog and the alerting collectors read it to say whether
+# an alert's newest failing event can be sent again, which is what turns the alert's link
+# into a deep link at that event.
+_as2_actions = {
+    AuditEvent.Message_Sent:     {'label': Resubmit_Label, 'service': 'zato.audit-log.as2.resend'},
+    AuditEvent.Message_Received: {'label': Resubmit_Label, 'service': 'zato.audit-log.as2.reprocess'},
+}
+
+_as4_actions = {
+    AuditEvent.Message_Sent:     {'label': Resubmit_Label, 'service': 'zato.audit-log.as4.resend'},
+    AuditEvent.Message_Received: {'label': Resubmit_Label, 'service': 'zato.audit-log.as4.reprocess'},
+}
+
+# What a channel received is re-run through the channel's own machinery
+_mllp_channel_actions = {
+    AuditEvent.Message_Received: {'label': Resubmit_Label, 'service': 'zato.audit-log.hl7.reprocess'},
+}
+
+# What an outgoing connection delivered is sent through it again, and a message a channel
+# fanned out to one of its destinations is repeated per hop, that one delivery going out
+# again without the rest of the destinations being involved
+_mllp_outgoing_actions = {
+    AuditEvent.Message_Sent: {'label': Resubmit_Label, 'service': 'zato.audit-log.hl7.resend'},
+    AuditEvent.Request_Sent: {'label': Resubmit_Label, 'service': 'zato.audit-log.resend-hop'},
+}
+
+# One recorded delivery to one destination is repeated on its own, whatever kind of connection
+# it went through - the row says which destination it went to and what repeating it needs.
+_hop_actions = {
+    AuditEvent.Request_Sent: {'label': Resubmit_Label, 'service': 'zato.audit-log.resend-hop'},
+}
+
+# The sources whose events carry resubmit actions at all, each with its own catalog
+source_resubmit_actions = {
+    AuditSource.AS2: _as2_actions,
+    AuditSource.AS4: _as4_actions,
+    AuditSource.MLLP_Channel: _mllp_channel_actions,
+    AuditSource.MLLP_Outgoing: _mllp_outgoing_actions,
+    AuditSource.FHIR: _hop_actions,
+    AuditSource.REST_Outgoing: _hop_actions,
+    AuditSource.Email_SMTP: _hop_actions,
+}
+
+# ################################################################################################################################
+
+def is_event_type_resubmittable(source:'str', event_type:'str') -> 'bool':
+    """ Whether one source declared one event type resubmittable - what says whether
+    an alert about a failure of that type can offer to send the message again.
+    """
+    actions = source_resubmit_actions.get(source)
+
+    # A source with no resubmit catalog of its own has nothing to send again
+    if actions is None:
+        return False
+
+    out = event_type in actions
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

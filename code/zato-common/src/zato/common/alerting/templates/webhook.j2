@@ -1,0 +1,15 @@
+{
+    "alert_id": {{ alert_id | tojson }},
+    "rule": {{ rule | tojson }},
+    "kind": {{ kind | tojson }},
+    "source": {{ source | tojson }},
+    "object_name": {{ object_name | tojson }},
+    "message": {{ message | tojson }},
+    "link": {{ link | tojson }},
+    "severity": {{ severity | tojson }},
+    "count": {{ count | tojson }},
+    "action_config": {{ action_config | tojson }}{% if diagnosis %},
+    "diagnosis": {{ diagnosis | tojson }},
+    "confidence": {{ confidence | tojson }},
+    "remediation": {{ remediation | tojson }}{% endif %}
+}

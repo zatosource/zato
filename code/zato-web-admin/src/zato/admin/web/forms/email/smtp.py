@@ -31,18 +31,25 @@ class CreateForm(forms.Form):
     needs_tls_verify = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     is_debug = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
+    # What kind of server the connection speaks to - generic SMTP or Microsoft 365
+    server_type = forms.ChoiceField(widget=forms.Select())
+
     # The provider preset and connection mode share one row
     provider = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:45%'}))
     mode = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:45%'}))
 
-    # The host and port share one row
-    host = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:73%'}))
+    # The host and port share one row - a Microsoft 365 connection leaves them empty
+    host = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:73%'}))
     port = forms.CharField(initial=EMAIL.DEFAULT.SMTP_PORT,
-        widget=forms.TextInput(attrs={'class':'required', 'style':'width:19%'}))
+        widget=forms.TextInput(attrs={'style':'width:19%'}))
 
     # The username and From address share one row
     username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:46%', 'autocomplete':'off'}))
     from_address = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:46%'}))
+
+    # The Microsoft 365 tenant and application the connection authenticates as
+    tenant_id = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    client_id = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
 
     # Rarely used options, collapsed by default
     timeout = forms.CharField(initial=EMAIL.DEFAULT.TIMEOUT,
@@ -67,6 +74,12 @@ class CreateForm(forms.Form):
             provider_choices.append((item['name'], item['name']))
 
         self.fields['provider'].choices = provider_choices
+
+        server_type_choices = []
+        for key, value in EMAIL.SMTP.ServerTypeHuman.items():
+            server_type_choices.append((key, value))
+
+        self.fields['server_type'].choices = server_type_choices
 
 # ################################################################################################################################
 # ################################################################################################################################

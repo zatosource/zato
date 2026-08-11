@@ -95,7 +95,7 @@ def parse_skill(source:'str', data:'str') -> 'Skill':
 
 def load_skill(source:'str') -> 'Skill | None':
     """ Returns the diagnostic skill for an audit source, reading it from disk on first use.
-    Sources without a skill of their own return None - not every connection family has one yet.
+    Sources without a skill of their own return None - not every connection type has one yet.
     """
 
     # Skills are read once and kept in memory ..

@@ -24,6 +24,15 @@ from zato.common.api import EMAIL
 # Bunch
 from zato.common.ext.bunch import Bunch
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
 class Index(_Index):
@@ -35,8 +44,10 @@ class Index(_Index):
     paginate = True
 
     input_required = 'cluster_id',
-    output_required = 'id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address'
-    output_optional = 'username', 'needs_tls_verify', 'ca_certs_path', 'helo_hostname', 'from_address', 'is_audit_log_active'
+    output_required = 'id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address', \
+        'server_type', 'server_type_human'
+    output_optional = 'username', 'needs_tls_verify', 'ca_certs_path', 'helo_hostname', 'from_address', 'tenant_id', \
+        'client_id', 'is_audit_log_active'
     output_repeated = True
 
     def handle(self):
@@ -53,12 +64,12 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    input_required = 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode'
-    input_optional = 'ping_address', 'needs_tls_verify', 'ca_certs_path', 'helo_hostname', 'from_address', \
-        'is_audit_log_active'
+    input_required = 'name', 'is_active', 'port', 'timeout', 'username', 'is_debug', 'mode'
+    input_optional = 'host', 'ping_address', 'needs_tls_verify', 'ca_certs_path', 'helo_hostname', 'from_address', \
+        'server_type', 'tenant_id', 'client_id', 'is_audit_log_active'
     output_required = 'id', 'name'
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
         return 'Successfully {0} the SMTP connection [{1}]'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
@@ -76,7 +87,7 @@ class Delete(_Delete):
     service_name = 'zato.email.smtp.delete'
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req:'any_', id:'any_', cluster_id:'any_') -> 'any_':
     ret = id_only_service(req, 'zato.email.smtp.ping', id, 'SMTP ping error: {}')
     if isinstance(ret, HttpResponseServerError):
         error_text = ret.content.decode('utf-8', 'replace')
@@ -84,5 +95,5 @@ def ping(req, id, cluster_id):
     return ping_json_response(True, ret.data.info)
 
 @method_allowed('POST')
-def change_password(req):
+def change_password(req:'any_') -> 'any_':
     return _change_password(req, 'zato.email.smtp.change-password')

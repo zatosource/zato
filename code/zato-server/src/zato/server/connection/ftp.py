@@ -21,7 +21,7 @@ from fs.ftpfs import FTPFS
 # Zato
 from zato.common.api import SECRET_SHADOW, TRACE1
 from zato.common.audit_log.api import AuditLog, AuditOutcome
-from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Store
+from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Read, Operation_Store
 from zato.common.exception import Inactive
 from zato.common.util.api import new_cid_server
 
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 class FTPFacade(FTPFS):
     """ A thin wrapper around fs's FTPFS so it looks like the other Zato connection objects.
-    The store and delete paths record what they moved in the audit log - the connection's
+    The read, store and delete paths record what they moved in the audit log - the connection's
     name and the writer are attached by the store that builds each facade.
     """
 
@@ -86,6 +86,18 @@ class FTPFacade(FTPFS):
         duration_ms = int((monotonic() - start) * 1000)
         self._zato_record(operation, remote_path, outcome=AuditOutcome.OK, size=size, duration_ms=duration_ms)
 
+        return out
+
+# ################################################################################################################################
+
+    def readbytes(self, path):
+        out = self._zato_run_audited(Operation_Read, path, 0, super().readbytes, path)
+        return out
+
+# ################################################################################################################################
+
+    def download(self, path, file, chunk_size=None, **options):
+        out = self._zato_run_audited(Operation_Read, path, 0, super().download, path, file, chunk_size, **options)
         return out
 
 # ################################################################################################################################

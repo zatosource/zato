@@ -124,7 +124,7 @@ class Create(ZatoCommand):
             self.add_streaming_channels(session, cluster, ping_service, streaming_sec)
             create_openapi_channel(session, cluster, openapi_handler_service)
             self.add_pubsub_rest_channels(session, cluster)
-            self.add_incident_notification_connections(session, cluster)
+            self.add_alert_notification_connections(session, cluster)
 
             # Run ODB post-processing tasks
             odb_post_process.run()
@@ -290,9 +290,10 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_incident_notification_connections(self, session, cluster):
-        """ Adds the default incident notification connections - one Slack, one Microsoft Teams
-        and one SMTP, all inactive with placeholder details for people to fill in.
+    def add_alert_notification_connections(self, session, cluster):
+        """ Adds the default alert notification connections - one Slack, one Microsoft Teams,
+        one SMTP and one LLM connection for alert diagnoses, all inactive
+        with placeholder details for people to fill in.
         """
 
         # Zato
@@ -301,11 +302,18 @@ class Create(ZatoCommand):
 
         conn_name = Incidents.Notification_Conn_Name
 
-        # Slack and Microsoft Teams are generic connections and differ only by their type
-        for type_ in (GENERIC.CONNECTION.TYPE.CHAT_SLACK, GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS):
+        # Slack, Microsoft Teams and the LLM connection are generic connections
+        # and differ only by their type and name.
+        generic_details = (
+            (conn_name, GENERIC.CONNECTION.TYPE.CHAT_SLACK),
+            (conn_name, GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS),
+            (Incidents.LLM_Connection_Name, GENERIC.CONNECTION.TYPE.OUTCONN_LLM),
+        )
+
+        for name, type_ in generic_details:
 
             connection = GenericConn()
-            connection.name = conn_name
+            connection.name = name
             connection.type_ = type_
             connection.is_active = False
             connection.is_internal = False

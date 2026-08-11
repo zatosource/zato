@@ -33,7 +33,8 @@ from sqlalchemy.sql.type_api import TypeEngine
 # Zato
 from zato.common.api import DEPLOYMENT_STATUS, HTTP_SOAP, MS_SQL, NotGiven, SEC_DEF_TYPE, SECRET_SHADOW, \
      SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
-from zato.common.audit_log.api import AuditLog, AuditOutcome
+from zato.common.audit_log.api import AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.calls import record_remote_call
 from zato.common.audit_log.sql import all_levels as all_sql_audit_levels, record_sql_execution, Config_Audit_Log, \
      Level_Off as SQL_Audit_Off
 from zato.common.exception import Inactive
@@ -156,11 +157,15 @@ class SessionWrapper:
         self.pool = pool
 
         # The audit level applies only where a writer was attached - the pool store attaches one
-        # to every outgoing connection that asked for auditing, while the ODB's own wrapper
-        # never audits itself.
+        # to every outgoing connection, while the ODB's own wrapper never audits itself.
         if self.audit_log:
             self.sql_audit_level = pool.sql_audit_level
-            self.sql_audit_endpoint = '{}:{}/{}'.format(config['host'], config['port'], config['db_name'])
+
+            # An SQLite connection is a file, everything else is a network address
+            if config['engine'] == 'sqlite':
+                self.sql_audit_endpoint = config['sqlite_path']
+            else:
+                self.sql_audit_endpoint = '{}:{}/{}'.format(config['host'], config['port'], config['db_name'])
 
         is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
 
@@ -179,10 +184,13 @@ class SessionWrapper:
 
     def execute(self, query:'str', params:'strdictnone'=None) -> 'any_':
 
-        # The common case - a connection whose statements are not audited runs them as it always did
-        if self.sql_audit_level == SQL_Audit_Off:
+        # A wrapper with no writer attached - the ODB's own - runs statements as it always did
+        if not self.audit_log:
             out = self._execute(query, params)
             return out
+
+        # The statement event and the completion event of one statement pair up on this id
+        cid = new_cid_server()
 
         start = monotonic()
 
@@ -191,15 +199,31 @@ class SessionWrapper:
             out = self._execute(query, params)
         except Exception:
             duration_ms = int((monotonic() - start) * 1000)
-            _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
-                cid=new_cid_server(), endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.Error,
-                params=params, duration_ms=duration_ms, error=format_exc())
+
+            # The statement's own content is on record only where the connection opted in ..
+            if self.sql_audit_level != SQL_Audit_Off:
+                _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
+                    cid=cid, endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.Error,
+                    params=params, duration_ms=duration_ms, error=format_exc())
+
+            # .. while the completing event with the outcome and duration is always written -
+            # it is what the alerting collectors measure.
+            record_remote_call(self.audit_log, AuditSource.SQL_Outgoing, self.config['name'],
+                cid=cid, is_ok=False, duration_ms=duration_ms, endpoint=self.sql_audit_endpoint)
             raise
 
         duration_ms = int((monotonic() - start) * 1000)
-        _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
-            cid=new_cid_server(), endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.OK,
-            params=params, rows=out, duration_ms=duration_ms)
+
+        # The statement's own content is on record only where the connection opted in ..
+        if self.sql_audit_level != SQL_Audit_Off:
+            _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
+                cid=cid, endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.OK,
+                params=params, rows=out, duration_ms=duration_ms)
+
+        # .. while the completing event with the outcome and duration is always written -
+        # it is what the alerting collectors measure.
+        record_remote_call(self.audit_log, AuditSource.SQL_Outgoing, self.config['name'],
+            cid=cid, is_ok=True, duration_ms=duration_ms, endpoint=self.sql_audit_endpoint)
 
         return out
 
@@ -216,9 +240,10 @@ class SessionWrapper:
         any other statement when this connection is audited.
         """
 
-        # The common case - a connection whose statements are not audited pings as it always did
-        if self.sql_audit_level == SQL_Audit_Off:
-            return self.pool.ping(fs_sql_config)
+        # A wrapper with no writer attached - the ODB's own - pings as it always did
+        if not self.audit_log:
+            out = self.pool.ping(fs_sql_config)
+            return out
 
         # The same query the pool's ping runs - a direct-mode engine carries its own
         engine:'any_' = self.pool.engine
@@ -228,6 +253,9 @@ class SessionWrapper:
         else:
             query = get_ping_query(fs_sql_config, self.config)
 
+        # The statement event and the completion event of one ping pair up on this id
+        cid = new_cid_server()
+
         start = monotonic()
 
         # A failed ping is recorded too, before the caller learns about it
@@ -235,15 +263,31 @@ class SessionWrapper:
             out = self.pool.ping(fs_sql_config)
         except Exception:
             duration_ms = int((monotonic() - start) * 1000)
-            _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
-                cid=new_cid_server(), endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.Error,
-                duration_ms=duration_ms, error=format_exc())
+
+            # The ping's own statement is on record only where the connection opted in ..
+            if self.sql_audit_level != SQL_Audit_Off:
+                _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
+                    cid=cid, endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.Error,
+                    duration_ms=duration_ms, error=format_exc())
+
+            # .. while the completing event with the outcome and duration is always written -
+            # it is what the alerting collectors measure.
+            record_remote_call(self.audit_log, AuditSource.SQL_Outgoing, self.config['name'],
+                cid=cid, is_ok=False, duration_ms=duration_ms, endpoint=self.sql_audit_endpoint)
             raise
 
         duration_ms = int((monotonic() - start) * 1000)
-        _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
-            cid=new_cid_server(), endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.OK,
-            duration_ms=duration_ms)
+
+        # The ping's own statement is on record only where the connection opted in ..
+        if self.sql_audit_level != SQL_Audit_Off:
+            _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
+                cid=cid, endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.OK,
+                duration_ms=duration_ms)
+
+        # .. while the completing event with the outcome and duration is always written -
+        # it is what the alerting collectors measure.
+        record_remote_call(self.audit_log, AuditSource.SQL_Outgoing, self.config['name'],
+            cid=cid, is_ok=True, duration_ms=duration_ms, endpoint=self.sql_audit_endpoint)
 
         return out
 
@@ -671,9 +715,19 @@ class PoolStore:
             config_no_sensitive['password'] = SECRET_SHADOW
             pool = self.sql_conn_class(name, config, config_no_sensitive)
 
-            # A connection that opted into statement auditing receives a writer of its own -
-            # every other one carries none and its statements run as they always did.
-            if pool.sql_audit_level != SQL_Audit_Off:
+            # Every real outgoing connection receives a writer so its completed calls
+            # are on record for the alerting collectors - the ODB's own pool and unittest
+            # pools carry none, and a connection that also opted into statement auditing
+            # records its statements through the same writer.
+            is_odb_pool = name == ZATO_ODB_POOL_NAME
+            is_unittest_pool = pool.engine_name == UNITTEST.SQL_ENGINE
+
+            records_calls = not is_odb_pool
+
+            if is_unittest_pool:
+                records_calls = False
+
+            if records_calls:
                 wrapper = SessionWrapper(audit_log=AuditLog(self.server_name))
             else:
                 wrapper = SessionWrapper()

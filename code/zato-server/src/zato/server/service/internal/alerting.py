@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from contextlib import closing
 
 # requests
@@ -14,12 +15,16 @@ import requests
 
 # Zato
 from zato.common.api import Alerting, EMAIL, SMTPMessage
-from zato.common.alerting.engine import AlertTransports
+from zato.common.alerting.engine import AlertDefaults, AlertTransports
+from zato.common.alerting.notification_config import read_notification_config, set_notification_config
 from zato.common.alerting.probes import parse_tls_target, run_canary_probe, run_certificate_probe, run_health_probe
+from zato.common.alerting.rendering import Template_Dir_Name
 from zato.common.alerting.sweep import load_alert_rules, run_sweep
 from zato.common.audit_log.api import get_audit_engine, AuditLog, AuditSource
+from zato.common.json_internal import dumps
 from zato.common.odb.model import IntervalBasedJob, Job
 from zato.common.util.api import utcnow
+from zato.common.util.scheduler import set_job_active
 from zato.server.generic.api.channel_hl7_mllp import get_current_metrics
 from zato.server.rule_engine_api import get_backend
 from zato.server.service.internal import AdminService
@@ -78,16 +83,17 @@ class AlertingRun(AdminService):
 
     def _build_transports(self, context:'anydict') -> 'AlertTransports':
         """ Wires the real delivery callables the engine dispatches through -
-        SMTP for email, the server's own invoker, pub/sub and HTTP for webhooks.
+        the named email connection, the server's own invoker, pub/sub and HTTP
+        for webhooks.
         """
-        smtp_conn = self._get_extra(Alerting.Extra_SMTP_Conn, context)
+        email_connection = self._get_extra(Alerting.Extra_Email_Connection, context)
         from_ = self._get_extra(Alerting.Extra_From, context)
 
         def send_email(addresses:'strlist', subject:'str', body:'str') -> 'None':
 
-            # Email is off until the job's extra data names an SMTP connection
-            if not smtp_conn:
-                self.logger.info('No SMTP connection is configured for alerting, skipping an email to `%s`', addresses)
+            # Email is off until the job's extra data names an email connection
+            if not email_connection:
+                self.logger.info('No email connection is configured for alerting, skipping an email to `%s`', addresses)
                 return
 
             # The email component may be disabled in server.conf
@@ -102,7 +108,7 @@ class AlertingRun(AdminService):
             message.subject = subject
             message.body = body
 
-            smtp_item = self.email.smtp.get(smtp_conn, True)
+            smtp_item = self.email.smtp.get(email_connection, True)
             smtp_item.conn.send(message)
 
         def invoke_service(service_name:'str', payload:'stranydict') -> 'None':
@@ -208,23 +214,39 @@ class AlertingRun(AdminService):
         default_to = self._get_extra(Alerting.Extra_Default_To, context)
         dashboard_url = self._get_extra(Alerting.Extra_Dashboard_URL, context)
 
+        # The deployment-level targets a rule without its own delivers through
+        defaults = AlertDefaults()
+        defaults.slack_webhook = self._get_extra(Alerting.Extra_Slack_Webhook, context)
+        defaults.teams_webhook = self._get_extra(Alerting.Extra_Teams_Webhook, context)
+        defaults.webhook_url = self._get_extra(Alerting.Extra_Webhook_URL, context)
+
         if default_to:
-            default_email = [item.strip() for item in default_to.split(',')]
-        else:
-            default_email = None
+            email_to = []
+
+            for item in default_to.split(','):
+                email_to.append(item.strip())
+
+            defaults.email_to = email_to
 
         transports = self._build_transports(context)
         audit_log = AuditLog(self.server.name)
         engine = get_audit_engine()
 
+        # The notification texts render from the server's own template files,
+        # the copies create_server put next to the rest of the config - an environment
+        # created before the templates existed renders from the shipped defaults.
+        template_dir = os.path.join(self.server.repo_location, Template_Dir_Name)
+
+        if not os.path.isdir(template_dir):
+            template_dir = ''
+
         # The intervals the missed-run measure sizes itself against
         job_intervals = self._get_job_intervals()
 
         result = run_sweep(engine, rules, metrics_by_name, AuditSource.MLLP_Channel, transports, audit_log, self.cid, now,
-            default_email=default_email, dashboard_url=dashboard_url, job_intervals=job_intervals)
+            defaults=defaults, dashboard_url=dashboard_url, template_dir=template_dir, job_intervals=job_intervals)
 
-        self.logger.info('Alerting sweep ran %d rule(s) over %d fact(s) - %d finding(s), %d raised, %d deduplicated, ' \
-            '%d dispatched',
+        self.logger.info('Alerting sweep ran %d rule(s) over %d fact(s) - %d finding(s), %d raised, %d deduplicated, %d dispatched',
             result.rule_count, result.fact_count, result.finding_count, result.raised_count, result.deduplicated_count,
             len(result.dispatched))
 
@@ -414,6 +436,69 @@ class AlertingCanary(AdminService):
             checked += 1
 
         self.logger.info('Canary probe checked %d connection(s)', checked)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AlertingGetNotificationConfig(AdminService):
+    """ Returns the notification targets the alerting sweep job's extra holds -
+    what the config screen's notifications row shows.
+    """
+    name = Alerting.Get_Notification_Config_Service
+    output = 'response_data'
+
+    def handle(self) -> 'None':
+
+        with closing(self.odb.session()) as session:
+            job = session.query(Job).\
+                filter(Job.name==Alerting.Job_Name).\
+                filter(Job.cluster_id==self.server.cluster_id).\
+                one()
+            extra = job.extra
+
+        values = read_notification_config(extra)
+
+        self.response.payload.response_data = dumps(values)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AlertingSetNotificationConfig(AdminService):
+    """ Writes the notification targets into the alerting sweep job's extra -
+    what the config screen's notifications row saves through, and the very
+    next sweep already delivers with the new values.
+    """
+    name = Alerting.Set_Notification_Config_Service
+
+    def handle(self) -> 'None':
+
+        values = self.request.payload
+
+        with closing(self.odb.session()) as session:
+            changed = set_notification_config(session, self.server.cluster_id, values)
+            session.commit()
+
+        self.logger.info('Alerting notification config saved (changed=%s)', changed)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AlertingSetCanaryState(AdminService):
+    """ Flips the canary scheduler job's active flag in ODB - the config screen's
+    test transfers checkbox drives this service next to its flip of the
+    Canary_Failing rule, so the job and the rule always move together.
+    """
+    name = Alerting.Set_Canary_State_Service
+
+    def handle(self) -> 'None':
+
+        is_active = self.request.payload['is_active']
+
+        with closing(self.odb.session()) as session:
+            changed = set_job_active(session, self.server.cluster_id, Alerting.Canary_Job_Name, is_active)
+            session.commit()
+
+        self.logger.info('Canary job `%s` set to is_active=%s (changed=%s)', Alerting.Canary_Job_Name, is_active, changed)
 
 # ################################################################################################################################
 # ################################################################################################################################

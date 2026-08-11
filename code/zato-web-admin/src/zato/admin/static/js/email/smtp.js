@@ -17,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.SMTP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.email.smtp.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'host', 'port', 'timeout', 'mode']);
+    $.fn.zato.data_table.setup_forms(['name', 'server_type']);
     var unique_constraints = [
         {field: 'name', entity_type: 'email_smtp', attr_name: 'name'}
     ];
@@ -44,6 +44,9 @@ $.fn.zato.email.smtp.field_descriptions = {
     'id_is_audit_log_active': 'Whether this connection\'s activity is recorded<br>in the audit log. On by default.',
     'id_needs_tls_verify': 'Whether the server\'s TLS certificate is verified.<br>Turn it off only for servers<br>with self-signed certificates.',
     'id_is_debug': 'When on, the full SMTP protocol conversation<br>is written out to server logs.<br>Useful when diagnosing delivery issues.',
+    'id_server_type': 'What kind of server this is - generic SMTP<br>for any standard server or Microsoft 365<br>for cloud mailboxes accessed with OAuth2.',
+    'id_tenant_id': 'The Microsoft 365 tenant the mailbox belongs to.<br>Found in the Azure portal under the app registration.',
+    'id_client_id': 'The application (client) ID of the app registration<br>the connection authenticates as.<br>Its secret is set with the Change secret link.',
     'id_provider': 'Pre-fills the connection details<br>for a well-known e-mail provider.<br>Pick Generic to fill everything in yourself.',
     'id_mode': 'How the connection is secured. STARTTLS upgrades<br>a plain connection to TLS, SSL uses TLS<br>from the start and Plain sends everything unencrypted.',
     'id_host': 'Hostname of the SMTP server to connect to,<br>e.g. smtp.example.com.',
@@ -144,6 +147,10 @@ $.fn.zato.email.smtp.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the SMTP connection', id);
     $.fn.zato.email.smtp.update_port_hint('edit-');
 
+    // Expand the Microsoft 365 block when that is what the connection is
+    var isMicrosoft365 = $('#id_edit-server_type').val() == 'microsoft_365';
+    $.fn.zato.toggle_visible_hidden('.smtp-microsoft-365-edit', isMicrosoft365);
+
     // Expand the advanced block if any of its fields differs from the defaults
     var hasAdvanced = false;
 
@@ -184,14 +191,41 @@ $.fn.zato.email.smtp.data_table.new_row = function(item, data, include_tr) {
     var is_audit_log_active = item.is_audit_log_active == true
     var username = item.username ? item.username : "<span class='form_hint'>(None)</span>";
 
+    // What the type-dependent cells show - a Microsoft 365 connection has a tenant
+    // where a generic one has a host, no port of its own and a secret instead of a password
+    var emptyHint = "<span class='form_hint'>---</span>";
+
+    var serverTypeHuman;
+    var hostCell;
+    var portCell;
+    var passwordLink;
+
+    if(item.server_type == 'microsoft_365') {
+        serverTypeHuman = 'Microsoft 365';
+        hostCell = item.tenant_id;
+        portCell = emptyHint;
+        passwordLink = String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change secret', 'Secret', 'secret')\">Change secret</a>", item.id);
+    }
+    else {
+        serverTypeHuman = 'Generic SMTP';
+        hostCell = item.host;
+        portCell = item.port;
+        passwordLink = String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}')\">Change password</a>", item.id);
+    }
+
+    if(hostCell === '') {
+        hostCell = emptyHint;
+    }
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? "Yes" : "No");
-    row += String.format('<td>{0}</td>', item.host);
-    row += String.format('<td>{0}</td>', item.port);
+    row += String.format('<td>{0}</td>', serverTypeHuman);
+    row += String.format('<td>{0}</td>', hostCell);
+    row += String.format('<td>{0}</td>', portCell);
     row += String.format('<td>{0}</td>', username);
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}')\">Change password</a>", item.id));
+    row += String.format('<td>{0}</td>', passwordLink);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.email.smtp.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.email.smtp.delete_('{0}');\">Delete</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\">Ping</a>", item.id));
@@ -206,6 +240,9 @@ $.fn.zato.email.smtp.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.ca_certs_path);
     row += String.format("<td class='ignore'>{0}</td>", item.helo_hostname);
     row += String.format("<td class='ignore'>{0}</td>", item.from_address);
+    row += String.format("<td class='ignore'>{0}</td>", item.server_type);
+    row += String.format("<td class='ignore'>{0}</td>", item.tenant_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.client_id);
     row += String.format("<td class='ignore'>{0}</td>", is_audit_log_active);
 
     if(include_tr) {

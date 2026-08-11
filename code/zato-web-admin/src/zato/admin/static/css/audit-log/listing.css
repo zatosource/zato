@@ -492,6 +492,68 @@
     cursor: pointer;
 }
 
+/* The confirmation a resubmit deep link opens - which connection the message goes
+   through again and what it is known by, with the confirm button the only way
+   anything goes out. It rides inside a tippy, whose dark face the text reads on. */
+
+.audit-log-resubmit-confirm {
+    padding: 4px 2px;
+    text-align: left;
+    font-size: 12.5px;
+}
+
+.audit-log-resubmit-confirm-title {
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.audit-log-resubmit-confirm-text {
+    margin-bottom: 4px;
+    max-width: 280px;
+    word-break: break-word;
+}
+
+.audit-log-resubmit-confirm-label {
+    margin-right: 5px;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.audit-log-resubmit-confirm-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.audit-log-resubmit-confirm-yes,
+.audit-log-resubmit-confirm-cancel {
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.audit-log-resubmit-confirm-yes {
+    border: 1px solid #22863a;
+    background: #22863a;
+    color: #fff;
+}
+
+.audit-log-resubmit-confirm-yes:hover {
+    background: #1d7534;
+}
+
+.audit-log-resubmit-confirm-cancel {
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: transparent;
+    color: #fff;
+}
+
+.audit-log-resubmit-confirm-cancel:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
 /* One more badge among the row's chips, saying the message went out again - its
    background leaning a touch towards green, everything else as the other tags */
 

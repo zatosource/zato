@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.alerting.engine import build_digest, build_slack_payload, build_teams_payload, process_findings, \
-    AlertTransports
+    AlertDefaults, AlertTransports
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, FindingKind
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditSource
 from zato.common.json_internal import loads
@@ -41,6 +41,15 @@ _webhook_url = 'https://hooks.example.com/services/T000/B000/XXX'
 
 # The addresses the email rules send to
 _addresses = ['ops@example.com']
+
+# ################################################################################################################################
+
+def _email_defaults() -> 'AlertDefaults':
+    """ The deployment-level defaults with only the email address configured.
+    """
+    out = AlertDefaults()
+    out.email_to = _addresses
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -127,7 +136,7 @@ class TestActions:
         rule = new_rule('silent-feeds-default', FindingKind.Feed_Silent, action=AlertAction.Email_Digest)
 
         result = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-email-default', utcnow(),
-            default_email=_addresses)
+            defaults=_email_defaults())
 
         assert result.dispatched == [('silent-feeds-default', AlertAction.Email_Digest)]
 
@@ -226,17 +235,127 @@ class TestActions:
 # ################################################################################################################################
 
     def test_a_critical_teams_card_is_red(self) -> 'None':
-        payload = build_teams_payload('The channel is down', '', AlertSeverity.Critical)
+        payload = build_teams_payload('The channel is down', 'The channel is down', AlertSeverity.Critical)
 
         assert payload['themeColor'] == 'cc0000'
         assert payload['text'] == 'The channel is down'
 
 # ################################################################################################################################
 
-    def test_a_slack_payload_without_a_link_is_just_the_message(self) -> 'None':
-        payload = build_slack_payload('The channel is down', '')
+    def test_a_slack_payload_is_the_rendered_text_in_the_envelope(self) -> 'None':
+        payload = build_slack_payload('The channel is down')
 
         assert payload == {'text': 'The channel is down'}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestDefaultTargets:
+    """ A rule whose action config names no target of its own delivers through
+    the deployment-level defaults from the sweep job's extra.
+    """
+
+    def test_a_slack_rule_without_a_webhook_uses_the_default_one(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        recorder = _TransportRecorder()
+
+        rule = new_rule('slack-default', FindingKind.Feed_Silent, action=AlertAction.Slack)
+
+        defaults = AlertDefaults()
+        defaults.slack_webhook = _webhook_url
+
+        result = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-slack-default', utcnow(),
+            defaults=defaults)
+
+        assert result.dispatched == [('slack-default', AlertAction.Slack)]
+
+        url, payload = recorder.posts[0]
+
+        assert url == _webhook_url
+        assert payload == {'text': 'Feed on `hl7.test.channel` silent for 400s\n/zato/hl7/channels/'}
+
+# ################################################################################################################################
+
+    def test_a_teams_rule_without_a_webhook_uses_the_default_one(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        recorder = _TransportRecorder()
+
+        rule = new_rule('teams-default', FindingKind.Feed_Silent, action=AlertAction.Teams)
+
+        defaults = AlertDefaults()
+        defaults.teams_webhook = _webhook_url
+
+        _ = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-teams-default', utcnow(),
+            defaults=defaults)
+
+        url, payload = recorder.posts[0]
+
+        assert url == _webhook_url
+        assert payload['@type'] == 'MessageCard'
+        assert 'silent for 400s' in payload['text']
+
+# ################################################################################################################################
+
+    def test_a_webhook_rule_without_a_url_uses_the_default_one(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        recorder = _TransportRecorder()
+
+        rule = new_rule('webhook-default', FindingKind.Feed_Silent, action=AlertAction.Webhook)
+
+        defaults = AlertDefaults()
+        defaults.webhook_url = _webhook_url
+
+        _ = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-webhook-default', utcnow(),
+            defaults=defaults)
+
+        url, payload = recorder.posts[0]
+
+        # The webhook carries the whole structured payload, rendered by its template
+        assert url == _webhook_url
+        assert payload['rule'] == 'webhook-default'
+        assert payload['kind'] == FindingKind.Feed_Silent
+        assert payload['object_name'] == _channel_name
+        assert payload['message'] == 'Feed on `hl7.test.channel` silent for 400s'
+        assert payload['link'] == '/zato/hl7/channels/'
+        assert payload['severity'] == AlertSeverity.Warning
+        assert payload['count'] == 1
+        assert payload['action_config'] == {}
+        assert isinstance(payload['alert_id'], int)
+
+# ################################################################################################################################
+
+    def test_a_rule_with_its_own_webhook_ignores_the_defaults(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        recorder = _TransportRecorder()
+
+        own_url = 'https://hooks.example.com/services/OWN/RULE/YYY'
+
+        rule = new_rule('slack-own', FindingKind.Feed_Silent,
+            action=AlertAction.Slack, action_config={'webhook_url': own_url})
+
+        defaults = AlertDefaults()
+        defaults.slack_webhook = _webhook_url
+
+        _ = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-slack-own', utcnow(),
+            defaults=defaults)
+
+        url, _ignored = recorder.posts[0]
+
+        assert url == own_url
+
+# ################################################################################################################################
+
+    def test_a_slack_rule_with_no_webhook_anywhere_sends_nothing(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        recorder = _TransportRecorder()
+
+        rule = new_rule('slack-nowhere', FindingKind.Feed_Silent, action=AlertAction.Slack)
+
+        result = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-slack-nowhere', utcnow())
+
+        # The alert itself is still raised, only the delivery is skipped
+        assert result.raised_count == 1
+        assert recorder.posts == []
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -313,7 +432,7 @@ class TestDefaultSink:
         recorder = _TransportRecorder()
 
         result = process_findings([], [_new_finding()], recorder.make(), audit_log, 'cid-catch-all', utcnow(),
-            default_email=_addresses, dashboard_url='https://dashboard.example.com')
+            defaults=_email_defaults(), dashboard_url='https://dashboard.example.com')
 
         assert len(result.unmatched) == 1
 

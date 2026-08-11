@@ -241,6 +241,7 @@ _event_type_label = {
     AuditEvent.Receipt_Sent: 'Receipt sent',
     AuditEvent.Receipt_Received: 'Receipt received',
     AuditEvent.Alert_Raised: 'Alert raised',
+    AuditEvent.Alert_Diagnosed: 'Alert diagnosed',
     AuditEvent.MCP_Initialize: 'MCP initialize',
     AuditEvent.MCP_Tools_List: 'MCP tools list',
     AuditEvent.MCP_Tools_Call: 'MCP tools call',

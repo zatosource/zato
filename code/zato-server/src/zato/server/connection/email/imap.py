@@ -1,7 +1,7 @@
-# -# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,13 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from base64 import b64decode
 from contextlib import contextmanager
-from imaplib import IMAP4
 from io import BytesIO
 from json import dumps
-from logging import getLogger, INFO
+from logging import getLogger
 from mimetypes import guess_type as guess_mime_type
-from smtplib import SMTPAuthenticationError
-from time import monotonic
 from traceback import format_exc
 
 # imbox
@@ -23,18 +20,14 @@ from zato.common.ext.imbox import Imbox as _Imbox
 from zato.common.ext.imbox.imap import ImapTransport as _ImapTransport
 from zato.common.ext.imbox.parser import parse_email, Struct
 
-# Outbox
-from zato.server.ext.outbox import AnonymousOutbox, Attachment, Email, Outbox
-
-# Python 2/3 compatibility
-from zato.common.py23_.past.builtins import basestring, unicode
-
 # Zato
 from zato.common.api import IMAPMessage, EMAIL
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.attachment import build_attachment
+from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid_server
 from zato.server.connection.cloud.microsoft_365 import Microsoft365Client
+from zato.server.connection.email.common import is_auth_error, BaseConnection
 from zato.server.store import BaseAPI, BaseStore
 
 # ################################################################################################################################
@@ -52,38 +45,6 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-_modes = {
-    EMAIL.SMTP.MODE.PLAIN: None,
-    EMAIL.SMTP.MODE.SSL: 'SSL',
-    EMAIL.SMTP.MODE.STARTTLS: 'TLS'
-}
-
-# The words an IMAP login rejection speaks in - the protocol has no error codes,
-# so the exception's text is what says the server refused the credentials.
-_imap_auth_error_markers = ('auth', 'login')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _is_auth_error(e:'Exception') -> 'bool':
-    """ Whether an exception speaks of rejected credentials - SMTP replies 535 and 534
-    arrive as SMTPAuthenticationError, while IMAP rejections arrive as IMAP4.error
-    whose text names the authentication. Alerting counts these separately, because
-    their remedy is credentials, not networking.
-    """
-    if isinstance(e, SMTPAuthenticationError):
-        return True
-
-    if isinstance(e, IMAP4.error):
-        text = str(e).lower()
-        out = any(marker in text for marker in _imap_auth_error_markers)
-        return out
-
-    return False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -177,44 +138,6 @@ def _build_attachment_envelopes(attachments:'any_') -> 'anylist':
         data = content.getvalue()
 
         out.append(build_attachment(item['filename'], item['content-type'], data))
-
-    return out
-
-# ################################################################################################################################
-
-def _join_addresses(value:'any_') -> 'str':
-    """ Message recipients arrive as one address or as a list of them - either way,
-    what goes to the audit log is one comma-joined string.
-    """
-    if isinstance(value, basestring):
-        out = value
-    elif value:
-        out = ', '.join(value)
-    else:
-        out = ''
-
-    return out
-
-# ################################################################################################################################
-
-def _get_send_summary(msg:'any_', from_:'any_') -> 'str':
-    """ Builds a JSON summary of an outgoing SMTP message for the audit log.
-    """
-
-    # The body may be bytes, depending on how the caller built the message
-    body = msg.body
-
-    if isinstance(body, bytes):
-        body = body.decode('utf-8', errors='replace')
-
-    out = dumps({
-        'subject': msg.subject,
-        'from': from_ or msg.from_,
-        'to': _join_addresses(msg.to),
-        'cc': _join_addresses(msg.cc),
-        'bcc': _join_addresses(msg.bcc),
-        'body': body,
-    })
 
     return out
 
@@ -330,319 +253,60 @@ class Microsoft365IMAPMessage(IMAPMessage):
 
 class Imbox(_Imbox):
 
-    def __init__(self, config, config_no_sensitive):
+    def __init__(self, config:'any_', config_no_sensitive:'any_') -> 'None':
         self.config = config
         self.config_no_sensitive = config_no_sensitive
         self.server = ImapTransport(self.config.host, self.config.port, self.config.mode==EMAIL.IMAP.MODE.SSL)
-        self.connection = self.server.connect(self.config.username, self.config.password or '', self.config.debug_level)
 
-    def __repr__(self):
+        # A connection without credentials keeps None as its password
+        password = self.config.password
+        if password is None:
+            password = ''
+
+        self.connection = self.server.connect(self.config.username, password, self.config.debug_level)
+
+    def __repr__(self) -> 'str':
         return '<{} at {}, config:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
 
-    def fetch_by_uid(self, uid):
-        message, data = self.connection.uid('fetch', uid, '(BODY.PEEK[])')
+    def fetch_by_uid(self, uid:'any_') -> 'any_':
+        _, data = self.connection.uid('fetch', uid, '(BODY.PEEK[])')
         raw_email = data[0][1]
 
-        if not isinstance(raw_email, unicode):
+        if not isinstance(raw_email, str):
             raw_email = raw_email.decode('utf8')
 
         email_object = parse_email(raw_email)
 
         return email_object
 
-    def search(self, criteria):
-        message, data = self.connection.uid('search', None, criteria)
+    def search(self, criteria:'str') -> 'any_':
+        _, data = self.connection.uid('search', cast_('str', None), criteria)
         return data[0].split()
 
-    def fetch_list(self, criteria):
+    def fetch_list(self, criteria:'str') -> 'any_':
         uid_list = self.search(criteria)
 
         for uid in uid_list:
             yield (uid, self.fetch_by_uid(uid))
 
-    def close(self):
-        self.connection.close()
+    def close(self) -> 'None':
+        _ = self.connection.close()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ImapTransport(_ImapTransport):
-    def connect(self, username, password, debug_level):
+    def connect(self, username:'str', password:'str', debug_level:'int') -> 'any_':
         self.server.debug = debug_level
-        self.server.login(username, password)
-        self.server.select()
+        _ = self.server.login(username, password)
+        _ = self.server.select()
 
         return self.server
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class EMailAPI:
-    def __init__(self, smtp, imap):
-        self.smtp = smtp
-        self.imap = imap
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _Connection:
-
-    def __repr__(self):
-        return '<{} at {}, config:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SMTPConnection(_Connection):
-    def __init__(self, config, config_no_sensitive, audit_log:'AuditLog') -> 'None':
-        self.config = config
-        self.config_no_sensitive = config_no_sensitive
-        self.audit_log = audit_log
-
-        # Each connection can have its audit log turned off individually - connections
-        # created before the flag existed have no such key stored at all.
-        if 'is_audit_log_active' in config:
-            self.needs_audit = config['is_audit_log_active']
-        else:
-            self.needs_audit = True
-
-        self.conn_args = [
-            self.config.host.encode('utf-8'),
-            int(self.config.port),
-            self.config.mode_outbox,
-            self.config.is_debug,
-            self.config.timeout
-        ]
-
-        # These may be empty strings in the configuration and the underlying transport expects None in such cases
-        ca_certs_path = self.config.ca_certs_path
-        if not ca_certs_path:
-            ca_certs_path = None
-
-        helo_hostname = self.config.helo_hostname
-        if not helo_hostname:
-            helo_hostname = None
-
-        from_address = self.config.from_address
-        if not from_address:
-            from_address = None
-
-        self.conn_kwargs = {
-            'needs_tls_verify': self.config.needs_tls_verify,
-            'ca_certs_path': ca_certs_path,
-            'helo_hostname': helo_hostname,
-            'from_address': from_address,
-        }
-
-        if config.username or config.password:
-
-            password = (self.config.password or '')
-            username = (self.config.username or '')
-
-            self.conn_class = Outbox
-
-            self.conn_args.insert(0, password)
-            self.conn_args.insert(0, username)
-
-        else:
-            self.conn_class = AnonymousOutbox
-
-# ################################################################################################################################
-
-    def ping(self) -> 'str':
-        """ Connects to the server, authenticating as configured, without sending any message.
-        Returns the server's EHLO response.
-        """
-        cid = new_cid_server()
-        start = monotonic()
-
-        # The transport opens and closes its own connection during a ping
-        conn = self.conn_class(*self.conn_args, **self.conn_kwargs)
-
-        # A failed ping is recorded too, before the caller learns about it
-        try:
-            out = conn.ping()
-        except Exception as e:
-            if self.needs_audit:
-                self._insert_ping_event(cid, start, outcome=AuditOutcome.Error, status=str(e),
-                    is_auth_error=_is_auth_error(e))
-            raise
-
-        # A ping is traffic like any other to the audit log
-        if self.needs_audit:
-            self._insert_ping_event(cid, start, outcome=AuditOutcome.OK)
-
-        return out
-
-# ################################################################################################################################
-
-    def _insert_ping_event(
-        self,
-        cid:'str',
-        start:'float',
-        *,
-        outcome:'str',
-        status:'str' = '',
-        is_auth_error:'bool' = False,
-        ) -> 'None':
-        """ Writes one request-sent event describing a ping of this connection.
-        A rejection of the credentials gets the auth-failed event type,
-        because its remedy is different and alerting counts it separately.
-        """
-        duration_ms = int((monotonic() - start) * 1000)
-
-        if is_auth_error:
-            event_type = AuditEvent.Auth_Failed
-        else:
-            event_type = AuditEvent.Request_Sent
-
-        self.audit_log.insert(
-            AuditSource.Email_SMTP,
-            event_type,
-            self.config.name,
-            cid=cid,
-            endpoint=f'{self.config.host}:{self.config.port}',
-            outcome=outcome,
-            status=status,
-            duration_ms=duration_ms,
-        )
-
-# ################################################################################################################################
-
-    def send(self, msg, from_=None, cid:'str'='') -> 'bool':
-
-        headers = msg.headers or {}
-        atts = []
-        attachment_envelopes = []
-
-        if msg.attachments:
-            for item in msg.attachments:
-                contents  = item['contents']
-                contents = contents.encode('utf8') if isinstance(contents, unicode) else contents
-                att = Attachment(item['name'], BytesIO(contents))
-                atts.append(att)
-
-                # The audit log keeps the attachment's bytes as they went out
-                if self.needs_audit:
-                    mime_type, _ = guess_mime_type(item['name'])
-                    if not mime_type:
-                        mime_type = 'text/plain'
-                    attachment_envelopes.append(build_attachment(item['name'], mime_type, contents))
-
-        # Messages without an explicit From address use the connection's own one, filled in by the underlying transport
-        if 'From' not in msg.headers:
-            if msg.from_:
-                headers['From'] = msg.from_
-
-        if msg.cc and 'CC' not in headers:
-            headers['CC'] = ', '.join(msg.cc) if not isinstance(msg.cc, basestring) else msg.cc
-
-        if msg.bcc and 'BCC' not in headers:
-            headers['BCC'] = ', '.join(msg.bcc) if not isinstance(msg.bcc, basestring) else msg.bcc
-
-        body, html_body = (None, msg.body) if msg.is_html else (msg.body, None)
-        email = Email(msg.to, msg.subject, body, html_body, msg.charset, headers, msg.is_rfc2231)
-
-        send_start = monotonic()
-
-        try:
-            with self.conn_class(*self.conn_args, **self.conn_kwargs) as conn:
-                conn.send(email, atts, from_ or msg.from_)
-        except Exception as e:
-
-            # Log what happened ..
-            logger.warning('Could not send an SMTP message to `%s`, e:`%s`', self.config_no_sensitive, format_exc())
-
-            # .. record the failure before telling the caller ..
-            if self.needs_audit:
-                self._insert_send_event(msg, from_, cid, send_start, attachment_envelopes,
-                    outcome=AuditOutcome.Error, status=str(e), is_auth_error=_is_auth_error(e))
-
-            # .. and tell the caller that the message was not sent.
-            return False
-        else:
-
-            # Optionally, log what happened ..
-            if logger.isEnabledFor(INFO):
-                atts_info = ', '.join(att.name for att in atts) if atts else None
-                logger.info('SMTP message `%r` sent from `%r` to `%r`, attachments:`%r`',
-                    msg.subject, msg.from_, msg.to, atts_info)
-
-            # .. record what went out on the wire ..
-            if self.needs_audit:
-                self._insert_send_event(msg, from_, cid, send_start, attachment_envelopes,
-                    outcome=AuditOutcome.OK)
-
-            # .. and tell the caller that the message was sent successfully.
-            return True
-
-# ################################################################################################################################
-
-    def _insert_send_event(
-        self,
-        msg:'any_',
-        from_:'any_',
-        cid:'str',
-        send_start:'float',
-        attachment_envelopes:'anylist',
-        *,
-        outcome:'str',
-        status:'str' = '',
-        is_auth_error:'bool' = False,
-        ) -> 'None':
-        """ Writes one message-sent event describing a direct SMTP send, successful or not.
-        A rejection of the credentials gets the auth-failed event type,
-        because its remedy is different and alerting counts it separately.
-        """
-        duration_ms = int((monotonic() - send_start) * 1000)
-        data = _get_send_summary(msg, from_)
-
-        if is_auth_error:
-            event_type = AuditEvent.Auth_Failed
-        else:
-            event_type = AuditEvent.Message_Sent
-
-        self.audit_log.insert(
-            AuditSource.Email_SMTP,
-            event_type,
-            self.config.name,
-            cid=cid,
-            endpoint=_join_addresses(msg.to),
-            size=len(data),
-            outcome=outcome,
-            status=status,
-            duration_ms=duration_ms,
-            data=data,
-            attachments=attachment_envelopes,
-        )
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SMTPAPI(BaseAPI):
-    """ API to obtain SMTP connections through.
-    """
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SMTPConnStore(BaseStore):
-    """ Stores connections to SMTP.
-    """
-    def __init__(self, server_name:'str') -> 'None':
-        super().__init__()
-
-        # All SMTP connections write their audit events through this object
-        self.audit_log = AuditLog(server_name)
-
-    def create_impl(self, config, config_no_sensitive):
-        config.mode_outbox = _modes[config.mode]
-        return SMTPConnection(config, config_no_sensitive, self.audit_log)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _IMAPConnection(_Connection):
+class _IMAPConnection(BaseConnection):
 
     def __init__(self, config:'any_', config_no_sensitive:'any_', audit_log:'AuditLog') -> 'None':
         self.config = config
@@ -652,16 +316,16 @@ class _IMAPConnection(_Connection):
         # Each connection can have its audit log turned off individually
         self.needs_audit = config['is_audit_log_active']
 
-    def get(self, *args, **kwargs):
+    def get(self, *args:'any_', **kwargs:'any_') -> 'any_':
         raise NotImplementedError('Must be implemented by subclasses')
 
-    def ping(self, *args, **kwargs):
+    def ping(self, *args:'any_', **kwargs:'any_') -> 'any_':
         raise NotImplementedError('Must be implemented by subclasses')
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args:'any_', **kwargs:'any_') -> 'any_':
         raise NotImplementedError('Must be implemented by subclasses')
 
-    def mark_seen(self, *args, **kwargs):
+    def mark_seen(self, *args:'any_', **kwargs:'any_') -> 'any_':
         raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
@@ -717,7 +381,7 @@ class GenericIMAPConnection(_IMAPConnection):
             if self.needs_audit:
                 error = format_exc()
 
-                if _is_auth_error(e):
+                if is_auth_error(e):
                     event_type = AuditEvent.Auth_Failed
                 else:
                     event_type = AuditEvent.Message_Received
@@ -741,7 +405,7 @@ class GenericIMAPConnection(_IMAPConnection):
             if self.needs_audit:
                 error = format_exc()
 
-                if _is_auth_error(e):
+                if is_auth_error(e):
                     event_type = AuditEvent.Auth_Failed
                 else:
                     event_type = AuditEvent.Request_Sent
@@ -825,7 +489,6 @@ class Microsoft365IMAPConnection(_IMAPConnection):
         out = []
         elems = ((elem.name, elem.address) for elem in list(native_elem))
 
-        # .. try to extract the recipients of the message ..
         for display_name, email in elems:
             out.append({
                 'name': display_name,
@@ -918,8 +581,9 @@ class Microsoft365IMAPConnection(_IMAPConnection):
         # Obtain a new connection ..
         client = Microsoft365Client(self.config)
 
-        # .. get a handle to the user's underlying mailbox ..
-        mailbox = client.impl.mailbox(resource=self.config['username'])
+        # .. get a handle to the user's underlying mailbox - the lookup goes through
+        # .. the client itself, which is what builds the account on first use ..
+        mailbox = client.mailbox(resource=self.config['username'])
 
         # .. and return it to the caller.
         return mailbox
@@ -930,7 +594,7 @@ class Microsoft365IMAPConnection(_IMAPConnection):
 
         filter = filter or self.config['filter_criteria']
 
-        # By default, we have nothing to return.
+        # What a call that finds no folder returns
         default = []
 
         # All messages received in this call share one correlation ID
@@ -944,7 +608,7 @@ class Microsoft365IMAPConnection(_IMAPConnection):
             # .. try to look up a folder by its name ..
             mailbox_folder = mailbox.get_folder(folder_name=folder)
 
-            # .. if found, we can return all of its messages ..
+            # .. a folder that exists yields all of its messages ..
             if mailbox_folder:
                 messages = mailbox_folder.get_messages(limit=10_000, query=filter, download_attachments=True)
                 for item in messages:
@@ -1038,7 +702,7 @@ class IMAPConnStore(BaseStore):
 # ################################################################################################################################
 
 class IMAPAPI(BaseAPI):
-    """ API to obtain SMTP connections through.
+    """ API to obtain IMAP connections through.
     """
 
 # ################################################################################################################################

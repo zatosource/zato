@@ -16,13 +16,13 @@ from time import time
 from six import add_metaclass
 
 # Zato
-from zato.common.api import SMTPMessage
+from zato.common.api import EMAIL as EMail_Common, SMTPMessage, Zato_None
 from zato.common.broker_message import EMAIL
 from zato.common.odb.model import SMTP
 from zato.common.typing_ import cast_
 from zato.common.version import get_version
 from zato.common.odb.query import email_smtp_list
-from zato.server.service import Boolean
+from zato.server.service import AsIs, Boolean
 from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -46,15 +46,19 @@ broker_message = EMAIL
 broker_message_prefix = 'SMTP_'
 list_func = email_smtp_list
 create_edit_input_optional_extra = [Boolean('needs_tls_verify'), 'ca_certs_path', 'helo_hostname', 'from_address',
-    Boolean('is_audit_log_active')]
+    'server_type', AsIs('tenant_id'), AsIs('client_id'), Boolean('is_audit_log_active')]
 output_optional_extra = [Boolean('needs_tls_verify'), 'ca_certs_path', 'helo_hostname', 'from_address',
-    Boolean('is_audit_log_active')]
+    'server_type', 'server_type_human', AsIs('tenant_id'), AsIs('client_id'), Boolean('is_audit_log_active')]
 
 # ################################################################################################################################
 
 def instance_hook(service:'any_', input:'any_', instance:'any_', attrs:'any_') -> 'None':
     if attrs.is_create_edit:
         instance.username = input.username or '' # So it's not stored as None/NULL
+
+        # A Microsoft 365 connection has no host of its own while the column itself
+        # is NOT NULL, so an absent value is stored under a marker value.
+        instance.host = input.host or Zato_None
 
         # The dashboard form leaves the ping address empty unless one was typed in
         # while the column itself is NOT NULL, so an absent value is stored as an empty string.
@@ -67,6 +71,26 @@ def pre_opaque_attrs_hook(service:'any_', input:'any_', instance:'any_', attrs:'
 
     # The audit log is enabled unless it was turned off explicitly
     input.is_audit_log_active = input.get('is_audit_log_active', True)
+
+# ################################################################################################################################
+
+def response_hook(service:'any_', input:'any_', instance:'any_', attrs:'any_', hook_type:'str') -> 'None':
+
+    if hook_type == 'get_list':
+
+        for item in service.response.payload:
+
+            # A connection created before server types existed stores no type at all,
+            # in which case it is a generic one ..
+            if not item.get('server_type'):
+                item.server_type = EMail_Common.SMTP.ServerType.Generic
+
+            # .. and the human-friendly name follows from the type.
+            item.server_type_human = EMail_Common.SMTP.ServerTypeHuman[item.server_type]
+
+            # The marker stands in for a host the user never set
+            if item.host == Zato_None:
+                item.host = ''
 
 # ################################################################################################################################
 

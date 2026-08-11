@@ -1106,6 +1106,15 @@ class EMAIL:
             def __iter__(self):
                 return iter((self.STARTTLS, self.SSL, self.PLAIN))
 
+        class ServerType:
+            Generic = 'generic'
+            Microsoft365 = 'microsoft_365'
+
+        ServerTypeHuman = {
+            ServerType.Generic: 'Generic SMTP',
+            ServerType.Microsoft365: 'Microsoft 365',
+        }
+
         # Default ports matching each connection mode
         ModePort = {
             MODE.PLAIN: 25,
@@ -1408,13 +1417,26 @@ class Alerting:
     Canary_Job_Interval_Minutes = 15
     Canary_Service              = 'zato.alerting.canary.run'
 
-    # The keys the scheduler job's extra data may carry - which SMTP connection
-    # sends the emails, its addressing, where the catch-all digest goes
-    # and the Dashboard address the links point to.
-    Extra_SMTP_Conn     = 'smtp_conn'
-    Extra_From          = 'from'
-    Extra_Default_To    = 'default_to'
-    Extra_Dashboard_URL = 'dashboard_url'
+    # The service the config screen's test transfers checkbox drives - it flips
+    # the canary job's active flag in ODB, next to the Canary_Failing rule's own flip.
+    Set_Canary_State_Service = 'zato.alerting.set-canary-state'
+
+    # The keys the scheduler job's extra data may carry - which email connection
+    # sends the emails, its addressing, where the catch-all digest goes,
+    # the Dashboard address the links point to and the default webhooks
+    # the engine falls back to when a rule names none of its own.
+    Extra_Email_Connection = 'email_connection'
+    Extra_From             = 'from'
+    Extra_Default_To       = 'default_to'
+    Extra_Dashboard_URL    = 'dashboard_url'
+    Extra_Slack_Webhook    = 'slack_webhook'
+    Extra_Teams_Webhook    = 'teams_webhook'
+    Extra_Webhook_URL      = 'webhook_url'
+
+    # The services the config screen's notifications row goes through - one reads
+    # the current values from the sweep job's extra, the other writes them back.
+    Get_Notification_Config_Service = 'zato.alerting.get-notification-config'
+    Set_Notification_Config_Service = 'zato.alerting.set-notification-config'
 
     # The rule engine rulesets the alert rules live in and the vocabulary their editor completes
     # from. Every ruleset whose name is the prefix itself or starts with the prefix plus
@@ -1428,46 +1450,42 @@ class Alerting:
 # ################################################################################################################################
 
 class Incidents:
-    """ Incidents - diagnoses of failing connections, produced by an LLM guided by a per-connection
-    diagnostic skill and stored as generic objects until a person approves or rejects them.
+    """ Diagnosed alerts - diagnoses of failing connections, produced by an LLM guided
+    by a per-connection diagnostic skill and stored next to the alerts they explain.
+    There is no lifecycle here - the diagnosis travels out with the alert's
+    notifications and whatever happens next lives in the receiving system.
     """
 
-    # The generic-object type incidents are stored under.
+    # The generic-object type diagnoses are stored under.
     class Type:
         Incident = 'zato-incident'
 
-    # The lifecycle of an incident - the status lives in the generic object's subtype column.
-    class Status:
-        New               = 'new'
-        Awaiting_Approval = 'awaiting-approval'
-        Approved          = 'approved'
-        Rejected          = 'rejected'
-        Resolved          = 'resolved'
-
-    # The service an alert rule's invoke-service action points at to turn its findings into incidents.
-    Service_Diagnose = 'zato.incidents.diagnose'
+    # The service a rule outcome's diagnose action points at to turn its findings
+    # into diagnosed alerts.
+    Service_Diagnose = 'zato.alerting.diagnose'
 
     # The name shared by the notification connections - one Slack, one Microsoft Teams, one SMTP,
     # all created when the environment is, inactive and with placeholder details.
-    Notification_Conn_Name = 'default.incidents.notifications'
+    Notification_Conn_Name = 'default.alerts.notifications'
 
-    # The keys an incident rule's action_config may carry - which LLM connection diagnoses,
+    # The LLM connection diagnoses fall back to when a rule names none of its own -
+    # created when the environment is, inactive and with placeholder details.
+    LLM_Connection_Name = 'default.alerts.llm'
+
+    # The keys a diagnose rule's action_config may carry - which LLM connection diagnoses,
     # where the notification links point to and where each transport delivers.
-    Config_LLM_Conn      = 'llm_conn'
-    Config_Dashboard_URL = 'dashboard_url'
-    Config_Slack_Channel = 'slack_channel'
-    Config_Teams_To      = 'teams_to'
-    Config_Email_To      = 'email_to'
-    Config_Email_From    = 'email_from'
+    Config_LLM_Connection = 'llm_connection'
+    Config_Dashboard_URL  = 'dashboard_url'
+    Config_Slack_Channel  = 'slack_channel'
+    Config_Teams_To       = 'teams_to'
+    Config_Email_To       = 'email_to'
+    Config_Email_From     = 'email_from'
 
     # The one remediation the diagnosis may propose for REST outgoing connections.
     Remediation_Resubmit = 'resubmit'
 
-    # How many recent audit events go into an incident's evidence pack.
+    # How many recent audit events go into a diagnosis's evidence pack.
     Evidence_Max_Events = 20
-
-    # The Dashboard path an incident's detail screen lives under.
-    Dashboard_Path = '/zato/incidents/detail/'
 
 # ################################################################################################################################
 # ################################################################################################################################

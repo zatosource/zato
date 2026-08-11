@@ -15,6 +15,8 @@ from zato.cli.enmasse.exporters.email_smtp import SMTPExporter
 from zato.cli.enmasse.exporters.group import GroupExporter
 from zato.cli.enmasse.exporters.odoo import OdooExporter
 from zato.cli.enmasse.exporters.quota_tier import QuotaTierExporter
+from zato.cli.enmasse.exporters.alert_config import AlertConfigExporter
+from zato.cli.enmasse.importers.alert_config import get_rule_backend
 from zato.cli.enmasse.exporters.audit_retention import AuditRetentionExporter
 from zato.cli.enmasse.exporters.audit_extraction import AuditExtractionExporter
 from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
@@ -89,6 +91,7 @@ class EnmasseYAMLExporter:
         self.odoo_exporter = OdooExporter(self)
         self.quota_tier_exporter = QuotaTierExporter(self)
         self.audit_retention_exporter = AuditRetentionExporter(self)
+        self.alert_config_exporter = AlertConfigExporter(self)
         self.audit_extraction_exporter = AuditExtractionExporter(self)
         self.scheduler_exporter = SchedulerExporter(self)
         self.security_exporter = SecurityExporter(self)
@@ -190,6 +193,24 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
         audit_retention_list = self.audit_retention_exporter.export(session, self.cluster_id)
         return audit_retention_list
+
+# ################################################################################################################################
+
+    def export_alert_rules(self) -> 'list':
+        """ Exports alert rule configuration - the storage is the live rule documents, not ODB.
+        """
+        backend = get_rule_backend()
+        alert_rules_list = self.alert_config_exporter.export_rules(backend)
+        return alert_rules_list
+
+# ################################################################################################################################
+
+    def export_alert_notifications(self, session:'SASession') -> 'stranydict':
+        """ Exports alert notification targets from the sweep job's extra.
+        """
+        _ = self.get_cluster(session)
+        alert_notifications = self.alert_config_exporter.export_notifications(session, self.cluster_id)
+        return alert_notifications
 
 # ################################################################################################################################
 
@@ -648,6 +669,16 @@ class EnmasseYAMLExporter:
         audit_retention_defs = self.export_audit_retention(session)
         if audit_retention_defs:
             output_dict['audit_retention'] = audit_retention_defs
+
+        # Export alert rule configuration
+        alert_rules_defs = self.export_alert_rules()
+        if alert_rules_defs:
+            output_dict['alert_rules'] = alert_rules_defs
+
+        # Export alert notification targets
+        alert_notification_defs = self.export_alert_notifications(session)
+        if alert_notification_defs:
+            output_dict['alert_notifications'] = alert_notification_defs
 
         # Export attribute-extraction rule set definitions
         audit_extraction_defs = self.export_audit_extraction(session)

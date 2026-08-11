@@ -9,10 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # One alerting sweep - the scheduler-driven run that measures the audit database
 # and live channel metrics into per-object facts and routes each fact through every
 # alert ruleset the rule engine keeps. A rule that fires names its action in its
-# `then` outcomes - `outcome.action = 'incident'` invokes the diagnosis service the
-# way the invoke-service action always did, with the remaining outcome keys travelling
-# as the action config. The dedup store, the audit trace and the dispatch transports
-# stay as they were - only the rule representation and the matching changed.
+# `then` outcomes - `outcome.action = 'diagnose'` invokes the diagnosis service,
+# with the remaining outcome keys travelling as the action config. Deduplication,
+# the audit trace and the dispatch transports all key off the rule that fired.
 
 from __future__ import annotations
 
@@ -20,12 +19,14 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from urllib.parse import quote
 
 # Zato
 from zato.common.alerting.collectors import collect_facts
 from zato.common.alerting.engine import process_findings
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, Default_Dedup_Window_Seconds
 from zato.common.api import Alerting, Incidents
+from zato.common.defaults import default_cluster_id
 from zato.common.rule_engine.loading import documents_from_version, load_documents
 from zato.common.typing_ import list_field
 
@@ -34,13 +35,14 @@ from zato.common.typing_ import list_field
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.alerting.engine import AlertTransports
+    from zato.common.alerting.engine import AlertDefaults, AlertTransports
     from zato.common.alerting.model import AlertRule, Finding
     from zato.common.audit_log.api import AuditLog
     from zato.common.rule_engine.models import Rule
     from zato.common.rule_engine.sql import RuleSQLBackend
     from zato.common.typing_ import anylist, stranydict, strintdict, strlist
 
+    AlertDefaults = AlertDefaults
     AlertRule = AlertRule
     AlertTransports = AlertTransports
     anylist = anylist
@@ -70,19 +72,27 @@ Fact_Entity = 'alert'
 # The prefix a rule's then targets carry - `outcome.action`, `outcome.severity` and so on.
 Outcome_Prefix = 'outcome.'
 
-# What each outcome.action value means in engine terms - `incident` is invoke-service
+# What each outcome.action value means in engine terms - `diagnose` is invoke-service
 # pointed at the diagnosis service, everything else maps one to one.
 _action_by_outcome = {
-    'incident':         AlertAction.Invoke_Service,
+    'diagnose':         AlertAction.Invoke_Service,
     'email':            AlertAction.Email_Digest,
     'invoke-service':   AlertAction.Invoke_Service,
     'publish-to-topic': AlertAction.Publish_To_Topic,
     'slack':            AlertAction.Slack,
     'teams':            AlertAction.Teams,
+    'webhook':          AlertAction.Webhook,
 }
 
 # The severities an outcome may carry.
 _severities = (AlertSeverity.Info, AlertSeverity.Warning, AlertSeverity.Critical)
+
+# Where a finding's link leads when the rule names none of its own - the audit log page,
+# the one existing screen every dashboard URL already wraps in login_required.
+Audit_Log_Path = '/zato/audit-log/'
+
+# What the deep link asks the audit log page to do with the failing event.
+Resubmit_Action = 'resubmit'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,9 +114,9 @@ class SweepResult:
 # ################################################################################################################################
 
 def is_alert_ruleset(name:'str') -> 'bool':
-    """ Whether one ruleset name belongs to alerting - the prefix itself, which is the
-    legacy single-ruleset name, or any name led by the prefix and an underscore,
-    the way alerts_rest and its siblings are named.
+    """ Whether one ruleset name belongs to alerting - the prefix itself, the name
+    of the single ruleset from before the per-type split, or any name led by the
+    prefix and an underscore, the way alerts_rest and its siblings are named.
     """
     if name == Alerting.Ruleset_Prefix:
         return True
@@ -131,7 +141,7 @@ def load_alert_rules(backend:'RuleSQLBackend') -> 'rule_engine_rule_list':
 
     for definition in published:
 
-        # A ruleset outside the alerts family is someone else's business
+        # A ruleset outside the alerts prefix is someone else's business
         if not is_alert_ruleset(definition.name):
             continue
 
@@ -199,6 +209,24 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
 
 # ################################################################################################################################
 
+def build_finding_link(fact:'stranydict') -> 'str':
+    """ Where a finding about one fact leads - the audit log page filtered down to
+    the failing object, and straight at the newest failing event, its confirmation
+    popover ready to open, when that event's type can be resubmitted from that page.
+    """
+    source = quote(fact['source'])
+    object_name = quote(fact['object_name'])
+
+    out = f'{Audit_Log_Path}?source={source}&object_name={object_name}&cluster={default_cluster_id}'
+
+    # A failure the audit log page can send again deep-links at the event itself
+    if fact['is_resubmittable'] and fact['last_error_event_id']:
+        out += f'&event={fact["last_error_event_id"]}&action={Resubmit_Action}'
+
+    return out
+
+# ################################################################################################################################
+
 def read_outcome(then:'stranydict') -> 'stranydict':
     """ Returns a match's outcome keys with the entity prefix stripped -
     `outcome.action` becomes `action`.
@@ -216,7 +244,12 @@ def read_outcome(then:'stranydict') -> 'stranydict':
 
 # ################################################################################################################################
 
-def build_dispatch(rule:'Rule', fact:'stranydict', outcome:'stranydict') -> 'tuple[AlertRule, Finding] | None':
+def build_dispatch(
+    rule:'Rule',
+    fact:'stranydict',
+    outcome:'stranydict',
+    dashboard_url:'str' = '',
+    ) -> 'tuple[AlertRule, Finding] | None':
     """ Turns one rule match into the pair the engine dispatches - a transient engine rule
     carrying the outcome's action and config, and a finding carrying the fact's measures.
     An outcome without an action names nothing to do, which is an authoring error, not a dispatch.
@@ -240,8 +273,19 @@ def build_dispatch(rule:'Rule', fact:'stranydict', outcome:'stranydict') -> 'tup
 
     link = outcome.pop('link', '')
 
-    # The incident action is invoke-service pointed at the diagnosis service ..
-    if action_name == 'incident':
+    # A rule that names no link of its own points at the audit log page - straight
+    # at the failing event when that event can be sent again from that page,
+    # at the object's own rows otherwise.
+    if not link:
+        link = build_finding_link(fact)
+
+    # What a notification carries is a full address - the dashboard the deployment
+    # configured, with the page's own path after it.
+    if link.startswith('/') and dashboard_url:
+        link = dashboard_url.rstrip('/') + link
+
+    # The diagnose action is invoke-service pointed at the diagnosis service ..
+    if action_name == 'diagnose':
         outcome['service'] = Incidents.Service_Diagnose
 
     # .. and an email outcome's addresses arrive as one comma-separated string.
@@ -276,13 +320,14 @@ def run_sweep(
     cid:'str',
     now:'datetime',
     *,
-    default_email:'strlist | None' = None,
+    defaults:'AlertDefaults | None' = None,
     dashboard_url:'str' = '',
+    template_dir:'str' = '',
     job_intervals:'strintdict | None' = None,
     ) -> 'SweepResult':
     """ Runs one full sweep - the fact producers measure everything once, each fact runs
     through each rule of every alert ruleset, and every match is dispatched through
-    the engine one at a time, so dedup and the audit trace work exactly as before.
+    the engine one at a time, so dedup and the audit trace see each match on its own.
     """
 
     # Our response to produce - the fields are assigned here because init=False
@@ -309,7 +354,7 @@ def run_sweep(
                 continue
 
             outcome = read_outcome(match_result.then)
-            dispatch = build_dispatch(rule, fact, outcome)
+            dispatch = build_dispatch(rule, fact, outcome, dashboard_url)
 
             if dispatch is None:
                 continue
@@ -319,7 +364,7 @@ def run_sweep(
 
             # The finding was built for this one rule, so only this one rule processes it
             result = process_findings([alert_rule], [finding], transports, audit_log, cid, now,
-                default_email=default_email, dashboard_url=dashboard_url)
+                defaults=defaults, dashboard_url=dashboard_url, template_dir=template_dir)
 
             out.raised_count += result.raised_count
             out.deduplicated_count += result.deduplicated_count

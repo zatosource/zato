@@ -34,6 +34,9 @@ class _object_type:
     Audit_Retention = 'audit_retention'           #
     Audit_Extraction = 'audit_extraction'         #
 
+    Alert_Rules = 'alert_rules'                   #
+    Alert_Notifications = 'alert_notifications'   #
+
     LDAP = 'ldap'                                 #
     MongoDB = 'mongodb'                           #
     OData = 'odata'                               #

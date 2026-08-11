@@ -36,6 +36,7 @@
             '_selection',
             'name',
             '_is_active',
+            '_server_type',
             'host',
             'port',
             '_username',
@@ -54,6 +55,9 @@
             'ca_certs_path',
             'helo_hostname',
             'from_address',
+            'server_type',
+            'tenant_id',
+            'client_id',
             'is_audit_log_active'
         ]
     }
@@ -86,13 +90,16 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Host</a></th>
+                        <th><a href="#">Type</a></th>
+                        <th><a href="#">Host / Tenant ID</a></th>
                         <th><a href="#">Port</a></th>
                         <th><a href="#">Username</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -115,10 +122,29 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.host }}</td>
-                        <td>{{ item.port }}</td>
+                        <td>{{ item.server_type_human }}</td>
+                        <td>
+                            {% if item.server_type == "microsoft_365" %}
+                                {{ item.tenant_id|default:"<span class='form_hint'>---</span>" }}
+                            {% else %}
+                                {{ item.host|default:"<span class='form_hint'>---</span>" }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.server_type == "microsoft_365" %}
+                                <span class="form_hint">---</span>
+                            {% else %}
+                                {{ item.port }}
+                            {% endif %}
+                        </td>
                         <td>{{ item.username|default:"<span class='form_hint'>(None)</span>" }}</td>
-                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
+                        <td>
+                            {% if item.server_type == "microsoft_365" %}
+                                <a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change secret', 'Secret', 'secret')">Change secret</a>
+                            {% else %}
+                                <a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a>
+                            {% endif %}
+                        </td>
                         <td><a href="javascript:$.fn.zato.email.smtp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.email.smtp.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
@@ -133,6 +159,9 @@
                         <td class='ignore'>{{ item.ca_certs_path }}</td>
                         <td class='ignore'>{{ item.helo_hostname }}</td>
                         <td class='ignore'>{{ item.from_address }}</td>
+                        <td class='ignore'>{{ item.server_type }}</td>
+                        <td class='ignore'>{{ item.tenant_id|default:"" }}</td>
+                        <td class='ignore'>{{ item.client_id|default:"" }}</td>
                         <td class='ignore'>{{ item.is_audit_log_active }}</td>
                     </tr>
                 {% endfor %}
@@ -181,6 +210,11 @@
                                     Debug
                                     {{ create_form.is_debug }}
                                 </label>
+                                |
+                                <label for="id_server_type">
+                                    Server type
+                                    {{ create_form.server_type }}
+                                </label>
                             </td>
                         </tr>
                         <tr>
@@ -224,6 +258,26 @@
                                 <br/>
                                 <span class="form_hint" id="create-username-hint"></span>
                             </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                            Microsoft 365
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.smtp-microsoft-365-create')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="smtp-microsoft-365-create hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_tenant_id">Tenant ID</label>
+                            </td>
+                            <td>{{ create_form.tenant_id }}</td>
+                        </tr>
+                        <tr class="smtp-microsoft-365-create hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_client_id">Client ID</label>
+                            </td>
+                            <td>{{ create_form.client_id }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
@@ -310,6 +364,11 @@
                                     Debug
                                     {{ edit_form.is_debug }}
                                 </label>
+                                |
+                                <label for="id_edit-server_type">
+                                    Server type
+                                    {{ edit_form.server_type }}
+                                </label>
                             </td>
                         </tr>
                         <tr>
@@ -344,6 +403,26 @@
                                 {{ edit_form.from_address }}
                                 </label>
                             </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                            Microsoft 365
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.smtp-microsoft-365-edit')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="smtp-microsoft-365-edit hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-tenant_id">Tenant ID</label>
+                            </td>
+                            <td>{{ edit_form.tenant_id }}</td>
+                        </tr>
+                        <tr class="smtp-microsoft-365-edit hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-client_id">Client ID</label>
+                            </td>
+                            <td>{{ edit_form.client_id }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
@@ -408,8 +487,9 @@
                             <td id="change-password-name"></td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle"><label for="{{ change_password_form.password.id_for_label }}">Password</label></td>
+                            <td style="vertical-align:middle"><label for="{{ change_password_form.password.id_for_label }}"><span id="secret_label1">Password</span></label></td>
                             <td>{{ change_password_form.password }}
+                                <input type="hidden" id="secret_type_id" name="secret_type" />
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
                             </td>

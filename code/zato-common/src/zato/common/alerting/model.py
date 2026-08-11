@@ -45,13 +45,16 @@ Default_Dedup_Window_Seconds = 3600
 
 class AlertAction:
     """ What a rule does when it fires - the action menu. Slack and Teams
-    are incoming-webhook posts, the rule stores the webhook URL.
+    are incoming-webhook posts, the rule stores the webhook URL, and the
+    plain webhook posts the structured alert payload to any HTTP endpoint,
+    e.g. the automation webhook of Jira or another workflow backend.
     """
     Email_Digest     = 'email-digest'
     Invoke_Service   = 'invoke-service'
     Publish_To_Topic = 'publish-to-topic'
     Slack            = 'slack'
     Teams            = 'teams'
+    Webhook          = 'webhook'
 
 # ################################################################################################################################
 
@@ -62,15 +65,6 @@ class AlertSeverity:
     Info     = 'info'
     Warning  = 'warning'
     Critical = 'critical'
-
-# ################################################################################################################################
-
-class AlertState:
-    """ The lifecycle states of an alert - raised, acknowledged, resolved.
-    """
-    Unobserved = 'unobserved'
-    Observed   = 'observed'
-    Resolved   = 'resolved'
 
 # ################################################################################################################################
 

@@ -23,6 +23,7 @@ from zato.cli.enmasse.importers.channel_as4 import ChannelAS4Importer
 from zato.cli.enmasse.importers.channel_soap import ChannelSOAPImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.quota_tier import QuotaTierImporter
+from zato.cli.enmasse.importers.alert_config import AlertConfigImporter
 from zato.cli.enmasse.importers.audit_retention import AuditRetentionImporter
 from zato.cli.enmasse.importers.audit_extraction import AuditExtractionImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
@@ -191,6 +192,7 @@ class EnmasseYAMLImporter:
         self.quota_tier_importer = QuotaTierImporter(self)
         self.audit_retention_importer = AuditRetentionImporter(self)
         self.audit_extraction_importer = AuditExtractionImporter(self)
+        self.alert_config_importer = AlertConfigImporter(self)
         self.odoo_importer = OdooImporter(self)
         self.smtp_importer = SMTPImporter(self)
         self.imap_importer = IMAPImporter(self)
@@ -431,6 +433,39 @@ class EnmasseYAMLImporter:
         logger.info(f'Processed retention policies: created={created_count} updated={updated_count}')
 
         return policies_created, policies_updated
+
+# ################################################################################################################################
+
+    def sync_alert_rules(self, rule_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes alert rule configuration from a YAML configuration with the rule store.
+        """
+        if not rule_list:
+            return [], []
+
+        count = len(rule_list)
+        noun = 'entry' if count == 1 else 'entries'
+        logger.info(f'Processing {count} alert rule {noun}')
+
+        rules_created, rules_updated = self.alert_config_importer.sync_alert_rules(rule_list)
+
+        updated_count = len(rules_updated)
+        logger.info(f'Processed alert rules: updated={updated_count}')
+
+        return rules_created, rules_updated
+
+# ################################################################################################################################
+
+    def sync_alert_notifications(self, values:'dict', session:'SASession') -> 'bool':
+        """ Synchronizes alert notification targets from a YAML configuration with the sweep job's extra.
+        """
+        if not values:
+            return False
+
+        changed = self.alert_config_importer.sync_alert_notifications(values, session)
+
+        logger.info('Processed alert notifications: changed=%s', changed)
+
+        return changed
 
 # ################################################################################################################################
 
@@ -1936,6 +1971,17 @@ class EnmasseYAMLImporter:
             self.created_objects['channel_openapi'] = channel_openapi_created
         if channel_openapi_updated:
             self.updated_objects['channel_openapi'] = channel_openapi_updated
+
+        # Process alert rule configuration - the storage is the live rule documents
+        _, alert_rules_updated = self.sync_alert_rules(yaml_config.get('alert_rules', []), session)
+        if alert_rules_updated:
+            self.updated_objects['alert_rules'] = alert_rules_updated
+
+        # Process alert notification targets - the storage is the sweep job's extra
+        alert_notifications = yaml_config.get('alert_notifications', {})
+        alert_notifications_changed = self.sync_alert_notifications(alert_notifications, session)
+        if alert_notifications_changed:
+            self.updated_objects['alert_notifications'] = [alert_notifications]
 
         # Process custom connector definitions - each top-level key with the custom_ prefix
         # holds the definitions of one connector type built with the Connector SDK.

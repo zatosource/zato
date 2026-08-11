@@ -9,11 +9,22 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 
+# SQLAlchemy
+from sqlalchemy import select
+
 # Zato
-from zato.common.alerting.model import new_finding, new_rule, AlertState, FindingKind
-from zato.common.alerting.store import get_alerts, observe_alert, raise_alert, render_alert_message, resolve_alert
+from zato.common.alerting.model import new_finding, new_rule, FindingKind
+from zato.common.alerting.store import raise_alert, render_alert_message
 from zato.common.audit_log.api import get_audit_engine, AuditLog
+from zato.common.audit_log.common import alert_table
 from zato.common.util.api import utcnow
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import dictlist
+    dictlist = dictlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,6 +54,21 @@ def _new_env() -> 'tuple':
     return engine, rule, finding
 
 # ################################################################################################################################
+
+def _get_alert_rows(engine) -> 'dictlist':
+    """ Every alert row in the store, newest first.
+    """
+    statement = select(alert_table).order_by(alert_table.c.id.desc())
+
+    out:'dictlist' = []
+
+    with engine.connect() as connection:
+        for row in connection.execute(statement):
+            out.append(dict(row._mapping))
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestDedup:
@@ -56,13 +82,12 @@ class TestDedup:
         assert result.is_new is True
         assert result.count == 1
 
-        alerts = get_alerts(engine)
+        alerts = _get_alert_rows(engine)
 
         assert len(alerts) == 1
         assert alerts[0]['id'] == result.alert_id
         assert alerts[0]['rule_name'] == 'silent-feeds'
         assert alerts[0]['object_name'] == _channel_name
-        assert alerts[0]['state'] == AlertState.Unobserved
         assert alerts[0]['count'] == 1
 
 # ################################################################################################################################
@@ -81,7 +106,7 @@ class TestDedup:
         assert third.alert_id == first.alert_id
         assert third.count == 3
 
-        alerts = get_alerts(engine)
+        alerts = _get_alert_rows(engine)
         assert len(alerts) == 1
         assert alerts[0]['count'] == 3
 
@@ -96,22 +121,25 @@ class TestDedup:
 
         assert later.is_new is True
         assert later.alert_id != first.alert_id
-        assert len(get_alerts(engine)) == 2
+        assert len(_get_alert_rows(engine)) == 2
 
 # ################################################################################################################################
 
-    def test_a_resolved_alert_never_absorbs_new_findings(self) -> 'None':
+    def test_the_window_keys_on_the_last_occurrence(self) -> 'None':
         engine, rule, finding = _new_env()
         now = utcnow()
 
+        # Each repetition moves the window forward - what matters is the time
+        # since the last occurrence, not since the first
         first = raise_alert(engine, rule, finding, now)
-        resolve_alert(engine, first.alert_id, 'admin', now)
+        _ = raise_alert(engine, rule, finding, now + timedelta(seconds=_window_seconds - 60))
 
-        # The same finding immediately afterwards raises a new alert - the previous one was resolved
-        second = raise_alert(engine, rule, finding, now + timedelta(seconds=1))
+        # Well past the first occurrence's window, still inside the second's
+        third = raise_alert(engine, rule, finding, now + timedelta(seconds=_window_seconds + 120))
 
-        assert second.is_new is True
-        assert second.alert_id != first.alert_id
+        assert third.is_new is False
+        assert third.alert_id == first.alert_id
+        assert third.count == 3
 
 # ################################################################################################################################
 
@@ -126,63 +154,6 @@ class TestDedup:
         assert first.is_new is True
         assert second.is_new is True
         assert first.alert_id != second.alert_id
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TestLifecycle:
-
-    def test_observed_then_resolved_with_who_and_when(self) -> 'None':
-        engine, rule, finding = _new_env()
-        now = utcnow()
-
-        result = raise_alert(engine, rule, finding, now)
-
-        observe_alert(engine, result.alert_id, 'admin', now + timedelta(seconds=10))
-
-        alerts = get_alerts(engine)
-        assert alerts[0]['state'] == AlertState.Observed
-        assert alerts[0]['observed_by'] == 'admin'
-        assert alerts[0]['observed_iso'] != ''
-
-        resolve_alert(engine, result.alert_id, 'admin', now + timedelta(seconds=20))
-
-        alerts = get_alerts(engine)
-        assert alerts[0]['state'] == AlertState.Resolved
-        assert alerts[0]['resolved_by'] == 'admin'
-        assert alerts[0]['resolved_iso'] != ''
-
-# ################################################################################################################################
-
-    def test_an_observed_alert_still_absorbs_repetitions(self) -> 'None':
-
-        # Acknowledgment does not end deduplication - repeated findings keep
-        # incrementing the acknowledged alert instead of raising new ones.
-        engine, rule, finding = _new_env()
-        now = utcnow()
-
-        result = raise_alert(engine, rule, finding, now)
-        observe_alert(engine, result.alert_id, 'admin', now)
-
-        repetition = raise_alert(engine, rule, finding, now + timedelta(seconds=60))
-
-        assert repetition.is_new is False
-        assert repetition.alert_id == result.alert_id
-
-# ################################################################################################################################
-
-    def test_alerts_are_filterable_by_state(self) -> 'None':
-        engine, rule, finding = _new_env()
-        other_finding = new_finding(FindingKind.Feed_Silent, _source, 'hl7.other.channel', 'The other feed went quiet')
-        now = utcnow()
-
-        first = raise_alert(engine, rule, finding, now)
-        _ = raise_alert(engine, rule, other_finding, now)
-
-        resolve_alert(engine, first.alert_id, 'admin', now)
-
-        assert len(get_alerts(engine, state=AlertState.Resolved)) == 1
-        assert len(get_alerts(engine, state=AlertState.Unobserved)) == 1
 
 # ################################################################################################################################
 # ################################################################################################################################

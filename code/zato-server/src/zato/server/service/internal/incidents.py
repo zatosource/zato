@@ -7,19 +7,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from traceback import format_exc
-
-# SQLAlchemy
-from sqlalchemy import and_, select
 
 # Zato
 from zato.common.api import Incidents, SMTPMessage
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome
+from zato.common.alerting.rendering import render_alert_template, Template_Dir_Name, Template_Email_Body, \
+    Template_Email_Subject, Template_Slack, Template_Teams
+from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome
+from zato.common.audit_log.common import AuditSource
 from zato.common.incidents.diagnosis import build_prompt, parse_diagnosis
 from zato.common.incidents.evidence import build_evidence, collect_audit_trail
 from zato.common.incidents.skill import load_skill
 from zato.common.incidents.store import IncidentStore
-from zato.common.json_internal import dumps
 from zato.common.util.api import utcnow
 from zato.server.service.internal import AdminService
 
@@ -27,167 +27,23 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, dictlist, stranydict
+    from zato.common.typing_ import anydict, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The actor recorded when the system itself acts, e.g. when an incident is raised.
-_actor_system = 'zato'
-
-# What each history entry calls its step.
-_history_raised      = 'raised'
-_history_approved    = 'approved'
-_history_rejected    = 'rejected'
-_history_resubmitted = 'resubmitted'
-
-# The name incidents are stored under - the unique part is the cid of the diagnosis.
-_incident_name_prefix = 'incident.'
-
-# The statuses a resubmission may run from.
-_resubmit_statuses = (Incidents.Status.Awaiting_Approval, Incidents.Status.Approved)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _new_history_entry(action:'str', actor:'str', note:'str'='') -> 'stranydict':
-    """ One step of an incident's history - who did what and when.
-    """
-    now = utcnow()
-
-    out = {
-        'action': action,
-        'actor': actor,
-        'time_iso': now.isoformat(),
-        'note': note,
-    }
-
-    return out
-
-# ################################################################################################################################
-
-def _get_failed_cids(incident:'stranydict') -> 'dictlist':
-    """ Returns the failed calls recorded in an incident's evidence - each one names
-    the cid its request can be read back by.
-    """
-
-    # Our response to produce
-    out:'dictlist' = []
-
-    audit_trail = incident['evidence']['audit_trail']
-
-    for event in audit_trail:
-
-        if event['event_type'] != AuditEvent.Response_Received:
-            continue
-
-        if event['outcome'] != AuditOutcome.Error:
-            continue
-
-        out.append(event)
-
-    return out
-
-# ################################################################################################################################
-
-def _load_request(engine:'any_', source:'str', object_name:'str', cid:'str') -> 'stranydict | None':
-    """ Reads back the request that a failed call sent - the request-sent event sharing
-    the failed response's cid, with the payload in its data and the method in its endpoint.
-    """
-    statement = select(
-        event_table.c.endpoint,
-        event_table.c.data,
-    ).where(and_(
-        event_table.c.source == source,
-        event_table.c.object_name == object_name,
-        event_table.c.cid == cid,
-        event_table.c.event_type == AuditEvent.Request_Sent,
-    )).order_by(event_table.c.id.desc())
-
-    with engine.connect() as connection:
-        row = connection.execute(statement).first()
-
-    if row is None:
-        return None
-
-    endpoint, data = row
-
-    # The endpoint is the method and the address separated by a space.
-    method, _, _ = endpoint.partition(' ')
-
-    out = {
-        'method': method,
-        'data': data,
-    }
-
-    return out
-
-# ################################################################################################################################
-
-def _run_resubmit(service:'AdminService', incident:'stranydict') -> 'stranydict':
-    """ Re-sends the failed requests from an incident's evidence through the same connection.
-    Each call is attempted on its own, so one failure never stops the others.
-    """
-    source = incident['source']
-    object_name = incident['object_name']
-
-    engine = get_audit_engine()
-    conn = service.out.rest[object_name].conn
-
-    failed = _get_failed_cids(incident)
-
-    results:'dictlist' = []
-    succeeded_count = 0
-
-    for event in failed:
-
-        cid = event['cid']
-        result:'stranydict' = {'cid': cid, 'is_ok': False}
-
-        # The original request may have aged out of the audit log by now ..
-        request = _load_request(engine, source, object_name, cid)
-
-        if request is None:
-            result['note'] = 'Original request not found in the audit log'
-            results.append(result)
-            continue
-
-        # .. otherwise, re-send it as a fresh call with its own audit trail.
-        try:
-            response = conn.http_request(request['method'], service.cid, request['data'])
-        except Exception:
-            result['note'] = format_exc()
-        else:
-            result['is_ok'] = response.ok
-            result['status_code'] = response.status_code
-
-            if response.ok:
-                succeeded_count += 1
-            else:
-                result['note'] = response.text
-
-        results.append(result)
-
-    attempted_count = len(results)
-
-    # Our response to produce
-    out = {
-        'is_ok': bool(attempted_count) and succeeded_count == attempted_count,
-        'attempted': attempted_count,
-        'succeeded': succeeded_count,
-        'results': results,
-    }
-
-    return out
+# The name diagnoses are stored under - the unique part is the id of the alert
+# they explain, so one alert produces one diagnosis, not one per sweep.
+_diagnosis_name_prefix = 'alert.'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Diagnose(AdminService):
-    """ Turns an alert about a failing connection into an incident - collects the evidence,
-    has the LLM diagnose it against the connection's diagnostic skill, stores the incident
-    as a generic object and notifies through the default notification connections.
-    An alert rule's invoke-service action points here.
+    """ Turns an alert about a failing connection into a diagnosed alert - collects
+    the evidence, has the LLM diagnose it against the connection's diagnostic skill,
+    stores the diagnosis next to the alert and notifies through the default
+    notification connections. A rule outcome whose action says diagnose points here.
     """
     name = Incidents.Service_Diagnose
 
@@ -198,7 +54,7 @@ class Diagnose(AdminService):
         payload = self.request.payload
 
         if not isinstance(payload, dict):
-            self.logger.info('Incident diagnosis received no alert payload, nothing to do')
+            self.logger.info('Alert diagnosis received no alert payload, nothing to do')
             return
 
         source = payload['source']
@@ -211,18 +67,19 @@ class Diagnose(AdminService):
             self.logger.info('No diagnostic skill exists for source `%s`, skipping `%s`', source, object_name)
             return
 
-        # .. and one failing connection produces one incident, not one per sweep.
+        # .. and one alert produces one diagnosis, not one per sweep.
         store = IncidentStore(self.odb.session, self.server.cluster_id)
+        name = _diagnosis_name_prefix + str(payload['alert_id'])
 
-        if store.has_open(object_name):
-            self.logger.info('An open incident already exists for `%s`, skipping', object_name)
+        if store.exists(name):
+            self.logger.info('A diagnosis already exists for `%s`, skipping `%s`', name, object_name)
             return
 
         # The rule's own configuration - which LLM diagnoses and where notifications deliver.
         action_config = payload['action_config']
 
         # Collect the evidence pack ..
-        conn_config = self.out.rest[object_name].config
+        conn_config = self._get_connection_config(source, object_name)
         engine = get_audit_engine()
 
         audit_trail = collect_audit_trail(engine, source, object_name, Incidents.Evidence_Max_Events)
@@ -240,9 +97,8 @@ class Diagnose(AdminService):
         # .. have the LLM diagnose it ..
         diagnosis = self._diagnose(skill.instructions, evidence, action_config)
 
-        # .. store the incident ..
+        # .. store the diagnosis next to the alert ..
         now = utcnow()
-        name = _incident_name_prefix + self.cid
 
         details = {
             'object_name': object_name,
@@ -259,36 +115,78 @@ class Diagnose(AdminService):
             'remediation': diagnosis['remediation'],
             'is_parsed': diagnosis['is_parsed'],
             'created_iso': now.isoformat(),
-            'history': [_new_history_entry(_history_raised, _actor_system)],
         }
 
-        store.create(name, details, Incidents.Status.Awaiting_Approval)
+        store.create(name, details)
 
         # .. leave a trace in the audit log ..
         audit_log = AuditLog(self.server.name)
 
-        _ = audit_log.insert(source, AuditEvent.Incident_Raised, object_name,
+        _ = audit_log.insert(source, AuditEvent.Alert_Diagnosed, object_name,
             cid=self.cid, outcome=AuditOutcome.OK, data=payload['message'])
 
-        self.logger.info('Incident `%s` raised for `%s` (%s)', name, object_name, payload['rule'])
+        self.logger.info('Alert `%s` diagnosed for `%s` (%s)', name, object_name, payload['rule'])
 
-        # .. and tell the people who decide.
-        self._notify(name, details, action_config)
+        # .. and tell the people the alert goes to.
+        self._notify(details, action_config)
+
+# ################################################################################################################################
+
+    def _get_connection_config(self, source:'str', object_name:'str') -> 'anydict':
+        """ The connection's configuration for the evidence pack, looked up through
+        the facade the alert's source names. Sources without an in-process config
+        facade contribute the name alone - the audit trail carries the errors either
+        way, which is what the diagnosis mostly reads.
+        """
+        if source == AuditSource.REST_Outgoing:
+            out = self.out.rest[object_name].config
+
+        elif source == AuditSource.LLM:
+            out = self.llm.conn_dict[object_name]
+
+        else:
+            out = {'name': object_name}
+
+        return out
+
+# ################################################################################################################################
+
+    def _get_llm_connection(self, action_config:'anydict') -> 'str':
+        """ The LLM connection the diagnosis goes through - the rule's own when it names
+        one, otherwise the default connection, as long as it exists and is active.
+        An empty name means no LLM is available and the alert goes out undiagnosed.
+        """
+
+        # The rule's action_config is user-editable - a missing key means the rule
+        # names no connection of its own.
+        if llm_connection := action_config.get(Incidents.Config_LLM_Connection):
+            return llm_connection
+
+        # The default connection ships inactive with placeholder credentials,
+        # so it only answers once a person points it at a real model.
+        default_name = Incidents.LLM_Connection_Name
+
+        if default_name not in self.llm.conn_dict:
+            return ''
+
+        item = self.llm.conn_dict[default_name]
+
+        if not item['is_active']:
+            return ''
+
+        return default_name
 
 # ################################################################################################################################
 
     def _diagnose(self, instructions:'str', evidence:'stranydict', action_config:'anydict') -> 'stranydict':
         """ Runs the LLM diagnosis, or produces an empty one when no LLM connection
-        is configured - the incident is still raised so a person can look at the evidence.
+        is available - the alert still goes out so a person can look at the evidence.
         """
+        llm_connection = self._get_llm_connection(action_config)
 
-        # The rule's action_config is user-editable - a missing key means no LLM is configured.
-        llm_conn = action_config.get(Incidents.Config_LLM_Conn)
+        if not llm_connection:
 
-        if not llm_conn:
-
-            self.logger.info('No `%s` key in the rule\'s action_config, storing the incident without a diagnosis',
-                Incidents.Config_LLM_Conn)
+            self.logger.info('No LLM connection is available, storing the alert without a diagnosis')
 
             out:'stranydict' = {
                 'diagnosis': '',
@@ -300,48 +198,66 @@ class Diagnose(AdminService):
             return out
 
         prompt = build_prompt(instructions, evidence)
-        response = self.llm[llm_conn].invoke(prompt)
+        response = self.llm[llm_connection].invoke(prompt)
 
         out = parse_diagnosis(response['text'])
         return out
 
 # ################################################################################################################################
 
-    def _build_notification_text(self, name:'str', details:'stranydict', action_config:'anydict') -> 'str':
-        """ The message all the transports carry - what fired, what the diagnosis is
-        and where in the Dashboard the decision is made.
+    def _build_template_context(self, details:'stranydict', action_config:'anydict') -> 'stranydict':
+        """ The context the notification templates render with - the same shape the
+        alerting engine builds, with the diagnosis keys filled in and the link
+        prefixed with the dashboard's address when one is configured.
         """
-        lines = [
-            f'Incident on `{details["object_name"]}` - {details["message"]}',
-        ]
+        link = details['link']
 
-        if details['diagnosis']:
-            lines.append('')
-            lines.append(f'Diagnosis ({details["confidence"] or "no confidence given"}): {details["diagnosis"]}')
+        # A link the sweep already made absolute stays as it is - only a bare
+        # dashboard path still needs the dashboard's own address in front of it.
+        if link.startswith('/'):
+            if dashboard_url := action_config.get(Incidents.Config_Dashboard_URL):
+                link = dashboard_url.rstrip('/') + link
 
-        # The links point at the incident's Dashboard detail screen - the resubmit one
-        # additionally opens the confirmation popup on arrival.
-        if dashboard_url := action_config.get(Incidents.Config_Dashboard_URL):
+        out = {
+            'alert_id': details['alert_id'],
+            'rule': details['rule'],
+            'kind': '',
+            'source': details['source'],
+            'object_name': details['object_name'],
+            'message': details['message'],
+            'link': link,
+            'severity': details['severity'],
+            'count': details['count'],
+            'action_config': action_config,
+            'diagnosis': details['diagnosis'],
+            'confidence': details['confidence'],
+            'remediation': details['remediation'],
+        }
 
-            detail_url = dashboard_url.rstrip('/') + Incidents.Dashboard_Path + name + '/'
-
-            lines.append('')
-            lines.append(f'Details: {detail_url}')
-
-            if details['remediation']:
-                lines.append(f'Resubmit: {detail_url}?action=resubmit')
-
-        out = '\n'.join(lines)
         return out
 
 # ################################################################################################################################
 
-    def _notify(self, name:'str', details:'stranydict', action_config:'anydict') -> 'None':
-        """ Sends the incident through every notification connection that is configured
-        and active. A transport that is not set up is skipped with a log line -
-        an unconfigured notification never breaks the diagnosis.
+    def _get_template_dir(self) -> 'str':
+        """ The server's own template directory - the bundled defaults answer
+        until an environment created before the templates existed is recreated.
         """
-        text = self._build_notification_text(name, details, action_config)
+        out = os.path.join(self.server.repo_location, Template_Dir_Name)
+
+        if not os.path.isdir(out):
+            out = ''
+
+        return out
+
+# ################################################################################################################################
+
+    def _notify(self, details:'stranydict', action_config:'anydict') -> 'None':
+        """ Sends the diagnosed alert through every notification connection that is
+        configured and active. A transport that is not set up is skipped with
+        a log line - an unconfigured notification never breaks the diagnosis.
+        """
+        context = self._build_template_context(details, action_config)
+        template_dir = self._get_template_dir()
         conn_name = Incidents.Notification_Conn_Name
 
         transports = (
@@ -355,13 +271,13 @@ class Diagnose(AdminService):
             # The default connections start out inactive with placeholder details,
             # so any of them may fail until a person fills them in.
             try:
-                transport(conn_name, text, action_config)
+                transport(conn_name, context, template_dir, action_config)
             except Exception:
-                self.logger.warning('Could not send an incident notification through %s; e:`%s`', label, format_exc())
+                self.logger.warning('Could not send an alert notification through %s; e:`%s`', label, format_exc())
 
 # ################################################################################################################################
 
-    def _notify_slack(self, conn_name:'str', text:'str', action_config:'anydict') -> 'None':
+    def _notify_slack(self, conn_name:'str', context:'stranydict', template_dir:'str', action_config:'anydict') -> 'None':
 
         # Without a channel in the rule's action_config, Slack notifications are off.
         channel = action_config.get(Incidents.Config_Slack_Channel)
@@ -380,11 +296,12 @@ class Diagnose(AdminService):
             self.logger.info('Slack connection `%s` is inactive, skipping the notification', conn_name)
             return
 
+        text = render_alert_template(Template_Slack, context, template_dir)
         _ = self.slack.send(conn_name, channel, text)
 
 # ################################################################################################################################
 
-    def _notify_teams(self, conn_name:'str', text:'str', action_config:'anydict') -> 'None':
+    def _notify_teams(self, conn_name:'str', context:'stranydict', template_dir:'str', action_config:'anydict') -> 'None':
 
         # Without a target in the rule's action_config, Teams notifications are off.
         to = action_config.get(Incidents.Config_Teams_To)
@@ -404,12 +321,13 @@ class Diagnose(AdminService):
             return
 
         # Teams messages are HTML.
+        text = render_alert_template(Template_Teams, context, template_dir)
         html = text.replace('\n', '<br/>')
         _ = self.microsoft.teams.send(conn_name, to, html)
 
 # ################################################################################################################################
 
-    def _notify_email(self, conn_name:'str', text:'str', action_config:'anydict') -> 'None':
+    def _notify_email(self, conn_name:'str', context:'stranydict', template_dir:'str', action_config:'anydict') -> 'None':
 
         # Without recipients in the rule's action_config, email notifications are off.
         email_to = action_config.get(Incidents.Config_Email_To)
@@ -436,241 +354,10 @@ class Diagnose(AdminService):
         message = SMTPMessage()
         message.from_ = action_config.get(Incidents.Config_Email_From)
         message.to = addresses
-        message.subject = text.split('\n')[0]
-        message.body = text
+        message.subject = render_alert_template(Template_Email_Subject, context, template_dir)
+        message.body = render_alert_template(Template_Email_Body, context, template_dir)
 
         smtp_item.conn.send(message)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class GetList(AdminService):
-    """ Returns incident summaries, optionally only the ones in a given status, newest first.
-    """
-    name = 'zato.incidents.get-list'
-    input = '-status'
-    output = 'response_data'
-
-    def handle(self) -> 'None':
-
-        status = self.request.input.status or None
-
-        store = IncidentStore(self.odb.session, self.server.cluster_id)
-        incidents = store.get_list(status)
-
-        items:'dictlist' = []
-
-        for incident in incidents:
-            items.append({
-                'name': incident['name'],
-                'status': incident['status'],
-                'object_name': incident['object_name'],
-                'source': incident['source'],
-                'rule': incident['rule'],
-                'severity': incident['severity'],
-                'message': incident['message'],
-                'confidence': incident['confidence'],
-                'has_remediation': bool(incident['remediation']),
-                'created_iso': incident['created_iso'],
-            })
-
-        self.response.payload.response_data = dumps({'items': items})
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Get(AdminService):
-    """ Returns one incident in full, its evidence and history included.
-    """
-    name = 'zato.incidents.get'
-    input = 'name'
-    output = 'response_data'
-
-    def handle(self) -> 'None':
-
-        store = IncidentStore(self.odb.session, self.server.cluster_id)
-        incident = store.get(self.request.input.name)
-
-        self.response.payload.response_data = dumps({'incident': incident})
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _DecisionService(AdminService):
-    """ What the approve, reject and resubmit services share - loading the incident,
-    appending to its history and recording the decision in the audit log.
-    """
-
-    def _get_incident(self, store:'IncidentStore') -> 'stranydict | None':
-        """ Returns the incident named on input, with an error response already set when there is none.
-        """
-        incident = store.get(self.request.input.name)
-
-        if not incident:
-            self.response.payload.response_data = dumps({'error': f'No such incident: `{self.request.input.name}`'})
-
-        return incident
-
-# ################################################################################################################################
-
-    def _get_actor(self) -> 'str':
-        """ Who is making the decision - the Dashboard sends the user's name.
-        """
-        out = self.request.input.actor or _actor_system
-        return out
-
-# ################################################################################################################################
-
-    def _record_decision(
-        self,
-        store:'IncidentStore',
-        incident:'stranydict',
-        status:'str',
-        event_type:'str',
-        history_action:'str',
-        actor:'str',
-        note:'str'='',
-        ) -> 'None':
-        """ Moves the incident to its new status, extends its history and leaves an audit trace.
-        """
-        incident['history'].append(_new_history_entry(history_action, actor, note))
-
-        # The id and status live outside the opaque document - everything else is the details.
-        details:'stranydict' = {}
-
-        for key, value in incident.items():
-            if key not in ('id', 'name', 'status'):
-                details[key] = value
-
-        store.update(incident['name'], details, status)
-
-        audit_log = AuditLog(self.server.name)
-
-        _ = audit_log.insert(incident['source'], event_type, incident['object_name'],
-            cid=self.cid, outcome=AuditOutcome.OK, endpoint=actor, data=note)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Approve(_DecisionService):
-    """ Approves an incident - when its diagnosis proposes a remediation, the remediation runs
-    and a fully successful run resolves the incident. Without one, the incident is only
-    marked approved and the follow-up stays with the person who approved it.
-    """
-    name = 'zato.incidents.approve'
-    input = 'name', '-actor'
-    output = 'response_data'
-
-    def handle(self) -> 'None':
-
-        store = IncidentStore(self.odb.session, self.server.cluster_id)
-        incident = self._get_incident(store)
-
-        if not incident:
-            return
-
-        if incident['status'] != Incidents.Status.Awaiting_Approval:
-            self.response.payload.response_data = dumps({'error': f'Incident is not awaiting approval: `{incident["status"]}`'})
-            return
-
-        actor = self._get_actor()
-
-        # An approved remediation runs at once ..
-        if incident['remediation']:
-
-            report = _run_resubmit(self, incident)
-            note = f'Resubmitted {report["succeeded"]} of {report["attempted"]} request(s)'
-
-            # .. and only a fully successful run closes the incident.
-            if report['is_ok']:
-                status = Incidents.Status.Resolved
-                event_type = AuditEvent.Incident_Resolved
-            else:
-                status = Incidents.Status.Approved
-                event_type = AuditEvent.Incident_Approved
-
-        # .. with nothing to run, approval is a decision and nothing else.
-        else:
-            report = {'is_ok': True, 'attempted': 0, 'succeeded': 0, 'results': []}
-            note = 'Approved with no remediation to run'
-            status = Incidents.Status.Approved
-            event_type = AuditEvent.Incident_Approved
-
-        self._record_decision(store, incident, status, event_type, _history_approved, actor, note)
-
-        self.response.payload.response_data = dumps({'status': status, 'report': report})
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Reject(_DecisionService):
-    """ Rejects an incident - nothing runs and the incident is closed with the reason given.
-    """
-    name = 'zato.incidents.reject'
-    input = 'name', '-actor', '-reason'
-    output = 'response_data'
-
-    def handle(self) -> 'None':
-
-        store = IncidentStore(self.odb.session, self.server.cluster_id)
-        incident = self._get_incident(store)
-
-        if not incident:
-            return
-
-        if incident['status'] != Incidents.Status.Awaiting_Approval:
-            self.response.payload.response_data = dumps({'error': f'Incident is not awaiting approval: `{incident["status"]}`'})
-            return
-
-        actor = self._get_actor()
-        reason = self.request.input.reason or ''
-
-        self._record_decision(
-            store, incident, Incidents.Status.Rejected, AuditEvent.Incident_Rejected,
-            _history_rejected, actor, reason)
-
-        self.response.payload.response_data = dumps({'status': Incidents.Status.Rejected})
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Resubmit(_DecisionService):
-    """ Re-sends the failed requests from an incident's evidence through the same connection,
-    directly, without going through the approve step - the person clicking is the approval.
-    """
-    name = 'zato.incidents.resubmit'
-    input = 'name', '-actor'
-    output = 'response_data'
-
-    def handle(self) -> 'None':
-
-        store = IncidentStore(self.odb.session, self.server.cluster_id)
-        incident = self._get_incident(store)
-
-        if not incident:
-            return
-
-        if incident['status'] not in _resubmit_statuses:
-            self.response.payload.response_data = dumps({'error': f'Incident cannot be resubmitted: `{incident["status"]}`'})
-            return
-
-        actor = self._get_actor()
-
-        report = _run_resubmit(self, incident)
-        note = f'Resubmitted {report["succeeded"]} of {report["attempted"]} request(s)'
-
-        # Only a fully successful run closes the incident - anything else keeps it open
-        # so it can be resubmitted again or rejected.
-        if report['is_ok']:
-            status = Incidents.Status.Resolved
-            event_type = AuditEvent.Incident_Resolved
-        else:
-            status = incident['status']
-            event_type = AuditEvent.Incident_Resubmitted
-
-        self._record_decision(store, incident, status, event_type, _history_resubmitted, actor, note)
-
-        self.response.payload.response_data = dumps({'status': status, 'report': report})
 
 # ################################################################################################################################
 # ################################################################################################################################

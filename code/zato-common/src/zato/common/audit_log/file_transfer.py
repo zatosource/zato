@@ -38,6 +38,7 @@ if 0:
 
 # The operations one file transfer event describes.
 Operation_Store  = 'store'
+Operation_Read   = 'read'
 Operation_Delete = 'delete'
 
 # What a stored file is served back as when nothing better is known about it
@@ -87,6 +88,7 @@ def record_file_transfer(
         'endpoint': remote_path,
         'size': size,
         'outcome': outcome,
+        'duration_ms': duration_ms,
         'data': dumps(summary),
         'attrs': attrs,
     }

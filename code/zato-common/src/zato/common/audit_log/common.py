@@ -68,7 +68,7 @@ class AuditSource:
     LLM           = 'llm'
     Odoo          = 'odoo'
 
-    # One source for the whole Microsoft cloud family - 365, Teams, OneDrive,
+    # One source for all the Microsoft cloud services - 365, Teams, OneDrive,
     # SharePoint, Power Automate and Fabric - the object name says which connection spoke.
     Microsoft_Cloud = 'microsoft-cloud'
 
@@ -152,11 +152,7 @@ class AuditEvent:
     Receipt_Sent         = 'receipt-sent'
     Receipt_Received     = 'receipt-received'
     Alert_Raised         = 'alert-raised'
-    Incident_Raised      = 'incident-raised'
-    Incident_Approved    = 'incident-approved'
-    Incident_Rejected    = 'incident-rejected'
-    Incident_Resolved    = 'incident-resolved'
-    Incident_Resubmitted = 'incident-resubmitted'
+    Alert_Diagnosed      = 'alert-diagnosed'
     MCP_Initialize       = 'mcp-initialize'
     MCP_Tools_List       = 'mcp-tools-list'
     MCP_Tools_Call       = 'mcp-tools-call'
@@ -357,9 +353,10 @@ event_dedup_table = Table('event_dedup', metadata, *_event_dedup_columns)
 
 # ################################################################################################################################
 
-# Alerts with their dedup count and lifecycle - one row per (rule, object, kind) within
-# the dedup window, repeated findings increment the count instead of adding rows,
-# and acknowledgment is recorded in place, so an alert never exists twice half-resolved.
+# Alerts with their dedup count - one row per (rule, object, kind) within the dedup
+# window, repeated findings increment the count instead of adding rows. There is
+# no lifecycle here - what happens to an alert after it goes out lives in Jira,
+# ServiceNow or whatever else receives it.
 _alert_columns = [
     Column('id', _id_column_type, primary_key=True, autoincrement=True),
     Column('rule_name', _short_column),
@@ -370,15 +367,9 @@ _alert_columns = [
     Column('message', Text),
     Column('link', _endpoint_column),
     Column('count', Integer),
-    Column('state', _short_column),
     Column('first_raised_iso', _short_column),
     Column('last_raised_iso', _short_column),
-    Column('observed_by', _short_column),
-    Column('observed_iso', _short_column),
-    Column('resolved_by', _short_column),
-    Column('resolved_iso', _short_column),
     Index('idx_alert_rule_object', 'rule_name', 'object_name', 'kind'),
-    Index('idx_alert_state', 'state'),
 ]
 
 alert_table = Table('alert', metadata, *_alert_columns)

@@ -14,11 +14,10 @@ from time import monotonic
 from sqlalchemy import select
 
 # Zato
-from zato.common.alerting.model import AlertState
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
     get_audit_engine, AuditEvent, AuditLink, AuditOutcome, AuditSource
 from zato.common.audit_log.common import alert_table, event_dedup_table
-from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo_data, Actor_Admin, Actor_Operator, \
+from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo_data, \
     Actors, Burst_End_Hour, Burst_Start_Hour, Channel_Clinic, Channel_Lab, Channel_Main, Clinic_Silent_Hour, \
     In_Flight_Count, Outconn_FHIR, Outconn_Forward, SeedConfig
 
@@ -300,9 +299,9 @@ class TestSeedContents:
 
 # ################################################################################################################################
 
-    def test_the_alerts_cover_all_three_states(self) -> 'None':
-        """ One alert is unobserved, one observed and one resolved,
-        each with the expected people on it.
+    def test_the_alerts_cover_all_three_shapes(self) -> 'None':
+        """ One alert repeats since the morning, one folded yesterday's burst
+        and one was a single occurrence - each with its dedup count.
         """
         _ = _run_seed()
 
@@ -311,19 +310,13 @@ class TestSeedContents:
         with engine.connect() as connection:
             rows = connection.execute(select(alert_table)).fetchall()
 
-        alerts = {row._asdict()['state']: row._asdict() for row in rows}
+        alerts = {row._asdict()['object_name']: row._asdict() for row in rows}
 
         assert len(alerts) == 3
 
-        assert alerts[AlertState.Unobserved]['object_name'] == Channel_Clinic
-        assert alerts[AlertState.Unobserved]['count'] > 1
-
-        assert alerts[AlertState.Observed]['object_name'] == Channel_Lab
-        assert alerts[AlertState.Observed]['observed_by'] == Actor_Admin
-        assert alerts[AlertState.Observed]['count'] == 3
-
-        assert alerts[AlertState.Resolved]['object_name'] == Outconn_Forward
-        assert alerts[AlertState.Resolved]['resolved_by'] == Actor_Operator
+        assert alerts[Channel_Clinic]['count'] > 1
+        assert alerts[Channel_Lab]['count'] == 3
+        assert alerts[Outconn_Forward]['count'] == 1
 
 # ################################################################################################################################
 

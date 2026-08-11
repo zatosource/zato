@@ -30,7 +30,7 @@ from zato.admin.web.views.audit_log.columns import _all_sources_columns, _all_so
     _poll_url, _preview_len, _row_columns, _run_page_url, _source_columns, _source_endpoint_label, _source_event_label, \
     _source_except_label, _source_label, _source_object_label, _source_page_url, _source_title, _status_outstanding
 from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
-from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_outstanding, _source_parse, \
+from zato.admin.web.views.audit_log.sources import get_resubmit_labels, _source_outstanding, _source_parse, \
     _source_resubmit, render_scheduler_record, render_view_record
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, AuditSource
 from zato.common.audit_log.attachment import get_attachment, list_attachments
@@ -174,7 +174,7 @@ def object_index(req:'any_') -> 'TemplateResponse':
 
     # The per-event-type resubmit labels of each source, keyed by source, so any row
     # of any listing knows what its action link is to say
-    resubmit_labels = _get_resubmit_labels()
+    resubmit_labels = get_resubmit_labels()
     resubmit_labels_json = json.dumps(resubmit_labels)
 
     # The exchanges of this source - the event that opens one and the event that closes it -
@@ -708,7 +708,7 @@ def attachment_download(req:'any_') -> 'HttpResponse':
     attachment = get_attachment(engine, attachment_id)
 
     if attachment is None:
-        out = HttpResponseNotFound('No such attachment')
+        out = HttpResponseNotFound(b'No such attachment')
         return out
 
     # Whoever is downloading this file is recorded, against the event the file arrived with

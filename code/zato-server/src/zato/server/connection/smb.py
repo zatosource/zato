@@ -21,7 +21,7 @@ from humanize import naturalsize
 
 # Zato
 from zato.common.audit_log.api import AuditOutcome
-from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Store
+from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Read, Operation_Store
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -334,9 +334,22 @@ class SMBConnection:
 
     def read(self, remote_path:'str') -> 'bytes':
 
-        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-            client = cast_('SMBClient', client)
-            out = client.read(remote_path)
+        start = monotonic()
+
+        # A failed read is recorded too, before the caller learns about it
+        try:
+            with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
+                client = cast_('SMBClient', client)
+                out = client.read(remote_path)
+        except Exception:
+            duration_ms = int((monotonic() - start) * 1000)
+            self._record_transfer(Operation_Read, remote_path,
+                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
+            raise
+
+        duration_ms = int((monotonic() - start) * 1000)
+        self._record_transfer(Operation_Read, remote_path,
+            outcome=AuditOutcome.OK, size=len(out), duration_ms=duration_ms)
 
         return out
 

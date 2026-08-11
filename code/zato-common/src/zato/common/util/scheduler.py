@@ -336,6 +336,27 @@ def ensure_canary_job_exists(session:'any_', cluster_id:'int') -> 'bool':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def set_job_active(session:'any_', cluster_id:'int', job_name:'str', is_active:'bool') -> 'bool':
+    """ Flips one scheduler job's active flag in ODB - the commit stays with the caller.
+    Returns whether the row actually changed.
+    """
+    job = session.query(Job).\
+        filter(Job.name==job_name).\
+        filter(Job.cluster_id==cluster_id).\
+        one()
+
+    # A job already in the desired state has nothing to change
+    if job.is_active == is_active:
+        return False
+
+    job.is_active = is_active
+    session.add(job)
+
+    return True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def wait_for_odb_service_by_odb(session:'any_', cluster_id:'int', service_name:'str') -> 'None':
 
     # Assume we do not have it

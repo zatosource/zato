@@ -491,6 +491,14 @@ class Create(ZatoCommand):
             # this command will be a no-op.
             self.copy_server_crypto(repo_dir, args)
 
+            # Each environment gets its own copy of the alert notification templates -
+            # copied, not referenced, so editing a file under the server changes
+            # the next alert and the future template-editing UI has real files to work on.
+            from shutil import copytree
+            from zato.common.alerting.rendering import get_default_template_dir, Template_Dir_Name
+
+            copytree(get_default_template_dir(), os.path.join(repo_dir, Template_Dir_Name))
+
             if show_output:
                 self.logger.debug('Created a repo in {}'.format(repo_dir))
                 self.logger.debug('Creating files..')

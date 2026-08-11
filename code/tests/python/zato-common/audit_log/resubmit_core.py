@@ -17,8 +17,9 @@ from zato.common.audit_log.common import event_dedup_table
 from zato.common.audit_log.dedup import acquire_dedup_key, build_dedup_key, complete_dedup_key, get_in_doubt, \
     release_dedup_key
 from zato.common.audit_log.resubmit import bulk_resubmit, find_event_ids, get_resubmit_handler, get_stored_payload, \
-    load_event, register_resubmit_handler, require_event_type, resend_hop, Action_Reprocess, Action_Resend, \
-    ResubmitFilter, ResubmitException, Row_Error, Row_Resubmitted, Row_Would_Resubmit
+    is_event_type_resubmittable, load_event, register_resubmit_handler, require_event_type, resend_hop, \
+    source_resubmit_actions, Action_Reprocess, Action_Resend, ResubmitFilter, ResubmitException, Row_Error, \
+    Row_Resubmitted, Row_Would_Resubmit
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
@@ -199,6 +200,31 @@ def _run_registry_checks() -> 'None':
         assert 'audit-test-core' in str(e)
     else:
         raise Exception('An unregistered handler was expected to be rejected')
+
+# ################################################################################################################################
+
+def _run_resubmittable_declaration_checks() -> 'None':
+    """ Confirms the shared per-source catalog answers what can be sent again -
+    a declared type says yes, an undeclared type of a declared source says no,
+    and a source with no catalog at all says no for everything.
+    """
+
+    # Every catalog entry names its label and the service that performs it
+    for actions in source_resubmit_actions.values():
+        for action in actions.values():
+            assert action['label'] == 'Resubmit'
+            assert action['service'].startswith('zato.audit-log.')
+
+    # A declared type of a declared source can be sent again ..
+    assert is_event_type_resubmittable(AuditSource.REST_Outgoing, AuditEvent.Request_Sent) is True
+    assert is_event_type_resubmittable(AuditSource.MLLP_Channel, AuditEvent.Message_Received) is True
+
+    # .. an undeclared type of a declared source cannot ..
+    assert is_event_type_resubmittable(AuditSource.REST_Outgoing, AuditEvent.Response_Received) is False
+    assert is_event_type_resubmittable(AuditSource.MLLP_Channel, AuditEvent.Ack_Sent) is False
+
+    # .. and a source with no catalog cannot send anything again.
+    assert is_event_type_resubmittable(AuditSource.SQL_Outgoing, AuditEvent.Response_Received) is False
 
 # ################################################################################################################################
 
@@ -472,14 +498,16 @@ def _run_bulk_resubmit_checks(audit_log:'AuditLog') -> 'None':
 
 def run_resubmit_core_scenario() -> 'None':
     """ The shared resubmit core scenario every backend must pass: loading stored events
-    back with every rejection path, the per-source handler registry, the per-hop resend,
-    the dedup ledger and bulk resubmit with dry runs and double-apply prevention.
+    back with every rejection path, the per-source declarations of what can be sent again,
+    the per-source handler registry, the per-hop resend, the dedup ledger and bulk resubmit
+    with dry runs and double-apply prevention.
     """
     delete_all_events()
 
     audit_log = AuditLog(_server_name)
 
     _run_load_event_checks(audit_log)
+    _run_resubmittable_declaration_checks()
     _run_registry_checks()
     _run_hop_resend_checks(audit_log)
     _run_dedup_checks()

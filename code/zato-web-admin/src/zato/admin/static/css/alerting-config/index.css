@@ -3,7 +3,7 @@
 /*
  * Alert rules - the rows screen.
  *
- * One slim full-width band per rule family - the family's name and state
+ * One slim full-width band per rule type - the type's name and state
  * badge stand in a fixed left column, and the values run to the right as
  * one quiet line, each in the same column on every row. Clicking a value
  * opens the row's popover editor on that very field.
@@ -47,7 +47,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Alert rules - a family's row                                  */
+/* Alert rules - a type's row                                    */
 /* ------------------------------------------------------------ */
 
 /* The kit sizes dashboard cards for charts - these are slim quiet bands,
@@ -64,6 +64,7 @@
     border-width: 1px;
     border-color: rgba(69, 84, 96, 0.55);
     background: var(--alert-rules-row-bg);
+    padding-left:0.8rem;
 
     /* The shadow lifts each row a touch off the page */
     box-shadow: 0 2px 6px rgba(69, 84, 96, 0.18);
@@ -95,8 +96,8 @@
     color: var(--wizard-text);
 }
 
-/* The family sliders wait for their own screen - the badge says what
-   state a family is in for now. The long selector is deliberate: the
+/* The type sliders wait for their own screen - the badge says what
+   state a type is in for now. The long selector is deliberate: the
    global toggle rule in style.css weighs (0,4,4) through its three
    :not() clauses, so this one carries five class-level parts to win. */
 .alert-rules .alert-rules-grid .alert-rules-set-card .alert-rules-set-header input[type="checkbox"] {
@@ -145,7 +146,7 @@
 
 /* The state badges are the shared dashboard tags - the same face the role
    tags of the message flow and audit log listings wear - and this file only
-   names their hues, a muted sage for on and a quiet grey for off */
+   names their hues, one for on and one for off */
 .alert-rules {
     --alert-rules-badge-on-ink: #78937a;
     --alert-rules-badge-on-bg: rgba(78, 113, 80, 0.06);
@@ -187,7 +188,7 @@
     display: inline-block;
 }
 
-/* Once a change is done, a green confirmation stands where Running was,
+/* Once a change is done, a confirmation stands where Running was,
    for the moment its JS timer gives it - plain text, not a badge */
 .alert-rules-ok {
     display: none;
@@ -221,14 +222,14 @@
 /* Alert rules - a row's value columns                           */
 /* ------------------------------------------------------------ */
 
-/* Four fixed columns shared by every row, so the same kind of value
+/* Five fixed columns shared by every row, so the same kind of value
    stands at the same place all the way down the page. A bare 1fr still
    grows for its own row's nowrap content, each row then splitting the
-   width its own way - minmax(0, 1fr) pins all four tracks to the same
-   quarter on every row, and a long cell runs into the gap instead. */
+   width its own way - minmax(0, 1fr) pins all five tracks to the same
+   fifth on every row, and a long cell runs into the gap instead. */
 .alert-rules-set-body {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 2px 24px;
     align-items: center;
 }
@@ -262,7 +263,7 @@
     color: #52525b;
 }
 
-/* A hovered row says its cells are a way in by wearing the link blue
+/* A hovered row says its cells are a way in by wearing the link hover color
    on all of them at once, names and values alike */
 .alert-rules-set-card:hover .alert-rules-param-label,
 .alert-rules-set-card:hover .alert-rules-param-value {
@@ -278,7 +279,7 @@
     margin-left: 0;
 }
 
-/* A value that does not apply to the family - a quiet placeholder
+/* A value that does not apply to the type - a quiet placeholder
    holding the column open */
 .alert-rules-param .form_hint {
     color: var(--wizard-text-muted);
@@ -286,10 +287,10 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Alert rules - a family that is off                            */
+/* Alert rules - a type that is off                              */
 /* ------------------------------------------------------------ */
 
-/* An off family steps back as a whole - its name noticeably, and its
+/* An off type steps back as a whole - its name noticeably, and its
    border, background and values much further still, so the name is what
    remains readable */
 .alert-rules-set-card.alert-rules-set-off {
@@ -314,6 +315,32 @@
 
 .alert-rules-set-off .alert-rules-drag-handle {
     opacity: 0.2;
+}
+
+/* ------------------------------------------------------------ */
+/* Alert rules - the notifications row below the types           */
+/* ------------------------------------------------------------ */
+
+/* The one fixed row that is not a type - it stands outside the sortable
+   grid, so it keeps the grid's own gap as a margin and never travels */
+.dashboard-grid-section .alert-rules-notifications-card {
+    margin-top: 12px;
+}
+
+/* Seven cells share the five columns, wrapping onto a second line */
+.alert-rules-notifications-body {
+    row-gap: 4px;
+}
+
+/* A webhook address can run long - the cell keeps its quarter and says
+   the rest with an ellipsis */
+.alert-rules-notifications-body .alert-rules-param .wizard-toggle-edit {
+    max-width: 100%;
+}
+
+.alert-rules-notifications-body .alert-rules-param-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* ------------------------------------------------------------ */

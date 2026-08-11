@@ -179,7 +179,7 @@ class SQLSave(AdminService):
         # .. turn the form values into their environment variables ..
         env_variables = build_env_variables(env_prefix, sql_field_suffixes, values)
 
-        # .. the Enabled switch has a variable of its own, outside the connection family ..
+        # .. the Enabled switch has a variable of its own, outside the connection's variable prefix ..
         env_variables.update(build_enabled_env_variables(database, values))
 
         # .. apply them to the running server ..

@@ -783,11 +783,11 @@ def is_cluster_empty(server:'ParallelServer') -> 'bool':
             filter(SecurityBase.cluster_id==default_cluster_id).\
             count()
 
-        # Generic connections - a new environment only has the inactive incident
-        # notification placeholders
+        # Generic connections - a new environment only has the inactive alert
+        # notification and LLM placeholders
         connection_count = session.query(GenericConn).\
             filter(GenericConn.is_internal.is_(False)).\
-            filter(GenericConn.name!=Incidents.Notification_Conn_Name).\
+            filter(GenericConn.name.notin_([Incidents.Notification_Conn_Name, Incidents.LLM_Connection_Name])).\
             filter(GenericConn.cluster_id==default_cluster_id).\
             count()
 

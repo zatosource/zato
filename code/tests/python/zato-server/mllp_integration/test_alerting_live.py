@@ -18,7 +18,6 @@ from sqlalchemy import create_engine, select
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent
 from zato.common.audit_log.common import alert_table
-from zato.common.alerting.model import AlertState
 
 # Zato - test helpers
 from conftest import wait_for_port_open
@@ -326,7 +325,7 @@ class TestAlertingLive:
 
             # The first sweep - exactly what the scheduler job invokes on its interval
             _ = zato_client.invoke(Alerting.Service, {
-                Alerting.Extra_SMTP_Conn: _smtp_conn_name,
+                Alerting.Extra_Email_Connection: _smtp_conn_name,
                 Alerting.Extra_From: _alert_from,
             })
 
@@ -338,7 +337,6 @@ class TestAlertingLive:
 
             assert alert['object_name'] == _error_channel_name, alert
             assert alert['kind'] == _rule_name, alert
-            assert alert['state'] == AlertState.Unobserved, alert
             assert alert['count'] == 1, alert
             assert 'error rate' in alert['message'], alert
 
@@ -359,7 +357,7 @@ class TestAlertingLive:
             # The second sweep, still inside the dedup window, only counts -
             # the alert's count grows and no second email goes out
             _ = zato_client.invoke(Alerting.Service, {
-                Alerting.Extra_SMTP_Conn: _smtp_conn_name,
+                Alerting.Extra_Email_Connection: _smtp_conn_name,
                 Alerting.Extra_From: _alert_from,
             })
 

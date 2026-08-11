@@ -14,7 +14,7 @@ import tempfile
 import threading
 import time
 from datetime import datetime, timedelta, timezone
-from http.client import CREATED, NOT_FOUND, OK, UNAUTHORIZED
+from http.client import ACCEPTED, CREATED, NOT_FOUND, OK, UNAUTHORIZED
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -123,6 +123,9 @@ class TeamsGraphTestHandler(BaseHTTPRequestHandler):
 
     # Every channel message received so far
     messages:'dictlist' = []
+
+    # Every e-mail message sent through a mailbox so far
+    sent_mail:'dictlist' = []
 
     def log_message(self, format:'str', *args:'any_') -> 'None':
         pass
@@ -260,6 +263,30 @@ class TeamsGraphTestHandler(BaseHTTPRequestHandler):
                     self._send_json(OK, {'value': matched})
                     return
 
+        # POST /users/{mailbox}/sendMail - send an e-mail message through a mailbox
+        if segment_count == 3:
+            if segments[0] == 'users':
+                if segments[2] == 'sendMail':
+                    if method == 'POST':
+                        body = self._read_body()
+                        payload = json.loads(body)
+
+                        TeamsGraphTestHandler.sent_mail.append({
+                            'mailbox': segments[1],
+                            'payload': payload,
+                        })
+
+                        self._send_json(ACCEPTED, {})
+                        return
+
+        # GET /users/{mailbox}/mailFolders - list a mailbox's folders, which is what a ping asks for
+        if segment_count == 3:
+            if segments[0] == 'users':
+                if segments[2] == 'mailFolders':
+                    if method == 'GET':
+                        self._send_json(OK, {'value': [{'id': 'folder-id-001', 'displayName': 'Inbox'}]})
+                        return
+
         # Everything below is scoped to a single team
         if segment_count >= 3:
             if segments[0] == 'teams':
@@ -368,6 +395,7 @@ def start_teams_server(
     TeamsGraphTestHandler.valid_tokens = {}
     TeamsGraphTestHandler.teams = teams
     TeamsGraphTestHandler.messages = []
+    TeamsGraphTestHandler.sent_mail = []
 
     out = ThreadingHTTPServer(('127.0.0.1', port), TeamsGraphTestHandler)
 

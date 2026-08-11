@@ -15,6 +15,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR
+from typing import Callable
 
 # Django
 from django.http import HttpResponse, JsonResponse
@@ -23,20 +24,23 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.rule_store import get_backend
 from zato.admin.web.views import method_allowed
+from zato.common.alerting import config_map
+from zato.common.alerting.config_store import apply_type_config, NoSuchRulesetError
+from zato.common.alerting.notification_config import notification_keys
 from zato.common.api import Alerting
 from zato.common.defaults import default_cluster_id
 from zato.common.rule_engine import webapi
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary, Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.common.rule_engine.webapi import BadRequestError, DocumentInvalidError
+from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.rule_engine.sql import RuleDefinitionRecord, RuleSQLBackend
-    from zato.common.typing_ import any_, anydict, dictlist, stranydict
-    any_ = any_
+    from zato.common.typing_ import anydict, dictlist, stranydict
     anydict = anydict
     dictlist = dictlist
     RuleDefinitionRecord = RuleDefinitionRecord
@@ -47,6 +51,24 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Defaults for the editor's GET parameters when the caller does not send them
+_default_rule_key    = ''
+_default_rule_name   = ''
+_default_rule_docs   = ''
+_default_rule_active = '1'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _rule_entry_sort_key(entry:'anydict') -> 'str':
+    """ Orders the editor's rule select by label, case-insensitively.
+    """
+    out = entry['label'].lower()
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,18 +89,251 @@ def _find_definition(backend:'RuleSQLBackend', name:'str', object_type:'str') ->
 # ################################################################################################################################
 # ################################################################################################################################
 
+# What the config screen calls each type
+_type_titles = {
+    'rest':          'REST and SOAP',
+    'sql':           'SQL',
+    'llm':           'LLM',
+    'mcp':           'MCP',
+    'microsoft':     'Microsoft cloud',
+    'email':         'Email',
+    'odoo':          'Odoo',
+    'file_transfer': 'File transfer',
+    'scheduler':     'Scheduler',
+    'channels':      'Channels',
+    'common':        'Common',
+}
+
+# What each screen cell says - the label next to the value and the unit suffix after it
+_field_display = {
+    'consecutive_failures': ('Consecutive failures', ''),
+    'error_rate':           ('Error rate', '%'),
+    'alert_threshold':      ('Alert threshold', '%'),
+    'max_latency':          ('Max latency', ' ms'),
+    'max_query_time':       ('Max query time', ' ms'),
+    'warning_latency':      ('Warning latency', ' ms'),
+    'critical_latency':     ('Critical latency', ' ms'),
+    'max_tool_call_time':   ('Max tool-call time', ' ms'),
+    'health_alerts':        ('Health alerts', ''),
+    'max_call_time':        ('Max call time', ' ms'),
+    'auth_failures':        ('Auth failures', ''),
+    'warning_failures':     ('Warning failures', ''),
+    'critical_failures':    ('Critical failures', ''),
+    'test_transfers':       ('Test transfers', ''),
+    'overdue_multiplier':   ('Overdue multiplier', ''),
+    'start_delay':          ('Start delay', ' ms'),
+    'certificate_warning':  ('Certificate warning', ' days'),
+    'outstanding_backlog':  ('Outstanding backlog', ''),
+    'feed_silence':         ('Feed silence', ' s'),
+    'use_llm':              ('LLM', ''),
+}
+
+# The five cell slots of each type's row - the columns line up across the rows,
+# so a type without a value in some column carries a placeholder there.
+_type_cells = {
+    'rest':          ['consecutive_failures', 'error_rate', 'alert_threshold', 'max_latency', 'use_llm'],
+    'sql':           ['consecutive_failures', 'error_rate', 'alert_threshold', 'max_query_time', 'use_llm'],
+    'llm':           ['consecutive_failures', 'error_rate', 'warning_latency', 'critical_latency', 'use_llm'],
+    'mcp':           ['consecutive_failures', 'error_rate', 'alert_threshold', 'max_tool_call_time', 'use_llm'],
+    'microsoft':     ['consecutive_failures', 'error_rate', 'health_alerts', 'max_call_time', 'use_llm'],
+    'email':         ['consecutive_failures', 'error_rate', 'auth_failures', 'alert_threshold', 'use_llm'],
+    'odoo':          ['consecutive_failures', 'error_rate', 'auth_failures', 'max_call_time', 'use_llm'],
+    'file_transfer': ['consecutive_failures', 'warning_failures', 'critical_failures', 'test_transfers', 'use_llm'],
+    'scheduler':     ['error_rate', 'alert_threshold', 'overdue_multiplier', 'start_delay', 'use_llm'],
+    'channels':      [None, 'error_rate', None, None, None],
+    'common':        ['certificate_warning', 'outstanding_backlog', 'feed_silence', None, None],
+}
+
+# What a toggle cell's value reads as
+_toggle_on_label  = 'On'
+_toggle_off_label = 'Off'
+
+# What each cell of the notifications row calls its value
+_notification_display = {
+    Alerting.Extra_Slack_Webhook:    'Slack webhook',
+    Alerting.Extra_Teams_Webhook:    'Teams webhook',
+    Alerting.Extra_Webhook_URL:      'Webhook URL',
+    Alerting.Extra_Email_Connection: 'Email connection',
+    Alerting.Extra_Default_To:       'Email to',
+    Alerting.Extra_From:             'Email from',
+    Alerting.Extra_Dashboard_URL:    'Dashboard URL',
+}
+
+# What a notification cell without a value reads as
+_not_set_label = 'Not set'
+
+# ################################################################################################################################
+
+def _build_config_cell(field_name:'str', kind:'str', values:'stranydict') -> 'stranydict | None':
+    """ One cell of one type's row - the label, the value in screen units and what
+    the cell displays. A field whose rule is gone renders as a placeholder.
+    """
+    if field_name not in values:
+        return None
+
+    label, suffix = _field_display[field_name]
+    value = values[field_name]
+
+    # Our response to produce
+    out = {
+        'name': field_name,
+        'label': label,
+        'suffix': suffix,
+    }
+
+    if kind == config_map.Kind_Toggle:
+        out['kind'] = 'checkbox'
+        out['value'] = 'true' if value else 'false'
+        out['display'] = _toggle_on_label if value else _toggle_off_label
+    else:
+        out['kind'] = 'number'
+        out['value'] = value
+        out['display'] = f'{value}{suffix}'
+
+    return out
+
+# ################################################################################################################################
+
 @method_allowed('GET')
 def config(req:'any_') -> 'TemplateResponse':
-    """ The alert rules config screen - one card per rule family, each with the
-    parameters its rules are driven by. The values shown are the seeded defaults,
-    hardcoded in the template for now - the wiring that reads and saves them
-    comes separately.
+    """ The alert rules config screen - one card per rule type, each with the
+    parameters its rules are driven by, read from the live rule documents
+    the same way the sweep reads them.
     """
+    backend = get_backend()
+
+    types = []
+
+    for type_name, ruleset_name in config_map.type_to_ruleset.items():
+
+        definition = _find_definition(backend, ruleset_name, Definition_Type_Ruleset)
+
+        # A store without the ruleset shows the row inactive with no values
+        if definition:
+            document = deserialize_document(definition.document)
+            documents = document[Documents_Key]
+        else:
+            documents = {}
+
+        values = config_map.read_type_values(type_name, documents)
+
+        # Which kind each of the type's fields comes in
+        kinds = {}
+
+        for field in config_map.type_fields[type_name]:
+            kinds[field['name']] = field['kind']
+
+        cells = []
+
+        for field_name in _type_cells[type_name]:
+
+            if field_name is None:
+                cells.append(None)
+                continue
+
+            cell = _build_config_cell(field_name, kinds[field_name], values)
+            cells.append(cell)
+
+        types.append({
+            'name': type_name,
+            'title': _type_titles[type_name],
+            'is_active': config_map.is_type_active(documents),
+            'cells': cells,
+        })
+
+    # The notifications row below the types - its values live in the sweep job's
+    # extra and come through the same service enmasse reads them with.
+    response = req.zato.client.invoke(Alerting.Get_Notification_Config_Service, {})
+    notification_values = json.loads(response.data['response_data'])
+
+    notification_cells = []
+
+    for key in notification_keys:
+
+        value = notification_values[key]
+
+        notification_cells.append({
+            'name': key,
+            'label': _notification_display[key],
+            'value': value,
+            'display': value if value else _not_set_label,
+        })
+
     return TemplateResponse(req, 'zato/alerting/config.html', {
         'cluster_id': default_cluster_id,
+        'types': types,
+        'notification_cells': notification_cells,
         'zato_clusters': True,
         'zato_template_name': 'zato/alerting/config.html',
     })
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def config_save(req:'any_') -> 'JsonResponse':
+    """ Saves one type's config from the screen - the popover's values, the badge's
+    active state or both - into the live rule documents and publishes the new version,
+    the same path the listing's actions walk. A save that changes nothing stores nothing.
+    """
+    backend = get_backend()
+    body = json.loads(req.body)
+
+    type_name = body['type']
+    actor = req.user.username
+
+    try:
+        changed = apply_type_config(
+            backend,
+            type_name,
+            actor=actor,
+            values=body.get('values'),
+            is_active=body.get('is_active'),
+        )
+
+    except NoSuchRulesetError as e:
+        out = JsonResponse({'error': str(e)}, status=BAD_REQUEST)
+        return out
+
+    except DocumentInvalidError as e:
+        out = JsonResponse({'error': json.dumps(e.errors)}, status=BAD_REQUEST)
+        return out
+
+    except Exception as e:
+        logger.warning('Alert rules config save for `%s` failed -> %s', type_name, e)
+        out = JsonResponse({'error': str(e)}, status=INTERNAL_SERVER_ERROR)
+        return out
+
+    # The test transfers checkbox also drives the canary scheduler job - the rule
+    # decides whether canary findings match, the job decides whether the canary
+    # transfers run at all, and the two always move together.
+    values = body.get('values')
+
+    if values and 'test_transfers' in values:
+        _ = req.zato.client.invoke(Alerting.Set_Canary_State_Service, {'is_active': values['test_transfers']})
+
+    out = JsonResponse({'is_ok': True, 'changed': changed})
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def config_notifications_save(req:'any_') -> 'JsonResponse':
+    """ Saves the notifications row - the popover's values go into the alerting
+    sweep job's extra through the internal service and the very next sweep
+    already delivers with them.
+    """
+    body = json.loads(req.body)
+
+    try:
+        _ = req.zato.client.invoke(Alerting.Set_Notification_Config_Service, body['values'])
+
+    except Exception as e:
+        logger.warning('Alert notifications save failed -> %s', e)
+        out = JsonResponse({'error': str(e)}, status=INTERNAL_SERVER_ERROR)
+        return out
+
+    out = JsonResponse({'is_ok': True})
+    return out
 
 # ################################################################################################################################
 
@@ -111,7 +366,9 @@ def editor(req:'any_') -> 'TemplateResponse':
     definition = _find_definition(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
 
     definition_id = definition.id if definition else 0
-    rule_key = req.GET.get('rule', '')
+
+    if not (rule_key := req.GET.get('rule')):
+        rule_key = _default_rule_key
 
     # The header names the rule being edited, read from the stored document,
     # and the select next to it offers every rule of the ruleset.
@@ -128,7 +385,16 @@ def editor(req:'any_') -> 'TemplateResponse':
         for key, item in documents.items():
             rules.append({'value': key, 'label': item['name']})
 
-        rules.sort(key=lambda entry: entry['label'].lower())
+        rules.sort(key=_rule_entry_sort_key)
+
+    if not (new_rule_name := req.GET.get('new')):
+        new_rule_name = _default_rule_name
+
+    if not (new_rule_docs := req.GET.get('docs')):
+        new_rule_docs = _default_rule_docs
+
+    if not (new_rule_active := req.GET.get('active')):
+        new_rule_active = _default_rule_active
 
     return TemplateResponse(req, 'zato/alerting/editor.html', {
         'cluster_id': default_cluster_id,
@@ -136,9 +402,9 @@ def editor(req:'any_') -> 'TemplateResponse':
         'rule_key': rule_key,
         'rule_name': rule_name,
         'rules_json': json.dumps(rules),
-        'new_rule_name': req.GET.get('new', ''),
-        'new_rule_docs': req.GET.get('docs', ''),
-        'new_rule_active': req.GET.get('active', '1') == '1',
+        'new_rule_name': new_rule_name,
+        'new_rule_docs': new_rule_docs,
+        'new_rule_active': new_rule_active == '1',
         'zato_clusters': True,
         'zato_template_name': 'zato/alerting/editor.html',
     })
@@ -250,11 +516,11 @@ def _read_json(req:'any_') -> 'stranydict':
 
 # ################################################################################################################################
 
-def _json_error(func:'any_') -> 'any_':
+def _json_error(func:'Callable[..., JsonResponse]') -> 'Callable[..., JsonResponse]':
     """ Turns the shared webapi's exceptions into the JSON error answers the editor's
     data layer reads - the same contract the rule engine dashboard's own views keep.
     """
-    def wrapper(req:'any_', *args:'any_', **kwargs:'any_') -> 'any_':
+    def wrapper(req:'any_', *args:'any_', **kwargs:'any_') -> 'JsonResponse':
         try:
             out = func(req, *args, **kwargs)
         except BadRequestError as e:
@@ -300,7 +566,8 @@ def api_search(req:'any_') -> 'JsonResponse':
     """ Full-text search over rendered rule sentences - what the listing's
     command bar highlights its hits with.
     """
-    query = req.GET.get('q', '').strip()
+    if query := req.GET.get('q'):
+        query = query.strip()
 
     if not query:
         raise BadRequestError('Missing required parameter -> q')

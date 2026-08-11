@@ -21,7 +21,7 @@ from typing_extensions import TypeAlias
 
 # Zato
 from zato.common.alerting.collectors import new_fact
-from zato.common.alerting.engine import AlertTransports
+from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.seed import alerting_vocabulary, build_ruleset_document, default_rulesets, \
     ensure_alerting_definitions
 from zato.common.alerting.sweep import load_alert_rules, run_sweep, Fact_Entity
@@ -58,7 +58,7 @@ _conn_name = 'CRM'
 
 # The ruleset the sweep test's rule lives in and the rule it expects to fire
 _rest_ruleset_name = 'alerts_rest'
-_incident_rule_name = 'Error_Rate_Incident'
+_diagnose_rule_name = 'Error_Rate_Diagnose'
 
 # The rule that ships inactive - the canary writes to remote systems, activating it is the opt-in
 _canary_full_name = 'alerts_file_transfer_Canary_Failing'
@@ -159,7 +159,7 @@ class TestEnsureAlertingDefinitions:
         document = deserialize_document(ruleset.document)
         documents = document[Documents_Key]
 
-        kept_key = f'{_rest_ruleset_name}_{_incident_rule_name}'
+        kept_key = f'{_rest_ruleset_name}_{_diagnose_rule_name}'
         edited = {kept_key: documents[kept_key]}
 
         _ = backend.versions.create(
@@ -225,7 +225,7 @@ class TestSweepOverSeededRules:
         # The seeded rules load straight from the live versions of every default ruleset
         rules = load_alert_rules(backend)
         rule_names = [rule.name for rule in rules]
-        assert _incident_rule_name in rule_names
+        assert _diagnose_rule_name in rule_names
 
         audit_log = AuditLog(_server_name)
         audit_engine = get_audit_engine()
@@ -238,30 +238,33 @@ class TestSweepOverSeededRules:
             _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Response_Received, _conn_name,
                 cid=f'seed-sweep-{index}', outcome=AuditOutcome.Error)
 
+        defaults = AlertDefaults()
+        defaults.email_to = ['ops@example.com']
+
         result = run_sweep(
             audit_engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-seed-1', now,
-            default_email=['ops@example.com'])
+            defaults=defaults)
 
-        # The incident rule fired and dispatched the incident diagnosis
+        # The diagnose rule fired and dispatched the diagnosis
         assert result.raised_count >= 1
 
-        incident_invocations = [item for item in recorder.invocations if item[0] == Incidents.Service_Diagnose]
-        assert len(incident_invocations) == 1
+        diagnose_invocations = [item for item in recorder.invocations if item[0] == Incidents.Service_Diagnose]
+        assert len(diagnose_invocations) == 1
 
-        service, payload = incident_invocations[0]
+        service, payload = diagnose_invocations[0]
         assert service == Incidents.Service_Diagnose
-        assert payload['rule'] == _incident_rule_name
+        assert payload['rule'] == _diagnose_rule_name
         assert payload['object_name'] == _conn_name
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEachFamilyReachesItsRule:
+class TestEachTypeReachesItsRule:
 
-    # One fact per family, each crafted to clear one representative rule's default
+    # One fact per type, each crafted to clear one representative rule's default
     # thresholds, with the full name of the rule it must reach. The facts start
     # from new_fact so every measure a rule may reference is present.
-    def _family_cases(self) -> 'anylist':
+    def _type_cases(self) -> 'anylist':
 
         cases = []
 
@@ -288,13 +291,13 @@ class TestEachFamilyReachesItsRule:
 
 # ################################################################################################################################
 
-    def test_a_fact_from_each_family_reaches_its_rule(self, backend:'RuleSQLBackend') -> 'None':
+    def test_a_fact_from_each_type_reaches_its_rule(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
 
         rules = load_alert_rules(backend)
         rules_by_full_name = {rule.full_name: rule for rule in rules}
 
-        for full_name, fact in self._family_cases():
+        for full_name, fact in self._type_cases():
 
             rule = rules_by_full_name[full_name]
             match_result = rule.match({Fact_Entity: fact})

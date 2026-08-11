@@ -82,7 +82,6 @@ from zato.admin.web.views import b2b
 from zato.admin.web.views import channel_usage
 from zato.admin.web.views import detail_poll
 from zato.admin.web.views import alerting
-from zato.admin.web.views import incidents
 from zato.admin.web.views import mapping
 from zato.admin.web.views import message_flow
 from zato.admin.web.views import scheduler_dashboard
@@ -383,21 +382,16 @@ urlpatterns += [
     path('zato/scheduler/dashboard/job/<int:job_id>/run/<int:run_number>/',
         login_required(scheduler_dashboard.run_detail), name='scheduler-run-detail'),
 
-    # Incidents
-
-    url(r'^zato/incidents/$',
-        login_required(incidents.index), name='incidents'),
-    path('zato/incidents/detail/<str:name>/',
-        login_required(incidents.detail), name='incidents-detail'),
-    url(r'^zato/incidents/action/$',
-        login_required(incidents.action), name='incidents-action'),
-
     # Alert rules
 
     url(r'^zato/alerting/rules/$',
         login_required(alerting.index), name='alert-rules'),
     url(r'^zato/alerting/rules/config/$',
         login_required(alerting.config), name='alert-rules-config'),
+    url(r'^zato/alerting/rules/config/save/$',
+        login_required(alerting.config_save), name='alert-rules-config-save'),
+    url(r'^zato/alerting/rules/config/notifications/save/$',
+        login_required(alerting.config_notifications_save), name='alert-rules-config-notifications-save'),
     url(r'^zato/alerting/rules/editor/$',
         login_required(alerting.editor), name='alert-rules-editor'),
     url(r'^zato/alerting/rules/action/$',

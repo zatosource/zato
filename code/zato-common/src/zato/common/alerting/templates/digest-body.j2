@@ -1,0 +1,7 @@
+{% for finding in findings %}
+* {{ finding.message }}
+  {{ finding.link }}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}

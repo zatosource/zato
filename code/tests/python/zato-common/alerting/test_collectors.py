@@ -82,6 +82,8 @@ class TestNewFact:
         assert fact['outstanding'] == 0
         assert fact['oldest_waiting_seconds'] == 0
         assert fact['silent_seconds'] == 0
+        assert fact['last_error_event_id'] == 0
+        assert fact['is_resubmittable'] == 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -143,6 +145,59 @@ class TestErrorRateFacts:
         facts = collect_error_rate_facts(engine, _window_seconds, now)
 
         assert facts == []
+
+# ################################################################################################################################
+
+    def test_the_newest_failing_event_of_a_resubmittable_type_is_pointed_at(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Two failed per-hop deliveries - the request-sent type is what their source
+        # declared resubmittable, and the newer of the two is the one to point at
+        _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _channel_name,
+            cid='resub-er-1', outcome=AuditOutcome.Error)
+        newest_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _channel_name,
+            cid='resub-er-2', outcome=AuditOutcome.Error)
+
+        facts = collect_error_rate_facts(engine, _window_seconds, now)
+
+        assert len(facts) == 1
+        assert facts[0]['last_error_event_id'] == newest_id
+        assert facts[0]['is_resubmittable'] == 1
+
+# ################################################################################################################################
+
+    def test_a_failing_event_of_an_undeclared_type_is_pointed_at_without_a_resend_offer(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # An outbound acknowledgment is no type its source declared resubmittable
+        event_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, _channel_name,
+            cid='resub-er-3', outcome=AuditOutcome.Error)
+
+        facts = collect_error_rate_facts(engine, _window_seconds, now)
+
+        assert len(facts) == 1
+        assert facts[0]['last_error_event_id'] == event_id
+        assert facts[0]['is_resubmittable'] == 0
+
+# ################################################################################################################################
+
+    def test_an_object_without_failures_points_at_nothing(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _channel_name,
+            cid='resub-er-4', outcome=AuditOutcome.OK)
+
+        facts = collect_error_rate_facts(engine, _window_seconds, now)
+
+        assert len(facts) == 1
+        assert facts[0]['last_error_event_id'] == 0
+        assert facts[0]['is_resubmittable'] == 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -280,6 +335,45 @@ class TestConsecutiveFailureFacts:
 
         assert len(facts) == 1
         assert facts[0]['consecutive_failures'] == 0
+
+# ################################################################################################################################
+
+    def test_an_object_mid_streak_points_at_its_newest_failing_event(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # An unbroken run of failed per-hop deliveries - the newest one is the one
+        # to point at, and its type is what its source declared resubmittable
+        _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _channel_name,
+            cid='resub-cf-1', outcome=AuditOutcome.Error)
+        newest_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _channel_name,
+            cid='resub-cf-2', outcome=AuditOutcome.Error)
+
+        facts = collect_consecutive_failure_facts(engine, now)
+
+        assert len(facts) == 1
+        assert facts[0]['consecutive_failures'] == 2
+        assert facts[0]['last_error_event_id'] == newest_id
+        assert facts[0]['is_resubmittable'] == 1
+
+# ################################################################################################################################
+
+    def test_a_clean_object_points_at_nothing(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A failure with a recovery after it - no streak, so nothing to point at either
+        _seed_outcome(audit_log, 'resub-cf-3', AuditOutcome.Error)
+        _seed_outcome(audit_log, 'resub-cf-4', AuditOutcome.OK)
+
+        facts = collect_consecutive_failure_facts(engine, now)
+
+        assert len(facts) == 1
+        assert facts[0]['consecutive_failures'] == 0
+        assert facts[0]['last_error_event_id'] == 0
+        assert facts[0]['is_resubmittable'] == 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -497,7 +591,7 @@ class TestPerSourceWindows:
         now = utcnow()
 
         # A file transfer error older than the default window but within
-        # the file transfer family's own longer one
+        # the file transfer type's own longer one
         event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, 'sftp.backups',
             cid='window-1', outcome=AuditOutcome.Error)
         _backdate(event_id, now - timedelta(seconds=400))

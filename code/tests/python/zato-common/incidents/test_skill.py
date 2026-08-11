@@ -6,9 +6,29 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pytest
+import pytest
+
 # Zato
 from zato.common.audit_log.api import AuditSource
 from zato.common.incidents.skill import load_skill, parse_skill
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Every audit source that ships with a diagnostic skill of its own.
+_shipped_sources = (
+    AuditSource.REST_Outgoing,
+    AuditSource.SQL_Outgoing,
+    AuditSource.LLM,
+    AuditSource.MCP,
+    AuditSource.Microsoft_Cloud,
+    AuditSource.Email_SMTP,
+    AuditSource.Email_IMAP,
+    AuditSource.Odoo,
+    AuditSource.File_Outgoing,
+    AuditSource.Scheduler,
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,6 +83,27 @@ class TestLoadSkill:
         second = load_skill(AuditSource.REST_Outgoing)
 
         assert first is second
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestShippedSkills:
+
+    @pytest.mark.parametrize('source', _shipped_sources)
+    def test_every_shipped_skill_loads_with_a_complete_frontmatter(self, source:'str') -> 'None':
+        skill = load_skill(source)
+
+        assert skill is not None
+        assert skill.name == f'{source}-diagnostics'
+        assert skill.description != ''
+        assert skill.instructions != ''
+
+    @pytest.mark.parametrize('source', _shipped_sources)
+    def test_every_shipped_skill_keeps_the_remediation_catalog_closed(self, source:'str') -> 'None':
+        skill = load_skill(source)
+
+        assert skill is not None
+        assert 'resubmit' in skill.instructions
 
 # ################################################################################################################################
 # ################################################################################################################################

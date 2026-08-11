@@ -22,7 +22,7 @@ from humanize import naturalsize
 
 # Zato
 from zato.common.audit_log.api import AuditOutcome
-from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Store
+from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Read, Operation_Store
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -645,7 +645,20 @@ class SFTPConnection:
         else:
             options = ''
 
-        out = self.execute('get{} {} {}'.format(options, quote_path(remote_path), quote_path(local_path)), log_level)
+        start = monotonic()
+
+        # A failed read is recorded too, before the caller learns about it
+        try:
+            out = self.execute('get{} {} {}'.format(options, quote_path(remote_path), quote_path(local_path)), log_level)
+        except Exception:
+            duration_ms = int((monotonic() - start) * 1000)
+            self._record_transfer(Operation_Read, remote_path,
+                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
+            raise
+
+        duration_ms = int((monotonic() - start) * 1000)
+        self._record_transfer(Operation_Read, remote_path, outcome=AuditOutcome.OK, duration_ms=duration_ms)
+
         return out
 
 # ################################################################################################################################

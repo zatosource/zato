@@ -9,32 +9,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 
-# SQLAlchemy
-from sqlalchemy import and_, update
-
 # Zato
-from zato.common.api import GENERIC, Incidents
+from zato.common.api import Incidents
 from zato.common.json_internal import dumps
-from zato.common.odb.model import GenericObject as ModelGenericObject
 from zato.common.odb.query.generic import GenericObjectWrapper
-from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callable_, dictlist, stranydict, strnone
+    from zato.common.typing_ import any_, callable_, dictlist, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-ModelGenericObjectTable:'any_' = ModelGenericObject.__table__
-_opaque_attr_name = GENERIC.ATTR_NAME
-
-# The statuses under which an incident still awaits a decision.
-_open_statuses = (Incidents.Status.New, Incidents.Status.Awaiting_Approval)
-
-# The keys an incident's opaque document carries.
+# The keys a diagnosis's opaque document carries.
 _detail_keys = (
     'object_name',
     'source',
@@ -50,15 +39,15 @@ _detail_keys = (
     'remediation',
     'is_parsed',
     'created_iso',
-    'history',
 )
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class IncidentStore:
-    """ Reads and writes incidents - generic objects of the zato-incident type,
-    with the status in the subtype column and everything else in the opaque document.
+    """ Reads and writes diagnosed alerts - generic objects of the zato-incident type
+    with everything in the opaque document. There is no lifecycle here - a diagnosis
+    is written once, next to the alert it explains, and only ever read back.
     """
 
     def __init__(self, session:'callable_', cluster_id:'int') -> 'None':
@@ -76,14 +65,13 @@ class IncidentStore:
 # ################################################################################################################################
 
     def _row_to_incident(self, row:'stranydict') -> 'stranydict':
-        """ Normalizes a generic_object row, with its opaque keys merged in, to an incident dict.
+        """ Normalizes a generic_object row, with its opaque keys merged in, to a diagnosis dict.
         """
 
         # Our response to produce
         out:'stranydict' = {
             'id': row['id'],
             'name': row['name'],
-            'status': row['subtype'],
         }
 
         for key in _detail_keys:
@@ -94,15 +82,15 @@ class IncidentStore:
 
 # ################################################################################################################################
 
-    def create(self, name:'str', details:'stranydict', status:'str') -> 'None':
-        """ Stores a new incident under the given name and status.
+    def create(self, name:'str', details:'stranydict') -> 'None':
+        """ Stores a new diagnosis under the given name.
         """
         opaque = dumps(details)
 
         with closing(self.session()) as session:
 
             wrapper = self._new_wrapper(session)
-            insert = wrapper.create(name, opaque, subtype=status)
+            insert = wrapper.create(name, opaque)
 
             session.execute(insert)
             session.commit()
@@ -110,7 +98,7 @@ class IncidentStore:
 # ################################################################################################################################
 
     def get(self, name:'str') -> 'stranydict | None':
-        """ Returns one incident by its name, or None if there is no such incident.
+        """ Returns one diagnosis by its name, or None if there is no such diagnosis.
         """
 
         with closing(self.session()) as session:
@@ -126,8 +114,8 @@ class IncidentStore:
 
 # ################################################################################################################################
 
-    def get_list(self, status:'strnone'=None) -> 'dictlist':
-        """ Returns all incidents, optionally only the ones in a given status, newest first.
+    def get_list(self) -> 'dictlist':
+        """ Returns all diagnoses, newest first.
         """
 
         # Our response to produce
@@ -136,7 +124,7 @@ class IncidentStore:
         with closing(self.session()) as session:
 
             wrapper = self._new_wrapper(session)
-            rows = wrapper.get_list(subtype=status)
+            rows = wrapper.get_list()
 
         for row in rows:
             incident = self._row_to_incident(row)
@@ -149,55 +137,18 @@ class IncidentStore:
 
 # ################################################################################################################################
 
-    def update(self, name:'str', details:'stranydict', status:'str') -> 'None':
-        """ Replaces an incident's details and status.
+    def exists(self, name:'str') -> 'bool':
+        """ Whether a diagnosis is already stored under the given name -
+        one alert produces one diagnosis, not one per sweep.
         """
-        opaque = dumps(details)
-        now = utcnow()
-
-        # The wrapper's own update never touches the subtype, which is where the status lives,
-        # hence the query is built here in full.
-        values = {
-            _opaque_attr_name: opaque,
-            'subtype': status,
-            'last_modified': now,
-        }
-
-        where = and_(
-            ModelGenericObjectTable.c.name == name,
-            ModelGenericObjectTable.c.type_ == Incidents.Type.Incident,
-            ModelGenericObjectTable.c.cluster_id == self.cluster_id,
-        )
-
-        query = update(ModelGenericObjectTable).values(values).where(where)
-
-        with closing(self.session()) as session:
-            session.execute(query)
-            session.commit()
-
-# ################################################################################################################################
-
-    def has_open(self, object_name:'str') -> 'bool':
-        """ Whether a connection already has an incident awaiting a decision -
-        one failing connection produces one incident, not one per sweep.
-        """
-        incidents = self.get_list()
-
-        for incident in incidents:
-
-            if incident['object_name'] != object_name:
-                continue
-
-            if incident['status'] in _open_statuses:
-                return True
-
-        return False
+        out = self.get(name) is not None
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _by_created(incident:'stranydict') -> 'str':
-    """ The sort key ordering incidents by their creation time.
+    """ The sort key ordering diagnoses by their creation time.
     """
     out = incident['created_iso']
     return out

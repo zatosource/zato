@@ -29,7 +29,7 @@ from random import Random
 from sqlalchemy import delete, func, select
 
 # Zato
-from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, AlertState, FindingKind
+from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, FindingKind
 from zato.common.alerting.engine import record_alert_event
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
     AuditEvent, AuditLog, AuditOutcome, AuditSource
@@ -952,16 +952,11 @@ def _build_alert_row(
     finding:'Finding',
     *,
     count:'int',
-    state:'str',
     first_raised:'datetime',
     last_raised:'datetime',
-    observed_by:'str' = '',
-    observed_iso:'str' = '',
-    resolved_by:'str' = '',
-    resolved_iso:'str' = '',
     ) -> 'anydict':
-    """ Composes one alert row in its final lifecycle state - the same columns
-    the alert store's raise, observe and resolve sequence would have produced.
+    """ Composes one alert row - the same columns the alert store's raise
+    sequence would have produced.
     """
     out = {
         'rule_name': rule.name,
@@ -972,13 +967,8 @@ def _build_alert_row(
         'message': finding.message,
         'link': finding.link,
         'count': count,
-        'state': state,
         'first_raised_iso': first_raised.isoformat(),
         'last_raised_iso': last_raised.isoformat(),
-        'observed_by': observed_by,
-        'observed_iso': observed_iso,
-        'resolved_by': resolved_by,
-        'resolved_iso': resolved_iso,
     }
 
     return out
@@ -987,8 +977,8 @@ def _build_alert_row(
 
 def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime', rng:'Random') -> 'dictlist':
     """ Writes the alert history's audit events and composes the alert rows -
-    one alert in each lifecycle state, so the alerts screen shows all three
-    colors. Returns the alert rows for the bulk insert.
+    three alerts of different shapes and ages. Returns the alert rows for
+    the bulk insert.
     """
 
     rules = {}
@@ -1040,10 +1030,10 @@ def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime', rng:'Random') -> 'd
     if silent_stamps:
         out.append(_build_alert_row(
             silent_rule, silent_finding,
-            count=len(silent_stamps), state=AlertState.Unobserved,
+            count=len(silent_stamps),
             first_raised=silent_stamps[0], last_raised=silent_stamps[-1]))
 
-    # The observed alert - yesterday's error burst, acknowledged that evening
+    # The repeated alert - yesterday's error burst
     error_rule = rules[Rule_Error_Rate]
     error_finding = new_finding(
         FindingKind.Error_Rate, AuditSource.MLLP_Channel, Channel_Lab,
@@ -1064,15 +1054,12 @@ def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime', rng:'Random') -> 'd
         record_alert_event(
             audit_log, error_rule, error_finding, len(error_stamps), f'{Cid_Prefix}al-error-{minutes_offset:04d}')
 
-    observed_when = burst_day + timedelta(hours=Burst_End_Hour, minutes=5) + _draw_fraction(rng)
-
     out.append(_build_alert_row(
         error_rule, error_finding,
-        count=len(error_stamps), state=AlertState.Observed,
-        first_raised=error_stamps[0], last_raised=error_stamps[-1],
-        observed_by=Actor_Admin, observed_iso=observed_when.isoformat()))
+        count=len(error_stamps),
+        first_raised=error_stamps[0], last_raised=error_stamps[-1]))
 
-    # The resolved alert - a delivery stall from three days ago, resolved the same day
+    # The single-occurrence alert - a delivery stall from three days ago
     missing_rule = rules[Rule_Missing_Ack]
     missing_finding = new_finding(
         FindingKind.Missing_Followup, AuditSource.MLLP_Outgoing, Outconn_Forward,
@@ -1084,13 +1071,10 @@ def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime', rng:'Random') -> 'd
     audit_log.set_event_time(missing_when)
     record_alert_event(audit_log, missing_rule, missing_finding, 1, f'{Cid_Prefix}al-missing-0001')
 
-    resolved_when = missing_when + timedelta(hours=2, minutes=30)
-
     out.append(_build_alert_row(
         missing_rule, missing_finding,
-        count=1, state=AlertState.Resolved,
-        first_raised=missing_when, last_raised=missing_when,
-        resolved_by=Actor_Operator, resolved_iso=resolved_when.isoformat()))
+        count=1,
+        first_raised=missing_when, last_raised=missing_when))
 
     return out
 
