@@ -53,8 +53,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-from config_db_screen import expect_redis_test_error, expect_redis_test_ok, open_redis_screen, run_redis_test, \
-    save_redis_connection
+from config_db_screen import expect_redis_test_error, expect_redis_test_ok, open_redis_screen, redis_field_selector, \
+    run_redis_test, save_redis_connection
 from rest_channel import create_channel, invoke_until_status
 from server_restart import restart_server
 
@@ -250,7 +250,7 @@ class TestRedisLive:
     # The dashboard returns HTTP 500 for a failed connection test on purpose
     @pytest.mark.expect_log_errors('Internal Server Error')
     def test_01_failed_test_shows_error(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ A connection test against a port nothing listens on renders the error row.
+        """ A connection test against a port nothing listens on shows the error tooltip.
         Nothing is saved so the live configuration stays as it was.
         """
         page = logged_in_page
@@ -262,7 +262,7 @@ class TestRedisLive:
         original_values = {} # type: anydict
 
         for field in _Form_Fields:
-            original_values[field] = page.input_value(f'#id_{field}')
+            original_values[field] = page.input_value(redis_field_selector(field))
 
         _shared_state['original_values'] = original_values
 

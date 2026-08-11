@@ -1,102 +1,225 @@
+
+// ////////////////////////////////////////////////////////////////////////////
+// Redis connection UI
+// ////////////////////////////////////////////////////////////////////////////
+
 (function($) {
 
-$(document).ready(function() {
+    var stored_url_base = '';
 
-    var config = {};
-    config.apiPrefix = '/zato/redis/';
-    config.testUrl = '/zato/redis/test';
-    config.saveUrl = '/zato/redis/save';
-    config.saveProgressLabel = 'Saving...';
-    config.saveErrorLabel = 'Save failed';
-    config.testErrorLabel = 'Test failed';
-
-    // The current values of the connection, embedded by the server at render time
-    var valuesElement = document.getElementById('redis-values');
-    var connectionValues = JSON.parse(valuesElement.textContent);
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    var populateForm = function(values) {
-
-        $('#id_display_name').val(values.display_name);
-        $('#id_description').val(values.description);
-        $('#id_host').val(values.host);
-        $('#id_port').val(values.port);
-        $('#id_db').val(values.db);
-        $('#id_username').val(values.username);
-        $('#id_password').val(values.password);
-        $('#id_ssl').prop('checked', values.ssl);
-        $('#id_ssl_ca_file').val(values.ssl_ca_file);
-        $('#id_ssl_cert_file').val(values.ssl_cert_file);
-        $('#id_ssl_key_file').val(values.ssl_key_file);
-        $('#id_ssl_verify').prop('checked', values.ssl_verify);
+    $.fn.zato.redis.config = {
+        save_ok_message: 'OK, saved',
+        save_error_message: 'Could not save',
+        test_error_message: 'Could not connect',
+        test_spinner_label: 'Testing ..',
+        test_details_title: 'Test connection response',
+        status_fade_delay_ms: 750,
+        status_fade_duration_ms: 500
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    var collectValues = function() {
-
-        var out = {};
-
-        out.display_name = $('#id_display_name').val();
-        out.description = $('#id_description').val();
-        out.host = $('#id_host').val();
-        out.port = $('#id_port').val();
-        out.db = $('#id_db').val();
-        out.username = $('#id_username').val();
-        out.password = $('#id_password').val();
-        out.ssl = $('#id_ssl').is(':checked');
-        out.ssl_ca_file = $('#id_ssl_ca_file').val();
-        out.ssl_cert_file = $('#id_ssl_cert_file').val();
-        out.ssl_key_file = $('#id_ssl_key_file').val();
-        out.ssl_verify = $('#id_ssl_verify').is(':checked');
-
-        return out;
+    // The per-field help texts behind the "How does it work?" badge,
+    // keyed by the ids of the form fields.
+    $.fn.zato.redis.field_descriptions = {
+        'redis-display-name': 'A short name for this connection.',
+        'redis-description': 'What this connection is used for.',
+        'redis-host': 'The host the Redis server listens on, e.g. localhost.',
+        'redis-port': 'The port the Redis server listens on. Default is 6379.',
+        'redis-db': 'The number of the Redis logical database to use. Default is 0.',
+        'redis-username': 'Username to authenticate with. Leave empty if the server does not require authentication.',
+        'redis-password': 'Password matching the username above. Stored encrypted in secrets.conf. An empty field keeps the current password.',
+        'redis-ssl': 'When on, all traffic to the server is encrypted with TLS. Required for the certificate options below to take effect.',
+        'redis-ssl-ca-file': 'Path to a PEM file with CA certificates used to verify the server\'s certificate.',
+        'redis-ssl-cert-file': 'Path to a PEM file with the client certificate, for mutual TLS.',
+        'redis-ssl-key-file': 'Path to a PEM file with the private key of the client certificate above.',
+        'redis-ssl-verify': 'When on, the server\'s certificate is verified against the CA file above. Turn it off only with test environments.'
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    config.buildTestPayload = function() {
+    $.fn.zato.redis.init = function(url_base, config) {
+        stored_url_base = url_base;
+
+        $.fn.zato.redis.load_config(config);
+
+        $.fn.zato.how_it_works.init({
+            badgeId: 'redis-how-it-works',
+            divId: '#redis',
+            fieldSelector: '.redis-row',
+            containerSelector: '#markup',
+            placement: 'left',
+            descriptions: $.fn.zato.redis.field_descriptions
+        });
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.redis.load_config = function(config) {
+
+        document.getElementById('redis-display-name').value = config.display_name;
+        document.getElementById('redis-description').value = config.description;
+        document.getElementById('redis-host').value = config.host;
+        document.getElementById('redis-port').value = config.port;
+        document.getElementById('redis-db').value = config.db;
+        document.getElementById('redis-username').value = config.username;
+        document.getElementById('redis-password').value = config.password;
+        document.getElementById('redis-ssl').checked = config.ssl;
+        document.getElementById('redis-ssl-ca-file').value = config.ssl_ca_file;
+        document.getElementById('redis-ssl-cert-file').value = config.ssl_cert_file;
+        document.getElementById('redis-ssl-key-file').value = config.ssl_key_file;
+        document.getElementById('redis-ssl-verify').checked = config.ssl_verify;
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.redis.get_config = function() {
+
+        var config = {
+            display_name: document.getElementById('redis-display-name').value,
+            description: document.getElementById('redis-description').value,
+            host: document.getElementById('redis-host').value,
+            port: document.getElementById('redis-port').value,
+            db: document.getElementById('redis-db').value,
+            username: document.getElementById('redis-username').value,
+            password: document.getElementById('redis-password').value,
+            ssl: document.getElementById('redis-ssl').checked,
+            ssl_ca_file: document.getElementById('redis-ssl-ca-file').value,
+            ssl_cert_file: document.getElementById('redis-ssl-cert-file').value,
+            ssl_key_file: document.getElementById('redis-ssl-key-file').value,
+            ssl_verify: document.getElementById('redis-ssl-verify').checked
+        };
+
+        return config;
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.redis.extract_error = function(jqXHR, default_message) {
+        var msg = default_message;
+
+        try {
+            var response = JSON.parse(jqXHR.responseText);
+            if(response.error) {
+                msg = response.error;
+            }
+            else if(response.message) {
+                msg = response.message;
+            }
+        }
+        catch(e) {
+            if(jqXHR.responseText) {
+                msg = jqXHR.responseText;
+            }
+        }
+
+        return msg;
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.redis.save = function() {
+
+        var values = $.fn.zato.redis.get_config();
+        var status = $('#redis-status');
+        var ui_config = $.fn.zato.redis.config;
+
+        status.removeClass('show fade status-message-success status-message-error');
+
+        $.ajax({
+            url: stored_url_base + '/save',
+            type: 'POST',
+            data: JSON.stringify({values: values}),
+            contentType: 'application/json',
+            headers: {'X-CSRFToken': $.cookie('csrftoken')},
+            success: function() {
+                status.text(ui_config.save_ok_message).addClass('show status-message-success');
+                setTimeout(function() {
+                    status.addClass('fade');
+                    setTimeout(function() {
+                        status.removeClass('show fade status-message-success');
+                    }, ui_config.status_fade_duration_ms);
+                }, ui_config.status_fade_delay_ms);
+            },
+            error: function(jqXHR) {
+                var msg = $.fn.zato.redis.extract_error(jqXHR, ui_config.save_error_message);
+                status.text(msg).addClass('show status-message-error');
+            }
+        });
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.redis.parse_test_response = function(jqXHR) {
+
+        var ui_config = $.fn.zato.redis.config;
+
+        // A request that never reached the server has no response text at all
+        var body = jqXHR.responseText;
+        if(body === undefined) {
+            body = '';
+        }
+
+        var parsed = null;
+        try {
+            parsed = JSON.parse(body);
+        }
+        catch(e) {
+            parsed = null;
+        }
+
+        // The test service always answers with JSON - success carries a message
+        // with the response time, failure carries the Redis client's error,
+        // shown in full in the tooltip and again in the copyable details modal.
+        if(parsed) {
+            if(parsed.success) {
+                return {
+                    is_success: true,
+                    label: parsed.message,
+                    details_title: '',
+                    details_body: '',
+                    details_lexer: '',
+                    status_code: 0
+                };
+            }
+            return {
+                is_success: false,
+                label: parsed.error,
+                details_title: parsed.error,
+                details_body: parsed.error,
+                details_lexer: '',
+                status_code: 0
+            };
+        }
+
+        // A non-JSON body means the request never made it to the test service
         return {
-            values: collectValues()
+            is_success: false,
+            label: ui_config.test_error_message,
+            details_title: ui_config.test_error_message,
+            details_body: body,
+            details_lexer: '',
+            status_code: jqXHR.status
         };
     };
 
-    config.buildSavePayload = function() {
-        return {
-            values: collectValues()
-        };
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.redis.test = function(test_link) {
+
+        var values = $.fn.zato.redis.get_config();
+        var ui_config = $.fn.zato.redis.config;
+
+        $.fn.zato.action_runner.run({
+            link_elem: test_link,
+            url: stored_url_base + '/test',
+            data: JSON.stringify({values: values}),
+            spinner_label: ui_config.test_spinner_label,
+            details_modal_title: ui_config.test_details_title,
+            parse: $.fn.zato.redis.parse_test_response
+        });
     };
 
     // ////////////////////////////////////////////////////////////////////////
-
-    config.tourSteps = [];
-
-    config.tourSteps[0] = {};
-    config.tourSteps[0].popover = {};
-    config.tourSteps[0].popover.title = 'Redis';
-    config.tourSteps[0].popover.description = 'Configure the Redis connection that services use, including SSL/TLS. ' +
-        'The settings are stored in the server config file.';
-
-    config.tourSteps[1] = {};
-    config.tourSteps[1].element = '#check-button';
-    config.tourSteps[1].popover = {};
-    config.tourSteps[1].popover.title = 'Test';
-    config.tourSteps[1].popover.description = 'Connects to the Redis server with the values from the form and pings it.';
-
-    config.tourSteps[2] = {};
-    config.tourSteps[2].element = '#update-button';
-    config.tourSteps[2].popover = {};
-    config.tourSteps[2].popover.title = 'Save';
-    config.tourSteps[2].popover.description = 'Saves the connection details. New connections to this server ' +
-        'will use them from now on.';
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    // Show the current values when the page opens
-    populateForm(connectionValues);
-
-    $.fn.zato.form_settings.init(config);
-});
 
 })(jQuery);

@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Driving the Config DB screens the way a user would - navigating to them, filling
-# the connection forms and clicking Test or Save, waiting for the outcome to render.
+# Driving the Config DB and Redis screens the way a user would - navigating to them,
+# filling the connection forms and clicking Test or Save, waiting for the outcome to render.
 
 # Zato
 from zato.common.typing_ import cast_
@@ -31,6 +31,16 @@ _checkbox_fields = ('ssl', 'ssl_verify')
 # ################################################################################################################################
 # ################################################################################################################################
 
+def redis_field_selector(field:'str') -> 'str':
+    """ Returns the selector of one field of the Redis form, e.g. display_name maps to #redis-display-name.
+    """
+    field_id = field.replace('_', '-')
+
+    out = f'#redis-{field_id}'
+    return out
+
+# ################################################################################################################################
+
 def _fill_form(page:'Page', values:'anydict') -> 'None':
     """ Fills the given fields of a Config DB form, leaving everything else as it is.
     """
@@ -40,6 +50,19 @@ def _fill_form(page:'Page', values:'anydict') -> 'None':
             page.set_checked(f'#id_{field}', value)
         else:
             page.fill(f'#id_{field}', str(value))
+
+# ################################################################################################################################
+
+def _fill_redis_form(page:'Page', values:'anydict') -> 'None':
+    """ Fills the given fields of the Redis form, leaving everything else as it is.
+    """
+    for field, value in values.items():
+        selector = redis_field_selector(field)
+
+        if field in _checkbox_fields:
+            page.set_checked(selector, value)
+        else:
+            page.fill(selector, str(value))
 
 # ################################################################################################################################
 
@@ -93,7 +116,7 @@ def open_redis_screen(page:'Page', base_url:'str') -> 'None':
     """ Navigates to the Redis screen and waits for the form to render.
     """
     _ = page.goto(f'{base_url}{Redis_Page_Url}')
-    _ = page.wait_for_selector('#id_host', state='visible')
+    _ = page.wait_for_selector('#redis-host', state='visible')
 
 # ################################################################################################################################
 
@@ -102,40 +125,43 @@ def save_redis_connection(page:'Page', base_url:'str', values:'anydict') -> 'Non
     """
     open_redis_screen(page, base_url)
 
-    _fill_form(page, values)
-    _save_form(page)
+    _fill_redis_form(page, values)
+
+    page.click('.redis-save-group input[type="submit"]')
+
+    status = cast_('any_', page.wait_for_selector('#redis-status.status-message-success', state='visible', timeout=10000))
+    status_text = status.inner_text()
+    assert 'OK, saved' in status_text, f'Expected "OK, saved" in status, got: {status_text}'
 
 # ################################################################################################################################
 
 def run_redis_test(page:'Page', base_url:'str', values:'anydict') -> 'None':
-    """ Fills the Redis form with the given values and clicks Test, without saving.
+    """ Fills the Redis form with the given values and clicks Test connection, without saving.
     The caller asserts on the outcome via expect_redis_test_ok or expect_redis_test_error.
     """
     open_redis_screen(page, base_url)
 
-    _fill_form(page, values)
-    page.click('#check-button')
+    _fill_redis_form(page, values)
+    page.click('.redis-test-link')
 
 # ################################################################################################################################
 
 def expect_redis_test_ok(page:'Page') -> 'None':
-    """ Waits for the OK outcome of a connection test.
+    """ Waits for the OK outcome of a connection test - a tooltip over the Test connection link.
     """
-    result = cast_('any_', page.wait_for_selector('.test-results .result-status.ok', state='visible', timeout=10000))
-    result_text = result.inner_text()
-    assert result_text == 'OK', f'Expected "OK", got: {result_text}'
-
-    message = page.inner_text('.test-results .result-message')
-    assert 'Connection OK' in message, f'Expected "Connection OK" in message, got: {message}'
+    tooltip = cast_('any_', page.wait_for_selector('.tippy-content', state='visible', timeout=10000))
+    tooltip_text = tooltip.inner_text()
+    assert 'Connection OK' in tooltip_text, f'Expected "Connection OK" in tooltip, got: {tooltip_text}'
 
 # ################################################################################################################################
 
 def expect_redis_test_error(page:'Page') -> 'None':
-    """ Waits for the error outcome of a connection test.
+    """ Waits for the error outcome of a connection test - a persistent tooltip
+    over the Test connection link, with a Show details link to a copyable modal.
     """
-    result = cast_('any_', page.wait_for_selector('.test-results .result-status.error', state='visible', timeout=10000))
-    result_text = result.inner_text()
-    assert result_text == 'Error', f'Expected "Error", got: {result_text}'
+    tooltip = cast_('any_', page.wait_for_selector('.tippy-content:has-text("Show details")', state='visible', timeout=10000))
+    tooltip_text = tooltip.inner_text()
+    assert 'Connection OK' not in tooltip_text, f'Expected an error in tooltip, got: {tooltip_text}'
 
 # ################################################################################################################################
 # ################################################################################################################################

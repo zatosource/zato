@@ -1,0 +1,127 @@
+/* ------------------------------------------------------------ */
+/* Redis - page heading                                          */
+/* ------------------------------------------------------------ */
+
+#markup > h2.zato {
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 1rem;
+}
+
+/* ------------------------------------------------------------ */
+/* Redis - container                                             */
+/* ------------------------------------------------------------ */
+
+.redis-container {
+    box-sizing: border-box;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+/* ------------------------------------------------------------ */
+/* Redis - form card                                             */
+/* ------------------------------------------------------------ */
+
+.redis-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid #d8dce0;
+    border-radius: 5px;
+    background: #fdfefe;
+    font-size: 12px;
+    transition: border-color 0.15s;
+
+    /* The same small toggle look that dialog forms get from .data-popup */
+    --toggle-width: 32px;
+    --toggle-height: 16px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 2px;
+    --toggle-travel: 16px;
+    --toggle-off-background: #999;
+    --toggle-on-background: #2d6392;
+}
+
+.redis-card:hover {
+    border-color: #b0b0b0;
+}
+
+/* ------------------------------------------------------------ */
+/* Redis - form rows                                             */
+/* ------------------------------------------------------------ */
+
+.redis-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.redis-label {
+    display: inline-block;
+    width: 200px;
+    flex-shrink: 0;
+    color: #333333;
+    font-weight: bold;
+}
+
+.redis-row input[type="text"],
+.redis-row input[type="password"] {
+    width: 320px;
+}
+
+.redis-row input.redis-input-short {
+    width: 90px;
+}
+
+/* The hide-show-password plugin wraps the password input in a wrapper whose
+   width the global stylesheet stretches to 100% - size the wrapper to the
+   input instead and center the Show toggle vertically within it. */
+.redis-row .hideShowPassword-wrapper {
+    display: inline-block !important;
+    width: 320px !important;
+}
+
+.redis-row .hideShowPassword-wrapper input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* The plugin centers the toggle itself with an inline negative margin-top,
+   so the margin must go before translateY can center it - otherwise both
+   would pull the toggle up and it would sit above the middle. */
+.redis-row .hideShowPassword-toggle {
+    top: 50% !important;
+    margin-top: 0 !important;
+    transform: translateY(-50%);
+    right: 6px !important;
+}
+
+/* ------------------------------------------------------------ */
+/* Redis - actions                                               */
+/* ------------------------------------------------------------ */
+
+.redis-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 8px;
+}
+
+.redis-test-link {
+    font-size: 80%;
+}
+
+.redis-save-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+}

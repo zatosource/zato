@@ -25,7 +25,7 @@ $.fn.zato.logging.destinations._renderList = function(vendor) {
     if (!items.length) {
         var placeholder = document.createElement('div');
         placeholder.className = 'logging-destination-empty';
-        placeholder.textContent = 'No destinations yet';
+        placeholder.textContent = 'No destination';
         $container.append(placeholder);
         return;
     }
@@ -117,6 +117,13 @@ $.fn.zato.logging.destinations._showForm = function(vendor, item) {
         $form.find('[data-field="address"]').val(config.datadogDefaultAddress);
     }
 
+    // .. an empty list makes no sense next to an open form, hide it whole
+    // .. so its padding does not leave a blank strip above the form ..
+    var $list = $('#logging-list-' + vendor);
+    if ($list.find('.logging-destination-empty').length) {
+        $list.prop('hidden', true);
+    }
+
     // .. and switch the footer buttons to the form mode.
     $form.prop('hidden', false);
     $('#logging-add-' + vendor).prop('hidden', true);
@@ -131,6 +138,9 @@ $.fn.zato.logging.destinations._hideForm = function(vendor) {
     $('#logging-add-' + vendor).prop('hidden', false);
     $('#logging-save-' + vendor).prop('hidden', true);
     $('#logging-cancel-' + vendor).prop('hidden', true);
+
+    // The list, hidden if it was empty when the form opened, becomes relevant again.
+    $('#logging-list-' + vendor).prop('hidden', false);
 };
 
 // ////////////////////////////////////////////////////////////////////////

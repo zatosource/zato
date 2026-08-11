@@ -16,7 +16,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.config_db import _invoke
-from zato.admin.web.views.settings.config import redis_page_config
+from zato.common.json_internal import dumps
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,8 +53,8 @@ def index(req:'any_') -> 'TemplateResponse':
         logger.error('redis index: %s', format_exc())
 
     return TemplateResponse(req, 'zato/redis.html', {
-        'page_config': redis_page_config,
-        'redis_values': redis_values,
+        'config': redis_values,
+        'config_json': dumps(redis_values),
     })
 
 # ################################################################################################################################

@@ -1,0 +1,70 @@
+/* Shared action buttons - the primary (filled) and secondary (outlined)
+   buttons used by the settings pages and the logging page. The colors
+   come from shared/tokens.css, loaded globally through style.css. */
+
+.action-button {
+    background: var(--primary-dark);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.action-button:hover {
+    background: var(--primary-dark);
+    color: var(--white);
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.action-button:disabled {
+    background: #c8c8c8;
+    color: #777 !important;
+    cursor: not-allowed;
+}
+
+.action-button:disabled:hover {
+    background: #c8c8c8;
+    color: #777 !important;
+}
+
+.secondary-button {
+    background: #fff;
+    color: var(--primary-dark);
+    border: 1px solid var(--primary-dark);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.secondary-button:hover {
+    background: #fff;
+    color: var(--primary-dark);
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.secondary-button:disabled {
+    color: #aaa;
+    border-color: #aaa;
+    cursor: not-allowed;
+}
+
+.secondary-button:disabled:hover {
+    background: #fff;
+    color: #aaa;
+    border-color: #aaa;
+}

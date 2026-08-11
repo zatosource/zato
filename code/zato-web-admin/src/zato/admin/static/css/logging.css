@@ -1,3 +1,5 @@
+@import url("shared/buttons.css");
+
 /* ------------------------------------------------------------ */
 /* Logging - layout overrides                                    */
 /* ------------------------------------------------------------ */
@@ -24,6 +26,13 @@
 .logging-card {
     display: flex;
     flex-direction: column;
+
+    /* The same small slider size the dialog forms (.data-popup) use. */
+    --toggle-width: 32px;
+    --toggle-height: 16px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 2px;
+    --toggle-travel: 16px;
 }
 
 .logging-card .dashboard-card-header {
@@ -168,7 +177,6 @@
 
 .logging-destination-form {
     padding: 8px 24px 16px 24px;
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .logging-form-row {
@@ -183,17 +191,34 @@
     color: #1a1a2e;
 }
 
+/* Sizing only - the look itself comes from the app-wide formalize styles. */
 .logging-form-row input[type="text"],
 .logging-form-row input[type="password"] {
     flex: 1;
-    padding: 6px 10px;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    border-radius: 6px;
-    font-size: 12px;
 }
 
 .logging-form-row-toggle input {
-    flex: 0;
+    flex: 0 0 auto;
+}
+
+/* The hide-show-password plugin wraps each password input in a wrapper
+   whose width is frozen while the form is still hidden - let the wrapper
+   fill the row and the input fill the wrapper instead. */
+.logging-form-row .hideShowPassword-wrapper {
+    flex: 1;
+    display: block !important;
+    width: auto !important;
+}
+
+.logging-form-row .hideShowPassword-wrapper input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.logging-form-row .hideShowPassword-toggle {
+    top: 50% !important;
+    transform: translateY(-50%);
+    right: 6px !important;
 }
 
 /* ------------------------------------------------------------ */

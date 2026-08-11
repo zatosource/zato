@@ -1,81 +1,108 @@
-{% extends "zato/settings/form-page.html" %}
+{% extends "zato/index.html" %}
 
-{% block form_rows %}
-<div class="info-row">
-    <div class="info-label">Name</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_display_name" placeholder="A short name for this connection">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Description</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_description" placeholder="What this connection is used for">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Host</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_host" placeholder="e.g. localhost">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Port</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_port" class="form-value-short" placeholder="e.g. 6379">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">DB number</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_db" class="form-value-short" placeholder="e.g. 0">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Username</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_username">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Password</div>
-    <div class="info-value form-value">
-        <input type="password" id="id_password">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Use SSL/TLS</div>
-    <div class="info-value form-value form-value-checkbox">
-        <input type="checkbox" id="id_ssl">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">SSL CA file</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_ssl_ca_file" placeholder="Path to the CA certificate file">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">SSL certificate file</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_ssl_cert_file" placeholder="Path to the client certificate file">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">SSL key file</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_ssl_key_file" placeholder="Path to the client key file">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Verify SSL certificate</div>
-    <div class="info-value form-value form-value-checkbox">
-        <input type="checkbox" id="id_ssl_verify" checked>
-    </div>
-</div>
+{% block html_title %}Redis{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/redis.css">
 {% endblock %}
 
-{% block form_page_js %}
-{{ redis_values|json_script:"redis-values" }}
-<script type="text/javascript" src="/static/js/redis.js" nonce="{{ CSP_NONCE }}"></script>
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/redis.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        $.fn.zato.redis.init('/zato/redis', {{ config_json|safe }});
+    });
+    </script>
+{% endblock %}
+
+{% block "content" %}
+
+<div id="markup">
+<h2 class="zato">Redis</h2>
+
+<div class="redis-container" id="redis">
+    <div class="redis-card">
+
+        <div class="redis-row">
+            <label class="redis-label" for="redis-display-name">Name</label>
+            <input type="text" id="redis-display-name" />
+        </div>
+
+        <div class="redis-row">
+            <label class="redis-label" for="redis-description">Description</label>
+            <input type="text" id="redis-description" />
+        </div>
+
+        <div class="redis-row">
+            <label class="redis-label" for="redis-host">Host</label>
+            <input type="text" id="redis-host" />
+        </div>
+
+        <div class="redis-row">
+            <label class="redis-label" for="redis-port">Port</label>
+            <input type="text" id="redis-port" class="redis-input-short" />
+        </div>
+
+        <div class="redis-row">
+            <label class="redis-label" for="redis-db">DB number</label>
+            <input type="text" id="redis-db" class="redis-input-short" />
+        </div>
+
+        <div class="redis-row">
+            <label class="redis-label" for="redis-username">Username</label>
+            <input type="text" id="redis-username" autocomplete="off" />
+        </div>
+
+        <div class="redis-row">
+            <label class="redis-label" for="redis-password">Password</label>
+            <input type="password" id="redis-password" autocomplete="new-password" />
+        </div>
+
+        <div class="redis-row">
+            <label class="redis-label" for="redis-ssl">Use SSL/TLS</label>
+            <input type="checkbox" id="redis-ssl" {% if config.ssl %}checked{% endif %} />
+        </div>
+
+        <div class="redis-row">
+            <label class="redis-label" for="redis-ssl-ca-file">SSL CA file</label>
+            <input type="text" id="redis-ssl-ca-file" />
+        </div>
+
+        <div class="redis-row">
+            <label class="redis-label" for="redis-ssl-cert-file">SSL certificate file</label>
+            <input type="text" id="redis-ssl-cert-file" />
+        </div>
+
+        <div class="redis-row">
+            <label class="redis-label" for="redis-ssl-key-file">SSL key file</label>
+            <input type="text" id="redis-ssl-key-file" />
+        </div>
+
+        <div class="redis-row">
+            <label class="redis-label" for="redis-ssl-verify">Verify SSL certificate</label>
+            <input type="checkbox" id="redis-ssl-verify" {% if config.ssl_verify %}checked{% endif %} />
+        </div>
+
+    </div>
+</div>
+
+<div class="redis-actions">
+    <span class="how-it-works-badge" id="redis-how-it-works">How does it work?</span>
+    <span class="redis-save-group">
+        <span class="status-message" id="redis-status"></span>
+        <a href="javascript:void(0)" class="redis-test-link" onclick="$.fn.zato.redis.test(this)">Test connection</a>
+        <input type="submit" value="Save" onclick="$.fn.zato.redis.save()" />
+    </span>
+</div>
+
+</div>
+
 {% endblock %}
