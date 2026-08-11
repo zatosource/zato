@@ -62,7 +62,8 @@ drawing.config = {
         'response': 'REPLY',
         'none': 'SYS',
         'view': 'VIEW',
-        'job': 'SCHEDULER'
+        'job': 'SCHEDULER',
+        'access': 'ACCESS'
     },
 
     // The one event type that is a person reading rather than a message moving

@@ -426,6 +426,17 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     fill: var(--message-flow-job);
 }
 
+/* A log access record - a config change or someone reading a message body -
+   in the same inks the platform's own records wear */
+
+.message-flow-chip-access {
+    fill: rgba(157, 157, 184, 0.18);
+}
+
+.message-flow-chip-text-access {
+    fill: var(--message-flow-sys);
+}
+
 .message-flow-chip-good {
     fill: rgba(116, 207, 146, 0.18);
 }
@@ -834,6 +845,10 @@ svg.message-flow-focus .message-flow-connector-chip:not(.message-flow-lit) {
 
 .message-flow-detail-tab-role-job {
     color: var(--message-flow-job);
+}
+
+.message-flow-detail-tab-role-access {
+    color: var(--message-flow-sys);
 }
 
 .message-flow-detail-tab-id {

@@ -77,6 +77,7 @@ _source_label = {
     AuditSource.Email_SMTP: 'SMTP',
     AuditSource.FHIR: 'FHIR outgoing',
     AuditSource.File_Outgoing: 'File transfer',
+    AuditSource.LLM: 'LLM',
     AuditSource.Config: 'Log access',
     AuditSource.MCP: 'MCP',
     AuditSource.MLLP_Channel: 'MLLP channels',
@@ -111,6 +112,7 @@ _source_event_label = {
     AuditSource.Email_SMTP: 'SMTP',
     AuditSource.FHIR: 'FHIR outgoing',
     AuditSource.File_Outgoing: 'File transfer',
+    AuditSource.LLM: 'LLM',
     AuditSource.MCP: 'MCP',
     AuditSource.MLLP_Channel: 'MLLP channel',
     AuditSource.MLLP_Outgoing: 'MLLP outgoing',
@@ -134,6 +136,7 @@ _source_object_label = {
     AuditSource.Email_SMTP: 'Connection',
     AuditSource.FHIR: 'Connection',
     AuditSource.File_Outgoing: 'Connection',
+    AuditSource.LLM: 'Connection',
     AuditSource.MCP: 'Channel',
     AuditSource.MLLP_Channel: 'Channel',
     AuditSource.MLLP_Outgoing: 'Connection',
@@ -163,6 +166,7 @@ _source_page_url = {
     AuditSource.Email_SMTP: f'/zato/email/smtp/?cluster={default_cluster_id}',
     AuditSource.PubSub: f'/zato/pubsub/topic/?cluster={default_cluster_id}',
     AuditSource.File_Outgoing: f'/zato/outgoing/ftp/?cluster={default_cluster_id}',
+    AuditSource.LLM: f'/zato/outgoing/llm/?cluster={default_cluster_id}&type_=outconn-llm',
 }
 
 # Where one object's own page is - the source's page opened on that object.
@@ -209,6 +213,7 @@ _source_endpoint_label = {
     AuditSource.MLLP_Channel: 'Address',
     AuditSource.MLLP_Outgoing: 'Address',
     AuditSource.FHIR: 'Request',
+    AuditSource.LLM: 'Address',
 }
 
 # How one event type reads on the screen - every member of AuditEvent is here,
@@ -247,6 +252,7 @@ _event_type_label = {
     AuditEvent.Config_Deleted: 'Config deleted',
     AuditEvent.Content_Viewed: 'Content viewed',
     AuditEvent.Job_Executed: 'Job executed',
+    AuditEvent.Auth_Failed: 'Auth failed',
 }
 
 # Per-source page titles - more sources will follow, e.g. REST outgoing connections
@@ -267,6 +273,7 @@ _source_title = {
     'mllp-outgoing': 'Outgoing MLLP audit log',
     'fhir': 'FHIR audit log',
     'scheduler': 'Scheduler audit log',
+    'llm': 'LLM audit log',
 }
 
 # Each column tells the frontend which row key to read, what header label to show
@@ -443,6 +450,17 @@ _fhir_columns = [
     {'key': 'action', 'label': 'Actions', 'type': 'action'},
 ]
 
+_llm_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'object_name', 'label': 'Connection', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Address', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'duration_ms', 'label': 'Duration', 'type': 'text'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
 # The all-events page - every source in one listing - reads each row by the columns
 # every source shares, plus the source itself, which a single-source page never says
 _all_sources_columns = [
@@ -475,6 +493,7 @@ _source_columns = {
     'mllp-outgoing': _mllp_columns,
     'fhir': _fhir_columns,
     'scheduler': _scheduler_columns,
+    'llm': _llm_columns,
 }
 
 # ################################################################################################################################
