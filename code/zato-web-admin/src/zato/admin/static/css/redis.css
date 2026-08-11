@@ -78,27 +78,18 @@
     width: 90px;
 }
 
-/* The hide-show-password plugin wraps the password input in a wrapper whose
-   width the global stylesheet stretches to 100% - size the wrapper to the
-   input instead and center the Show toggle vertically within it. */
-.redis-row .hideShowPassword-wrapper {
-    display: inline-block !important;
-    width: 320px !important;
+/* ------------------------------------------------------------ */
+/* Redis - SSL options depend on the SSL/TLS toggle              */
+/* ------------------------------------------------------------ */
+
+.redis-row-disabled {
+    opacity: 0.4;
 }
 
-.redis-row .hideShowPassword-wrapper input {
-    width: 100%;
-    box-sizing: border-box;
-}
-
-/* The plugin centers the toggle itself with an inline negative margin-top,
-   so the margin must go before translateY can center it - otherwise both
-   would pull the toggle up and it would sit above the middle. */
-.redis-row .hideShowPassword-toggle {
-    top: 50% !important;
-    margin-top: 0 !important;
-    transform: translateY(-50%);
-    right: 6px !important;
+/* A disabled toggle shows gray even when checked - the blue on-state
+   belongs to options that are actually in effect. */
+.redis-row-disabled input[type="checkbox"] {
+    --toggle-on-background: #999;
 }
 
 /* ------------------------------------------------------------ */

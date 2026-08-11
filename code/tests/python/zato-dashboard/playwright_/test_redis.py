@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.crypto.api import CryptoManager
 from zato.common.typing_ import any_, cast_
 
 # Zato - test library
@@ -24,8 +23,6 @@ if 0:
 # ################################################################################################################################
 
 _Page_Url_Pattern = '/zato/redis/'
-
-_Test_Name_Prefix = 'test.redis.' + CryptoManager.generate_hex_string(32) + '.'
 
 _Save_Button = '.redis-save-group input[type="submit"]'
 _Test_Link   = '.redis-test-link'
@@ -67,10 +64,11 @@ class TestRedis:
         ssl_verify_checked = page.is_checked('#redis-ssl-verify')
         assert ssl_verify_checked is True, 'Expected SSL verification to be on by default'
 
-        # .. the certificate fields are present ..
-        _ = page.wait_for_selector('#redis-ssl-ca-file', state='visible')
-        _ = page.wait_for_selector('#redis-ssl-cert-file', state='visible')
-        _ = page.wait_for_selector('#redis-ssl-key-file', state='visible')
+        # .. the certificate fields are present and, with SSL off, they are disabled ..
+        for field in ('ssl_ca_file', 'ssl_cert_file', 'ssl_key_file', 'ssl_verify'):
+            selector = redis_field_selector(field)
+            _ = page.wait_for_selector(selector, state='visible')
+            assert page.is_disabled(selector), f'Expected {selector} to be disabled while SSL is off'
 
         # .. and both the test link and the Save button are present.
         test_link_text = page.inner_text(_Test_Link)
@@ -121,9 +119,6 @@ class TestRedis:
 
         redis_port = zato_dashboard['queue_bridge_redis_port']
 
-        display_name = _Test_Name_Prefix + 'connection'
-        description = 'Description of ' + display_name
-
         # Navigate to the Redis screen ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         _ = page.wait_for_selector('#redis-host', state='visible')
@@ -131,12 +126,10 @@ class TestRedis:
         # .. remember the original values so they can be restored at the end ..
         original_values = {} # type: anydict
 
-        for field in ('display_name', 'description', 'host', 'port', 'db'):
+        for field in ('host', 'port', 'db'):
             original_values[field] = page.input_value(redis_field_selector(field))
 
         # .. fill in the connection details ..
-        page.fill('#redis-display-name', display_name)
-        page.fill('#redis-description', description)
         page.fill('#redis-host', '127.0.0.1')
         page.fill('#redis-port', str(redis_port))
 
@@ -153,12 +146,6 @@ class TestRedis:
         _ = page.wait_for_selector('#redis-host', state='visible')
 
         # .. verify the values came back from the server ..
-        name_value = page.input_value('#redis-display-name')
-        assert name_value == display_name, f'Expected "{display_name}", got: "{name_value}"'
-
-        description_value = page.input_value('#redis-description')
-        assert description_value == description, f'Expected "{description}", got: "{description_value}"'
-
         host_value = page.input_value('#redis-host')
         assert host_value == '127.0.0.1', f'Expected "127.0.0.1", got: "{host_value}"'
 

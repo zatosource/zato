@@ -128,8 +128,6 @@ service_invoker_allow_internal="demo.ping", "zato.api.invoke"
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
 
 [redis]
-name=default
-description=
 host={{redis_host}}
 port={{redis_port}}
 unix_socket_path=

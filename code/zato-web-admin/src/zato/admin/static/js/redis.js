@@ -14,7 +14,7 @@
         test_spinner_label: 'Testing ..',
         test_spinner_delay_ms: 250,
         test_details_title: 'Test connection response',
-        test_ok_hold_ms: 600,
+        test_ok_hold_ms: 1200,
         status_fade_delay_ms: 750,
         status_fade_duration_ms: 500
     };
@@ -24,8 +24,6 @@
     // The per-field help texts behind the "How does it work?" badge,
     // keyed by the ids of the form fields.
     $.fn.zato.redis.field_descriptions = {
-        'redis-display-name': 'A short name for this connection.',
-        'redis-description': 'What this connection is used for.',
         'redis-host': 'The host the Redis server listens on, e.g. localhost.',
         'redis-port': 'The port the Redis server listens on. Default is 6379.',
         'redis-db': 'The number of the Redis logical database to use. Default is 0.',
@@ -45,6 +43,9 @@
 
         $.fn.zato.redis.load_config(config);
 
+        // The SSL options follow the SSL/TLS toggle from now on
+        $('#redis-ssl').on('change', $.fn.zato.redis.update_ssl_state);
+
         $.fn.zato.how_it_works.init({
             badgeId: 'redis-how-it-works',
             divId: '#redis',
@@ -57,10 +58,22 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
+    // Enables or disables the SSL-dependent rows to match the SSL/TLS toggle
+    $.fn.zato.redis.update_ssl_state = function() {
+
+        var is_ssl = document.getElementById('redis-ssl').checked;
+
+        $('.redis-ssl-option').each(function() {
+            var row = $(this);
+            row.toggleClass('redis-row-disabled', !is_ssl);
+            row.find('input').prop('disabled', !is_ssl);
+        });
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
     $.fn.zato.redis.load_config = function(config) {
 
-        document.getElementById('redis-display-name').value = config.display_name;
-        document.getElementById('redis-description').value = config.description;
         document.getElementById('redis-host').value = config.host;
         document.getElementById('redis-port').value = config.port;
         document.getElementById('redis-db').value = config.db;
@@ -78,8 +91,6 @@
     $.fn.zato.redis.get_config = function() {
 
         var config = {
-            display_name: document.getElementById('redis-display-name').value,
-            description: document.getElementById('redis-description').value,
             host: document.getElementById('redis-host').value,
             port: document.getElementById('redis-port').value,
             db: document.getElementById('redis-db').value,

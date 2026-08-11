@@ -32,16 +32,6 @@
     <div class="redis-card">
 
         <div class="redis-row">
-            <label class="redis-label" for="redis-display-name">Name</label>
-            <input type="text" id="redis-display-name" />
-        </div>
-
-        <div class="redis-row">
-            <label class="redis-label" for="redis-description">Description</label>
-            <input type="text" id="redis-description" />
-        </div>
-
-        <div class="redis-row">
             <label class="redis-label" for="redis-host">Host</label>
             <input type="text" id="redis-host" />
         </div>
@@ -71,24 +61,24 @@
             <input type="checkbox" id="redis-ssl" {% if config.ssl %}checked{% endif %} />
         </div>
 
-        <div class="redis-row">
+        <div class="redis-row redis-ssl-option{% if not config.ssl %} redis-row-disabled{% endif %}">
             <label class="redis-label" for="redis-ssl-ca-file">SSL CA file</label>
-            <input type="text" id="redis-ssl-ca-file" />
+            <input type="text" id="redis-ssl-ca-file" {% if not config.ssl %}disabled{% endif %} />
         </div>
 
-        <div class="redis-row">
+        <div class="redis-row redis-ssl-option{% if not config.ssl %} redis-row-disabled{% endif %}">
             <label class="redis-label" for="redis-ssl-cert-file">SSL certificate file</label>
-            <input type="text" id="redis-ssl-cert-file" />
+            <input type="text" id="redis-ssl-cert-file" {% if not config.ssl %}disabled{% endif %} />
         </div>
 
-        <div class="redis-row">
+        <div class="redis-row redis-ssl-option{% if not config.ssl %} redis-row-disabled{% endif %}">
             <label class="redis-label" for="redis-ssl-key-file">SSL key file</label>
-            <input type="text" id="redis-ssl-key-file" />
+            <input type="text" id="redis-ssl-key-file" {% if not config.ssl %}disabled{% endif %} />
         </div>
 
-        <div class="redis-row">
+        <div class="redis-row redis-ssl-option{% if not config.ssl %} redis-row-disabled{% endif %}">
             <label class="redis-label" for="redis-ssl-verify">Verify SSL certificate</label>
-            <input type="checkbox" id="redis-ssl-verify" {% if config.ssl_verify %}checked{% endif %} />
+            <input type="checkbox" id="redis-ssl-verify" {% if config.ssl_verify %}checked{% endif %} {% if not config.ssl %}disabled{% endif %} />
         </div>
 
     </div>

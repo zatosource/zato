@@ -69,10 +69,6 @@ def get_redis_values_from_section(section:'any_') -> 'stranydict':
     out['username'] = _get_section_value(section, 'username', '')
     out['password'] = _get_section_value(section, 'password', '')
 
-    # The display details live in the same section
-    out['display_name'] = _get_section_value(section, 'name', '')
-    out['description']  = _get_section_value(section, 'description', '')
-
     # The port and the database number may arrive as strings from a config file
     port = _get_section_value(section, 'port', Default_Port)
     db   = _get_section_value(section, 'db', Default_DB)

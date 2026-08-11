@@ -87,7 +87,7 @@ _TLS_Ready_Timeout = 30
 _TLS_Ready_Socket_Timeout = 2
 
 # The fields of the Redis form the tests capture and restore
-_Form_Fields = ('display_name', 'description', 'host', 'port', 'db', 'username')
+_Form_Fields = ('host', 'port', 'db', 'username')
 
 # State shared between the sequential tests of this module
 _shared_state = {} # type: dict
@@ -323,13 +323,10 @@ class TestRedisLive:
 
         # Save the session's Redis as the server's connection ..
         save_redis_connection(page, base_url, {
-            'display_name': _Test_Name_Prefix + 'connection',
-            'description': 'The session Redis, saved by the live test',
             'host': '127.0.0.1',
             'port': session_redis_port,
             'db': 0,
             'ssl': False,
-            'ssl_verify': True,
         })
 
         # .. write through self.redis via the fixture service ..
@@ -525,12 +522,14 @@ class TestRedisLive:
 
         original_values = dict(_shared_state['original_values'])
 
-        # The original connection has no SSL and no certificate files
-        original_values['ssl'] = False
+        # The original connection has no SSL and no certificate files - the SSL toggle
+        # goes off last because turning it off disables the fields it depends on
+        # and the form fills fields in the order given here.
         original_values['ssl_verify'] = True
         original_values['ssl_ca_file'] = ''
         original_values['ssl_cert_file'] = ''
         original_values['ssl_key_file'] = ''
+        original_values['ssl'] = False
 
         save_redis_connection(page, base_url, original_values)
 

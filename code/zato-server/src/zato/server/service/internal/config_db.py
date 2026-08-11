@@ -74,8 +74,6 @@ _sql_databases = {
 
 # The keys of the [redis] section of server.conf the Redis screen saves, mapped from the form fields
 _redis_conf_keys = {
-    'display_name':  'name',
-    'description':   'description',
     'host':          'host',
     'port':          'port',
     'db':            'db',

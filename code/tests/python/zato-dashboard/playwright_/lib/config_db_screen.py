@@ -32,7 +32,7 @@ _checkbox_fields = ('ssl', 'ssl_verify')
 # ################################################################################################################################
 
 def redis_field_selector(field:'str') -> 'str':
-    """ Returns the selector of one field of the Redis form, e.g. display_name maps to #redis-display-name.
+    """ Returns the selector of one field of the Redis form, e.g. ssl_ca_file maps to #redis-ssl-ca-file.
     """
     field_id = field.replace('_', '-')
 
