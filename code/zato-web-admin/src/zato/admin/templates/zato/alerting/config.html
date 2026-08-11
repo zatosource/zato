@@ -1,0 +1,330 @@
+{% extends "zato/dashboard_base.html" %}
+
+{% block html_title %}Alert rules{% endblock %}
+
+{% block dashboard_extra_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/alerting-config/index.css">
+{% endblock %}
+
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/sortable/Sortable.min.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/index.js"></script>
+{% endblock %}
+
+{% block dashboard_tiles %}{% endblock %}
+{% block dashboard_header_pill %}{% endblock %}
+{% block dashboard_chart_header_content %}{% endblock %}
+{% block dashboard_time_range_options %}{% endblock %}
+{% block dashboard_refresh_options %}{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div class="alert-rules" id="alert-rules">
+
+            <div class="alert-rules-master" id="alert-rules-master">
+                <label class="alert-rules-master-label" for="id_alert_rules_all">Alert rules | Everything</label>
+                <input type="checkbox" id="id_alert_rules_all" checked>
+                <span class="dashboard-outcome-badge dashboard-outcome-running alert-rules-running"><span class="badge-running-spinner"></span>Running</span>
+                <span class="alert-rules-ok" id="alert-rules-ok-all"></span>
+                <span class="alert-rules-error" id="alert-rules-error"></span>
+            </div>
+
+            <div class="alert-rules-grid">
+
+                <div class="dashboard-card alert-rules-set-card" id="alert-rules-card-rest">
+                    <div class="alert-rules-set-header">
+                        <span class="alert-rules-drag-handle" title="Drag to reorder"><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span></span>
+                        <label class="alert-rules-set-title" for="id_alert_rules_rest">REST and SOAP</label>
+                        <span class="alert-rules-set-status" id="alert-rules-status-rest"></span>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running alert-rules-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="alert-rules-ok" id="alert-rules-ok-rest"></span>
+                        <input type="checkbox" id="id_alert_rules_rest" checked>
+                    </div>
+                    <div class="alert-rules-set-body" id="alert-rules-body-rest">
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="consecutive_failures" data-kind="number" data-value="3" data-suffix=""><span class="alert-rules-param-label">Consecutive failures</span><span class="alert-rules-param-value">3</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="error_rate" data-kind="number" data-value="10" data-suffix="%"><span class="alert-rules-param-label">Error rate</span><span class="alert-rules-param-value">10%</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="incident_threshold" data-kind="number" data-value="25" data-suffix="%"><span class="alert-rules-param-label">Incident threshold</span><span class="alert-rules-param-value">25%</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="max_latency" data-kind="number" data-value="5000" data-suffix=" ms"><span class="alert-rules-param-label">Max latency</span><span class="alert-rules-param-value">5000 ms</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card alert-rules-set-card" id="alert-rules-card-sql">
+                    <div class="alert-rules-set-header">
+                        <span class="alert-rules-drag-handle" title="Drag to reorder"><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span></span>
+                        <label class="alert-rules-set-title" for="id_alert_rules_sql">SQL</label>
+                        <span class="alert-rules-set-status" id="alert-rules-status-sql"></span>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running alert-rules-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="alert-rules-ok" id="alert-rules-ok-sql"></span>
+                        <input type="checkbox" id="id_alert_rules_sql" checked>
+                    </div>
+                    <div class="alert-rules-set-body" id="alert-rules-body-sql">
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="consecutive_failures" data-kind="number" data-value="3" data-suffix=""><span class="alert-rules-param-label">Consecutive failures</span><span class="alert-rules-param-value">3</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="error_rate" data-kind="number" data-value="10" data-suffix="%"><span class="alert-rules-param-label">Error rate</span><span class="alert-rules-param-value">10%</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param"><span class="form_hint">---</span></div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="max_query_time" data-kind="number" data-value="5000" data-suffix=" ms"><span class="alert-rules-param-label">Max query time</span><span class="alert-rules-param-value">5000 ms</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card alert-rules-set-card" id="alert-rules-card-llm">
+                    <div class="alert-rules-set-header">
+                        <span class="alert-rules-drag-handle" title="Drag to reorder"><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span></span>
+                        <label class="alert-rules-set-title" for="id_alert_rules_llm">LLM</label>
+                        <span class="alert-rules-set-status" id="alert-rules-status-llm"></span>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running alert-rules-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="alert-rules-ok" id="alert-rules-ok-llm"></span>
+                        <input type="checkbox" id="id_alert_rules_llm" checked>
+                    </div>
+                    <div class="alert-rules-set-body" id="alert-rules-body-llm">
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="consecutive_failures" data-kind="number" data-value="3" data-suffix=""><span class="alert-rules-param-label">Consecutive failures</span><span class="alert-rules-param-value">3</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="error_rate" data-kind="number" data-value="10" data-suffix="%"><span class="alert-rules-param-label">Error rate</span><span class="alert-rules-param-value">10%</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="warning_latency" data-kind="number" data-value="10000" data-suffix=" ms"><span class="alert-rules-param-label">Warning latency</span><span class="alert-rules-param-value">10000 ms</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="critical_latency" data-kind="number" data-value="15000" data-suffix=" ms"><span class="alert-rules-param-label">Critical latency</span><span class="alert-rules-param-value">15000 ms</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card alert-rules-set-card" id="alert-rules-card-mcp">
+                    <div class="alert-rules-set-header">
+                        <span class="alert-rules-drag-handle" title="Drag to reorder"><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span></span>
+                        <label class="alert-rules-set-title" for="id_alert_rules_mcp">MCP</label>
+                        <span class="alert-rules-set-status" id="alert-rules-status-mcp"></span>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running alert-rules-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="alert-rules-ok" id="alert-rules-ok-mcp"></span>
+                        <input type="checkbox" id="id_alert_rules_mcp" checked>
+                    </div>
+                    <div class="alert-rules-set-body" id="alert-rules-body-mcp">
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="consecutive_failures" data-kind="number" data-value="3" data-suffix=""><span class="alert-rules-param-label">Consecutive failures</span><span class="alert-rules-param-value">3</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="error_rate" data-kind="number" data-value="10" data-suffix="%"><span class="alert-rules-param-label">Error rate</span><span class="alert-rules-param-value">10%</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param"><span class="form_hint">---</span></div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="max_tool_call_time" data-kind="number" data-value="5000" data-suffix=" ms"><span class="alert-rules-param-label">Max tool-call time</span><span class="alert-rules-param-value">5000 ms</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card alert-rules-set-card" id="alert-rules-card-microsoft">
+                    <div class="alert-rules-set-header">
+                        <span class="alert-rules-drag-handle" title="Drag to reorder"><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span></span>
+                        <label class="alert-rules-set-title" for="id_alert_rules_microsoft">Microsoft cloud</label>
+                        <span class="alert-rules-set-status" id="alert-rules-status-microsoft"></span>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running alert-rules-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="alert-rules-ok" id="alert-rules-ok-microsoft"></span>
+                        <input type="checkbox" id="id_alert_rules_microsoft" checked>
+                    </div>
+                    <div class="alert-rules-set-body" id="alert-rules-body-microsoft">
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="consecutive_failures" data-kind="number" data-value="3" data-suffix=""><span class="alert-rules-param-label">Consecutive failures</span><span class="alert-rules-param-value">3</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="error_rate" data-kind="number" data-value="10" data-suffix="%"><span class="alert-rules-param-label">Error rate</span><span class="alert-rules-param-value">10%</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="health_alerts" data-kind="checkbox" data-value="true" data-suffix=""><span class="alert-rules-param-label">Health alerts</span><span class="alert-rules-param-value">On</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="max_call_time" data-kind="number" data-value="2000" data-suffix=" ms"><span class="alert-rules-param-label">Max call time</span><span class="alert-rules-param-value">2000 ms</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card alert-rules-set-card" id="alert-rules-card-email">
+                    <div class="alert-rules-set-header">
+                        <span class="alert-rules-drag-handle" title="Drag to reorder"><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span></span>
+                        <label class="alert-rules-set-title" for="id_alert_rules_email">Email</label>
+                        <span class="alert-rules-set-status" id="alert-rules-status-email"></span>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running alert-rules-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="alert-rules-ok" id="alert-rules-ok-email"></span>
+                        <input type="checkbox" id="id_alert_rules_email" checked>
+                    </div>
+                    <div class="alert-rules-set-body" id="alert-rules-body-email">
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="consecutive_failures" data-kind="number" data-value="3" data-suffix=""><span class="alert-rules-param-label">Consecutive failures</span><span class="alert-rules-param-value">3</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="error_rate" data-kind="number" data-value="10" data-suffix="%"><span class="alert-rules-param-label">Error rate</span><span class="alert-rules-param-value">10%</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="auth_failures" data-kind="number" data-value="3" data-suffix=""><span class="alert-rules-param-label">Auth failures</span><span class="alert-rules-param-value">3</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param"><span class="form_hint">---</span></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card alert-rules-set-card" id="alert-rules-card-odoo">
+                    <div class="alert-rules-set-header">
+                        <span class="alert-rules-drag-handle" title="Drag to reorder"><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span></span>
+                        <label class="alert-rules-set-title" for="id_alert_rules_odoo">Odoo</label>
+                        <span class="alert-rules-set-status" id="alert-rules-status-odoo"></span>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running alert-rules-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="alert-rules-ok" id="alert-rules-ok-odoo"></span>
+                        <input type="checkbox" id="id_alert_rules_odoo" checked>
+                    </div>
+                    <div class="alert-rules-set-body" id="alert-rules-body-odoo">
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="consecutive_failures" data-kind="number" data-value="3" data-suffix=""><span class="alert-rules-param-label">Consecutive failures</span><span class="alert-rules-param-value">3</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="error_rate" data-kind="number" data-value="10" data-suffix="%"><span class="alert-rules-param-label">Error rate</span><span class="alert-rules-param-value">10%</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="auth_failures" data-kind="number" data-value="3" data-suffix=""><span class="alert-rules-param-label">Auth failures</span><span class="alert-rules-param-value">3</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="max_call_time" data-kind="number" data-value="2000" data-suffix=" ms"><span class="alert-rules-param-label">Max call time</span><span class="alert-rules-param-value">2000 ms</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card alert-rules-set-card" id="alert-rules-card-file_transfer">
+                    <div class="alert-rules-set-header">
+                        <span class="alert-rules-drag-handle" title="Drag to reorder"><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span></span>
+                        <label class="alert-rules-set-title" for="id_alert_rules_file_transfer">File transfer</label>
+                        <span class="alert-rules-set-status" id="alert-rules-status-file_transfer"></span>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running alert-rules-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="alert-rules-ok" id="alert-rules-ok-file_transfer"></span>
+                        <input type="checkbox" id="id_alert_rules_file_transfer" checked>
+                    </div>
+                    <div class="alert-rules-set-body" id="alert-rules-body-file_transfer">
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="consecutive_failures" data-kind="number" data-value="3" data-suffix=""><span class="alert-rules-param-label">Consecutive failures</span><span class="alert-rules-param-value">3</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="warning_failures" data-kind="number" data-value="10" data-suffix=""><span class="alert-rules-param-label">Warning failures</span><span class="alert-rules-param-value">10</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="critical_failures" data-kind="number" data-value="20" data-suffix=""><span class="alert-rules-param-label">Critical failures</span><span class="alert-rules-param-value">20</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="canary_checks" data-kind="checkbox" data-value="false" data-suffix=""><span class="alert-rules-param-label">Canary checks</span><span class="alert-rules-param-value">Off</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card alert-rules-set-card" id="alert-rules-card-scheduler">
+                    <div class="alert-rules-set-header">
+                        <span class="alert-rules-drag-handle" title="Drag to reorder"><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span></span>
+                        <label class="alert-rules-set-title" for="id_alert_rules_scheduler">Scheduler</label>
+                        <span class="alert-rules-set-status" id="alert-rules-status-scheduler"></span>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running alert-rules-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="alert-rules-ok" id="alert-rules-ok-scheduler"></span>
+                        <input type="checkbox" id="id_alert_rules_scheduler" checked>
+                    </div>
+                    <div class="alert-rules-set-body" id="alert-rules-body-scheduler">
+                        <div class="alert-rules-param"><span class="form_hint">---</span></div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="error_rate" data-kind="number" data-value="10" data-suffix="%"><span class="alert-rules-param-label">Error rate</span><span class="alert-rules-param-value">10%</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="overdue_multiplier" data-kind="number" data-value="2" data-suffix=""><span class="alert-rules-param-label">Overdue multiplier</span><span class="alert-rules-param-value">2</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="start_delay" data-kind="number" data-value="5000" data-suffix=" ms"><span class="alert-rules-param-label">Start delay</span><span class="alert-rules-param-value">5000 ms</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card alert-rules-set-card" id="alert-rules-card-channels">
+                    <div class="alert-rules-set-header">
+                        <span class="alert-rules-drag-handle" title="Drag to reorder"><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span></span>
+                        <label class="alert-rules-set-title" for="id_alert_rules_channels">Channels</label>
+                        <span class="alert-rules-set-status" id="alert-rules-status-channels"></span>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running alert-rules-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="alert-rules-ok" id="alert-rules-ok-channels"></span>
+                        <input type="checkbox" id="id_alert_rules_channels" checked>
+                    </div>
+                    <div class="alert-rules-set-body" id="alert-rules-body-channels">
+                        <div class="alert-rules-param"><span class="form_hint">---</span></div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="error_rate" data-kind="number" data-value="10" data-suffix="%"><span class="alert-rules-param-label">Error rate</span><span class="alert-rules-param-value">10%</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param"><span class="form_hint">---</span></div>
+                        <div class="alert-rules-param"><span class="form_hint">---</span></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card alert-rules-set-card" id="alert-rules-card-common">
+                    <div class="alert-rules-set-header">
+                        <span class="alert-rules-drag-handle" title="Drag to reorder"><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span><span class="alert-rules-drag-handle-dot-row"><span class="alert-rules-drag-handle-dot"></span><span class="alert-rules-drag-handle-dot"></span></span></span>
+                        <label class="alert-rules-set-title" for="id_alert_rules_common">Common</label>
+                        <span class="alert-rules-set-status" id="alert-rules-status-common"></span>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running alert-rules-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="alert-rules-ok" id="alert-rules-ok-common"></span>
+                        <input type="checkbox" id="id_alert_rules_common" checked>
+                    </div>
+                    <div class="alert-rules-set-body" id="alert-rules-body-common">
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="certificate_warning" data-kind="number" data-value="7" data-suffix=" days"><span class="alert-rules-param-label">Certificate warning</span><span class="alert-rules-param-value">7 days</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="outstanding_backlog" data-kind="number" data-value="100" data-suffix=""><span class="alert-rules-param-label">Outstanding backlog</span><span class="alert-rules-param-value">100</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="feed_silence" data-kind="number" data-value="7200" data-suffix=" s"><span class="alert-rules-param-label">Feed silence</span><span class="alert-rules-param-value">7200 s</span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+                        <div class="alert-rules-param"><span class="form_hint">---</span></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="alert-rules-row-fields" hidden>
+                <input type="number" id="id_alert-rules-row-consecutive_failures">
+                <input type="number" id="id_alert-rules-row-error_rate">
+                <input type="number" id="id_alert-rules-row-incident_threshold">
+                <input type="number" id="id_alert-rules-row-max_latency">
+                <input type="number" id="id_alert-rules-row-max_query_time">
+                <input type="number" id="id_alert-rules-row-warning_latency">
+                <input type="number" id="id_alert-rules-row-critical_latency">
+                <input type="number" id="id_alert-rules-row-max_tool_call_time">
+                <input type="checkbox" id="id_alert-rules-row-health_alerts">
+                <input type="number" id="id_alert-rules-row-max_call_time">
+                <input type="number" id="id_alert-rules-row-auth_failures">
+                <input type="number" id="id_alert-rules-row-warning_failures">
+                <input type="number" id="id_alert-rules-row-critical_failures">
+                <input type="checkbox" id="id_alert-rules-row-canary_checks">
+                <input type="number" id="id_alert-rules-row-overdue_multiplier">
+                <input type="number" id="id_alert-rules-row-start_delay">
+                <input type="number" id="id_alert-rules-row-certificate_warning">
+                <input type="number" id="id_alert-rules-row-outstanding_backlog">
+                <input type="number" id="id_alert-rules-row-feed_silence">
+            </div>
+
+            <div class="alert-rules-footer">
+                <span class="how-it-works-badge" id="alert-rules-how-it-works">How does it work?</span>
+            </div>
+
+        </div>
+
+{% endblock %}

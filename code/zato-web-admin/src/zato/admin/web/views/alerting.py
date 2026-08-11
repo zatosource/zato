@@ -68,6 +68,21 @@ def _find_definition(backend:'RuleSQLBackend', name:'str', object_type:'str') ->
 # ################################################################################################################################
 
 @method_allowed('GET')
+def config(req:'any_') -> 'TemplateResponse':
+    """ The alert rules config screen - one card per rule family, each with the
+    parameters its rules are driven by. The values shown are the seeded defaults,
+    hardcoded in the template for now - the wiring that reads and saves them
+    comes separately.
+    """
+    return TemplateResponse(req, 'zato/alerting/config.html', {
+        'cluster_id': default_cluster_id,
+        'zato_clusters': True,
+        'zato_template_name': 'zato/alerting/config.html',
+    })
+
+# ################################################################################################################################
+
+@method_allowed('GET')
 def index(req:'any_') -> 'TemplateResponse':
     """ The alert rules listing - the shared ruleset browser, opened straight
     onto the rules of the alerts ruleset.

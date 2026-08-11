@@ -1,0 +1,18 @@
+/* Dashboard kit - the tag.
+   The one face every short tinted word wears - the role tags of the audit log
+   and message flow listings, the state badges of the alert rules screen. Solid
+   ink over a light tint of the same hue, with the host's tint classes naming
+   the hues. */
+
+.dashboard-tag {
+    display: inline-block;
+    min-width: 30px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: var(--dashboard-mono);
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0.6px;
+    user-select: none;
+}

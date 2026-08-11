@@ -44,7 +44,7 @@
        is left out everywhere else. */
     kit.role.tag = function(role, title, variant) {
         var config = kit.role.config;
-        var classes = 'dashboard-role ' + config.css_classes[role];
+        var classes = 'dashboard-tag ' + config.css_classes[role];
 
         if (variant === 'dark') {
             classes += ' ' + config.dark_class;

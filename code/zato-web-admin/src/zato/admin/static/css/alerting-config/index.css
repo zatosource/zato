@@ -1,0 +1,275 @@
+@import url("../dashboard-kit/tag.css");
+
+/*
+ * Alert rules - the rows screen.
+ *
+ * One slim full-width band per rule family - the family's name and state
+ * badge stand in a fixed left column, and the values run to the right as
+ * one quiet line, each in the same column on every row. Clicking a value
+ * opens the row's popover editor on that very field. Above the rows sits
+ * the master "Everything" slider, and below them the page-wide help badge.
+ */
+
+/* ------------------------------------------------------------ */
+/* Alert rules - the rows                                        */
+/* ------------------------------------------------------------ */
+
+/* The wizard kit narrows the section to one wizard's width - full-width
+   rows need the room back */
+.dashboard-grid-section {
+    max-width: 1100px;
+}
+
+.alert-rules-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+/* ------------------------------------------------------------ */
+/* Alert rules - the master slider                               */
+/* ------------------------------------------------------------ */
+
+.alert-rules-master {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 2px 2px 16px;
+}
+
+.alert-rules-master-label {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--wizard-text);
+    cursor: pointer;
+}
+
+/* Where a failed change explains itself, with room to wrap */
+.alert-rules-error {
+    font-size: 12px;
+    color: var(--wizard-error);
+    overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------ */
+/* Alert rules - a family's row                                  */
+/* ------------------------------------------------------------ */
+
+/* The kit sizes dashboard cards for charts - these are slim quiet bands,
+   the header in a fixed left column and the values filling the rest */
+.dashboard-grid-section .alert-rules-set-card {
+    min-height: 0;
+    padding: 0.55rem 1.3rem;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    column-gap: 24px;
+    align-items: center;
+    border-color: rgba(69, 84, 96, 0.3);
+    box-shadow: none;
+}
+
+.alert-rules-set-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.alert-rules-set-title {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--wizard-text);
+}
+
+/* The family sliders wait for their own screen - the badge says what
+   state a family is in for now. The long selector is deliberate: the
+   global toggle rule in style.css weighs (0,4,4) through its three
+   :not() clauses, so this one carries five class-level parts to win. */
+.alert-rules .alert-rules-grid .alert-rules-set-card .alert-rules-set-header input[type="checkbox"] {
+    display: none;
+}
+
+/* The handle a row is picked up by to reorder it - the same dot grid
+   the rate limiting rules use */
+.alert-rules-drag-handle {
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 2px;
+    flex-shrink: 0;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+}
+
+.alert-rules-set-card:hover .alert-rules-drag-handle {
+    opacity: 0.7;
+}
+
+.alert-rules-drag-handle-dot-row {
+    display: flex;
+    gap: 2px;
+}
+
+.alert-rules-drag-handle-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #666666;
+}
+
+/* The ghost Sortable leaves at the drop spot while a row is carried */
+.alert-rules-set-card.alert-rules-dragging {
+    opacity: 0.5;
+    border-color: #5794d0;
+    box-shadow: 0 2px 8px #5794d033;
+}
+
+/* The state badges are the shared dashboard tags - the same face the role
+   tags of the message flow and audit log listings wear - and this file only
+   names their hues, a muted sage for on and a quiet grey for off */
+.alert-rules {
+    --alert-rules-badge-on-ink: #78937a;
+    --alert-rules-badge-on-bg: rgba(78, 113, 80, 0.06);
+    --alert-rules-badge-off-ink: #7d8794;
+    --alert-rules-badge-off-bg: rgba(110, 110, 115, 0.1);
+}
+
+.alert-rules-state-on {
+    color: var(--alert-rules-badge-on-ink);
+    background: var(--alert-rules-badge-on-bg);
+}
+
+.alert-rules-state-off {
+    color: var(--alert-rules-badge-off-ink);
+    background: var(--alert-rules-badge-off-bg);
+}
+
+/* ------------------------------------------------------------ */
+/* Alert rules - the Running badge of a change on its way        */
+/* ------------------------------------------------------------ */
+
+/* The badge sits by the sliders a change touches and only shows while
+   the request is on its way */
+.alert-rules-running {
+    display: none;
+}
+
+.alert-rules-busy .alert-rules-running {
+    display: inline-block;
+}
+
+/* Once a change is done, a green confirmation stands where Running was,
+   for the moment its JS timer gives it - plain text, not a badge */
+.alert-rules-ok {
+    display: none;
+    color: var(--wizard-done);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.alert-rules-ok-visible {
+    display: inline-block;
+}
+
+/* ------------------------------------------------------------ */
+/* Alert rules - the status badge after a row's name             */
+/* ------------------------------------------------------------ */
+
+/* The badge stands right after the name, centred on the name's own height,
+   and the room left over keeps the column's width */
+.alert-rules-set-status {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+/* ------------------------------------------------------------ */
+/* Alert rules - a row's value columns                           */
+/* ------------------------------------------------------------ */
+
+/* Four fixed columns shared by every row, so the same kind of value
+   stands at the same place all the way down the page */
+.alert-rules-set-body {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px 24px;
+    align-items: center;
+}
+
+.alert-rules-param {
+    display: flex;
+    align-items: baseline;
+}
+
+/* The whole cell is one click target - label, value and the hint that
+   waits for a hover, all on one line that never wraps. The wizard link
+   the cell reuses sizes itself for the sliders it usually sits next to,
+   so it is re-grounded here where no slider variables are in scope. */
+.alert-rules-param .wizard-toggle-edit {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    white-space: nowrap;
+    height: auto;
+    line-height: normal;
+}
+
+.alert-rules-param-label {
+    font-size: 11px;
+    color: var(--wizard-text-muted);
+}
+
+.alert-rules-param-value {
+    font-size: 11px;
+    font-weight: 600;
+    color: #52525b;
+}
+
+/* The hint may run past its own column - it paints over whatever stands
+   next so it stays readable, and only ever on a hover */
+.alert-rules-param .zato-soft-hint {
+    position: relative;
+    z-index: 1;
+    background: #fff;
+    margin-left: 0;
+}
+
+/* A value that does not apply to the family - a quiet placeholder
+   holding the column open */
+.alert-rules-param .form_hint {
+    color: var(--wizard-text-muted);
+    opacity: 0.6;
+}
+
+/* ------------------------------------------------------------ */
+/* Alert rules - a family that is off                            */
+/* ------------------------------------------------------------ */
+
+/* An off family steps back as a whole - its name noticeably, and its
+   border, background and values much further still, so the name is what
+   remains readable */
+.alert-rules-set-card.alert-rules-set-off {
+    border-color: rgba(69, 84, 96, 0.1);
+    background: rgba(255, 255, 255, 0.45);
+}
+
+.alert-rules-set-off .alert-rules-set-title,
+.alert-rules-set-off .alert-rules-set-status {
+    opacity: 0.4;
+}
+
+.alert-rules-set-off .alert-rules-set-body {
+    opacity: 0.18;
+}
+
+.alert-rules-set-off .alert-rules-drag-handle {
+    opacity: 0.2;
+}
+
+/* ------------------------------------------------------------ */
+/* Alert rules - the page-wide help below the grid               */
+/* ------------------------------------------------------------ */
+
+.alert-rules-footer {
+    padding-top: 16px;
+}

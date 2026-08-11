@@ -1,18 +1,8 @@
-/* Dashboard kit - the role tag.
-   A short uppercase word tinted by the part the message plays in its exchange. */
+@import url("tag.css");
 
-.dashboard-role {
-    display: inline-block;
-    min-width: 30px;
-    padding: 1px 5px;
-    border-radius: 3px;
-    font-family: var(--dashboard-mono);
-    font-size: 10px;
-    font-weight: 700;
-    text-align: center;
-    letter-spacing: 0.6px;
-    user-select: none;
-}
+/* Dashboard kit - the role tag.
+   A short uppercase word tinted by the part the message plays in its exchange.
+   The face itself is the shared dashboard tag - this file only names the hues. */
 
 .dashboard-role-request {
     color: #0f6ea8;

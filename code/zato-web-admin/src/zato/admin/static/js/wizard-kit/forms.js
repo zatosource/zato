@@ -90,6 +90,11 @@ kit.forms.defaults = {
     // so it has nothing to back out of, while a popover that saves on its own does
     showCancel: false,
 
+    // Whether each label stands in a column of its own to the left of its
+    // input, so the fields read as a table of keys and values, rather than
+    // above the input the way the wizards have theirs
+    labelsLeft: false,
+
     // The per-field help badge label - the badge is rebuilt with every
     // page render, so one id can serve every micro-form
     helpBadgeLabel: 'How does it work?'
@@ -121,6 +126,9 @@ kit.forms.setup = function(wizard, config) {
 
     // The currently open popover, if any
     forms._instance = null;
+
+    // The input the next popover puts the cursor into, when the caller named one
+    forms._focusInputId = null;
 
     // The field kinds the instance registered on top of the built-in ones
     forms._kinds = {};
@@ -259,7 +267,28 @@ kit.forms.setup = function(wizard, config) {
                 // The title is the drag handle - the whole popover follows it
                 forms._makeDraggable(tippyInstance);
 
-                // The first input is ready for typing right away
+                // The input the popover was opened for takes the cursor, with its
+                // value selected so typing replaces it right away ..
+                var wantedInput = null;
+
+                if(forms._focusInputId) {
+                    wantedInput = tippyInstance.popper.querySelector('#' + forms._focusInputId);
+                    forms._focusInputId = null;
+                }
+
+                if(wantedInput) {
+                    wantedInput.focus();
+
+                    // A text or number input offers its value for typing over -
+                    // a select has no such call and its focus is the whole story
+                    if(wantedInput.select) {
+                        wantedInput.select();
+                    }
+                    return;
+                }
+
+                // .. and with no field named, the first input is the one
+                // ready for typing.
                 var firstInput = tippyInstance.popper.querySelector('input[type="text"], select');
                 if(firstInput) {
                     firstInput.focus();
@@ -579,15 +608,24 @@ kit.forms.setup = function(wizard, config) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Opens the named micro-form anchored to the given element.
-    forms.open = function(descriptorName, targetElement) {
+    // Opens the named micro-form anchored to the given element. The optional
+    // focusFieldName says which input takes the cursor once the popover is on
+    // screen - a page whose every value opens the same popover names the very
+    // field that was clicked.
+    forms.open = function(descriptorName, targetElement, focusFieldName) {
 
         var formsConfig = forms.config;
         var descriptor = forms.descriptors[descriptorName];
 
+        forms._focusInputId = focusFieldName ? forms.inputId(focusFieldName) : null;
+
         var container = document.createElement('div');
         container.className = 'wizard-tippy-form zato-popup';
         container.id = formsConfig.popupId;
+
+        if(formsConfig.labelsLeft) {
+            container.classList.add('wizard-tippy-labels-left');
+        }
 
         if(descriptor.width) {
             container.style.width = descriptor.width;

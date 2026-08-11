@@ -1213,6 +1213,35 @@ a.wizard-cancel {
     color: var(--wizard-text-muted);
 }
 
+/* A host may ask for its labels in a column of their own, to the left of
+   the inputs - every row then reads as one line of a table of keys and
+   values, the labels sharing one width and the inputs starting level */
+.wizard-tippy-labels-left {
+    --wizard-tippy-label-width: 150px;
+}
+
+.wizard-tippy-labels-left .wizard-tippy-field {
+    display: grid;
+    grid-template-columns: var(--wizard-tippy-label-width) 1fr;
+    align-items: center;
+    column-gap: 12px;
+}
+
+/* A checkbox row keeps to the same two columns - its text where the other
+   labels stand and its switch where the other inputs begin */
+.wizard-tippy-labels-left .wizard-tippy-checkbox {
+    display: grid;
+    grid-template-columns: var(--wizard-tippy-label-width) 1fr;
+    column-gap: 12px;
+    justify-items: start;
+}
+
+.wizard-tippy-labels-left .wizard-tippy-checkbox-text {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--wizard-text-muted);
+}
+
 /* One explicit height keeps rows mixing inputs and selects even */
 .wizard-tippy-field input[type="text"],
 .wizard-tippy-field input[type="number"],
