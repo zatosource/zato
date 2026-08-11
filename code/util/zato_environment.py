@@ -40,6 +40,12 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Files that were deleted from the source tree but may still exist in environments updated in place,
+# given as glob patterns relative to the installation's code directory.
+_deleted_file_patterns = [
+    'zato-server/src/zato/server/service/internal/pubsub/client.py',
+    'zato-server/src/zato/server/service/internal/pubsub/__pycache__/client.*.pyc',
+]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -661,11 +667,27 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
+    def delete_removed_files(self) -> 'None':
+
+        # Go through all the files that used to be part of the source tree ..
+        for pattern in _deleted_file_patterns:
+
+            # .. resolve each pattern relative to our installation directory ..
+            full_pattern = os.path.join(self.base_dir, pattern)
+
+            # .. and delete any matches remaining from previous versions.
+            for path in glob.glob(full_pattern):
+                os.remove(path)
+                logger.info('Deleted `%s`', path)
+
+# ################################################################################################################################
+
     def update(self) -> 'None':
 
         self.update_git_revision()
         self.pip_install()
         self.copy_patches()
+        self.delete_removed_files()
 
 # ################################################################################################################################
 
