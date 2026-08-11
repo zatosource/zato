@@ -239,6 +239,13 @@
                         </tr>
 
                         <tr>
+                            <td style="vertical-align:middle">Advanced</td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.mongodb-advanced-block-create')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="mongodb-advanced-block-create hidden">
                             <td style="vertical-align:middle">
                                 <label for="{{ create_form.auth_source.id_for_label }}">Auth source</label>
                             </td>
@@ -255,7 +262,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="mongodb-advanced-block-create hidden">
                             <td style="vertical-align:middle">
                                 <label for="{{ create_form.replica_set.id_for_label }}">Replica set</label>
                             </td>
@@ -264,7 +271,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="mongodb-advanced-block-create hidden">
                             <td style="vertical-align:middle">
                                 <label for="{{ create_form.pool_size_max.id_for_label }}">Pool size</label>
                             </td>
@@ -274,12 +281,12 @@
                                 |
 
                                 <label for="{{ create_form.connect_timeout.id_for_label }}">
-                                Timeout (s.) connect
+                                Connect timeout
                                 {{ create_form.connect_timeout }}
                                 </label>
 
                                 <label for="{{ create_form.server_select_timeout.id_for_label }}">
-                                server select
+                                Server select
                                 {{ create_form.server_select_timeout }}
                                 </label>
 
@@ -289,6 +296,13 @@
                         <tr>
                             <td style="vertical-align:middle">TLS</td>
                             <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.mongodb-tls-block-create')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="mongodb-tls-block-create hidden">
+                            <td></td>
+                            <td style="padding-top:10px">
 
                                 <label for="{{ create_form.is_tls_enabled.id_for_label }}">
                                 Enabled
@@ -305,7 +319,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="mongodb-tls-block-create hidden">
                             <td style="vertical-align:middle">
                                 <label for="{{ create_form.tls_ca_certs_file.id_for_label }}">TLS CA certs file</label>
                             </td>
@@ -314,7 +328,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="mongodb-tls-block-create hidden">
                             <td style="vertical-align:middle">
                                 <label for="{{ create_form.tls_cert_key_file.id_for_label }}">TLS cert/key file</label>
                             </td>
@@ -391,6 +405,13 @@
                         </tr>
 
                         <tr>
+                            <td style="vertical-align:middle">Advanced</td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.mongodb-advanced-block-edit')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="mongodb-advanced-block-edit hidden">
                             <td style="vertical-align:middle">
                                 <label for="{{ edit_form.auth_source.id_for_label }}">Auth source</label>
                             </td>
@@ -407,7 +428,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="mongodb-advanced-block-edit hidden">
                             <td style="vertical-align:middle">
                                 <label for="{{ edit_form.replica_set.id_for_label }}">Replica set</label>
                             </td>
@@ -416,7 +437,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="mongodb-advanced-block-edit hidden">
                             <td style="vertical-align:middle">
                                 <label for="{{ edit_form.pool_size_max.id_for_label }}">Pool size</label>
                             </td>
@@ -426,12 +447,12 @@
                                 |
 
                                 <label for="{{ edit_form.connect_timeout.id_for_label }}">
-                                Timeout (s.) connect
+                                Connect timeout
                                 {{ edit_form.connect_timeout }}
                                 </label>
 
                                 <label for="{{ edit_form.server_select_timeout.id_for_label }}">
-                                server select
+                                Server select
                                 {{ edit_form.server_select_timeout }}
                                 </label>
 
@@ -441,6 +462,13 @@
                         <tr>
                             <td style="vertical-align:middle">TLS</td>
                             <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.mongodb-tls-block-edit')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="mongodb-tls-block-edit hidden">
+                            <td></td>
+                            <td style="padding-top:10px">
 
                                 <label for="{{ edit_form.is_tls_enabled.id_for_label }}">
                                 Enabled
@@ -457,7 +485,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="mongodb-tls-block-edit hidden">
                             <td style="vertical-align:middle">
                                 <label for="{{ edit_form.tls_ca_certs_file.id_for_label }}">TLS CA certs file</label>
                             </td>
@@ -466,7 +494,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="mongodb-tls-block-edit hidden">
                             <td style="vertical-align:middle">
                                 <label for="{{ edit_form.tls_cert_key_file.id_for_label }}">TLS cert/key file</label>
                             </td>
