@@ -68,6 +68,9 @@ _as2_resend_service_impl_name = 'zato.server.service.internal.as2.ResendOverdueM
 # The Python path of the service the AS4 reception awareness job invokes, created upfront the same way.
 _as4_resend_service_impl_name = 'zato.server.service.internal.as4.ResendOverdueMessages'
 
+# Whether the AS2/AS4 jobs are created on startup
+_as2_as4_jobs_enabled = False
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -75,6 +78,8 @@ def ensure_as2_rotation_job_exists(session:'any_', cluster_id:'int') -> 'bool':
     """ Checks if the interval job that completes AS2 certificate rotations exists, creates it if not.
     Returns True if created, False if already existed.
     """
+    if not _as2_as4_jobs_enabled:
+        return False
 
     existing = session.query(Job).\
         filter(Job.name==AS2.Default.Rotation_Job_Name).\
@@ -177,6 +182,9 @@ def ensure_as2_async_mdn_job_exists(session:'any_', cluster_id:'int') -> 'bool':
     """ Checks if the interval job that drains the asynchronous MDN queue exists, creates it if not.
     Returns True if created, False if already existed.
     """
+    if not _as2_as4_jobs_enabled:
+        return False
+
     out = _ensure_interval_job_exists(session, cluster_id, AS2.Async_MDN.Job_Name, AS2.Async_MDN.Service,
         _as2_async_mdn_service_impl_name, AS2.Async_MDN.Job_Interval_Minutes)
 
@@ -189,6 +197,9 @@ def ensure_as2_resend_job_exists(session:'any_', cluster_id:'int') -> 'bool':
     """ Checks if the interval job that resends messages with an overdue MDN exists, creates it
     if not. Returns True if created, False if already existed.
     """
+    if not _as2_as4_jobs_enabled:
+        return False
+
     out = _ensure_interval_job_exists(session, cluster_id, AS2.Resend.Job_Name, AS2.Resend.Service,
         _as2_resend_service_impl_name, AS2.Resend.Job_Interval_Minutes)
 
@@ -201,6 +212,9 @@ def ensure_as4_resend_job_exists(session:'any_', cluster_id:'int') -> 'bool':
     """ Checks if the interval job that repeats the delivery of messages with an overdue AS4 receipt
     exists, creates it if not. Returns True if created, False if already existed.
     """
+    if not _as2_as4_jobs_enabled:
+        return False
+
     out = _ensure_interval_job_exists(session, cluster_id, AS4.Resend.Job_Name, AS4.Resend.Service,
         _as4_resend_service_impl_name, AS4.Resend.Job_Interval_Minutes)
 
