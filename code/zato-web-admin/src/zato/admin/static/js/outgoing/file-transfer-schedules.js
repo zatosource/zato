@@ -15,7 +15,7 @@ $(document).ready(function() {
     }
 
     // Each option's value is the URL of that connection's own schedule list.
-    $('#ft-schedules-conn-select').change(function() {
+    $('#file-transfer-schedules-conn-select').change(function() {
         window.location.href = this.value;
     });
 });
@@ -33,8 +33,8 @@ $.fn.zato.outgoing.file_transfer.schedules.delete_ = function(id, name) {
         }
 
         // Where the delete endpoint lives and which connection the schedule belongs to
-        var deleteUrl = $('#ft-schedules-delete-url').val();
-        var connId = $('#ft-schedules-conn-id').val();
+        var deleteUrl = $('#file-transfer-schedules-delete-url').val();
+        var connId = $('#file-transfer-schedules-conn-id').val();
 
         var callback = function(data, status) {
 

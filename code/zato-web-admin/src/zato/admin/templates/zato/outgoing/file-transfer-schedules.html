@@ -38,7 +38,7 @@ recurring pickup task created through the schedule wizard. The view provides:
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
     <div id="markup">
-        <h2 class="zato">{% include "zato/include/header-brand.html" with badge=badge_label %}<select id="ft-schedules-conn-select">
+        <h2 class="zato">{% include "zato/include/header-brand.html" with badge=badge_label %}<select id="file-transfer-schedules-conn-select">
             {% for item in connection_list %}
             <option value="{{ item.url }}"{% if item.name == conn_name %} selected{% endif %}>{{ item.name }}</option>
             {% endfor %}
@@ -107,8 +107,8 @@ recurring pickup task created through the schedule wizard. The view provides:
         </table>
 
         {% comment %} The delete function reads these {% endcomment %}
-        <input type="hidden" id="ft-schedules-conn-id" value="{{ conn_id }}" />
-        <input type="hidden" id="ft-schedules-delete-url" value="{% url "out-file-transfer-schedule-delete" %}" />
+        <input type="hidden" id="file-transfer-schedules-conn-id" value="{{ conn_id }}" />
+        <input type="hidden" id="file-transfer-schedules-delete-url" value="{% url "out-file-transfer-schedule-delete" %}" />
 
     </div>
 
