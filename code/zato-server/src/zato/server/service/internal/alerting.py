@@ -16,6 +16,7 @@ import requests
 # Zato
 from zato.common.api import Alerting, EMAIL, SMTPMessage
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
+from zato.common.alerting.names import get_notification_conn_name
 from zato.common.alerting.notification_config import read_notification_config, set_notification_config
 from zato.common.alerting.probes import parse_tls_target, run_canary_probe, run_certificate_probe, run_health_probe
 from zato.common.alerting.rendering import Template_Dir_Name
@@ -64,7 +65,8 @@ class AlertingRun(AdminService):
     The collectors measure the audit database and the live channel metrics into facts,
     the `alerts` ruleset in the rule engine decides which facts matter, and the matches
     are deduplicated and dispatched through the actions their outcomes name.
-    Email goes out through the SMTP connection named in the job's extra data.
+    Email, Slack and Microsoft Teams go out through the connections that share
+    the default notification name, as long as they exist and are active.
     """
     name = Alerting.Service
 
@@ -82,24 +84,34 @@ class AlertingRun(AdminService):
 # ################################################################################################################################
 
     def _build_transports(self, context:'anydict') -> 'AlertTransports':
-        """ Wires the real delivery callables the engine dispatches through -
-        the named email connection, the server's own invoker, pub/sub and HTTP
-        for webhooks.
+        """ Wires the real delivery callables the engine dispatches through - email,
+        Slack and Microsoft Teams ride on the connections that share the default
+        notification name, next to the server's own invoker, pub/sub and HTTP
+        for plain webhooks. The default connections ship inactive with placeholder
+        details, so each of these callables skips quietly until a person fills
+        its connection in and activates it.
         """
-        email_connection = self._get_extra(Alerting.Extra_Email_Connection, context)
+        conn_name = get_notification_conn_name()
         from_ = self._get_extra(Alerting.Extra_From, context)
 
         def send_email(addresses:'strlist', subject:'str', body:'str') -> 'None':
-
-            # Email is off until the job's extra data names an email connection
-            if not email_connection:
-                self.logger.info('No email connection is configured for alerting, skipping an email to `%s`', addresses)
-                return
 
             # The email component may be disabled in server.conf
             if not self.email:
                 self.logger.warning(
                     'Could not send an alerting email; is component_enabled.email set to True in server.conf?')
+                return
+
+            # A connection that does not exist sends nothing ..
+            try:
+                smtp_item = self.email.smtp.get(conn_name, True)
+            except KeyError:
+                self.logger.info('No SMTP connection `%s` exists, skipping an email to `%s`', conn_name, addresses)
+                return
+
+            # .. and neither does an inactive one.
+            if not smtp_item.config['is_active']:
+                self.logger.info('SMTP connection `%s` is inactive, skipping an email to `%s`', conn_name, addresses)
                 return
 
             message = SMTPMessage()
@@ -108,7 +120,6 @@ class AlertingRun(AdminService):
             message.subject = subject
             message.body = body
 
-            smtp_item = self.email.smtp.get(email_connection, True)
             smtp_item.conn.send(message)
 
         def invoke_service(service_name:'str', payload:'stranydict') -> 'None':
@@ -116,6 +127,36 @@ class AlertingRun(AdminService):
 
         def publish(topic_name:'str', payload:'stranydict') -> 'None':
             _ = self.server.pubsub_backend.publish(topic_name, payload, cid=self.cid, correl_id=self.cid)
+
+        def send_slack(channel:'str', text:'str') -> 'None':
+
+            # A connection that does not exist or is inactive sends nothing.
+            if conn_name not in self.slack.conn_dict:
+                self.logger.info('No Slack connection `%s` exists, skipping the notification', conn_name)
+                return
+
+            item = self.slack.conn_dict[conn_name]
+
+            if not item['is_active']:
+                self.logger.info('Slack connection `%s` is inactive, skipping the notification', conn_name)
+                return
+
+            _ = self.slack.send(conn_name, channel, text)
+
+        def send_teams(to:'str', html:'str') -> 'None':
+
+            # A connection that does not exist or is inactive sends nothing.
+            if conn_name not in self.microsoft.teams.conn_dict:
+                self.logger.info('No Microsoft Teams connection `%s` exists, skipping the notification', conn_name)
+                return
+
+            item = self.microsoft.teams.conn_dict[conn_name]
+
+            if not item['is_active']:
+                self.logger.info('Microsoft Teams connection `%s` is inactive, skipping the notification', conn_name)
+                return
+
+            _ = self.microsoft.teams.send(conn_name, to, html)
 
         def http_post(url:'str', payload:'stranydict') -> 'None':
             response = requests.post(url, json=payload, timeout=_webhook_timeout)
@@ -128,6 +169,8 @@ class AlertingRun(AdminService):
         out.send_email = send_email
         out.invoke_service = invoke_service
         out.publish = publish
+        out.send_slack = send_slack
+        out.send_teams = send_teams
         out.http_post = http_post
 
         return out
@@ -216,8 +259,6 @@ class AlertingRun(AdminService):
 
         # The deployment-level targets a rule without its own delivers through
         defaults = AlertDefaults()
-        defaults.slack_webhook = self._get_extra(Alerting.Extra_Slack_Webhook, context)
-        defaults.teams_webhook = self._get_extra(Alerting.Extra_Teams_Webhook, context)
         defaults.webhook_url = self._get_extra(Alerting.Extra_Webhook_URL, context)
 
         if default_to:

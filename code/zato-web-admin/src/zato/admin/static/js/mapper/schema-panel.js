@@ -38,7 +38,7 @@
 
             var title = document.createElement('h3');
             title.className = 'mapper-empty-state-title';
-            title.textContent = 'No ' + sideLabels[side] + ' schema yet';
+            title.textContent = 'No ' + sideLabels[side] + ' schema';
             wrapper.appendChild(title);
 
             var text = document.createElement('p');

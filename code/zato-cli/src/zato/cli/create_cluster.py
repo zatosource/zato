@@ -297,17 +297,18 @@ class Create(ZatoCommand):
         """
 
         # Zato
-        from zato.common.api import EMAIL, GENERIC, Incidents
+        from zato.common.alerting.names import get_llm_conn_name, get_notification_conn_name
+        from zato.common.api import EMAIL, GENERIC
         from zato.common.odb.model import GenericConn, SMTP
 
-        conn_name = Incidents.Notification_Conn_Name
+        conn_name = get_notification_conn_name()
 
         # Slack, Microsoft Teams and the LLM connection are generic connections
         # and differ only by their type and name.
         generic_details = (
             (conn_name, GENERIC.CONNECTION.TYPE.CHAT_SLACK),
             (conn_name, GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS),
-            (Incidents.LLM_Connection_Name, GENERIC.CONNECTION.TYPE.OUTCONN_LLM),
+            (get_llm_conn_name(), GENERIC.CONNECTION.TYPE.OUTCONN_LLM),
         )
 
         for name, type_ in generic_details:

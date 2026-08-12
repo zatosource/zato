@@ -1,0 +1,23 @@
+/* ------------------------------------------------------------ */
+/* File transfer schedules - page heading                        */
+/* ------------------------------------------------------------ */
+
+/* The site-wide form stylesheet gives every select a height of 1.8em, which sits
+   the text low inside the header, so the height and paddings are stated here instead. */
+#ft-schedules-conn-select {
+    box-sizing: border-box;
+    height: 26px;
+    padding: 0 6px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+/* ------------------------------------------------------------ */
+/* File transfer schedules - page prompt                         */
+/* ------------------------------------------------------------ */
+
+/* The prompt keeps the same distance from the heading above as from the table below */
+div.page_prompt {
+    margin-top: 16px;
+}

@@ -383,8 +383,8 @@ class TestOutgoingSFTPCommandShell:
         opacity = page.evaluate('window.getComputedStyle(document.querySelector(".dashboard-page")).opacity')
         assert opacity == '1', f'Expected the page to be revealed, got opacity "{opacity}"'
 
-        # .. the connection's name is on the card ..
-        conn_name = page.text_content('#sftp-shell-conn-name')
+        # .. the connection's name is what the card's select has selected ..
+        conn_name = page.eval_on_selector('#sftp-shell-conn-select', 'select => select.selectedOptions[0].textContent')
         assert conn_name == sftp_shell['name'], f'Expected "{sftp_shell["name"]}" on the card, got: "{conn_name}"'
 
         # .. and none of the markup the page used to be built from is left.

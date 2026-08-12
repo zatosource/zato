@@ -10,8 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import select
 
 # Zato
-from zato.common.alerting.engine import build_digest, build_slack_payload, build_teams_payload, process_findings, \
-    AlertDefaults, AlertTransports
+from zato.common.alerting.engine import build_digest, process_findings, AlertDefaults, AlertTransports
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, FindingKind
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditSource
 from zato.common.json_internal import loads
@@ -36,8 +35,14 @@ _server_name = 'test-alerting-server'
 # The channel the tests raise findings about
 _channel_name = 'hl7.test.channel'
 
-# The webhook the Slack and Teams rules post to
-_webhook_url = 'https://hooks.example.com/services/T000/B000/XXX'
+# The URL the plain webhook rules post to
+_webhook_url = 'https://example.atlassian.net/automation/webhooks/abc'
+
+# The channel the Slack rules post to
+_slack_channel = '#zato-alerts'
+
+# The team and channel the Teams rules post to
+_teams_to = 'Zato Ops/Alerts'
 
 # The addresses the email rules send to
 _addresses = ['ops@example.com']
@@ -61,6 +66,8 @@ class _TransportRecorder:
         self.emails:'anylist' = []
         self.invocations:'anylist' = []
         self.publications:'anylist' = []
+        self.slack_messages:'anylist' = []
+        self.teams_messages:'anylist' = []
         self.posts:'anylist' = []
 
     def make(self) -> 'AlertTransports':
@@ -75,12 +82,20 @@ class _TransportRecorder:
         def publish(topic:'str', payload:'stranydict') -> 'None':
             self.publications.append((topic, payload))
 
+        def send_slack(channel:'str', text:'str') -> 'None':
+            self.slack_messages.append((channel, text))
+
+        def send_teams(to:'str', html:'str') -> 'None':
+            self.teams_messages.append((to, html))
+
         def http_post(url:'str', payload:'stranydict') -> 'None':
             self.posts.append((url, payload))
 
         out.send_email = send_email
         out.invoke_service = invoke_service
         out.publish = publish
+        out.send_slack = send_slack
+        out.send_teams = send_teams
         out.http_post = http_post
 
         return out
@@ -198,54 +213,63 @@ class TestActions:
 
 # ################################################################################################################################
 
-    def test_the_slack_action_posts_to_the_webhook(self) -> 'None':
+    def test_the_slack_action_sends_to_the_rule_channel(self) -> 'None':
         audit_log = AuditLog(_server_name)
         recorder = _TransportRecorder()
 
         rule = new_rule('slack-ops', FindingKind.Feed_Silent,
-            action=AlertAction.Slack, action_config={'webhook_url': _webhook_url})
+            action=AlertAction.Slack, action_config={'slack_channel': _slack_channel})
 
         _ = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-slack', utcnow())
 
-        url, payload = recorder.posts[0]
+        channel, text = recorder.slack_messages[0]
 
-        assert url == _webhook_url
-        assert payload == {'text': 'Feed on `hl7.test.channel` silent for 400s\n/zato/hl7/channels/'}
+        assert channel == _slack_channel
+        assert text == 'Feed on `hl7.test.channel` silent for 400s\n/zato/hl7/channels/'
 
 # ################################################################################################################################
 
-    def test_the_teams_action_posts_a_message_card(self) -> 'None':
+    def test_the_teams_action_sends_html_to_the_rule_target(self) -> 'None':
         audit_log = AuditLog(_server_name)
         recorder = _TransportRecorder()
 
         rule = new_rule('teams-ops', FindingKind.Feed_Silent,
-            action=AlertAction.Teams, action_config={'webhook_url': _webhook_url})
+            action=AlertAction.Teams, action_config={'teams_to': _teams_to})
 
         _ = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-teams', utcnow())
 
-        url, payload = recorder.posts[0]
+        to, html = recorder.teams_messages[0]
 
-        assert url == _webhook_url
-        assert payload['@type'] == 'MessageCard'
-        assert payload['summary'] == 'Feed on `hl7.test.channel` silent for 400s'
-        assert payload['themeColor'] == 'e8a317'
-        assert 'silent for 400s' in payload['text']
-        assert '/zato/hl7/channels/' in payload['text']
+        assert to == _teams_to
+        assert html == 'Feed on `hl7.test.channel` silent for 400s<br/><br/>/zato/hl7/channels/'
 
 # ################################################################################################################################
 
-    def test_a_critical_teams_card_is_red(self) -> 'None':
-        payload = build_teams_payload('The channel is down', 'The channel is down', AlertSeverity.Critical)
+    def test_a_slack_rule_without_a_channel_sends_nothing(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        recorder = _TransportRecorder()
 
-        assert payload['themeColor'] == 'cc0000'
-        assert payload['text'] == 'The channel is down'
+        rule = new_rule('slack-nowhere', FindingKind.Feed_Silent, action=AlertAction.Slack)
+
+        result = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-slack-nowhere', utcnow())
+
+        # The alert itself is still raised, only the delivery is skipped
+        assert result.raised_count == 1
+        assert recorder.slack_messages == []
 
 # ################################################################################################################################
 
-    def test_a_slack_payload_is_the_rendered_text_in_the_envelope(self) -> 'None':
-        payload = build_slack_payload('The channel is down')
+    def test_a_teams_rule_without_a_target_sends_nothing(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        recorder = _TransportRecorder()
 
-        assert payload == {'text': 'The channel is down'}
+        rule = new_rule('teams-nowhere', FindingKind.Feed_Silent, action=AlertAction.Teams)
+
+        result = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-teams-nowhere', utcnow())
+
+        # The alert itself is still raised, only the delivery is skipped
+        assert result.raised_count == 1
+        assert recorder.teams_messages == []
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -254,47 +278,6 @@ class TestDefaultTargets:
     """ A rule whose action config names no target of its own delivers through
     the deployment-level defaults from the sweep job's extra.
     """
-
-    def test_a_slack_rule_without_a_webhook_uses_the_default_one(self) -> 'None':
-        audit_log = AuditLog(_server_name)
-        recorder = _TransportRecorder()
-
-        rule = new_rule('slack-default', FindingKind.Feed_Silent, action=AlertAction.Slack)
-
-        defaults = AlertDefaults()
-        defaults.slack_webhook = _webhook_url
-
-        result = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-slack-default', utcnow(),
-            defaults=defaults)
-
-        assert result.dispatched == [('slack-default', AlertAction.Slack)]
-
-        url, payload = recorder.posts[0]
-
-        assert url == _webhook_url
-        assert payload == {'text': 'Feed on `hl7.test.channel` silent for 400s\n/zato/hl7/channels/'}
-
-# ################################################################################################################################
-
-    def test_a_teams_rule_without_a_webhook_uses_the_default_one(self) -> 'None':
-        audit_log = AuditLog(_server_name)
-        recorder = _TransportRecorder()
-
-        rule = new_rule('teams-default', FindingKind.Feed_Silent, action=AlertAction.Teams)
-
-        defaults = AlertDefaults()
-        defaults.teams_webhook = _webhook_url
-
-        _ = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-teams-default', utcnow(),
-            defaults=defaults)
-
-        url, payload = recorder.posts[0]
-
-        assert url == _webhook_url
-        assert payload['@type'] == 'MessageCard'
-        assert 'silent for 400s' in payload['text']
-
-# ################################################################################################################################
 
     def test_a_webhook_rule_without_a_url_uses_the_default_one(self) -> 'None':
         audit_log = AuditLog(_server_name)
@@ -328,15 +311,15 @@ class TestDefaultTargets:
         audit_log = AuditLog(_server_name)
         recorder = _TransportRecorder()
 
-        own_url = 'https://hooks.example.com/services/OWN/RULE/YYY'
+        own_url = 'https://example.atlassian.net/automation/webhooks/own-rule'
 
-        rule = new_rule('slack-own', FindingKind.Feed_Silent,
-            action=AlertAction.Slack, action_config={'webhook_url': own_url})
+        rule = new_rule('webhook-own', FindingKind.Feed_Silent,
+            action=AlertAction.Webhook, action_config={'webhook_url': own_url})
 
         defaults = AlertDefaults()
-        defaults.slack_webhook = _webhook_url
+        defaults.webhook_url = _webhook_url
 
-        _ = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-slack-own', utcnow(),
+        _ = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-webhook-own', utcnow(),
             defaults=defaults)
 
         url, _ignored = recorder.posts[0]
@@ -345,13 +328,13 @@ class TestDefaultTargets:
 
 # ################################################################################################################################
 
-    def test_a_slack_rule_with_no_webhook_anywhere_sends_nothing(self) -> 'None':
+    def test_a_webhook_rule_with_no_url_anywhere_sends_nothing(self) -> 'None':
         audit_log = AuditLog(_server_name)
         recorder = _TransportRecorder()
 
-        rule = new_rule('slack-nowhere', FindingKind.Feed_Silent, action=AlertAction.Slack)
+        rule = new_rule('webhook-nowhere', FindingKind.Feed_Silent, action=AlertAction.Webhook)
 
-        result = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-slack-nowhere', utcnow())
+        result = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-webhook-nowhere', utcnow())
 
         # The alert itself is still raised, only the delivery is skipped
         assert result.raised_count == 1
@@ -369,7 +352,7 @@ class TestDedupAndCriticalFloor:
         now = utcnow()
 
         rule = new_rule('slack-ops', FindingKind.Feed_Silent,
-            action=AlertAction.Slack, action_config={'webhook_url': _webhook_url})
+            action=AlertAction.Slack, action_config={'slack_channel': _slack_channel})
 
         first = process_findings([rule], [_new_finding()], transports, audit_log, 'cid-quiet-1', now)
         second = process_findings([rule], [_new_finding()], transports, audit_log, 'cid-quiet-2', now)
@@ -378,7 +361,7 @@ class TestDedupAndCriticalFloor:
         assert first.raised_count == 1
         assert second.raised_count == 0
         assert second.deduplicated_count == 1
-        assert len(recorder.posts) == 1
+        assert len(recorder.slack_messages) == 1
 
         # .. yet both occurrences are in the audit trail, the second with its count.
         assert _count_alert_events() == 2
@@ -392,7 +375,7 @@ class TestDedupAndCriticalFloor:
         now = utcnow()
 
         rule = new_rule('slack-ops', FindingKind.Feed_Silent,
-            action=AlertAction.Slack, action_config={'webhook_url': _webhook_url})
+            action=AlertAction.Slack, action_config={'slack_channel': _slack_channel})
 
         critical = _new_finding(severity=AlertSeverity.Critical)
 
@@ -401,10 +384,10 @@ class TestDedupAndCriticalFloor:
 
         # Deduplicated in the store - dispatched anyway, with the count prefix
         assert second.deduplicated_count == 1
-        assert len(recorder.posts) == 2
+        assert len(recorder.slack_messages) == 2
 
-        _, payload = recorder.posts[1]
-        assert payload['text'].startswith('[2x] ')
+        _, text = recorder.slack_messages[1]
+        assert text.startswith('[2x] ')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -417,13 +400,13 @@ class TestDefaultSink:
 
         # The one rule cares about a different kind
         rule = new_rule('error-rates', FindingKind.Error_Rate,
-            action=AlertAction.Slack, action_config={'webhook_url': _webhook_url})
+            action=AlertAction.Slack, action_config={'slack_channel': _slack_channel})
 
         result = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-sink', utcnow())
 
         assert result.raised_count == 0
         assert len(result.unmatched) == 1
-        assert recorder.posts == []
+        assert recorder.slack_messages == []
 
 # ################################################################################################################################
 
@@ -453,7 +436,7 @@ class TestAuditTrail:
         recorder = _TransportRecorder()
 
         rule = new_rule('slack-ops', FindingKind.Feed_Silent,
-            action=AlertAction.Slack, action_config={'webhook_url': _webhook_url})
+            action=AlertAction.Slack, action_config={'slack_channel': _slack_channel})
 
         _ = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-trail', utcnow())
 
@@ -486,15 +469,16 @@ class TestAuditTrail:
 
         # A finding may match multiple rules, each dispatching independently
         slack_rule = new_rule('slack-ops', FindingKind.Feed_Silent,
-            action=AlertAction.Slack, action_config={'webhook_url': _webhook_url})
+            action=AlertAction.Slack, action_config={'slack_channel': _slack_channel})
         teams_rule = new_rule('teams-ops', FindingKind.Feed_Silent,
-            action=AlertAction.Teams, action_config={'webhook_url': _webhook_url})
+            action=AlertAction.Teams, action_config={'teams_to': _teams_to})
 
         result = process_findings([slack_rule, teams_rule], [_new_finding()], recorder.make(),
             audit_log, 'cid-both', utcnow())
 
         assert result.raised_count == 2
-        assert len(recorder.posts) == 2
+        assert len(recorder.slack_messages) == 1
+        assert len(recorder.teams_messages) == 1
         assert _count_alert_events() == 2
 
 # ################################################################################################################################

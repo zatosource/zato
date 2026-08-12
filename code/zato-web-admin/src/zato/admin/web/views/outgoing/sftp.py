@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from traceback import format_exc
+from urllib.parse import quote
 
 # Bunch
 from zato.common.ext.bunch import Bunch
@@ -16,6 +17,7 @@ from zato.common.ext.bunch import Bunch
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
+from django.urls import reverse
 
 # Zato
 from zato.admin.web.forms.outgoing.sftp import CommandShellForm, CreateForm, EditForm
@@ -23,6 +25,14 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index,
      SKIP_VALUE
 from zato.common.api import GENERIC
 from zato.common.json_internal import dumps
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, dictlist
+    any_ = any_
+    dictlist = dictlist
 
 # ################################################################################################################################
 
@@ -139,7 +149,31 @@ def ping(req, id, cluster_id):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def command_shell(req, id, cluster_id, name_slug):
+def command_shell(req:'any_', id:'str', cluster_id:'str', name_slug:'str') -> 'TemplateResponse':
+
+    # Every outgoing SFTP connection there is ..
+    response = req.zato.client.invoke('zato.generic.connection.get-list', {
+        'cluster_id': req.zato.cluster_id,
+        'type_': GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
+        'paginate': False,
+    })
+
+    if not response.ok:
+        raise Exception(response.details)
+
+    # .. each pointing to its own command shell, which is what the page's select navigates to.
+    connection_list:'dictlist' = []
+
+    for item in response.data:
+        item_id = item['id']
+        item_name = item['name']
+        item_slug = slugify(item_name)
+        item_url = reverse('out-sftp-command-shell', args=[item_id, cluster_id, item_slug])
+        item_name_encoded = quote(item_name)
+        connection_list.append({
+            'name': item_name,
+            'url': f'{item_url}?name={item_name_encoded}',
+        })
 
     return_data = {
         'zato_clusters':req.zato.clusters,
@@ -148,10 +182,12 @@ def command_shell(req, id, cluster_id, name_slug):
         'conn_id': id,
         'name_slug': name_slug,
         'conn_name': req.GET['name'],
+        'connection_list': connection_list,
         'form':CommandShellForm(),
         }
 
-    return TemplateResponse(req, 'zato/outgoing/sftp-command-shell.html', return_data)
+    out = TemplateResponse(req, 'zato/outgoing/sftp-command-shell.html', return_data)
+    return out
 
 # ################################################################################################################################
 

@@ -14,7 +14,7 @@ $.fn.zato.channel.hl7.dashboard.config = {
     time_range: 'week',
     audit_log_page: '/zato/audit-log/',
     default_refresh_seconds: 60,
-    no_data_text: 'No data yet',
+    no_data_text: 'No results',
     no_value_text: '-'
 };
 

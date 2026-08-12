@@ -12,6 +12,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import Incidents, SMTPMessage
+from zato.common.alerting.names import get_llm_conn_name, get_notification_conn_name
 from zato.common.alerting.rendering import render_alert_template, Template_Dir_Name, Template_Email_Body, \
     Template_Email_Subject, Template_Slack, Template_Teams
 from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome
@@ -164,7 +165,7 @@ class Diagnose(AdminService):
 
         # The default connection ships inactive with placeholder credentials,
         # so it only answers once a person points it at a real model.
-        default_name = Incidents.LLM_Connection_Name
+        default_name = get_llm_conn_name()
 
         if default_name not in self.llm.conn_dict:
             return ''
@@ -258,7 +259,7 @@ class Diagnose(AdminService):
         """
         context = self._build_template_context(details, action_config)
         template_dir = self._get_template_dir()
-        conn_name = Incidents.Notification_Conn_Name
+        conn_name = get_notification_conn_name()
 
         transports = (
             ('Slack', self._notify_slack),

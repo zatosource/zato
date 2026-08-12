@@ -186,9 +186,11 @@ def alerting_vocabulary() -> 'anydict':
         _term('llm_connection',       TermType.Text,   'the LLM connection an alert diagnosis goes through'),
         _term('dashboard_url',        TermType.Text,   'the dashboard address notification links point to'),
         _term('addresses',            TermType.Text,   'the comma-separated addresses an email alert goes to'),
+        _term('slack_channel',        TermType.Text,   'the channel a Slack alert posts to'),
+        _term('teams_to',             TermType.Text,   'the team and channel a Teams alert goes to'),
         _term('service',              TermType.Text,   'the service an invoke-service action calls'),
         _term('topic',                TermType.Text,   'the topic a publish-to-topic action publishes to'),
-        _term('webhook_url',          TermType.Text,   'the webhook a Slack or Teams alert posts to'),
+        _term('webhook_url',          TermType.Text,   'the URL a webhook alert posts to'),
         _term('link',                 TermType.Text,   'the dashboard path the alert message links to'),
         _term('dedup_window_seconds', TermType.Number, 'how long repeated matches increment the alert instead of raising anew'),
     ]

@@ -4,17 +4,19 @@
 The list of file transfer schedules of one connection - each row is one
 recurring pickup task created through the schedule wizard. The view provides:
 
-* conn_id        - the connection the schedules belong to
-* conn_name      - its name
-* name_slug      - its name slugified, for links to the wizard
-* transfer_label - the connection type, e.g. SFTP
-* items          - the schedules themselves
+* conn_id         - the connection the schedules belong to
+* conn_name       - its name
+* name_slug       - its name slugified, for links to the wizard
+* connection_list - all the connections of this transfer type, with the URL of each one's schedules
+* badge_label     - what the header badge says, e.g. SFTP schedules or SMB schedules
+* items           - the schedules themselves
 {% endcomment %}
 
 {% block html_title %}File transfer schedules{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/outgoing/file-transfer-schedules.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -36,12 +38,15 @@ recurring pickup task created through the schedule wizard. The view provides:
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
     <div id="markup">
-        <h2 class="zato">{% include "zato/include/header-brand.html" with badge="File transfer" %}Schedules of {{ transfer_label }} connection `{{ conn_name }}`</h2>
+        <h2 class="zato">{% include "zato/include/header-brand.html" with badge=badge_label %}<select id="ft-schedules-conn-select">
+            {% for item in connection_list %}
+            <option value="{{ item.url }}"{% if item.name == conn_name %} selected{% endif %}>{{ item.name }}</option>
+            {% endfor %}
+        </select></h2>
 
-        <div class='page_prompt'>
-            <a href="{% url "out-file-transfer-schedule-wizard-create" transfer_type conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}">Create a new schedule</a>
-            &nbsp;|&nbsp;
-            <a href="{{ back_url }}">Back to the connection list</a>
+        <div class='page_prompt' style="clear:left">
+            <a href="{% url "out-file-transfer-schedule-wizard-create" transfer_type conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}">Create a new schedule</a> |
+            <a href="{{ back_url }}" class="common">Connection list</a>
         </div>
 
         <table class="zato-table" id="data-table">
@@ -94,7 +99,7 @@ recurring pickup task created through the schedule wizard. The view provides:
                 {% endfor %}
             {% else %}
                 <tr class='ignore'>
-                    <td colspan='11'>No schedules yet - create the first one above</td>
+                    <td colspan='11'>No results</td>
                 </tr>
             {% endif %}
 

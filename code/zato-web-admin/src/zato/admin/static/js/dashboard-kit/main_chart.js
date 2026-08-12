@@ -124,7 +124,7 @@
             var filtered = timeline || [];
 
             if (!filtered || filtered.length === 0) {
-                $container.html('<div class="dashboard-no-data">No data yet</div>');
+                $container.html('<div class="dashboard-no-data">No results</div>');
                 $legend.empty();
                 $count.text('');
                 return;
@@ -158,7 +158,7 @@
             }
 
             if (timestamps.length === 0) {
-                $container.html('<div class="dashboard-no-data">No data yet</div>');
+                $container.html('<div class="dashboard-no-data">No results</div>');
                 $legend.empty();
                 $count.text('');
                 return;

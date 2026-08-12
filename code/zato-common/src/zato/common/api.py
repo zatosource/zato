@@ -1433,10 +1433,12 @@ class Alerting:
     # the canary job's active flag in ODB, next to the Canary_Failing rule's own flip.
     Set_Canary_State_Service = 'zato.alerting.set-canary-state'
 
-    # The keys the scheduler job's extra data may carry - which email connection
-    # sends the emails, its addressing, where the catch-all digest goes,
-    # the Dashboard address the links point to and the default webhooks
-    # the engine falls back to when a rule names none of its own.
+    # The keys the scheduler job's extra data may carry - the email addressing,
+    # where the catch-all digest goes, the Dashboard address the links point to
+    # and the default plain-webhook URL a rule without its own delivers through.
+    # Email, Slack and Teams themselves go out through the connections that share
+    # the default notification name, so the connection and webhook keys stay only
+    # for the read-write contract of the config services and enmasse.
     Extra_Email_Connection = 'email_connection'
     Extra_From             = 'from'
     Extra_Default_To       = 'default_to'
@@ -1480,9 +1482,13 @@ class Incidents:
     # all created when the environment is, inactive and with placeholder details.
     Notification_Conn_Name = 'default.alerts.notifications'
 
-    # The LLM connection diagnoses fall back to when a rule names none of its own -
+    # The default LLM connection diagnoses go through when a rule names none of its own -
     # created when the environment is, inactive and with placeholder details.
     LLM_Connection_Name = 'default.alerts.llm'
+
+    # The environment variables that rename the default connections.
+    Env_Notification_Conn_Name = 'Zato_Alerts_Connection'
+    Env_LLM_Connection_Name    = 'Zato_Alerts_LLM_Connection'
 
     # The keys a diagnose rule's action_config may carry - which LLM connection diagnoses,
     # where the notification links point to and where each transport delivers.

@@ -567,7 +567,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = $.fn.zato.dashboard_kit.palette.
         var container = $('#dashboard-bar-chart');
 
         if (!chart_data || !chart_data.buckets || chart_data.buckets.length === 0) {
-            container.html('<div class="dashboard-no-data">No run history yet</div>');
+            container.html('<div class="dashboard-no-data">No results</div>');
             $('#dashboard-chart-legend').empty();
             $('#dashboard-data-count').text('');
             return;
@@ -656,7 +656,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = $.fn.zato.dashboard_kit.palette.
         );
 
         if (total_exec_count === 0) {
-            container.html('<div class="dashboard-no-data">No run history yet</div>');
+            container.html('<div class="dashboard-no-data">No results</div>');
             $('#dashboard-chart-legend').empty();
             return;
         }

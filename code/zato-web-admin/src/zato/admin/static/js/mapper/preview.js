@@ -126,7 +126,7 @@
             var sample = activeSample();
             if (sample === null) {
                 zato.mapper.log('preview', 'no source sample, nothing to evaluate');
-                inputPane.innerHTML = '<span class="mapper-preview-empty">No source sample yet - paste an example or scaffold one from the schema.</span>';
+                inputPane.innerHTML = '<span class="mapper-preview-empty">No results</span>';
                 outputPane.innerHTML = '<span class="mapper-preview-empty">The output appears here once a sample exists.</span>';
                 return;
             }

@@ -13,6 +13,11 @@ $(document).ready(function() {
     if(highlight) {
         $('#tr_' + highlight).addClass('updated');
     }
+
+    // Each option's value is the URL of that connection's own schedule list.
+    $('#ft-schedules-conn-select').change(function() {
+        window.location.href = this.value;
+    });
 });
 
 // ////////////////////////////////////////////////////////////////////////

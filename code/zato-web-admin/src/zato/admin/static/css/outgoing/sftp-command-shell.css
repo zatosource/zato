@@ -106,16 +106,19 @@
 
 /* The site-wide form stylesheet gives every select a height of 1.8em, which is too little
    for a digit once this page's own padding is inside it, so both are stated here instead. */
+.sftp-shell-conn-select,
 .sftp-shell-actions select {
     box-sizing: border-box;
     height: var(--sftp-shell-control-height);
-
-    /* Wide enough for the arrow the browser draws next to a single-digit level */
-    min-width: 60px;
     padding: 0 6px;
     border: 1px solid var(--sftp-shell-border);
     border-radius: 6px;
     font-size: 12px;
+}
+
+/* Wide enough for the arrow the browser draws next to a single-digit level */
+.sftp-shell-actions select {
+    min-width: 60px;
 }
 
 .sftp-shell-status {

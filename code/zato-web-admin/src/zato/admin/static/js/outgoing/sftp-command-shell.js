@@ -4,6 +4,7 @@ var shell = $.fn.zato.outgoing.sftp.command_shell;
 
 shell.config = {
     formSelector: '#sftp-shell-form',
+    connectionSelector: '#sftp-shell-conn-select',
     tabSelector: '.sftp-shell-card .dashboard-tab',
     panelPrefix: 'sftp-shell-tab-panel-',
     defaultTab: 'stdout',
@@ -136,6 +137,11 @@ shell.init = function() {
     $(config.formSelector).submit(function() {
         shell.run();
         return false;
+    });
+
+    // Each option's value is the URL of that connection's own command shell.
+    $(config.connectionSelector).change(function() {
+        window.location.href = this.value;
     });
 
     $('#sftp-shell-clear').click(function() {

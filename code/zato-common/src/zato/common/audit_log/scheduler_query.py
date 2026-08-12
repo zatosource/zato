@@ -21,7 +21,7 @@ from sqlalchemy import func, or_, select
 
 # Zato
 from zato.common.api import SCHEDULER
-from zato.common.audit_log.api import AuditSource, get_audit_engine
+from zato.common.audit_log.api import AuditEvent, AuditSource, get_audit_engine
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_table
 from zato.common.audit_log.scheduler import Attr_Current_Run, Attr_Delay_Ms, Attr_Job_ID, Log_Kind_Error, Log_Kind_Info, \
     Log_Kind_System, Log_Kind_Warn, Log_Kinds
@@ -155,6 +155,7 @@ def _job_events(job_name:'str') -> 'any_':
     """
     out = select(event_table).where(
         event_table.c.source == AuditSource.Scheduler).where(
+        event_table.c.event_type == AuditEvent.Job_Executed).where(
         event_table.c.object_name == job_name)
 
     return out
@@ -263,6 +264,7 @@ def get_history_page(
     rows_query = _job_events(job_name)
     total_query = select(func.count()).where(
         event_table.c.source == AuditSource.Scheduler).where(
+        event_table.c.event_type == AuditEvent.Job_Executed).where(
         event_table.c.object_name == job_name).where(
         event_table.c.outcome != SCHEDULER.OUTCOME.RUNNING)
 
@@ -321,6 +323,7 @@ def get_history_since(
 
     total_query = select(func.count()).where(
         event_table.c.source == AuditSource.Scheduler).where(
+        event_table.c.event_type == AuditEvent.Job_Executed).where(
         event_table.c.object_name == job_name).where(
         event_table.c.outcome != SCHEDULER.OUTCOME.RUNNING)
 
@@ -354,6 +357,7 @@ def get_run_detail(job_id:'int', job_name:'str', current_run:'int') -> 'anydict'
     neighbour_base = select(event_attr_table.c.value_number).select_from(
         event_attr_table.join(event_table, event_table.c.id == event_attr_table.c.event_id)).where(
         event_table.c.source == AuditSource.Scheduler).where(
+        event_table.c.event_type == AuditEvent.Job_Executed).where(
         event_table.c.object_name == job_name).where(
         event_attr_table.c.name == Attr_Current_Run)
 
@@ -395,6 +399,7 @@ def get_log_entries(job_name:'str', current_run:'int', since_idx:'int') -> 'dict
     run_match = _attr_match(Attr_Current_Run, current_run)
     event_query = select(event_table.c.id).where(
         event_table.c.source == AuditSource.Scheduler).where(
+        event_table.c.event_type == AuditEvent.Job_Executed).where(
         event_table.c.object_name == job_name).where(
         event_table.c.id.in_(run_match)).order_by(
         event_table.c.id.desc()).limit(1)
@@ -440,6 +445,7 @@ def get_chart_data(since_iso:'str' = '', until_iso:'str' = '') -> 'anydict':
 
     events_query = select(event_table.c.event_time_iso, event_table.c.outcome).where(
         event_table.c.source == AuditSource.Scheduler).where(
+        event_table.c.event_type == AuditEvent.Job_Executed).where(
         event_table.c.outcome.in_(_chart_outcomes))
 
     # Collect every countable execution as its epoch milliseconds and outcome ..
@@ -534,7 +540,9 @@ def get_timeline_events_since(since_iso:'str' = '', limit:'int' = 0) -> 'dictlis
     """
     engine = get_audit_engine()
 
-    events_query = select(event_table).where(event_table.c.source == AuditSource.Scheduler)
+    events_query = select(event_table).where(
+        event_table.c.source == AuditSource.Scheduler).where(
+        event_table.c.event_type == AuditEvent.Job_Executed)
 
     if since_iso:
         events_query = events_query.where(event_table.c.event_time_iso > since_iso)
@@ -576,7 +584,8 @@ def get_job_aggregates() -> 'anydict':
     engine = get_audit_engine()
 
     counts_query = select(event_table.c.object_name, event_table.c.outcome, func.count().label('outcome_count')).where(
-        event_table.c.source == AuditSource.Scheduler).group_by(
+        event_table.c.source == AuditSource.Scheduler).where(
+        event_table.c.event_type == AuditEvent.Job_Executed).group_by(
         event_table.c.object_name, event_table.c.outcome)
 
     # Our response to produce
@@ -612,6 +621,7 @@ def get_job_aggregates() -> 'anydict':
             recent_query = select(
                 event_table.c.outcome, event_table.c.duration_ms, event_table.c.event_time_iso).where(
                 event_table.c.source == AuditSource.Scheduler).where(
+                event_table.c.event_type == AuditEvent.Job_Executed).where(
                 event_table.c.object_name == job_name).order_by(
                 event_table.c.event_time_iso.desc(), event_table.c.id.desc()).limit(_recent_outcome_count)
 

@@ -20,7 +20,8 @@ from traceback import format_exc
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common.api import GENERIC, Incidents
+from zato.common.alerting.names import get_llm_conn_name, get_notification_conn_name
+from zato.common.api import GENERIC
 from zato.common.defaults import default_cluster_id
 from zato.common.demo.seed import Channel_Clinic, Channel_Lab, Channel_Main, Outconn_FHIR, Outconn_Forward
 from zato.common.json_internal import dumps
@@ -787,7 +788,7 @@ def is_cluster_empty(server:'ParallelServer') -> 'bool':
         # notification and LLM placeholders
         connection_count = session.query(GenericConn).\
             filter(GenericConn.is_internal.is_(False)).\
-            filter(GenericConn.name.notin_([Incidents.Notification_Conn_Name, Incidents.LLM_Connection_Name])).\
+            filter(GenericConn.name.notin_([get_notification_conn_name(), get_llm_conn_name()])).\
             filter(GenericConn.cluster_id==default_cluster_id).\
             count()
 

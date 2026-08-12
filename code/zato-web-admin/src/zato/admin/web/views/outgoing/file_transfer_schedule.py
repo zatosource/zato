@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 from traceback import format_exc
+from urllib.parse import quote
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -18,16 +19,17 @@ from django.urls import reverse
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms.outgoing.file_transfer_schedule import CreateForm
-from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed
-from zato.common.api import FileTransfer
+from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed, slugify
+from zato.common.api import FileTransfer, GENERIC
 from zato.common.json_internal import dumps
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, dictlist, stranydict
     any_ = any_
+    dictlist = dictlist
     stranydict = stranydict
 
 # ################################################################################################################################
@@ -55,6 +57,12 @@ _back_links = {
     'smb': ('out-smb', 'outconn-smb'),
 }
 
+# Which generic connection type each transfer type stands for
+_connection_types = {
+    'sftp': GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
+    'smb': GENERIC.CONNECTION.TYPE.OUTCONN_SMB,
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -70,6 +78,35 @@ def _get_schedule_list(req:'any_', conn_id:'str') -> 'any_':
         raise Exception(response.details)
 
     out = response.data
+    return out
+
+# ################################################################################################################################
+
+def _get_connection_list(req:'any_', transfer_type:'str', cluster_id:'str') -> 'dictlist':
+    """ Returns every connection of the given transfer type along with the URL of its own schedule list.
+    """
+    response = req.zato.client.invoke('zato.generic.connection.get-list', {
+        'cluster_id': req.zato.cluster_id,
+        'type_': _connection_types[transfer_type],
+        'paginate': False,
+    })
+
+    if not response.ok:
+        raise Exception(response.details)
+
+    out:'dictlist' = []
+
+    for item in response.data:
+        item_id = item['id']
+        item_name = item['name']
+        item_slug = slugify(item_name)
+        item_url = reverse('out-file-transfer-schedules', args=[transfer_type, item_id, cluster_id, item_slug])
+        item_name_encoded = quote(item_name)
+        out.append({
+            'name': item_name,
+            'url': f'{item_url}?name={item_name_encoded}',
+        })
+
     return out
 
 # ################################################################################################################################
@@ -124,6 +161,12 @@ def schedules(req:'any_', transfer_type:'str', conn_id:'str', cluster_id:'str', 
     back_url_name, back_type = _back_links[transfer_type]
     back_url = reverse(back_url_name) + '?cluster={}&type_={}'.format(req.zato.cluster_id, back_type)
 
+    # Every connection of this type, so the page's select can switch to any of them
+    connection_list = _get_connection_list(req, transfer_type, cluster_id)
+
+    # How the page's badge reads, e.g. SFTP schedules or SMB schedules
+    badge_label = _transfer_labels[transfer_type] + ' schedules'
+
     return_data = {
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
@@ -132,7 +175,8 @@ def schedules(req:'any_', transfer_type:'str', conn_id:'str', cluster_id:'str', 
         'conn_id': conn_id,
         'name_slug': name_slug,
         'conn_name': req.GET['name'],
-        'transfer_label': _transfer_labels[transfer_type],
+        'connection_list': connection_list,
+        'badge_label': badge_label,
         'back_url': back_url,
         'items': items,
     }

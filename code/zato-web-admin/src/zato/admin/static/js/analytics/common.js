@@ -18,7 +18,7 @@ $.fn.zato.analytics.dashboard.config = {
     consumer_page: '/zato/analytics/consumer/',
     audit_log_page: '/zato/audit-log/',
     default_refresh_seconds: 60,
-    no_data_text: 'No data yet',
+    no_data_text: 'No results',
     empty_period_text: '-'
 };
 

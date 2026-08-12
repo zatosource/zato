@@ -8,15 +8,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The full delivery loop - audit events cross the seeded thresholds, the seeded rules
 # load from a real SQL rule store, one sweep runs with real transports, and what each
-# simulated receiver holds afterwards is asserted payload by payload. Slack, Teams
-# and the plain webhook are HTTP receivers of their own - the Teams one over TLS,
-# the way real Teams webhooks are - and email arrives over real SMTP.
+# receiver holds afterwards is asserted payload by payload. The plain webhook is an
+# HTTP receiver of its own and email arrives over real SMTP. Slack and Teams deliver
+# through the chat connections behind their transports, so here the transports record
+# the channel and the rendered text - the wire itself belongs to the chat framework
+# and its own suites.
 
 # stdlib
 import json
 import os
 import smtplib
-import ssl
 import sys
 import threading
 from email.mime.text import MIMEText
@@ -26,7 +27,7 @@ from pathlib import Path
 from typing import Generator
 from urllib.parse import quote
 
-# The TLS certificate helper is shared with the rule engine jobs suite
+# The port helper is shared with the rule engine jobs suite
 # and the SMTP receiver with the other zato-common suites.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'rule_engine_jobs', 'lib')))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
@@ -44,9 +45,6 @@ from sqlalchemy.engine import Engine
 # typing-extensions
 from typing_extensions import TypeAlias
 
-# urllib3
-import urllib3
-
 # Zato
 from zato.common.alerting.engine import process_findings, AlertDefaults, AlertTransports
 from zato.common.alerting.model import new_finding, new_rule, AlertAction
@@ -60,7 +58,6 @@ from zato.common.util.api import utcnow
 # Test helpers
 from chat_simulators import find_free_port
 from hl7_client.smtp_receiver import SMTPReceiver
-from teams_simulator import _make_tls_certificate
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,9 +72,6 @@ if 0:
 # ################################################################################################################################
 
 engine_generator:TypeAlias = Generator[Engine, None, None]
-
-# The Teams receiver serves TLS with a self-signed certificate, so its warnings say nothing
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,12 +90,16 @@ _sql_conn_name = 'Billing DB'
 _addresses = ['ops@example.com']
 _email_from = 'zato@example.com'
 
+# The channel the Slack rule posts to and the team and channel the Teams rule sends to
+_slack_channel = '#zato-alerts'
+_teams_to = 'Zato Ops/Alerts'
+
 # How long a webhook post may take before it is abandoned, in seconds -
 # the same wait the server's own transport applies.
 _webhook_timeout = 10
 
 # The extra ruleset the full loop adds next to the seeded ones - the seeded rules
-# all deliver by email, so the webhook-riding channels get rules of their own,
+# all deliver by email, so the other channels get rules of their own,
 # loaded from the same store the seeded ones load from.
 _extra_ruleset_name = 'alerts_full_loop'
 
@@ -118,6 +116,7 @@ when
 then
     outcome.action = 'slack'
     outcome.severity = 'warning'
+    outcome.slack_channel = '#zato-alerts'
 
 rule
     Teams_On_Errors
@@ -131,6 +130,7 @@ when
 then
     outcome.action = 'teams'
     outcome.severity = 'critical'
+    outcome.teams_to = 'Zato Ops/Alerts'
 
 rule
     Webhook_On_Errors
@@ -173,20 +173,11 @@ class WebhookTestHandler(BaseHTTPRequestHandler):
 
 # ################################################################################################################################
 
-def start_webhook_server(port:'int', *, use_tls:'bool'=False) -> 'ThreadingHTTPServer':
-    """ Starts one webhook receiver in a background thread - over TLS when asked to,
-    which is how the Teams receiver runs, because real Teams webhooks are https.
+def start_webhook_server(port:'int') -> 'ThreadingHTTPServer':
+    """ Starts one webhook receiver in a background thread.
     """
     out = ThreadingHTTPServer(('127.0.0.1', port), WebhookTestHandler)
     out.received = [] # type: ignore[attr-defined]
-
-    if use_tls:
-        certificate_path, private_key_path = _make_tls_certificate()
-
-        tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        tls_context.load_cert_chain(certificate_path, private_key_path)
-
-        out.socket = tls_context.wrap_socket(out.socket, server_side=True)
 
     thread = threading.Thread(target=out.serve_forever, daemon=True)
     thread.start()
@@ -197,18 +188,21 @@ def start_webhook_server(port:'int', *, use_tls:'bool'=False) -> 'ThreadingHTTPS
 # ################################################################################################################################
 
 class _ServiceRecorder:
-    """ The two transports with no wire of their own - the service invoker
-    and pub/sub - recorded instead of delivered.
+    """ The transports with no wire of their own in this suite - the service invoker,
+    pub/sub and the two chat connections - recorded instead of delivered.
     """
     def __init__(self) -> 'None':
         self.invocations:'anylist' = []
         self.publications:'anylist' = []
+        self.slack_messages:'anylist' = []
+        self.teams_messages:'anylist' = []
 
 # ################################################################################################################################
 
 def build_transports(smtp_port:'int', recorder:'_ServiceRecorder') -> 'AlertTransports':
-    """ The real delivery callables - email over real SMTP, webhooks over real HTTP,
-    the same way the server's own transports deliver.
+    """ The delivery callables - email over real SMTP and the plain webhook over
+    real HTTP, the same way the server's own transports deliver, with the chat
+    connections recorded.
     """
 
     def send_email(addresses:'anylist', subject:'str', body:'str') -> 'None':
@@ -219,7 +213,7 @@ def build_transports(smtp_port:'int', recorder:'_ServiceRecorder') -> 'AlertTran
 
         client = smtplib.SMTP('127.0.0.1', smtp_port)
         _ = client.sendmail(_email_from, addresses, mime.as_string())
-        client.quit()
+        _ = client.quit()
 
     def invoke_service(service_name:'str', payload:'stranydict') -> 'None':
         recorder.invocations.append((service_name, payload))
@@ -227,8 +221,14 @@ def build_transports(smtp_port:'int', recorder:'_ServiceRecorder') -> 'AlertTran
     def publish(topic_name:'str', payload:'stranydict') -> 'None':
         recorder.publications.append((topic_name, payload))
 
+    def send_slack(channel:'str', text:'str') -> 'None':
+        recorder.slack_messages.append((channel, text))
+
+    def send_teams(to:'str', html:'str') -> 'None':
+        recorder.teams_messages.append((to, html))
+
     def http_post(url:'str', payload:'stranydict') -> 'None':
-        response = requests.post(url, json=payload, timeout=_webhook_timeout, verify=False)
+        response = requests.post(url, json=payload, timeout=_webhook_timeout)
         assert response.ok, (url, response.status_code, response.text)
 
     # Our response to produce
@@ -237,6 +237,8 @@ def build_transports(smtp_port:'int', recorder:'_ServiceRecorder') -> 'AlertTran
     out.send_email = send_email
     out.invoke_service = invoke_service
     out.publish = publish
+    out.send_slack = send_slack
+    out.send_teams = send_teams
     out.http_post = http_post
 
     return out
@@ -285,30 +287,6 @@ def backend(rule_database_engine:'Engine') -> 'RuleSQLBackend':
 # ################################################################################################################################
 
 @pytest.fixture
-def slack_server() -> 'any_':
-    """ A running Slack incoming-webhook receiver.
-    """
-    server = start_webhook_server(find_free_port())
-
-    yield server
-
-    server.shutdown()
-
-# ################################################################################################################################
-
-@pytest.fixture
-def teams_server() -> 'any_':
-    """ A running Teams incoming-webhook receiver, over TLS.
-    """
-    server = start_webhook_server(find_free_port(), use_tls=True)
-
-    yield server
-
-    server.shutdown()
-
-# ################################################################################################################################
-
-@pytest.fixture
 def webhook_server() -> 'any_':
     """ A running plain webhook receiver - e.g. a workflow backend's automation webhook.
     """
@@ -334,24 +312,22 @@ def smtp_receiver() -> 'any_':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _server_url(server:'any_', path:'str', *, scheme:'str'='http') -> 'str':
+def _server_url(server:'any_', path:'str') -> 'str':
     """ The address one webhook receiver listens on, with the given path.
     """
     port = server.server_address[1]
-    out = f'{scheme}://127.0.0.1:{port}{path}'
+    out = f'http://127.0.0.1:{port}{path}'
     return out
 
 # ################################################################################################################################
 
-def _build_defaults(slack_server:'any_', teams_server:'any_', webhook_server:'any_') -> 'AlertDefaults':
+def _build_defaults(webhook_server:'any_') -> 'AlertDefaults':
     """ The deployment-level targets - what the sweep job's extra would carry,
-    each one pointing at its own simulated receiver.
+    the plain webhook pointing at its simulated receiver.
     """
     out = AlertDefaults()
 
     out.email_to = _addresses
-    out.slack_webhook = _server_url(slack_server, '/services/T000/B000/XXX')
-    out.teams_webhook = _server_url(teams_server, '/webhookb2/abc', scheme='https')
     out.webhook_url = _server_url(webhook_server, '/hooks/zato')
 
     return out
@@ -399,8 +375,6 @@ class TestFullLoop:
     def test_one_sweep_delivers_through_every_channel(
         self,
         backend:'RuleSQLBackend',
-        slack_server:'any_',
-        teams_server:'any_',
         webhook_server:'any_',
         smtp_receiver:'any_',
         ) -> 'None':
@@ -413,7 +387,7 @@ class TestFullLoop:
 
         recorder = _ServiceRecorder()
         transports = build_transports(smtp_receiver.port, recorder)
-        defaults = _build_defaults(slack_server, teams_server, webhook_server)
+        defaults = _build_defaults(webhook_server)
 
         rules = load_alert_rules(backend)
 
@@ -445,34 +419,24 @@ class TestFullLoop:
         # no source declares resubmittable, so no event is deep-linked.
         rest_link = f'/zato/audit-log/?source=rest-outgoing&object_name={quote(_rest_conn_name)}&cluster=1'
 
-        # Slack received exactly one post - the incoming-webhook envelope
-        # around the rendered slack template
-        assert len(slack_server.received) == 1
+        # Slack received exactly one message - the rendered slack template,
+        # sent to the channel the rule names
+        assert len(recorder.slack_messages) == 1
 
-        slack_delivery = slack_server.received[0]
-        assert slack_delivery['path'] == '/services/T000/B000/XXX'
-        assert sorted(slack_delivery['payload']) == ['text']
-
-        slack_text = slack_delivery['payload']['text']
-        assert slack_text.strip() == (
+        slack_channel, slack_text = recorder.slack_messages[0]
+        assert slack_channel == _slack_channel
+        assert slack_text == (
             f'Rule `Slack_On_Errors` matched `{_rest_conn_name}` (REST outgoing) - {rest_measures}\n{rest_link}')
 
-        # Teams received exactly one post over TLS - the message card,
-        # colored critical, with the rendered teams template as its text
-        assert len(teams_server.received) == 1
+        # Teams received exactly one message - the rendered teams template as HTML,
+        # sent to the team and channel the rule names
+        assert len(recorder.teams_messages) == 1
 
-        teams_delivery = teams_server.received[0]
-        assert teams_delivery['path'] == '/webhookb2/abc'
-
-        teams_payload = teams_delivery['payload']
+        teams_to, teams_html = recorder.teams_messages[0]
         teams_message = f'Rule `Teams_On_Errors` matched `{_rest_conn_name}` (REST outgoing) - {rest_measures}'
 
-        assert teams_payload['@type'] == 'MessageCard'
-        assert teams_payload['@context'] == 'https://schema.org/extensions'
-        assert teams_payload['title'] == 'Zato alert'
-        assert teams_payload['themeColor'] == 'cc0000'
-        assert teams_payload['summary'] == teams_message
-        assert teams_payload['text'].strip() == f'{teams_message}\n\n{rest_link}'
+        assert teams_to == _teams_to
+        assert teams_html == f'{teams_message}<br/><br/>{rest_link}'
 
         # The plain webhook received the whole structured payload,
         # rendered by the webhook template
@@ -536,8 +500,6 @@ class TestFullLoop:
     def test_a_second_sweep_in_the_window_delivers_only_the_critical_findings(
         self,
         backend:'RuleSQLBackend',
-        slack_server:'any_',
-        teams_server:'any_',
         webhook_server:'any_',
         smtp_receiver:'any_',
         ) -> 'None':
@@ -550,7 +512,7 @@ class TestFullLoop:
 
         recorder = _ServiceRecorder()
         transports = build_transports(smtp_receiver.port, recorder)
-        defaults = _build_defaults(slack_server, teams_server, webhook_server)
+        defaults = _build_defaults(webhook_server)
 
         rules = load_alert_rules(backend)
 
@@ -575,17 +537,17 @@ class TestFullLoop:
         ]
 
         # The warning channels heard nothing new ..
-        assert len(slack_server.received) == 1
+        assert len(recorder.slack_messages) == 1
         assert len(webhook_server.received) == 1
 
         # .. while the critical ones delivered again - Teams, the connection-down
         # email and the diagnosis service.
-        assert len(teams_server.received) == 2
+        assert len(recorder.teams_messages) == 2
         assert len(recorder.invocations) == 2
         assert len(smtp_receiver.messages) == 4
 
         # A repetition speaks with its count
-        assert teams_server.received[1]['payload']['text'].strip().startswith('[2x] Rule `Teams_On_Errors`')
+        assert recorder.teams_messages[1][1].startswith('[2x] Rule `Teams_On_Errors`')
 
         # Every occurrence landed in the audit trail, deduplicated or not
         raised = _get_raised_events()

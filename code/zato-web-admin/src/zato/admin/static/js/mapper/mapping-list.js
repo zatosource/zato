@@ -253,7 +253,7 @@
 
                     var title = document.createElement('h3');
                     title.className = 'mapper-empty-state-title';
-                    title.textContent = 'No mappings yet';
+                    title.textContent = 'No results';
                     empty.appendChild(title);
 
                     var text = document.createElement('p');

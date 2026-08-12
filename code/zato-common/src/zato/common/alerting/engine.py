@@ -9,12 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The alerting engine - findings are routed through the rules that match them,
 # deduplicated in the store and dispatched through each rule's action. The transports
 # are injected callables, so the engine stays pure and offline-testable - the service
-# layer provides the real SMTP, service invoker, pub/sub and HTTP implementations.
-# What each notification says comes from the Jinja templates on disk, and a rule
-# whose action config names no target of its own delivers through the deployment-level
-# defaults from the sweep job's extra. Findings no rule matches go to the default
-# sink - logged and offered as a catch-all digest, never dropped - and critical
-# findings are dispatched on every occurrence, regardless of dedup and digest settings.
+# layer provides the real SMTP, Slack and Microsoft Teams connections, the service
+# invoker, pub/sub and HTTP for plain webhooks. Email, Slack and Teams deliver through
+# the connections that share the default notification name, so the delivery targets
+# are the connections themselves - a rule only says where within them, e.g. which
+# Slack channel. What each notification says comes from the Jinja templates on disk.
+# Findings no rule matches go to the default sink - logged and offered as a catch-all
+# digest, never dropped - and critical findings are dispatched on every occurrence,
+# regardless of dedup and digest settings.
 
 from __future__ import annotations
 
@@ -29,6 +31,7 @@ from zato.common.alerting.model import rule_matches, AlertAction, AlertSeverity
 from zato.common.alerting.rendering import render_alert_template, Template_Digest_Body, Template_Digest_Subject, \
     Template_Email_Body, Template_Email_Subject, Template_Slack, Template_Teams, Template_Webhook
 from zato.common.alerting.store import raise_alert, render_alert_message
+from zato.common.api import Incidents
 from zato.common.audit_log.api import AuditEvent, get_audit_engine
 from zato.common.json_internal import dumps
 from zato.common.typing_ import list_field
@@ -59,23 +62,13 @@ logger = logging.getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The Teams message card colors per severity, hex without the hash sign.
-_teams_theme_colors = {
-    AlertSeverity.Info:     '0076d7',
-    AlertSeverity.Warning:  'e8a317',
-    AlertSeverity.Critical: 'cc0000',
-}
-
-# The title Teams cards are posted under.
-_teams_card_title = 'Zato alert'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 @dataclass(init=False)
 class AlertTransports:
     """ The delivery callables behind the action menu, injected by the service layer -
     the engine decides what to dispatch, the transports perform the delivery.
+    The email, Slack and Teams callables deliver through the connections that share
+    the default notification name, and each of them skips quietly when its connection
+    does not exist or is inactive.
     """
 
     # send_email(addresses, subject, body)
@@ -87,7 +80,13 @@ class AlertTransports:
     # publish(topic_name, payload_dict)
     publish: 'callable_' = None
 
-    # http_post(url, payload_dict) - what the Slack, Teams and plain webhooks ride on
+    # send_slack(channel, text)
+    send_slack: 'callable_' = None
+
+    # send_teams(to, html)
+    send_teams: 'callable_' = None
+
+    # http_post(url, payload_dict) - what the plain webhook action rides on
     http_post: 'callable_' = None
 
 # ################################################################################################################################
@@ -101,12 +100,6 @@ class AlertDefaults:
 
     # Where the catch-all digest and target-less email rules deliver
     email_to: 'strlist | None' = None
-
-    # Where target-less Slack rules post
-    slack_webhook: str = ''
-
-    # Where target-less Teams rules post
-    teams_webhook: str = ''
 
     # Where target-less plain webhook rules post - e.g. a Jira automation webhook
     webhook_url: str = ''
@@ -151,32 +144,6 @@ def build_template_context(rule:'AlertRule', finding:'Finding', alert_id:'int', 
         'diagnosis': '',
         'confidence': '',
         'remediation': None,
-    }
-
-    return out
-
-# ################################################################################################################################
-
-def build_slack_payload(text:'str') -> 'stranydict':
-    """ Wraps one rendered Slack text in the incoming-webhook envelope -
-    the text itself comes from the slack template.
-    """
-    out = {'text': text}
-    return out
-
-# ################################################################################################################################
-
-def build_teams_payload(text:'str', summary:'str', severity:'str') -> 'stranydict':
-    """ Wraps one rendered Teams text in the message-card envelope, colored
-    by severity - the text itself comes from the teams template.
-    """
-    out = {
-        '@type': 'MessageCard',
-        '@context': 'https://schema.org/extensions',
-        'summary': summary,
-        'themeColor': _teams_theme_colors[severity],
-        'title': _teams_card_title,
-        'text': text,
     }
 
     return out
@@ -229,15 +196,14 @@ def dispatch_action(
     ) -> 'None':
     """ Runs one rule's action for one alert - what goes out is rendered from the
     alert templates and delivered through whichever transport the rule chose.
-    A rule whose action config names no target of its own uses the
-    deployment-level defaults, so a seeded rule saying only which channel
-    to use delivers without being edited.
+    Email, Slack and Teams ride on the connections behind their transports,
+    and a rule whose action config names no address list or webhook URL of its own
+    uses the deployment-level defaults, so a seeded rule delivers without being edited.
     """
     if defaults is None:
         defaults = AlertDefaults()
 
     context = build_template_context(rule, finding, alert_id, count)
-    message = context['message']
 
     if rule.action == AlertAction.Email_Digest:
 
@@ -269,29 +235,25 @@ def dispatch_action(
 
     elif rule.action == AlertAction.Slack:
 
-        webhook_url = _get_webhook_target(rule, defaults.slack_webhook)
-
-        if not webhook_url:
-            logger.warning('Alert rule `%s` has no Slack webhook and no default one is configured - skipping `%s`',
-                rule.name, finding.object_name)
+        # Without a channel in the rule's action config there is nowhere to post
+        if not (channel := rule.action_config.get(Incidents.Config_Slack_Channel)):
+            logger.warning('Alert rule `%s` has no Slack channel - skipping `%s`', rule.name, finding.object_name)
             return
 
         text = render_alert_template(Template_Slack, context, template_dir)
-        payload = build_slack_payload(text)
-        transports.http_post(webhook_url, payload)
+        transports.send_slack(channel, text)
 
     elif rule.action == AlertAction.Teams:
 
-        webhook_url = _get_webhook_target(rule, defaults.teams_webhook)
-
-        if not webhook_url:
-            logger.warning('Alert rule `%s` has no Teams webhook and no default one is configured - skipping `%s`',
-                rule.name, finding.object_name)
+        # Without a target in the rule's action config there is nowhere to post
+        if not (to := rule.action_config.get(Incidents.Config_Teams_To)):
+            logger.warning('Alert rule `%s` has no Teams target - skipping `%s`', rule.name, finding.object_name)
             return
 
+        # Teams messages are HTML
         text = render_alert_template(Template_Teams, context, template_dir)
-        payload = build_teams_payload(text, message, finding.severity)
-        transports.http_post(webhook_url, payload)
+        html = text.replace('\n', '<br/>')
+        transports.send_teams(to, html)
 
     elif rule.action == AlertAction.Webhook:
 

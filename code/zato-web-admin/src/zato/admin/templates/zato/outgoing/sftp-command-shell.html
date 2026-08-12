@@ -27,8 +27,12 @@ $(document).ready(function() {
         <div class="dashboard-card sftp-shell-card" id="sftp-shell-card">
 
             <div class="dashboard-card-header">
-                <h3>SFTP command shell</h3>
-                <span class="dashboard-pill" id="sftp-shell-conn-name">{{ conn_name }}</span>
+                <span class="dashboard-pill">SFTP command shell</span>
+                <select id="sftp-shell-conn-select" class="sftp-shell-conn-select">
+                    {% for item in connection_list %}
+                    <option value="{{ item.url }}"{% if item.name == conn_name %} selected{% endif %}>{{ item.name }}</option>
+                    {% endfor %}
+                </select>
                 <span class="dashboard-pill sftp-shell-timing" id="sftp-shell-timing" hidden></span>
             </div>
 
