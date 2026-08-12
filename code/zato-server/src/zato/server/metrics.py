@@ -290,14 +290,6 @@ zato_server_config_last_reload_timestamp_seconds = _get_or_create_gauge(
 
 # ################################################################################################################################
 
-zato_outgoing_health = _get_or_create_gauge(
-    'zato_outgoing_health',
-    'Health status of outgoing connections, 1 = healthy, 0 = unhealthy',
-    ('connection_name', 'address'),
-)
-
-# ################################################################################################################################
-
 zato_tls_certificate_expiry_timestamp_seconds = _get_or_create_gauge(
     'zato_tls_certificate_expiry_timestamp_seconds',
     'Unix timestamp when a TLS certificate expires',

@@ -38,6 +38,7 @@ $(document).ready(function() {
                         <span class="dashboard-tab-label">Logging</span>
                     </button>
 
+                    {% if 0 %}
                     <button type="button"
                             class="dashboard-tab{% if active_tab == 'splunk' %} dashboard-tab-active{% endif %}"
                             data-tab="splunk"
@@ -61,6 +62,7 @@ $(document).ready(function() {
                             aria-selected="{% if active_tab == 'grafana' %}true{% else %}false{% endif %}">
                         <span class="dashboard-tab-label">Grafana</span>
                     </button>
+                    {% endif %}
 
                 </div>
             </div>
@@ -85,6 +87,7 @@ $(document).ready(function() {
 
             </div>
 
+            {% if 0 %}
             <!-- Splunk -->
             <div class="dashboard-tab-panel"
                  id="logging-tab-panel-splunk"
@@ -250,6 +253,7 @@ $(document).ready(function() {
                 </div>
 
             </div>
+            {% endif %}
 
         </div>
 
