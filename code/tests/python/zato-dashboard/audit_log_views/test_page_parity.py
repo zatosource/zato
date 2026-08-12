@@ -20,7 +20,7 @@ from django.http import QueryDict
 
 # Zato
 from zato.admin.web.views.audit_log import object_index
-from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_resubmit
+from zato.admin.web.views.audit_log.sources import get_resubmit_labels, _source_resubmit
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, ModuleCtx as AuditLogCtx
 from zato.common.ext.bunch import Bunch
 
@@ -104,14 +104,14 @@ def _get_context(tmp_path:'any_', source:'str', object_name:'str') -> 'dict':
 class TestResubmitLabels:
 
     def test_the_labels_are_keyed_by_source(self):
-        labels = _get_resubmit_labels()
+        labels = get_resubmit_labels()
 
         assert set(labels) == set(_source_resubmit)
 
 # ################################################################################################################################
 
     def test_each_source_maps_its_event_types_to_display_labels(self):
-        labels = _get_resubmit_labels()
+        labels = get_resubmit_labels()
 
         assert labels['mllp-channel'] == {AuditEvent.Message_Received: 'Resubmit'}
         assert labels['rest-outgoing'] == {AuditEvent.Request_Sent: 'Resubmit'}

@@ -455,7 +455,7 @@ class TestFullLoop:
 
         slack_text = slack_delivery['payload']['text']
         assert slack_text.strip() == (
-            f'Rule `Slack_On_Errors` matched `{_rest_conn_name}` (rest-outgoing) - {rest_measures}\n{rest_link}')
+            f'Rule `Slack_On_Errors` matched `{_rest_conn_name}` (REST outgoing) - {rest_measures}\n{rest_link}')
 
         # Teams received exactly one post over TLS - the message card,
         # colored critical, with the rendered teams template as its text
@@ -465,7 +465,7 @@ class TestFullLoop:
         assert teams_delivery['path'] == '/webhookb2/abc'
 
         teams_payload = teams_delivery['payload']
-        teams_message = f'Rule `Teams_On_Errors` matched `{_rest_conn_name}` (rest-outgoing) - {rest_measures}'
+        teams_message = f'Rule `Teams_On_Errors` matched `{_rest_conn_name}` (REST outgoing) - {rest_measures}'
 
         assert teams_payload['@type'] == 'MessageCard'
         assert teams_payload['@context'] == 'https://schema.org/extensions'
@@ -482,7 +482,7 @@ class TestFullLoop:
         assert webhook_delivery['path'] == '/hooks/zato'
 
         webhook_payload = webhook_delivery['payload']
-        webhook_message = f'Rule `Webhook_On_Errors` matched `{_rest_conn_name}` (rest-outgoing) - {rest_measures}'
+        webhook_message = f'Rule `Webhook_On_Errors` matched `{_rest_conn_name}` (REST outgoing) - {rest_measures}'
 
         alert_id = webhook_payload.pop('alert_id')
         assert isinstance(alert_id, int)
@@ -507,9 +507,9 @@ class TestFullLoop:
         subjects = sorted(message.subject for message in smtp_receiver.messages)
 
         assert subjects == [
-            f'Rule `Connection_Down` matched `{_rest_conn_name}` (rest-outgoing) - {rest_measures}',
-            f'Rule `Error_Rate` matched `{_rest_conn_name}` (rest-outgoing) - {rest_measures}',
-            f'Rule `Slow_Queries` matched `{_sql_conn_name}` (sql-outgoing) - error rate 0% (0 of 3 over 300s), average duration 8000ms',
+            f'Rule `Connection_Down` matched `{_rest_conn_name}` (REST outgoing) - {rest_measures}',
+            f'Rule `Error_Rate` matched `{_rest_conn_name}` (REST outgoing) - {rest_measures}',
+            f'Rule `Slow_Queries` matched `{_sql_conn_name}` (SQL) - error rate 0% (0 of 3 over 300s), average duration 8000ms',
         ]
 
         for message in smtp_receiver.messages:

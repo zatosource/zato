@@ -60,11 +60,16 @@ class RaiseResult:
 # ################################################################################################################################
 
 def _find_open_alert(engine:'Engine', rule_name:'str', finding:'Finding') -> 'anydict | None':
-    """ Returns the newest alert of one rule about one object, or None - whether
+    """ Returns the newest alert of one rule about one object of one source, or None - whether
     it still absorbs repetitions is the dedup window's timestamps' call alone.
+
+    The source is part of what identifies an alert because one object writes to more than one
+    of them - a connection's health check and the traffic it carries share a name - and what is
+    measured apart is reported apart.
     """
     statement = select(alert_table)
     statement = statement.where(alert_table.c.rule_name == rule_name)
+    statement = statement.where(alert_table.c.source == finding.source)
     statement = statement.where(alert_table.c.object_name == finding.object_name)
     statement = statement.where(alert_table.c.kind == finding.kind)
     statement = statement.order_by(alert_table.c.id.desc())

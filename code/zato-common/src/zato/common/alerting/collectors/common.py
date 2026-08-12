@@ -36,9 +36,12 @@ if 0:
 Default_Window_Seconds = 300
 
 # Sources measured over a window of their own - file transfer moves fewer, larger
-# messages, so five minutes would rarely hold enough traffic to mean anything.
+# messages, so five minutes would rarely hold enough traffic to mean anything, and a
+# health check runs on an interval a person chose, which reaches into the hours.
 Default_Window_Seconds_By_Source = {
     AuditSource.File_Outgoing: 600,
+    AuditSource.REST_Outgoing_Health: 3600,
+    AuditSource.SOAP_Outgoing_Health: 3600,
 }
 
 # The event types the outstanding measures pair up - sent-not-acked is the canonical absence check.

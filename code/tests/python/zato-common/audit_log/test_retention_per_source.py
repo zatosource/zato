@@ -23,6 +23,10 @@ _evidence_retention_days = 7 * 365
 # What everything else comes back with when nothing is configured.
 _default_retention_days = 30
 
+# What a health check's own events come back with - a check outwrites the traffic it watches
+# and says nothing once it is past.
+_health_check_retention_days = 7
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -49,6 +53,32 @@ class TestRowRetention:
         # What a partner sent and what it signed for settles a dispute that surfaces years later.
         assert get_retention_days(AuditSource.AS2) == _evidence_retention_days
         assert get_retention_days(AuditSource.X12) == _evidence_retention_days
+
+# ################################################################################################################################
+
+    def test_the_health_check_sources_age_out_sooner(self) -> 'None':
+
+        # A check runs on its own interval and writes a pair every time, so it outwrites
+        # the connection it watches while being worth far less once it is past.
+        assert get_retention_days(AuditSource.REST_Outgoing_Health) == _health_check_retention_days
+        assert get_retention_days(AuditSource.SOAP_Outgoing_Health) == _health_check_retention_days
+
+        # The connection's own traffic is unaffected
+        assert get_retention_days(AuditSource.REST_Outgoing) == _default_retention_days
+
+# ################################################################################################################################
+
+    def test_a_health_check_source_takes_its_own_variable(self) -> 'None':
+        env_name = _env_name(Env_Retention_Days_Prefix, AuditSource.REST_Outgoing_Health)
+
+        try:
+            os.environ[env_name] = '2'
+
+            assert get_retention_days(AuditSource.REST_Outgoing_Health) == 2
+            assert get_retention_days(AuditSource.SOAP_Outgoing_Health) == _health_check_retention_days
+
+        finally:
+            _ = os.environ.pop(env_name, None)
 
 # ################################################################################################################################
 

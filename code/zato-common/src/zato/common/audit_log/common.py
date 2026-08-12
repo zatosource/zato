@@ -35,6 +35,11 @@ _default_retention_days = 30
 # so the sources that carry non-repudiation evidence outlive the debug events by default.
 _default_evidence_retention_days = 7 * 365
 
+# How many days a health check's own events are kept for. A check running every ten seconds writes
+# more rows in a day than most connections carry in a month, and a ping that answered a week ago
+# tells nobody anything, so these age out well before the traffic events do.
+_default_health_check_retention_days = 7
+
 # Maximum length of short string columns
 _short_column_len = 255
 
@@ -72,6 +77,12 @@ class AuditSource:
     # SharePoint, Power Automate and Fabric - the object name says which connection spoke.
     Microsoft_Cloud = 'microsoft-cloud'
 
+    # An outgoing connection's own health check writes here rather than to the connection's
+    # traffic source, under the same object name, so what a check measures is counted apart
+    # from what the connection's real calls measure.
+    REST_Outgoing_Health = 'rest-outgoing-health'
+    SOAP_Outgoing_Health = 'soap-outgoing-health'
+
     # The probe sources - the default scheduler jobs that measure what no
     # per-call event can, writing ordinary audit events the collectors read.
     Certificate      = 'certificate'
@@ -80,11 +91,59 @@ class AuditSource:
 
 # ################################################################################################################################
 
-# The sources whose events are evidence rather than diagnostics, with how long each is kept for.
+# What tells a check's event or measure from the connection's own.
+health_sources = {AuditSource.REST_Outgoing_Health, AuditSource.SOAP_Outgoing_Health}
+
+# ################################################################################################################################
+
+# What each source is called in a sentence a person reads, an alert message above all. The code
+# an event carries is what the tables are keyed by, not a name anyone should have to read.
+_source_label = {
+    AuditSource.PubSub: 'Pub/sub',
+    AuditSource.REST_Channel: 'REST channel',
+    AuditSource.SOAP_Channel: 'SOAP channel',
+    AuditSource.REST_Outgoing: 'REST outgoing',
+    AuditSource.SOAP_Outgoing: 'SOAP outgoing',
+    AuditSource.REST_Outgoing_Health: 'REST check',
+    AuditSource.SOAP_Outgoing_Health: 'SOAP check',
+    AuditSource.Email_IMAP: 'IMAP',
+    AuditSource.Email_SMTP: 'SMTP',
+    AuditSource.File_Outgoing: 'File transfer',
+    AuditSource.SQL_Outgoing: 'SQL',
+    AuditSource.AS2: 'AS2',
+    AuditSource.AS4: 'AS4',
+    AuditSource.X12: 'X12',
+    AuditSource.MCP: 'MCP',
+    AuditSource.MLLP_Channel: 'MLLP channel',
+    AuditSource.MLLP_Outgoing: 'MLLP outgoing',
+    AuditSource.FHIR: 'FHIR outgoing',
+    AuditSource.Config: 'Log access',
+    AuditSource.Scheduler: 'Scheduler',
+    AuditSource.LLM: 'LLM',
+    AuditSource.Odoo: 'Odoo',
+    AuditSource.Microsoft_Cloud: 'Microsoft cloud',
+    AuditSource.Certificate: 'Certificate',
+    AuditSource.Microsoft_Health: 'Microsoft health',
+    AuditSource.Canary: 'Canary',
+}
+
+# ################################################################################################################################
+
+def get_source_label(source:'str') -> 'str':
+    """ What one source is called in a sentence.
+    """
+    out = _source_label[source]
+    return out
+
+# ################################################################################################################################
+
+# The sources kept for something other than the usual span, with how long each is kept for.
 _source_retention_days = {
     AuditSource.AS2: _default_evidence_retention_days,
     AuditSource.AS4: _default_evidence_retention_days,
     AuditSource.X12: _default_evidence_retention_days,
+    AuditSource.REST_Outgoing_Health: _default_health_check_retention_days,
+    AuditSource.SOAP_Outgoing_Health: _default_health_check_retention_days,
 }
 
 # ################################################################################################################################
@@ -235,6 +294,11 @@ _short_column = String(_short_column_len)
 _endpoint_column = String(_endpoint_column_len)
 _attr_number_column = Numeric(20, 6, asdecimal=False)
 
+# How much of a short column an index spans when a whole one would not fit. MySQL caps a key
+# at 3072 bytes, which four full-width utf8mb4 columns overrun, and rule, source, object
+# and kind names all tell themselves apart well inside this many characters.
+_index_prefix_len = 64
+
 # ################################################################################################################################
 
 _event_columns = [
@@ -355,7 +419,7 @@ event_dedup_table = Table('event_dedup', metadata, *_event_dedup_columns)
 
 # ################################################################################################################################
 
-# Alerts with their dedup count - one row per (rule, object, kind) within the dedup
+# Alerts with their dedup count - one row per (rule, source, object, kind) within the dedup
 # window, repeated findings increment the count instead of adding rows. There is
 # no lifecycle here - what happens to an alert after it goes out lives in Jira,
 # ServiceNow or whatever else receives it.
@@ -371,7 +435,12 @@ _alert_columns = [
     Column('count', Integer),
     Column('first_raised_iso', _short_column),
     Column('last_raised_iso', _short_column),
-    Index('idx_alert_rule_object', 'rule_name', 'object_name', 'kind'),
+    Index('idx_alert_rule_object', 'rule_name', 'source', 'object_name', 'kind', mysql_length={
+        'rule_name': _index_prefix_len,
+        'source': _index_prefix_len,
+        'object_name': _index_prefix_len,
+        'kind': _index_prefix_len,
+    }),
 ]
 
 alert_table = Table('alert', metadata, *_alert_columns)

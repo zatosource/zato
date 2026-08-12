@@ -62,6 +62,8 @@ _alert_sources = [
     AuditSource.SOAP_Channel,
     AuditSource.REST_Outgoing,
     AuditSource.SOAP_Outgoing,
+    AuditSource.REST_Outgoing_Health,
+    AuditSource.SOAP_Outgoing_Health,
     AuditSource.Email_IMAP,
     AuditSource.Email_SMTP,
     AuditSource.File_Outgoing,

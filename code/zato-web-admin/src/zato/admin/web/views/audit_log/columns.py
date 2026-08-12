@@ -85,9 +85,11 @@ _source_label = {
     AuditSource.PubSub: 'Pub/sub',
     AuditSource.REST_Channel: 'REST channels',
     AuditSource.REST_Outgoing: 'REST outgoing',
+    AuditSource.REST_Outgoing_Health: 'REST checks',
     AuditSource.Scheduler: 'Scheduler',
     AuditSource.SOAP_Channel: 'SOAP channels',
     AuditSource.SOAP_Outgoing: 'SOAP outgoing',
+    AuditSource.SOAP_Outgoing_Health: 'SOAP checks',
     AuditSource.SQL_Outgoing: 'SQL',
     AuditSource.X12: 'X12',
 }
@@ -119,9 +121,11 @@ _source_event_label = {
     AuditSource.PubSub: 'Pub/sub',
     AuditSource.REST_Channel: 'REST channel',
     AuditSource.REST_Outgoing: 'REST outgoing',
+    AuditSource.REST_Outgoing_Health: 'REST check',
     AuditSource.Scheduler: 'Scheduler',
     AuditSource.SOAP_Channel: 'SOAP channel',
     AuditSource.SOAP_Outgoing: 'SOAP outgoing',
+    AuditSource.SOAP_Outgoing_Health: 'SOAP check',
     AuditSource.SQL_Outgoing: 'SQL',
     AuditSource.X12: 'X12',
 }
@@ -143,9 +147,11 @@ _source_object_label = {
     AuditSource.PubSub: 'Topic',
     AuditSource.REST_Channel: 'Channel',
     AuditSource.REST_Outgoing: 'Connection',
+    AuditSource.REST_Outgoing_Health: 'Connection',
     AuditSource.Scheduler: 'Job',
     AuditSource.SOAP_Channel: 'Channel',
     AuditSource.SOAP_Outgoing: 'Connection',
+    AuditSource.SOAP_Outgoing_Health: 'Connection',
     AuditSource.SQL_Outgoing: 'Connection',
     AuditSource.X12: 'Partner',
 }
@@ -158,6 +164,12 @@ _source_page_url = {
     AuditSource.SOAP_Channel: f'/zato/http-soap/?cluster={default_cluster_id}&connection=channel&transport=soap',
     AuditSource.REST_Outgoing: f'/zato/http-soap/?cluster={default_cluster_id}&connection=outgoing&transport=plain_http',
     AuditSource.SOAP_Outgoing: f'/zato/http-soap/?cluster={default_cluster_id}&connection=outgoing&transport=soap',
+
+    # A check's object is the connection it watches, so both lead where the connection is
+    AuditSource.REST_Outgoing_Health:
+        f'/zato/http-soap/?cluster={default_cluster_id}&connection=outgoing&transport=plain_http',
+    AuditSource.SOAP_Outgoing_Health: f'/zato/http-soap/?cluster={default_cluster_id}&connection=outgoing&transport=soap',
+
     AuditSource.MLLP_Channel: f'/zato/channel/hl7/mllp/?cluster={default_cluster_id}',
     AuditSource.MLLP_Outgoing: f'/zato/outgoing/hl7/mllp/?cluster={default_cluster_id}',
     AuditSource.FHIR: f'/zato/outgoing/hl7/fhir/?cluster={default_cluster_id}',
@@ -205,6 +217,8 @@ _source_endpoint_label = {
     AuditSource.Scheduler: 'Service',
     AuditSource.REST_Outgoing: 'Address',
     AuditSource.SOAP_Outgoing: 'Address',
+    AuditSource.REST_Outgoing_Health: 'Address',
+    AuditSource.SOAP_Outgoing_Health: 'Address',
     AuditSource.Email_IMAP: 'Folder',
     AuditSource.Email_SMTP: 'Address',
     AuditSource.SQL_Outgoing: 'Database',
@@ -263,6 +277,8 @@ _source_title = {
     'soap-channel': 'SOAP channel audit log',
     'rest-outgoing': 'Outgoing REST audit log',
     'soap-outgoing': 'Outgoing SOAP audit log',
+    'rest-outgoing-health': 'REST check audit log',
+    'soap-outgoing-health': 'SOAP check audit log',
     'email-imap': 'IMAP audit log',
     'file-outgoing': 'File transfer audit log',
     'sql-outgoing': 'SQL audit log',
@@ -483,6 +499,10 @@ _source_columns = {
     'soap-channel': _soap_channel_columns,
     'rest-outgoing': _rest_outgoing_columns,
     'soap-outgoing': _soap_outgoing_columns,
+
+    # A check writes what a call writes, through the same writer, so its rows have the same shape
+    'rest-outgoing-health': _rest_outgoing_columns,
+    'soap-outgoing-health': _soap_outgoing_columns,
     'email-imap': _email_imap_columns,
     'file-outgoing': _file_outgoing_columns,
     'sql-outgoing': _sql_outgoing_columns,

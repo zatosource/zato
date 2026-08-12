@@ -7,8 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # An outgoing REST call leaves a request-sent and a response-received row under one
-# correlation id, the response row carrying the HTTP status it came with - and a ping
-# is traffic like any other, so it leaves the same pair.
+# correlation id, the response row carrying the HTTP status it came with. A health check's
+# ping leaves the same pair, under the connection's health source rather than its traffic one,
+# which is what lets a check's failures be counted apart from a call's.
 
 # stdlib
 from http.client import INTERNAL_SERVER_ERROR, OK
@@ -21,7 +22,8 @@ from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent,
 from zato.common.json_internal import loads
 
 # Test support
-from rest_stub import new_rest_wrapper, rest_audit_env, Address_Host, Address_Path, Connection_Name, ResponseStub
+from rest_stub import new_rest_wrapper, new_soap_wrapper, rest_audit_env, Address_Host, Address_Path, Connection_Name, \
+    ResponseStub
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -229,6 +231,119 @@ def test_a_ping_of_an_unaudited_connection_writes_nothing(tmp_path:'os.PathLike'
         _ = wrapper.ping(_cid)
 
         assert _get_events() == []
+
+# ################################################################################################################################
+
+def test_a_ping_writes_the_health_source(tmp_path:'os.PathLike') -> 'None':
+    """ Both rows a ping leaves belong to the connection's health source, and both still
+    name the connection, so a check is found where the connection is looked for.
+    """
+    with rest_audit_env(tmp_path):
+
+        wrapper = new_rest_wrapper()
+        wrapper.invoke_http = _replying_invoke_http(ResponseStub(OK, 'OK', ''))
+
+        _ = wrapper.ping(_cid)
+
+        events = _get_events()
+        assert len(events) == 2
+
+        for event in events:
+            assert event['source'] == AuditSource.REST_Outgoing_Health
+            assert event['object_name'] == Connection_Name
+
+# ################################################################################################################################
+
+def test_a_failed_ping_writes_the_health_source(tmp_path:'os.PathLike') -> 'None':
+    """ A ping that never got an answer is recorded on the health source too - the error
+    rows are the ones a failure streak is counted from.
+    """
+    with rest_audit_env(tmp_path):
+
+        wrapper = new_rest_wrapper()
+        wrapper.invoke_http = _raising_invoke_http()
+
+        try:
+            _ = wrapper.ping(_cid)
+        except Exception as e:
+            assert _connection_error in str(e)
+        else:
+            raise AssertionError('The ping should have raised')
+
+        events = _get_events()
+        assert len(events) == 2
+
+        for event in events:
+            assert event['source'] == AuditSource.REST_Outgoing_Health
+
+        response_received = events[1]
+        assert response_received['outcome'] == AuditOutcome.Error
+
+# ################################################################################################################################
+
+def test_business_traffic_keeps_the_traffic_source(tmp_path:'os.PathLike') -> 'None':
+    """ A regular call is unaffected by what a ping does - both its rows stay on the
+    connection's traffic source.
+    """
+    with rest_audit_env(tmp_path):
+
+        wrapper = new_rest_wrapper()
+        wrapper.invoke_http = _replying_invoke_http(ResponseStub(OK, 'OK', '{"result":"created"}'))
+
+        _ = wrapper.post(_cid, 'The request body')
+
+        events = _get_events()
+        assert len(events) == 2
+
+        for event in events:
+            assert event['source'] == AuditSource.REST_Outgoing
+
+# ################################################################################################################################
+
+def test_a_ping_and_a_call_land_on_different_sources(tmp_path:'os.PathLike') -> 'None':
+    """ One connection pinged and called writes to two sources under the one name,
+    which is the whole point - the same object measured as two streams.
+    """
+    with rest_audit_env(tmp_path):
+
+        wrapper = new_rest_wrapper()
+        wrapper.invoke_http = _replying_invoke_http(ResponseStub(OK, 'OK', ''))
+
+        _ = wrapper.ping(_cid)
+        _ = wrapper.post(_cid, 'The request body')
+
+        events = _get_events()
+        assert len(events) == 4
+
+        sources = set()
+        object_names = set()
+
+        for event in events:
+            sources.add(event['source'])
+            object_names.add(event['object_name'])
+
+        assert sources == {AuditSource.REST_Outgoing_Health, AuditSource.REST_Outgoing}
+        assert object_names == {Connection_Name}
+
+# ################################################################################################################################
+
+def test_a_soap_ping_writes_the_soap_health_source(tmp_path:'os.PathLike') -> 'None':
+    """ The transport decides which health source a check writes to, the same way it decides
+    which traffic source a call writes to.
+    """
+    with rest_audit_env(tmp_path):
+
+        wrapper = new_soap_wrapper()
+        wrapper.invoke_http = _replying_invoke_http(ResponseStub(OK, 'OK', ''))
+
+        _ = wrapper.ping(_cid)
+
+        events = _get_events()
+        assert len(events) == 2
+
+        for event in events:
+            assert event['source'] == AuditSource.SOAP_Outgoing_Health
+            assert event['object_name'] == Connection_Name
 
 # ################################################################################################################################
 # ################################################################################################################################

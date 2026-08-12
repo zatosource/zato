@@ -19,6 +19,7 @@ from http.client import BAD_REQUEST
 from live_sql.env import database_env
 from zato.common.api import URL_TYPE
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.soap.common import SOAPVersion
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 
 # ################################################################################################################################
@@ -92,8 +93,8 @@ class _ServerStub:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def new_rest_wrapper(*, is_audit_log_active:'bool'=True) -> 'HTTPSOAPWrapper':
-    """ Builds the connection under test - real except for invoke_http, which the tests
+def _new_wrapper(transport:'str', is_audit_log_active:'bool') -> 'HTTPSOAPWrapper':
+    """ Builds one connection under test - real except for invoke_http, which the tests
     replace so that nothing ever goes on the wire.
     """
     config = {
@@ -104,19 +105,38 @@ def new_rest_wrapper(*, is_audit_log_active:'bool'=True) -> 'HTTPSOAPWrapper':
         'timeout': 10,
         'pool_size': '',
         'sec_type': '',
-        'transport': URL_TYPE.PLAIN_HTTP,
+        'transport': transport,
         'address_host': Address_Host,
         'address_url_path': Address_Path,
         'content_type': '',
         'data_format': '',
         'password': '',
         'ping_method': '',
+        'soap_version': SOAPVersion.V11,
+        'soap_action': '',
     }
 
     server = _ServerStub()
 
     out = HTTPSOAPWrapper(server, config)
 
+    return out
+
+# ################################################################################################################################
+
+def new_rest_wrapper(*, is_audit_log_active:'bool'=True) -> 'HTTPSOAPWrapper':
+    """ The REST connection under test.
+    """
+    out = _new_wrapper(URL_TYPE.PLAIN_HTTP, is_audit_log_active)
+    return out
+
+# ################################################################################################################################
+
+def new_soap_wrapper(*, is_audit_log_active:'bool'=True) -> 'HTTPSOAPWrapper':
+    """ The SOAP connection under test - the same wrapper, differing only in the transport
+    its events are recorded under.
+    """
+    out = _new_wrapper(URL_TYPE.SOAP, is_audit_log_active)
     return out
 
 # ################################################################################################################################

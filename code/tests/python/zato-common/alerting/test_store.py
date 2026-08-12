@@ -15,7 +15,7 @@ from sqlalchemy import select
 # Zato
 from zato.common.alerting.model import new_finding, new_rule, FindingKind
 from zato.common.alerting.store import raise_alert, render_alert_message
-from zato.common.audit_log.api import get_audit_engine, AuditLog
+from zato.common.audit_log.api import get_audit_engine, AuditLog, AuditSource
 from zato.common.audit_log.common import alert_table
 from zato.common.util.api import utcnow
 
@@ -23,8 +23,10 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.engine import Engine
     from zato.common.typing_ import dictlist
     dictlist = dictlist
+    Engine = Engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,17 +38,29 @@ _server_name = 'test-alerting-server'
 _source = 'mllp-channel'
 _channel_name = 'hl7.test.channel'
 
+# The outgoing connection whose check and whose traffic are told apart
+_connection_name = 'crm.orders.api'
+
 # The dedup window all the test rules use, in seconds
 _window_seconds = 3600
 
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _new_engine() -> 'Engine':
+    """ Creates the schema and returns the engine over it.
+    """
+    _ = AuditLog(_server_name)
+
+    out = get_audit_engine()
+    return out
+
+# ################################################################################################################################
+
 def _new_env() -> 'tuple':
     """ Creates the schema and returns the engine along with one rule and one finding.
     """
-    _ = AuditLog(_server_name)
-    engine = get_audit_engine()
+    engine = _new_engine()
 
     rule = new_rule('silent-feeds', FindingKind.Feed_Silent, dedup_window_seconds=_window_seconds)
     finding = new_finding(FindingKind.Feed_Silent, _source, _channel_name, 'Feed on `hl7.test.channel` silent for 300s')
@@ -55,7 +69,7 @@ def _new_env() -> 'tuple':
 
 # ################################################################################################################################
 
-def _get_alert_rows(engine) -> 'dictlist':
+def _get_alert_rows(engine:'Engine') -> 'dictlist':
     """ Every alert row in the store, newest first.
     """
     statement = select(alert_table).order_by(alert_table.c.id.desc())
@@ -154,6 +168,62 @@ class TestDedup:
         assert first.is_new is True
         assert second.is_new is True
         assert first.alert_id != second.alert_id
+
+# ################################################################################################################################
+
+    def test_two_sources_on_one_object_raise_two_alerts(self) -> 'None':
+        """ A connection's health check and the traffic it carries share a name and are
+        measured apart, so what is measured apart is also reported apart.
+        """
+        engine = _new_engine()
+        rule = new_rule('connection-errors', FindingKind.Error_Rate, dedup_window_seconds=_window_seconds)
+        now = utcnow()
+
+        traffic_finding = new_finding(
+            FindingKind.Error_Rate, AuditSource.REST_Outgoing, _connection_name, 'The calls are failing')
+        check_finding = new_finding(
+            FindingKind.Error_Rate, AuditSource.REST_Outgoing_Health, _connection_name, 'The check is failing')
+
+        # Both inside the dedup window, which is where a shared row would have absorbed the second
+        first = raise_alert(engine, rule, traffic_finding, now)
+        second = raise_alert(engine, rule, check_finding, now + timedelta(seconds=60))
+
+        assert first.is_new is True
+        assert second.is_new is True
+        assert first.alert_id != second.alert_id
+
+        alerts = _get_alert_rows(engine)
+        assert len(alerts) == 2
+
+        sources = set()
+
+        for alert in alerts:
+            assert alert['object_name'] == _connection_name
+            assert alert['count'] == 1
+            sources.add(alert['source'])
+
+        assert sources == {AuditSource.REST_Outgoing, AuditSource.REST_Outgoing_Health}
+
+# ################################################################################################################################
+
+    def test_one_source_still_deduplicates_within_the_window(self) -> 'None':
+        """ Telling the two streams apart does not stop either of them deduplicating.
+        """
+        engine = _new_engine()
+        rule = new_rule('connection-errors', FindingKind.Error_Rate, dedup_window_seconds=_window_seconds)
+        now = utcnow()
+
+        check_finding = new_finding(
+            FindingKind.Error_Rate, AuditSource.REST_Outgoing_Health, _connection_name, 'The check is failing')
+
+        first = raise_alert(engine, rule, check_finding, now)
+        second = raise_alert(engine, rule, check_finding, now + timedelta(seconds=60))
+
+        assert second.is_new is False
+        assert second.alert_id == first.alert_id
+        assert second.count == 2
+
+        assert len(_get_alert_rows(engine)) == 1
 
 # ################################################################################################################################
 # ################################################################################################################################

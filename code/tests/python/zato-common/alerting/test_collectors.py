@@ -39,6 +39,9 @@ _server_name = 'test-alerting-server'
 _channel_name = 'hl7.test.channel'
 _other_channel_name = 'hl7.other.channel'
 
+# The outgoing connection the health check tests seed events for
+_connection_name = 'crm.orders.api'
+
 # The window the error-rate measures cover in these tests, in seconds
 _window_seconds = 3600
 
@@ -64,6 +67,16 @@ def _seed_outcome(audit_log:'AuditLog', cid:'str', outcome:'str', *, object_name
     """ Stores one inbound acknowledgment event with the given outcome.
     """
     _ = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, object_name, cid=cid, outcome=outcome)
+
+# ################################################################################################################################
+
+def _seed_exchange(audit_log:'AuditLog', source:'str', cid:'str', outcome:'str') -> 'None':
+    """ Stores the request/response pair an outgoing connection leaves behind, the way its
+    wrapper writes it - the request half always goes out fine, the response half carries
+    what actually happened.
+    """
+    _ = audit_log.insert(source, AuditEvent.Request_Sent, _connection_name, cid=cid, outcome=AuditOutcome.OK)
+    _ = audit_log.insert(source, AuditEvent.Response_Received, _connection_name, cid=cid, outcome=outcome)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -335,6 +348,105 @@ class TestConsecutiveFailureFacts:
 
         assert len(facts) == 1
         assert facts[0]['consecutive_failures'] == 0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestHealthCheckStreamIsCountedApart:
+
+    def test_a_failing_ping_does_not_add_to_the_traffic_streak(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # One connection, failing on both what it carries and what watches it
+        _seed_exchange(audit_log, AuditSource.REST_Outgoing, 'apart-call-1', AuditOutcome.Error)
+        _seed_exchange(audit_log, AuditSource.REST_Outgoing, 'apart-call-2', AuditOutcome.Error)
+        _seed_exchange(audit_log, AuditSource.REST_Outgoing_Health, 'apart-check-1', AuditOutcome.Error)
+        _seed_exchange(audit_log, AuditSource.REST_Outgoing_Health, 'apart-check-2', AuditOutcome.Error)
+
+        facts = collect_consecutive_failure_facts(engine, now)
+
+        streaks_by_source = {}
+
+        for fact in facts:
+            assert fact['object_name'] == _connection_name
+            streaks_by_source[fact['source']] = fact['consecutive_failures']
+
+        # Two streams of two, rather than one of four
+        assert streaks_by_source == {
+            AuditSource.REST_Outgoing: 2,
+            AuditSource.REST_Outgoing_Health: 2,
+        }
+
+# ################################################################################################################################
+
+    def test_a_succeeding_ping_no_longer_breaks_the_traffic_streak(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A check that answers between failing calls, oldest first. On one shared stream the
+        # newest three outcomes would read OK, error, OK and the streak would stop at one.
+        _seed_exchange(audit_log, AuditSource.REST_Outgoing, 'interleaved-call-1', AuditOutcome.Error)
+        _seed_exchange(audit_log, AuditSource.REST_Outgoing_Health, 'interleaved-check-1', AuditOutcome.OK)
+        _seed_exchange(audit_log, AuditSource.REST_Outgoing, 'interleaved-call-2', AuditOutcome.Error)
+        _seed_exchange(audit_log, AuditSource.REST_Outgoing_Health, 'interleaved-check-2', AuditOutcome.OK)
+        _seed_exchange(audit_log, AuditSource.REST_Outgoing, 'interleaved-call-3', AuditOutcome.Error)
+
+        facts = collect_consecutive_failure_facts(engine, now)
+
+        streaks_by_source = {}
+
+        for fact in facts:
+            streaks_by_source[fact['source']] = fact['consecutive_failures']
+
+        # The three failed calls are an unbroken run, and the answering check says so
+        assert streaks_by_source[AuditSource.REST_Outgoing] == 3
+        assert streaks_by_source[AuditSource.REST_Outgoing_Health] == 0
+
+# ################################################################################################################################
+
+    def test_a_connection_with_only_a_health_check_reports_only_the_health_source(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_exchange(audit_log, AuditSource.REST_Outgoing_Health, 'only-check-1', AuditOutcome.Error)
+        _seed_exchange(audit_log, AuditSource.REST_Outgoing_Health, 'only-check-2', AuditOutcome.Error)
+        _seed_exchange(audit_log, AuditSource.REST_Outgoing_Health, 'only-check-3', AuditOutcome.Error)
+
+        facts = collect_consecutive_failure_facts(engine, now)
+
+        assert len(facts) == 1
+
+        fact = facts[0]
+        assert fact['source'] == AuditSource.REST_Outgoing_Health
+        assert fact['object_name'] == _connection_name
+        assert fact['consecutive_failures'] == 3
+
+# ################################################################################################################################
+
+    def test_a_soap_check_is_counted_apart_from_soap_traffic(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_exchange(audit_log, AuditSource.SOAP_Outgoing, 'soap-call-1', AuditOutcome.Error)
+        _seed_exchange(audit_log, AuditSource.SOAP_Outgoing_Health, 'soap-check-1', AuditOutcome.Error)
+        _seed_exchange(audit_log, AuditSource.SOAP_Outgoing_Health, 'soap-check-2', AuditOutcome.Error)
+
+        facts = collect_consecutive_failure_facts(engine, now)
+
+        streaks_by_source = {}
+
+        for fact in facts:
+            streaks_by_source[fact['source']] = fact['consecutive_failures']
+
+        assert streaks_by_source == {
+            AuditSource.SOAP_Outgoing: 1,
+            AuditSource.SOAP_Outgoing_Health: 2,
+        }
 
 # ################################################################################################################################
 

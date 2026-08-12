@@ -13,6 +13,7 @@ from zato.common.alerting.model import AlertAction
 from zato.common.alerting.sweep import build_fact_message, build_finding_link, read_outcome, run_sweep
 from zato.common.api import Alerting, Incidents
 from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.common import get_source_label
 from zato.common.monitoring.health import EndpointMetrics
 from zato.common.rule_engine.loading import load_documents
 from zato.common.rule_engine.parser import parse_data_details
@@ -67,6 +68,21 @@ docs
     A feed silent for ten minutes raises an email alert.
 when
     alert.silent_seconds is at least 600
+then
+    outcome.action = 'email'
+    outcome.severity = 'critical'
+""".strip()
+
+# The rule an outgoing connection and its own health check are both judged by - one condition,
+# one threshold, two streams counted apart.
+_health_rules_text = """
+rule
+    test_connection_down
+docs
+    A connection failing three times in a row is considered down, and so is its health check.
+when
+    alert.source in ['rest-outgoing', 'rest-outgoing-health'] and
+    alert.consecutive_failures is at least 3
 then
     outcome.action = 'email'
     outcome.severity = 'critical'
@@ -130,6 +146,15 @@ def _seed_outcome(audit_log:'AuditLog', cid:'str', outcome:'str', *, object_name
     _ = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, object_name, cid=cid, outcome=outcome)
 
 # ################################################################################################################################
+
+def _seed_exchange(audit_log:'AuditLog', source:'str', cid:'str') -> 'None':
+    """ Stores the failed request/response pair an outgoing connection leaves behind, the way
+    its wrapper writes it - the request half goes out fine, the response half carries the failure.
+    """
+    _ = audit_log.insert(source, AuditEvent.Request_Sent, _connection_name, cid=cid, outcome=AuditOutcome.OK)
+    _ = audit_log.insert(source, AuditEvent.Response_Received, _connection_name, cid=cid, outcome=AuditOutcome.Error)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestReadOutcome:
@@ -163,6 +188,78 @@ class TestBuildFactMessage:
         assert _channel_name in message
         assert 'outstanding' not in message
         assert 'silent' not in message
+
+# ################################################################################################################################
+
+    def test_a_failing_health_check_says_so_in_words(self) -> 'None':
+        fact = new_fact(AuditSource.REST_Outgoing_Health, _connection_name)
+        fact['consecutive_failures'] = 3
+
+        message = build_fact_message('test_connection_down', fact)
+
+        assert 'REST check failed 3 times' in message
+        assert _connection_name in message
+
+        # The measure already names the source, so it is not repeated in parentheses
+        assert '(REST check)' not in message
+
+# ################################################################################################################################
+
+    def test_one_failed_check_is_not_pluralized(self) -> 'None':
+        fact = new_fact(AuditSource.SOAP_Outgoing_Health, _connection_name)
+        fact['consecutive_failures'] = 1
+
+        message = build_fact_message('test_connection_down', fact)
+
+        assert 'SOAP check failed 1 time' in message
+        assert 'failed 1 times' not in message
+
+# ################################################################################################################################
+
+    def test_a_failing_connection_keeps_the_streak_phrase(self) -> 'None':
+        fact = new_fact(AuditSource.REST_Outgoing, _connection_name)
+        fact['consecutive_failures'] = 3
+
+        message = build_fact_message('test_connection_down', fact)
+
+        assert '3 consecutive failure(s)' in message
+        assert '(REST outgoing)' in message
+
+# ################################################################################################################################
+
+    def test_a_measure_that_reads_alike_names_its_source(self) -> 'None':
+        """ An error rate is an error rate on either stream, so the source in parentheses
+        is what says which of the two is being reported.
+        """
+        fact = new_fact(AuditSource.REST_Outgoing_Health, _connection_name)
+        fact['error_rate'] = 0.75
+        fact['error_count'] = 3
+        fact['total_count'] = 4
+        fact['window_seconds'] = 3600
+
+        message = build_fact_message('test_error_rate', fact)
+
+        assert '(REST check)' in message
+        assert 'error rate 75% (3 of 4 over 3600s)' in message
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestSourceLabels:
+
+    def test_every_source_has_a_name_a_person_can_read(self) -> 'None':
+        """ An alert names the source of what it measured, so a source added without a label
+        of its own takes the alert down with it.
+        """
+        for name in dir(AuditSource):
+
+            if name.startswith('_'):
+                continue
+
+            source = getattr(AuditSource, name)
+            label = get_source_label(source)
+
+            assert label != source, name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -312,6 +409,46 @@ class TestRunSweep:
         # The diagnose rule went out through the service transport
         assert len(recorder.invocations) == 1
         assert recorder.invocations[0][1]['object_name'] == _channel_name
+
+# ################################################################################################################################
+
+    def test_a_failing_check_and_failing_traffic_raise_one_alert_each(self) -> 'None':
+        """ One connection failing on both streams is two alerts, not one counted twice -
+        what is measured apart is reported apart.
+        """
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        recorder = _TransportRecorder()
+        now = utcnow()
+
+        for index in range(3):
+            _seed_exchange(audit_log, AuditSource.REST_Outgoing, f'sweep-call-{index}')
+            _seed_exchange(audit_log, AuditSource.REST_Outgoing_Health, f'sweep-check-{index}')
+
+        rules = _load_rules(_health_rules_text)
+
+        defaults = AlertDefaults()
+        defaults.email_to = _addresses
+
+        result = run_sweep(
+            engine, rules, {}, AuditSource.REST_Outgoing, recorder.make(), audit_log, 'cid-health-1', now,
+            defaults=defaults)
+
+        # Two facts about the one connection, each raising its own alert
+        assert result.fact_count == 2
+        assert result.raised_count == 2
+        assert result.deduplicated_count == 0
+        assert len(recorder.emails) == 2
+
+        bodies = []
+
+        for _, _, body in recorder.emails:
+            bodies.append(body)
+
+        joined = '\n'.join(bodies)
+
+        assert 'REST check failed 3 times' in joined
+        assert '3 consecutive failure(s)' in joined
 
 # ################################################################################################################################
 # ################################################################################################################################

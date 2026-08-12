@@ -277,6 +277,11 @@ class TestEachTypeReachesItsRule:
         case('alerts_common_Certificate_Expiring', AuditSource.Certificate, cert_days_left=3)
         case('alerts_channels_Channel_Error_Rate', AuditSource.REST_Channel, total_count=20, error_count=4, error_rate=0.2)
         case('alerts_rest_Connection_Down', AuditSource.REST_Outgoing, consecutive_failures=3)
+
+        # A connection's health check is measured apart from its traffic and judged by the same rule
+        case('alerts_rest_Connection_Down', AuditSource.REST_Outgoing_Health, consecutive_failures=3)
+        case('alerts_rest_Connection_Down', AuditSource.SOAP_Outgoing_Health, consecutive_failures=3)
+
         case('alerts_sql_Slow_Queries', AuditSource.SQL_Outgoing, avg_duration_ms=6000)
         case('alerts_llm_Slow_Completions', AuditSource.LLM, avg_duration_ms=12000)
         case('alerts_mcp_Server_Down', AuditSource.MCP, consecutive_failures=3)

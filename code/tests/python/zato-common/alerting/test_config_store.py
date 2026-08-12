@@ -21,9 +21,11 @@ from typing_extensions import TypeAlias
 
 # Zato
 from zato.common.alerting import config_map
+from zato.common.alerting.collectors import new_fact
 from zato.common.alerting.config_store import apply_type_config, get_type_definition, NoSuchRulesetError
 from zato.common.alerting.seed import ensure_alerting_definitions
-from zato.common.alerting.sweep import load_alert_rules
+from zato.common.alerting.sweep import load_alert_rules, Fact_Entity
+from zato.common.audit_log.api import AuditSource
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
@@ -42,6 +44,9 @@ _actor = 'test-config-store'
 # The type and ruleset most of the tests speak through
 _rest_type = 'rest'
 _rest_ruleset = 'alerts_rest'
+
+# The outgoing connection the facts are about
+_connection_name = 'crm.orders.api'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,6 +107,28 @@ class TestApplyTypeConfig:
 
         error_rule = rules_by_full_name[f'{_rest_ruleset}_Error_Rate']
         assert error_rule.defaults['error_rate_threshold'] == 0.3
+
+# ################################################################################################################################
+
+    def test_one_knob_moves_the_trip_point_of_both_streams(self, backend:'RuleSQLBackend') -> 'None':
+        """ A connection's health check and the traffic it carries are counted apart and read
+        the same threshold, so the config screen moves both at once.
+        """
+        _ = apply_type_config(backend, _rest_type, actor=_actor, values={'consecutive_failures': 7})
+
+        rules = load_alert_rules(backend)
+        rules_by_full_name = {rule.full_name: rule for rule in rules}
+        down_rule = rules_by_full_name[f'{_rest_ruleset}_Connection_Down']
+
+        for source in (AuditSource.REST_Outgoing, AuditSource.REST_Outgoing_Health):
+
+            at_the_threshold = new_fact(source, _connection_name)
+            at_the_threshold['consecutive_failures'] = 7
+            assert down_rule.match({Fact_Entity: at_the_threshold}), source
+
+            below_it = new_fact(source, _connection_name)
+            below_it['consecutive_failures'] = 6
+            assert not down_rule.match({Fact_Entity: below_it}), source
 
 # ################################################################################################################################
 

@@ -16,7 +16,8 @@
 	test-hl7 test-hl7-fhir test-hl7-mllp-channels test-hl7-mllp-outconns test-hl7-languages test-hl7-volume \
 	test-ui _test-ui test-ui-pubsub test-ui-openapi test-ui-analytics test-ui-audit-log test-ui-webapp test-ui-rule-engine-dashboard \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
-	test-audit-log test-alerting test-destinations test-analytics test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
+	test-audit-log test-rest-outgoing-audit test-alerting test-destinations test-analytics test-demo-seed test-logging \
+	test-ibm-mq test-mongodb test-es \
 	test-rule-engine test-rule-engine-perf test-rule-engine-jobs \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
 	test-all test test-all-reset test-perf \
@@ -1025,6 +1026,13 @@ test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, pl
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_log \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-rest-outgoing-audit: ## Outgoing REST and SOAP audit log tests - what a call and what a health check each write, fully offline.
+	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-server/rest_outgoing_audit/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/rest_outgoing_audit/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_outgoing_audit -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-alerting: ## Alerting engine tests - rules, actions, dedup, lifecycle and collectors, fully offline.
 	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-common/alerting/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1240,7 +1248,7 @@ Zato_Test_Static := test-lint
 Zato_Test_Offline := \
 	test-message-filters test-demo-seed test-sql-cloud test-truncate test-safeguards \
 	test-edifact test-rule-engine-jobs test-alerting test-x12 test-request-response test-destinations \
-	test-as4 test-soap test-as2 test-rule-engine test-hl7-fhir test-llm
+	test-as4 test-soap test-as2 test-rule-engine test-hl7-fhir test-llm test-rest-outgoing-audit
 
 # Rust toolchain suites and the database matrices
 Zato_Test_Toolchain := \

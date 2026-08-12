@@ -15,10 +15,11 @@ rule
     Connection_Down
 docs
     A REST or SOAP outgoing connection that failed three consecutive times is considered down and raises a critical email alert.
+    A connection's health check is measured on its own, so three failed checks say the same thing as three failed calls.
 defaults
     max_consecutive_failures = 3
 when
-    alert.source in ['rest-outgoing', 'soap-outgoing'] and
+    alert.source in ['rest-outgoing', 'soap-outgoing', 'rest-outgoing-health', 'soap-outgoing-health'] and
     alert.consecutive_failures is at least default.max_consecutive_failures
 then
     outcome.action = 'email'
@@ -28,10 +29,11 @@ rule
     Slow_Responses
 docs
     A REST or SOAP outgoing connection whose average response time within the window exceeds five seconds raises an email alert.
+    A connection's health check is measured on its own, so a slow check reads as slow whatever the connection's own traffic did.
 defaults
     max_avg_duration_ms = 5000
 when
-    alert.source in ['rest-outgoing', 'soap-outgoing'] and
+    alert.source in ['rest-outgoing', 'soap-outgoing', 'rest-outgoing-health', 'soap-outgoing-health'] and
     alert.avg_duration_ms is at least default.max_avg_duration_ms
 then
     outcome.action = 'email'
@@ -42,11 +44,12 @@ rule
 docs
     A REST or SOAP outgoing connection whose error share reaches a tenth of its recent traffic raises an email alert.
     This is the early warning below the diagnose rule's quarter threshold.
+    A connection's health check is measured on its own, so the share of failed checks counts apart from the share of failed calls.
 defaults
     error_rate_threshold = 0.1
     min_events = 10
 when
-    alert.source in ['rest-outgoing', 'soap-outgoing'] and
+    alert.source in ['rest-outgoing', 'soap-outgoing', 'rest-outgoing-health', 'soap-outgoing-health'] and
     alert.total_count is at least default.min_events and
     alert.error_rate is at least default.error_rate_threshold
 then
@@ -57,11 +60,12 @@ rule
     Error_Rate_Diagnose
 docs
     A REST outgoing connection whose error share reached a quarter of its recent traffic has its alert diagnosed by the LLM.
+    A connection's health check is measured on its own and is diagnosed on the same threshold.
 defaults
     error_rate_threshold = 0.25
     min_events = 10
 when
-    alert.source is 'rest-outgoing' and
+    alert.source in ['rest-outgoing', 'rest-outgoing-health'] and
     alert.total_count is at least default.min_events and
     alert.error_rate is at least default.error_rate_threshold
 then

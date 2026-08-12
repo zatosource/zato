@@ -26,6 +26,7 @@ from zato.common.alerting.collectors import collect_facts
 from zato.common.alerting.engine import process_findings
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, Default_Dedup_Window_Seconds
 from zato.common.api import Alerting, Incidents
+from zato.common.audit_log.common import get_source_label, health_sources
 from zato.common.defaults import default_cluster_id
 from zato.common.rule_engine.loading import documents_from_version, load_documents
 from zato.common.typing_ import list_field
@@ -166,6 +167,13 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
     """
     parts = []
 
+    source = fact['source']
+    source_label = get_source_label(source)
+
+    # A connection's own health check is named in the measure rather than after it,
+    # because "the check failed" and "the calls failed" are two different sentences.
+    is_health_check = source in health_sources
+
     if fact['total_count']:
         percent = round(fact['error_rate'] * 100)
         error_part = f'error rate {percent}% ({fact["error_count"]} of {fact["total_count"]}'
@@ -179,7 +187,12 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
         parts.append(f'silent for {fact["silent_seconds"]}s')
 
     if fact['consecutive_failures']:
-        parts.append(f'{fact["consecutive_failures"]} consecutive failure(s)')
+        if is_health_check:
+            failure_count = fact['consecutive_failures']
+            times = 'time' if failure_count == 1 else 'times'
+            parts.append(f'{source_label} failed {failure_count} {times}')
+        else:
+            parts.append(f'{fact["consecutive_failures"]} consecutive failure(s)')
 
     if fact['avg_duration_ms']:
         parts.append(f'average duration {fact["avg_duration_ms"]}ms')
@@ -204,7 +217,15 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
 
     measures = ', '.join(parts)
 
-    out = f'Rule `{rule_name}` matched `{fact["object_name"]}` ({fact["source"]}) - {measures}'
+    # A streak measure on a health source already opens with the source's name, so
+    # repeating it in parentheses would say the same thing twice in one sentence ..
+    if is_health_check:
+        if fact['consecutive_failures']:
+            out = f'Rule `{rule_name}` matched `{fact["object_name"]}` - {measures}'
+            return out
+
+    # .. every other measure reads the same on either stream, so the source is what tells them apart.
+    out = f'Rule `{rule_name}` matched `{fact["object_name"]}` ({source_label}) - {measures}'
     return out
 
 # ################################################################################################################################

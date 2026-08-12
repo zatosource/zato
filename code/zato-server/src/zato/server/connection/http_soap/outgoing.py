@@ -376,11 +376,16 @@ class BaseHTTPSOAPWrapper:
         data:'any_',
         status:'str' = '',
         method:'str' = '',
+        *,
+        is_health_check:'bool' = False,
     ) -> 'None':
         """ Writes one audit event describing a request sent to or a response received
         from an outgoing REST or SOAP connection. A request-sent event names the method
         it went out with and is stored as the resubmit convention document,
         which is what makes it repeatable per hop later.
+
+        A health check's own ping goes to the connection's health source instead of its
+        traffic one, which is what lets a check's failures be counted on their own.
         """
 
         # Payloads reach here in whatever shape their caller had them in - bytes as they went on the
@@ -400,11 +405,18 @@ class BaseHTTPSOAPWrapper:
         if method:
             data = dumps({'payload': data, 'method': method})
 
-        # .. the source depends on the connection's transport ..
+        # .. the source depends on the connection's transport, and on whether this is
+        # .. the connection's own health check rather than the traffic it carries ..
         if self.config['transport'] == URL_TYPE.PLAIN_HTTP:
-            source = AuditSource.REST_Outgoing
+            if is_health_check:
+                source = AuditSource.REST_Outgoing_Health
+            else:
+                source = AuditSource.REST_Outgoing
         else:
-            source = AuditSource.SOAP_Outgoing
+            if is_health_check:
+                source = AuditSource.SOAP_Outgoing_Health
+            else:
+                source = AuditSource.SOAP_Outgoing
 
         # .. now, write out the event.
         self.audit_log.insert(
@@ -783,11 +795,11 @@ class BaseHTTPSOAPWrapper:
         ping_path = ping_path or '/'
         address = self.address.replace(r'{_zato_path}', ping_path)
 
-        # .. a ping is traffic like any other to the audit log, so it writes the same
-        # .. request/response pair a regular invocation does, sharing one CID ..
+        # .. a ping writes the same request/response pair a regular invocation does, sharing one CID,
+        # .. but under the connection's health source, so what the check measures stays its own ..
         if self.needs_audit:
             self._insert_audit_event(cid, AuditEvent.Request_Sent, f'{ping_method} {address}', AuditOutcome.OK, '',
-                method=ping_method)
+                method=ping_method, is_health_check=True)
 
         # .. invoke the other end ..
         try:
@@ -797,7 +809,8 @@ class BaseHTTPSOAPWrapper:
 
             # .. record the error in the audit log before re-raising, sharing the request's CID ..
             if self.needs_audit:
-                self._insert_audit_event(cid, AuditEvent.Response_Received, f'{ping_method} {address}', AuditOutcome.Error, str(e))
+                self._insert_audit_event(cid, AuditEvent.Response_Received, f'{ping_method} {address}',
+                    AuditOutcome.Error, str(e), is_health_check=True)
             raise
 
         # .. record the received response in the audit log, with the HTTP status it came with ..
@@ -809,7 +822,7 @@ class BaseHTTPSOAPWrapper:
             response_status = f'{response.status_code} {response.reason}'
             self._insert_audit_event(
                 cid, AuditEvent.Response_Received, f'{ping_method} {address}', response_outcome, response.text,
-                status=response_status)
+                status=response_status, is_health_check=True)
 
         # .. store additional info, get and close the stream.
         _ = verbose.write('Code: {}'.format(response.status_code))
