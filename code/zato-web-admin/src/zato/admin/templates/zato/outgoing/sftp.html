@@ -44,6 +44,7 @@
             '_username',
             '_command_shell',
             '_schedules',
+            '_audit_log',
 
             {% comment %} 3 {% endcomment %}
             '_edit',
@@ -62,6 +63,7 @@
 
             {% comment %} 6 {% endcomment %}
             'ignore_host_key_changes',
+            'should_store_content',
         ]
     }
     </script>
@@ -102,6 +104,7 @@
                         <th><a href="#">Username</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -119,6 +122,7 @@
                         <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                 </thead>
@@ -139,6 +143,7 @@
                         <td>{{ item.username|default:'<span class="form_hint">---</span>' }}</td>
                         <td><a href="{% url "out-sftp-command-shell" item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">Command shell</a></td>
                         <td><a href="{% url "out-file-transfer-schedules" 'sftp' item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">Schedules</a></td>
+                        <td><a href="/zato/audit-log/?source=file-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.outgoing.sftp.edit('{{ item.id }}')">Edit</a></td>
@@ -157,12 +162,13 @@
 
                         {% comment %} 6 {% endcomment %}
                         <td class='ignore'>{{ item.ignore_host_key_changes }}</td>
+                        <td class='ignore'>{{ item.should_store_content }}</td>
 
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='18'>No results</td>
+                        <td colspan='20'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -203,6 +209,13 @@
                                 <label for="id_ignore_host_key_changes">
                                 Ignore host key changes
                                 {{ create_form.ignore_host_key_changes }}
+                                </label>
+
+                                |
+
+                                <label for="{{ create_form.should_store_content.id_for_label }}">
+                                Store file contents
+                                {{ create_form.should_store_content }}
                                 </label>
 
                             </td>
@@ -293,6 +306,13 @@
                                 <label for="id_edit-ignore_host_key_changes">
                                 Ignore host key changes
                                 {{ edit_form.ignore_host_key_changes }}
+                                </label>
+
+                                |
+
+                                <label for="{{ edit_form.should_store_content.id_for_label }}">
+                                Store file contents
+                                {{ edit_form.should_store_content }}
                                 </label>
 
                             </td>

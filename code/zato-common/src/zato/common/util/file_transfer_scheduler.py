@@ -162,6 +162,10 @@ _optional_field_defaults = {
     'should_claim': False,
     'on_success': FileTransfer.Scheduler.OnSuccess.Move,
     'move_directory': FileTransfer.Scheduler.Default_Move_Directory,
+
+    # How many seconds may pass without a file arriving before the arrival alert
+    # considers the schedule overdue.
+    'arrival_window': FileTransfer.Scheduler.Default_Arrival_Window,
 }
 
 # ################################################################################################################################

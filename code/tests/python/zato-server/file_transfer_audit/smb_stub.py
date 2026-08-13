@@ -16,6 +16,7 @@ from contextlib import contextmanager
 # Zato
 from zato.common.audit_log.api import AuditLog
 from zato.common.ext.bunch import Bunch
+from zato.common.typing_ import cast_
 from zato.server.connection.smb import SMBConnection
 
 # Test support
@@ -54,6 +55,7 @@ class ClientRecorder:
     def __init__(self) -> 'None':
         self.written:'anylist' = []
         self.removed:'anylist' = []
+        self.renamed:'anylist' = []
 
     def write(self, remote_path:'any_', data:'any_') -> 'None':
         self.written.append((remote_path, data))
@@ -63,6 +65,9 @@ class ClientRecorder:
 
     def rmdir(self, remote_path:'any_') -> 'None':
         self.removed.append(remote_path)
+
+    def rename(self, from_path:'any_', to_path:'any_') -> 'None':
+        self.renamed.append((from_path, to_path))
 
 # ################################################################################################################################
 
@@ -74,6 +79,9 @@ class RaisingClient(ClientRecorder):
         raise Exception(Raised_Error)
 
     def remove(self, remote_path:'any_') -> 'None':
+        raise Exception(Raised_Error)
+
+    def rename(self, from_path:'any_', to_path:'any_') -> 'None':
         raise Exception(Raised_Error)
 
 # ################################################################################################################################
@@ -102,7 +110,7 @@ def new_smb_connection(smb_client:'ClientRecorder', *, should_store_content:'boo
     """
     wrapper = WrapperStub(smb_client, should_store_content=should_store_content)
 
-    out = SMBConnection(Cid, wrapper) # type: ignore[arg-type]
+    out = SMBConnection(Cid, cast_('any_', wrapper))
 
     return out
 

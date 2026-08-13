@@ -20,6 +20,7 @@ import os
 import smtplib
 import sys
 import threading
+from datetime import timedelta
 from email.mime.text import MIMEText
 from http.client import OK
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -39,7 +40,7 @@ import pytest
 import requests
 
 # SQLAlchemy
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.engine import Engine
 
 # typing-extensions
@@ -591,6 +592,53 @@ class TestFullLoop:
         assert digest.subject == 'Zato alert digest - 1 finding'
         assert 'a finding no rule matches' in digest.body
         assert 'https://dashboard.example.com/zato/audit-log/' in digest.body
+
+# ################################################################################################################################
+
+    def test_a_missed_arrival_reaches_email_through_the_seeded_rule(
+        self,
+        backend:'RuleSQLBackend',
+        smtp_receiver:'any_',
+        ) -> 'None':
+
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        recorder = _ServiceRecorder()
+        transports = build_transports(smtp_receiver.port, recorder)
+
+        defaults = AlertDefaults()
+        defaults.email_to = _addresses
+
+        schedule_name = 'Daily results'
+
+        # The schedule's newest arrival, ten minutes back on a five-minute window
+        event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Delivered, 'sftp.backups',
+            cid='loop-arrival-1', outcome=AuditOutcome.OK, attrs={'schedule': schedule_name})
+
+        statement = update(event_table)
+        statement = statement.where(event_table.c.id == event_id)
+        statement = statement.values(event_time_iso=(now - timedelta(seconds=600)).isoformat())
+
+        with engine.begin() as connection:
+            _ = connection.execute(statement)
+
+        rules = load_alert_rules(backend)
+
+        result = run_sweep(engine, rules, {}, AuditSource.REST_Outgoing, transports, audit_log, 'cid-arrival-1', now,
+            defaults=defaults, arrival_windows={schedule_name: 300})
+
+        # The seeded arrival rule fired and nothing else did
+        assert result.dispatched == [('Arrival_Overdue', AlertAction.Email_Digest)]
+
+        assert len(smtp_receiver.messages) == 1
+
+        message = smtp_receiver.messages[0]
+        assert message.recipients == _addresses
+        assert 'Arrival_Overdue' in message.subject
+        assert schedule_name in message.subject
+        assert 'no file for 600s' in message.subject
 
 # ################################################################################################################################
 # ################################################################################################################################

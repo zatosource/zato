@@ -16,6 +16,7 @@ from traceback import format_exc
 # Zato
 from zato.common.api import SFTP
 from zato.common.audit_log.api import AuditLog
+from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
 from zato.common.sftp import SFTPOutput
 from zato.common.util.api import new_cid
 from zato.server.commands import CommandsFacade
@@ -67,13 +68,14 @@ outconn_sftp_config_defaults:'dict[str, object]' = {
     'private_key': '',
     'strict_host_key_checking': True,
     'ignore_host_key_changes': False,
+    'should_store_content': False,
 }
 
 # Config keys that must be integers but may arrive as strings from opaque storage
 outconn_sftp_int_config_keys = ()
 
 # Config keys that must be booleans but may arrive as strings from opaque storage
-outconn_sftp_bool_config_keys = ('strict_host_key_checking', 'ignore_host_key_changes')
+outconn_sftp_bool_config_keys = ('strict_host_key_checking', 'ignore_host_key_changes', 'should_store_content')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -378,6 +380,17 @@ class OutconnSFTPWrapper(Wrapper):
 
         # Every file this connection moves is recorded through this object
         self.audit_log = AuditLog(server.name)
+
+        # Whether the audited operations also keep the bytes of the files they moved -
+        # connections created before the flag existed have no such key stored at all.
+        if 'should_store_content' in config:
+            self.should_store_content = config['should_store_content']
+        else:
+            self.should_store_content = False
+
+        # What a guaranteed delivery to this connection goes through. It is built from the connection's
+        # id rather than its name because that is what a rename leaves alone.
+        self.publisher = OutgoingPublisher(server, OutgoingType.SFTP, config.id)
 
 # ################################################################################################################################
 

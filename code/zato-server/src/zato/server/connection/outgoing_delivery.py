@@ -14,8 +14,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # pub/sub delivery loop keep the message queued and try again.
 
 # stdlib
+import os
 from json import loads
 from logging import getLogger
+from tempfile import mkstemp
+
+# gevent
+from gevent.fileobject import FileObjectThread
 
 # Zato
 from zato.common.api import GENERIC
@@ -40,6 +45,15 @@ _fhir_block_timeout = 30
 # A FHIR resource is created by posting it to the path its own type names.
 _fhir_method = 'POST'
 
+# The keys of the envelope a queued file transfer travels under - the bytes stay on the local disk
+# and only the spool path and the remote destination go through the queue, so a file of any size
+# travels without ever touching a pub/sub row.
+Key_Spool_Path = 'spool_path'
+Key_Remote_Path = 'remote_path'
+
+# What a spool file's name ends with, so a stray one can be told apart in the temporary directory.
+_spool_suffix = '-zato-file-delivery-spool.dat'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -47,6 +61,8 @@ _fhir_method = 'POST'
 # not here has no queue, so a rename or a delete of one has nothing to move or to remove.
 publishable_generic_types = {
     GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: OutgoingType.FHIR,
+    GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: OutgoingType.SFTP,
+    GENERIC.CONNECTION.TYPE.OUTCONN_SMB: OutgoingType.SMB,
 }
 
 # ################################################################################################################################
@@ -107,6 +123,106 @@ def _deliver_to_fhir(server:'ParallelServer', cid:'str', wrapper:'any_', data:'s
         _ = client._do_request(_fhir_method, path, data=resource)
 
 # ################################################################################################################################
+
+def _locate_sftp(server:'ParallelServer', conn_id:'int') -> 'anytuple':
+    """ Finds an outgoing SFTP connection by its id. These connections live in a dict keyed by name,
+    so the id is what each of them is compared by.
+    """
+    for item in server.config_manager.outconn_sftp.values():
+        if item['id'] == conn_id:
+            out = (item['name'], item['conn'])
+            return out
+
+    return ()
+
+# ################################################################################################################################
+
+def _locate_smb(server:'ParallelServer', conn_id:'int') -> 'anytuple':
+    """ Finds an outgoing SMB connection by its id. These connections live in a dict keyed by name,
+    so the id is what each of them is compared by.
+    """
+    for item in server.config_manager.outconn_smb.values():
+        if item['id'] == conn_id:
+            out = (item['name'], item['conn'])
+            return out
+
+    return ()
+
+# ################################################################################################################################
+
+def spool_file_payload(data:'bytes') -> 'str':
+    """ Writes the bytes of one queued file transfer to a local spool file, returning its path -
+    what the publication puts in its envelope in place of the bytes themselves. The write runs
+    in its own thread so as not to block the event loop.
+    """
+    spool_fd, spool_path = mkstemp(suffix=_spool_suffix)
+    os.close(spool_fd)
+
+    thread_file = FileObjectThread(spool_path, 'wb')
+    _ = thread_file.write(data)
+    thread_file.close()
+
+    return spool_path
+
+# ################################################################################################################################
+
+def _read_spool_file(spool_path:'str') -> 'bytes':
+    """ Reads the bytes one queued file transfer spooled to the local disk - the queue itself carries
+    only the spool path, so a file of any size travels without ever touching a pub/sub row.
+    The read runs in its own thread so as not to block the event loop.
+    """
+    thread_file = FileObjectThread(spool_path, 'rb')
+    out = thread_file.read()
+    thread_file.close()
+
+    return out
+
+# ################################################################################################################################
+
+def _deliver_to_sftp(server:'ParallelServer', cid:'str', wrapper:'any_', data:'str') -> 'None':
+    """ Hands one queued file over to an outgoing SFTP connection - the bytes come from the local
+    spool file the publication left behind and go to the remote path it named. The write overwrites,
+    so a retry after a partial upload starts clean, and the connection's own audit event is what
+    records the attempt. The spool file outlives every failed attempt and goes away only
+    once the file has actually been written out.
+    """
+
+    # Imported here to avoid circular imports
+    from zato.server.connection.sftp import SFTPConnection
+
+    envelope = loads(data)
+
+    payload = _read_spool_file(envelope[Key_Spool_Path])
+
+    conn = SFTPConnection(cid, wrapper)
+    conn.write(payload, envelope[Key_Remote_Path], overwrite=True)
+
+    # Only a delivered file's spool is removed - a failed delivery raised above,
+    # keeping the bytes in place for the retry.
+    os.remove(envelope[Key_Spool_Path])
+
+# ################################################################################################################################
+
+def _deliver_to_smb(server:'ParallelServer', cid:'str', wrapper:'any_', data:'str') -> 'None':
+    """ Hands one queued file over to an outgoing SMB connection, the same way the SFTP handler
+    does - SMB writes always overwrite, so a retry after a partial upload starts clean.
+    """
+
+    # Imported here to avoid circular imports
+    from zato.server.connection.smb import SMBConnection
+
+    envelope = loads(data)
+
+    payload = _read_spool_file(envelope[Key_Spool_Path])
+
+    conn = SMBConnection(cid, wrapper)
+    conn.write(payload, envelope[Key_Remote_Path])
+
+    # Only a delivered file's spool is removed - a failed delivery raised above,
+    # keeping the bytes in place for the retry.
+    os.remove(envelope[Key_Spool_Path])
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def register_delivery_handlers() -> 'None':
@@ -114,6 +230,11 @@ def register_delivery_handlers() -> 'None':
     """
     register_outgoing_conn_type(OutgoingType.REST, _locate_rest, _deliver_to_rest)
     register_outgoing_conn_type(OutgoingType.FHIR, _locate_fhir, _deliver_to_fhir)
+
+    # File deliveries are recorded as file-outgoing audit events by the connections themselves,
+    # so their queue topics write no pub/sub events of their own.
+    register_outgoing_conn_type(OutgoingType.SFTP, _locate_sftp, _deliver_to_sftp, is_audit_log_active=False)
+    register_outgoing_conn_type(OutgoingType.SMB, _locate_smb, _deliver_to_smb, is_audit_log_active=False)
 
 # ################################################################################################################################
 # ################################################################################################################################

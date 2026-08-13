@@ -17,6 +17,7 @@ from smbprotocol.exceptions import SMBOSError
 # Zato
 from zato.common.api import SMB
 from zato.common.audit_log.api import AuditLog
+from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
 from zato.common.typing_ import cast_
 from zato.server.connection.queue import Wrapper
 
@@ -260,6 +261,10 @@ class OutconnSMBWrapper(Wrapper):
             self.should_store_content = config['should_store_content']
         else:
             self.should_store_content = False
+
+        # What a guaranteed delivery to this connection goes through. It is built from the connection's
+        # id rather than its name because that is what a rename leaves alone.
+        self.publisher = OutgoingPublisher(server, OutgoingType.SMB, config.id)
 
 # ################################################################################################################################
 

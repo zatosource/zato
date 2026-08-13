@@ -12,15 +12,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # file keeps its metadata while losing its bytes.
 
 # stdlib
+from hashlib import sha256
 from json import loads
 
 # SQLAlchemy
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.attachment import get_attachment, list_attachments, Env_Max_Attachment_Size
-from zato.common.audit_log.file_transfer import Operation_Delete, Operation_Store
+from zato.common.audit_log.file_transfer import Operation_Delete, Operation_Move, Operation_Store
 
 # Test support
 from audit_env import audit_db_env
@@ -47,8 +48,31 @@ def _get_events() -> 'anylist':
     query = select(event_table)
     query = query.order_by(event_table.c.id)
 
+    out:'anylist' = []
+
     with engine.connect() as connection:
-        out = [dict(row._mapping) for row in connection.execute(query)]
+        for row in connection.execute(query):
+            event = dict(row._mapping)
+            out.append(event)
+
+    return out
+
+# ################################################################################################################################
+
+def _get_attrs(event_id:'int') -> 'any_':
+    """ The searchable attributes of one event, by name.
+    """
+    engine = get_audit_engine()
+
+    query = select(event_attr_table.c.name, event_attr_table.c.value)
+    query = query.where(event_attr_table.c.event_id == event_id)
+
+    out:'any_' = {}
+
+    with engine.connect() as connection:
+        for row in connection.execute(query):
+            name = row[0]
+            out[name] = row[1]
 
     return out
 
@@ -86,6 +110,10 @@ def test_a_store_writes_one_event_with_the_path_and_size(tmp_path:'os.PathLike')
         assert summary['operation'] == Operation_Store
         assert summary['remote_path'] == Remote_Path
         assert summary['size'] == len(File_Content)
+
+        # The event carries a SHA-256 digest of the bytes as a searchable attribute
+        attrs = _get_attrs(event['id'])
+        assert attrs['checksum'] == sha256(File_Content).hexdigest()
 
 # ################################################################################################################################
 
@@ -203,6 +231,67 @@ def test_a_delete_writes_one_event_too(tmp_path:'os.PathLike') -> 'None':
 
         summary = loads(event['data'])
         assert summary['operation'] == Operation_Delete
+
+# ################################################################################################################################
+
+def test_a_move_writes_one_event_with_both_paths(tmp_path:'os.PathLike') -> 'None':
+    """ Renaming a file on a share is one event saying where the file went.
+    """
+    with audit_db_env(tmp_path):
+
+        to_path = 'MyShare/documents/archive/results.csv'
+
+        smb_client = ClientRecorder()
+        conn = new_smb_connection(smb_client)
+
+        conn.move(Remote_Path, to_path)
+
+        assert smb_client.renamed == [(Remote_Path, to_path)]
+
+        events = _get_events()
+        assert len(events) == 1
+
+        event = events[0]
+
+        assert event['event_type'] == AuditEvent.Request_Sent
+        assert event['endpoint'] == Remote_Path
+        assert event['outcome'] == AuditOutcome.OK
+
+        summary = loads(event['data'])
+
+        assert summary['operation'] == Operation_Move
+        assert summary['to_path'] == to_path
+
+# ################################################################################################################################
+
+def test_a_raising_move_writes_the_error_outcome(tmp_path:'os.PathLike') -> 'None':
+    """ A rename the share refused leaves an error entry before the caller learns about it.
+    """
+    with audit_db_env(tmp_path):
+
+        to_path = 'MyShare/documents/archive/results.csv'
+
+        conn = new_smb_connection(RaisingClient())
+
+        try:
+            conn.move(Remote_Path, to_path)
+        except Exception:
+            pass
+        else:
+            raise Exception('A failed move was expected to propagate')
+
+        events = _get_events()
+        assert len(events) == 1
+
+        event = events[0]
+
+        assert event['outcome'] == AuditOutcome.Error
+        assert Raised_Error in event['data']
+
+        summary = loads(event['data'])
+
+        assert summary['operation'] == Operation_Move
+        assert summary['to_path'] == to_path
 
 # ################################################################################################################################
 # ################################################################################################################################

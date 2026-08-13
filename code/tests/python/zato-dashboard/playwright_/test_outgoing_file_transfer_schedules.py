@@ -332,11 +332,24 @@ class TestOutgoingFileTransferSchedules:
 
         try:
 
+            # The connection's row links to its own slice of the audit log
+            audit_link = page.query_selector(
+                f'#data-table tbody tr:has(td:text-is("{conn_name}")) a:has-text("Audit log")')
+            assert audit_link is not None, 'The connection row should link to the audit log'
+
+            audit_href = audit_link.get_attribute('href')
+            assert audit_href is not None, 'The audit log link should have an href'
+            assert 'source=file-outgoing' in audit_href, f'Expected the audit log filter in the link, got: `{audit_href}`'
+
             # The connection's Schedules link leads to an empty list
             _open_schedules(page, conn_name)
 
             no_schedules = page.query_selector('#data-table tbody tr td[colspan]')
             assert no_schedules is not None, 'A new connection should have no schedules'
+
+            # The schedules page carries the same audit log link, scoped to the connection
+            schedules_audit_link = page.query_selector('a:has-text("Audit log")')
+            assert schedules_audit_link is not None, 'The schedules page should link to the audit log'
 
             _open_create_wizard(page)
 
@@ -352,8 +365,16 @@ class TestOutgoingFileTransferSchedules:
 
             _wizard_next(page)
 
-            # Step 2 - the target service, the rest keeps its defaults
+            # Step 2 - the target service, the rest keeps its defaults, and the arrival
+            # expectation line starts out saying no expectation was declared
             _fill_wizard_service(page)
+
+            assert page.is_visible('#file-transfer-wizard-edit-arrival-window'), \
+                'The arrival window line should be on step 2'
+
+            arrival_summary = page.inner_text('#file-transfer-wizard-summary-arrival-window')
+            assert arrival_summary == 'No expectation', \
+                f'Expected the resting arrival summary, got: "{arrival_summary}"'
 
             _wizard_next(page)
 

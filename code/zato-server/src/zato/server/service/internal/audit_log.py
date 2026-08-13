@@ -19,10 +19,13 @@ from zato.common.as4.resubmit import describe_send_result as as4_describe_send_r
     find_connection_name as as4_find_connection_name, load_event as as4_load_event, \
     new_send_report as as4_new_send_report, reprocess as as4_reprocess, resend as as4_resend
 from zato.common.audit_log.api import AuditLog
-from zato.common.audit_log.resubmit import resend_hop
+from zato.common.audit_log.common import AuditEvent, AuditOutcome
+from zato.common.audit_log.file_transfer import load_transfer_content, record_schedule_event
+from zato.common.audit_log.resubmit import load_event as load_audit_event, resend_hop, ResubmitException
 from zato.common.destination.audit import get_hop_entry
 from zato.common.hl7.resubmit import reprocess as hl7_reprocess, resend as hl7_resend
 from zato.common.json_internal import dumps
+from zato.common.model.file_transfer_ import FileTransferItem
 from zato.common.util.api import asbool
 from zato.hl7v2 import parse_hl7
 from zato.server.connection.as4 import AS4ChannelRuntime
@@ -538,6 +541,97 @@ def _get_destination_names(destinations:'str') -> 'strlist':
             out.append(name)
 
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ReprocessFileTransfer(AdminService):
+    """ Runs a stored file transfer through the schedule's target service again - for when
+    the service or the system behind it was down and an already-taken file needs to be
+    processed once more. The bytes come from the read event, which stored them when
+    the connection keeps file contents. The new attempt is recorded as its own audit event
+    linked to the original one by the correlation id.
+    """
+    name = 'zato.audit-log.file-transfer-reprocess'
+    input = Int('event_id')
+    output = 'response_data'
+
+    def handle(self) -> 'None':
+
+        event_id = self.request.input.event_id
+
+        # A failed reprocess comes back as a report too, never as a bare exception,
+        # so the caller always sees the same shape with the details inside.
+        report:'stranydict' = {
+            'is_ok': False,
+            'event_id': None,
+            'error': '',
+        }
+
+        try:
+            event = load_audit_event(event_id)
+
+            # Only what a schedule handed to its target service can be run through it again
+            if event.event_type not in (AuditEvent.Delivered, AuditEvent.Delivery_Failed):
+                error_message = f'Only `{AuditEvent.Delivered}` and `{AuditEvent.Delivery_Failed}` events ' + \
+                    f'can be reprocessed, not `{event.event_type}`'
+                raise ResubmitException(error_message)
+
+            # The event's own data says which schedule took the file, which service received it
+            # and what the file was - the bytes come from the read event sharing the same cid.
+            details = event.details
+
+            schedule_name = details['schedule']
+            service_name = details['service']
+            file_name = details['file_name']
+            full_path = details['remote_path']
+            conn_type = details['conn_type']
+            last_modified = details['last_modified']
+
+            data = load_transfer_content(event.cid)
+
+            # The directory is the part of the path the file's own name leaves out
+            directory = full_path.rsplit('/', 1)[0]
+
+            item = FileTransferItem(conn_type, event.object_name, schedule_name, directory, file_name,
+                full_path, len(data), last_modified, data)
+
+            audit_log = AuditLog(self.server.name)
+
+            # The new event carries the same details a live run's event carries,
+            # so a reprocess of this new attempt has everything it needs too.
+            event_extra = {
+                'conn_type': conn_type,
+                'last_modified': last_modified,
+            }
+
+            # Hand the file to the target service again - a failed attempt is recorded
+            # as its own event too, and then the caller learns about it.
+            try:
+                _ = self.server.invoke(service_name, item)
+            except Exception:
+                error = format_exc()
+                _ = record_schedule_event(audit_log, event.object_name, AuditEvent.Delivery_Failed, full_path,
+                    cid=self.cid, correl_id=event.cid, schedule=schedule_name, outcome=AuditOutcome.Error,
+                    file_name=file_name, service=service_name, size=len(data), error=error,
+                    extra=event_extra, parents=[event.id])
+                raise
+
+            new_event_id = record_schedule_event(audit_log, event.object_name, AuditEvent.Delivered, full_path,
+                cid=self.cid, correl_id=event.cid, schedule=schedule_name, outcome=AuditOutcome.OK,
+                file_name=file_name, service=service_name, size=len(data),
+                extra=event_extra, parents=[event.id])
+
+            report['is_ok'] = True
+            report['event_id'] = new_event_id
+
+        except Exception:
+            report['error'] = format_exc()
+
+        report['action'] = _action_reprocess
+        report['cid'] = self.cid
+
+        self.response.payload.response_data = dumps(report)
 
 # ################################################################################################################################
 # ################################################################################################################################

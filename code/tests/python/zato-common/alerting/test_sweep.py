@@ -6,13 +6,19 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from datetime import timedelta
+
+# SQLAlchemy
+from sqlalchemy import update
+
 # Zato
 from zato.common.alerting.collectors import new_fact
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.model import AlertAction
 from zato.common.alerting.sweep import build_fact_message, build_finding_link, read_outcome, run_sweep
 from zato.common.api import Alerting, Incidents
-from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.common import get_source_label
 from zato.common.monitoring.health import EndpointMetrics
 from zato.common.rule_engine.loading import load_documents
@@ -243,6 +249,19 @@ class TestBuildFactMessage:
         assert 'error rate 75% (3 of 4 over 3600s)' in message
 
 # ################################################################################################################################
+
+    def test_a_missing_arrival_says_how_long_and_against_what(self) -> 'None':
+        fact = new_fact(AuditSource.File_Outgoing, 'Daily results')
+        fact['seconds_since_last_arrival'] = 600
+        fact['arrival_overdue_ratio'] = 2.0
+
+        message = build_fact_message('test_arrival_overdue', fact)
+
+        assert 'no file for 600s' in message
+        assert '2.0x its arrival window since the last file' in message
+        assert 'Daily results' in message
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestSourceLabels:
@@ -449,6 +468,65 @@ class TestRunSweep:
 
         assert 'REST check failed 3 times' in joined
         assert '3 consecutive failure(s)' in joined
+
+# ################################################################################################################################
+
+    def test_the_arrival_windows_reach_the_arrival_rule(self) -> 'None':
+        """ The per-schedule windows travel from the caller through the sweep into the collector,
+        the way the job intervals do, and a schedule past its own window raises an email alert.
+        """
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        recorder = _TransportRecorder()
+        now = utcnow()
+
+        schedule_name = 'Daily results'
+
+        # The newest arrival of the schedule, ten minutes back on a five-minute window
+        event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Delivered, 'sftp.backups',
+            cid='sweep-arrival-1', outcome=AuditOutcome.OK, attrs={'schedule': schedule_name})
+
+        statement = update(event_table)
+        statement = statement.where(event_table.c.id == event_id)
+        statement = statement.values(event_time_iso=(now - timedelta(seconds=600)).isoformat())
+
+        with engine.begin() as connection:
+            _ = connection.execute(statement)
+
+        rules = _load_rules(_arrival_rules_text)
+
+        defaults = AlertDefaults()
+        defaults.email_to = _addresses
+
+        result = run_sweep(
+            engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-arrival-1', now,
+            defaults=defaults, arrival_windows={schedule_name: 300})
+
+        assert result.raised_count == 1
+        assert len(recorder.emails) == 1
+
+        _, _, body = recorder.emails[0]
+
+        assert schedule_name in body
+        assert 'no file for 600s' in body
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The ruleset the arrival test matches through - a schedule past its own arrival window
+# raises an email alert, with the same condition the seeded Arrival_Overdue rule has.
+_arrival_rules_text = """
+rule
+    test_arrival_overdue
+docs
+    A schedule whose expected file did not arrive within its own window raises an email alert.
+when
+    alert.source is 'file-outgoing' and
+    alert.arrival_overdue_ratio is at least 1
+then
+    outcome.action = 'email'
+    outcome.severity = 'warning'
+""".strip()
 
 # ################################################################################################################################
 # ################################################################################################################################

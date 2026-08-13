@@ -17,6 +17,7 @@ from contextlib import contextmanager
 from zato.common.audit_log.api import AuditLog
 from zato.common.ext.bunch import Bunch
 from zato.common.sftp import SFTPOutput
+from zato.common.typing_ import cast_
 from zato.server.connection.sftp import SFTPConnection
 
 # Test support
@@ -72,11 +73,12 @@ class RaisingClient(ClientRecorder):
 
 class WrapperStub:
     """ Stands in for the connection wrapper - it hands over the stubbed client
-    and carries the audit writer the real one carries.
+    and carries the audit writer and the content storage flag the real one carries.
     """
 
-    def __init__(self, sftp_client:'ClientRecorder') -> 'None':
+    def __init__(self, sftp_client:'ClientRecorder', *, should_store_content:'bool') -> 'None':
         self.sftp_client = sftp_client
+        self.should_store_content = should_store_content
         self.audit_log = AuditLog(Server_Name)
 
         self.config = Bunch()
@@ -88,12 +90,12 @@ class WrapperStub:
 
 # ################################################################################################################################
 
-def new_sftp_connection(sftp_client:'ClientRecorder') -> 'SFTPConnection':
+def new_sftp_connection(sftp_client:'ClientRecorder', *, should_store_content:'bool'=False) -> 'SFTPConnection':
     """ Builds the connection under test around one stubbed client.
     """
-    wrapper = WrapperStub(sftp_client)
+    wrapper = WrapperStub(sftp_client, should_store_content=should_store_content)
 
-    out = SFTPConnection(Cid, wrapper) # type: ignore[arg-type]
+    out = SFTPConnection(Cid, cast_('any_', wrapper))
 
     return out
 

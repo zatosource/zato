@@ -293,6 +293,10 @@ def schedule_wizard_edit(req:'any_', transfer_type:'str', conn_id:'str', cluster
     form.fields['run_every'].initial = schedule['run_every']
     form.fields['run_unit'].initial = schedule['run_unit']
 
+    # A schedule created before the field existed declares no arrival expectation
+    if arrival_window := schedule.get('arrival_window'):
+        form.fields['arrival_window'].initial = arrival_window
+
     # The start date is stored in UTC and edited in the user's own timezone and format.
     form.fields['start_date'].initial = from_utc_to_user(schedule['start_date'] + '+00:00', req.zato.user_profile)
 
@@ -325,6 +329,7 @@ def _schedule_request_from_post(req:'any_') -> 'stranydict':
         'run_every': req.POST['run_every'],
         'run_unit': req.POST['run_unit'],
         'start_date': start_date,
+        'arrival_window': req.POST['arrival_window'],
     }
 
     return out

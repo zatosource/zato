@@ -46,7 +46,8 @@ recurring pickup task created through the schedule wizard. The view provides:
 
         <div class='page_prompt' style="clear:left">
             <a href="{% url "out-file-transfer-schedule-wizard-create" transfer_type conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}">Create a new schedule</a> |
-            <a href="{{ back_url }}" class="common">Connection list</a>
+            <a href="{{ back_url }}" class="common">Connection list</a> |
+            <a href="/zato/audit-log/?source=file-outgoing&amp;object_name={{ conn_name|urlencode }}&amp;cluster={{ cluster_id }}" class="common">Audit log</a>
         </div>
 
         <table class="zato-table" id="data-table">

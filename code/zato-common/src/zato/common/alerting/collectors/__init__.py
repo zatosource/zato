@@ -16,6 +16,7 @@ from zato.common.alerting.collectors.common import apply_newest_error as apply_n
     Default_End_Event_Type as Default_End_Event_Type, Default_Window_Seconds as Default_Window_Seconds, \
     Default_Window_Seconds_By_Source as Default_Window_Seconds_By_Source, Probe_Source_Canary as Probe_Source_Canary, \
     Probe_Source_Certificate as Probe_Source_Certificate, Probe_Source_Microsoft_Health as Probe_Source_Microsoft_Health
+from zato.common.alerting.collectors.file_transfer import collect_file_transfer_facts as collect_file_transfer_facts
 from zato.common.alerting.collectors.probes import collect_canary_facts as collect_canary_facts, \
     collect_certificate_facts as collect_certificate_facts, collect_health_facts as collect_health_facts
 from zato.common.alerting.collectors.rates import collect_auth_failure_facts as collect_auth_failure_facts, \

@@ -290,6 +290,8 @@ class TestEachTypeReachesItsRule:
         case('alerts_odoo_Connection_Down', AuditSource.Odoo, consecutive_failures=3)
         case('alerts_file_transfer_Transfer_Failures', AuditSource.File_Outgoing,
             total_count=30, error_count=12, error_rate=0.4)
+        case('alerts_file_transfer_Arrival_Overdue', AuditSource.File_Outgoing,
+            seconds_since_last_arrival=600, arrival_overdue_ratio=2.0)
         case('alerts_scheduler_Missed_Run', AuditSource.Scheduler, overdue_ratio=2.5)
 
         return cases

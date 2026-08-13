@@ -29,6 +29,10 @@ class CreateForm(forms.Form):
     strict_host_key_checking = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     ignore_host_key_changes = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
+    # Off by default - the audit log records every transfer either way,
+    # this flag additionally keeps the bytes of the files moved.
+    should_store_content = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+
     def __init__(self, prefix=None, req=None):
         super(CreateForm, self).__init__(prefix=prefix)
 

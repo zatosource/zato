@@ -44,6 +44,7 @@
             '_port',
             '_username',
             '_schedules',
+            '_audit_log',
 
             {% comment %} 3 {% endcomment %}
             '_edit',
@@ -99,6 +100,7 @@
                         <th><a href="#">Port</a></th>
                         <th><a href="#">Username</a></th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -133,6 +135,7 @@
                         <td>{{ item.port|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.username|default:'<span class="form_hint">---</span>' }}</td>
                         <td><a href="{% url "out-file-transfer-schedules" 'smb' item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">Schedules</a></td>
+                        <td><a href="/zato/audit-log/?source=file-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.outgoing.smb.edit('{{ item.id }}')">Edit</a></td>
@@ -153,7 +156,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='17'>No results</td>
+                        <td colspan='18'>No results</td>
                     </tr>
                 {% endif %}
 

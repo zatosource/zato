@@ -42,6 +42,10 @@ class SFTPImporter(GenericConnectionImporter):
         'private_key': '',
         'strict_host_key_checking': True,
         'ignore_host_key_changes': False,
+
+        # The audit log records every transfer either way - this flag additionally
+        # keeps the bytes of the files moved, and it is off unless YAML turns it on.
+        'should_store_content': False,
     }
 
     connection_secret_keys = ['password', 'secret']

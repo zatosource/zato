@@ -42,6 +42,7 @@ $.fn.zato.outgoing.sftp.field_descriptions = {
     'id_private_key': 'Full path to the private key file on the<br>server\'s filesystem, e.g. /opt/zato/keys/id_rsa.<br>Used instead of a password.',
     'id_strict_host_key_checking': 'When on, the server\'s host key must already be<br>in known_hosts or the connection is rejected.<br>Turning it off accepts the keys of new hosts.',
     'id_ignore_host_key_changes': 'When on, host keys are neither checked nor recorded,<br>so a server that regenerated its key still connects.<br>This overrides strict host key checking.',
+    'id_should_store_content': 'Whether the audit log additionally keeps the bytes<br>of the files this connection moves,<br>so they can be reread and downloaded later. Off by default.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -95,6 +96,8 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>',
         String.format("<a href=\"/zato/outgoing/file-transfer/schedules/sftp/{0}/cluster/{1}/{2}/?name={3}\">Schedules</a>",
         item.id, item.cluster_id, data.name_slug, item.name));
+    row += String.format('<td><a href="/zato/audit-log/?source=file-outgoing&object_name={0}&cluster={1}">Audit log</a></td>',
+        encodeURIComponent(item.name), item.cluster_id);
 
     // 3
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.sftp.edit('{0}')\">Edit</a>", item.id));
@@ -113,6 +116,7 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
 
     // 6
     row += String.format("<td class='ignore'>{0}</td>", ignore_host_key_changes ? 'True' : 'False');
+    row += String.format("<td class='ignore'>{0}</td>", item.should_store_content == true);
 
     if(include_tr) {
         row += '</tr>';

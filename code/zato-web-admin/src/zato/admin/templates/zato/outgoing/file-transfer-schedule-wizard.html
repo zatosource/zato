@@ -170,6 +170,11 @@ $(document).ready(function() {
                                 <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="file-transfer-wizard-edit-run-every"><span class="zato-link-face wizard-toggle-summary" id="file-transfer-wizard-summary-run-every"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
+                            <div class="wizard-line" id="file-transfer-wizard-line-arrival-window">
+                                <label class="wizard-line-label" for="file-transfer-wizard-edit-arrival-window">Expects a file</label>
+                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="file-transfer-wizard-edit-arrival-window"><span class="zato-link-face wizard-toggle-summary" id="file-transfer-wizard-summary-arrival-window"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
                         </div>
                     </div>
 
@@ -212,6 +217,7 @@ $(document).ready(function() {
                     {{ form.move_directory }}
                     {{ form.run_every }}
                     {{ form.run_unit }}
+                    {{ form.arrival_window }}
                 </div>
 
                 <input type="hidden" id="id_cluster_id" name="cluster_id" value="{{ cluster_id }}" />

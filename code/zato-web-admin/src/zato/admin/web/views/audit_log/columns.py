@@ -268,6 +268,9 @@ _event_type_label = {
     AuditEvent.Content_Viewed: 'Content viewed',
     AuditEvent.Job_Executed: 'Job executed',
     AuditEvent.Auth_Failed: 'Auth failed',
+    AuditEvent.File_Claimed: 'File claimed',
+    AuditEvent.File_Acked: 'File acked',
+    AuditEvent.Run_Completed: 'Run completed',
 }
 
 # Per-source page titles - more sources will follow, e.g. REST outgoing connections
@@ -364,10 +367,14 @@ _file_outgoing_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'operation', 'label': 'Operation', 'type': 'text'},
+    {'key': 'schedule', 'label': 'Schedule', 'type': 'text'},
+    {'key': 'file_name', 'label': 'File', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Remote path', 'type': 'text'},
     {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
     {'key': 'size', 'label': 'Size', 'type': 'size'},
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+    {'key': 'action', 'label': 'Actions', 'type': 'action'},
 ]
 
 _sql_outgoing_columns = [
@@ -527,6 +534,7 @@ _source_attr_columns = {
     'mllp-outgoing': ('msg_type', 'mrn', 'facility', 'ack_status'),
     'fhir': ('resource_type', 'method'),
     'scheduler': ('current_run', 'delay_ms', 'job_id'),
+    'file-outgoing': ('operation', 'schedule', 'file_name'),
 
     # Who viewed what - a view record is named by these two rather than by an event id
     'config': ('actor', 'viewed_object_name'),

@@ -90,6 +90,8 @@ $.fn.zato.outgoing.smb.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>',
         String.format("<a href=\"/zato/outgoing/file-transfer/schedules/smb/{0}/cluster/{1}/{2}/?name={3}\">Schedules</a>",
         item.id, item.cluster_id, data.name_slug, item.name));
+    row += String.format('<td><a href="/zato/audit-log/?source=file-outgoing&object_name={0}&cluster={1}">Audit log</a></td>',
+        encodeURIComponent(item.name), item.cluster_id);
 
     // 3
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.smb.edit('{0}')\">Edit</a>", item.id));

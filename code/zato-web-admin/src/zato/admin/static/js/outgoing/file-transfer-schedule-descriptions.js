@@ -25,7 +25,9 @@ $.fn.zato.outgoing.file_transfer.field_descriptions = {
     'id_move_directory': 'A subdirectory of the watched directory<br>the processed files are moved into,<br>e.g. processed.',
     'file-transfer-wizard-edit-run-every': 'How often the directory is looked into,<br>e.g. every 5 minutes.',
     'id_run_every': 'How often the directory is looked into,<br>e.g. every 5 minutes.',
-    'id_start_date': 'When the first run takes place, in your own timezone.<br>Subsequent runs follow the interval above.'
+    'id_start_date': 'When the first run takes place, in your own timezone.<br>Subsequent runs follow the interval above.',
+    'file-transfer-wizard-edit-arrival-window': 'Whether a file is expected to arrive regularly.<br>If none arrives for this many seconds,<br>an alert is raised. Zero means no expectation<br>and no alerts about missing files.',
+    'id_arrival_window': 'How many seconds may pass without a file<br>before an alert is raised.<br>Zero means no expectation.'
 };
 
 // ////////////////////////////////////////////////////////////////////////

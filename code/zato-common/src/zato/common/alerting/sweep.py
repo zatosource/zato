@@ -215,6 +215,12 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
     if fact['overdue_ratio']:
         parts.append(f'{fact["overdue_ratio"]}x its interval since the last run')
 
+    if seconds_since_last_arrival := fact['seconds_since_last_arrival']:
+        parts.append(f'no file for {seconds_since_last_arrival}s')
+
+    if arrival_overdue_ratio := fact['arrival_overdue_ratio']:
+        parts.append(f'{arrival_overdue_ratio}x its arrival window since the last file')
+
     measures = ', '.join(parts)
 
     # A streak measure on a health source already opens with the source's name, so
@@ -345,6 +351,7 @@ def run_sweep(
     dashboard_url:'str' = '',
     template_dir:'str' = '',
     job_intervals:'strintdict | None' = None,
+    arrival_windows:'strintdict | None' = None,
     ) -> 'SweepResult':
     """ Runs one full sweep - the fact producers measure everything once, each fact runs
     through each rule of every alert ruleset, and every match is dispatched through
@@ -356,7 +363,8 @@ def run_sweep(
     out = SweepResult()
     out.dispatched = []
 
-    facts = collect_facts(engine, metrics_by_name, metrics_source, now, job_intervals=job_intervals)
+    facts = collect_facts(engine, metrics_by_name, metrics_source, now, job_intervals=job_intervals,
+        arrival_windows=arrival_windows)
     out.fact_count = len(facts)
 
     for rule in rules:

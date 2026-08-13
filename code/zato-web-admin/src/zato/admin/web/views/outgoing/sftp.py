@@ -42,10 +42,10 @@ logger = logging.getLogger(__name__)
 
 _fields_required = ('name',)
 _fields_optional = 'is_active', 'address', 'username', 'private_key', 'strict_host_key_checking', \
-    'ignore_host_key_changes'
+    'ignore_host_key_changes', 'should_store_content'
 
 # The connection's fields that a checkbox stands for, which is what turns their input into a boolean
-_fields_checkbox = 'strict_host_key_checking', 'ignore_host_key_changes'
+_fields_checkbox = 'strict_host_key_checking', 'ignore_host_key_changes', 'should_store_content'
 
 # What the command shell shows in an output pane that the command left empty
 Command_Shell_Empty_Output = '(None)'
@@ -242,4 +242,5 @@ def command_shell_action(req, id, cluster_id, name_slug):
         logger.error('Caught an exception, e:`%s`', format_exc())
         return HttpResponseServerError(str(e).encode('utf8'))
 
+# ################################################################################################################################
 # ################################################################################################################################

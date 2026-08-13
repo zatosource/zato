@@ -47,6 +47,13 @@ $.fn.zato.wizard_kit.forms.setup(wizard, {
             pages: [[
                 {field: 'run_every', label: 'Run every', kind: 'number', unitField: 'run_unit', width: '220px'}
             ]]
+        },
+
+        'arrival_window': {
+            title: 'When to expect a file',
+            pages: [[
+                {field: 'arrival_window', label: 'Alert after seconds without one', kind: 'number', width: '220px'}
+            ]]
         }
     }
 });
@@ -103,6 +110,10 @@ forms.initLines = function() {
 
     $('#file-transfer-wizard-edit-run-every').on('click', function() {
         forms.open('run_every', this);
+    });
+
+    $('#file-transfer-wizard-edit-arrival-window').on('click', function() {
+        forms.open('arrival_window', this);
     });
 };
 

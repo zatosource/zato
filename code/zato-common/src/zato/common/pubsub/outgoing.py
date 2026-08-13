@@ -19,7 +19,7 @@ from zato.common.pubsub.util import validate_topic_name
 
 if 0:
     from zato.common.pubsub.sql.backend import PublishResult
-    from zato.common.typing_ import any_, anytuple, callable_, strcalldict, stranydict
+    from zato.common.typing_ import any_, anytuple, callable_, strcalldict, stranydict, strset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -43,6 +43,11 @@ delivery_handlers:'strcalldict' = {}
 # Each of them answers with the connection's current name and the wrapper to hand a message to.
 conn_locators:'strcalldict' = {}
 
+# Connection types whose queue topics write no pub/sub audit events of their own - file deliveries
+# are already recorded as file-outgoing events, so recording them as pub/sub events too
+# would say the same thing twice.
+audit_disabled_conn_types:'strset' = set()
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -52,6 +57,8 @@ class OutgoingType:
     """
     REST = 'rest'
     FHIR = 'fhir'
+    SFTP = 'sftp'
+    SMB = 'smb'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,12 +111,22 @@ def get_outgoing_sub_config(sub_key:'str', topic_name:'str') -> 'stranydict':
 
 # ################################################################################################################################
 
-def register_outgoing_conn_type(conn_type:'str', locator:'callable_', handler:'callable_') -> 'None':
+def register_outgoing_conn_type(
+    conn_type:'str',
+    locator:'callable_',
+    handler:'callable_',
+    *,
+    is_audit_log_active:'bool'=True,
+    ) -> 'None':
     """ Makes connections of one type publishable to. The locator answers with a connection's current
-    name and its wrapper, the handler is what hands a message over to that wrapper.
+    name and its wrapper, the handler is what hands a message over to that wrapper. A type whose
+    deliveries are already recorded elsewhere turns its topics' own pub/sub audit log off.
     """
     conn_locators[conn_type] = locator
     delivery_handlers[conn_type] = handler
+
+    if not is_audit_log_active:
+        audit_disabled_conn_types.add(conn_type)
 
 # ################################################################################################################################
 

@@ -76,7 +76,8 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         'scheduler_service',
         'move_directory',
         'run_every',
-        'start_date'
+        'start_date',
+        'arrival_window'
     ],
 
     // Where each of them is read on the review and answered on its step - the
@@ -96,7 +97,9 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
                             anchorSelector: '#file-transfer-wizard-line-success'},
         run_every:         {group: wizard.config_own.groups.schedule, label: 'Run every',
                             anchorSelector: '#file-transfer-wizard-line-run-every'},
-        start_date:        {group: wizard.config_own.groups.schedule, label: 'Start time'}
+        start_date:        {group: wizard.config_own.groups.schedule, label: 'Start time'},
+        arrival_window:    {group: wizard.config_own.groups.schedule, label: 'Expects a file',
+                            anchorSelector: '#file-transfer-wizard-line-arrival-window'}
     },
 
 // ////////////////////////////////////////////////////////////////////////

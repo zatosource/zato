@@ -16,6 +16,7 @@ from __future__ import annotations
 from zato.common.alerting.collectors.backlogs import collect_feed_silent_facts, collect_outstanding_facts
 from zato.common.alerting.collectors.common import Default_Begin_Event_Type, Default_End_Event_Type, \
     Default_Window_Seconds, Default_Window_Seconds_By_Source
+from zato.common.alerting.collectors.file_transfer import collect_file_transfer_facts
 from zato.common.alerting.collectors.probes import collect_canary_facts, collect_certificate_facts, collect_health_facts
 from zato.common.alerting.collectors.rates import collect_auth_failure_facts, collect_consecutive_failure_facts, \
     collect_error_rate_facts, collect_latency_facts
@@ -48,6 +49,7 @@ def collect_facts(
     begin_event_type:'str' = Default_Begin_Event_Type,
     end_event_type:'str' = Default_End_Event_Type,
     job_intervals:'strintdict | None' = None,
+    arrival_windows:'strintdict | None' = None,
     ) -> 'dictlist':
     """ Runs every fact producer and merges their measures into one fact
     per (source, object) pair - the input the alert rules match over.
@@ -57,6 +59,9 @@ def collect_facts(
 
     if job_intervals is None:
         job_intervals = {}
+
+    if arrival_windows is None:
+        arrival_windows = {}
 
     error_rate_facts = collect_error_rate_facts(engine, window_seconds, now)
     latency_facts = collect_latency_facts(engine, window_seconds, now)
@@ -68,6 +73,7 @@ def collect_facts(
     health_facts = collect_health_facts(engine, now)
     canary_facts = collect_canary_facts(engine, now)
     scheduler_facts = collect_scheduler_facts(engine, window_seconds, now, job_intervals)
+    file_transfer_facts = collect_file_transfer_facts(engine, now, arrival_windows)
 
     # A source with a window of its own is measured again over that window,
     # and its own measures replace the default-window ones below.
@@ -112,6 +118,7 @@ def collect_facts(
         health_facts,
         canary_facts,
         scheduler_facts,
+        file_transfer_facts,
     )
 
     for fact_list in fact_lists:

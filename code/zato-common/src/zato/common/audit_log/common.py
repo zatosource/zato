@@ -226,6 +226,13 @@ class AuditEvent:
     Content_Viewed       = 'content-viewed'
     Job_Executed         = 'job-executed'
 
+    # What a file transfer schedule writes about each file it takes and about
+    # each of its runs - the claim rename, the move or delete after success
+    # and the per-run summary with its counts.
+    File_Claimed         = 'file-claimed'
+    File_Acked           = 'file-acked'
+    Run_Completed        = 'run-completed'
+
     # A call that failed on credentials rather than networking - its own type
     # because its remedy is different, so alerting counts it separately.
     Auth_Failed          = 'auth-failed'

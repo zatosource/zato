@@ -16,19 +16,35 @@ from gevent import sleep
 
 # Zato
 from zato.common.api import FileTransfer
+from zato.common.audit_log.common import AuditEvent, AuditOutcome
+from zato.common.audit_log.file_transfer import record_schedule_event
 from zato.common.model.file_transfer_ import FileTransferItem
+from zato.common.util.api import new_cid_server
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.audit_log.api import AuditLog
     from zato.common.typing_ import any_, anylist, stranydict, strlist
     from zato.server.service import Service
+    AuditLog = AuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 _scheduler = FileTransfer.Scheduler
+
+# What a single file's handling ended with - the run summary counts each kind separately
+_status_processed = 'processed'
+_status_failed    = 'failed'
+_status_skipped   = 'skipped'
+
+# What a claim-lost event says went wrong
+_claim_lost_error = 'Already claimed by another consumer'
+
+# What the run summary of a directory that is not there says
+_no_directory_note = 'Directory does not exist'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -159,10 +175,15 @@ def _ack_one_file(
     file_name,    # type: str
     full_path,    # type: str
     current_path, # type: str
-    ) -> 'None':
+    ) -> 'str':
     """ Puts a file that its target service accepted out of the way - it is either moved to the schedule's
     destination or deleted, either of which makes sure the next run never picks it up again.
+    Returns the path the file was moved to, or an empty string when it was deleted.
     """
+
+    # Our response to produce - the moved-to path, empty when the file was deleted instead
+    out = ''
+
     if schedule['on_success'] == _scheduler.OnSuccess.Move:
 
         move_directory = f'{directory}/{schedule["move_directory"]}'
@@ -174,6 +195,8 @@ def _ack_one_file(
         destination = _get_move_destination(conn, move_directory, file_name)
         _ = conn.move(current_path, destination)
 
+        out = destination
+
     else:
         _ = conn.delete_file(current_path)
 
@@ -181,6 +204,8 @@ def _ack_one_file(
     if schedule['ready_how'] == _scheduler.ReadyHow.Marker:
         marker_path = full_path + schedule['marker_suffix']
         _ = conn.delete_file(marker_path)
+
+    return out
 
 # ################################################################################################################################
 
@@ -191,20 +216,39 @@ def _process_one_file(
     schedule,  # type: stranydict
     directory, # type: str
     entry,     # type: any_
-    ) -> 'None':
+    ) -> 'str':
     """ Handles a single ready file - claims it if configured to, downloads it, invokes the target service
     and moves or deletes the file on success. A failure leaves the file in place for the next run.
+    Returns the status the file ended with - processed, failed or skipped.
     """
 
     # Local aliases
     conn_name = context[_scheduler.Extra_Conn_Name]
     conn_type = context[_scheduler.Extra_Conn_Type]
+    schedule_name = schedule['name']
+    service_name = schedule['service']
+
+    # The run's own cid ties every event of this run together ..
+    run_cid = service.cid
+
+    # .. while the file's own cid, given to the connection too, lines up the schedule-level
+    # .. and the connection-level events of this one file under one shared cid.
+    file_cid = new_cid_server()
+    conn.cid = file_cid
+
+    audit_log:'AuditLog' = conn.wrapper.audit_log
 
     file_name = _get_file_name(entry)
     full_path = f'{directory}/{file_name}'
 
     # The path the file is read from - it changes if the file is claimed first
     current_path = full_path
+
+    # What a reprocess needs to rebuild the item the target service received
+    event_extra = {
+        'conn_type': conn_type,
+        'last_modified': entry.last_modified_iso,
+    }
 
     # With claiming on, the file is renamed before anything reads it, so another environment
     # watching the same directory never takes the same file. A failed rename means another
@@ -215,7 +259,10 @@ def _process_one_file(
             _ = conn.move(full_path, claim_path)
         except Exception:
             service.logger.info('File `%s` already claimed by another consumer, skipping', full_path)
-            return
+            _ = record_schedule_event(audit_log, conn_name, AuditEvent.File_Claimed, full_path,
+                cid=file_cid, correl_id=run_cid, schedule=schedule_name, outcome=AuditOutcome.Error,
+                file_name=file_name, error=_claim_lost_error)
+            return _status_skipped
         current_path = claim_path
 
     try:
@@ -223,17 +270,23 @@ def _process_one_file(
         data = conn.read(current_path)
 
         # .. and hand it over to the target service, once per file.
-        item = FileTransferItem(conn_type, conn_name, schedule['name'], directory, file_name, full_path,
+        item = FileTransferItem(conn_type, conn_name, schedule_name, directory, file_name, full_path,
             entry.size, entry.last_modified_iso, data)
 
-        _ = service.invoke(schedule['service'], item)
+        _ = service.invoke(service_name, item)
 
     except Exception:
+
+        error = format_exc()
 
         # The file is rejected by leaving it in place - it will be picked up anew
         # on the next run, which means that files are never lost.
         service.logger.warning('Could not invoke `%s` with file `%s` from `%s` -> `%s`',
-            schedule['service'], full_path, conn_name, format_exc())
+            service_name, full_path, conn_name, error)
+
+        _ = record_schedule_event(audit_log, conn_name, AuditEvent.Delivery_Failed, full_path,
+            cid=file_cid, correl_id=run_cid, schedule=schedule_name, outcome=AuditOutcome.Error,
+            file_name=file_name, service=service_name, size=entry.size, error=error, extra=event_extra)
 
         # A claimed file is renamed back so the next run, here or elsewhere, can take it again.
         # The file may be gone by now, e.g. another consumer took it, which is not our concern here.
@@ -243,16 +296,68 @@ def _process_one_file(
             except Exception:
                 service.logger.info('Could not release the claim on `%s`', current_path)
 
-        return
+        return _status_failed
+
+    # The target service took the file, which is recorded before the file is moved or deleted
+    _ = record_schedule_event(audit_log, conn_name, AuditEvent.Delivered, full_path,
+        cid=file_cid, correl_id=run_cid, schedule=schedule_name, outcome=AuditOutcome.OK,
+        file_name=file_name, service=service_name, size=entry.size, extra=event_extra)
 
     # Everything succeeded so the file is acked. An ack that cannot go through - because the destination
     # will not take the file or because another run moved it away a moment earlier - concerns this one
     # file alone, so it is logged and the run carries on with the files behind it.
     try:
-        _ack_one_file(conn, schedule, directory, file_name, full_path, current_path)
+        destination = _ack_one_file(conn, schedule, directory, file_name, full_path, current_path)
     except Exception:
+        error = format_exc()
         service.logger.warning('Could not put file `%s` out of the way after `%s` took it -> `%s`',
-            full_path, schedule['service'], format_exc())
+            full_path, service_name, error)
+        _ = record_schedule_event(audit_log, conn_name, AuditEvent.File_Acked, full_path,
+            cid=file_cid, correl_id=run_cid, schedule=schedule_name, outcome=AuditOutcome.Error,
+            file_name=file_name, service=service_name, error=error)
+        return _status_processed
+
+    # What the ack did with the file - moved it to its destination or deleted it
+    if destination:
+        extra = {'moved_to': destination}
+    else:
+        extra = {'deleted': True}
+
+    _ = record_schedule_event(audit_log, conn_name, AuditEvent.File_Acked, full_path,
+        cid=file_cid, correl_id=run_cid, schedule=schedule_name, outcome=AuditOutcome.OK,
+        file_name=file_name, service=service_name, extra=extra)
+
+    return _status_processed
+
+# ################################################################################################################################
+
+def _record_run_completed(
+    audit_log,       # type: AuditLog
+    conn_name,       # type: str
+    directory,       # type: str
+    run_cid,         # type: str
+    schedule_name,   # type: str
+    *,
+    entry_count,     # type: int
+    candidate_count, # type: int
+    processed_count, # type: int
+    failed_count,    # type: int
+    note='',         # type: str
+    ) -> 'None':
+    """ Writes the one summary event a run leaves behind, with the counts of what the run saw and did.
+    """
+    extra:'stranydict' = {
+        'entries': entry_count,
+        'candidates': candidate_count,
+        'processed': processed_count,
+        'failed': failed_count,
+    }
+
+    if note:
+        extra['note'] = note
+
+    _ = record_schedule_event(audit_log, conn_name, AuditEvent.Run_Completed, directory,
+        cid=run_cid, correl_id=run_cid, schedule=schedule_name, outcome=AuditOutcome.OK, extra=extra)
 
 # ################################################################################################################################
 
@@ -266,6 +371,10 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
     conn_name = context[_scheduler.Extra_Conn_Name]
     conn_type = context[_scheduler.Extra_Conn_Type]
     schedule = context[_scheduler.Extra_Schedule]
+    schedule_name = schedule['name']
+
+    # The run's own cid, which every event of this run carries in its correlation id
+    run_cid = service.cid
 
     # The trailing slash, if any, would only get in the way of the path arithmetic below
     directory = schedule['directory'].rstrip('/')
@@ -276,10 +385,14 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
     else:
         conn = service.smb[conn_name]
 
+    audit_log:'AuditLog' = conn.wrapper.audit_log
+
     # A directory that is not there yet, e.g. the partner has not created it, or one that went away
     # during maintenance, means there is nothing to do - exactly what an empty one means.
     if not conn.exists(directory):
         service.logger.info('Directory `%s` does not exist in `%s`, nothing to do', directory, conn_name)
+        _record_run_completed(audit_log, conn_name, directory, run_cid, schedule_name,
+            entry_count=0, candidate_count=0, processed_count=0, failed_count=0, note=_no_directory_note)
         return
 
     # Look into the directory ..
@@ -287,6 +400,8 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
 
     # .. an empty one means there is nothing to do ..
     if not entries:
+        _record_run_completed(audit_log, conn_name, directory, run_cid, schedule_name,
+            entry_count=0, candidate_count=0, processed_count=0, failed_count=0)
         return
 
     # .. keep only what the schedule may pick up ..
@@ -296,14 +411,32 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
     if schedule['ready_how'] == _scheduler.ReadyHow.Stability:
         candidates = _keep_stable_entries(conn, directory, candidates, schedule['stability_delay'])
 
+    # How the run went, file by file
+    processed_count = 0
+    failed_count = 0
+
     # .. and now each ready file can be handled on its own. One file that cannot be handled never ends
     # the run for the files behind it - the run is over only once every file has had its turn.
     for entry in candidates:
         try:
-            _process_one_file(service, conn, context, schedule, directory, entry)
+            status = _process_one_file(service, conn, context, schedule, directory, entry)
         except Exception:
             service.logger.warning('Could not handle file `%s` from `%s` -> `%s`',
                 _get_file_name(entry), conn_name, format_exc())
+            failed_count += 1
+        else:
+            if status == _status_processed:
+                processed_count += 1
+            elif status == _status_failed:
+                failed_count += 1
+
+    # The run is over, which is what its one summary event says
+    entry_count = len(entries)
+    candidate_count = len(candidates)
+
+    _record_run_completed(audit_log, conn_name, directory, run_cid, schedule_name,
+        entry_count=entry_count, candidate_count=candidate_count, processed_count=processed_count,
+        failed_count=failed_count)
 
 # ################################################################################################################################
 # ################################################################################################################################

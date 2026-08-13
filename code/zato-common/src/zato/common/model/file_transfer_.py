@@ -51,6 +51,10 @@ class FileTransferSchedule:
     run_unit: str = ''
     start_date: str = ''
 
+    # How many seconds may pass without a file arriving before the arrival alert
+    # considers the schedule overdue - zero means no such expectation.
+    arrival_window: int = 0
+
     # The database ID of the linked scheduler job
     job_id: int = 0
 
@@ -74,6 +78,7 @@ class FileTransferSchedule:
             'run_every': self.run_every,
             'run_unit': self.run_unit,
             'start_date': self.start_date,
+            'arrival_window': self.arrival_window,
             'job_id': self.job_id,
         }
 

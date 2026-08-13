@@ -103,6 +103,11 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
         'start_delay_ms': 0,
         'overdue_ratio': 0.0,
 
+        # The file transfer arrival measures - how long ago a schedule's newest file
+        # arrived and how far past the schedule's own arrival window that moment is.
+        'seconds_since_last_arrival': 0,
+        'arrival_overdue_ratio': 0.0,
+
         # The id of the object's newest failing event and whether that event's type
         # can be resubmitted per its source's declaration - what lets an alert
         # deep-link straight at the message that failed.

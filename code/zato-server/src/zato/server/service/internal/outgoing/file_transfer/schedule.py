@@ -40,7 +40,7 @@ _scheduler = FileTransfer.Scheduler
 # and its job already agree on, which is how a job switched off by hand stays off.
 _schedule_input = ('name', Boolean('-is_active'), 'directory', '-pattern', 'ready_how', Int('-stability_delay'),
     '-marker_suffix', Boolean('-should_claim'), 'service', 'on_success', '-move_directory', Int('run_every'),
-    'run_unit', 'start_date')
+    'run_unit', 'start_date', Int('-arrival_window'))
 
 # What a schedule nobody said anything about starts out as
 _default_is_active = True
@@ -180,6 +180,7 @@ def _build_schedule_dict(input:'any_', schedule_id:'str', job_id:'int', is_activ
         'run_every': input.run_every,
         'run_unit': input.run_unit,
         'start_date': input.start_date,
+        'arrival_window': input.arrival_window or _scheduler.Default_Arrival_Window,
         'job_id': job_id,
     }
 

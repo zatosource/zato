@@ -1349,11 +1349,13 @@ class FileTransfer:
         Extra_Conn_Type = 'conn_type'
         Extra_Schedule = 'schedule'
 
-        # What a schedule starts out with before the user changes anything
+        # What a schedule starts out with before the user changes anything -
+        # an arrival window of zero means no arrival expectation is declared.
         Default_Pattern = '*'
         Default_Marker_Suffix = '.done'
         Default_Move_Directory = 'processed'
         Default_Stability_Delay = 2
+        Default_Arrival_Window = 0
 
         # The suffix a file is renamed to when a schedule claims it for itself
         Claim_Suffix = '.processing'

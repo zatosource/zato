@@ -29,6 +29,7 @@ from zato.common.rule_engine.document_checks import validate_definition_document
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary, Documents_Key, \
     System_Actor
+from zato.common.rule_engine.sql.document import deserialize_document
 from zato.common.rule_engine.vocabulary import TermType
 
 # ################################################################################################################################
@@ -51,6 +52,10 @@ logger = getLogger(__name__)
 
 # The comment the first version of each seeded definition carries.
 _seed_comment = 'The alerting definitions a new environment starts with'
+
+# The comment an upgrade version carries when a newer release ships definitions
+# an existing environment does not hold yet.
+_upgrade_comment = 'New default alerting definitions gained on upgrade'
 
 # A term that is neither deprecated nor otherwise marked carries no status.
 _no_status = ''
@@ -178,6 +183,8 @@ def alerting_vocabulary() -> 'anydict':
         _term('canary_failed',          TermType.Number, 'whether the newest canary check failed'),
         _term('overdue_ratio',          TermType.Number, 'time since the newest run as a multiple of the job interval'),
         _term('start_delay_ms',         TermType.Number, 'the worst delay between planned and actual fire time in the window'),
+        _term('seconds_since_last_arrival', TermType.Number, 'how long ago a schedule last received a file'),
+        _term('arrival_overdue_ratio',  TermType.Number, 'time since the newest file as a multiple of the schedule arrival window'),
     ]
 
     outcome_terms = [
@@ -308,6 +315,201 @@ def _seed_ruleset(backend:'RuleSQLBackend', ruleset_name:'str', zrules_contents:
     return True
 
 # ################################################################################################################################
+
+def _find_active(backend:'RuleSQLBackend', name:'str', object_type:'str') -> 'RuleDefinitionRecord | None':
+    """ The one active definition of the given name and kind - what an upgrade works on.
+    An archived one stays out on purpose, because what was put aside stays that way.
+    """
+    records = backend.definitions.find_by_name(name=name, object_type=object_type)
+
+    if records:
+        out = records[0]
+    else:
+        out = None
+
+    return out
+
+# ################################################################################################################################
+
+def _historical_documents(backend:'RuleSQLBackend', definition:'RuleDefinitionRecord') -> 'list[anydict]':
+    """ The document of every version one definition ever had, oldest first. This is what tells
+    a rule a person deleted apart from a rule a newer release ships - the deleted one appeared
+    in some earlier version, the new one never did. Versions are numbered consecutively
+    from one, so walking them needs no listing API.
+    """
+
+    # Our response to produce
+    out:'list[anydict]' = []
+
+    for version_number in range(1, definition.current_version + 1):
+        version = backend.versions.get(definition.id, version_number)
+        out.append(deserialize_document(version.document))
+
+    return out
+
+# ################################################################################################################################
+
+def _store_upgrade(backend:'RuleSQLBackend', definition:'RuleDefinitionRecord', document:'anydict') -> 'None':
+    """ Stores one upgraded document as a new published version of an existing definition,
+    the same path a person's own edit takes.
+    """
+    version = backend.versions.create(
+        definition_id=definition.id,
+        expected_current_version=definition.current_version,
+        document=document,
+        author=System_Actor,
+        comment=_upgrade_comment,
+    )
+
+    # A ruleset's reference index follows its rules
+    if definition.object_type == Definition_Type_Ruleset:
+        _ = backend.references.rebuild(definition_id=definition.id, documents=document[Documents_Key])
+
+    _ = backend.versions.publish(definition_id=definition.id, version=version.version, actor=System_Actor)
+
+# ################################################################################################################################
+
+def _upgrade_vocabulary(backend:'RuleSQLBackend') -> 'bool':
+    """ Gives an existing vocabulary the terms a newer release ships. A term is added only
+    when no version of the vocabulary ever held it - a term missing now that some earlier
+    version did hold was removed by a person and stays removed, and anything
+    a person edited themselves is never touched.
+    """
+    definition = _find_active(backend, Alerting.Vocabulary_Name, Definition_Type_Vocabulary)
+
+    # No vocabulary means the seeding itself is what runs, not an upgrade
+    if definition is None:
+        return False
+
+    document = deserialize_document(definition.document)
+    shipped = alerting_vocabulary()
+
+    # The stored entities by name, so the shipped ones can be matched up
+    stored_entities = {}
+
+    for entity in document['entities']:
+        stored_entities[entity['name']] = entity
+
+    # What the current document is missing, as (entity name, attribute) pairs
+    missing:'list[tuple[str, anydict]]' = []
+
+    for shipped_entity in shipped['entities']:
+
+        # A whole entity the store never saw is missing with all its attributes ..
+        if shipped_entity['name'] not in stored_entities:
+            for attribute in shipped_entity['attributes']:
+                missing.append((shipped_entity['name'], attribute))
+            continue
+
+        # .. and an existing one may be missing some of the shipped attributes.
+        stored_entity = stored_entities[shipped_entity['name']]
+
+        stored_names = set()
+
+        for attribute in stored_entity['attributes']:
+            stored_names.add(attribute['name'])
+
+        for attribute in shipped_entity['attributes']:
+            if attribute['name'] not in stored_names:
+                missing.append((shipped_entity['name'], attribute))
+
+    # Nothing missing means nothing to store, and the history stays unread
+    if not missing:
+        return False
+
+    # Every (entity, attribute) pair any version ever held - what was there
+    # once and is gone now was removed by a person on purpose.
+    ever_present = set()
+
+    for historical in _historical_documents(backend, definition):
+        for entity in historical['entities']:
+            for attribute in entity['attributes']:
+                ever_present.add((entity['name'], attribute['name']))
+
+    added_any = False
+
+    for entity_name, attribute in missing:
+
+        # A term some earlier version held was removed on purpose and stays removed
+        if (entity_name, attribute['name']) in ever_present:
+            continue
+
+        # A whole new entity is grown the moment its first attribute arrives
+        if entity_name not in stored_entities:
+            new_entity = {'name': entity_name, 'attributes': []}
+            document['entities'].append(new_entity)
+            stored_entities[entity_name] = new_entity
+
+        stored_entities[entity_name]['attributes'].append(attribute)
+        added_any = True
+
+    # Everything missing was removed by a person, so there is nothing to store
+    if not added_any:
+        return False
+
+    _store_upgrade(backend, definition, document)
+
+    logger.info('Upgraded the alerting vocabulary `%s` with new terms', Alerting.Vocabulary_Name)
+    return True
+
+# ################################################################################################################################
+
+def _upgrade_ruleset(backend:'RuleSQLBackend', ruleset_name:'str', zrules_contents:'str') -> 'bool':
+    """ Gives an existing default ruleset the rules a newer release ships. A rule is added only
+    when no version of the ruleset ever held it - a rule missing now that some earlier version
+    did hold was deleted by a person and stays deleted, and anything a person edited
+    themselves is never touched.
+    """
+    definition = _find_active(backend, ruleset_name, Definition_Type_Ruleset)
+
+    # No such ruleset means the seeding itself is what runs, not an upgrade
+    if definition is None:
+        return False
+
+    document = deserialize_document(definition.document)
+    documents = document[Documents_Key]
+
+    shipped = build_ruleset_document(ruleset_name, zrules_contents)
+
+    # What the current document is missing, by each rule's full name
+    missing = []
+
+    for full_name in shipped[Documents_Key]:
+        if full_name not in documents:
+            missing.append(full_name)
+
+    # Nothing missing means nothing to store, and the history stays unread
+    if not missing:
+        return False
+
+    # Every rule name any version ever held - what was there once
+    # and is gone now was deleted by a person on purpose.
+    ever_present = set()
+
+    for historical in _historical_documents(backend, definition):
+        ever_present.update(historical[Documents_Key])
+
+    added_any = False
+
+    for full_name in missing:
+
+        # A rule some earlier version held was deleted on purpose and stays deleted
+        if full_name in ever_present:
+            continue
+
+        documents[full_name] = shipped[Documents_Key][full_name]
+        added_any = True
+
+    # Everything missing was deleted by a person, so there is nothing to store
+    if not added_any:
+        return False
+
+    _store_upgrade(backend, definition, document)
+
+    logger.info('Upgraded the default alerting ruleset `%s` with new rules', ruleset_name)
+    return True
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def ensure_alerting_definitions(backend:'RuleSQLBackend') -> 'None':
@@ -319,9 +521,19 @@ def ensure_alerting_definitions(backend:'RuleSQLBackend') -> 'None':
     """
     created_any = _seed_vocabulary(backend)
 
+    # A vocabulary that already existed may still be missing the terms
+    # a newer release ships - the upgrade adds only what is absent by name.
+    if not created_any:
+        _ = _upgrade_vocabulary(backend)
+
     for ruleset_name, zrules_contents in default_rulesets:
         created_ruleset = _seed_ruleset(backend, ruleset_name, zrules_contents)
         created_any = created_any or created_ruleset
+
+        # An already-seeded ruleset gains the rules a newer release ships,
+        # each one looked up by its own full name.
+        if not created_ruleset:
+            _ = _upgrade_ruleset(backend, ruleset_name, zrules_contents)
 
     if created_any:
         logger.info('Default alerting definitions seeded')

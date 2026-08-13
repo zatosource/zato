@@ -8,8 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import date, datetime
+from hashlib import sha256
 from logging import getLogger
-from os.path import getsize
+from os.path import getsize, isfile
 from tempfile import NamedTemporaryFile
 from time import monotonic, strptime
 from traceback import format_exc
@@ -22,7 +23,8 @@ from humanize import naturalsize
 
 # Zato
 from zato.common.audit_log.api import AuditOutcome
-from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Read, Operation_Store
+from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Move, Operation_Read, \
+    Operation_Store
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,6 +43,9 @@ logger = getLogger(__name__)
 # means that two runs over one connection take turns instead of one of them failing, and it also covers
 # the window while the pool is still being filled in after the server starts.
 _pool_block_timeout = 60
+
+# How many bytes at a time a local file is read in when its digest is computed
+_hash_chunk_size = 65536
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -200,11 +205,15 @@ class SFTPConnection:
         size:'int' = 0,
         duration_ms:'int' = 0,
         error:'str' = '',
+        to_path:'str' = '',
+        checksum:'str' = '',
+        content:'any_' = None,
         ) -> 'None':
         """ Records one file operation of this connection in the audit log.
         """
         _ = record_file_transfer(self.wrapper.audit_log, self.wrapper.config.name, operation, remote_path,
-            cid=self.cid, outcome=outcome, size=size, duration_ms=duration_ms, error=error)
+            cid=self.cid, outcome=outcome, size=size, duration_ms=duration_ms, error=error,
+            to_path=to_path, checksum=checksum, content=content)
 
 # ################################################################################################################################
 
@@ -620,7 +629,20 @@ class SFTPConnection:
 
     def move(self, from_path:'str', to_path:'str', log_level:'int'=0) -> 'SFTPOutput':
 
-        out = self.execute('rename {} {}'.format(quote_path(from_path), quote_path(to_path)), log_level)
+        start = monotonic()
+
+        # A failed move is recorded too, before the caller learns about it
+        try:
+            out = self.execute('rename {} {}'.format(quote_path(from_path), quote_path(to_path)), log_level)
+        except Exception:
+            duration_ms = int((monotonic() - start) * 1000)
+            self._record_transfer(Operation_Move, from_path,
+                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc(), to_path=to_path)
+            raise
+
+        duration_ms = int((monotonic() - start) * 1000)
+        self._record_transfer(Operation_Move, from_path, outcome=AuditOutcome.OK, duration_ms=duration_ms, to_path=to_path)
+
         return out
 
     rename = move
@@ -633,7 +655,8 @@ class SFTPConnection:
         local_path:'str',
         recursive:'bool'=True,
         require_file:'bool'=False,
-        log_level:'int'=0
+        log_level:'int'=0,
+        _needs_audit:'bool'=True
         ) -> 'SFTPOutput':
 
         # Make sure this is indeed a file
@@ -651,30 +674,44 @@ class SFTPConnection:
         try:
             out = self.execute('get{} {} {}'.format(options, quote_path(remote_path), quote_path(local_path)), log_level)
         except Exception:
-            duration_ms = int((monotonic() - start) * 1000)
-            self._record_transfer(Operation_Read, remote_path,
-                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
+            if _needs_audit:
+                duration_ms = int((monotonic() - start) * 1000)
+                self._record_transfer(Operation_Read, remote_path,
+                    outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
             raise
 
-        duration_ms = int((monotonic() - start) * 1000)
-        self._record_transfer(Operation_Read, remote_path, outcome=AuditOutcome.OK, duration_ms=duration_ms)
+        if _needs_audit:
+            duration_ms = int((monotonic() - start) * 1000)
+            self._record_transfer(Operation_Read, remote_path, outcome=AuditOutcome.OK, duration_ms=duration_ms)
 
         return out
 
 # ################################################################################################################################
 
-    def download_file(self, remote_path:'str', local_path:'str', log_level:'int'=0) -> 'SFTPOutput':
+    def download_file(self, remote_path:'str', local_path:'str', log_level:'int'=0, _needs_audit:'bool'=True) -> 'SFTPOutput':
 
-        out = self.download(remote_path, local_path, require_file=True, log_level=log_level)
+        out = self.download(remote_path, local_path, require_file=True, log_level=log_level, _needs_audit=_needs_audit)
         return out
 
 # ################################################################################################################################
 
     def read(self, remote_path:'str', mode:'str'='r+b', log_level:'int'=0) -> 'any_':
 
+        start = monotonic()
+
         # Download the file to a temporary location ..
         with NamedTemporaryFile(mode, suffix='zato-sftp-read.txt') as local_path:
-            _ = self.download_file(remote_path, local_path.name, log_level)
+
+            # .. a failed read is recorded too, before the caller learns about it -
+            # .. the event is written here rather than by the download because only
+            # .. this method has the file's bytes in hand once it succeeds ..
+            try:
+                _ = self.download_file(remote_path, local_path.name, log_level, _needs_audit=False)
+            except Exception:
+                duration_ms = int((monotonic() - start) * 1000)
+                self._record_transfer(Operation_Read, remote_path,
+                    outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
+                raise
 
             # .. and read it in using a separate thread so as not to block the event loop.
             # .. The mode is passed explicitly, otherwise the file would be reopened in text mode.
@@ -682,7 +719,25 @@ class SFTPConnection:
             data = thread_file.read()
             thread_file.close()
 
-            return data
+        # A text-mode read hands back a string while the digest and the archive need the bytes
+        if isinstance(data, bytes):
+            payload = data
+        else:
+            payload = data.encode('utf8')
+
+        # The bytes themselves are kept only when the connection asked for that
+        if self.wrapper.should_store_content:
+            content = payload
+        else:
+            content = None
+
+        checksum = sha256(payload).hexdigest()
+
+        duration_ms = int((monotonic() - start) * 1000)
+        self._record_transfer(Operation_Read, remote_path,
+            outcome=AuditOutcome.OK, size=len(payload), duration_ms=duration_ms, checksum=checksum, content=content)
+
+        return data
 
 # ################################################################################################################################
 
@@ -724,6 +779,27 @@ class SFTPConnection:
         except OSError:
             size = 0
 
+        # A single file has a digest and, when the connection asked for that,
+        # its bytes travel to the audit log too - a directory has neither.
+        checksum = ''
+        content = None
+
+        if isfile(local_path):
+
+            # With the archive on, the bytes are read once and serve both purposes ..
+            if self.wrapper.should_store_content:
+                with open(local_path, 'rb') as local_file:
+                    content = local_file.read()
+                checksum = sha256(content).hexdigest()
+
+            # .. and without it, the file is digested chunk by chunk.
+            else:
+                digest = sha256()
+                with open(local_path, 'rb') as local_file:
+                    while chunk := local_file.read(_hash_chunk_size):
+                        digest.update(chunk)
+                checksum = digest.hexdigest()
+
         start = monotonic()
 
         # A failed store is recorded too, before the caller learns about it
@@ -736,7 +812,8 @@ class SFTPConnection:
             raise
 
         duration_ms = int((monotonic() - start) * 1000)
-        self._record_transfer(Operation_Store, remote_path, outcome=AuditOutcome.OK, size=size, duration_ms=duration_ms)
+        self._record_transfer(Operation_Store, remote_path,
+            outcome=AuditOutcome.OK, size=size, duration_ms=duration_ms, checksum=checksum, content=content)
 
         return out
 
@@ -774,6 +851,31 @@ class SFTPConnection:
             finally:
                 # Now we can close the file too
                 thread_file.close()
+
+# ################################################################################################################################
+
+    def publish(self, data:'any_', remote_path:'str', encoding:'str'='utf8') -> 'any_':
+        """ Queues one file for guaranteed delivery to the remote path, returning as soon as it is stored.
+        The bytes go to a local spool file and only its path travels through the queue, so a file
+        of any size is delivered with retries, backoff and an audit event per attempt.
+        """
+
+        # Imported here to avoid circular imports
+        from zato.server.connection.outgoing_delivery import spool_file_payload, Key_Remote_Path, Key_Spool_Path
+
+        # Data to be written out must be always bytes
+        if not isinstance(data, bytes):
+            data = data.encode(encoding)
+
+        spool_path = spool_file_payload(data)
+
+        envelope = {
+            Key_Spool_Path: spool_path,
+            Key_Remote_Path: remote_path,
+        }
+
+        out = self.wrapper.publisher.publish(envelope)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

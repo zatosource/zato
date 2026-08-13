@@ -14,7 +14,7 @@ from contextlib import closing
 import requests
 
 # Zato
-from zato.common.api import Alerting, EMAIL, SMTPMessage
+from zato.common.api import Alerting, EMAIL, FileTransfer, SMTPMessage
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.names import get_notification_conn_name
 from zato.common.alerting.notification_config import read_notification_config, set_notification_config
@@ -23,8 +23,9 @@ from zato.common.alerting.rendering import Template_Dir_Name
 from zato.common.alerting.sweep import load_alert_rules, run_sweep
 from zato.common.audit_log.api import get_audit_engine, AuditLog, AuditSource
 from zato.common.json_internal import dumps
-from zato.common.odb.model import IntervalBasedJob, Job
+from zato.common.odb.model import GenericConn, IntervalBasedJob, Job
 from zato.common.util.api import utcnow
+from zato.common.util.file_transfer_scheduler import get_schedule_list
 from zato.common.util.scheduler import set_job_active
 from zato.server.generic.api.channel_hl7_mllp import get_current_metrics
 from zato.server.rule_engine_api import get_backend
@@ -229,6 +230,39 @@ class AlertingRun(AdminService):
 
 # ################################################################################################################################
 
+    def _get_arrival_windows(self) -> 'strintdict':
+        """ Returns the arrival window of every active file transfer schedule, in seconds,
+        by schedule name - what the arrival-overdue measure sizes itself against.
+        A schedule with no window declares no expectation and is not here.
+        """
+
+        # Our response to produce
+        out:'strintdict' = {}
+
+        # Every SFTP and SMB connection may carry schedules in its opaque attributes
+        with closing(self.odb.session()) as session:
+            rows = session.query(GenericConn.id).\
+                filter(GenericConn.type_.in_(FileTransfer.ConnTypeList)).\
+                filter(GenericConn.cluster_id==self.server.cluster_id).\
+                all()
+
+            for row in rows:
+                schedules = get_schedule_list(session, row.id)
+
+                for schedule in schedules:
+
+                    # A schedule switched off is not expected to receive anything
+                    if not schedule['is_active']:
+                        continue
+
+                    # Schedules created before the field existed carry no window
+                    if window := schedule.get('arrival_window'):
+                        out[schedule['name']] = window
+
+        return out
+
+# ################################################################################################################################
+
     def handle(self) -> 'None':
 
         # The job's extra data arrives as a dict - an empty extra arrives as something else,
@@ -284,8 +318,12 @@ class AlertingRun(AdminService):
         # The intervals the missed-run measure sizes itself against
         job_intervals = self._get_job_intervals()
 
+        # The windows the arrival-overdue measure sizes itself against
+        arrival_windows = self._get_arrival_windows()
+
         result = run_sweep(engine, rules, metrics_by_name, AuditSource.MLLP_Channel, transports, audit_log, self.cid, now,
-            defaults=defaults, dashboard_url=dashboard_url, template_dir=template_dir, job_intervals=job_intervals)
+            defaults=defaults, dashboard_url=dashboard_url, template_dir=template_dir, job_intervals=job_intervals,
+            arrival_windows=arrival_windows)
 
         self.logger.info('Alerting sweep ran %d rule(s) over %d fact(s) - %d finding(s), %d raised, %d deduplicated, %d dispatched',
             result.rule_count, result.fact_count, result.finding_count, result.raised_count, result.deduplicated_count,

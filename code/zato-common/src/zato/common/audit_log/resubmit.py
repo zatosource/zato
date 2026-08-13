@@ -97,6 +97,13 @@ _hop_actions = {
     AuditEvent.Request_Sent: {'label': Resubmit_Label, 'service': 'zato.audit-log.resend-hop'},
 }
 
+# A file a schedule handed to its target service is run through that service again,
+# using the bytes the read event stored under the same cid.
+_file_transfer_actions = {
+    AuditEvent.Delivered:       {'label': Resubmit_Label, 'service': 'zato.audit-log.file-transfer-reprocess'},
+    AuditEvent.Delivery_Failed: {'label': Resubmit_Label, 'service': 'zato.audit-log.file-transfer-reprocess'},
+}
+
 # The sources whose events carry resubmit actions at all, each with its own catalog
 source_resubmit_actions = {
     AuditSource.AS2: _as2_actions,
@@ -106,6 +113,7 @@ source_resubmit_actions = {
     AuditSource.FHIR: _hop_actions,
     AuditSource.REST_Outgoing: _hop_actions,
     AuditSource.Email_SMTP: _hop_actions,
+    AuditSource.File_Outgoing: _file_transfer_actions,
 }
 
 # ################################################################################################################################

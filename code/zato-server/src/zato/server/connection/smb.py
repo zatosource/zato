@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timezone
+from hashlib import sha256
 from logging import getLogger
 from stat import S_ISDIR, S_ISLNK
 from time import monotonic
@@ -21,7 +22,8 @@ from humanize import naturalsize
 
 # Zato
 from zato.common.audit_log.api import AuditOutcome
-from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Read, Operation_Store
+from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Move, Operation_Read, \
+    Operation_Store
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -148,12 +150,15 @@ class SMBConnection:
         size:'int' = 0,
         duration_ms:'int' = 0,
         error:'str' = '',
+        to_path:'str' = '',
+        checksum:'str' = '',
         content:'any_' = None,
         ) -> 'None':
         """ Records one file operation of this connection in the audit log.
         """
         _ = record_file_transfer(self.wrapper.audit_log, self.wrapper.config.name, operation, remote_path,
-            cid=self.cid, outcome=outcome, size=size, duration_ms=duration_ms, error=error, content=content)
+            cid=self.cid, outcome=outcome, size=size, duration_ms=duration_ms, error=error,
+            to_path=to_path, checksum=checksum, content=content)
 
 # ################################################################################################################################
 
@@ -324,9 +329,21 @@ class SMBConnection:
 
     def move(self, from_path:'str', to_path:'str') -> 'None':
 
-        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-            client = cast_('SMBClient', client)
-            client.rename(from_path, to_path)
+        start = monotonic()
+
+        # A failed move is recorded too, before the caller learns about it
+        try:
+            with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
+                client = cast_('SMBClient', client)
+                client.rename(from_path, to_path)
+        except Exception:
+            duration_ms = int((monotonic() - start) * 1000)
+            self._record_transfer(Operation_Move, from_path,
+                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc(), to_path=to_path)
+            raise
+
+        duration_ms = int((monotonic() - start) * 1000)
+        self._record_transfer(Operation_Move, from_path, outcome=AuditOutcome.OK, duration_ms=duration_ms, to_path=to_path)
 
     rename = move
 
@@ -347,9 +364,17 @@ class SMBConnection:
                 outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
             raise
 
+        # The bytes themselves are kept only when the connection asked for that
+        if self.wrapper.should_store_content:
+            content = out
+        else:
+            content = None
+
+        checksum = sha256(out).hexdigest()
+
         duration_ms = int((monotonic() - start) * 1000)
         self._record_transfer(Operation_Read, remote_path,
-            outcome=AuditOutcome.OK, size=len(out), duration_ms=duration_ms)
+            outcome=AuditOutcome.OK, size=len(out), duration_ms=duration_ms, checksum=checksum, content=content)
 
         return out
 
@@ -381,9 +406,11 @@ class SMBConnection:
         else:
             content = None
 
+        checksum = sha256(data).hexdigest()
+
         duration_ms = int((monotonic() - start) * 1000)
         self._record_transfer(Operation_Store, remote_path,
-            outcome=AuditOutcome.OK, size=size, duration_ms=duration_ms, content=content)
+            outcome=AuditOutcome.OK, size=size, duration_ms=duration_ms, checksum=checksum, content=content)
 
 # ################################################################################################################################
 
@@ -410,6 +437,31 @@ class SMBConnection:
         thread_file.close()
 
     download = download_file
+
+# ################################################################################################################################
+
+    def publish(self, data:'any_', remote_path:'str', encoding:'str'='utf8') -> 'any_':
+        """ Queues one file for guaranteed delivery to the remote path, returning as soon as it is stored.
+        The bytes go to a local spool file and only its path travels through the queue, so a file
+        of any size is delivered with retries, backoff and an audit event per attempt.
+        """
+
+        # Imported here to avoid circular imports
+        from zato.server.connection.outgoing_delivery import spool_file_payload, Key_Remote_Path, Key_Spool_Path
+
+        # Data to be written out must be always bytes
+        if not isinstance(data, bytes):
+            data = data.encode(encoding)
+
+        spool_path = spool_file_payload(data)
+
+        envelope = {
+            Key_Spool_Path: spool_path,
+            Key_Remote_Path: remote_path,
+        }
+
+        out = self.wrapper.publisher.publish(envelope)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

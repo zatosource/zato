@@ -41,8 +41,9 @@ from zato.common.facade import _service_name_to_topic, _service_sub_key_prefix
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
-from zato.common.pubsub.outgoing import find_outgoing_conn, get_outgoing_sub_config, get_outgoing_sub_key, \
-    get_outgoing_topic_name, locate_outgoing_conn, OutgoingPublisher, OutgoingType, parse_outgoing_sub_key
+from zato.common.pubsub.outgoing import audit_disabled_conn_types, find_outgoing_conn, get_outgoing_sub_config, \
+    get_outgoing_sub_key, get_outgoing_topic_name, locate_outgoing_conn, OutgoingPublisher, OutgoingType, \
+    parse_outgoing_sub_key
 from zato.common.pubsub.sql.backend import PublishResult
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, new_msg_id, parse_datetime, \
     update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
@@ -2873,6 +2874,16 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
+    def _set_outgoing_topic_audit_flag(self, conn_type:'str', topic_name:'str') -> 'None':
+        """ Turns the pub/sub audit log of one outgoing connection's topic off when its type says so -
+        file deliveries are already recorded as file-outgoing events, so recording them
+        as pub/sub events too would say the same thing twice.
+        """
+        if conn_type in audit_disabled_conn_types:
+            self.server.pubsub_backend.set_topic_audit_flag(topic_name, False)
+
+# ################################################################################################################################
+
     def ensure_outgoing_subscription(self, conn_type:'str', conn_id:'int') -> 'anytuple':
         """ Makes sure that one outgoing connection has a topic and a queue of its own, returning the name
         of that topic and the name the connection goes by now. The queue is keyed by the connection's id,
@@ -2886,6 +2897,9 @@ class ConfigManager(_ConfigManagerBase):
             # .. the topic is built from the name the connection goes by at this very moment ..
             conn_name, _ = locate_outgoing_conn(self.server, conn_type, conn_id)
             topic_name = get_outgoing_topic_name(conn_type, conn_name)
+
+            # .. a type whose deliveries are recorded elsewhere keeps its topic out of the pub/sub audit log ..
+            self._set_outgoing_topic_audit_flag(conn_type, topic_name)
 
             # .. and a connection already set up needs nothing further ..
             if sub_key not in self._outgoing_sub_key_cache:
@@ -2934,6 +2948,10 @@ class ConfigManager(_ConfigManagerBase):
                 # .. the messages, the deliveries and the subscription all move together ..
                 self.server.pubsub_backend.rename_topic(old_topic_name, new_topic_name)
 
+                # .. the audit flag follows the topic to its new name ..
+                self.server.pubsub_backend.delete_topic_audit_flag(old_topic_name)
+                self._set_outgoing_topic_audit_flag(conn_type, new_topic_name)
+
                 # .. a delivery greenlet looks a message's config up by the topic name that message
                 # .. carries, so the one in memory now needs to be the new name too ..
                 sub_config = get_outgoing_sub_config(sub_key, new_topic_name)
@@ -2971,6 +2989,9 @@ class ConfigManager(_ConfigManagerBase):
 
             # .. the topic goes away with its messages, its deliveries and its subscription ..
             self.server.pubsub_backend.delete_topic(topic_name)
+
+            # .. the audit flag of the deleted topic goes away too ..
+            self.server.pubsub_backend.delete_topic_audit_flag(topic_name)
 
             # .. and nothing in this server points to the queue any longer.
             del self._push_subs[sub_key]
@@ -3015,6 +3036,9 @@ class ConfigManager(_ConfigManagerBase):
                 if subscribed_topic != topic_name:
                     logger.info('Finishing the move of outgoing topic `%s` to `%s`', subscribed_topic, topic_name)
                     self.server.pubsub_backend.rename_topic(subscribed_topic, topic_name)
+
+            # .. a type whose deliveries are recorded elsewhere keeps its topic out of the pub/sub audit log ..
+            self._set_outgoing_topic_audit_flag(conn_type, topic_name)
 
             # .. and the queue is put back exactly as the first publication to it made it.
             sub_config = get_outgoing_sub_config(sub_key, topic_name)

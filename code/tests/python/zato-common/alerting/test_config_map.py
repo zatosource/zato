@@ -352,6 +352,20 @@ class TestRoundTripOverSeededRules:
 
 # ################################################################################################################################
 
+    def test_the_arrival_threshold_reads_the_seeded_default(self, backend:'RuleSQLBackend') -> 'None':
+        ensure_alerting_definitions(backend)
+
+        matches = backend.definitions.find_by_name(name='alerts_file_transfer', object_type=Definition_Type_Ruleset)
+        document = deserialize_document(matches[0].document)
+        documents = document[Documents_Key]
+
+        values = config_map.read_type_values('file_transfer', documents)
+
+        # The arrival rule ships firing right at the schedule's own window
+        assert values['arrival_overdue'] == 1
+
+# ################################################################################################################################
+
     def test_a_write_read_round_trip_over_the_seeded_documents(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
 

@@ -31,6 +31,9 @@ _scheduler = FileTransfer.Scheduler
 _default_run_every = '5'
 _default_run_unit  = _scheduler.Unit.Minutes
 
+# No arrival expectation unless the user declares one.
+_default_arrival_window = '0'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -60,6 +63,10 @@ class CreateForm(forms.Form):
     run_every = forms.CharField(initial=_default_run_every, widget=forms.TextInput(attrs={'class':'validate-digits'}))
     run_unit = forms.ChoiceField(initial=_default_run_unit, widget=forms.Select())
     start_date = forms.CharField(widget=forms.TextInput())
+
+    # How many seconds may pass without a file arriving before an alert - zero means no expectation.
+    arrival_window = forms.CharField(
+        initial=_default_arrival_window, widget=forms.TextInput(attrs={'class':'validate-digits'}))
 
     def __init__(self, prefix:'strnone'=None, post_data:'anydictnone'=None, req:'any_'=None) -> 'None':
         super().__init__(post_data, prefix=prefix)

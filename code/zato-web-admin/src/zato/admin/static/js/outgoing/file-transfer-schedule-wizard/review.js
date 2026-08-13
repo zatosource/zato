@@ -45,9 +45,30 @@ review.refreshSummaries = function() {
 
     review.setSummary('file-transfer-wizard-summary-success', successText);
 
-    // .. and how often the directory is looked into.
+    // .. how often the directory is looked into ..
     var runEvery = 'Every ' + wizard.field('run_every').val() + ' ' + wizard.field('run_unit').val();
     review.setSummary('file-transfer-wizard-summary-run-every', runEvery);
+
+    // .. and whether a file is expected within some window at all.
+    review.setSummary('file-transfer-wizard-summary-arrival-window', review.arrivalWindowText());
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// How the arrival expectation reads - a window of zero means none was declared
+review.arrivalWindowText = function() {
+
+    var arrivalWindow = parseInt(wizard.field('arrival_window').val());
+    var out;
+
+    if(arrivalWindow) {
+        out = 'Alert after ' + arrivalWindow + 's without one';
+    }
+    else {
+        out = 'No expectation';
+    }
+
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -136,6 +157,7 @@ review.render = function() {
             rows: [
             ['Run every', runEvery],
             ['Start time', wizard.field('start_date').val()],
+            ['Expects a file', review.arrivalWindowText()],
             ['Active', isActive ? 'Yes' : 'No']
         ]}
     ]);

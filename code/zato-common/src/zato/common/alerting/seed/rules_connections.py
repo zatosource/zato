@@ -568,6 +568,24 @@ when
 then
     outcome.action = 'email'
     outcome.severity = 'critical'
+
+rule
+    Arrival_Overdue
+docs
+    A schedule whose expected file did not arrive within its own arrival window raises an email alert.
+    The measure is a ratio of time since the newest delivered file to the schedule's declared window,
+    so one rule sizes itself to every schedule that declares one - a schedule without a window is never measured.
+    The dedup window is raised because the measure only grows until a file finally arrives,
+    so the alert would otherwise re-fire every sweep.
+defaults
+    arrival_overdue_multiplier = 1
+when
+    alert.source is 'file-outgoing' and
+    alert.arrival_overdue_ratio is at least default.arrival_overdue_multiplier
+then
+    outcome.action = 'email'
+    outcome.severity = 'warning'
+    outcome.dedup_window_seconds = 14400
 """.strip()
 
 
