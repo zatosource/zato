@@ -22,9 +22,9 @@ from zato.common.api import HL7
 from zato.common.audit_log.api import get_audit_engine
 from zato.common.defaults import default_cluster_id
 from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo_data, Channel_Clinic, Channel_Lab, \
-    Channel_Main, Outconn_FHIR, Outconn_Forward, Route_Clinic, Route_Lab, Route_Main, SeedConfig
+    Channel_Main, Facilities_By_Channel, Outconn_FHIR, Outconn_Forward, Route_Clinic, Route_Lab, Route_Main, SeedConfig
 from zato.common.destination.constants import DestinationType
-from zato.common.hl7.feed import generate_feed_items, rewrite_msh_field, FeedConfig, MSH3_Index
+from zato.common.hl7.feed import generate_feed_items, rewrite_msh_field, FeedConfig, MSH3_Index, MSH4_Index
 from zato.common.hl7.fhir.fields import Outconn_Config_Defaults as FHIR_Outconn_Defaults
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.fields import Channel_Defaults as MLLP_Channel_Defaults, \
@@ -506,10 +506,19 @@ def send_demo_burst() -> 'int':
 
     items = generate_feed_items(_burst_count, feed_config)
 
-    for item in items:
+    # The live messages come from the same facilities the seeded week does, so the channel
+    # has one set of callers rather than one for its history and another for its live traffic
+    facilities = Facilities_By_Channel[Channel_Main]
+    facility_count = len(facilities)
 
-        # Every burst message routes to the main demo channel
+    for index, item in enumerate(items):
+
+        # Every burst message routes to the main demo channel ..
         text = rewrite_msh_field(item.text, MSH3_Index, Route_Main)
+
+        # .. and the facilities take turns sending them.
+        facility = facilities[index % facility_count]
+        text = rewrite_msh_field(text, MSH4_Index, facility)
 
         _ = client.send(text.encode('utf-8'), item.control_id)
 

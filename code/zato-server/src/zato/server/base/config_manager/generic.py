@@ -35,11 +35,11 @@ from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys
     outconn_odata_int_config_keys, outconn_sap_config_defaults
 from zato.server.generic.api.outconn_sdk import normalize_connector_config
 from zato.server.generic.api.outconn_sftp import outconn_sftp_bool_config_keys, outconn_sftp_config_defaults, \
-    outconn_sftp_int_config_keys
+    outconn_sftp_int_config_keys, outconn_sftp_string_config_keys
 from zato.server.generic.api.outconn_mongodb import outconn_mongodb_bool_config_keys, outconn_mongodb_config_defaults, \
     outconn_mongodb_int_config_keys
 from zato.server.generic.api.outconn_smb import outconn_smb_bool_config_keys, outconn_smb_config_defaults, \
-    outconn_smb_int_config_keys
+    outconn_smb_int_config_keys, outconn_smb_string_config_keys
 from zato.server.generic.connection import GenericConnection
 from zato.server.connection.outgoing_delivery import publishable_generic_types
 
@@ -290,6 +290,10 @@ class Generic(ConfigManagerImpl):
 
     def ping_generic_connection(self, conn_id:'int') -> 'None':
         conn_dict, _ = self._find_conn_info(conn_id)
+
+        # E.g. the connection was deleted a moment ago
+        if not conn_dict:
+            raise Exception('Could not find connection by id `{}` to ping'.format(conn_id))
 
         self.logger.info('About to ping generic connection `%s` (%s)', conn_dict.name, conn_dict.type_)
         conn = conn_dict['conn']
@@ -590,11 +594,17 @@ class Generic(ConfigManagerImpl):
             if isinstance(value, str):
                 config[key] = int(value)
 
-        # .. and make sure boolean fields are booleans.
+        # .. make sure boolean fields are booleans ..
         for key in outconn_sftp_bool_config_keys:
             value = config[key]
             if isinstance(value, str):
                 config[key] = as_bool(value)
+
+        # .. and make sure string fields are strings.
+        for key in outconn_sftp_string_config_keys:
+            value = config[key]
+            if isinstance(value, int):
+                config[key] = str(value)
 
 # ################################################################################################################################
 
@@ -686,11 +696,17 @@ class Generic(ConfigManagerImpl):
             if isinstance(value, str):
                 config[key] = int(value)
 
-        # .. and make sure boolean fields are booleans.
+        # .. make sure boolean fields are booleans ..
         for key in outconn_smb_bool_config_keys:
             value = config[key]
             if isinstance(value, str):
                 config[key] = as_bool(value)
+
+        # .. and make sure string fields are strings.
+        for key in outconn_smb_string_config_keys:
+            value = config[key]
+            if isinstance(value, int):
+                config[key] = str(value)
 
 # ################################################################################################################################
 

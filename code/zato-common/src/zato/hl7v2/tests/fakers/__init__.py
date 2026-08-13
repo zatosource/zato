@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.hl7v2.tests.fakers.base import fake, fake_msh, fake_segment
+from zato.hl7v2.tests.fakers.base import fake, fake_msh, fake_segment, Receiver_Pool, Sender_Pool
 from zato.hl7v2.tests.fakers.blood_bank import fake_bpo
 from zato.hl7v2.tests.fakers.clinical import fake_gol, fake_prb, fake_pth, fake_rf1
 from zato.hl7v2.tests.fakers.documents import fake_txa
@@ -66,6 +66,8 @@ __all__ = [
     'fake_spm',
     'fake_stf',
     'fake_txa',
+    'Receiver_Pool',
+    'Sender_Pool',
 ]
 
 # ################################################################################################################################

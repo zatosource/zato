@@ -9,10 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from contextlib import contextmanager
+from datetime import timedelta
+
+# SQLAlchemy
+from sqlalchemy import update
 
 # Zato
 from common import audit_log_env, delete_all_events
-from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.audit_log.reports import Range_Day
 from zato.common.audit_log.usage import get_object_options, get_usage, normalize_sources, usage_csv, Usage_Sources
@@ -48,8 +52,11 @@ _rest_caller = 'usage.test.caller'
 # The sending facility of the MLLP channel's messages - MLLP's caller identity
 _mllp_facility = 'CLINIC_A'
 
-# What a caller with no identity at all is reported as
+# What a channel response with no security definition is reported as
 _caller_anonymous = 'Anonymous'
+
+# What an outgoing connection's row shows, there being no caller to name
+_caller_outgoing = '-'
 
 # Hostile object values that must be treated as plain names - no error, no match
 _hostile_names = [
@@ -167,10 +174,54 @@ class TestGetUsage:
             assert mllp_row.source == AuditSource.MLLP_Channel
             assert mllp_row.caller == _mllp_facility
 
-            # An exchange recorded with no identity at all came from an anonymous caller
+            # A channel response that authenticated with no security definition
+            # came from an anonymous caller
+            soap_row = _rows_for(rows, _soap_channel)[0]
+            assert soap_row.source == AuditSource.SOAP_Channel
+            assert soap_row.caller == _caller_anonymous
+
+            # Nobody calls out to us through an outgoing connection, so its rows name no caller
             fhir_row = _rows_for(rows, _fhir_outgoing)[0]
             assert fhir_row.source == AuditSource.FHIR
-            assert fhir_row.caller == _caller_anonymous
+            assert fhir_row.caller == _caller_outgoing
+
+            mllp_outgoing_row = _rows_for(rows, _mllp_outgoing)[0]
+            assert mllp_outgoing_row.source == AuditSource.MLLP_Outgoing
+            assert mllp_outgoing_row.caller == _caller_outgoing
+
+            rest_outgoing_row = _rows_for(rows, _rest_outgoing)[0]
+            assert rest_outgoing_row.source == AuditSource.REST_Outgoing
+            assert rest_outgoing_row.caller == _caller_outgoing
+
+# ################################################################################################################################
+
+    def test_the_call_times_follow_the_moments(self, tmp_path:'os.PathLike') -> 'None':
+
+        with _usage_env(tmp_path):
+
+            # A reprocessed message is recorded after the traffic it came from, so it lands
+            # with a higher id than the exchanges it happened before ..
+            audit_log = AuditLog(_server_name)
+            event_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, _mllp_channel,
+                cid='cid-mllp-2', ext_client_id=_mllp_facility, outcome=AuditOutcome.OK)
+
+            now = utcnow()
+            older_iso = (now - timedelta(hours=1)).isoformat()
+
+            statement = update(event_table).where(event_table.c.id == event_id).values(event_time_iso=older_iso)
+
+            engine = get_audit_engine()
+
+            with engine.begin() as connection:
+                _ = connection.execute(statement)
+
+            # .. and it is the older of the row's two calls, not the newer one.
+            rows = get_usage(now, Range_Day, [AuditSource.MLLP_Channel], [_mllp_channel])
+            row = rows[0]
+
+            assert row.calls == 2
+            assert row.first_call == older_iso
+            assert row.last_call > older_iso
 
 # ################################################################################################################################
 

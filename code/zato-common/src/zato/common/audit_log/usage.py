@@ -57,6 +57,10 @@ object_options_dict = dict[str, list[str]]
 # What a caller that authenticated with no security definition is reported as
 Caller_Anonymous = 'Anonymous'
 
+# What an outgoing connection's row shows in the caller column - nobody calls out to us
+# through one, so there is no caller to name
+Caller_Outgoing = '-'
+
 # The sources the usage page covers and, per source, the event marking one completed
 # exchange - the completing event rather than request-sent, so a destination delivery,
 # whose hop recorder writes an extra request-sent row, is never counted twice.
@@ -73,6 +77,9 @@ _usage_event_by_source = {
 
 # The covered sources in their display order - what the page's source filter offers
 Usage_Sources = tuple(_usage_event_by_source)
+
+# The report's outgoing sources, whose rows carry no caller of their own
+_outgoing_sources = {AuditSource.REST_Outgoing, AuditSource.MLLP_Outgoing, AuditSource.FHIR}
 
 # The CSV headers of the usage table, matching the columns the page renders
 Usage_Headers = ('channel', 'type', 'caller', 'calls', 'first_call', 'last_call')
@@ -180,7 +187,11 @@ def _load_usage_events(cutoff_iso:'str', sources:'strlist', objects:'strlist') -
         event_table.c.event_time_iso,
     )
     statement = statement.where(conditions)
-    statement = statement.order_by(event_table.c.id)
+
+    # Ordered by the moment rather than by the id - a resubmit is recorded after the traffic
+    # it reprocesses, so its id is higher while its exchange is older, and the first and last
+    # call of a row are read off this order
+    statement = statement.order_by(event_table.c.event_time_iso, event_table.c.id)
 
     engine = get_audit_engine()
 
@@ -213,9 +224,13 @@ def get_usage(
 
     for source, object_name, ext_client_id, event_time_iso in events:
 
-        # A response recorded without a security definition came from an anonymous caller
+        # An exchange with no identity on it is an outgoing connection's own call, which has
+        # no caller at all, or a channel response that authenticated with no security definition
         if not ext_client_id:
-            ext_client_id = Caller_Anonymous
+            if source in _outgoing_sources:
+                ext_client_id = Caller_Outgoing
+            else:
+                ext_client_id = Caller_Anonymous
 
         key = (object_name, source, ext_client_id)
 

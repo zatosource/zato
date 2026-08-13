@@ -11,7 +11,7 @@ from zato.common.audit_log.api import AuditEvent, AuditSource
 from zato.common.hl7.audit import get_audit_attrs, get_control_id, get_message_type, get_mrn, get_sending_facility, \
     get_wire_attrs
 from zato.hl7v2 import parse_hl7
-from zato.hl7v2.tests.fakers import fake
+from zato.hl7v2.tests.fakers import fake, Sender_Pool
 from zato.hl7v2.tests.fakers.msg_adt import fake_adta01
 
 # ################################################################################################################################
@@ -127,6 +127,23 @@ class TestSendingFacilityAndControlID:
     def test_control_id_comes_from_msh_10(self) -> 'None':
         msg = parse_hl7(_adt_a01)
         assert get_control_id(msg) == 'MSG000001'
+
+# ################################################################################################################################
+
+    def test_a_generated_message_comes_from_an_interface(self) -> 'None':
+
+        # A generated message's sending side is one of the interfaces the fakers know,
+        # so the facility a report names as the caller is a system, never a person.
+        fake.seed_instance(314159)
+
+        for _ in range(20):
+
+            msg = parse_hl7(fake_adta01())
+
+            sending_application = msg.get('msh.sending_application')
+            sending_facility = get_sending_facility(msg)
+
+            assert (sending_application, sending_facility) in Sender_Pool
 
 # ################################################################################################################################
 # ################################################################################################################################

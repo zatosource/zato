@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timedelta
+from json import loads
 from time import monotonic
 
 # SQLAlchemy
@@ -15,11 +16,15 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
-    get_audit_engine, AuditEvent, AuditLink, AuditOutcome, AuditSource
+    get_audit_engine, AuditBody, AuditEvent, AuditLink, AuditOutcome, AuditSource
 from zato.common.audit_log.common import alert_table, event_dedup_table
+from zato.common.audit_log.reports import Range_Week
+from zato.common.audit_log.usage import get_usage
 from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo_data, \
     Actors, Burst_End_Hour, Burst_Start_Hour, Channel_Clinic, Channel_Lab, Channel_Main, Clinic_Silent_Hour, \
-    In_Flight_Count, Outconn_FHIR, Outconn_Forward, SeedConfig
+    Facilities_By_Channel, FHIR_Error_Status, FHIR_Save_Method, In_Flight_Count, Outconn_FHIR, Outconn_Forward, \
+    Routes_By_Channel, SeedConfig
+from zato.common.hl7.feed import MSH3_Index, MSH4_Index
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,6 +84,35 @@ def _get_events(**where:'any_') -> 'anylist':
         rows = connection.execute(statement).fetchall()
 
     out = [row._asdict() for row in rows]
+    return out
+
+# ################################################################################################################################
+
+def _get_request_bodies(object_name:'str') -> 'anylist':
+    """ The stored message bodies of everything one channel received.
+    """
+    engine = get_audit_engine()
+
+    events = _get_events(event_type=AuditEvent.Message_Received, object_name=object_name)
+    event_ids = [event['id'] for event in events]
+
+    statement = select(event_body_table.c.data).where(event_body_table.c.event_id.in_(event_ids))
+    statement = statement.where(event_body_table.c.kind == AuditBody.Request)
+
+    with engine.connect() as connection:
+        rows = connection.execute(statement).fetchall()
+
+    out = [row[0] for row in rows]
+    return out
+
+# ################################################################################################################################
+
+def _get_msh_fields(message_text:'str') -> 'anylist':
+    """ The pipe-split MSH segment of one message, index 0 being the segment name.
+    """
+    msh_line = message_text.partition('\r')[0]
+
+    out = msh_line.split('|')
     return out
 
 # ################################################################################################################################
@@ -158,6 +192,52 @@ class TestSeedContents:
 
         for row in rows:
             assert '20260101000000' not in row[0]
+
+# ################################################################################################################################
+
+    def test_every_channel_names_its_own_senders(self) -> 'None':
+        """ A seeded body says where it came from - its channel's own route in MSH-3
+        and one of the facilities that channel hears from in MSH-4, with each
+        acknowledgment filed under that same facility.
+        """
+        _ = _run_seed()
+
+        for channel_name, facilities in Facilities_By_Channel.items():
+
+            route = Routes_By_Channel[channel_name]
+
+            bodies = _get_request_bodies(channel_name)
+            assert bodies
+
+            for body in bodies:
+                msh_fields = _get_msh_fields(body)
+
+                assert msh_fields[MSH3_Index] == route, body
+                assert msh_fields[MSH4_Index] in facilities, body
+
+            ack_events = _get_events(event_type=AuditEvent.Ack_Sent, object_name=channel_name)
+            assert ack_events
+
+            for event in ack_events:
+                assert event['ext_client_id'] in facilities
+
+# ################################################################################################################################
+
+    def test_the_usage_report_names_the_clinics(self) -> 'None':
+        """ The callers the channel-usage page shows for the clinic channel are
+        the facilities that channel hears from, each with calls of its own.
+        """
+        _ = _run_seed()
+
+        rows = get_usage(_now, Range_Week, [AuditSource.MLLP_Channel], [Channel_Clinic])
+
+        callers = set()
+
+        for row in rows:
+            assert row.calls > 0
+            callers.add(row.caller)
+
+        assert callers == set(Facilities_By_Channel[Channel_Clinic])
 
 # ################################################################################################################################
 
@@ -363,7 +443,8 @@ class TestSeedContents:
 # ################################################################################################################################
 
     def test_the_fhir_pairs_are_present(self) -> 'None':
-        """ Every FHIR request has its response on the same cid.
+        """ Every FHIR request has its response on the same cid, some of them refused,
+        and a save carries the resource it wrote.
         """
         _ = _run_seed()
 
@@ -380,6 +461,21 @@ class TestSeedContents:
 
         for event in requests:
             assert event['object_name'] == Outconn_FHIR
+
+        # The connection has failures of its own, and each one says what the server refused with
+        failed = [event for event in responses if event['outcome'] == AuditOutcome.Error]
+        assert failed
+
+        for event in failed:
+            assert event['status'] == FHIR_Error_Status
+
+        # A save is the pair that stored a body - what the browser shows and a resend repeats
+        saves = [loads(event['data']) for event in requests if loads(event['data'])['payload']]
+        assert saves
+
+        for stored in saves:
+            assert stored['method'] == FHIR_Save_Method
+            assert stored['path'].endswith(loads(stored['payload'])['id'])
 
 # ################################################################################################################################
 # ################################################################################################################################

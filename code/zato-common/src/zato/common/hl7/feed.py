@@ -72,6 +72,7 @@ Default_Mix = (
 
 # Field indexes within a pipe-split MSH segment, where index 0 is the segment name itself
 MSH3_Index  = 2
+MSH4_Index  = 3
 MSH10_Index = 9
 
 # ################################################################################################################################

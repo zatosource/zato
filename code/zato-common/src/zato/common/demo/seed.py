@@ -38,8 +38,9 @@ from zato.common.audit_log.config_audit import record_config_change, record_view
 from zato.common.audit_log.dedup import build_dedup_key
 from zato.common.hl7.audit import audit_ack_received, audit_ack_sent, audit_batch_received, audit_message_received, \
     audit_message_sent, get_audit_attrs, ACKStatus
-from zato.common.hl7.feed import generate_feed_items, rewrite_msh_field, FeedConfig, MSH10_Index
+from zato.common.hl7.feed import generate_feed_items, rewrite_msh_field, FeedConfig, MSH3_Index, MSH4_Index, MSH10_Index
 from zato.common.util.api import utcnow
+from zato.fhir.test import TestData
 from zato.hl7v2 import parse_hl7
 
 # ################################################################################################################################
@@ -86,6 +87,25 @@ Outconn_FHIR    = 'demo.fhir.ehr'
 Route_Main   = 'DEMO_HOSPITAL_ADT'
 Route_Lab    = 'DEMO_LAB_ORU'
 Route_Clinic = 'DEMO_CLINIC_ADT'
+
+# Which route each channel's messages carry in MSH-3 - a seeded body is stamped with it,
+# so its history reads the way the live wire would have delivered it
+Routes_By_Channel = {
+    Channel_Main:   Route_Main,
+    Channel_Lab:    Route_Lab,
+    Channel_Clinic: Route_Clinic,
+}
+
+# The MSH-4 sending facilities each channel hears from - a feed has a handful of them,
+# and they are the callers the channel-usage report names
+Facilities_By_Channel = {
+    Channel_Main:   ('GENERAL_HOSPITAL', 'ST_MARYS_HOSPITAL', 'EASTGATE_HOSPITAL'),
+    Channel_Lab:    ('CENTRAL_LAB', 'REGIONAL_LAB', 'PATHOLOGY_LAB'),
+    Channel_Clinic: ('RIVERSIDE_CLINIC', 'LAKEVIEW_CLINIC', 'NORTHSIDE_CLINIC'),
+}
+
+# The facility the demo batch and its contained messages arrive from
+Batch_Facility = 'GENERAL_HOSPITAL'
 
 # The people appearing in the demo's config-change and alert history
 Actor_Admin    = 'demo.admin'
@@ -146,6 +166,24 @@ Second_Hop_Every = 3
 
 # How many content-viewed records the access log carries
 View_Count = 40
+
+# Every FHIR pair this many is a save rather than a read - the pair that carries
+# a body to view and a payload a resend can repeat
+FHIR_Save_Every = 3
+
+# Every FHIR pair this many is refused by the server - deterministic rather than a ratio
+# so even the smallest run has an error row of its own
+FHIR_Error_Every = 4
+
+# What a FHIR server's refusal reads as on the failed response's row
+FHIR_Error_Status = 'Operation outcome: 503 Service Unavailable'
+
+# The resource types the demo's FHIR calls go out for
+FHIR_Resource_Types = ('Patient', 'Observation', 'Encounter')
+
+# The HTTP methods a read and a save go out as - the case the live connection records them in
+FHIR_Read_Method = 'get'
+FHIR_Save_Method = 'put'
 
 # How many distinct message bodies the feed authors for the seeded traffic - the remaining
 # messages reuse them with control ids of their own, which is most of what keeps a run fast
@@ -211,6 +249,7 @@ class _PlannedMessage:
     channel_name:'str' = ''
     text:'str' = ''
     control_id:'str' = ''
+    facility:'str' = ''
     template_key:'int' = 0
     is_error:'bool' = False
     is_forwarded:'bool' = False
@@ -495,11 +534,23 @@ def _to_hl7_timestamp(when:'datetime') -> 'str':
 
 # ################################################################################################################################
 
-def _build_ack_text(ack_code:'str', control_id:'str', when:'datetime') -> 'str':
-    """ Builds the minimal acknowledgment message a channel would send back,
-    its MSH-7 carrying the acknowledgment's own moment.
+def _build_ack_text(ack_code:'str', control_id:'str', when:'datetime', source_text:'str') -> 'str':
+    """ Builds the minimal acknowledgment message a channel would send back, its MSH-7 carrying
+    the acknowledgment's own moment and its receiving side naming whoever sent the message.
     """
-    msh = 'MSH|^~\\&|ZATO|ZATO|DEMO|DEMO|{}||ACK|{}|P|2.4'.format(_to_hl7_timestamp(when), control_id)
+
+    # An acknowledgment goes back where the message came from, so the sender's own application
+    # and facility are what its receiving side names
+    msh_line = source_text.partition('\r')[0]
+    msh_fields = msh_line.split('|')
+
+    sending_application = msh_fields[MSH3_Index]
+    sending_facility = msh_fields[MSH4_Index]
+
+    ack_timestamp = _to_hl7_timestamp(when)
+
+    msh = 'MSH|^~\\&|ZATO|ZATO|{}|{}|{}||ACK|{}|P|2.4'.format(
+        sending_application, sending_facility, ack_timestamp, control_id)
     msa = 'MSA|{}|{}'.format(ack_code, control_id)
 
     out = msh + '\r' + msa
@@ -538,7 +589,6 @@ def _build_plan(config:'SeedConfig', now:'datetime') -> 'anylist':
     for item in items:
 
         planned = _PlannedMessage()
-        planned.text = item.text
         planned.control_id = item.control_id
         planned.template_key = item.template_key
 
@@ -573,6 +623,16 @@ def _build_plan(config:'SeedConfig', now:'datetime') -> 'anylist':
 
             planned.when = when
             planned.is_error = rng.random() < Base_Error_Ratio
+
+        # The body says where it came from - its channel's own route in MSH-3 and one of the
+        # facilities that channel hears from in MSH-4, the caller the usage report names
+        route = Routes_By_Channel[planned.channel_name]
+        facilities = Facilities_By_Channel[planned.channel_name]
+
+        planned.facility = rng.choice(facilities)
+
+        text = rewrite_msh_field(item.text, MSH3_Index, route)
+        planned.text = rewrite_msh_field(text, MSH4_Index, planned.facility)
 
         # Accepted main-channel messages flow onwards to the EHR
         is_forward_candidate = planned.channel_name == Channel_Main and not planned.is_error
@@ -611,8 +671,8 @@ def _write_messages(
     ok_sample_step = 100
 
     # The parsed attributes of each distinct body - one template's messages all carry
-    # the same searchable attributes, the control id not being among them, so the parse
-    # runs once per template rather than once per message
+    # the same searchable attributes, the control id and the stamped facility not being
+    # among them, so the parse runs once per template rather than once per message
     attrs_by_template:'intanydict' = {}
 
     for index, planned in enumerate(plan):
@@ -625,6 +685,11 @@ def _write_messages(
             message = parse_hl7(planned.text, validate=False)
             attrs = get_audit_attrs(message)
             attrs_by_template[planned.template_key] = attrs
+
+        # The facility is the one field the plan stamped per message, so the reused parse
+        # is copied with that field replaced rather than run again
+        attrs = dict(attrs)
+        attrs['facility'] = planned.facility
 
         # The receipt itself
         audit_log.set_event_time(planned.when)
@@ -661,12 +726,12 @@ def _write_messages(
             duration_ms = rng.randrange(5, 120)
 
         ack_when = planned.when + timedelta(milliseconds=duration_ms)
-        ack_text = _build_ack_text(ack_code, planned.control_id, ack_when)
+        ack_text = _build_ack_text(ack_code, planned.control_id, ack_when, planned.text)
 
         audit_log.set_event_time(ack_when)
         _ = audit_ack_sent(
             audit_log, planned.channel_name, ack_code, ack_text,
-            cid=cid, msg_id=planned.control_id, facility=attrs['facility'], duration_ms=duration_ms)
+            cid=cid, msg_id=planned.control_id, facility=planned.facility, duration_ms=duration_ms)
 
         # The forwarded pair on the outgoing connection
         if planned.is_forwarded:
@@ -748,13 +813,24 @@ def _write_batch(
     feed_config.seed = config.seed + 1
 
     items = generate_feed_items(3, feed_config)
-    body = '\r'.join(item.text for item in items)
+
+    # The batch arrives on the main channel, so its messages name that channel's route
+    # and the facility the batch header itself comes from
+    texts:'anylist' = []
+
+    for item in items:
+        text = rewrite_msh_field(item.text, MSH3_Index, Route_Main)
+        text = rewrite_msh_field(text, MSH4_Index, Batch_Facility)
+        texts.append(text)
+
+    body = '\r'.join(texts)
 
     batch_cid = f'{Cid_Prefix}batch-00000001'
     batch_when = now.replace(hour=11, minute=0, second=0, microsecond=0) - timedelta(days=2) + _draw_fraction(rng)
 
     # The batch header carries the batch's own moment
-    batch_header = 'BHS|^~\\&|DEMO_BATCH|GENERAL_HOSPITAL|ZATO|ZATO|{}'.format(_to_hl7_timestamp(batch_when))
+    batch_timestamp = _to_hl7_timestamp(batch_when)
+    batch_header = 'BHS|^~\\&|DEMO_BATCH|{}|ZATO|ZATO|{}'.format(Batch_Facility, batch_timestamp)
     batch_text = batch_header + '\r' + body + '\rBTS|3'
 
     audit_log.set_event_time(batch_when)
@@ -799,7 +875,7 @@ def _write_one_hop(
     )
 
     ack_when = when + timedelta(milliseconds=duration_ms)
-    ack_text = _build_ack_text(ack_code, source.control_id, ack_when)
+    ack_text = _build_ack_text(ack_code, source.control_id, ack_when, source.text)
 
     audit_log.set_event_time(ack_when)
     _ = audit_ack_sent(
@@ -1226,11 +1302,14 @@ def _write_fhir_traffic(
     rng:'Random',
     ) -> 'int':
     """ Writes the FHIR side of the demo - request/response pairs on the FHIR
-    outgoing connection, spread over the same span as the HL7 traffic.
+    outgoing connection, spread over the same span as the HL7 traffic. Reads mostly,
+    with a save carrying a body and a refused response every few pairs.
     Returns the pair count.
     """
 
-    resource_types = ('Patient', 'Observation', 'Encounter')
+    # The resources the calls go out for are the shipped samples, so an id in the browser
+    # names a resource that exists - the first access is what loads them
+    resources_by_type = {item:getattr(TestData, item) for item in FHIR_Resource_Types}
 
     for index in range(config.fhir_pair_count):
 
@@ -1239,19 +1318,31 @@ def _write_fhir_traffic(
         while when > now:
             when = _draw_time(rng, now, config.days)
 
-        cid = f'{Cid_Prefix}fhir-{index + 1:08d}'
-        resource_type = rng.choice(resource_types)
-        resource_id = rng.randrange(1000, 9999)
-        path = f'/{resource_type}/{resource_id}'
+        pair_number = index + 1
+        cid = f'{Cid_Prefix}fhir-{pair_number:08d}'
+
+        resource_type = rng.choice(FHIR_Resource_Types)
+        resource = rng.choice(resources_by_type[resource_type])
+        path = f'/{resource_type}/{resource.id}'
+
+        # A save writes the resource back, everything else only reads it
+        if pair_number % FHIR_Save_Every == 0:
+            method = FHIR_Save_Method
+            request_body = resource.to_json()
+        else:
+            method = FHIR_Read_Method
+            request_body = ''
 
         attrs = {
             'resource_type': resource_type,
-            'method': 'GET',
+            'method': method.upper(),
         }
 
+        # The stored document is the resubmit convention - payload plus the method
+        # and path a per-hop resend needs to repeat the exact same call
         stored_data = dumps({
-            'payload': '',
-            'method': 'get',
+            'payload': request_body,
+            'method': method,
             'path': path,
         })
 
@@ -1259,7 +1350,8 @@ def _write_fhir_traffic(
         _ = audit_log.insert(
             AuditSource.FHIR, AuditEvent.Request_Sent, Outconn_FHIR,
             cid=cid,
-            endpoint=f'GET {path}',
+            endpoint=f'{method.upper()} {path}',
+            size=len(request_body),
             outcome=AuditOutcome.OK,
             data=stored_data,
             attrs=attrs,
@@ -1268,11 +1360,20 @@ def _write_fhir_traffic(
         duration_ms = rng.randrange(15, 350)
         response_when = when + timedelta(milliseconds=duration_ms)
 
+        # A refusal is the server saying no - an error response carrying what it said
+        if pair_number % FHIR_Error_Every == 0:
+            outcome = AuditOutcome.Error
+            status = FHIR_Error_Status
+        else:
+            outcome = AuditOutcome.OK
+            status = ''
+
         audit_log.set_event_time(response_when)
         _ = audit_log.insert(
             AuditSource.FHIR, AuditEvent.Response_Received, Outconn_FHIR,
             cid=cid,
-            outcome=AuditOutcome.OK,
+            outcome=outcome,
+            status=status,
             duration_ms=duration_ms,
             attrs=attrs,
         )

@@ -160,6 +160,11 @@ skip_simple_type = {
     # Connection names must stay strings even when they look numeric, e.g. a channel named 123.
     'name',
 
+    # Hosts, addresses and usernames must stay strings even when they are all-digit
+    'host',
+    'address',
+    'username',
+
     # Secrets and API keys must stay strings too - an all-digit key would otherwise
     # arrive as an integer and encryption works only with text.
     'secret',

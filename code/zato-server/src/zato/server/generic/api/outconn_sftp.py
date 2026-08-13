@@ -77,6 +77,9 @@ outconn_sftp_int_config_keys = ()
 # Config keys that must be booleans but may arrive as strings from opaque storage
 outconn_sftp_bool_config_keys = ('strict_host_key_checking', 'ignore_host_key_changes', 'should_store_content')
 
+# Config keys that must be strings but may arrive as integers from opaque storage
+outconn_sftp_string_config_keys = ('address', 'username')
+
 # ################################################################################################################################
 # ################################################################################################################################
 

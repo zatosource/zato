@@ -53,6 +53,9 @@ outconn_smb_int_config_keys = ('port',)
 # Config keys that must be booleans but may arrive as strings from opaque storage
 outconn_smb_bool_config_keys = ('should_store_content',)
 
+# Config keys that must be strings but may arrive as integers from opaque storage
+outconn_smb_string_config_keys = ('host', 'username')
+
 # ################################################################################################################################
 # ################################################################################################################################
 

@@ -219,6 +219,16 @@ class ConfigLoader:
                 ext_generic = ConfigDict.from_query('generic_connection', ext_query, decrypt_func=self.decrypt)
             merge_ext_config_entries(self.config.generic_connection._impl, ext_generic._impl)
 
+        # Names are unique per type only, so the entries are rekeyed by type and name together
+        rekeyed = Bunch()
+
+        for entry in self.config.generic_connection._impl.values():
+            entry_config = entry['config']
+            key = '{}/{}'.format(entry_config['type_'], entry_config['name'])
+            rekeyed[key] = entry
+
+        self.config.generic_connection._impl = rekeyed
+
         #
         # Generic - end
         #
