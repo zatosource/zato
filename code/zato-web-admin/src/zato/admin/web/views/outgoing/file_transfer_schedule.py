@@ -186,6 +186,35 @@ def schedules(req:'any_', transfer_type:'str', conn_id:'str', cluster_id:'str', 
 
 # ################################################################################################################################
 
+@method_allowed('POST')
+def schedule_name_exists(req:'any_') -> 'HttpResponse':
+    """ Says whether a schedule of the given name already exists under a connection - schedules live
+    with their connection rather than in a table of their own, which is why the shared check cannot see them.
+    """
+    value = req.POST['value']
+    conn_id = req.POST['conn_id']
+    schedule_id = req.POST['schedule_id']
+
+    # Look the name up among the connection's schedules ..
+    exists = False
+
+    for schedule in _get_schedule_list(req, conn_id):
+
+        # .. the schedule being edited keeps its own name ..
+        if schedule_id:
+            if schedule['id'] == schedule_id:
+                continue
+
+        # .. and any other schedule of the same name means the name is taken.
+        if schedule['name'] == value:
+            exists = True
+            break
+
+    out = HttpResponse(dumps({'exists': exists}), content_type='application/json')
+    return out
+
+# ################################################################################################################################
+
 def _wizard_response(
     req,           # type: any_
     transfer_type, # type: str

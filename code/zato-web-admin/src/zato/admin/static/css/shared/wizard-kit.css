@@ -463,25 +463,6 @@
     white-space: nowrap;
 }
 
-/* Inside an unfolded choice card the rows read as details of the pick -
-   tighter and softer than the page-level rows above */
-.wizard-choice-body .wizard-field-row {
-    padding: 3px 0;
-}
-
-.wizard-choice-body .wizard-field-row > label {
-    width: 8em;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--wizard-text-muted);
-}
-
-/* min-width lets the flex basis win over the input's intrinsic size */
-.wizard-choice-body .wizard-field-row input[type="text"] {
-    flex: 0 1 180px;
-    min-width: 0;
-}
-
 /* ------------------------------------------------------------ */
 /* Wizard - toggle rows                                          */
 /* ------------------------------------------------------------ */
@@ -818,99 +799,13 @@ a.wizard-select-delete:hover::before {
     padding-left: var(--wizard-collapse-indent);
 }
 
-/* ------------------------------------------------------------ */
-/* Wizard - pick-one choice cards                                */
-/* ------------------------------------------------------------ */
-
-/* A choice group is a set of cards of which exactly one is selected -
-   a radio group wearing the option card look. The selected card unfolds
-   its body, where its own inline fields live. */
-.wizard-choice-card {
-    max-width: 560px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-    border: 1px solid var(--wizard-border);
-    border-radius: 5px;
-    cursor: pointer;
-    transition: border-color 150ms ease, background 150ms ease;
-}
-
-.wizard-choice-card:hover {
-    border-color: var(--wizard-border-strong);
-}
-
-.wizard-choice-card-selected {
-    border-color: var(--wizard-accent);
-    background: rgba(20, 87, 138, 0.035);
-}
-
-.wizard-choice-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-/* The radio dot is drawn by the stylesheet, so the cards need no
-   actual radio inputs of their own */
-.wizard-choice-radio {
-    width: 13px;
-    height: 13px;
-    border: 1.5px solid var(--wizard-border-strong);
-    border-radius: 50%;
-    flex: 0 0 auto;
-    position: relative;
-}
-
-.wizard-choice-card-selected .wizard-choice-radio {
-    border-color: var(--wizard-accent);
-}
-
-.wizard-choice-card-selected .wizard-choice-radio::before {
-    content: '';
-    position: absolute;
-    inset: 2.5px;
-    background: var(--wizard-accent);
-    border-radius: 50%;
-}
-
-.wizard-choice-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--wizard-text);
-}
-
-.wizard-choice-summary {
-    margin-left: auto;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--wizard-done);
-}
-
-.wizard-choice-desc {
-    margin: 4px 0 0 23px;
-    font-size: 11.5px;
-    line-height: 1.5;
-    color: var(--wizard-text-muted);
-}
-
-/* File names and suffixes quoted inside descriptions and hints */
-.wizard-choice-desc code,
+/* File names and suffixes quoted inside hints */
 .wizard-section-hint code {
     padding: 0 3px;
     font-family: 'Ubuntu Mono', 'DejaVu Sans Mono', 'Menlo', 'Consolas', monospace;
     font-size: 11px;
     background: rgba(0, 0, 0, 0.045);
     border-radius: 3px;
-}
-
-/* Only the selected card shows its body with the inline fields */
-.wizard-choice-body {
-    display: none;
-    margin: 10px 0 2px 23px;
-}
-
-.wizard-choice-card-selected .wizard-choice-body {
-    display: block;
 }
 
 /* ------------------------------------------------------------ */

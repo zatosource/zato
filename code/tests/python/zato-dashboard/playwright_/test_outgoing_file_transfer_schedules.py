@@ -231,6 +231,20 @@ def _fill_wizard_service(page:'Page') -> 'None':
 
 # ################################################################################################################################
 
+def _fill_run_every(page:'Page', value:'str') -> 'None':
+    """ Sets the schedule's interval - the field is edited in the popover the Runs line
+    opens, and OK is what writes the answer back into the form.
+    """
+    page.click('#file-transfer-wizard-edit-run-every')
+    _ = page.wait_for_selector('#file-transfer-wizard-tippy-run_every', state='visible', timeout=5000)
+
+    page.fill('#file-transfer-wizard-tippy-run_every', value)
+
+    page.click('.wizard-tippy-buttons button:has-text("OK")')
+    _ = page.wait_for_selector('#file-transfer-wizard-tippy-run_every', state='detached', timeout=5000)
+
+# ################################################################################################################################
+
 def _submit_a_schedule_the_server_refuses(page:'Page', kind:'ConnKind') -> 'None':
     """ Walks the wizard to the end with a schedule the server will not accept and clicks Finish.
     """
@@ -242,7 +256,7 @@ def _submit_a_schedule_the_server_refuses(page:'Page', kind:'ConnKind') -> 'None
     _wizard_next(page)
 
     _fill_wizard_service(page)
-    page.fill('#id_run_every', _Refused_Run_Every)
+    _fill_run_every(page, _Refused_Run_Every)
 
     _wizard_next(page)
 

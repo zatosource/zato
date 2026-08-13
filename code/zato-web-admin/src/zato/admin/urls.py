@@ -806,6 +806,8 @@ urlpatterns += [
         login_required(out_file_transfer_schedule.schedule_edit_action), name='out-file-transfer-schedule-edit'),
     url(r'^zato/outgoing/file-transfer/schedule/delete/$',
         login_required(out_file_transfer_schedule.schedule_delete_action), name='out-file-transfer-schedule-delete'),
+    url(r'^zato/outgoing/file-transfer/schedule/name-exists/$',
+        login_required(out_file_transfer_schedule.schedule_name_exists), name='out-file-transfer-schedule-name-exists'),
     ]
 
 # ################################################################################################################################

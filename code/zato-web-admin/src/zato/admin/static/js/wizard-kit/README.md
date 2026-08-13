@@ -12,7 +12,7 @@ Three instances exist today:
 
 - the HL7 MLLP channel wizard - `static/js/channel/hl7/mllp-wizard/`
 - the HL7 MLLP outgoing connection wizard - `static/js/outgoing/hl7/mllp-wizard/`
-- the file transfer schedule wizard for SFTP and SMB - `static/js/outgoing/file-transfer-schedule-wizard.js`
+- the file transfer schedule wizard for SFTP and SMB - `static/js/outgoing/file-transfer-schedule-wizard/`
 
 ## Modules
 
@@ -21,13 +21,12 @@ Three instances exist today:
 | `core.js` | `kit.core` | The step engine and page state machine - step walking, the name badge, submit plumbing, the "How does it work?" wiring |
 | `forms.js` | `kit.forms` | The popover micro-form engine - descriptor-driven tippy forms that seed from and write back to the Django form |
 | `review.js` | `kit.review` | Card summaries with the fade replay and the review step's grouped-rows renderer with Edit links |
-| `choices.js` | `kit.choices` | Pick-one choice cards - a radio group wearing the wizard card look, the selected card unfolds its inline fields |
 | `select-rows.js` | `kit.selectRows` | A column of rows, each with its own selects and a delete link, plus the add link under the list |
 | `lines.js` | `kit.lines` | Decision lines - a step body written as sentences, each line one label and one value, the value a chip opening a panel or a strip of options |
 | `collapse.js` | `kit.collapse` | Collapsibles - a section folded behind one line of the step, and the groups a section or a card folds inside itself |
 | `probe.js` | `kit.probe` | The live check - a button that posts what has been filled in so far to an endpoint and paints the verdict, before anything is saved |
 
-An instance uses whichever modules its config declares - MLLP uses toggle rows and popovers, the schedule wizard uses choice cards and the context badge, both use the name badge, the help badges and the review renderer from the same code.
+An instance uses whichever modules its config declares - MLLP uses toggle rows and popovers, the schedule wizard uses decision lines and the context badge, both use the name badge, the help badges and the review renderer from the same code.
 
 ## How an instance is built
 
@@ -248,22 +247,6 @@ What the kit adds around that is the row asking the question: the label naming i
 A save that goes through says so the way every inline edit on a listing does - a tooltip reading `OK, saved` to the left of the button it was asked for through, gone a moment later, the page it was made on staying open. One that does not shows `Save failed` there instead, with a `Show details` link opening the exception the endpoint sent back. Both come from `$.fn.zato.action_runner`, the labels and the timings from `$.fn.zato.inline_edit.config`, so a wizard and a listing answer in the same words.
 
 Which questions a save waits on follows what the page is. A create is one walk ending in one save, so it waits on all of them and the review is where they are read. An edit is a page per step, each saved from where it is, so a save there waits only on the questions its own step asks - saving the first step of a channel is not the moment to answer for the second, and the save made on that step is where those answers are due. The shared validator is pointed the same way, at the whole form on a create and at the body of the step on screen on an edit, so it does not refuse a save over a field another step holds. Nothing is said in a message area or a popup - the page shows what it is waiting for where the answer is given.
-
-## Choice cards
-
-Cards share a `data-choice-group` value, each has its own `data-choice-id`, and the body with the card's inline fields is optional:
-
-```javascript
-var handle = $.fn.zato.wizard_kit.choices.init({
-    group: 'ready',
-    onChange: function(choiceId) { ... }
-});
-
-handle.get();          // the selected card's data-choice-id
-handle.set('marker');  // selects a card programmatically
-```
-
-Clicks inside the unfolded body do not re-select, so typing into the card's own inputs never steals the focus.
 
 ## CSS
 

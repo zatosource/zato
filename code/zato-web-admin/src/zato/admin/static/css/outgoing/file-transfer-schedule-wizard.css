@@ -1,42 +1,34 @@
 /* File transfer schedule wizard - only what this wizard has of its own.
    Everything generic - the card, the step strip, the field rows, the
-   choice cards, the review and the footer - lives in shared/wizard-kit.css. */
+   decision lines, the popovers, the review and the footer - lives in
+   shared/wizard-kit.css and shared/wizard-lines.css. */
 
 /* ------------------------------------------------------------ */
 /* Schedule wizard - the name row                                */
 /* ------------------------------------------------------------ */
 
-/* Unlike MLLP, no toggle rows follow the name here - the first section
-   title does, so the name row keeps a full row of air below itself */
+/* No toggle rows follow the name here - the field rows do, so the
+   name row keeps a full row of air below itself */
 #file-transfer-wizard .wizard-name-row {
     margin-bottom: 16px;
 }
 
 /* ------------------------------------------------------------ */
-/* Schedule wizard - the interval and start time rows            */
+/* Schedule wizard - the line labels                             */
 /* ------------------------------------------------------------ */
 
-/* The interval count is a small number, so its box stays narrow
-   and the unit select sits right next to it. Without min-width the
-   input would insist on its intrinsic size and ignore the flex basis. */
-.file-transfer-wizard-run-every-row input[type="text"] {
-    flex: 0 0 60px;
-    min-width: 0;
+/* The longest question here - "After a file is processed" - is shorter
+   than the kit default was sized for, so the values move in closer */
+#file-transfer-wizard {
+    --wizard-line-label-width: 12.5em;
 }
+
+/* ------------------------------------------------------------ */
+/* Schedule wizard - the start time row                          */
+/* ------------------------------------------------------------ */
 
 /* The start time holds one timestamp - no need for the full row width */
 .file-transfer-wizard-start-date-row input[type="text"] {
     flex: 0 1 220px;
     min-width: 0;
-}
-
-/* ------------------------------------------------------------ */
-/* Schedule wizard - the claim toggle                            */
-/* ------------------------------------------------------------ */
-
-/* The hint reads as the toggle's own footnote, so it aligns with
-   the label text after the slider */
-.file-transfer-wizard-claim-hint {
-    margin: 2px 0 0 35px;
-    max-width: 500px;
 }
