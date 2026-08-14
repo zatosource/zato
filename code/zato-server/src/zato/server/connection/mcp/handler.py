@@ -15,6 +15,7 @@ from typing import NamedTuple
 # Zato
 from zato.common.api import MCP
 from zato.common.json_internal import dumps, loads
+from zato.common.util.message_filters.api import apply_filter
 from zato.common.util.safeguards.api import apply_safeguards
 from zato.common.util.safeguards.config import is_safeguards_active
 from zato.common.util.truncate.tokens import apply_token_cap
@@ -32,7 +33,7 @@ from zato.server.connection.mcp.validate import validate_arguments
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, stranydict, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, stranydict, strdictlist, strnone
     from zato.common.util.safeguards.common import SafeguardConfig
     from zato.common.util.truncate.tokens import TokenCapConfig
     from zato.server.connection.mcp.prompts import SkillPrompts
@@ -67,6 +68,19 @@ _http_not_found = NOT_FOUND
 # HTTP status code for a protocol-level rejection (missing, unknown, or expired session on a request that requires one)
 _http_bad_request = BAD_REQUEST
 
+# The optional argument through which a client passes a JSONata expression to shape a tool's response,
+# available only on gateways whose configuration allows client filters.
+_response_filter_key = 'response_filter'
+
+# What the advertised response_filter property says about itself
+_response_filter_schema:'stranydict' = {
+    'type': 'string',
+    'description': 'Optional JSONata expression applied to the response before it is returned',
+}
+
+# What the trace records as the rejection kind when the size cap blocks a response
+_reject_kind_size = 'size'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -77,12 +91,22 @@ class ResponseRejected(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class FilterInvalid(Exception):
+    """ Raised when a client-supplied response filter does not compile or does not evaluate -
+    the message becomes a JSON-RPC invalid-params error.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class DispatchResult(NamedTuple):
     """ Carries a single JSON-RPC response body plus the ID of a session
-    created during dispatch (only initialize creates one, all other methods yield None).
+    created during dispatch (only initialize creates one, all other methods yield None)
+    and the trace of what shaping did to a tools/call response (None for all other methods).
     """
     body:       'stranydict'
     session_id: 'strnone'
+    trace:      'anydictnone' = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,6 +125,7 @@ class MCPHandler:
         token_cap_config:'TokenCapConfig',
         validate_input:'bool',
         skill_prompts:'SkillPrompts',
+        allow_client_filters:'bool' = False,
         ) -> 'None':
         self.tool_registry = tool_registry
         self.invoke_func = invoke_func
@@ -109,6 +134,7 @@ class MCPHandler:
         self.token_cap_config = token_cap_config
         self.validate_input = validate_input
         self.skill_prompts = skill_prompts
+        self.allow_client_filters = allow_client_filters
 
 # ################################################################################################################################
 
@@ -275,6 +301,7 @@ class MCPHandler:
             out.body = dispatch_result.body
             out.status_code = OK
             out.session_id = dispatch_result.session_id
+            out.trace = dispatch_result.trace
             return out
 
         # .. anything else is an invalid request.
@@ -346,8 +373,8 @@ class MCPHandler:
 
         if method == _method_tools_call:
 
-            body = self._handle_tools_call(request_id, params)
-            out = DispatchResult(body, None)
+            body, trace = self._handle_tools_call(request_id, params)
+            out = DispatchResult(body, None, trace)
             return out
 
         if method == _method_prompts_list:
@@ -431,6 +458,37 @@ class MCPHandler:
 
 # ################################################################################################################################
 
+    def _add_response_filter_property(self, tools:'strdictlist') -> 'strdictlist':
+        """ Returns a copy of a tools page whose every input schema additionally advertises
+        the optional response_filter property - the cached originals are never touched,
+        so validation keeps seeing the schemas without it.
+        """
+
+        out:'strdictlist' = []
+
+        for tool in tools:
+
+            tool = dict(tool)
+            input_schema = dict(tool['inputSchema'])
+
+            # A schema with no properties of its own still advertises the filter
+            properties = input_schema.get('properties')
+
+            if properties is None:
+                properties = {}
+
+            properties = dict(properties)
+            properties[_response_filter_key] = _response_filter_schema
+
+            input_schema['properties'] = properties
+            tool['inputSchema'] = input_schema
+
+            out.append(tool)
+
+        return out
+
+# ################################################################################################################################
+
     def _handle_tools_list(self, request_id:'any_', params:'anydict') -> 'stranydict':
         """ Handles the MCP tools/list request.
         Supports cursor-based pagination - the client may pass a `cursor` in params
@@ -444,6 +502,11 @@ class MCPHandler:
         except ValueError:
             out = make_error_response(request_id, _error_invalid_params, _message_invalid_cursor)
             return out
+
+        # When the gateway allows client filters, every tool advertises the optional
+        # response_filter argument so callers can discover it from the schema alone.
+        if self.allow_client_filters:
+            tools = self._add_response_filter_property(tools)
 
         result:'stranydict' = {
             'tools': tools,
@@ -525,10 +588,11 @@ class MCPHandler:
 
 # ################################################################################################################################
 
-    def _handle_tools_call(self, request_id:'any_', params:'anydict') -> 'stranydict':
+    def _handle_tools_call(self, request_id:'any_', params:'anydict') -> 'tuple[stranydict, anydictnone]':
         """ Handles the MCP tools/call request.
         Validates the tool name against the allow list, invokes the service,
-        and wraps the response in MCP content format.
+        and wraps the response in MCP content format. Returns the response body
+        together with the trace of what shaping did to it - None when nothing did anything.
         """
 
         # Extract tool name from the params ..
@@ -537,17 +601,25 @@ class MCPHandler:
         if not tool_name:
 
             out = make_error_response(request_id, _error_invalid_params, _message_missing_tool_name)
-            return out
+            return out, None
 
         # .. check if the tool is allowed on this gateway ..
         if not self.tool_registry.is_tool_allowed(tool_name):
 
             message = f'Tool not found: `{tool_name}`'
             out = make_error_response(request_id, _error_method_not_found, message)
-            return out
+            return out, None
 
         # .. extract arguments - optional per the MCP spec, defaults to empty dict ..
         arguments = params.get('arguments', {})
+
+        # .. on a gateway that allows client filters, the response_filter argument belongs
+        # to the gateway, not to the service - it is taken out before validation ever sees it ..
+        response_filter = None
+
+        if self.allow_client_filters:
+            if isinstance(arguments, dict):
+                response_filter = arguments.pop(_response_filter_key, None)
 
         # .. when the gateway has input validation on, the arguments must match the tool's
         # input schema, the same one tools/list advertises - the error names the offending field ..
@@ -557,14 +629,17 @@ class MCPHandler:
             if error_message := validate_arguments(arguments, schema):
                 logger.info('MCP: Invalid arguments for `%s`: %s', tool_name, error_message)
                 out = make_error_response(request_id, _error_invalid_params, error_message)
-                return out
+                return out, None
+
+        # The trace of everything shaping does to this response, filled in along the way
+        trace:'stranydict' = {}
 
         # .. invoke the service and serialize its response, treating a serialization
         # failure (e.g. bytes that do not decode or objects that do not dump to JSON)
         # the same way as a service exception ..
         try:
             service_response = self.invoke_func(tool_name, arguments)
-            response_text = self._serialize_service_response(service_response)
+            response_text = self._serialize_service_response(service_response, trace, response_filter)
 
         # .. a safeguard or size cap refused the response - the message names the reason,
         # unlike a service exception, which is never revealed to the client ..
@@ -582,7 +657,14 @@ class MCPHandler:
             }
 
             out = make_success_response(request_id, refused_result)
-            return out
+            return out, self._trace_or_none(trace)
+
+        # .. an invalid client filter is the caller's own mistake and is reported as invalid params ..
+        except FilterInvalid as e:
+            logger.info('MCP: Invalid response filter for `%s`: %s', tool_name, e)
+
+            out = make_error_response(request_id, _error_invalid_params, str(e))
+            return out, self._trace_or_none(trace)
 
         except Exception:
             exception_detail = format_exc()
@@ -599,7 +681,7 @@ class MCPHandler:
             }
 
             out = make_success_response(request_id, error_result)
-            return out
+            return out, None
 
         # .. wrap the successful response in MCP content format.
 
@@ -613,14 +695,65 @@ class MCPHandler:
         }
 
         out = make_success_response(request_id, success_result)
+        return out, self._trace_or_none(trace)
+
+# ################################################################################################################################
+
+    def _trace_or_none(self, trace:'stranydict') -> 'anydictnone':
+        """ An empty trace travels as None so the audit log never records an empty document.
+        """
+
+        if trace:
+            out = trace
+        else:
+            out = None
+
         return out
 
 # ################################################################################################################################
 
-    def _serialize_service_response(self, response:'any_') -> 'str':
+    def _record_safeguard_trace(self, result:'any_', trace:'stranydict') -> 'None':
+        """ Copies what the safeguards did into the trace - only the counters
+        that actually counted something are recorded.
+        """
+
+        if result.pii_removed:
+            trace['pii_removed'] = result.pii_removed
+
+        if result.nulls_removed:
+            trace['nulls_removed'] = result.nulls_removed
+
+        if result.whitespace_chars_removed:
+            trace['whitespace_chars_removed'] = result.whitespace_chars_removed
+
+        if result.base64_blobs_removed:
+            trace['base64_blobs_removed'] = result.base64_blobs_removed
+
+        if result.unicode_chars_removed:
+            trace['unicode_chars_removed'] = result.unicode_chars_removed
+
+        if result.markup_items_removed:
+            trace['markup_items_removed'] = result.markup_items_removed
+
+        if result.urls_flagged:
+            trace['urls_flagged'] = result.urls_flagged
+
+        if result.was_rejected:
+            trace['reject_kind'] = result.reject_kind
+
+# ################################################################################################################################
+
+    def _serialize_service_response(
+        self,
+        response:'any_',
+        trace:'stranydict',
+        response_filter:'any_' = None,
+        ) -> 'str':
         """ Converts a service response to a text string suitable for MCP content,
-        applying the gateway's response safeguards and token cap on the way.
-        Raises ResponseRejected when a safeguard or the cap refuses the response.
+        applying the gateway's response safeguards, the client's response filter
+        and the token cap on the way, recording everything they did in the trace.
+        Raises ResponseRejected when a safeguard or the cap refuses the response
+        and FilterInvalid when the client's filter cannot be applied.
         """
 
         # Bytes are decoded up front so every later stage sees a JSON-serializable value ..
@@ -631,6 +764,7 @@ class MCPHandler:
         # and only when at least one stage is enabled, to skip the deep copy otherwise ..
         if is_safeguards_active(self.safeguard_config):
             safeguard_result = apply_safeguards(response, self.safeguard_config)
+            self._record_safeguard_trace(safeguard_result, trace)
 
             # .. a rejection refuses the whole response, naming the kind of finding that caused it ..
             if safeguard_result.was_rejected:
@@ -638,14 +772,40 @@ class MCPHandler:
 
             response = safeguard_result.value
 
-        # .. the token cap runs on the possibly cleaned value, only when a cap is set at all ..
+        # .. the client's filter runs after the safeguards, so it only ever sees cleaned data,
+        # and before the token cap, so the cap enforces the size of what actually goes out ..
+        if response_filter is not None:
+
+            # A filter that is not a string at all is refused the same way a broken one is
+            if not isinstance(response_filter, str):
+                raise FilterInvalid(f'Invalid {_response_filter_key}: expected a string')
+
+            filter_result = apply_filter(response_filter, response)
+
+            if filter_result.error:
+                raise FilterInvalid(f'Invalid {_response_filter_key}: {filter_result.error}')
+
+            trace['client_filter'] = response_filter
+            response = filter_result.value
+
+        # .. the token cap runs on the possibly cleaned and filtered value, only when a cap is set at all ..
         if self.token_cap_config.max_response_tokens:
             cap_result = apply_token_cap(response, self.token_cap_config)
 
-            # .. block mode refuses an oversized response outright, naming the size and the cap ..
+            # .. block mode refuses an oversized response outright, naming the size and the cap -
+            # the trace records what was measured and that size was the reason ..
             if cap_result.was_blocked:
+                trace['tokens_before'] = cap_result.tokens_before
+                trace['reject_kind'] = _reject_kind_size
+
                 cap = self.token_cap_config.max_response_tokens
                 raise ResponseRejected(f'Response too large: {cap_result.tokens_before} tokens, cap is {cap}')
+
+            # .. a truncation records both sides of the cut - an untouched response records nothing ..
+            if cap_result.was_truncated:
+                trace['tokens_before'] = cap_result.tokens_before
+                trace['tokens_after'] = cap_result.tokens_after
+                trace['was_truncated'] = True
 
             response = cap_result.value
 

@@ -109,10 +109,9 @@ cards.fill = function(hit) {
     else {
 
         var count = hit.continent.cities.length;
-        var countWord = count === 1 ? words.connectionSingular : words.connectionPlural;
 
         title.textContent = hit.continent.label;
-        detail.textContent = count + ' ' + countWord;
+        detail.textContent = $.fn.zato.count_text(count, words.connectionSingular, words.connectionPlural);
 
         cards.addLink(links, words.showLog, cards.showLogURL(hit.continent.source, ''));
         cards.addLink(links, words.configuration, cards.page.sourceLinks[hit.continent.source]);

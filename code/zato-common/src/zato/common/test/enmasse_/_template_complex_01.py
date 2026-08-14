@@ -402,9 +402,37 @@ mcp_gateway:
     is_active: true
     is_audit_log_active: true
     url_path: /mcp/enmasse-1
-    services: crm.get-customer,crm.update-customer
+    services:
+      - crm.get-customer
+      - crm.update-customer
     security_groups:
       - enmasse.group.1
+    skills:
+      - crm-house-style
+    validate_input: true
+    allow_client_filters: true
+    max_response_size: 2000
+    size_cap_mode: block
+    min_size_threshold: 100
+    characters_per_token: 3.5
+    safeguards_strip_nulls: true
+    safeguards_collapse_whitespace: true
+    safeguards_strip_base64: true
+    safeguards_pii_enabled: true
+    safeguards_pii_lands:
+      - intl
+    safeguards_pii_exclude:
+      - intl_email
+    safeguards_pii_validate: false
+    safeguards_pii_stable_tokens: true
+    safeguards_normalize_unicode: true
+    safeguards_unicode_mode: reject
+    safeguards_sanitize_markup: true
+    safeguards_markup_mode: reject
+    safeguards_url_policy_enabled: true
+    safeguards_url_allow_list:
+      - example.com
+    safeguards_url_mode: neutralize
 
   - name: enmasse.mcp.gateway.2
     is_active: true

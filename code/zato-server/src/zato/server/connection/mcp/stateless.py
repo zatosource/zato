@@ -209,7 +209,8 @@ def dispatch(
             out.status_code = OK
             return out
 
-        body = handler._handle_tools_call(request_id, params)
+        body, trace = handler._handle_tools_call(request_id, params)
+        out.trace = trace
 
     # .. server/discover advertises versions, capabilities and identity ..
     elif method == _method_discover:

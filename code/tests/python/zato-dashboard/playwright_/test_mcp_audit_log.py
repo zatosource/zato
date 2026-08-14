@@ -74,6 +74,25 @@ _Pane_Head_Selector = '.audit-log-pane-head'
 _Details_Tab_Selector = '.audit-log-pane-tab[data-tab="details"]'
 _Details_Panel_Selector = '#audit-log-pane-panel-details .audit-log-pane-details'
 
+# The land whose detectors the PII gateway of the trace test runs, as the wizard labels it
+_PII_Land_Label = 'International'
+
+# One email and three valid-checksum IMEIs in mixed written forms - what the echo
+# response carries so PII removal has one singular and one plural count to report
+_PII_Email        = 'renata.brixen@example.com'
+_PII_IMEI_Compact = '490154203237518'
+_PII_IMEI_Dashed  = '35-209900-176148-1'
+_PII_IMEI_Spaced  = '86 723902 235411 8'
+
+# How the pane must word those counts - the singular email line must never
+# come out as its plural misspelling either
+_Trace_Line_Email       = 'pii removed\nreplaced 1 email'
+_Trace_Line_Email_Wrong = 'replaced 1 emails'
+_Trace_Line_IMEI        = 'pii removed\nreplaced 3 imei numbers'
+
+# The suffix no audit page may ever show a count with
+_Plural_Suffix = '(s)'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -107,14 +126,47 @@ def _create_mcp_gateway(page:'Page', base_url:'str', gateway_name:'str', url_pat
 
 # ################################################################################################################################
 
-def _run_one_conversation(mcp_url:'str', auth:'anytuple') -> 'None':
-    """ Runs one initialize plus tools/call round trip against the live gateway.
+def _create_pii_gateway(page:'Page', base_url:'str', gateway_name:'str', url_path:'str', definition_name:'str') -> 'None':
+    """ Creates an MCP gateway through the wizard with the echo service, the given security definition
+    and PII removal on for the international land with checksum validation.
+    """
+
+    # Open the create wizard and answer step 1 ..
+    wizard_page.open_wizard_create(page, base_url)
+
+    page.fill('#id_name', gateway_name)
+    page.fill('#id_url_path', url_path)
+
+    wizard_page.assign_badge(page, 'services', _Echo_Service)
+    wizard_page.assign_badge(page, 'security', definition_name)
+
+    # .. turn PII removal on through its card on step 2 - the international land
+    # holds the email and IMEI detectors, and validation keeps broken checksums alone ..
+    wizard_page.go_to_step(page, 1)
+    wizard_page.open_pii_card(page)
+
+    page.check('#id_safeguards_pii_enabled')
+    page.check('#id_safeguards_pii_validate')
+
+    wizard_page.pick_from_chosen(page, 'safeguards_pii_lands', _PII_Land_Label)
+
+    # .. save from the review step ..
+    wizard_page.save_create(page)
+
+    # .. and confirm the row is on the list.
+    _ = wizard_page.go_to_list(page, base_url, gateway_name)
+
+# ################################################################################################################################
+
+def _run_one_conversation(mcp_url:'str', auth:'anytuple', arguments:'anydict') -> 'None':
+    """ Runs one initialize plus tools/call round trip against the live gateway,
+    echoing the given arguments back.
     """
 
     client = MCPClient(mcp_url, auth=auth)
     session_id = client.initialize().session_id
 
-    params = {'name': _Echo_Service, 'arguments': {'customer': 'Customer name here'}}
+    params = {'name': _Echo_Service, 'arguments': arguments}
     response = client.jsonrpc('tools/call', params=params, session_id=session_id)
 
     data = response.json()
@@ -194,7 +246,8 @@ class TestMCPAuditLog:
         _wait_until_authenticated(mcp_url, auth)
 
         # .. drive one real MCP conversation through the gateway ..
-        _run_one_conversation(mcp_url, auth)
+        arguments = {'customer': 'Customer name here'}
+        _run_one_conversation(mcp_url, auth, arguments)
 
         # .. go back to the MCP gateways page and click this gateway's Audit log link ..
         _ = wizard_page.go_to_list(page, base_url, gateway_name)
@@ -277,6 +330,94 @@ class TestMCPAuditLog:
         # .. and the payload itself never reaches the audit log.
         assert 'customer name here' not in details_text, \
             f'Expected no payload in the detail pane, got: "{details_text}"'
+
+# ################################################################################################################################
+
+    @pytest.mark.expect_log_errors(*_Group_Log_Patterns, *_Group_Edit_Log_Patterns)
+    def test_safeguard_trace_lines_read_in_the_right_grammatical_number(
+        self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        definition_name = _Test_Name_Prefix + 'pii-basic-auth'
+        username = 'user.' + definition_name
+        password = 'password.' + CryptoManager.generate_hex_string()
+
+        gateway_name = _Test_Name_Prefix + 'pii-gateway'
+        url_path = '/mcp/test/audit/pii/' + CryptoManager.generate_hex_string()
+
+        mcp_url = f'http://127.0.0.1:{server_port}{url_path}'
+        auth = (username, password)
+
+        # Create the credentials the MCP client will use ..
+        _create_basic_auth(page, base_url, definition_name, username, password)
+
+        # .. create the gateway with PII removal on for the international land ..
+        _create_pii_gateway(page, base_url, gateway_name, url_path, definition_name)
+
+        # .. wait until the gateway reaches live enforcement ..
+        _wait_until_authenticated(mcp_url, auth)
+
+        # .. echo a record carrying one email and three IMEIs in mixed written forms,
+        # so the audit event carries one singular and one plural count ..
+        arguments = {
+            'email': _PII_Email,
+            'device_main': _PII_IMEI_Compact,
+            'device_backup': _PII_IMEI_Dashed,
+            'device_travel': _PII_IMEI_Spaced,
+        }
+        _run_one_conversation(mcp_url, auth, arguments)
+
+        # .. open this gateway's audit log page ..
+        _ = wizard_page.go_to_list(page, base_url, gateway_name)
+
+        row_selector = wizard_page.row_selector(gateway_name)
+        page.click(f'{row_selector} a:text-is("Audit log")')
+
+        page.wait_for_url(f'**{_Audit_Log_URL_Prefix}**')
+        _wait_for_table(page)
+
+        # .. events come newest first - the conversation's tools/call tops the list ..
+        rows = page.query_selector_all(_Row_Selector)
+        assert rows, 'Expected audit log rows on the page'
+
+        tools_call_row = rows[0]
+
+        event_label = _get_row_event_label(tools_call_row)
+        assert event_label == _Event_Tools_Call_Label, \
+            f'Expected event "{_Event_Tools_Call_Label}", got: "{event_label}"'
+
+        # .. its detail pane's Details tab holds the trace lines ..
+        tools_call_row.click()
+
+        _ = page.wait_for_selector(_Details_Tab_Selector, state='visible', timeout=_UI_Timeout)
+        page.click(_Details_Tab_Selector)
+        _ = page.wait_for_selector(_Details_Panel_Selector, state='visible', timeout=_UI_Timeout)
+
+        # The fact labels are uppercased with CSS, so the whole text is compared lowercase
+        details_text = page.inner_text(_Details_Panel_Selector)
+        details_text = details_text.lower()
+
+        # .. one email reads singular ..
+        assert _Trace_Line_Email in details_text, \
+            f'Expected "{_Trace_Line_Email}" in the detail pane, got: "{details_text}"'
+
+        assert _Trace_Line_Email_Wrong not in details_text, \
+            f'Expected no "{_Trace_Line_Email_Wrong}" in the detail pane, got: "{details_text}"'
+
+        # .. three IMEIs read plural ..
+        assert _Trace_Line_IMEI in details_text, \
+            f'Expected "{_Trace_Line_IMEI}" in the detail pane, got: "{details_text}"'
+
+        # .. no count anywhere on the page hedges with a "(s)" ..
+        page_text = page.inner_text('body')
+        assert _Plural_Suffix not in page_text, f'Expected no "{_Plural_Suffix}" on the page, got one'
+
+        # .. and none of the PII values themselves ever reach the audit log.
+        assert _PII_Email not in details_text, f'Expected no email in the detail pane, got: "{details_text}"'
+        assert _PII_IMEI_Compact not in details_text, f'Expected no IMEI in the detail pane, got: "{details_text}"'
 
 # ################################################################################################################################
 # ################################################################################################################################

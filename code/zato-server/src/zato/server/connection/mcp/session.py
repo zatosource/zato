@@ -15,6 +15,9 @@ from uuid import uuid4
 # gevent
 from gevent import sleep
 
+# Zato
+from zato.common.util.logging_ import count_text
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -295,8 +298,8 @@ class MCPSessionReaper:
             # .. log how many were removed, if any.
             if removed:
                 gateway_name = wrapper.config.name
-                suffix = 'session' if removed == 1 else 'sessions'
-                logger.info('MCP: Reaper removed %d expired %s from gateway `%s`', removed, suffix, gateway_name)
+                removed_count_text = count_text(removed, 'expired session', 'expired sessions')
+                logger.info('MCP: Reaper removed %s from gateway `%s`', removed_count_text, gateway_name)
 
 # ################################################################################################################################
 

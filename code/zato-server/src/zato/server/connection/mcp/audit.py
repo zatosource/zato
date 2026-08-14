@@ -23,6 +23,10 @@ if 0:
 # a session delete is a plain HTTP DELETE.
 Method_Session_Delete = 'session-delete'
 
+# Marker used as the method of requests the gateway refused before any JSON-RPC
+# processing - the caller's credentials did not authenticate.
+Method_Auth_Rejected = 'auth-rejected'
+
 # What a request whose method could not be parsed at all audits as
 Method_Unknown = 'unknown'
 
@@ -36,6 +40,7 @@ _method_to_event = {
     'prompts/get':          AuditEvent.MCP_Prompts_Get,
     'server/discover':      AuditEvent.MCP_Discover,
     Method_Session_Delete:  AuditEvent.MCP_Session_Delete,
+    Method_Auth_Rejected:   AuditEvent.Auth_Failed,
 }
 
 # HTTP status codes in this range mean success
@@ -62,6 +67,24 @@ def _find_error(body:'any_') -> 'anydictnone':
 
 # ################################################################################################################################
 
+def _is_tool_error(body:'any_') -> 'bool':
+    """ Whether a tools/call result reports a tool-level error - a failed or refused
+    tool response travels as a successful JSON-RPC response whose result says isError.
+    """
+
+    # Anything that is not a JSON-RPC response body with a dict result cannot report one
+    out = False
+
+    if isinstance(body, dict):
+        result = body.get('result')
+
+        if isinstance(result, dict):
+            out = bool(result.get('isError'))
+
+    return out
+
+# ################################################################################################################################
+
 def build_audit_event(
     gateway_name:'str',
     sec_def_name:'str',
@@ -75,10 +98,13 @@ def build_audit_event(
     status_code:'int',
     duration_ms:'float',
     request_size:'int',
+    trace:'anydictnone' = None,
     ) -> 'stranydict':
     """ Builds the keyword dict for one AuditLog.insert call out of plain inputs -
     this is the published column mapping of the MCP audit log. The request and response
-    payloads are never included, only their sizes are.
+    payloads are never included, only their sizes are. The trace of what response shaping
+    did - PII counts, compaction counts, token cuts, the client filter - lands in the data
+    document, one key per finding, with nothing written for stages that did nothing.
     """
 
     # A request that could not be parsed has no method to audit under ..
@@ -99,12 +125,13 @@ def build_audit_event(
     if session_id is None:
         session_id = ''
 
-    # .. the outcome is an error when the HTTP status is not 2xx
-    # or when the JSON-RPC response body carries an error object ..
+    # .. the outcome is an error when the HTTP status is not 2xx, when the JSON-RPC
+    # response body carries an error object, or when a tool result reports isError ..
     error = _find_error(response_body)
+    is_tool_error = _is_tool_error(response_body)
     is_http_success = _http_success_min <= status_code <= _http_success_max
 
-    if is_http_success and error is None:
+    if is_http_success and error is None and not is_tool_error:
         outcome = AuditOutcome.OK
     else:
         outcome = AuditOutcome.Error
@@ -121,6 +148,11 @@ def build_audit_event(
     if error is not None:
         data['error_code'] = error.get('code')
         data['error_message'] = error.get('message')
+
+    # .. and what shaping did to the response goes in as it was traced -
+    # the trace only ever carries the keys of stages that found something.
+    if trace:
+        data.update(trace)
 
     # .. and this is the whole published mapping.
     out:'stranydict' = {

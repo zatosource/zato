@@ -98,7 +98,38 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
         opaque = parse_instance_opaque_attr(conn)
         self.assertTrue(opaque['is_audit_log_active'])
 
-        # .. while a gateway without the key in YAML gets the off default.
+        # .. the services declared as a YAML list are stored as that list ..
+        self.assertEqual(opaque['services'], ['crm.get-customer', 'crm.update-customer'])
+
+        # .. and so is every other runtime field the YAML states ..
+        self.assertEqual(opaque['skills'], ['crm-house-style'])
+        self.assertTrue(opaque['validate_input'])
+        self.assertTrue(opaque['allow_client_filters'])
+
+        self.assertEqual(opaque['max_response_size'], 2000)
+        self.assertEqual(opaque['size_cap_mode'], 'block')
+        self.assertEqual(opaque['min_size_threshold'], 100)
+        self.assertEqual(opaque['characters_per_token'], 3.5)
+
+        self.assertTrue(opaque['safeguards_strip_nulls'])
+        self.assertTrue(opaque['safeguards_collapse_whitespace'])
+        self.assertTrue(opaque['safeguards_strip_base64'])
+
+        self.assertTrue(opaque['safeguards_pii_enabled'])
+        self.assertEqual(opaque['safeguards_pii_lands'], ['intl'])
+        self.assertEqual(opaque['safeguards_pii_exclude'], ['intl_email'])
+        self.assertFalse(opaque['safeguards_pii_validate'])
+        self.assertTrue(opaque['safeguards_pii_stable_tokens'])
+
+        self.assertTrue(opaque['safeguards_normalize_unicode'])
+        self.assertEqual(opaque['safeguards_unicode_mode'], 'reject')
+        self.assertTrue(opaque['safeguards_sanitize_markup'])
+        self.assertEqual(opaque['safeguards_markup_mode'], 'reject')
+        self.assertTrue(opaque['safeguards_url_policy_enabled'])
+        self.assertEqual(opaque['safeguards_url_allow_list'], ['example.com'])
+        self.assertEqual(opaque['safeguards_url_mode'], 'neutralize')
+
+        # .. while a gateway without the keys in YAML gets the documented defaults ..
         conn2 = self.session.query(GenericConn).filter_by(
             name='enmasse.mcp.gateway.2',
             type_=GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
@@ -106,6 +137,20 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
 
         opaque2 = parse_instance_opaque_attr(conn2)
         self.assertFalse(opaque2['is_audit_log_active'])
+
+        # .. its comma-separated services become the list they always meant to be ..
+        self.assertEqual(opaque2['services'], ['billing.get-invoice'])
+
+        # .. and every option family defaults to off.
+        self.assertEqual(opaque2['skills'], [])
+        self.assertFalse(opaque2['validate_input'])
+        self.assertFalse(opaque2['allow_client_filters'])
+        self.assertEqual(opaque2['max_response_size'], 0)
+        self.assertFalse(opaque2['safeguards_strip_nulls'])
+        self.assertFalse(opaque2['safeguards_pii_enabled'])
+        self.assertTrue(opaque2['safeguards_pii_validate'])
+        self.assertFalse(opaque2['safeguards_normalize_unicode'])
+        self.assertFalse(opaque2['safeguards_url_policy_enabled'])
 
 # ################################################################################################################################
 

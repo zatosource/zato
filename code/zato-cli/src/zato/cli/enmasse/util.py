@@ -673,7 +673,15 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['outgoing_ibm_mq'] = 'name', 'is_active', 'address', 'queue_manager', 'mq_channel_name', 'queue', \
         'username', 'ssl', 'cipher_spec', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file',
     order['channel_kafka'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service',
-    order['mcp_gateway'] = 'name', 'is_active', 'url_path', 'services', 'security_groups:list',
+    order['mcp_gateway'] = 'name', 'is_active', 'url_path', 'services:list', 'security_groups:list', \
+        'is_audit_log_active', 'skills:list', 'validate_input', 'allow_client_filters', \
+        'max_response_size', 'size_cap_mode', 'min_size_threshold', 'characters_per_token', \
+        'safeguards_strip_nulls', 'safeguards_collapse_whitespace', 'safeguards_strip_base64', \
+        'safeguards_pii_enabled', 'safeguards_pii_lands:list', 'safeguards_pii_detectors:list', \
+        'safeguards_pii_exclude:list', 'safeguards_pii_validate', 'safeguards_pii_stable_tokens', \
+        'safeguards_normalize_unicode', 'safeguards_unicode_mode', 'safeguards_sanitize_markup', \
+        'safeguards_markup_mode', 'safeguards_url_policy_enabled', 'safeguards_url_allow_list:list', \
+        'safeguards_url_mode',
     order['outgoing_graphql'] = 'name', 'is_active', 'address', 'security', 'default_query_timeout',
     order['outgoing_grpc'] = 'name', 'is_active', 'address', 'security', 'is_tls', 'tls_ca_certs_file', 'proto_path', \
         'stub_module', 'stub_class', 'ping_timeout', 'max_send_message_size', 'max_recv_message_size',

@@ -11,6 +11,7 @@ from logging import getLogger
 from operator import itemgetter
 
 # Zato
+from zato.common.util.logging_ import count_text
 from zato.server.connection.mcp.schema import io_to_json_schema
 
 # ################################################################################################################################
@@ -112,8 +113,8 @@ class ToolRegistry:
         self._cached_tools = tools
         self._schema_by_name = schema_by_name
 
-        tool_suffix = 'tool' if len(tools) == 1 else 'tools'
-        logger.info('MCP tool registry built with %d %s', len(tools), tool_suffix)
+        tool_count_text = count_text(len(tools), 'tool', 'tools')
+        logger.info('MCP tool registry built with %s', tool_count_text)
 
 # ################################################################################################################################
 

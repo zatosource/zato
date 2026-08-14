@@ -32,6 +32,7 @@ from zato.admin.web.views.audit_log.columns import _all_sources_columns, _all_so
 from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import get_resubmit_labels, _source_outstanding, _source_parse, \
     _source_resubmit, render_scheduler_record, render_view_record
+from zato.admin.web.views.audit_log.trace import attach_trace_lines
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, AuditSource
 from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.audit_log.body import resolve_body
@@ -294,13 +295,20 @@ def poll(req:'any_') -> 'HttpResponse':
 
         for db_row in page_result:
             row_values = zip(_row_columns, db_row)
-            row = dict(row_values)
+            row:'anydict' = dict(row_values)
 
             # A column the database has no value for is an empty one to the frontend ..
             _normalize_row(row)
 
-            # .. and only a preview of the payload goes into the table.
+            # .. an MCP row additionally says what response shaping did, read out of
+            # the full data document before it is cut down to a preview ..
             data = row['data']
+
+            if row['source'] == AuditSource.MCP:
+                if data:
+                    attach_trace_lines(row, data)
+
+            # .. and only a preview of the payload goes into the table.
             row['data'] = data[:_data_preview_len]
 
             rows.append(row)
@@ -499,9 +507,15 @@ def _read_flow_rows(connection:'any_', seed_id:'int') -> 'anylist':
 
         _normalize_row(row)
 
+        # An MCP line says what response shaping did, read out of the full document
+        data = row['data']
+
+        if row['source'] == AuditSource.MCP:
+            if data:
+                attach_trace_lines(row, data)
+
         # Only a preview of the payload travels with a line - the whole of it is fetched
         # by the line that is opened, and only then.
-        data = row['data']
         row['data'] = data[:_data_preview_len]
 
         # Why this event is in the flow, and whether it is the one the flow was read from

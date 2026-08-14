@@ -259,6 +259,8 @@ _event_type_label = {
     AuditEvent.MCP_Initialize: 'MCP initialize',
     AuditEvent.MCP_Tools_List: 'MCP tools list',
     AuditEvent.MCP_Tools_Call: 'MCP tools call',
+    AuditEvent.MCP_Prompts_List: 'MCP prompts list',
+    AuditEvent.MCP_Prompts_Get: 'MCP prompts get',
     AuditEvent.MCP_Session_Delete: 'MCP session delete',
     AuditEvent.MCP_Discover: 'MCP discover',
     AuditEvent.Bulk_Resubmit: 'Bulk resubmit',

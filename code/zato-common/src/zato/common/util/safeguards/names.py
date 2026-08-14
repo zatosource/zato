@@ -275,6 +275,208 @@ Detector_Labels:'strstrdict' = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The noun each detector's findings are counted in, in both grammatical numbers,
+# for trace lines like "replaced 1 email" and "replaced 3 IMEI numbers". Every detector
+# of Detector_Labels is here, so a count of any detector's findings can always be worded.
+Detector_Nouns:'dict[str, choice_tuple]' = {
+
+    # Austria
+    'at_vnr': ('social insurance number', 'social insurance numbers'),
+
+    # Australia
+    'au_tfn':      ('tax file number', 'tax file numbers'),
+    'au_abn':      ('business number', 'business numbers'),
+    'au_medicare': ('Medicare card number', 'Medicare card numbers'),
+    'au_passport': ('passport number', 'passport numbers'),
+
+    # Belgium
+    'be_bis':               ('BIS number', 'BIS numbers'),
+    'be_eid':               ('eID card number', 'eID card numbers'),
+    'be_nn':                ('national number', 'national numbers'),
+    'be_ogm_vcs_delimited': ('payment reference', 'payment references'),
+    'be_phone':             ('phone number', 'phone numbers'),
+    'be_vat':               ('VAT number', 'VAT numbers'),
+
+    # Bulgaria
+    'bg_egn': ('personal number', 'personal numbers'),
+    'bg_pnf': ('foreigner personal number', 'foreigner personal numbers'),
+
+    # Brazil
+    'br_cpf':      ('taxpayer number', 'taxpayer numbers'),
+    'br_cnpj':     ('company number', 'company numbers'),
+    'br_passport': ('passport number', 'passport numbers'),
+
+    # Canada
+    'ca_sin':      ('social insurance number', 'social insurance numbers'),
+    'ca_passport': ('passport number', 'passport numbers'),
+
+    # Czech Republic
+    'cz_dic': ('tax identifier', 'tax identifiers'),
+    'cz_rc':  ('birth number', 'birth numbers'),
+
+    # Germany
+    'de_idnr':  ('tax identifier', 'tax identifiers'),
+    'de_phone': ('phone number', 'phone numbers'),
+    'de_svnr':  ('social insurance number', 'social insurance numbers'),
+    'de_vat':   ('VAT number', 'VAT numbers'),
+
+    # Denmark
+    'dk_cpr': ('personal number', 'personal numbers'),
+    'dk_cvr': ('business number', 'business numbers'),
+
+    # Estonia
+    'ee_ik':       ('personal code', 'personal codes'),
+    'ee_passport': ('passport number', 'passport numbers'),
+
+    # Spain
+    'es_ccc':                  ('bank account code', 'bank account codes'),
+    'es_cif':                  ('company tax code', 'company tax codes'),
+    'es_dni':                  ('identity number', 'identity numbers'),
+    'es_matricula':            ('registration plate', 'registration plates'),
+    'es_nie':                  ('foreigner identity number', 'foreigner identity numbers'),
+    'es_nss':                  ('social security number', 'social security numbers'),
+    'es_passport':             ('passport number', 'passport numbers'),
+    'es_phone':                ('phone number', 'phone numbers'),
+    'es_referencia_catastral': ('cadastral reference', 'cadastral references'),
+
+    # Finland
+    'fi_hetu':     ('personal identity code', 'personal identity codes'),
+    'fi_passport': ('passport number', 'passport numbers'),
+    'fi_ytunnus':  ('business ID', 'business IDs'),
+
+    # France
+    'fr_cni':   ('identity card number', 'identity card numbers'),
+    'fr_nif':   ('tax identifier', 'tax identifiers'),
+    'fr_nir':   ('social security number', 'social security numbers'),
+    'fr_phone': ('phone number', 'phone numbers'),
+    'fr_siren': ('business number', 'business numbers'),
+    'fr_siret': ('establishment number', 'establishment numbers'),
+    'fr_tva':   ('VAT number', 'VAT numbers'),
+
+    # Greece
+    'gr_amka': ('social security number', 'social security numbers'),
+
+    # Croatia
+    'hr_oib': ('personal identification number', 'personal identification numbers'),
+
+    # Hungary
+    'hu_anum': ('tax number', 'tax numbers'),
+
+    # Ireland
+    'ie_pps': ('public service number', 'public service numbers'),
+
+    # Iceland
+    'is_kennitala': ('identity number', 'identity numbers'),
+
+    # India
+    'in_aadhaar':  ('Aadhaar number', 'Aadhaar numbers'),
+    'in_pan':      ('tax account number', 'tax account numbers'),
+    'in_passport': ('passport number', 'passport numbers'),
+
+    # International
+    'intl_bic':         ('BIC code', 'BIC codes'),
+    'intl_credit_card': ('credit card number', 'credit card numbers'),
+    'intl_email':       ('email', 'emails'),
+    'intl_eu_vat':      ('EU VAT number', 'EU VAT numbers'),
+    'intl_iban':        ('IBAN number', 'IBAN numbers'),
+    'intl_imei':        ('IMEI number', 'IMEI numbers'),
+    'intl_ipv4':        ('IPv4 address', 'IPv4 addresses'),
+    'intl_ipv6':        ('IPv6 address', 'IPv6 addresses'),
+    'intl_mac':         ('MAC address', 'MAC addresses'),
+    'intl_phone_e164':  ('phone number', 'phone numbers'),
+
+    # Italy
+    'it_codice_fiscale': ('tax code', 'tax codes'),
+    'it_partita_iva':    ('VAT number', 'VAT numbers'),
+    'it_phone':          ('phone number', 'phone numbers'),
+
+    # Japan
+    'jp_my_number':        ('My Number', 'My Numbers'),
+    'jp_corporate_number': ('corporate number', 'corporate numbers'),
+    'jp_passport':         ('passport number', 'passport numbers'),
+
+    # South Korea
+    'kr_rrn':      ('resident registration number', 'resident registration numbers'),
+    'kr_passport': ('passport number', 'passport numbers'),
+
+    # Lithuania
+    'lt_asmens': ('personal code', 'personal codes'),
+
+    # Luxembourg
+    'lu_matricule': ('national number', 'national numbers'),
+
+    # Mexico
+    'mx_curp': ('population registry code', 'population registry codes'),
+    'mx_rfc':  ('taxpayer registry code', 'taxpayer registry codes'),
+
+    # Netherlands
+    'nl_bsn':      ('citizen service number', 'citizen service numbers'),
+    'nl_btw':      ('VAT number', 'VAT numbers'),
+    'nl_passport': ('passport number', 'passport numbers'),
+    'nl_phone':    ('phone number', 'phone numbers'),
+
+    # Norway
+    'no_fnr': ('birth number', 'birth numbers'),
+
+    # New Zealand
+    'nz_ird': ('tax number', 'tax numbers'),
+    'nz_nhi': ('health index number', 'health index numbers'),
+
+    # Philippines
+    'ph_psn': ('PhilSys number', 'PhilSys numbers'),
+    'ph_pcn': ('PhilSys card number', 'PhilSys card numbers'),
+
+    # Poland
+    'pl_nip':   ('tax identifier', 'tax identifiers'),
+    'pl_pesel': ('personal number', 'personal numbers'),
+    'pl_regon': ('business number', 'business numbers'),
+
+    # Portugal
+    'pt_cc':       ('citizen card number', 'citizen card numbers'),
+    'pt_nif':      ('tax number', 'tax numbers'),
+    'pt_niss':     ('social security number', 'social security numbers'),
+    'pt_passport': ('passport number', 'passport numbers'),
+    'pt_phone':    ('phone number', 'phone numbers'),
+
+    # Romania
+    'ro_cf':  ('tax code', 'tax codes'),
+    'ro_cnp': ('personal numeric code', 'personal numeric codes'),
+
+    # Sweden
+    'se_orgnr':        ('business number', 'business numbers'),
+    'se_personnummer': ('personal number', 'personal numbers'),
+
+    # Singapore
+    'sg_nric': ('identity card number', 'identity card numbers'),
+
+    # Slovenia
+    'si_emso':    ('personal number', 'personal numbers'),
+    'si_maticna': ('business registration number', 'business registration numbers'),
+
+    # Slovakia
+    'sk_rc': ('birth number', 'birth numbers'),
+
+    # United States
+    'us_atin':     ('adoption taxpayer number', 'adoption taxpayer numbers'),
+    'us_dea':      ('DEA registration number', 'DEA registration numbers'),
+    'us_ein':      ('employer identification number', 'employer identification numbers'),
+    'us_itin':     ('individual taxpayer number', 'individual taxpayer numbers'),
+    'us_mbi':      ('Medicare beneficiary identifier', 'Medicare beneficiary identifiers'),
+    'us_npi':      ('national provider identifier', 'national provider identifiers'),
+    'us_passport': ('passport number', 'passport numbers'),
+    'us_phone':    ('phone number', 'phone numbers'),
+    'us_ptin':     ('preparer taxpayer number', 'preparer taxpayer numbers'),
+    'us_rtn':      ('bank routing number', 'bank routing numbers'),
+    'us_ssn':      ('Social Security number', 'Social Security numbers'),
+
+    # South Africa
+    'za_id':       ('identity number', 'identity numbers'),
+    'za_passport': ('passport number', 'passport numbers'),
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _choice_label(item:'choice_tuple') -> 'str':
     """ Returns the display label of a choice pair, for use as a sort key.
     """

@@ -1,0 +1,208 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# local
+import _agent
+import _audit
+import _constants
+import _helpers
+
+# Zato
+from zato.common.audit_log.api import AuditEvent, AuditOutcome
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The zero-width space the customer notes carry and the decomposed name they spell
+_zero_width_space = '\u200b'
+_decomposed_name = 'Mu\u0308ller'
+_composed_name = 'M\u00fcller'
+
+# What a final answer sounds like when the model reports that something did not work
+_failure_words = ('cannot', 'could not', "couldn't", 'unable', 'fail', 'error', 'not possible', 'refused', 'rejected')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _contains_failure_word(text:'str') -> 'bool':
+    """ Whether the text reports a failure in any of the usual wordings.
+    """
+
+    text = text.lower()
+
+    for word in _failure_words:
+        if word in text:
+            out = True
+            break
+    else:
+        out = False
+
+    return out
+
+# ################################################################################################################################
+
+def _get_customer_record(zato_server:'anydict', url_path:'str', gateway_name:'str') -> 'tuple':
+    """ One customer call through the given gateway, returning the record
+    and the audit data document of the call's event.
+    """
+
+    audit_db_path = zato_server['audit_db_path']
+    min_id = _audit.last_event_id(audit_db_path)
+
+    client = _helpers.make_client(zato_server, url_path)
+    session_id = _helpers.open_session(client)
+
+    body = _helpers.call_tool(client, session_id, _constants.Service_Customer_Get,
+        {'customer_id': _constants.Customer_ID})
+
+    data = _helpers.get_result_data(body)
+
+    events = _audit.wait_for_events(
+        audit_db_path, 1,
+        object_name=gateway_name,
+        event_type=AuditEvent.MCP_Tools_Call,
+        min_id=min_id)
+
+    out = data, events[-1]['data']
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestContentSafety:
+    """ Unicode normalization, markup sanitization and the URL policy each clean
+    the content and count their findings - and stay silent when off.
+    """
+
+# ################################################################################################################################
+
+    def test_unicode_is_normalized_and_counted(self, zato_server:'anydict') -> 'None':
+
+        data, event_data = _get_customer_record(zato_server, _constants.Path_Safety, _constants.Gateway_Safety)
+
+        notes = data['notes']
+
+        # The zero-width character is gone and the decomposed name is composed now ..
+        assert _zero_width_space not in notes, notes
+        assert _composed_name in notes, notes
+        assert _decomposed_name not in notes, notes
+
+        # .. and only the character that had no business being there was counted.
+        assert event_data['unicode_chars_removed'] == 1, event_data
+
+# ################################################################################################################################
+
+    def test_markup_is_sanitized_and_counted(self, zato_server:'anydict') -> 'None':
+
+        data, event_data = _get_customer_record(zato_server, _constants.Path_Safety, _constants.Gateway_Safety)
+
+        notes = data['notes']
+
+        # The script element is gone from the notes ..
+        assert '<script>' not in notes, notes
+
+        # .. and the finding was counted.
+        assert event_data['markup_items_removed'] >= 1, event_data
+
+# ################################################################################################################################
+
+    def test_the_url_policy_keeps_only_allowed_hosts(self, zato_server:'anydict') -> 'None':
+
+        data, event_data = _get_customer_record(zato_server, _constants.Path_Safety, _constants.Gateway_Safety)
+
+        notes = data['notes']
+
+        # The allow-listed URL survives and the other one is handled per the remove mode ..
+        assert _constants.Customer_URL_Allowed in notes, notes
+        assert _constants.Customer_URL_Disallowed not in notes, notes
+
+        # .. and exactly one URL was flagged.
+        assert event_data['urls_flagged'] == 1, event_data
+
+# ################################################################################################################################
+
+    def test_stages_off_leave_the_content_untouched(self, zato_server:'anydict') -> 'None':
+
+        data, event_data = _get_customer_record(zato_server, _constants.Path_Main, _constants.Gateway_Main)
+
+        notes = data['notes']
+
+        # With every safety stage off, the notes come back as the service built them ..
+        assert _zero_width_space in notes, notes
+        assert _decomposed_name in notes, notes
+        assert '<script>' in notes, notes
+        assert _constants.Customer_URL_Allowed in notes, notes
+        assert _constants.Customer_URL_Disallowed in notes, notes
+
+        # .. and the audit event carries no safety keys at all.
+        assert 'unicode_chars_removed' not in event_data, event_data
+        assert 'markup_items_removed' not in event_data, event_data
+        assert 'urls_flagged' not in event_data, event_data
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestRejectModeWithLLM:
+    """ Reject mode refuses the whole response and the model reports the refusal
+    instead of describing data it never saw.
+    """
+
+# ################################################################################################################################
+
+    def test_a_rejected_response_is_reported(self, zato_server:'anydict', ollama:'anydict') -> 'None':
+
+        audit_db_path = zato_server['audit_db_path']
+        min_id = _audit.last_event_id(audit_db_path)
+
+        client = _helpers.make_client(zato_server, _constants.Path_Safety_Reject)
+
+        task = (
+            f'What is the name of customer {_constants.Customer_ID}? Use the tools '
+            'and if they cannot give you the data, say so plainly.')
+
+        result = _agent.run_agent(client, task)
+
+        # The gateway refused the customer record over its markup ..
+        rejected_calls = []
+
+        for call in result.tool_calls:
+            if call.tool_name == _constants.Service_Customer_Get:
+                if call.is_error:
+                    rejected_calls.append(call)
+
+        assert rejected_calls, result.messages
+        assert 'markup' in rejected_calls[0].result_text.lower(), rejected_calls[0].result_text
+
+        # .. the model reported the refusal and never learned the customer's name ..
+        assert _contains_failure_word(result.final_text), result.final_text
+        assert _constants.Customer_Name not in result.final_text, result.final_text
+
+        # .. and the refusal is audited with its kind and an error outcome.
+        events = _audit.wait_for_events(
+            audit_db_path, 1,
+            object_name=_constants.Gateway_Safety_Reject,
+            event_type=AuditEvent.MCP_Tools_Call,
+            min_id=min_id)
+
+        rejected_events = []
+
+        for event in events:
+            if event['data'].get('reject_kind') == 'markup':
+                rejected_events.append(event)
+
+        assert rejected_events, events
+        assert rejected_events[0]['outcome'] == AuditOutcome.Error, rejected_events
+
+# ################################################################################################################################
+# ################################################################################################################################

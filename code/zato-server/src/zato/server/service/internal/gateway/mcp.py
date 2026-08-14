@@ -14,7 +14,8 @@ from time import monotonic
 
 # Zato
 from zato.common.json_internal import dumps
-from zato.server.connection.mcp.audit import build_audit_event, Method_Session_Delete
+from zato.server.connection.mcp.audit import build_audit_event, Method_Auth_Rejected, Method_Session_Delete
+from zato.server.connection.mcp.common import MCPResponse
 from zato.server.connection.mcp.schema import io_to_json_schema, io_to_output_json_schema
 from zato.server.service.internal import AdminService
 
@@ -23,7 +24,6 @@ from zato.server.service.internal import AdminService
 
 if 0:
     from zato.common.typing_ import any_, strnone
-    from zato.server.connection.mcp.handler import MCPResponse
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -165,6 +165,7 @@ class MCPEndpoint(AdminService):
                 self.channel.name, channel_security.name, channel_security.username)
             self.response.status_code = FORBIDDEN
             self.response.payload = ''
+            self._audit_auth_rejection()
             return
 
         logger.info(
@@ -309,6 +310,38 @@ class MCPEndpoint(AdminService):
 
 # ################################################################################################################################
 
+    def _audit_auth_rejection(self) -> 'None':
+        """ Writes the audit event of a request whose credentials did not authenticate -
+        only when the gateway exists and has its audit log on. The caller has no security
+        definition, so the event carries an empty identity, and the rejection audits
+        under its own event type with an error outcome.
+        """
+
+        # The gateway may be gone mid-flight - a rejection on a deleted gateway leaves no event ..
+        gateway_config = self.server.config_manager.gateway_mcp.get(self.channel.name)
+
+        if gateway_config is None:
+            return
+
+        # .. and neither does one on a gateway whose audit log is off.
+        wrapper = gateway_config.conn
+
+        if not wrapper.config.get('is_audit_log_active'):
+            return
+
+        remote_address = self.wsgi_environ[_remote_addr_key]
+        session_id = self.request.http.headers.get(_session_header)
+
+        mcp_response = MCPResponse()
+        mcp_response.status_code = FORBIDDEN
+        mcp_response.body = None
+
+        self._insert_audit_event(
+            wrapper, Method_Auth_Rejected, None, session_id, remote_address,
+            mcp_response, '', 0, 0, sec_def_name='')
+
+# ################################################################################################################################
+
     def _insert_audit_event(
         self,
         wrapper:'any_',
@@ -320,15 +353,19 @@ class MCPEndpoint(AdminService):
         payload:'str',
         duration_ms:'float',
         request_size:'int',
+        sec_def_name:'strnone' = None,
         ) -> 'None':
         """ Builds and writes the one audit event of this request - the payloads themselves
         are never recorded, only their sizes are.
         """
 
-        # The caller is always authenticated by the time an audit event is built, so both
-        # the gateway's channel name and the security definition's name are always present.
+        # The gateway's channel name is always present, and outside of auth rejections,
+        # which state their empty identity explicitly, the caller is always authenticated
+        # by the time an audit event is built, so the definition's name is present too.
         gateway_name = self.channel.name
-        sec_def_name = self.channel.security.name
+
+        if sec_def_name is None:
+            sec_def_name = self.channel.security.name
 
         assert gateway_name is not None
         assert sec_def_name is not None
@@ -346,6 +383,7 @@ class MCPEndpoint(AdminService):
             status_code=mcp_response.status_code,
             duration_ms=duration_ms,
             request_size=request_size,
+            trace=mcp_response.trace,
         )
 
         wrapper.get_audit_log().insert(**event)

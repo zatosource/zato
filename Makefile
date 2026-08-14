@@ -761,6 +761,20 @@ _test-mcp:
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		2>&1 | $(TS)
+	ruff check \
+		$(CURDIR)/code/tests/python/zato-server/mcp_llm_live/ \
+		2>&1 | $(TS)
+	pyright \
+		$(CURDIR)/code/tests/python/zato-server/mcp_llm_live/ \
+		2>&1 | $(TS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/mcp_llm_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp_llm -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
+
+llm-console: ## Browser console for the local LLM - starts Ollama, the model and Open WebUI.
+	$(ZATO_PY) -u $(CURDIR)/code/tests/python/zato-server/mcp_llm_live/console.py
 
 test-bearer: ## Inbound bearer token live tests.
 	$(MAKE) _test-bearer 2>&1 | tee /tmp/logs-test-bearer.txt

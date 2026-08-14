@@ -30,13 +30,35 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
+# Every runtime field an MCP gateway stores - the same list the importer declares defaults for,
+# so what one environment exports another can import without losing a single option.
 GATEWAY_OPTIONAL_FIELDS = [
+
+    # Routing and security
     'url_path', 'services', 'security_groups', 'is_audit_log_active',
+
+    # Skills served as prompts
+    'skills',
+
+    # Input validation and client-supplied JSONata response filters
+    'validate_input', 'allow_client_filters',
+
+    # Response shaping
+    'max_response_size', 'size_cap_mode', 'min_size_threshold', 'characters_per_token',
+
+    # Compaction
+    'safeguards_strip_nulls', 'safeguards_collapse_whitespace', 'safeguards_strip_base64',
+
+    # PII removal
+    'safeguards_pii_enabled', 'safeguards_pii_lands', 'safeguards_pii_detectors', 'safeguards_pii_exclude',
+    'safeguards_pii_validate', 'safeguards_pii_stable_tokens',
+
+    # Content safety
+    'safeguards_normalize_unicode', 'safeguards_unicode_mode', 'safeguards_sanitize_markup', 'safeguards_markup_mode',
+    'safeguards_url_policy_enabled', 'safeguards_url_allow_list', 'safeguards_url_mode',
 ]
 
-GATEWAY_OPAQUE_FIELDS = [
-    'url_path', 'services', 'security_groups', 'is_audit_log_active',
-]
+GATEWAY_OPAQUE_FIELDS = list(GATEWAY_OPTIONAL_FIELDS)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,9 +95,13 @@ class GatewayMCPExporter:
                 'name': row['name'],
             }
 
+            # A field is exported whenever the row carries it, falsy values included -
+            # otherwise an explicit False against a True default would not survive a round trip.
             for field in GATEWAY_OPTIONAL_FIELDS:
-                if value := row.get(field):
-                    item[field] = value
+                if field in row:
+                    value = row[field]
+                    if value is not None:
+                        item[field] = value
 
             exported.append(item)
 

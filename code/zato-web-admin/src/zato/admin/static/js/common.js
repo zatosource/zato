@@ -2274,6 +2274,16 @@ $.fn.zato.show_left_tooltip = function(elem_id_selector, text, should_draw_atten
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+// A count with its noun in the grammatical number the count calls for - "1 ruleset", "3 rulesets".
+// Both forms are given by the caller because English plurals are not all a matter of adding an s.
+$.fn.zato.count_text = function(count, singular, plural) {
+    var noun = count == 1 ? singular : plural;
+
+    return count + ' ' + noun;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 // Reusable "time ago" cells - each element with the .zato-time-ago class and a data-time-utc attribute
 // is turned into a humanized link, e.g. "3 minutes ago", with a click-triggered tippy that shows
 // the full timestamp both in the browser's timezone and in UTC.
@@ -2340,8 +2350,7 @@ $.fn.zato.time_ago.humanize = function(age_seconds) {
         var unit = units[unit_idx];
         if(age_seconds >= unit.seconds) {
             var count = Math.floor(age_seconds / unit.seconds);
-            var suffix = count == 1 ? '' : 's';
-            out = count + ' ' + unit.name + suffix + ' ' + config.ago_label;
+            out = $.fn.zato.count_text(count, unit.name, unit.name + 's') + ' ' + config.ago_label;
             break;
         }
     }
@@ -2370,8 +2379,7 @@ $.fn.zato.time_ago.humanize_detailed = function(age_seconds) {
         var unit = units[unit_idx];
         var count = Math.floor(remaining / unit.seconds);
         if(count) {
-            var suffix = count == 1 ? '' : 's';
-            parts.push(count + ' ' + unit.name + suffix);
+            parts.push($.fn.zato.count_text(count, unit.name, unit.name + 's'));
             remaining -= count * unit.seconds;
         }
     }
@@ -2395,8 +2403,7 @@ $.fn.zato.time_ago.humanize_duration = function(duration_ms) {
 
     if(seconds < 60) {
         var rounded = Math.round(seconds * 10) / 10;
-        var unit = rounded === 1 ? 'second' : 'seconds';
-        return rounded + ' ' + unit;
+        return $.fn.zato.count_text(rounded, 'second', 'seconds');
     }
 
     var out = $.fn.zato.time_ago.humanize_detailed(Math.floor(seconds));

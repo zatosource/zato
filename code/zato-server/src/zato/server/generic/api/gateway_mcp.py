@@ -11,6 +11,7 @@ from logging import getLogger
 
 # Zato
 from zato.common.audit_log.api import AuditLog
+from zato.common.util.logging_ import count_text
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler
@@ -85,6 +86,11 @@ class GatewayMCPWrapper:
         if validate_input is None:
             validate_input = False
 
+        # .. the same applies to client-supplied JSONata response filters ..
+        allow_client_filters = self.config.get('allow_client_filters')
+        if allow_client_filters is None:
+            allow_client_filters = False
+
         # .. the skills this gateway serves as prompts - a config without the key serves none,
         # and the files themselves are read from the server's config/repo/skills on each request ..
         allowed_skills:'strlist | None' = self.config.get('skills')
@@ -96,15 +102,15 @@ class GatewayMCPWrapper:
         # .. build the handler with an invoke function that calls services through the server.
         self.handler = MCPHandler(
             tool_registry, self._invoke_service, session_manager, safeguard_config, token_cap_config, validate_input,
-            skill_prompts)
+            skill_prompts, allow_client_filters)
 
-        service_suffix = 'service' if len(allowed_services) == 1 else 'services'
+        service_count_text = count_text(len(allowed_services), 'allowed service', 'allowed services')
         sorted_services = sorted(allowed_services)
-        logger.info('MCP gateway `%s` built with %d allowed %s: %s', self.config.name, len(allowed_services), service_suffix, sorted_services)
+        logger.info('MCP gateway `%s` built with %s: %s', self.config.name, service_count_text, sorted_services)
 
-        skill_suffix = 'skill' if len(allowed_skills) == 1 else 'skills'
+        skill_count_text = count_text(len(allowed_skills), 'skill', 'skills')
         sorted_skills = sorted(allowed_skills)
-        logger.info('MCP gateway `%s` serves %d %s as prompts: %s', self.config.name, len(allowed_skills), skill_suffix, sorted_skills)
+        logger.info('MCP gateway `%s` serves %s as prompts: %s', self.config.name, skill_count_text, sorted_skills)
 
 # ################################################################################################################################
 

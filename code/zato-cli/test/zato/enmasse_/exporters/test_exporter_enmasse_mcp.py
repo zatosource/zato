@@ -103,9 +103,54 @@ class TestEnmasseGatewayMCPExport(TestCase):
             exported_def = exported_by_name[name]
             self.assertEqual(exported_def['name'], yaml_def['name'])
 
-        # The audit log toggle round-trips - exported when on, skipped when off.
-        self.assertTrue(exported_by_name['enmasse.mcp.gateway.1']['is_audit_log_active'])
-        self.assertNotIn('is_audit_log_active', exported_by_name['enmasse.mcp.gateway.2'])
+        # The audit log toggle round-trips - True and False both survive the trip.
+        exported_1 = exported_by_name['enmasse.mcp.gateway.1']
+        exported_2 = exported_by_name['enmasse.mcp.gateway.2']
+
+        self.assertTrue(exported_1['is_audit_log_active'])
+        self.assertFalse(exported_2['is_audit_log_active'])
+
+        # The services list is exported as the list it was imported as,
+        # whether it arrived as a YAML list or as a comma-separated string.
+        self.assertEqual(exported_1['services'], ['crm.get-customer', 'crm.update-customer'])
+        self.assertEqual(exported_2['services'], ['billing.get-invoice'])
+
+        # Every runtime field of the fully configured gateway round-trips ..
+        self.assertEqual(exported_1['skills'], ['crm-house-style'])
+        self.assertTrue(exported_1['validate_input'])
+        self.assertTrue(exported_1['allow_client_filters'])
+
+        self.assertEqual(exported_1['max_response_size'], 2000)
+        self.assertEqual(exported_1['size_cap_mode'], 'block')
+        self.assertEqual(exported_1['min_size_threshold'], 100)
+        self.assertEqual(exported_1['characters_per_token'], 3.5)
+
+        self.assertTrue(exported_1['safeguards_strip_nulls'])
+        self.assertTrue(exported_1['safeguards_collapse_whitespace'])
+        self.assertTrue(exported_1['safeguards_strip_base64'])
+
+        self.assertTrue(exported_1['safeguards_pii_enabled'])
+        self.assertEqual(exported_1['safeguards_pii_lands'], ['intl'])
+        self.assertEqual(exported_1['safeguards_pii_exclude'], ['intl_email'])
+        self.assertFalse(exported_1['safeguards_pii_validate'])
+        self.assertTrue(exported_1['safeguards_pii_stable_tokens'])
+
+        self.assertTrue(exported_1['safeguards_normalize_unicode'])
+        self.assertEqual(exported_1['safeguards_unicode_mode'], 'reject')
+        self.assertTrue(exported_1['safeguards_sanitize_markup'])
+        self.assertEqual(exported_1['safeguards_markup_mode'], 'reject')
+        self.assertTrue(exported_1['safeguards_url_policy_enabled'])
+        self.assertEqual(exported_1['safeguards_url_allow_list'], ['example.com'])
+        self.assertEqual(exported_1['safeguards_url_mode'], 'neutralize')
+
+        # .. and a gateway that stated nothing exports its documented defaults,
+        # falsy values included, so a re-import cannot silently flip an option on.
+        self.assertFalse(exported_2['validate_input'])
+        self.assertFalse(exported_2['allow_client_filters'])
+        self.assertEqual(exported_2['max_response_size'], 0)
+        self.assertFalse(exported_2['safeguards_strip_nulls'])
+        self.assertFalse(exported_2['safeguards_pii_enabled'])
+        self.assertTrue(exported_2['safeguards_pii_validate'])
 
 # ################################################################################################################################
 # ################################################################################################################################

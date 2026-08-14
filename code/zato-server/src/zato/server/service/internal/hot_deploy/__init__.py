@@ -357,6 +357,42 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
+    def _rebuild_mcp_tool_registries(self, service_id_list:'intlist') -> 'None':
+        """ Rebuilds the tool registry of every MCP gateway whose allow list contains
+        any of the services just deployed, so the next tools/list already advertises
+        the schemas the redeployed code declares.
+        """
+
+        service_store = self.server.service_store
+        deployed_names = set()
+
+        for service_id in service_id_list:
+            service_name = service_store.get_service_name_by_id(service_id)
+            deployed_names.add(service_name)
+
+        for gateway_config in self.server.config_manager.gateway_mcp.values():
+
+            # A gateway that is not built yet, or is being deleted, has no registry to rebuild
+            handler = gateway_config.conn.handler
+
+            if handler is None:
+                continue
+
+            tool_registry = handler.tool_registry
+            allowed_names = set(tool_registry.allowed_services)
+
+            if allowed_names & deployed_names:
+
+                # One gateway whose allow list references a since-removed service must not
+                # break the deployment of the others, so each rebuild fails on its own.
+                try:
+                    tool_registry.rebuild()
+                except Exception:
+                    self.logger.warning('Could not rebuild the MCP tool registry of `%s`:\n%s',
+                        gateway_config.name, format_exc())
+
+# ################################################################################################################################
+
     def _is_enmasse_file(self, payload_name:'str') -> 'bool':
         return 'enmasse' in payload_name and (payload_name.endswith('.yml') or payload_name.endswith('.yaml'))
 
@@ -444,6 +480,10 @@ class Create(AdminService):
                     if getattr(class_, needs_post_deploy_attr, None):
                         service_store.post_deploy(class_)
                         delattr(class_, needs_post_deploy_attr)
+
+                # A redeployed service may have a new I/O declaration, so the MCP gateways
+                # that expose it rebuild their tool registries with the fresh schemas.
+                self._rebuild_mcp_tool_registries(services_deployed)
 
                 self.response.payload.services_deployed = services_deployed
 

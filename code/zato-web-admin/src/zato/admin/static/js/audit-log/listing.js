@@ -922,6 +922,19 @@ listing.paneDetailsHTML = function(rowModel) {
             listing.paneAttrValueHTML(rowModel, attr), attr.value, attr.search));
     }
 
+    // What response shaping did to this event - one line per finding, each already
+    // worded by the backend in the grammatical number its count calls for
+    var traceLines = rowModel.raw.trace_lines;
+
+    if (traceLines !== undefined) {
+        for (var traceIndex = 0; traceIndex < traceLines.length; traceIndex++) {
+            var traceLine = traceLines[traceIndex];
+
+            facts.push(listing.paneFact(traceLine.label, listing.escapeHTML(traceLine.text),
+                traceLine.text, ''));
+        }
+    }
+
     facts = facts.concat(listing.lineageFacts(rowModel));
 
     // When the event happened reads last of everything - a moment in time is shared by
