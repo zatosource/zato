@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,10 +10,7 @@ from pathlib import Path
 # ################################################################################################################################
 # ################################################################################################################################
 
-current = Path(__file__).resolve().parent
-while current.name != 'code':
-    current = current.parent
-_test_data_dir = current / 'tests' / 'messages' / 'hl7v2' / 'live'
+_test_data_dir = Path(os.environ['Zato_Health_Messages_Root']) / 'hl7v2' / 'live'
 
 # ################################################################################################################################
 # ################################################################################################################################
