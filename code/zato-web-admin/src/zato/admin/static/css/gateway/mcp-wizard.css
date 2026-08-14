@@ -108,27 +108,31 @@
 /* MCP wizard - field grids inside the folded cards              */
 /* ------------------------------------------------------------ */
 
-/* One width for every row, held here rather than left to each group's own
-   longest label, so that the switches and selects line up down the column
-   and across the groups */
+/* The width the wide rows keep and the room between the longest label
+   and the control column that follows it */
 :root {
     --mcp-wizard-field-width: 25em;
+    --mcp-wizard-control-gap: 16px;
 }
 
+/* Two columns sized by their content - the longest label decides where
+   the control column starts, so every control in the grid sits right
+   after it, in the one shared column */
 .mcp-wizard-field-grid {
     display: grid;
-    grid-template-columns: max-content;
-    gap: 6px 0;
+    grid-template-columns: max-content max-content;
+    gap: 6px var(--mcp-wizard-control-gap);
+    justify-content: start;
 }
 
-/* The control is held against the right edge of the row, so the controls
-   line up however long or short the labels next to them are */
+/* A row is a label whose text and control take the grid's own columns,
+   which is what keeps the controls lined up down the group */
 .mcp-wizard-field-grid label {
-    display: flex;
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: span 2;
     align-items: center;
-    justify-content: space-between;
-    width: var(--mcp-wizard-field-width);
-    gap: 12px;
+    justify-items: start;
     font-size: 12px;
     color: var(--wizard-text);
     cursor: pointer;
@@ -160,13 +164,16 @@
     border-color: var(--wizard-accent);
 }
 
-/* The allow list holds a comma-separated list of hosts - the label sits
-   above and the input takes the row's whole width, the same label-above-
-   input shape the popover micro-forms use for their text fields */
+/* The allow list holds a list of hosts - the label sits above and the
+   input takes the row's whole width, the same label-above-input shape
+   the popover micro-forms use for their text fields */
 .mcp-wizard-field-grid label.mcp-wizard-wide-field {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
+    grid-column: 1 / -1;
     gap: 4px;
+    min-width: var(--mcp-wizard-field-width);
 }
 
 .mcp-wizard-field-grid label.mcp-wizard-wide-field input[type="text"] {
@@ -189,6 +196,25 @@
 .mcp-wizard-pii-selects > label {
     font-size: 12px;
     color: var(--wizard-text);
+}
+
+/* The PII card's switch rows live in two blocks with the multi-selects
+   between them - the open card body carries the columns and both blocks
+   read them from it, so every switch of the card shares the one column */
+#mcp-wizard-pii-body.wizard-option-body-open {
+    display: grid;
+    grid-template-columns: max-content max-content;
+    column-gap: var(--mcp-wizard-control-gap);
+    justify-content: start;
+}
+
+#mcp-wizard-pii-body > .mcp-wizard-field-grid {
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+}
+
+#mcp-wizard-pii-body > .mcp-wizard-pii-selects {
+    grid-column: 1 / -1;
 }
 
 /* ------------------------------------------------------------ */
