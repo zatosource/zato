@@ -24,9 +24,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Docker details of the Ollama instance the LLM tests run against - the container and the model volume
-# are created once and reused forever, the way the Keycloak test container is, because pulling
-# the model weights is measured in tens of gigabytes and must never be a per-run cost.
+# The Ollama instance the LLM tests run against - the container and the model volume
+# are created once and reused across runs.
 Ollama_Image          = 'ollama/ollama'
 Ollama_Container_Name = 'zato-test-ollama'
 Ollama_Volume_Name    = 'zato-test-ollama-models'
@@ -36,12 +35,10 @@ Ollama_Base_URL       = f'http://localhost:{Ollama_Port}'
 # The OpenAI-compatible endpoint the agent loop and self.llm speak to
 Ollama_OpenAI_URL = f'{Ollama_Base_URL}/v1'
 
-# The model the tests drive - Apache-2.0 licensed, with native tool calling
-Model_Name = 'gpt-oss:120b'
+# The model the tests drive
+Model_Name = 'gpt-oss:20b'
 
-# Docker details of the browser console - Open WebUI connected to the Ollama instance above.
-# The console is its own container, created once and reused forever, and nothing
-# in the test suite ever starts it or depends on it.
+# The browser console - Open WebUI connected to the Ollama instance above
 Console_Image          = 'ghcr.io/open-webui/open-webui:main'
 Console_Container_Name = 'zato-test-open-webui'
 Console_Volume_Name    = 'zato-test-open-webui-data'
@@ -72,11 +69,10 @@ _readiness_poll_interval = 1.0
 # Timeout for docker commands, in seconds
 _docker_timeout = 120
 
-# Timeout for docker commands that create a container, in seconds - the first
-# creation also downloads the image itself, which is measured in gigabytes
+# Timeout for docker commands that create a container, in seconds - the first creation also downloads the image
 _docker_create_timeout = 1800
 
-# A model pull is measured in tens of gigabytes, so its read timeout is measured in hours
+# Read timeout for the model pull, in seconds
 _pull_timeout = 4 * 60 * 60
 
 # How often to report pull progress, in seconds
@@ -180,8 +176,7 @@ def _is_model_present(model:'str') -> 'bool':
 # ################################################################################################################################
 
 def _pull_model(model:'str') -> 'None':
-    """ Pulls the model through the streaming pull endpoint, reporting progress every few seconds
-    so a pull measured in tens of gigabytes is visibly alive the whole time.
+    """ Pulls the model through the streaming pull endpoint, reporting progress every few seconds.
     """
     pull_url = f'{Ollama_Base_URL}/api/pull'
     body = json.dumps({'model': model})
@@ -227,15 +222,14 @@ def ensure_ollama() -> 'None':
 # ################################################################################################################################
 
 def ensure_model(model:'str'=Model_Name) -> 'None':
-    """ Makes sure the model is available in the running instance, pulling it only when it is absent -
-    the named volume keeps the weights across container recreations, so the pull happens once per machine.
+    """ Makes sure the model is available in the running instance, pulling it only when it is absent.
     """
 
     if _is_model_present(model):
         print(f'[OLLAMA] model `{model}` already present')
         return
 
-    print(f'[OLLAMA] model `{model}` absent, pulling now - the first pull downloads the full weights')
+    print(f'[OLLAMA] model `{model}` absent, pulling now')
     _pull_model(model)
 
     if not _is_model_present(model):
