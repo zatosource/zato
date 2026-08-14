@@ -98,6 +98,12 @@
     margin-bottom: 6px;
 }
 
+/* The two zones of a picker need the row's whole width - the shared card
+   width fits the field grids of step 2, not a picker */
+.mcp-wizard-picker.wizard-option-card {
+    max-width: none;
+}
+
 /* ------------------------------------------------------------ */
 /* MCP wizard - field grids inside the folded cards              */
 /* ------------------------------------------------------------ */
@@ -183,6 +189,22 @@
 .mcp-wizard-pii-selects > label {
     font-size: 12px;
     color: var(--wizard-text);
+}
+
+/* ------------------------------------------------------------ */
+/* MCP wizard - URL allow list chips                             */
+/* ------------------------------------------------------------ */
+
+/* The chips wear the multi-select stylesheet, which sizes its text field
+   to what its own script keeps measuring - here the field simply takes
+   the row, chips wrapping above it as they come */
+.mcp-wizard-wide-field .mcp-host-list {
+    width: 100%;
+}
+
+.mcp-wizard-wide-field .mcp-host-list li.search-field,
+.mcp-wizard-wide-field .mcp-host-list li.search-field input[type="text"] {
+    width: 100%;
 }
 
 /* ------------------------------------------------------------ */

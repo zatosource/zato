@@ -78,7 +78,7 @@ class CreateForm(forms.Form):
     # Response safeguards - URL policy
     safeguards_url_policy_enabled = forms.BooleanField(required=False)
     safeguards_url_allow_list = forms.CharField(required=False, widget=forms.TextInput(
-        attrs={'style':'width:100%', 'placeholder':'example.com, api.example.com'}))
+        attrs={'style':'width:100%', 'placeholder':'example.com'}))
     safeguards_url_mode = forms.ChoiceField(choices=_url_mode_choices)
 
 # ################################################################################################################################

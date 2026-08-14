@@ -177,6 +177,7 @@ Detector_Labels:'strstrdict' = {
     'intl_email':       'Email address',
     'intl_eu_vat':      'EU VAT number',
     'intl_iban':        'Bank account number (IBAN)',
+    'intl_imei':        'Mobile equipment identity (IMEI)',
     'intl_ipv4':        'IPv4 address',
     'intl_ipv6':        'IPv6 address',
     'intl_mac':         'MAC address',

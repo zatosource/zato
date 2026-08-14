@@ -83,7 +83,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // header with the wizard-wide overview, then anything on a step
     // body holding a labeled field
     helpRowSelector: '.dashboard-card-header, .wizard-name-row, .wizard-field-row, ' +
-        '.wizard-section-title, .wizard-line, .mcp-wizard-field-grid, .mcp-wizard-pii-selects',
+        '.wizard-option-header, .wizard-line, .mcp-wizard-field-grid, .mcp-wizard-pii-selects',
 
     // Fields that must not be empty on submit
     requiredFields: [
@@ -129,9 +129,11 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         wizard.forms.initRows();
         wizard.review.initOptionCards();
 
-        // .. the PII multi-selects and the master toggles enabling the
-        // safeguard fields under them - the same wiring both actions share ..
+        // .. the PII multi-selects, the URL allow list chips and the master
+        // toggles enabling the safeguard fields under them - the same wiring
+        // both actions share ..
         $.fn.zato.gateway.mcp._init_pii_selects(action);
+        $.fn.zato.gateway.mcp._init_host_list(action);
         $.fn.zato.gateway.mcp._init_safeguard_toggles(action);
 
         // .. the services and the security definitions the gateway exposes

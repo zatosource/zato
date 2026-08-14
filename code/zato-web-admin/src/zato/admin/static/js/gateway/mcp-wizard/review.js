@@ -71,14 +71,56 @@ review.config = {
         'safeguards_normalize_unicode',
         'safeguards_sanitize_markup',
         'safeguards_url_policy_enabled'
-    ]
+    ],
+
+    // The words the picker card summaries are written with
+    assignedLabel: ' assigned',
+    noneAssignedLabel: 'None assigned'
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The three badge picker cards of step 1 - each folds its picker away the
+// way the PII and content safety cards of step 2 fold their fields.
+review.pickerCards = function() {
+
+    var ownConfig = wizard.config_own;
+
+    var out = [
+        {name: 'services', action: ownConfig.pickerAction},
+        {name: 'skills',   action: ownConfig.skillsPickerAction},
+        {name: 'security', action: ownConfig.securityPickerAction}
+    ];
+
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 review.initOptionCards = function() {
 
-    // The two smaller cards open their micro-forms ..
+    // The picker cards of step 1 expand and collapse in place, and each
+    // summary follows its assigned zone as badges move in and out ..
+    review.pickerCards().forEach(function(card) {
+
+        $('#mcp-wizard-' + card.name + '-header').on('click', function() {
+            $('#mcp-wizard-' + card.name + '-body').toggleClass('wizard-option-body-open');
+            $('#mcp-wizard-' + card.name + '-chevron').toggleClass('wizard-chevron-open');
+        });
+
+        // The pickers load after this wiring runs and badges travel between
+        // the zones with plain DOM moves, so the assigned zone's child list
+        // is what the summary follows
+        var assignedZone = document.querySelector('#badge-zone-assigned-' + card.action + ' .badge-zone-body');
+
+        var observer = new MutationObserver(function() {
+            review.setSummary('mcp-wizard-summary-' + card.name, review._pickerSummary(card.action));
+        });
+
+        observer.observe(assignedZone, {childList: true});
+    });
+
+    // .. the two smaller cards open their micro-forms ..
     $('#mcp-wizard-card-gateway-options').on('click', function() {
         wizard.forms.open('gateway_options', this);
     });
@@ -241,6 +283,23 @@ review._piiSummary = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// What one picker card's summary says - how many badges its assigned
+// zone holds.
+review._pickerSummary = function(pickerAction) {
+
+    var config = review.config;
+
+    var assignedCount = wizard.assignedBadges(pickerAction).length;
+    if(!assignedCount) {
+        return config.noneAssignedLabel;
+    }
+
+    var out = assignedCount + config.assignedLabel;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 review._safetySummary = function() {
 
     var config = review.config;
@@ -274,6 +333,10 @@ review._optionsSummary = function() {
 
 // Recomputes every line and card summary.
 review.refreshSummaries = function() {
+
+    review.pickerCards().forEach(function(card) {
+        review.setSummary('mcp-wizard-summary-' + card.name, review._pickerSummary(card.action));
+    });
 
     review.setSummary('mcp-wizard-summary-size-caps', review._sizeCapsSummary());
     review.setSummary('mcp-wizard-summary-options', review._optionsSummary());
@@ -386,20 +449,33 @@ review._urlPolicySummary = function() {
 // so the answer is there to be changed rather than to be looked for. The
 // Basics group has none - its answers are the top rows of step 1 itself.
 
+// A picker card inside a closed body has nothing to show, so an Edit link
+// opens the card first and reveals it then.
+review._openPickerCard = function(name) {
+
+    if(!$('#mcp-wizard-' + name + '-body').hasClass('wizard-option-body-open')) {
+        $('#mcp-wizard-' + name + '-header').trigger('click');
+    }
+
+    wizard.reveal(document.getElementById('mcp-wizard-picker-' + name));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 review._editServices = function() {
-    wizard.reveal(document.getElementById('mcp-wizard-picker-services'));
+    review._openPickerCard('services');
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 review._editSkills = function() {
-    wizard.reveal(document.getElementById('mcp-wizard-picker-skills'));
+    review._openPickerCard('skills');
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 review._editSecurity = function() {
-    wizard.reveal(document.getElementById('mcp-wizard-picker-security'));
+    review._openPickerCard('security');
 };
 
 // ////////////////////////////////////////////////////////////////////////

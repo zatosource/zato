@@ -344,6 +344,188 @@ $.fn.zato.gateway.mcp._init_pii_selects = function(action) {
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// URL policy - the allow list wears the same chip look as the PII multi-selects.
+// Each host is one chip and the underlying input keeps the whole list as the
+// one comma-separated line the endpoints read and write.
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp.host_list_config = {
+    field_name: 'safeguards_url_allow_list',
+    separator: ', '
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// What the underlying input currently holds, one host per entry.
+$.fn.zato.gateway.mcp._host_list_values = function(input) {
+
+    var out = [];
+    var parts = input.val().split(',');
+
+    for (var part_idx = 0; part_idx < parts.length; part_idx++) {
+        var host = parts[part_idx].trim();
+        if (host) {
+            out.push(host);
+        }
+    }
+
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Redraws the chips from the underlying input, keeping the text field last.
+$.fn.zato.gateway.mcp._render_host_chips = function(input, choices) {
+
+    choices.find('li.search-choice').remove();
+
+    var hosts = $.fn.zato.gateway.mcp._host_list_values(input);
+    var search_field = choices.find('li.search-field');
+
+    for (var host_idx = 0; host_idx < hosts.length; host_idx++) {
+        var chip = $('<li/>', {'class': 'search-choice'});
+        chip.append($('<span/>', {'text': hosts[host_idx]}));
+        chip.append($('<a/>', {'class': 'search-choice-close', 'data-host': hosts[host_idx]}));
+        chip.insertBefore(search_field);
+    }
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp._init_host_list = function(action) {
+
+    var config = $.fn.zato.gateway.mcp.host_list_config;
+
+    var prefix = action === 'edit' ? 'id_edit-' : 'id_';
+    var input = $('#' + prefix + config.field_name);
+
+    // The widget is built once for the page's lifetime
+    if (input.data('host-list-built')) {
+        return;
+    }
+    input.data('host-list-built', true);
+
+    // The same container and list classes the Chosen multi-selects render with,
+    // so the stylesheet the detectors wear dresses the chips here too ..
+    var container = $('<div/>', {'class': 'chosen-container chosen-container-multi mcp-host-list'});
+    var choices = $('<ul/>', {'class': 'chosen-choices'});
+    var search_field = $('<li/>', {'class': 'search-field'});
+    // The autocomplete attribute goes through attr - in the creation map,
+    // jQuery would call the UI plugin of the same name instead of setting it
+    var text_field = $('<input/>', {type: 'text', placeholder: input.attr('placeholder')});
+    text_field.attr('autocomplete', 'off');
+
+    search_field.append(text_field);
+    choices.append(search_field);
+    container.append(choices);
+
+    // .. the widget stands in for the input, which keeps the value out of sight ..
+    input.hide();
+    container.insertAfter(input);
+
+    var render = function() {
+        $.fn.zato.gateway.mcp._render_host_chips(input, choices);
+    };
+
+    // .. whatever was typed becomes chips - commas split a pasted list -
+    // and the input hears about every change the way any field would ..
+    var commit_text = function() {
+
+        var hosts = $.fn.zato.gateway.mcp._host_list_values(input);
+        var parts = text_field.val().split(',');
+        var added = false;
+
+        for (var part_idx = 0; part_idx < parts.length; part_idx++) {
+            var host = parts[part_idx].trim();
+            if (host) {
+                if (hosts.indexOf(host) === -1) {
+                    hosts.push(host);
+                    added = true;
+                }
+            }
+        }
+
+        text_field.val('');
+
+        if (added) {
+            input.val(hosts.join(config.separator));
+            render();
+            input.trigger('change');
+        }
+    };
+
+    var remove_host = function(host) {
+
+        var hosts = $.fn.zato.gateway.mcp._host_list_values(input);
+        var host_idx = hosts.indexOf(host);
+
+        hosts.splice(host_idx, 1);
+        input.val(hosts.join(config.separator));
+        render();
+        input.trigger('change');
+    };
+
+    // .. Enter and comma add what was typed - the event stops here so the
+    // form-wide Enter handling stays out of it - and Backspace in an empty
+    // field takes the last chip back ..
+    text_field.on('keydown', function(event) {
+
+        if (event.key === 'Enter' || event.key === ',') {
+            event.preventDefault();
+            event.stopPropagation();
+            commit_text();
+            return;
+        }
+
+        if (event.key === 'Backspace') {
+            if (!text_field.val()) {
+                var hosts = $.fn.zato.gateway.mcp._host_list_values(input);
+                if (hosts.length) {
+                    event.preventDefault();
+                    remove_host(hosts[hosts.length - 1]);
+                }
+            }
+        }
+    });
+
+    // .. leaving the field commits what was typed, so nothing is lost
+    // to a click on Next or Save ..
+    text_field.on('focus', function() {
+        container.addClass('chosen-container-active');
+    });
+
+    text_field.on('blur', function() {
+        container.removeClass('chosen-container-active');
+        commit_text();
+    });
+
+    // .. a chip's close mark removes it, a click anywhere else invites typing ..
+    choices.on('click', '.search-choice-close', function() {
+        remove_host($(this).data('host'));
+    });
+
+    choices.on('click', function(event) {
+        if (event.target === this) {
+            text_field.trigger('focus');
+        }
+    });
+
+    // .. the container follows the disabled state of the input it wraps,
+    // told about it the way the Chosen selects are ..
+    var sync_disabled = function() {
+        var is_disabled = input.prop('disabled');
+        container.toggleClass('chosen-disabled', is_disabled);
+        text_field.prop('disabled', is_disabled);
+    };
+
+    input.on('host-list:updated', sync_disabled);
+    sync_disabled();
+
+    // .. and the chips open on whatever the input arrived with.
+    render();
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Master toggles in the response safeguards fields - each key is a checkbox that
 // enables or disables the inputs listed under it.
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -390,6 +572,11 @@ $.fn.zato.gateway.mcp._init_safeguard_toggles = function(action) {
                 // Chosen mirrors the disabled state only when told the select changed
                 if (dependent.hasClass('chosen-multi')) {
                     dependent.trigger('chosen:updated');
+                }
+
+                // The host list widget mirrors it the same way
+                if (dependent.data('host-list-built')) {
+                    dependent.trigger('host-list:updated');
                 }
             });
         };

@@ -115,8 +115,13 @@ $(document).ready(function() {
                         {{ form.url_path }}
                     </div>
 
-                    <div class="wizard-section mcp-wizard-picker" id="mcp-wizard-picker-services">
-                        <div class="wizard-section-title"><label for="badge-filter-text-wizard">Services</label></div>
+                    <div class="wizard-option-card mcp-wizard-picker" id="mcp-wizard-picker-services">
+                        <div class="wizard-option-header" id="mcp-wizard-services-header">
+                            <svg class="wizard-chevron" id="mcp-wizard-services-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            <span class="wizard-option-label"><label for="badge-filter-text-wizard">Services</label></span>
+                            <span class="wizard-option-summary" id="mcp-wizard-summary-services"></span>
+                        </div>
+                        <div class="wizard-option-body" id="mcp-wizard-services-body">
                         <div class="badge-picker-filter" id="badge-filter-wizard">
                             <input type="text" id="badge-filter-text-wizard" placeholder="Filter services..." />
                             <button type="button" class="badge-filter-clear" id="badge-filter-clear-wizard">Clear</button>
@@ -132,10 +137,16 @@ $(document).ready(function() {
                                 <div class="badge-zone-body"></div>
                             </div>
                         </div>
+                        </div>
                     </div>
 
-                    <div class="wizard-section mcp-wizard-picker" id="mcp-wizard-picker-skills">
-                        <div class="wizard-section-title"><label for="badge-filter-text-skills-wizard">Skills</label></div>
+                    <div class="wizard-option-card mcp-wizard-picker" id="mcp-wizard-picker-skills">
+                        <div class="wizard-option-header" id="mcp-wizard-skills-header">
+                            <svg class="wizard-chevron" id="mcp-wizard-skills-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            <span class="wizard-option-label"><label for="badge-filter-text-skills-wizard">Skills</label></span>
+                            <span class="wizard-option-summary" id="mcp-wizard-summary-skills"></span>
+                        </div>
+                        <div class="wizard-option-body" id="mcp-wizard-skills-body">
                         <div class="badge-picker-filter" id="badge-filter-skills-wizard">
                             <input type="text" id="badge-filter-text-skills-wizard" placeholder="Filter skills..." />
                             <button type="button" class="badge-filter-clear" id="badge-filter-clear-skills-wizard">Clear</button>
@@ -151,10 +162,16 @@ $(document).ready(function() {
                                 <div class="badge-zone-body"></div>
                             </div>
                         </div>
+                        </div>
                     </div>
 
-                    <div class="wizard-section mcp-wizard-picker" id="mcp-wizard-picker-security">
-                        <div class="wizard-section-title"><label for="badge-filter-text-sec-wizard">Security</label></div>
+                    <div class="wizard-option-card mcp-wizard-picker" id="mcp-wizard-picker-security">
+                        <div class="wizard-option-header" id="mcp-wizard-security-header">
+                            <svg class="wizard-chevron" id="mcp-wizard-security-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            <span class="wizard-option-label"><label for="badge-filter-text-sec-wizard">Security</label></span>
+                            <span class="wizard-option-summary" id="mcp-wizard-summary-security"></span>
+                        </div>
+                        <div class="wizard-option-body" id="mcp-wizard-security-body">
                         <div class="badge-picker-filter" id="badge-filter-sec-wizard">
                             <input type="text" id="badge-filter-text-sec-wizard" placeholder="Filter security..." />
                             <button type="button" class="badge-filter-clear" id="badge-filter-clear-sec-wizard">Clear</button>
@@ -169,6 +186,7 @@ $(document).ready(function() {
                                 <div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>
                                 <div class="badge-zone-body"></div>
                             </div>
+                        </div>
                         </div>
                     </div>
 
