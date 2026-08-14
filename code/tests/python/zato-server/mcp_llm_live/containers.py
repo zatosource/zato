@@ -91,6 +91,18 @@ def _run_docker(arguments:'strlist', timeout:'int' = _docker_timeout) -> 'subpro
 
 # ################################################################################################################################
 
+def _pull_image(image:'str') -> 'None':
+    """ Pulls a docker image, streaming its progress.
+    """
+    command = ['docker', 'pull', image]
+
+    result = subprocess.run(command, timeout=_docker_create_timeout)
+
+    if result.returncode != 0:
+        raise Exception(f'Could not pull image `{image}`')
+
+# ################################################################################################################################
+
 def is_docker_available() -> 'bool':
     """ Whether the docker CLI exists and its daemon answers - the suite skips cleanly when it does not.
     """
@@ -115,13 +127,15 @@ def _ensure_container_running() -> 'None':
 
     # .. a non-zero exit code means there is no such container, so create it ..
     if result.returncode != 0:
+        _pull_image(Ollama_Image)
+
         result = _run_docker([
             'run', '-d',
             '--name', Ollama_Container_Name,
             '-p', f'{Ollama_Port}:{_ollama_internal_port}',
             '-v', f'{Ollama_Volume_Name}:/root/.ollama',
             Ollama_Image,
-        ], timeout=_docker_create_timeout)
+        ])
 
         if result.returncode != 0:
             raise Exception(f'Could not start Ollama -> {result.stderr}')
@@ -247,6 +261,8 @@ def _ensure_console_container_running() -> 'None':
 
     # .. a non-zero exit code means there is no such container, so create it ..
     if result.returncode != 0:
+        _pull_image(Console_Image)
+
         result = _run_docker([
             'run', '-d',
             '--name', Console_Container_Name,
@@ -256,7 +272,7 @@ def _ensure_console_container_running() -> 'None':
             '-e', f'WEBUI_SECRET_KEY={_console_secret_key}',
             '-v', f'{Console_Volume_Name}:/app/backend/data',
             Console_Image,
-        ], timeout=_docker_create_timeout)
+        ])
 
         if result.returncode != 0:
             raise Exception(f'Could not start the console -> {result.stderr}')
