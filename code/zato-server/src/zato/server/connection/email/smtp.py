@@ -52,6 +52,12 @@ _modes = {
 # for new messages, so only the plain-text kind is set explicitly.
 _ms365_body_type_text = 'Text'
 
+# Connections created before these fields existed have no such keys stored at all
+_default_ca_certs_path    = ''
+_default_helo_hostname    = ''
+_default_from_address     = ''
+_default_needs_tls_verify = True
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -153,21 +159,39 @@ class SMTPConnection(BaseConnection):
             self.config.timeout
         ]
 
-        # These may be empty strings in the configuration and the underlying transport expects None in such cases
-        ca_certs_path = self.config.ca_certs_path
+        # Connections created before these fields existed have no such keys stored at all ..
+        if 'ca_certs_path' in config:
+            ca_certs_path = config['ca_certs_path']
+        else:
+            ca_certs_path = _default_ca_certs_path
+
+        if 'helo_hostname' in config:
+            helo_hostname = config['helo_hostname']
+        else:
+            helo_hostname = _default_helo_hostname
+
+        if 'from_address' in config:
+            from_address = config['from_address']
+        else:
+            from_address = _default_from_address
+
+        if 'needs_tls_verify' in config:
+            needs_tls_verify = config['needs_tls_verify']
+        else:
+            needs_tls_verify = _default_needs_tls_verify
+
+        # .. and they may be empty strings in the configuration while the underlying transport expects None in such cases.
         if not ca_certs_path:
             ca_certs_path = None
 
-        helo_hostname = self.config.helo_hostname
         if not helo_hostname:
             helo_hostname = None
 
-        from_address = self.config.from_address
         if not from_address:
             from_address = None
 
         self.conn_kwargs:'stranydict' = {
-            'needs_tls_verify': self.config.needs_tls_verify,
+            'needs_tls_verify': needs_tls_verify,
             'ca_certs_path': ca_certs_path,
             'helo_hostname': helo_hostname,
             'from_address': from_address,

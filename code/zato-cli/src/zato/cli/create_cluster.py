@@ -11,6 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from copy import deepcopy
+from json import dumps
 from uuid import uuid4
 
 # Zato
@@ -339,6 +340,15 @@ class Create(ZatoCommand):
         smtp_conn.password = uuid4().hex
         smtp_conn.mode = EMAIL.SMTP.MODE.STARTTLS
         smtp_conn.ping_address = ''
+
+        # The transport details the connection reads on startup live in the opaque attributes
+        smtp_conn.opaque1 = dumps({
+            'ca_certs_path': '',
+            'helo_hostname': '',
+            'from_address': '',
+            'needs_tls_verify': True,
+        })
+
         smtp_conn.cluster = cluster
 
         session.add(smtp_conn)

@@ -23,7 +23,6 @@ import requests
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.mcp_ import make_jsonrpc_initialize
-from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dialog, submit_create_form
 
 # Zato - test helpers
 _keycloak_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'test'))
@@ -33,19 +32,26 @@ if _keycloak_directory not in sys.path:
 
 import keycloak_
 
+# Zato - test helpers - the wizard driver lives next to the tests
+_this_directory = os.path.dirname(__file__)
+
+if _this_directory not in sys.path:
+    sys.path.insert(0, _this_directory)
+
+import _mcp_wizard as wizard_page
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
     from requests import Response
-    from zato.common.typing_ import any_, anydict, strnone
+    from zato.common.typing_ import anydict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 from bearer_token import create_dynamic_definition, edit_group_members
-from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,8 +59,6 @@ from zato.common.typing_ import cast_
 logger = logging.getLogger(__name__)
 
 _Test_Name_Prefix = 'test.bearer.mcp.' + CryptoManager.generate_hex_string(32) + '.'
-
-_MCP_Page_Url = '/zato/gateway/mcp/?cluster=1'
 
 _Echo_Service = 'demo.echo'
 
@@ -133,30 +137,9 @@ def _initialize_until_status(server_port:'int', url_path:'str', token:'strnone',
 # ################################################################################################################################
 
 def _create_mcp_gateway(page:'Page', base_url:'str', gateway_name:'str', url_path:'str') -> 'None':
-    """ Creates an MCP gateway via the UI with the echo service assigned through the badge picker.
+    """ Creates an MCP gateway through the wizard with the echo service assigned through the badge picker.
     """
-
-    # Navigate to the MCP gateways page ..
-    navigate_to_page(page, base_url, _MCP_Page_Url)
-
-    # .. open the create dialog ..
-    open_create_dialog(page)
-
-    # .. fill in the basic fields ..
-    page.fill('#id_name', gateway_name)
-    page.fill('#id_url_path', url_path)
-
-    # .. assign the echo service via its badge ..
-    badge_selector = f'#badge-zone-available-create .badge-zone-body .security-badge[data-name="{_Echo_Service}"]'
-    badge = cast_('any_', page.wait_for_selector(badge_selector, state='visible', timeout=10000))
-    badge.click()
-
-    # .. submit and wait for the dialog to close ..
-    submit_create_form(page)
-
-    # .. and wait for the row to appear.
-    row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = wizard_page.create_gateway(page, base_url, gateway_name, url_path, services=[_Echo_Service])
 
 # ################################################################################################################################
 # ################################################################################################################################

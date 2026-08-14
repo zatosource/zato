@@ -23,24 +23,23 @@ if _this_directory not in sys.path:
     sys.path.insert(0, _this_directory)
 
 from test_mcp_response_controls import (
-    _create_basic_auth, _wait_until_authenticated, _Echo_Service, _Group_Edit_Log_Patterns, _Group_Log_Patterns,
-    _MCP_Page_Url)
-from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dialog, submit_create_form
+    _create_basic_auth, _wait_until_authenticated, _Echo_Service, _Group_Edit_Log_Patterns, _Group_Log_Patterns)
 
 from _client import MCPClient
+
+import _mcp_wizard as wizard_page
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anytuple
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 import pytest
-from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,72 +48,66 @@ logger = logging.getLogger(__name__)
 
 _Test_Name_Prefix = 'test.mcp.audit.' + CryptoManager.generate_hex_string(32) + '.'
 
-_Audit_Log_Url_Prefix = '/zato/audit-log/'
+_Audit_Log_URL_Prefix = '/zato/audit-log/'
+
+# How long to wait for a UI element to show, in milliseconds
+_UI_Timeout = 5000
+
+# How long to wait for the audit log table to finish loading, in milliseconds
+_Table_Timeout = 10000
 
 # The section title of the MCP source, compared lowercase because the heading is styled with CSS
 _MCP_Title = 'mcp audit log'
 
-# What each MCP request audits as
-_Event_Initialize = 'mcp-initialize'
-_Event_Tools_Call = 'mcp-tools-call'
+# How each MCP request reads on its row - the event labels the page renders
+_Event_Initialize_Label = 'MCP initialize'
+_Event_Tools_Call_Label = 'MCP tools call'
 
 _Outcome_OK = 'ok'
 
-# What the audit page renders empty cells as
-_Empty_Cell = '---'
-
-# Column indexes: Time, CID, Event, Tool, Caller, Outcome, Size, Data preview
-_Column_Time    = 0
-_Column_CID     = 1
-_Column_Event   = 2
-_Column_Tool    = 3
-_Column_Caller  = 4
-_Column_Outcome = 5
-_Column_Size    = 6
-_Column_Data    = 7
+# The audit page is a list-detail layout - each event is one row, everything
+# else the event says is read in the detail pane beside the list
+_Row_Selector = '#audit-log-table-body tr.audit-log-row'
+_Row_Event_Selector = '.audit-log-row-event'
+_Row_Main_Cell_Selector = '.audit-log-cell-main'
+_Pane_Head_Selector = '.audit-log-pane-head'
+_Details_Tab_Selector = '.audit-log-pane-tab[data-tab="details"]'
+_Details_Panel_Selector = '#audit-log-pane-panel-details .audit-log-pane-details'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _create_mcp_gateway(page:'Page', base_url:'str', gateway_name:'str', url_path:'str', definition_name:'str') -> 'None':
-    """ Creates an MCP gateway via the UI with the echo service and the given security definition assigned,
-    verifying on the way that the audit log checkbox is on by default for new gateways.
+    """ Creates an MCP gateway through the wizard with the echo service and the given security definition assigned,
+    verifying on the way that the audit log flag is on by default for new gateways.
     """
 
-    # Navigate to the MCP gateways page ..
-    navigate_to_page(page, base_url, _MCP_Page_Url)
+    # Open the create wizard and answer step 1 ..
+    wizard_page.open_wizard_create(page, base_url)
 
-    # .. open the create dialog ..
-    open_create_dialog(page)
-
-    # .. fill in the basic fields ..
     page.fill('#id_name', gateway_name)
     page.fill('#id_url_path', url_path)
 
-    # .. the audit log checkbox is checked by default for new gateways ..
-    assert page.is_checked('#id_is_audit_log_active'), 'Expected the audit log checkbox to be checked by default'
+    # .. the audit log flag is on by default for new gateways - the wizard keeps it
+    # in a hidden field the gateway options popover edits in place ..
+    assert page.is_checked('#id_is_audit_log_active'), 'Expected the audit log flag to be on by default'
 
     # .. assign the echo service via its badge ..
-    badge_selector = f'#badge-zone-available-create .badge-zone-body .security-badge[data-name="{_Echo_Service}"]'
-    badge = cast_('any_', page.wait_for_selector(badge_selector, state='visible', timeout=10000))
-    badge.click()
+    wizard_page.assign_badge(page, 'services', _Echo_Service)
 
     # .. assign the credentials via the security badge picker - the view auto-creates
     # the gateway's security group with this definition as its member ..
-    security_badge_selector = f'#badge-zone-available-sec-create .security-badge[data-name="{definition_name}"]'
-    security_badge = cast_('any_', page.wait_for_selector(security_badge_selector, state='visible', timeout=10000))
-    security_badge.click()
+    wizard_page.assign_badge(page, 'security', definition_name)
 
-    # .. submit and wait for the dialog to close ..
-    submit_create_form(page)
+    # .. save from the review step ..
+    wizard_page.save_create(page)
 
-    # .. and wait for the row to appear.
-    row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    # .. and confirm the row is on the list.
+    _ = wizard_page.go_to_list(page, base_url, gateway_name)
 
 # ################################################################################################################################
 
-def _run_one_conversation(mcp_url:'str', auth:'tuple') -> 'None':
+def _run_one_conversation(mcp_url:'str', auth:'anytuple') -> 'None':
     """ Runs one initialize plus tools/call round trip against the live gateway.
     """
 
@@ -140,18 +133,30 @@ def _wait_for_table(page:'Page') -> 'None':
             if (!rows.length) return false;
             return !body.querySelector('tr.detail-loading-row');
         }''',
-        timeout=10000)
+        timeout=_Table_Timeout)
 
 # ################################################################################################################################
 
-def _get_row_cells(row:'any_') -> 'anylist':
-    """ Returns the text of each cell in one audit log row.
+def _get_row_event_label(row:'any_') -> 'str':
+    """ What kind of event one row says it is - MCP events play no request-response role,
+    so each row names its kind in a label of its own. The text is read through text_content
+    because a narrow list hides the label with CSS while the detail pane is open.
     """
-    out = [] # type: anylist
+    event_element = row.query_selector(_Row_Event_Selector)
 
-    for cell in row.query_selector_all('td'):
-        out.append(cell.inner_text().strip())
+    out = event_element.text_content().strip()
+    return out
 
+# ################################################################################################################################
+
+def _get_row_main_text(row:'any_') -> 'str':
+    """ Everything one row's main cell says - the event label and the chips the row wears,
+    which for an MCP event are the tool and the caller. The text is read through text_content
+    because a narrow list hides the chips with CSS while the detail pane is open.
+    """
+    main_cell = row.query_selector(_Row_Main_Cell_Selector)
+
+    out = main_cell.text_content()
     return out
 
 # ################################################################################################################################
@@ -192,13 +197,13 @@ class TestMCPAuditLog:
         _run_one_conversation(mcp_url, auth)
 
         # .. go back to the MCP gateways page and click this gateway's Audit log link ..
-        navigate_to_page(page, base_url, _MCP_Page_Url)
+        _ = wizard_page.go_to_list(page, base_url, gateway_name)
 
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
+        row_selector = wizard_page.row_selector(gateway_name)
         page.click(f'{row_selector} a:text-is("Audit log")')
 
         # .. wait for the audit log page to load ..
-        page.wait_for_url(f'**{_Audit_Log_Url_Prefix}**')
+        page.wait_for_url(f'**{_Audit_Log_URL_Prefix}**')
         _wait_for_table(page)
 
         # .. the URL points to the MCP audit log of this gateway ..
@@ -210,51 +215,68 @@ class TestMCPAuditLog:
         title_text = title_text.lower()
         assert title_text.startswith(_MCP_Title), f'Expected the title to start with "{_MCP_Title}", got: "{title_text}"'
 
-        # .. the table shows the MCP columns, compared case-insensitively
-        # .. because the headers are uppercased with CSS ..
-        header_text = page.inner_text('#audit-log-table thead')
-        header_text = header_text.lower()
-        assert 'tool' in header_text, f'Expected a Tool column, got: "{header_text}"'
-        assert 'caller' in header_text, f'Expected a Caller column, got: "{header_text}"'
-        assert 'outcome' in header_text, f'Expected an Outcome column, got: "{header_text}"'
-
         # .. the polling loop that waited for enforcement produced its own initialize events,
         # .. so the newest two rows are what matters - the conversation's call and its initialize ..
-        rows = page.query_selector_all('#audit-log-table-body tr')
+        rows = page.query_selector_all(_Row_Selector)
         row_count = len(rows)
         assert row_count >= 2, f'Expected at least 2 audit log rows, got {row_count}'
 
-        tools_call_cells = _get_row_cells(rows[0])
-        initialize_cells = _get_row_cells(rows[1])
+        tools_call_row = rows[0]
+        initialize_row = rows[1]
 
         # .. events come newest first - the tools/call of the conversation tops the list ..
-        assert tools_call_cells[_Column_Event] == _Event_Tools_Call, \
-            f'Expected event "{_Event_Tools_Call}", got: "{tools_call_cells[_Column_Event]}"'
-        assert initialize_cells[_Column_Event] == _Event_Initialize, \
-            f'Expected event "{_Event_Initialize}", got: "{initialize_cells[_Column_Event]}"'
+        event_label = _get_row_event_label(tools_call_row)
+        assert event_label == _Event_Tools_Call_Label, \
+            f'Expected event "{_Event_Tools_Call_Label}", got: "{event_label}"'
 
-        # .. only the tools/call row names the tool ..
-        assert tools_call_cells[_Column_Tool] == _Echo_Service, \
-            f'Expected tool "{_Echo_Service}", got: "{tools_call_cells[_Column_Tool]}"'
-        assert initialize_cells[_Column_Tool] == _Empty_Cell, \
-            f'Expected no tool for initialize, got: "{initialize_cells[_Column_Tool]}"'
+        event_label = _get_row_event_label(initialize_row)
+        assert event_label == _Event_Initialize_Label, \
+            f'Expected event "{_Event_Initialize_Label}", got: "{event_label}"'
 
-        # .. every row names the caller and the outcome ..
-        for cells in (tools_call_cells, initialize_cells):
-            assert cells[_Column_Caller] == definition_name, \
-                f'Expected caller "{definition_name}", got: "{cells[_Column_Caller]}"'
-            assert cells[_Column_Outcome] == _Outcome_OK, \
-                f'Expected outcome "{_Outcome_OK}", got: "{cells[_Column_Outcome]}"'
-            assert cells[_Column_CID] != '', 'Expected a CID in every row'
-            assert cells[_Column_Time] != '', 'Expected a time in every row'
+        # .. the tools/call row wears the tool and the caller as its chips ..
+        main_text = _get_row_main_text(tools_call_row)
+        assert _Echo_Service in main_text, f'Expected the tool "{_Echo_Service}" on the row, got: "{main_text}"'
+        assert definition_name in main_text, f'Expected the caller "{definition_name}" on the row, got: "{main_text}"'
 
-        # .. the response size is recorded ..
-        size = int(tools_call_cells[_Column_Size])
-        assert size > 0, f'Expected a positive size, got {size}'
+        # .. while the initialize row names no tool, only the caller ..
+        main_text = _get_row_main_text(initialize_row)
+        assert _Echo_Service not in main_text, f'Expected no tool on the initialize row, got: "{main_text}"'
+        assert definition_name in main_text, f'Expected the caller "{definition_name}" on the row, got: "{main_text}"'
+
+        # .. selecting the newest row opens the detail pane on it,
+        # with the head reporting the outcome ..
+        tools_call_row.click()
+
+        _ = page.wait_for_selector(f'{_Pane_Head_Selector} .audit-log-outcome-filter', state='visible', timeout=_UI_Timeout)
+
+        outcome_text = page.inner_text(f'{_Pane_Head_Selector} .audit-log-outcome-filter')
+        outcome_text = outcome_text.strip().lower()
+        assert outcome_text == _Outcome_OK, f'Expected outcome "{_Outcome_OK}", got: "{outcome_text}"'
+
+        # .. the Details tab reads everything the event says ..
+        page.click(_Details_Tab_Selector)
+        _ = page.wait_for_selector(_Details_Panel_Selector, state='visible', timeout=_UI_Timeout)
+
+        # The fact labels are uppercased with CSS, so the whole text is compared lowercase,
+        # each label together with the value standing right under it
+        details_text = page.inner_text(_Details_Panel_Selector)
+        details_text = details_text.lower()
+
+        # .. the CID leads, the tool, the caller and the size all follow ..
+        cid_text = page.inner_text(f'{_Details_Panel_Selector} .audit-log-cid-link')
+        assert cid_text.strip() != '', 'Expected a CID in the detail pane'
+
+        tool_line = f'tool\n{_Echo_Service}'
+        assert tool_line in details_text, f'Expected a Tool line in the detail pane, got: "{details_text}"'
+
+        caller_line = f'caller\n{definition_name}'
+        assert caller_line in details_text, f'Expected a Caller line in the detail pane, got: "{details_text}"'
+
+        assert 'size\n' in details_text, f'Expected a Size line in the detail pane, got: "{details_text}"'
 
         # .. and the payload itself never reaches the audit log.
-        assert 'Customer name here' not in tools_call_cells[_Column_Data], \
-            f'Expected no payload in the data preview, got: "{tools_call_cells[_Column_Data]}"'
+        assert 'customer name here' not in details_text, \
+            f'Expected no payload in the detail pane, got: "{details_text}"'
 
 # ################################################################################################################################
 # ################################################################################################################################

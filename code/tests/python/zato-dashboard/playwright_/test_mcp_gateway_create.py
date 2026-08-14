@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import os
+import sys
 import time
 from http.client import FORBIDDEN, NOT_FOUND, OK
 
@@ -23,29 +24,60 @@ import requests
 from zato.common.crypto.api import CryptoManager
 from zato.common.test import rand_string
 from zato.common.test.mcp_ import make_jsonrpc_initialize
-from zato.common.test.playwright_pubsub import create_basic_auth, navigate_to_page, open_create_dialog, \
-    submit_create_form, submit_edit_form
-from zato.common.typing_ import any_, cast_
+from zato.common.test.playwright_pubsub import create_basic_auth, navigate_to_page, open_create_dialog, submit_create_form
+from zato.common.typing_ import cast_
+
+# Zato - test helpers - the wizard driver lives next to the tests
+_this_directory = os.path.dirname(__file__)
+
+if _this_directory not in sys.path:
+    sys.path.insert(0, _this_directory)
+
+import _mcp_wizard as wizard_page
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict, anylist, anynone
+    from zato.common.typing_ import any_, anydict, anylist, anynone
+
+    # Referenced only inside cast_ strings, which linters do not read as annotations
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
-_Page_Url_Pattern = '/zato/gateway/mcp/?cluster=1'
+_Page_URL_Pattern = '/zato/gateway/mcp/?cluster=1'
 
 _Test_Name_Prefix = 'test.mcp.playwright.' + rand_string() + '.'
 
 # What the server logs when a gateway with no security at all is probed - the default deny
 # these tests confirm, not a fault
 _No_Members_Log = 'is protected by security groups that have no members'
+
+# Column indexes on the gateway list - numbering, selection, name, active,
+# URL path, client filters, size caps, services, security
+_Column_Name       = 2
+_Column_Is_Active  = 3
+_Column_URL_Path   = 4
+_Column_Services   = 7
+_Column_Security   = 8
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _delete_gateway_row(page:'Page', item_id:'str', gateway_name:'str') -> 'None':
+    """ Deletes a gateway through its list row's confirmation popup and waits for the row to go.
+    """
+    row_selector = wizard_page.row_selector(gateway_name)
+
+    page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
+    _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+    page.click('#popup_ok')
+    _ = page.wait_for_selector(row_selector, state='hidden', timeout=5000)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,7 +113,7 @@ class TestMCPGatewayCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate to the MCP gateways page ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
+        navigate_to_page(page, base_url, _Page_URL_Pattern)
 
         # .. verify the page heading ..
         heading = cast_('any_', page.query_selector('h2.zato'))
@@ -124,29 +156,18 @@ class TestMCPGatewayCreate:
         gateway_name = _Test_Name_Prefix + 'minimal'
         url_path = '/mcp/test/' + rand_string()
 
-        # Navigate to the MCP gateways page ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
+        # Create the gateway through the wizard - name and URL path only ..
+        _ = wizard_page.create_gateway(page, base_url, gateway_name, url_path)
 
-        # .. open the create dialog ..
-        open_create_dialog(page)
-
-        # .. fill in the fields ..
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', url_path)
-
-        # .. submit and wait for dialog to close ..
-        submit_create_form(page)
-
-        # .. verify the new row appears in the table ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+        # .. the create flow ends back on the list with the new row on it ..
+        row = wizard_page.go_to_list(page, base_url, gateway_name)
 
         # .. extract cell texts from the row ..
         cells = row.query_selector_all('td')
 
-        name_cell_text = cells[2].inner_text().strip()
-        is_active_text = cells[3].inner_text().strip()
-        url_path_text = cells[4].inner_text().strip()
+        name_cell_text = cells[_Column_Name].inner_text().strip()
+        is_active_text = cells[_Column_Is_Active].inner_text().strip()
+        url_path_text = cells[_Column_URL_Path].inner_text().strip()
 
         logger.info('[test_create_minimal] name=%s is_active=%s url_path=%s', name_cell_text, is_active_text, url_path_text)
 
@@ -182,71 +203,50 @@ class TestMCPGatewayCreate:
         gateway_name = _Test_Name_Prefix + 'with-services'
         url_path = '/mcp/test-service/' + rand_string()
 
-        # Navigate to the MCP gateways page ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
+        # Open the create wizard and answer step 1 ..
+        wizard_page.open_wizard_create(page, base_url)
 
-        # .. open the create dialog ..
-        open_create_dialog(page)
-
-        # .. fill in the fields ..
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        # .. wait for the service badge picker to load ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 2',
-            timeout=10000
-        )
+        # .. open the services card and wait for at least two badges to pick from ..
+        wizard_page.open_picker_card(page, 'services')
+        wizard_page.wait_for_available_badges(page, 'services', 2)
 
         # .. pick the first two available service badges ..
-        available_badges = page.query_selector_all('#badge-zone-available-create .badge-zone-body .security-badge')
+        available_names = wizard_page.get_available_badge_names(page, 'services')
 
-        service_name_1 = available_badges[0].get_attribute('data-name')
-        service_name_2 = available_badges[1].get_attribute('data-name')
+        service_name_1 = available_names[0]
+        service_name_2 = available_names[1]
 
         logger.info('[test_create_with_services] selecting services: %s, %s', service_name_1, service_name_2)
 
-        # .. click badges to move them to assigned zone ..
-        available_badges[0].click()
-        available_badges[1].click()
+        # .. assign both by name through the card ..
+        wizard_page.assign_badge(page, 'services', service_name_1)
+        wizard_page.assign_badge(page, 'services', service_name_2)
 
-        # .. verify assigned count shows 2 ..
-        assigned_count_text = page.inner_text('#badge-zone-assigned-create .badge-zone-count')
+        # .. verify the assigned zone counts 2 ..
+        assigned_count_text = page.inner_text('#badge-zone-assigned-wizard .badge-zone-count')
         assert assigned_count_text == '2', f'Expected assigned count "2", got: "{assigned_count_text}"'
 
-        # .. submit and wait for dialog to close ..
-        submit_create_form(page)
+        # .. save from the review step ..
+        wizard_page.save_create(page)
 
         # .. verify the new row appears with service count = 2 ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+        row = wizard_page.go_to_list(page, base_url, gateway_name)
         cells = row.query_selector_all('td')
 
-        service_count_text = cells[5].inner_text().strip()
+        service_count_text = cells[_Column_Services].inner_text().strip()
         logger.info('[test_create_with_services] service_count_text=%s', service_count_text)
 
         assert service_count_text == '2', \
             f'Expected service count "2", got: "{service_count_text}"'
 
-        # .. reopen the edit dialog to confirm services are pre-selected ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
-
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
-
-        # .. wait for the badge picker to load in edit mode ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-assigned-edit .badge-zone-body .security-badge").length === 2',
-            timeout=10000
-        )
+        # .. reopen the edit wizard to confirm the services are pre-selected ..
+        wizard_page.open_wizard_edit(page, base_url, gateway_name)
 
         # .. verify the two services are in the assigned zone ..
-        assigned_badges = page.query_selector_all('#badge-zone-assigned-edit .badge-zone-body .security-badge')
-        assigned_names = set()
-
-        for badge in assigned_badges:
-            assigned_names.add(badge.get_attribute('data-name'))
+        assigned_names = set(wizard_page.get_assigned_badge_names(page, 'services'))
 
         logger.info('[test_create_with_services] assigned_names in edit=%s', assigned_names)
 
@@ -281,11 +281,7 @@ class TestMCPGatewayCreate:
 
         assert gateway_data is not None, f'Gateway "{gateway_name}" not found in ODB'
 
-        services = gateway_data.get('services')
-        if services is None:
-            services = []
-
-        stored_services = set(services)
+        stored_services = set(gateway_data['services'])
         logger.info('[test_create_with_services] stored_services=%s', stored_services)
 
         assert service_name_1 in stored_services, \
@@ -317,43 +313,27 @@ class TestMCPGatewayCreate:
 
         logger.info('[test_create_with_security] created sec def: name=%s username=%s', security_name, security_username)
 
-        # .. navigate to the MCP gateways page ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
+        # .. open the create wizard and answer step 1 ..
+        wizard_page.open_wizard_create(page, base_url)
 
-        # .. open the create dialog ..
-        open_create_dialog(page)
-
-        # .. fill in the fields ..
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        # .. wait for the security badge picker to load ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
+        # .. assign the badge matching our newly created sec def ..
+        wizard_page.assign_badge(page, 'security', security_name)
 
-        # .. pick the badge matching our newly created sec def ..
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = page.query_selector(badge_selector)
-        assert security_badge is not None, f'Could not find badge for sec def "{security_name}"'
-
-        security_badge.click()
-
-        # .. verify assigned count shows 1 ..
-        assigned_count_text = page.inner_text('#badge-zone-assigned-sec-create .badge-zone-count')
+        # .. verify the assigned zone counts 1 ..
+        assigned_count_text = page.inner_text('#badge-zone-assigned-sec-wizard .badge-zone-count')
         assert assigned_count_text == '1', f'Expected assigned count "1", got: "{assigned_count_text}"'
 
-        # .. submit and wait for dialog to close ..
-        submit_create_form(page)
+        # .. save from the review step ..
+        wizard_page.save_create(page)
 
         # .. verify the new row appears with security count = 1 ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+        row = wizard_page.go_to_list(page, base_url, gateway_name)
         cells = row.query_selector_all('td')
 
-        # Column index 6 is the security members count
-        security_count_text = cells[6].inner_text().strip()
+        security_count_text = cells[_Column_Security].inner_text().strip()
         logger.info('[test_create_with_security] security_count_text=%s', security_count_text)
 
         assert security_count_text == '1', f'Expected security count "1", got: "{security_count_text}"'
@@ -363,7 +343,7 @@ class TestMCPGatewayCreate:
         assert response.status_code == OK, f'Expected OK with valid creds, got {response.status_code}: {response.text}'
 
         # .. POST with invalid creds - should get FORBIDDEN ..
-        response = _post_mcp(server_port, url_path, auth=('bogus_user', 'bogus_pass'))
+        response = _post_mcp(server_port, url_path, auth=('invalid_user', 'invalid_password'))
         assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN with invalid creds, got {response.status_code}: {response.text}'
 
 # ################################################################################################################################
@@ -402,43 +382,25 @@ class TestMCPGatewayCreate:
 
         logger.info('[test_export] created sec defs: basic_auth=%s apikey=%s', basic_auth_name, apikey_name)
 
-        # .. navigate to the MCP gateways page ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
+        # .. open the create wizard and answer step 1 ..
+        wizard_page.open_wizard_create(page, base_url)
 
-        # .. open the create dialog ..
-        open_create_dialog(page)
-
-        # .. fill in the fields ..
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        # .. wait for both of our security badges to be available ..
-        basic_auth_badge_selector = \
-            f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{basic_auth_name}"]'
-        apikey_badge_selector = \
-            f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{apikey_name}"]'
-
-        basic_auth_badge = page.wait_for_selector(basic_auth_badge_selector, state='visible', timeout=10000)
-        apikey_badge = page.wait_for_selector(apikey_badge_selector, state='visible', timeout=10000)
-
-        assert basic_auth_badge is not None, f'Could not find badge for sec def "{basic_auth_name}"'
-        assert apikey_badge is not None, f'Could not find badge for sec def "{apikey_name}"'
-
         # .. assign both definitions to the gateway ..
-        basic_auth_badge.click()
-        apikey_badge.click()
+        wizard_page.assign_badge(page, 'security', basic_auth_name)
+        wizard_page.assign_badge(page, 'security', apikey_name)
 
-        # .. verify the assigned count shows 2 ..
-        assigned_count_text = page.inner_text('#badge-zone-assigned-sec-create .badge-zone-count')
+        # .. verify the assigned zone counts 2 ..
+        assigned_count_text = page.inner_text('#badge-zone-assigned-sec-wizard .badge-zone-count')
         assert assigned_count_text == '2', f'Expected assigned count "2", got: "{assigned_count_text}"'
 
-        # .. submit and wait for the dialog to close ..
-        submit_create_form(page)
+        # .. save from the review step ..
+        wizard_page.save_create(page)
 
         # .. wait for the new row to appear ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
-        assert row is not None, f'Could not find the row for gateway "{gateway_name}"'
+        row = wizard_page.go_to_list(page, base_url, gateway_name)
 
         # .. click the Export link and capture the download ..
         export_link = row.query_selector('a:text-is("Export")')
@@ -510,40 +472,25 @@ class TestMCPGatewayCreate:
         new_name = _Test_Name_Prefix + 'rename-new'
         new_url_path = '/mcp/rename-new/' + rand_string()
 
-        # Navigate to the MCP gateways page ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create the initial gateway ..
-        open_create_dialog(page)
-        page.fill('#id_name', old_name)
-        page.fill('#id_url_path', old_url_path)
-        submit_create_form(page)
-
-        # .. verify it appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{old_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+        # Create the initial gateway through the wizard ..
+        _ = wizard_page.create_gateway(page, base_url, old_name, old_url_path)
 
         # .. confirm old URL is routable (403 = no security but gateway exists) ..
         response = _post_mcp(server_port, old_url_path)
         assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN on old URL, got {response.status_code}'
 
-        # .. open the edit dialog ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
-
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        # .. open the edit wizard ..
+        wizard_page.open_wizard_edit(page, base_url, old_name)
 
         # .. change name and url_path ..
-        page.fill('#edit-div #id_edit-name', new_name)
-        page.fill('#edit-div #id_edit-url_path', new_url_path)
+        page.fill('#id_edit-name', new_name)
+        page.fill('#id_edit-url_path', new_url_path)
 
-        # .. submit the edit form ..
-        submit_edit_form(page)
+        # .. save the edit ..
+        wizard_page.save_edit(page)
 
-        # .. verify the row now shows the new name ..
-        new_row_selector = f'#data-table tbody tr:has(td:text-is("{new_name}"))'
-        _ = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
+        # .. verify the list now shows the new name ..
+        _ = wizard_page.go_to_list(page, base_url, new_name)
 
         logger.info('[test_edit_rename] renamed %s -> %s, %s -> %s', old_name, new_name, old_url_path, new_url_path)
 
@@ -576,50 +523,21 @@ class TestMCPGatewayCreate:
         security_username = security_info['username']
         security_password = security_info['password']
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create the gateway with security ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', old_url_path)
-
-        # .. wait for the security badge picker ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        # .. select our sec def ..
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = page.query_selector(badge_selector)
-        assert security_badge is not None, f'Could not find badge for sec def "{security_name}"'
-        security_badge.click()
-
-        submit_create_form(page)
+        # .. create the gateway through the wizard with the sec def assigned ..
+        _ = wizard_page.create_gateway(page, base_url, gateway_name, old_url_path, security=[security_name])
 
         # .. verify the gateway works with valid creds at old URL ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
-
         response = _post_mcp(server_port, old_url_path, auth=(security_username, security_password))
         assert response.status_code == OK, f'Expected OK at old URL with valid creds, got {response.status_code}'
 
-        # .. open edit dialog ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
-
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        # .. open the edit wizard ..
+        wizard_page.open_wizard_edit(page, base_url, gateway_name)
 
         # .. change only the url_path ..
-        page.fill('#edit-div #id_edit-url_path', new_url_path)
+        page.fill('#id_edit-url_path', new_url_path)
 
-        # .. submit ..
-        submit_edit_form(page)
-
-        # .. wait for the table to refresh ..
-        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        # .. save the edit ..
+        wizard_page.save_edit(page)
 
         logger.info('[test_edit_rename_preserves_security] renamed url_path %s -> %s', old_url_path, new_url_path)
 
@@ -632,7 +550,7 @@ class TestMCPGatewayCreate:
         assert response.status_code == OK, f'Expected OK at new URL with valid creds, got {response.status_code}'
 
         # .. new URL with invalid creds should be forbidden ..
-        response = _post_mcp(server_port, new_url_path, auth=('bogus_user', 'bogus_pass'))
+        response = _post_mcp(server_port, new_url_path, auth=('invalid_user', 'invalid_password'))
         assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN at new URL with bad creds, got {response.status_code}'
 
 # ################################################################################################################################
@@ -650,35 +568,19 @@ class TestMCPGatewayCreate:
         gateway_name = _Test_Name_Prefix + 'deactivate'
         url_path = '/mcp/deactivate/' + rand_string()
 
-        # Navigate to the MCP gateways page ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create the gateway ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', url_path)
-        submit_create_form(page)
-
-        # .. verify it appears and is active ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+        # Create the gateway through the wizard ..
+        _ = wizard_page.create_gateway(page, base_url, gateway_name, url_path)
 
         # .. confirm URL is routable while active ..
         response = _post_mcp(server_port, url_path)
         assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN (active, no sec), got {response.status_code}'
 
-        # .. open the edit dialog ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
+        # .. open the edit wizard and uncheck is_active ..
+        wizard_page.open_wizard_edit(page, base_url, gateway_name)
+        page.uncheck('#id_edit-is_active')
 
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
-
-        # .. uncheck is_active ..
-        page.uncheck('#edit-div #id_edit-is_active')
-
-        # .. submit ..
-        submit_edit_form(page)
+        # .. save the edit ..
+        wizard_page.save_edit(page)
 
         logger.info('[test_edit_deactivate] deactivated gateway %s', gateway_name)
 
@@ -701,38 +603,22 @@ class TestMCPGatewayCreate:
         gateway_name = _Test_Name_Prefix + 'reactivate'
         url_path = '/mcp/reactivate/' + rand_string()
 
-        # Navigate to the MCP gateways page ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
+        # Create the gateway through the wizard ..
+        _ = wizard_page.create_gateway(page, base_url, gateway_name, url_path)
 
-        # .. create the gateway ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', url_path)
-        submit_create_form(page)
-
-        # .. verify it appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
-
-        # .. open edit and deactivate ..
-        item_id_cell = cast_('any_', row).query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
-
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
-        page.uncheck('#edit-div #id_edit-is_active')
-        submit_edit_form(page)
+        # .. open the edit wizard and deactivate ..
+        wizard_page.open_wizard_edit(page, base_url, gateway_name)
+        page.uncheck('#id_edit-is_active')
+        wizard_page.save_edit(page)
 
         # .. confirm URL is now 404 ..
         response = _post_mcp(server_port, url_path)
         assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND when inactive, got {response.status_code}'
 
-        # .. reopen edit and reactivate ..
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
-        page.check('#edit-div #id_edit-is_active')
-        submit_edit_form(page)
+        # .. reopen the edit wizard and reactivate ..
+        wizard_page.open_wizard_edit(page, base_url, gateway_name)
+        page.check('#id_edit-is_active')
+        wizard_page.save_edit(page)
 
         logger.info('[test_edit_reactivate] reactivated gateway %s', gateway_name)
 
@@ -760,66 +646,47 @@ class TestMCPGatewayCreate:
         security_username = security_info['username']
         security_password = security_info['password']
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
+        # .. open the create wizard and answer step 1 ..
+        wizard_page.open_wizard_create(page, base_url)
 
-        # .. create the gateway with 1 service and security ..
-        open_create_dialog(page)
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        # .. wait for service badges ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 2',
-            timeout=10000
-        )
+        # .. pick only the first available service ..
+        wizard_page.open_picker_card(page, 'services')
+        wizard_page.wait_for_available_badges(page, 'services', 2)
 
-        # .. pick only the first service ..
-        available_services = page.query_selector_all('#badge-zone-available-create .badge-zone-body .security-badge')
-        service_name_1 = available_services[0].get_attribute('data-name')
-        available_services[0].click()
+        available_names = wizard_page.get_available_badge_names(page, 'services')
+        service_name_1 = available_names[0]
+
+        wizard_page.assign_badge(page, 'services', service_name_1)
 
         # .. assign security ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = cast_('any_', page.query_selector(badge_selector))
-        security_badge.click()
+        wizard_page.assign_badge(page, 'security', security_name)
 
-        submit_create_form(page)
-
-        # .. verify row appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+        # .. save from the review step ..
+        wizard_page.save_create(page)
 
         # .. initialize to confirm gateway is live ..
         response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
         assert response.status_code == OK, f'Expected OK, got {response.status_code}: {response.text}'
 
-        # .. open edit dialog ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
+        # .. open the edit wizard ..
+        wizard_page.open_wizard_edit(page, base_url, gateway_name)
 
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        # .. pick a second service out of what is still available ..
+        wizard_page.open_picker_card(page, 'services')
+        wizard_page.wait_for_available_badges(page, 'services', 1)
 
-        # .. wait for service badges in edit mode ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-edit .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
+        available_names_edit = wizard_page.get_available_badge_names(page, 'services')
+        service_name_2 = available_names_edit[0]
 
-        # .. pick a second service ..
-        available_services_edit = page.query_selector_all('#badge-zone-available-edit .badge-zone-body .security-badge')
-        service_name_2 = available_services_edit[0].get_attribute('data-name')
-        available_services_edit[0].click()
+        wizard_page.assign_badge(page, 'services', service_name_2)
 
         logger.info('[test_edit_add_service] adding service: %s (already has: %s)', service_name_2, service_name_1)
 
-        # .. submit edit ..
-        submit_edit_form(page)
+        # .. save the edit ..
+        wizard_page.save_edit(page)
 
         # .. initialize a session, then send tools/list with the session ID ..
         url = f'http://127.0.0.1:{server_port}{url_path}'
@@ -871,65 +738,39 @@ class TestMCPGatewayCreate:
         security_username = security_info['username']
         security_password = security_info['password']
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
+        # .. open the create wizard and answer step 1 ..
+        wizard_page.open_wizard_create(page, base_url)
 
-        # .. create the gateway with 2 services and security ..
-        open_create_dialog(page)
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        # .. wait for service badges ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 2',
-            timeout=10000
-        )
-
         # .. pick two services ..
-        available_services = page.query_selector_all('#badge-zone-available-create .badge-zone-body .security-badge')
-        service_name_1 = available_services[0].get_attribute('data-name')
-        service_name_2 = available_services[1].get_attribute('data-name')
-        available_services[0].click()
-        available_services[1].click()
+        wizard_page.open_picker_card(page, 'services')
+        wizard_page.wait_for_available_badges(page, 'services', 2)
+
+        available_names = wizard_page.get_available_badge_names(page, 'services')
+        service_name_1 = available_names[0]
+        service_name_2 = available_names[1]
+
+        wizard_page.assign_badge(page, 'services', service_name_1)
+        wizard_page.assign_badge(page, 'services', service_name_2)
 
         # .. assign security ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = cast_('any_', page.query_selector(badge_selector))
-        security_badge.click()
+        wizard_page.assign_badge(page, 'security', security_name)
 
-        submit_create_form(page)
+        # .. save from the review step ..
+        wizard_page.save_create(page)
 
-        # .. verify row appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+        # .. open the edit wizard ..
+        wizard_page.open_wizard_edit(page, base_url, gateway_name)
 
-        # .. open edit dialog ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
-
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
-
-        # .. wait for assigned badges in edit mode ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-assigned-edit .badge-zone-body .security-badge").length === 2',
-            timeout=10000
-        )
-
-        # .. remove the first service by clicking it in the assigned zone ..
-        remove_selector = f'#badge-zone-assigned-edit .badge-zone-body .security-badge[data-name="{service_name_1}"]'
-        badge_to_remove = page.query_selector(remove_selector)
-        assert badge_to_remove is not None, f'Could not find badge "{service_name_1}" in assigned zone'
-        badge_to_remove.click()
+        # .. remove the first service through the assigned zone ..
+        wizard_page.remove_assigned_badge(page, 'services', service_name_1)
 
         logger.info('[test_edit_remove_service] removing service: %s (keeping: %s)', service_name_1, service_name_2)
 
-        # .. submit edit ..
-        submit_edit_form(page)
+        # .. save the edit ..
+        wizard_page.save_edit(page)
 
         # .. initialize a session, then send tools/list with the session ID ..
         url = f'http://127.0.0.1:{server_port}{url_path}'
@@ -986,29 +827,8 @@ class TestMCPGatewayCreate:
         security_username_2 = security_info_2['username']
         security_password_2 = security_info_2['password']
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create the gateway with only the first sec def ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', url_path)
-
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 2',
-            timeout=10000
-        )
-
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name_1}"]'
-        security_badge = page.query_selector(badge_selector)
-        assert security_badge is not None, f'Could not find badge for "{security_name_1}"'
-        security_badge.click()
-
-        submit_create_form(page)
-
-        # .. verify row appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+        # .. create the gateway through the wizard with only the first sec def ..
+        _ = wizard_page.create_gateway(page, base_url, gateway_name, url_path, security=[security_name_1])
 
         # .. confirm first creds work, second does not ..
         response = _post_mcp(server_port, url_path, auth=(security_username_1, security_password_1))
@@ -1017,26 +837,12 @@ class TestMCPGatewayCreate:
         response = _post_mcp(server_port, url_path, auth=(security_username_2, security_password_2))
         assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN for sec_2 before edit, got {response.status_code}'
 
-        # .. open edit dialog ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
+        # .. open the edit wizard and add the second sec def ..
+        wizard_page.open_wizard_edit(page, base_url, gateway_name)
+        wizard_page.assign_badge(page, 'security', security_name_2)
 
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
-
-        # .. wait for the security badge picker in edit mode ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-edit .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        # .. add the second sec def ..
-        badge_selector = f'#badge-zone-available-sec-edit .badge-zone-body .security-badge[data-name="{security_name_2}"]'
-        security_badge_2 = page.query_selector(badge_selector)
-        assert security_badge_2 is not None, f'Could not find badge for "{security_name_2}" in edit available zone'
-        security_badge_2.click()
-
-        submit_edit_form(page)
+        # .. save the edit ..
+        wizard_page.save_edit(page)
 
         logger.info('[test_edit_add_security_member] added sec def %s to gateway %s', security_name_2, gateway_name)
 
@@ -1072,33 +878,8 @@ class TestMCPGatewayCreate:
         security_username_2 = security_info_2['username']
         security_password_2 = security_info_2['password']
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create the gateway with both sec defs ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', url_path)
-
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 2',
-            timeout=10000
-        )
-
-        badge_1 = page.query_selector(
-            f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name_1}"]')
-        badge_2 = page.query_selector(
-            f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name_2}"]')
-        assert badge_1 is not None, f'Could not find badge for "{security_name_1}"'
-        assert badge_2 is not None, f'Could not find badge for "{security_name_2}"'
-        badge_1.click()
-        badge_2.click()
-
-        submit_create_form(page)
-
-        # .. verify row appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+        # .. create the gateway through the wizard with both sec defs ..
+        _ = wizard_page.create_gateway(page, base_url, gateway_name, url_path, security=[security_name_1, security_name_2])
 
         # .. confirm both work ..
         response = _post_mcp(server_port, url_path, auth=(security_username_1, security_password_1))
@@ -1107,26 +888,12 @@ class TestMCPGatewayCreate:
         response = _post_mcp(server_port, url_path, auth=(security_username_2, security_password_2))
         assert response.status_code == OK, f'Expected OK for sec_2 before edit, got {response.status_code}'
 
-        # .. open edit dialog ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
+        # .. open the edit wizard and remove the first sec def through the assigned zone ..
+        wizard_page.open_wizard_edit(page, base_url, gateway_name)
+        wizard_page.remove_assigned_badge(page, 'security', security_name_1)
 
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
-
-        # .. wait for assigned sec badges in edit mode ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-assigned-sec-edit .badge-zone-body .security-badge").length === 2',
-            timeout=10000
-        )
-
-        # .. remove the first sec def by clicking it in the assigned zone ..
-        remove_selector = f'#badge-zone-assigned-sec-edit .badge-zone-body .security-badge[data-name="{security_name_1}"]'
-        badge_to_remove = page.query_selector(remove_selector)
-        assert badge_to_remove is not None, f'Could not find badge "{security_name_1}" in assigned sec zone'
-        badge_to_remove.click()
-
-        submit_edit_form(page)
+        # .. save the edit ..
+        wizard_page.save_edit(page)
 
         logger.info('[test_edit_remove_security_member] removed sec def %s from gateway %s', security_name_1, gateway_name)
 
@@ -1158,54 +925,19 @@ class TestMCPGatewayCreate:
         security_username = security_info['username']
         security_password = security_info['password']
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create the gateway with security ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', url_path)
-
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = page.query_selector(badge_selector)
-        assert security_badge is not None, f'Could not find badge for "{security_name}"'
-        security_badge.click()
-
-        submit_create_form(page)
-
-        # .. verify row appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+        # .. create the gateway through the wizard with security ..
+        _ = wizard_page.create_gateway(page, base_url, gateway_name, url_path, security=[security_name])
 
         # .. confirm creds work ..
         response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
         assert response.status_code == OK, f'Expected OK before edit, got {response.status_code}'
 
-        # .. open edit dialog ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
+        # .. open the edit wizard and remove the one assigned sec def ..
+        wizard_page.open_wizard_edit(page, base_url, gateway_name)
+        wizard_page.remove_assigned_badge(page, 'security', security_name)
 
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
-
-        # .. wait for assigned sec badges in edit mode ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-assigned-sec-edit .badge-zone-body .security-badge").length === 1',
-            timeout=10000
-        )
-
-        # .. remove all sec defs by clicking the one assigned badge ..
-        remove_selector = f'#badge-zone-assigned-sec-edit .badge-zone-body .security-badge[data-name="{security_name}"]'
-        badge_to_remove = page.query_selector(remove_selector)
-        assert badge_to_remove is not None, f'Could not find badge "{security_name}" in assigned sec zone'
-        badge_to_remove.click()
-
-        submit_edit_form(page)
+        # .. save the edit ..
+        wizard_page.save_edit(page)
 
         logger.info('[test_edit_remove_all_security] removed all security from gateway %s', gateway_name)
 
@@ -1224,7 +956,7 @@ class TestMCPGatewayCreate:
 
     def test_create_duplicate_name(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates a gateway, then tries to create another with the same name.
-        Asserts the UI blocks submission (dialog stays open, field gets attention indicator).
+        Asserts the wizard blocks the save - the taken indicator shows and the page stays.
         """
 
         page = logged_in_page
@@ -1234,33 +966,29 @@ class TestMCPGatewayCreate:
         url_path_1 = '/mcp/duplicate-1/' + rand_string()
         url_path_2 = '/mcp/duplicate-2/' + rand_string()
 
-        # Navigate to the MCP gateways page ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create the first gateway ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', url_path_1)
-        submit_create_form(page)
-
-        # .. verify it appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        # Create the first gateway through the wizard ..
+        _ = wizard_page.create_gateway(page, base_url, gateway_name, url_path_1)
 
         # .. try to create a second gateway with the same name ..
-        open_create_dialog(page)
+        wizard_page.open_wizard_create(page, base_url)
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path_2)
 
-        # .. click submit ..
-        page.click('#create-div input[type="submit"]')
-
-        # .. the dialog should stay open because the name is taken ..
+        # .. the live check marks the name as taken ..
         _ = page.wait_for_selector('.zato-unique-taken', state='visible', timeout=5000)
 
-        # .. verify the dialog is still visible ..
-        dialog_visible = page.is_visible('#create-div')
-        assert dialog_visible, 'Expected create dialog to remain open for duplicate name'
+        # .. a save from the review step is refused ..
+        wizard_page.go_to_step(page, wizard_page.Review_Step)
+        page.click('#mcp-wizard-next')
+
+        # .. no save confirmation shows and the wizard stays on its page ..
+        page.wait_for_timeout(2000)
+
+        saved_visible = page.is_visible(f'text="{wizard_page.Saved_Label}"')
+        assert not saved_visible, 'Expected no save confirmation for duplicate name'
+
+        wizard_visible = page.is_visible('#mcp-wizard')
+        assert wizard_visible, 'Expected the wizard to remain open for duplicate name'
 
         logger.info('[test_create_duplicate_name] duplicate name correctly blocked')
 
@@ -1268,7 +996,7 @@ class TestMCPGatewayCreate:
 
     def test_create_duplicate_url_path(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates a gateway with a URL path, then tries to create another with the same path.
-        Asserts the UI blocks submission (dialog stays open, field gets attention indicator).
+        Asserts the wizard blocks the save - the taken indicator shows and the page stays.
         """
 
         page = logged_in_page
@@ -1278,33 +1006,29 @@ class TestMCPGatewayCreate:
         gateway_name_2 = _Test_Name_Prefix + 'dup-path-2'
         url_path = '/mcp/duplicate-path/' + rand_string()
 
-        # Navigate to the MCP gateways page ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create the first gateway ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name_1)
-        page.fill('#id_url_path', url_path)
-        submit_create_form(page)
-
-        # .. verify it appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name_1}"))'
-        _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        # Create the first gateway through the wizard ..
+        _ = wizard_page.create_gateway(page, base_url, gateway_name_1, url_path)
 
         # .. try to create a second gateway with the same url_path ..
-        open_create_dialog(page)
+        wizard_page.open_wizard_create(page, base_url)
         page.fill('#id_name', gateway_name_2)
         page.fill('#id_url_path', url_path)
 
-        # .. click submit ..
-        page.click('#create-div input[type="submit"]')
-
-        # .. the dialog should stay open because the url_path is taken ..
+        # .. the live check marks the path as taken ..
         _ = page.wait_for_selector('.zato-unique-taken', state='visible', timeout=5000)
 
-        # .. verify the dialog is still visible ..
-        dialog_visible = page.is_visible('#create-div')
-        assert dialog_visible, 'Expected create dialog to remain open for duplicate url_path'
+        # .. a save from the review step is refused ..
+        wizard_page.go_to_step(page, wizard_page.Review_Step)
+        page.click('#mcp-wizard-next')
+
+        # .. no save confirmation shows and the wizard stays on its page ..
+        page.wait_for_timeout(2000)
+
+        saved_visible = page.is_visible(f'text="{wizard_page.Saved_Label}"')
+        assert not saved_visible, 'Expected no save confirmation for duplicate url_path'
+
+        wizard_visible = page.is_visible('#mcp-wizard')
+        assert wizard_visible, 'Expected the wizard to remain open for duplicate url_path'
 
         logger.info('[test_create_duplicate_url_path] duplicate url_path correctly blocked')
 
@@ -1330,38 +1054,9 @@ class TestMCPGatewayCreate:
         security_username = security_info['username']
         security_password = security_info['password']
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create a gateway with demo.echo and security ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', url_path)
-
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        # .. pick demo.echo ..
-        service_badge_selector = '#badge-zone-available-create .badge-zone-body .security-badge[data-name="demo.echo"]'
-        service_badge = page.query_selector(service_badge_selector)
-        assert service_badge is not None, 'Could not find badge for "demo.echo"'
-        service_badge.click()
-
-        # .. assign security ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = cast_('any_', page.query_selector(badge_selector))
-        security_badge.click()
-
-        submit_create_form(page)
-
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        # .. create a gateway through the wizard with demo.echo and security ..
+        _ = wizard_page.create_gateway(
+            page, base_url, gateway_name, url_path, services=['demo.echo'], security=[security_name])
 
         # .. hot-deploy a new service ..
         pickup_directory = os.path.join(server_dir, 'pickup', 'incoming', 'services')
@@ -1386,15 +1081,12 @@ class MCPTestHotDeployTools(Service):
         # .. wait for the service to be picked up ..
         time.sleep(5)
 
-        # .. open the edit dialog to add the hot-deployed service ..
-        item_id_cell = cast_('any_', row).query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
-
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        # .. open the edit wizard to add the hot-deployed service ..
+        wizard_page.open_wizard_edit(page, base_url, gateway_name)
+        wizard_page.open_picker_card(page, 'services')
 
         # .. wait for the hot-deployed service to appear in the available services badge picker ..
-        badge_selector_edit = f'#badge-zone-available-edit .badge-zone-body .security-badge[data-name="{hot_deploy_service_name}"]'
+        badge_selector_edit = wizard_page.available_badge_selector('services', hot_deploy_service_name)
 
         deadline = time.monotonic() + 15
 
@@ -1402,20 +1094,18 @@ class MCPTestHotDeployTools(Service):
             badge = page.query_selector(badge_selector_edit)
             if badge:
                 break
-            # .. close and reopen edit to refresh the badge list ..
-            page.keyboard.press('Escape')
-            _ = page.wait_for_selector('#edit-div', state='hidden', timeout=3000)
+            # .. reopen the wizard to refresh the badge list ..
             time.sleep(1)
-            page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-            _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+            wizard_page.open_wizard_edit(page, base_url, gateway_name)
+            wizard_page.open_picker_card(page, 'services')
         else:
             os.remove(service_file_path)
             raise AssertionError(
                 f'Hot-deployed service "{hot_deploy_service_name}" did not appear in edit badge picker within 15s')
 
-        badge.click()
+        wizard_page.assign_badge(page, 'services', hot_deploy_service_name)
 
-        submit_edit_form(page)
+        wizard_page.save_edit(page)
 
         # .. verify tools/list now includes the hot-deployed service ..
         url = f'http://127.0.0.1:{server_port}{url_path}'
@@ -1447,17 +1137,10 @@ class MCPTestHotDeployTools(Service):
         # .. the gateway must not outlive the hot-deployed service its allow list references,
         # otherwise a fresh server start would fail rebuilding the MCP tool registries,
         # so delete the gateway first ..
-        mcp_list_url = f'{_Page_Url_Pattern}&query={gateway_name}'
-        navigate_to_page(page, base_url, mcp_list_url)
+        _ = wizard_page.go_to_list(page, base_url, gateway_name)
+        item_id = wizard_page.get_gateway_id(page, gateway_name)
 
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
-        item_id_cell = cast_('any_', row).query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
-
-        page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
-        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
-        page.click('#popup_ok')
-        _ = page.wait_for_selector(row_selector, state='hidden', timeout=5000)
+        _delete_gateway_row(page, item_id, gateway_name)
 
         # .. delete the basic auth definition ..
         basic_auth_page_url = f'/zato/security/basic-auth/?cluster=1&query={security_name}'
@@ -1500,26 +1183,8 @@ class MCPTestHotDeployTools(Service):
         security_username = security_info['username']
         old_password = security_info['password']
 
-        # .. navigate to MCP gateways and create a gateway with this sec def ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', url_path)
-
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = page.query_selector(badge_selector)
-        assert security_badge is not None, f'Could not find badge for "{security_name}"'
-        security_badge.click()
-
-        submit_create_form(page)
-
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        # .. create a gateway through the wizard with this sec def ..
+        _ = wizard_page.create_gateway(page, base_url, gateway_name, url_path, security=[security_name])
 
         # .. verify the original password works ..
         response = _post_mcp(server_port, url_path, auth=(security_username, old_password))
@@ -1587,48 +1252,9 @@ class MCPTestHotDeployTools(Service):
         security_username_b = security_info_b['username']
         security_password_b = security_info_b['password']
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create gateway A with security A ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name_a)
-        page.fill('#id_url_path', url_path_a)
-
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 2',
-            timeout=10000
-        )
-
-        badge_selector_a = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name_a}"]'
-        security_badge_a = page.query_selector(badge_selector_a)
-        assert security_badge_a is not None, f'Could not find badge for "{security_name_a}"'
-        security_badge_a.click()
-
-        submit_create_form(page)
-
-        row_selector_a = f'#data-table tbody tr:has(td:text-is("{gateway_name_a}"))'
-        _ = page.wait_for_selector(row_selector_a, state='visible', timeout=5000)
-
-        # .. create gateway B with security B ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name_b)
-        page.fill('#id_url_path', url_path_b)
-
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        badge_selector_b = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name_b}"]'
-        security_badge_b = page.query_selector(badge_selector_b)
-        assert security_badge_b is not None, f'Could not find badge for "{security_name_b}"'
-        security_badge_b.click()
-
-        submit_create_form(page)
-
-        row_selector_b = f'#data-table tbody tr:has(td:text-is("{gateway_name_b}"))'
-        _ = page.wait_for_selector(row_selector_b, state='visible', timeout=5000)
+        # .. create gateway A with security A and gateway B with security B, both through the wizard ..
+        _ = wizard_page.create_gateway(page, base_url, gateway_name_a, url_path_a, security=[security_name_a])
+        _ = wizard_page.create_gateway(page, base_url, gateway_name_b, url_path_b, security=[security_name_b])
 
         # .. verify own creds work on own gateway ..
         response = _post_mcp(server_port, url_path_a, auth=(security_username_a, security_password_a))
@@ -1716,72 +1342,12 @@ class MCPTestAllowListB(Service):
         security_username = security_info['username']
         security_password = security_info['password']
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create gateway A restricted to service A ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name_a)
-        page.fill('#id_url_path', url_path_a)
-
-        # .. wait for service badges to load ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        # .. select service A ..
-        service_badge_selector_a = f'#badge-zone-available-create .badge-zone-body .security-badge[data-name="{service_name_a}"]'
-        service_badge_a = page.query_selector(service_badge_selector_a)
-        assert service_badge_a is not None, f'Could not find service badge for "{service_name_a}"'
-        service_badge_a.click()
-
-        # .. assign security ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = page.query_selector(badge_selector)
-        assert security_badge is not None, f'Could not find security badge for "{security_name}"'
-        security_badge.click()
-
-        submit_create_form(page)
-
-        row_selector_a = f'#data-table tbody tr:has(td:text-is("{gateway_name_a}"))'
-        _ = page.wait_for_selector(row_selector_a, state='visible', timeout=5000)
-
-        # .. create gateway B restricted to service B ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name_b)
-        page.fill('#id_url_path', url_path_b)
-
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        # .. select service B ..
-        service_badge_selector_b = f'#badge-zone-available-create .badge-zone-body .security-badge[data-name="{service_name_b}"]'
-        service_badge_b = page.query_selector(service_badge_selector_b)
-        assert service_badge_b is not None, f'Could not find service badge for "{service_name_b}"'
-        service_badge_b.click()
-
-        # .. assign the same security ..
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        security_badge = page.query_selector(badge_selector)
-        assert security_badge is not None, f'Could not find security badge for "{security_name}" (gateway B)'
-        security_badge.click()
-
-        submit_create_form(page)
-
-        row_selector_b = f'#data-table tbody tr:has(td:text-is("{gateway_name_b}"))'
-        _ = page.wait_for_selector(row_selector_b, state='visible', timeout=5000)
+        # .. create gateway A restricted to service A and gateway B restricted to service B,
+        # both through the wizard and sharing the one sec def ..
+        _ = wizard_page.create_gateway(
+            page, base_url, gateway_name_a, url_path_a, services=[service_name_a], security=[security_name])
+        _ = wizard_page.create_gateway(
+            page, base_url, gateway_name_b, url_path_b, services=[service_name_b], security=[security_name])
 
         # .. verify gateway A only exposes service A ..
         url_a = f'http://127.0.0.1:{server_port}{url_path_a}'
@@ -1846,27 +1412,16 @@ class MCPTestAllowListB(Service):
         # .. the gateways must not outlive the hot-deployed services their allow lists reference,
         # otherwise a fresh server start would fail rebuilding the MCP tool registries,
         # so delete gateway A first ..
-        mcp_list_url = f'{_Page_Url_Pattern}&query={_Test_Name_Prefix}allow-'
-        navigate_to_page(page, base_url, mcp_list_url)
+        _ = wizard_page.go_to_list(page, base_url, gateway_name_a)
+        item_id_a = wizard_page.get_gateway_id(page, gateway_name_a)
 
-        row_a = cast_('any_', page.wait_for_selector(row_selector_a, state='visible', timeout=5000))
-        item_id_cell_a = row_a.query_selector('td[class*="item_id_"]')
-        item_id_a = item_id_cell_a.inner_text().strip()
-
-        page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id_a}")')
-        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
-        page.click('#popup_ok')
-        _ = page.wait_for_selector(row_selector_a, state='hidden', timeout=5000)
+        _delete_gateway_row(page, item_id_a, gateway_name_a)
 
         # .. then delete gateway B ..
-        row_b = cast_('any_', page.wait_for_selector(row_selector_b, state='visible', timeout=5000))
-        item_id_cell_b = row_b.query_selector('td[class*="item_id_"]')
-        item_id_b = item_id_cell_b.inner_text().strip()
+        _ = wizard_page.go_to_list(page, base_url, gateway_name_b)
+        item_id_b = wizard_page.get_gateway_id(page, gateway_name_b)
 
-        page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id_b}")')
-        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
-        page.click('#popup_ok')
-        _ = page.wait_for_selector(row_selector_b, state='hidden', timeout=5000)
+        _delete_gateway_row(page, item_id_b, gateway_name_b)
 
         # .. delete the shared basic auth definition ..
         basic_auth_page_url = f'/zato/security/basic-auth/?cluster=1&query={security_name}'
@@ -1906,47 +1461,18 @@ class MCPTestAllowListB(Service):
         security_username = security_info['username']
         security_password = security_info['password']
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create the gateway ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', url_path)
-
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = page.query_selector(badge_selector)
-        assert security_badge is not None, f'Could not find badge for "{security_name}"'
-        security_badge.click()
-
-        submit_create_form(page)
-
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+        # .. create the gateway through the wizard ..
+        item_id = wizard_page.create_gateway(page, base_url, gateway_name, url_path, security=[security_name])
 
         # .. verify the gateway is live ..
         response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
         assert response.status_code == OK, f'Expected OK before delete, got {response.status_code}'
 
-        # .. get the item id for the delete call ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
-
         # .. delete the gateway via UI ..
-        page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
-        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
-        page.click('#popup_ok')
-
-        # .. wait for the row to disappear ..
-        _ = page.wait_for_selector(row_selector, state='hidden', timeout=5000)
+        _delete_gateway_row(page, item_id, gateway_name)
 
         # .. verify the row is gone ..
-        row_after_delete = page.query_selector(row_selector)
+        row_after_delete = page.query_selector(wizard_page.row_selector(gateway_name))
         assert row_after_delete is None, f'Row "{gateway_name}" should be gone after delete'
 
         # .. verify the URL returns 404 ..
@@ -1959,42 +1485,22 @@ class MCPTestAllowListB(Service):
 
     def test_mcp_delete_gateway_cleans_channel_rest(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates an MCP gateway, deletes it via the UI,
-        then verifies no orphan REST channel with the same name remains in the ODB.
+        then verifies no REST channel with the gateway's name remains in the ODB.
         """
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        gateway_name = _Test_Name_Prefix + 'orphan'
-        url_path = '/mcp/orphan-test/' + rand_string()
+        gateway_name = _Test_Name_Prefix + 'delete-cleanup'
+        url_path = '/mcp/delete-cleanup/' + rand_string()
 
         # Create a basic auth ..
-        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'orphan')
+        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'delete-cleanup')
         security_name = security_info['name']
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create the gateway ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', url_path)
-
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = page.query_selector(badge_selector)
-        assert security_badge is not None, f'Could not find badge for "{security_name}"'
-        security_badge.click()
-
-        submit_create_form(page)
-
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+        # .. create the gateway through the wizard ..
+        item_id = wizard_page.create_gateway(page, base_url, gateway_name, url_path, security=[security_name])
 
         # .. verify the REST channel exists before deletion ..
         api_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.http-soap.get-list'
@@ -2016,18 +1522,12 @@ class MCPTestAllowListB(Service):
         assert found_before, f'REST channel "{gateway_name}" should exist before deletion'
 
         # .. delete the MCP gateway ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
-
-        page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
-        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
-        page.click('#popup_ok')
-        _ = page.wait_for_selector(row_selector, state='hidden', timeout=5000)
+        _delete_gateway_row(page, item_id, gateway_name)
 
         # .. wait for cleanup to propagate ..
         page.wait_for_timeout(1000)
 
-        # .. verify no orphan REST channel remains ..
+        # .. verify no REST channel with the gateway's name remains ..
         rest_response = requests.post(api_url, data=api_payload, headers=api_headers, auth=api_auth, timeout=10)
         assert rest_response.status_code == OK, f'API get-list failed after delete: {rest_response.status_code}'
 
@@ -2039,7 +1539,7 @@ class MCPTestAllowListB(Service):
                 found_after = True
                 break
 
-        assert not found_after, f'Orphan REST channel "{gateway_name}" still exists after MCP gateway deletion'
+        assert not found_after, f'REST channel "{gateway_name}" still exists after MCP gateway deletion'
 
 # ################################################################################################################################
 
@@ -2061,32 +1561,8 @@ class MCPTestAllowListB(Service):
         security_username = security_info['username']
         security_password = security_info['password']
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create the gateway ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', url_path)
-
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = page.query_selector(badge_selector)
-        assert security_badge is not None, f'Could not find badge for "{security_name}"'
-        security_badge.click()
-
-        submit_create_form(page)
-
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
-
-        # .. get the item id ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
+        # .. create the gateway through the wizard ..
+        item_id = wizard_page.create_gateway(page, base_url, gateway_name, url_path, security=[security_name])
 
         # .. click delete but cancel ..
         page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
@@ -2097,7 +1573,7 @@ class MCPTestAllowListB(Service):
         _ = page.wait_for_selector('#popup_container', state='hidden', timeout=5000)
 
         # .. verify the row is still there ..
-        row_after_cancel = page.query_selector(row_selector)
+        row_after_cancel = page.query_selector(wizard_page.row_selector(gateway_name))
         assert row_after_cancel is not None, f'Row "{gateway_name}" should still exist after cancel'
 
         # .. verify the URL still works ..
@@ -2118,27 +1594,21 @@ class MCPTestAllowListB(Service):
         _gateway_count = 45
         _page_size = 20
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create 45 gateways ..
+        # .. create 45 gateways, each through the wizard ..
         for idx in range(_gateway_count):
             gateway_name = _Test_Name_Prefix + f'pag-{idx:02d}'
             url_path = f'/mcp/pagination-{idx:02d}/' + rand_string()
 
-            open_create_dialog(page)
+            wizard_page.open_wizard_create(page, base_url)
             page.fill('#id_name', gateway_name)
             page.fill('#id_url_path', url_path)
-            submit_create_form(page)
-
-            row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-            _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+            wizard_page.save_create(page)
 
         logger.info('[test_mcp_list_pagination] created %d gateways', _gateway_count)
 
         # .. reload to get a fresh paginated view, filtered to this test's gateways only,
         # otherwise gateways left over from other tests in this file would add extra pages ..
-        pagination_list_url = f'{_Page_Url_Pattern}&query={_Test_Name_Prefix}pag-'
+        pagination_list_url = f'{_Page_URL_Pattern}&query={_Test_Name_Prefix}pag-'
         navigate_to_page(page, base_url, pagination_list_url)
         _ = page.wait_for_selector('#data-table', state='visible', timeout=5000)
 
@@ -2227,26 +1697,16 @@ class MCPTestAllowListB(Service):
         gateway_name_match = _Test_Name_Prefix + 'srch-' + unique_token
         gateway_name_other = _Test_Name_Prefix + 'srch-other'
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
+        # .. create a gateway with the unique token in its name and another one without it,
+        # both through the wizard ..
+        _ = wizard_page.create_gateway(page, base_url, gateway_name_match, '/mcp/search-match/' + rand_string())
+        _ = wizard_page.create_gateway(page, base_url, gateway_name_other, '/mcp/search-other/' + rand_string())
 
-        # .. create a gateway with the unique token in its name ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name_match)
-        page.fill('#id_url_path', '/mcp/search-match/' + rand_string())
-        submit_create_form(page)
+        row_selector_match = wizard_page.row_selector(gateway_name_match)
+        row_selector_other = wizard_page.row_selector(gateway_name_other)
 
-        row_selector_match = f'#data-table tbody tr:has(td:text-is("{gateway_name_match}"))'
-        _ = page.wait_for_selector(row_selector_match, state='visible', timeout=5000)
-
-        # .. create another gateway without the token ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name_other)
-        page.fill('#id_url_path', '/mcp/search-other/' + rand_string())
-        submit_create_form(page)
-
-        row_selector_other = f'#data-table tbody tr:has(td:text-is("{gateway_name_other}"))'
-        _ = page.wait_for_selector(row_selector_other, state='visible', timeout=5000)
+        # .. go back to the unfiltered list ..
+        navigate_to_page(page, base_url, _Page_URL_Pattern)
 
         # .. search for the unique token ..
         search_input = page.query_selector('input[name="query"]')
@@ -2291,46 +1751,20 @@ class MCPTestAllowListB(Service):
         security_username_nonmember = security_info_nonmember['username']
         security_password_nonmember = security_info_nonmember['password']
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # 1. CREATE with security ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', url_path)
-
-        _ = page.wait_for_function(
-            'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
-            timeout=10000
-        )
-
-        badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name_member}"]'
-        security_badge = page.query_selector(badge_selector)
-        assert security_badge is not None, f'Could not find badge for "{security_name_member}"'
-        security_badge.click()
-
-        submit_create_form(page)
-
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        # 1. CREATE through the wizard with security ..
+        item_id = wizard_page.create_gateway(page, base_url, gateway_name, url_path, security=[security_name_member])
 
         # 2. POST with member creds -> 200 ..
         response = _post_mcp(server_port, url_path, auth=(security_username_member, security_password_member))
         assert response.status_code == OK, f'Expected OK with member creds, got {response.status_code}'
 
-        # 3. EDIT RENAME via UI ..
-        item_id_cell = cast_('any_', row).query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
+        # 3. EDIT RENAME through the wizard ..
+        wizard_page.open_wizard_edit(page, base_url, gateway_name)
+        page.fill('#id_edit-name', new_name)
+        page.fill('#id_edit-url_path', new_url_path)
+        wizard_page.save_edit(page)
 
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
-
-        page.fill('#edit-div #id_edit-name', new_name)
-        page.fill('#edit-div #id_edit-url_path', new_url_path)
-        submit_edit_form(page)
-
-        new_row_selector = f'#data-table tbody tr:has(td:text-is("{new_name}"))'
-        _ = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
+        _ = wizard_page.go_to_list(page, base_url, new_name)
 
         # 4. POST new URL with member creds -> 200 ..
         response = _post_mcp(server_port, new_url_path, auth=(security_username_member, security_password_member))
@@ -2344,34 +1778,27 @@ class MCPTestAllowListB(Service):
         response = _post_mcp(server_port, new_url_path, auth=(security_username_nonmember, security_password_nonmember))
         assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN for non-member, got {response.status_code}'
 
-        # 7. EDIT DEACTIVATE via UI ..
-        row = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
-        page.uncheck('#edit-div #id_edit-is_active')
-        submit_edit_form(page)
+        # 7. EDIT DEACTIVATE through the wizard ..
+        wizard_page.open_wizard_edit(page, base_url, new_name)
+        page.uncheck('#id_edit-is_active')
+        wizard_page.save_edit(page)
 
         # 8. URL -> 404 ..
         response = _post_mcp(server_port, new_url_path, auth=(security_username_member, security_password_member))
         assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND after deactivation, got {response.status_code}'
 
-        # 9. EDIT REACTIVATE via UI ..
-        row = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
-        page.check('#edit-div #id_edit-is_active')
-        submit_edit_form(page)
+        # 9. EDIT REACTIVATE through the wizard ..
+        wizard_page.open_wizard_edit(page, base_url, new_name)
+        page.check('#id_edit-is_active')
+        wizard_page.save_edit(page)
 
         # 10. URL -> 200 ..
         response = _post_mcp(server_port, new_url_path, auth=(security_username_member, security_password_member))
         assert response.status_code == OK, f'Expected OK after reactivation, got {response.status_code}'
 
-        # 11. DELETE via UI ..
-        row = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
-        page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
-        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
-        page.click('#popup_ok')
-        _ = page.wait_for_selector(new_row_selector, state='hidden', timeout=5000)
+        # 11. DELETE via the list page ..
+        _ = wizard_page.go_to_list(page, base_url, new_name)
+        _delete_gateway_row(page, item_id, new_name)
 
         # 12. URL -> 404 ..
         page.wait_for_timeout(1000)
@@ -2384,7 +1811,7 @@ class MCPTestAllowListB(Service):
     def test_mcp_concurrent_edit_via_ui_and_api(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates a gateway via UI, edits its url_path via the API, refreshes the UI page,
         asserts the new url_path is displayed in the table, then edits via UI again
-        to confirm no stale data issues.
+        to confirm the edit form carries the values the API saved.
         """
 
         page = logged_in_page
@@ -2396,17 +1823,8 @@ class MCPTestAllowListB(Service):
         api_url_path = '/mcp/concurrent-api/' + rand_string()
         ui_url_path = '/mcp/concurrent-ui/' + rand_string()
 
-        # .. navigate to MCP gateways ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-
-        # .. create the gateway via UI ..
-        open_create_dialog(page)
-        page.fill('#id_name', gateway_name)
-        page.fill('#id_url_path', original_url_path)
-        submit_create_form(page)
-
-        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        # .. create the gateway through the wizard ..
+        _ = wizard_page.create_gateway(page, base_url, gateway_name, original_url_path)
 
         # .. get the gateway's ID from the API ..
         api_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.generic.connection.get-list'
@@ -2443,11 +1861,9 @@ class MCPTestAllowListB(Service):
         assert edit_response.status_code == OK, f'API edit failed: {edit_response.status_code} {edit_response.text}'
 
         # .. refresh the UI page ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
-        _ = page.wait_for_selector('#data-table', state='visible', timeout=5000)
+        row = wizard_page.go_to_list(page, base_url, gateway_name)
 
         # .. the table should show the API-set url_path ..
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
         row_text = row.inner_text()
         assert api_url_path in row_text, \
             f'Expected API url_path "{api_url_path}" in row, got: {row_text}'
@@ -2460,15 +1876,10 @@ class MCPTestAllowListB(Service):
         response = _post_mcp(server_port, original_url_path)
         assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND at original url, got {response.status_code}'
 
-        # .. now edit via UI to change url_path again ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
-        item_id = item_id_cell.inner_text().strip()
-
-        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
-
-        page.fill('#edit-div #id_edit-url_path', ui_url_path)
-        submit_edit_form(page)
+        # .. now edit through the wizard to change url_path again ..
+        wizard_page.open_wizard_edit(page, base_url, gateway_name)
+        page.fill('#id_edit-url_path', ui_url_path)
+        wizard_page.save_edit(page)
 
         # .. verify UI-set URL is live ..
         response = _post_mcp(server_port, ui_url_path)

@@ -176,6 +176,22 @@ wizard.init = function(options) {
     }
 
     wizard._kitInit(options);
+
+    // The name and the path a gateway already has are its own, so keeping them
+    // is not the same as taking someone else's - this is what the uniqueness
+    // checks compare each edit against
+    if(options.is_edit) {
+        wizard._rememberOwnValue(wizard.config.nameField);
+        wizard._rememberOwnValue('url_path');
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard._rememberOwnValue = function(fieldName) {
+
+    var field = wizard.field(fieldName);
+    field.data('zato-original-value', field.val());
 };
 
 // ////////////////////////////////////////////////////////////////////////

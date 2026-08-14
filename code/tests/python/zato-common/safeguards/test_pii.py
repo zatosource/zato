@@ -19,6 +19,11 @@ _valid_iban  = 'DE89370400440532013000'
 _broken_iban = 'DE89370400440532013001'
 _email       = 'alice@example.com'
 
+# A valid IMEI in its compact and 2-6-6-1 grouped forms, and one with a broken Luhn check digit.
+_valid_imei_compact = '490154203237518'
+_valid_imei_grouped = '49-015420-323751-8'
+_broken_imei        = '490154203237519'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -209,6 +214,48 @@ class TestCleanerCache:
         assert len(_cache) == Max_Cleaner_Cache_Entries
 
         _cache.clear()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestIMEI:
+
+    def test_both_written_forms_leave_the_token(self) -> 'None':
+
+        # The compact run and the 2-6-6-1 grouped form of the same device are both
+        # found and each leaves the detector's token behind.
+        result = _new_result()
+        config = _new_config([], ['intl_imei'], [])
+        value = {'note': f'Device {_valid_imei_compact} also written as {_valid_imei_grouped}'}
+
+        cleaned = remove_pii(value, result, config)
+
+        assert cleaned == {'note': 'Device {{INTL_IMEI}} also written as {{INTL_IMEI}}'}
+        assert result.pii_removed == {'intl_imei': 2}
+
+    def test_broken_check_digit_survives_with_validation_on(self) -> 'None':
+
+        result = _new_result()
+        config = _new_config([], ['intl_imei'], [])
+        value = {'note': f'Device {_broken_imei} fails the Luhn check'}
+
+        cleaned = remove_pii(value, result, config)
+
+        assert _broken_imei in cleaned['note']
+        assert result.pii_removed == {}
+
+    def test_the_intl_land_runs_the_detector(self) -> 'None':
+
+        # The detector belongs to the intl land, so selecting the land alone is enough.
+        result = _new_result()
+        config = _new_config(['intl'], [], [])
+        value = {'note': f'Device {_valid_imei_compact} under order ORD-2026-000123'}
+
+        cleaned = remove_pii(value, result, config)
+
+        assert _valid_imei_compact not in cleaned['note']
+        assert 'ORD-2026-000123' in cleaned['note']
+        assert result.pii_removed == {'intl_imei': 1}
 
 # ################################################################################################################################
 # ################################################################################################################################

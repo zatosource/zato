@@ -140,6 +140,10 @@ _shaping_display_defaults = {
     'safeguards_url_mode':            Url_Mode_Remove,
 }
 
+# The server's simple-type parser turns 0 and 1 into booleans on their way into the opaque
+# storage, so these numeric fields may come back as bools and have to be read as numbers again.
+_numeric_shaping_fields = _shaping_int_fields + ('characters_per_token',)
+
 # The JSON Schema that exported MCP gateway documents conform to
 _export_schema_url = 'https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json'
 
@@ -173,6 +177,22 @@ _sec_type_to_export_header = {
         'isSecret': True,
     },
 }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def numeric_from_bool(value:'any_') -> 'any_':
+    """ The opaque storage stores 0 as False and 1 as True, so a numeric field read back
+    from it turns these two values into numbers again - False means no value at all.
+    """
+    if value is False:
+        out = ''
+    elif value is True:
+        out = 1
+    else:
+        out = value
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -272,6 +292,13 @@ class Index(_Index):
         for name, default_value in _shaping_display_defaults.items():
             if not hasattr(item, name):
                 setattr(item, name, default_value)
+
+        # The numeric fields the opaque storage stored as booleans are numbers again
+        # before the hidden columns are rendered.
+        for name in _numeric_shaping_fields:
+            value = getattr(item, name)
+            value = numeric_from_bool(value)
+            setattr(item, name, value)
 
         # What the size caps cell of this row says before it is clicked
         item.size_cap_label = get_size_cap_label(item.max_response_size, item.size_cap_mode)
@@ -770,6 +797,11 @@ def _read_gateway(req:'any_', id:'str') -> 'strdict':
     for name, default_value in _shaping_display_defaults.items():
         if name not in item_dict:
             item_dict[name] = default_value
+
+    # The numeric fields the opaque storage stored as booleans are numbers again
+    # before the edit form is prefilled with them.
+    for name in _numeric_shaping_fields:
+        item_dict[name] = numeric_from_bool(item_dict[name])
 
     return item_dict
 
