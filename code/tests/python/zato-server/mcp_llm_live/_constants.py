@@ -168,8 +168,10 @@ Path_Iso_C = '/mcp/llm/iso-c'
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The token cap the shaping gateways enforce and the threshold the threshold gateway skips below
-Shaping_Cap_Tokens    = 80
+# The token cap the shaping gateways enforce and the threshold the threshold gateway skips below.
+# The cap must stay at or above the minimum usable byte budget for trimming,
+# which is 1000 tokens under the default four characters per token.
+Shaping_Cap_Tokens    = 4000
 Shaping_Threshold_Tokens = 1_000_000
 
 # The characters-per-token ratios of the two ratio gateways - the same payload passes under

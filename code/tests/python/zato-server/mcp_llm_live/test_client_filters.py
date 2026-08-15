@@ -33,6 +33,9 @@ _filter_key = 'response_filter'
 # The expression the tests project invoice totals with
 _totals_expression = 'invoices.total'
 
+# What a final answer sounds like when the model reports that something did not work
+_failure_words = ('cannot', 'could not', "couldn't", 'unable', 'fail', 'error', 'not possible')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -229,13 +232,22 @@ class TestClientFiltersWithLLM:
         assert state['was_broken'], result.messages
 
         error_calls = []
+        success_calls = []
 
         for call in result.tool_calls:
             if call.is_error:
                 error_calls.append(call)
+            else:
+                success_calls.append(call)
 
         assert error_calls, result.messages
         assert _filter_key in error_calls[0].result_text, error_calls[0].result_text
+
+        # The model either retried and answered from the real totals, or reported the failure.
+        if success_calls:
+            assert '101' in result.final_text, result.final_text
+        else:
+            assert _helpers.contains_any_word(result.final_text, _failure_words), result.final_text
 
 # ################################################################################################################################
 # ################################################################################################################################

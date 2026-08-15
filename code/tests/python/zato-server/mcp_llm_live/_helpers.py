@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import unicodedata
 from json import loads
 
 # Zato
@@ -21,7 +22,7 @@ from _client import MCPClient
 
 if 0:
     from requests import Response
-    from zato.common.typing_ import anydict, anydictnone, dictlist, strlist, tupnone
+    from zato.common.typing_ import anydict, anydictnone, anytuple, dictlist, strlist, tupnone
 
     Response = Response
 
@@ -34,6 +35,68 @@ _initialize_params = {
     'capabilities': {},
     'clientInfo': {'name': 'zato-mcp-test', 'version': '1.0'},
 }
+
+# NFKC already folds the space variants, so this table holds only the characters NFKC keeps.
+_unicode_variants = (
+    ('\u2018', "'"),  # Left single quotation mark
+    ('\u2019', "'"),  # Right single quotation mark
+    ('\u201c', '"'),  # Left double quotation mark
+    ('\u201d', '"'),  # Right double quotation mark
+    ('\u2010', '-'),  # Hyphen
+    ('\u2011', '-'),  # Non-breaking hyphen
+    ('\u2013', '-'),  # En dash
+    ('\u2014', '-'),  # Em dash
+)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def normalize_llm_text(text:'str') -> 'str':
+    """ The model's output with its Unicode variants folded into their plain equivalents -
+    NFKC folds the space variants and the table above folds the quotation and dash variants.
+    """
+
+    out = unicodedata.normalize('NFKC', text)
+
+    for variant, replacement in _unicode_variants:
+        out = out.replace(variant, replacement)
+
+    return out
+
+# ################################################################################################################################
+
+def text_contains(haystack:'str', needle:'str') -> 'bool':
+    """ Whether the model's output contains the given text, with the Unicode variants
+    of both sides folded first and case ignored.
+    """
+
+    normalized_haystack = normalize_llm_text(haystack)
+    normalized_haystack = normalized_haystack.casefold()
+
+    normalized_needle = normalize_llm_text(needle)
+    normalized_needle = normalized_needle.casefold()
+
+    out = normalized_needle in normalized_haystack
+    return out
+
+# ################################################################################################################################
+
+def contains_any_word(text:'str', words:'anytuple') -> 'bool':
+    """ Whether the model's output contains any of the given lower-case words,
+    with its Unicode variants folded and its case lowered first.
+    """
+
+    text = normalize_llm_text(text)
+    text = text.lower()
+
+    for word in words:
+        if word in text:
+            out = True
+            break
+    else:
+        out = False
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

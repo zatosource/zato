@@ -100,7 +100,7 @@ class TestBasicAuth:
         result = _agent.run_agent(client, task)
 
         assert result.tool_calls, result.messages
-        assert _constants.Customer_City in result.final_text, result.final_text
+        assert _helpers.text_contains(result.final_text, _constants.Customer_City), result.final_text
 
 # ################################################################################################################################
 
@@ -303,7 +303,7 @@ class TestCallerIdentityInAuditEvents:
 
 # ################################################################################################################################
 
-    def test_events_name_the_definition_of_each_credential_type(self, zato_server:'anydict') -> 'None':
+    def test_events_name_the_definition_of_each_credential_type(self, zato_server:'anydict', keycloak:'None') -> 'None':
 
         audit_db_path = zato_server['audit_db_path']
         min_id = _audit.last_event_id(audit_db_path)
@@ -329,9 +329,17 @@ class TestCallerIdentityInAuditEvents:
             bearer_client, bearer_session, _constants.Service_Order_Status, arguments,
             extra_headers=bearer_auth_headers)
 
-        # Three calls, three events, each carrying its own caller identity and tool name
+        keycloak_token = keycloak_.get_token(keycloak_.Client_Accounting, keycloak_.Secret_Accounting)
+        keycloak_client = _helpers.make_client(zato_server, _constants.Path_Main, auth=None)
+        keycloak_auth_headers = _helpers.bearer_headers(keycloak_token)
+        keycloak_session = _helpers.open_session(keycloak_client, extra_headers=keycloak_auth_headers)
+        _ = _helpers.call_tool(
+            keycloak_client, keycloak_session, _constants.Service_Order_Status, arguments,
+            extra_headers=keycloak_auth_headers)
+
+        # Four calls, four events, each carrying its own caller identity and tool name
         events = _audit.wait_for_events(
-            audit_db_path, 3,
+            audit_db_path, 4,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -342,7 +350,12 @@ class TestCallerIdentityInAuditEvents:
             identities.append(event['ext_client_id'])
             assert event['endpoint'] == _constants.Service_Order_Status, event
 
-        expected = [_constants.Sec_Basic, _constants.Sec_APIKey, _constants.Sec_Bearer_Static]
+        expected = [
+            _constants.Sec_Basic,
+            _constants.Sec_APIKey,
+            _constants.Sec_Bearer_Static,
+            _constants.Sec_Bearer_Keycloak,
+        ]
         assert identities == expected, identities
 
 # ################################################################################################################################

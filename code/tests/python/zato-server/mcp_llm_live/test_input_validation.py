@@ -35,15 +35,7 @@ def _contains_failure_word(text:'str') -> 'bool':
     """ Whether the text reports a failure in any of the usual wordings.
     """
 
-    text = text.lower()
-
-    for word in _failure_words:
-        if word in text:
-            out = True
-            break
-    else:
-        out = False
-
+    out = _helpers.contains_any_word(text, _failure_words)
     return out
 
 # ################################################################################################################################
@@ -114,11 +106,13 @@ class TestInputValidation:
 
         count_before = _markers.count_invocations(marker_path, _constants.Service_Customer_Get)
 
-        # The main gateway has validation off, so the same call goes through to the service.
+        # The main gateway has validation off, so a wrong-type call reaches the service
+        # and the service itself runs. A missing required field would still be refused
+        # by the service's own input contract.
         client = _helpers.make_client(zato_server, _constants.Path_Main)
         session_id = _helpers.open_session(client)
 
-        _ = _helpers.call_tool(client, session_id, _constants.Service_Customer_Get, {})
+        _ = _helpers.call_tool(client, session_id, _constants.Service_Customer_Get, {'customer_id': 123})
 
         count_after = _markers.count_invocations(marker_path, _constants.Service_Customer_Get)
         assert count_after == count_before + 1, (count_before, count_after)
@@ -173,7 +167,7 @@ class TestValidationWithLLM:
             assert not call.is_error, (call.tool_name, call.arguments, call.result_text)
 
         # .. and the answer carries what the service returned.
-        assert _constants.Customer_Name in result.final_text, result.final_text
+        assert _helpers.text_contains(result.final_text, _constants.Customer_Name), result.final_text
 
 # ################################################################################################################################
 
@@ -220,9 +214,9 @@ class TestValidationWithLLM:
         # .. and the model either retried with correct arguments and answered from the real
         # result, or reported the failure - what it never does is invent the customer's name.
         if success_calls:
-            assert _constants.Customer_Name in result.final_text, result.final_text
+            assert _helpers.text_contains(result.final_text, _constants.Customer_Name), result.final_text
         else:
-            assert _constants.Customer_Name not in result.final_text, result.final_text
+            assert not _helpers.text_contains(result.final_text, _constants.Customer_Name), result.final_text
             assert _contains_failure_word(result.final_text), result.final_text
 
 # ################################################################################################################################

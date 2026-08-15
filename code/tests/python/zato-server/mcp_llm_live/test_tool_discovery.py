@@ -136,7 +136,8 @@ class TestToolDiscovery:
         with open(probe_path) as probe_file:
             probe_source = probe_file.read()
 
-        new_declaration = "input = 'revision', '{}'".format(_probe_new_field)
+        # The leading dash is what declares the new field optional in Zato input syntax
+        new_declaration = "input = 'revision', '-{}'".format(_probe_new_field)
         probe_source = probe_source.replace("input = 'revision'", new_declaration)
         probe_source = probe_source.replace("'build': 'first'", "'build': 'second'")
 
@@ -203,8 +204,8 @@ class TestToolSelectionByLLM:
                 assert call.arguments['customer_id'] == _constants.Customer_ID, call.arguments
 
         # .. and the final answer carries the values the custom service returned.
-        assert _constants.Customer_Name in result.final_text, result.final_text
-        assert _constants.Customer_City in result.final_text, result.final_text
+        assert _helpers.text_contains(result.final_text, _constants.Customer_Name), result.final_text
+        assert _helpers.text_contains(result.final_text, _constants.Customer_City), result.final_text
 
 # ################################################################################################################################
 
@@ -235,8 +236,8 @@ class TestToolSelectionByLLM:
         assert customer_index < order_index, called_names
 
         # .. the final answer reports both results ..
-        assert _constants.Customer_Name in result.final_text, result.final_text
-        assert _constants.Order_Status in result.final_text, result.final_text
+        assert _helpers.text_contains(result.final_text, _constants.Customer_Name), result.final_text
+        assert _helpers.text_contains(result.final_text, _constants.Order_Status), result.final_text
 
         # .. and each call landed as its own audit event, in the same order.
         events = _audit.wait_for_events(

@@ -195,8 +195,8 @@ class TestConcurrentSessions:
         assert result_one.session_id != result_two.session_id, (result_one.session_id, result_two.session_id)
 
         # .. each answered its own question from its own tools ..
-        assert _constants.Customer_Name in result_one.final_text, result_one.final_text
-        assert _constants.Order_Status in result_two.final_text, result_two.final_text
+        assert _helpers.text_contains(result_one.final_text, _constants.Customer_Name), result_one.final_text
+        assert _helpers.text_contains(result_two.final_text, _constants.Order_Status), result_two.final_text
 
         # .. and in the audit trail, every event belongs to exactly one of the two sessions,
         # with no CID ever appearing under both.

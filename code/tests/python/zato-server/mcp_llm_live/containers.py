@@ -60,6 +60,10 @@ _ollama_internal_port = 11434
 # How long to wait for the container to accept requests, in seconds
 _startup_timeout = 180
 
+# How long to wait for the console to accept requests, in seconds - its first boot
+# downloads its embedding model before the web server answers
+_console_startup_timeout = 600
+
 # Timeout for individual HTTP requests, in seconds
 _http_timeout = 30
 
@@ -91,9 +95,35 @@ def _run_docker(arguments:'strlist', timeout:'int' = _docker_timeout) -> 'subpro
 
 # ################################################################################################################################
 
-def _pull_image(image:'str') -> 'None':
-    """ Pulls a docker image, streaming its progress.
+def _has_usable_gpu() -> 'bool':
+    """ Whether an NVIDIA GPU is usable from containers - the driver must answer
+    and docker must have the nvidia runtime configured.
     """
+
+    if not shutil.which('nvidia-smi'):
+        return False
+
+    result = subprocess.run(['nvidia-smi'], capture_output=True, text=True, timeout=_docker_timeout)
+
+    if result.returncode != 0:
+        return False
+
+    result = _run_docker(['info', '--format', '{{.Runtimes}}'])
+
+    out = 'nvidia' in result.stdout
+    return out
+
+# ################################################################################################################################
+
+def _pull_image(image:'str') -> 'None':
+    """ Pulls a docker image only when it is absent locally, streaming the progress.
+    """
+
+    result = _run_docker(['image', 'inspect', image])
+
+    if result.returncode == 0:
+        return
+
     command = ['docker', 'pull', image]
 
     result = subprocess.run(command, timeout=_docker_create_timeout)
@@ -125,17 +155,24 @@ def _ensure_container_running() -> 'None':
     # Find out whether the container exists and whether it is running ..
     result = _run_docker(['inspect', '--format', '{{.State.Running}}', Ollama_Container_Name])
 
-    # .. a non-zero exit code means there is no such container, so create it ..
+    # .. a non-zero exit code means there is no such container, so create it,
+    # with GPU access when the host has a usable card ..
     if result.returncode != 0:
         _pull_image(Ollama_Image)
 
-        result = _run_docker([
+        run_arguments = [
             'run', '-d',
             '--name', Ollama_Container_Name,
             '-p', f'{Ollama_Port}:{_ollama_internal_port}',
             '-v', f'{Ollama_Volume_Name}:/root/.ollama',
-            Ollama_Image,
-        ])
+        ]
+
+        if _has_usable_gpu():
+            run_arguments += ['--gpus', 'all']
+
+        run_arguments.append(Ollama_Image)
+
+        result = _run_docker(run_arguments)
 
         if result.returncode != 0:
             raise Exception(f'Could not start Ollama -> {result.stderr}')
@@ -270,6 +307,8 @@ def _ensure_console_container_running() -> 'None':
             '--add-host', f'{_console_host_name}:host-gateway',
             '-e', f'OLLAMA_BASE_URL=http://{_console_host_name}:{Ollama_Port}',
             '-e', f'WEBUI_SECRET_KEY={_console_secret_key}',
+            '-e', 'RAG_EMBEDDING_ENGINE=ollama',
+            '-e', 'OFFLINE_MODE=1',
             '-v', f'{Console_Volume_Name}:/app/backend/data',
             Console_Image,
         ])
@@ -289,7 +328,7 @@ def _ensure_console_container_running() -> 'None':
 def _wait_until_console_ready() -> 'None':
     """ Polls the console's front page until it responds or the timeout expires.
     """
-    deadline = time.monotonic() + _startup_timeout
+    deadline = time.monotonic() + _console_startup_timeout
 
     while time.monotonic() < deadline:
 
@@ -304,7 +343,7 @@ def _wait_until_console_ready() -> 'None':
 
         time.sleep(_readiness_poll_interval)
 
-    raise Exception(f'The console did not become ready within {_startup_timeout}s')
+    raise Exception(f'The console did not become ready within {_console_startup_timeout}s')
 
 # ################################################################################################################################
 

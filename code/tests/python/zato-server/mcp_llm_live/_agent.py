@@ -14,6 +14,7 @@ from json import dumps, loads
 import requests
 
 # local
+import _diag
 from containers import Model_Name, Ollama_OpenAI_URL
 
 # ################################################################################################################################
@@ -102,6 +103,8 @@ def _chat_completion(messages:'dictlist', tools:'dictlist', model:'str', ollama_
         'temperature': _temperature,
     }
 
+    _diag.write_entry('chat_request', body)
+
     response = requests.post(
         f'{ollama_url}/chat/completions', data=dumps(body), headers={'Content-Type': 'application/json'},
         timeout=_completion_timeout)
@@ -110,6 +113,8 @@ def _chat_completion(messages:'dictlist', tools:'dictlist', model:'str', ollama_
         raise Exception(f'Chat completion failed with HTTP {response.status_code}: {response.text}')
 
     completion = response.json()
+
+    _diag.write_entry('chat_response', completion)
 
     out = completion['choices'][0]['message']
     return out

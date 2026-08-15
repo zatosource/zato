@@ -130,15 +130,15 @@ class TestSkillUseByLLM:
 
         # With the skill in the conversation, the answer carries the mandated marker ..
         with_skill = _agent.run_agent(client, task, system_text=instructions)
-        assert _constants.Skill_Marker in with_skill.final_text, with_skill.final_text
+        assert _helpers.text_contains(with_skill.final_text, _constants.Skill_Marker), with_skill.final_text
 
         # .. and without it, the marker never appears - the model has no way to know it.
         without_skill = _agent.run_agent(client, task)
-        assert _constants.Skill_Marker not in without_skill.final_text, without_skill.final_text
+        assert not _helpers.text_contains(without_skill.final_text, _constants.Skill_Marker), without_skill.final_text
 
         # Both runs answered the actual question, so the difference is the format alone.
-        assert _constants.Customer_Name in with_skill.final_text, with_skill.final_text
-        assert _constants.Customer_Name in without_skill.final_text, without_skill.final_text
+        assert _helpers.text_contains(with_skill.final_text, _constants.Customer_Name), with_skill.final_text
+        assert _helpers.text_contains(without_skill.final_text, _constants.Customer_Name), without_skill.final_text
 
 # ################################################################################################################################
 # ################################################################################################################################

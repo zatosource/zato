@@ -36,6 +36,7 @@ from zato.common.util.config import get_config_object, update_config_file  # noq
 
 # Zato - test helpers
 import _constants  # noqa: E402
+import _diag  # noqa: E402
 import _enmasse  # noqa: E402
 import containers  # noqa: E402
 
@@ -53,6 +54,44 @@ def pytest_report_teststatus(report:'any_', config:'any_') -> 'tupnone':
         outcome = report.outcome.upper()
         return report.outcome, f' {outcome} ', f'{outcome} {report.nodeid}'
     return None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(autouse=True)
+def wire_log(request:'any_') -> 'any_':
+    """ Points the wire log at a per-test file for the duration of each test.
+    """
+
+    _diag.set_current_test(request.node.nodeid)
+
+    yield
+
+    _diag.clear_current_test()
+
+# ################################################################################################################################
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item:'any_', call:'any_') -> 'any_':
+    """ On failure, dumps the Ollama container log next to the test's wire log
+    and prints both paths in the failure output.
+    """
+
+    outcome = yield
+    report = outcome.get_result()
+
+    if report.when == 'call':
+        if report.failed:
+
+            if wire_path := _diag.get_current_path():
+
+                lines = [f'wire log: {wire_path}']
+
+                if ollama_path := _diag.dump_ollama_logs():
+                    lines.append(f'ollama log: {ollama_path}')
+
+                section_text = '\n'.join(lines)
+                report.sections.append(('wire diagnostics', section_text))
 
 # ################################################################################################################################
 # ################################################################################################################################

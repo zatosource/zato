@@ -39,15 +39,7 @@ def _contains_failure_word(text:'str') -> 'bool':
     """ Whether the text reports a failure in any of the usual wordings.
     """
 
-    text = text.lower()
-
-    for word in _failure_words:
-        if word in text:
-            out = True
-            break
-    else:
-        out = False
-
+    out = _helpers.contains_any_word(text, _failure_words)
     return out
 
 # ################################################################################################################################
@@ -186,7 +178,7 @@ class TestRejectModeWithLLM:
 
         # .. the model reported the refusal and never learned the customer's name ..
         assert _contains_failure_word(result.final_text), result.final_text
-        assert _constants.Customer_Name not in result.final_text, result.final_text
+        assert not _helpers.text_contains(result.final_text, _constants.Customer_Name), result.final_text
 
         # .. and the refusal is audited with its kind and an error outcome.
         events = _audit.wait_for_events(

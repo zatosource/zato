@@ -27,7 +27,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many invoices make a response that goes over the 80-token cap under the default ratio
+# How many invoices make a response that goes over the token cap under the default ratio
 _oversized_count = '200'
 
 # What a final answer sounds like when the model reports that something did not work
@@ -40,15 +40,7 @@ def _contains_failure_word(text:'str') -> 'bool':
     """ Whether the text reports a failure in any of the usual wordings.
     """
 
-    text = text.lower()
-
-    for word in _failure_words:
-        if word in text:
-            out = True
-            break
-    else:
-        out = False
-
+    out = _helpers.contains_any_word(text, _failure_words)
     return out
 
 # ################################################################################################################################
@@ -163,9 +155,10 @@ class TestBlockModeWithLLM:
 
         client = _helpers.make_client(zato_server, _constants.Path_Shaping_Block)
 
+        # The invoice tool takes only a count, so the task names no customer.
         task = (
-            f'List the last {_oversized_count} invoices of customer {_constants.Customer_ID} '
-            'with their invoice numbers. If the tools cannot give you the data, say so plainly.')
+            f'Use the invoice tool to list the last {_oversized_count} invoices '
+            'and report their invoice numbers. If the tools cannot give you the data, say so plainly.')
 
         result = _agent.run_agent(client, task)
 

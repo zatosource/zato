@@ -149,6 +149,10 @@ class MCPEndpoint(AdminService):
 
     name = 'zato.gateway.mcp.endpoint'
 
+    # Requests whose credentials did not authenticate still reach this service -
+    # it rejects them itself and writes their audit event.
+    handles_auth_rejection = True
+
 # ################################################################################################################################
 
     def handle(self) -> 'None':

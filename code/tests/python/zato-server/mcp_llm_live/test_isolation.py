@@ -766,9 +766,10 @@ class TestConcurrentIsolation:
         client_truncate = _helpers.make_client(zato_server, _constants.Path_Shaping_Truncate)
         client_block = _helpers.make_client(zato_server, _constants.Path_Shaping_Block)
 
+        # The invoice tool takes only a count, so the task names no customer.
         task = (
-            f'List the last {_oversized_count} invoices of customer {_constants.Customer_ID} '
-            'with their invoice numbers. If the tools cannot give you the data, say so plainly.')
+            f'Use the invoice tool to list the last {_oversized_count} invoices '
+            'and report their invoice numbers. If the tools cannot give you the data, say so plainly.')
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             future_truncate = executor.submit(_agent.run_agent, client_truncate, task)
