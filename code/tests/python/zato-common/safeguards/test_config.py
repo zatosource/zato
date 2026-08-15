@@ -53,6 +53,7 @@ class TestBuildSafeguardConfig:
             'safeguards_pii_exclude': ['es_phone'],
             'safeguards_pii_validate': False,
             'safeguards_pii_stable_replacements': True,
+            'safeguards_secrets_enabled': True,
             'safeguards_normalize_unicode': True,
             'safeguards_unicode_mode': Mode_Reject,
             'safeguards_sanitize_markup': True,
@@ -74,6 +75,8 @@ class TestBuildSafeguardConfig:
         assert config.pii_exclude == ['es_phone']
         assert config.pii_validate is False
         assert config.pii_stable_replacements is True
+
+        assert config.secrets_enabled is True
 
         assert config.normalize_unicode is True
         assert config.unicode_mode == Mode_Reject
@@ -137,6 +140,7 @@ class TestIsSafeguardsActive:
             'safeguards_collapse_whitespace',
             'safeguards_strip_base64',
             'safeguards_pii_enabled',
+            'safeguards_secrets_enabled',
             'safeguards_normalize_unicode',
             'safeguards_sanitize_markup',
             'safeguards_url_policy_enabled',

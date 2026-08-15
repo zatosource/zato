@@ -92,6 +92,21 @@ _Event_Tools_Call_Label = 'MCP tools call'
 # two gateways made from the same values differ in exactly these
 _Gateway_Identifying_Fields = ('name', 'url_path', 'security_groups')
 
+# The window flag the markup in the stored values below names - the assertions
+# check it stays unset after every render
+_Probe_Var = '__zato_markup_probe'
+
+# The element id of the image the markup names - the page never gets such a node
+_Probe_Img_Id = 'zato-markup-img'
+
+# The stored values a caller controls - a method with a script tag, both kinds of quotes
+# and a control character, a tool name with an image error handler, and a filter expression
+# that is a valid JSONata string literal wrapping a script tag, so the filter applies
+# and its raw text lands in the event's trace
+_Markup_Method = '<script>window.__zato_markup_probe=1</script>/\'"\x07method'
+_Markup_Tool = '<img src=x id="zato-markup-img" onerror="window.__zato_markup_probe=1">tool'
+_Markup_Filter = '"<script>window.__zato_markup_probe=1</script>"'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -310,6 +325,148 @@ class TestMCPAgentAudit:
         # .. and the other conversation's session appears nowhere on the page.
         page_text = page.inner_text('body')
         assert other_session_id not in page_text, f'Expected no "{other_session_id}" on the page'
+
+# ################################################################################################################################
+
+    @pytest.mark.expect_log_errors(*_Group_Log_Patterns, *_Group_Edit_Log_Patterns)
+    def test_stored_markup_renders_as_text(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+        server_dir = zato_dashboard['server_dir']
+
+        definition_name = _Test_Name_Prefix + 'markup-basic-auth'
+        username = 'user.' + definition_name
+        password = 'password.' + CryptoManager.generate_hex_string()
+
+        group_name = _Test_Name_Prefix + 'markup-group'
+        gateway_name = _Test_Name_Prefix + 'markup-gateway'
+        url_path = '/mcp/test/agent/markup/' + CryptoManager.generate_hex_string()
+
+        # The gateway comes from enmasse because the filter expression needs client filters allowed ..
+        yaml_content = f"""
+security:
+  - name: {definition_name}
+    type: basic_auth
+    username: {username}
+    password: "{password}"
+
+groups:
+  - name: {group_name}
+    members:
+      - {definition_name}
+
+mcp_gateway:
+  - name: {gateway_name}
+    url_path: {url_path}
+    services:
+      - {_Echo_Service}
+    security_groups:
+      - {group_name}
+    is_audit_log_active: true
+    allow_client_filters: true
+"""
+
+        input_path = os.path.join(tempfile.gettempdir(), f'zato-mcp-agent-markup-{os.getpid()}.yaml')
+
+        with open(input_path, 'w') as input_file:
+            _ = input_file.write(yaml_content)
+
+        try:
+            _run_enmasse(server_dir, ['--import', '--input', input_path])
+        finally:
+            os.remove(input_path)
+
+        mcp_url = f'http://127.0.0.1:{server_port}{url_path}'
+        auth = (username, password)
+
+        _wait_until_authenticated(mcp_url, auth)
+
+        # .. one real conversation stores the markup-laden values - an unknown method,
+        # an unknown tool and a successful call whose filter expression carries the markup ..
+        client = MCPClient(mcp_url, auth=auth)
+        session_id = client.initialize().session_id
+
+        response = client.jsonrpc(_Markup_Method, session_id=session_id)
+        body = response.json()
+        assert 'error' in body, body
+
+        params:'anydict' = {'name': _Markup_Tool, 'arguments': {}}
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
+        body = response.json()
+        assert 'error' in body, body
+
+        params = {'name': _Echo_Service, 'arguments': {
+            'note': 'Quarterly note', 'response_filter': _Markup_Filter}}
+        response = client.jsonrpc('tools/call', params=params, session_id=session_id)
+        assert response.status_code == OK, response.text
+
+        # .. any dialog firing anywhere on the page is recorded as a failure ..
+        dialog_messages = []
+
+        def _on_dialog(dialog:'any_') -> 'None':
+            dialog_messages.append(dialog.message)
+            dialog.dismiss()
+
+        page.on('dialog', _on_dialog)
+
+        # .. the audit page narrowed to this gateway renders every event and its pane ..
+        gateway_quoted = quote(gateway_name)
+        url = f'{base_url}{_Audit_Log_URL_Prefix}?source=mcp&object_name={gateway_quoted}'
+
+        _ = page.goto(url)
+        _wait_for_table(page)
+
+        rows = page.query_selector_all(_Row_Selector)
+        assert rows, 'Expected audit log rows for the gateway'
+
+        row_count = len(rows)
+        seen_texts = []
+
+        for row_index in range(row_count):
+
+            # The rows are re-read on each pass - opening a pane re-renders the list
+            rows = page.query_selector_all(_Row_Selector)
+            row = rows[row_index]
+
+            row.click()
+
+            _ = page.wait_for_selector(_Details_Tab_Selector, state='visible', timeout=_UI_Timeout)
+            page.click(_Details_Tab_Selector)
+            _ = page.wait_for_selector(_Details_Panel_Selector, state='visible', timeout=_UI_Timeout)
+
+            seen_texts.append(page.inner_text('body'))
+
+        # .. no dialog fired while anything rendered ..
+        assert dialog_messages == [], dialog_messages
+
+        # .. the probe flag stays unset ..
+        probe_value = page.evaluate(f'window.{_Probe_Var}')
+        assert probe_value is None, probe_value
+
+        # .. the markup became no DOM node - neither the image
+        # nor a script element carrying the probe ..
+        image_node = page.query_selector(f'#{_Probe_Img_Id}')
+        assert image_node is None, 'Expected no image node'
+
+        script_node_count = page.evaluate(
+            f'''() => {{
+                let out = 0;
+                for (let node of document.querySelectorAll('script')) {{
+                    if (node.textContent.includes('{_Probe_Var}')) {{
+                        out += 1;
+                    }}
+                }}
+                return out;
+            }}''')
+        assert script_node_count == 0, script_node_count
+
+        # .. and the markup strings display as the text they are.
+        all_text = '\n'.join(seen_texts)
+
+        assert _Probe_Img_Id in all_text, 'Expected the tool name to display as text'
+        assert _Probe_Var in all_text, 'Expected the filter expression to display as text'
 
 # ################################################################################################################################
 

@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import os
+
 # local
 import _agent
 import _audit
@@ -17,6 +20,7 @@ from _helpers import wait_until as _wait_until
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
+from zato.common.test import rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -425,6 +429,87 @@ class TestValidationOptions:
                 return out
 
             _wait_until(call_is_refused, 'validation on came back')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestNameRenderingInErrors:
+    """ Tool and argument names from the request render as single lines in error messages
+    and in the log - the audit log is the one place that keeps the raw value.
+    """
+
+# ################################################################################################################################
+
+    def test_a_tool_name_with_line_breaks_is_reported_on_one_line(self, zato_server:'anydict') -> 'None':
+
+        audit_db_path = zato_server['audit_db_path']
+        min_id = _audit.last_event_id(audit_db_path)
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        # The tool name carries line breaks and a distinctive trailer ..
+        trailer = 'crm.note.' + rand_string()
+        tool_name = f'crm.orders\r\n{trailer}'
+
+        body = _helpers.call_tool(client, session_id, tool_name, {})
+
+        assert body['error']['code'] == _constants.Error_Method_Not_Found, body
+
+        # .. the error names the tool on one line - the line breaks became spaces ..
+        message = body['error']['message']
+
+        assert '\r' not in message, body
+        assert '\n' not in message, body
+        assert trailer in message, body
+
+        # .. and the audit event keeps the name exactly as it was sent.
+        events = _audit.wait_for_events(
+            audit_db_path, 1,
+            object_name=_constants.Gateway_Main,
+            event_type=AuditEvent.MCP_Tools_Call,
+            min_id=min_id)
+
+        event = events[-1]
+        assert event['outcome'] == AuditOutcome.Error, event
+        assert event['endpoint'] == tool_name, event
+
+# ################################################################################################################################
+
+    def test_an_argument_name_with_line_breaks_is_reported_on_one_line(self, zato_server:'anydict') -> 'None':
+
+        server_log_path = zato_server['server_log_path']
+
+        client = _helpers.make_client(zato_server, _constants.Path_Validate)
+        session_id = _helpers.open_session(client)
+
+        log_offset = os.path.getsize(server_log_path)
+
+        # The unknown argument's name carries line breaks and a distinctive trailer ..
+        trailer = 'crm.note.' + rand_string()
+        argument_name = f'delivery_notes\r\n{trailer}'
+
+        arguments = {'customer_id': _constants.Customer_ID, argument_name: _unknown_value}
+        body = _helpers.call_tool(client, session_id, _constants.Service_Customer_Get, arguments)
+
+        assert body['error']['code'] == _constants.Error_Invalid_Params, body
+
+        # .. the error names the argument on one line ..
+        message = body['error']['message']
+
+        assert 'Unknown parameter' in message, body
+        assert '\r' not in message, body
+        assert '\n' not in message, body
+        assert trailer in message, body
+
+        # .. and in the server log the name sits inside the refusal's own line -
+        # the trailer never opens a line of its own.
+        new_log_text = _helpers.read_new_log_text(server_log_path, log_offset)
+        assert trailer in new_log_text, new_log_text
+
+        for line in new_log_text.splitlines():
+            if trailer in line:
+                assert 'Invalid arguments' in line, line
 
 # ################################################################################################################################
 # ################################################################################################################################

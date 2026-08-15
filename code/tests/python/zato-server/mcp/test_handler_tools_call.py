@@ -23,6 +23,7 @@ from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params
     _mcp_protocol_version, _message_bad_request
 from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.session import MCPSessionManager
+from zato.server.connection.mcp.validate import _message_not_an_object
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -337,6 +338,63 @@ class HandleToolsCall(TestCase):
 
         first_payload = received_payloads[0]
         self.assertEqual(first_payload, {})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HandleNonObjectArguments(TestCase):
+    """ Tests that an arguments element that is not an object has one defined outcome -
+    invalid params before the service is ever called - whether or not input validation is on.
+    """
+
+    def _run_case(self, arguments:'any_') -> 'None':
+        """ Sends one tools/call with the given arguments and checks the outcome -
+        invalid params, the defined message, and no service invocation.
+        """
+
+        received_payloads = []
+
+        def invoke_capture(service_name:'str', payload:'anydict') -> 'str':
+            received_payloads.append(payload)
+            return 'ok'
+
+        registry = _MockToolRegistry(allowed_tools={'test.service'})
+        handler = _make_handler(registry=registry, invoke_func=invoke_capture)
+        session_id = _make_session(handler)
+
+        params = {'name': 'test.service', 'arguments': arguments}
+        request = _make_request('tools/call', params)
+        raw = dumps(request)
+
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+
+        self.assertEqual(mcp_response.status_code, OK)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_params)
+        self.assertEqual(error['message'], _message_not_an_object)
+
+        # The service must never have been invoked
+        self.assertEqual(received_payloads, [])
+
+    def test_arguments_as_list_are_refused(self) -> 'None':
+        """ A list is not an object, so the call never reaches the service.
+        """
+
+        self._run_case(['customer_id', '123'])
+
+    def test_arguments_as_string_are_refused(self) -> 'None':
+        """ A string is not an object either.
+        """
+
+        self._run_case('customer_id=123')
+
+    def test_arguments_as_number_are_refused(self) -> 'None':
+        """ Nor is a number.
+        """
+
+        self._run_case(123)
 
 # ################################################################################################################################
 # ################################################################################################################################

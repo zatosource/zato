@@ -469,16 +469,28 @@ def zato_server() -> 'any_':
     # .. start the server in foreground mode ..
     broker_port = _find_free_port()
 
-    # The marker directory is where the fixture services record their invocations
+    # The marker directory is where the fixture services record their invocations -
+    # both marker files exist from the start.
     marker_directory = os.path.join(_temp_directory, 'markers')
     os.makedirs(marker_directory, exist_ok=True)
+
     marker_path = os.path.join(marker_directory, 'invocations.txt')
+    payload_path = os.path.join(marker_directory, 'payloads.txt')
+
+    for _marker_file_path in (marker_path, payload_path):
+        with open(_marker_file_path, 'w'):
+            pass
 
     server_env = os.environ.copy()
     server_env['Zato_Config_Bind_Port'] = str(port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     server_env['Zato_Test_LLM_Marker_Dir'] = marker_directory
     server_env['Zato_MCP_Session_Reaper_Interval'] = str(_constants.Reaper_Interval_Seconds)
+
+    # Origin validation is on, so requests that carry an Origin header outside
+    # a gateway's allowed list are refused - no test client sends one otherwise.
+    server_env['Zato_MCP_Check_Origin'] = 'true'
+
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
     # Point the audit log at a file inside the temp directory so the live server
@@ -571,6 +583,7 @@ def zato_server() -> 'any_':
         'pickup_directory': pickup_directory,
         'audit_db_path': audit_db_path,
         'marker_path': marker_path,
+        'payload_path': payload_path,
         'server_log_path': _server_log_path,
         'mcp_url': _mcp_url,
         'basic_auth': (_constants.Username_Basic, _constants.Password_Basic),

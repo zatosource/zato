@@ -10,8 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from piigex.detectors import get_registry
 
 # Zato
+from zato.common.util.safeguards.detectors.secrets import Region_Secrets
 from zato.common.util.safeguards.names import Detector_Labels, get_detector_choices, get_land_choices, Land_International, \
-    Land_Names
+    Land_Names, Secret_Detector_Nouns
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -20,18 +21,29 @@ class TestRegistryCoverage:
 
     def test_every_registry_detector_has_a_label(self) -> 'None':
 
-        # A library upgrade that adds detectors must fail here instead of showing raw codes in the UI.
+        # A library upgrade that adds detectors must fail here instead of showing raw codes
+        # in the UI - the secrets detectors belong to no land and are worded by their nouns instead.
         registry = get_registry()
 
-        for name in registry:
+        for name, detector in registry.items():
+
+            if detector.region == Region_Secrets:
+                assert name in Secret_Detector_Nouns, f'Detector `{name}` has no noun in Secret_Detector_Nouns'
+                continue
+
             assert name in Detector_Labels, f'Detector `{name}` has no label in Detector_Labels'
 
     def test_every_registry_land_has_a_full_name(self) -> 'None':
 
-        # A library upgrade that adds lands must fail here instead of showing raw codes in the UI.
+        # A library upgrade that adds lands must fail here instead of showing raw codes in the UI -
+        # the secrets region is not a land at all.
         registry = get_registry()
 
         for detector in registry.values():
+
+            if detector.region == Region_Secrets:
+                continue
+
             assert detector.region in Land_Names, f'Land `{detector.region}` has no full name in Land_Names'
 
 # ################################################################################################################################
@@ -79,7 +91,15 @@ class TestDetectorChoices:
 
     def test_every_registry_detector_appears_exactly_once(self) -> 'None':
 
+        # The secrets detectors are not PII choices, so they stay out of the comparison.
         registry = get_registry()
+
+        expected = []
+        for name, detector in registry.items():
+            if detector.region == Region_Secrets:
+                continue
+            expected.append(name)
+
         groups = get_detector_choices()
 
         names = []
@@ -87,7 +107,7 @@ class TestDetectorChoices:
             for name, _ in group:
                 names.append(name)
 
-        assert sorted(names) == sorted(registry)
+        assert sorted(names) == sorted(expected)
 
     def test_groups_follow_land_choice_order(self) -> 'None':
 

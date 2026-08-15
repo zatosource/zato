@@ -81,6 +81,9 @@ class SafeguardConfig:
     pii_validate:            bool = True
     pii_stable_replacements: bool = False
 
+    # Secrets removal - credential-shaped values are redacted with stable replacements
+    secrets_enabled: bool = False
+
     # Unicode normalization
     normalize_unicode: bool = False
     unicode_mode:      str  = Mode_Clean
@@ -135,6 +138,9 @@ class SafeguardResult:
 
     # PII matches by detector name
     pii_removed: strintdict
+
+    # Secrets matches by detector name
+    secrets_removed: strintdict
 
     # Security findings by kind
     signals: signal_dict

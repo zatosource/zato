@@ -21,6 +21,9 @@ Error_Invalid_Params   = -32602
 # JSON-RPC error code returned when a request asks for a protocol version the server does not speak
 Error_Unsupported_Protocol_Version = -32022
 
+# JSON-RPC error code returned when an Mcp-* header does not agree with the request body
+Error_Header_Mismatch = -32020
+
 # The protocol revisions the server speaks
 Protocol_Version_Sessions  = '2025-06-18'
 Protocol_Version_Stateless = '2026-07-28'
@@ -176,6 +179,29 @@ Customer_ID_Reactions = 'CRM-8001'
 Reaction_Tokens = ('🚀', '👍🏽', '🧑\u200d💻', 'γειά', 'καφε\u0301δες')
 Reaction_Repeat = 1200
 
+# The secrets customer - its notes carry credential-shaped values,
+# one per detector of the secrets removal stage, mirroring the fixture exactly
+Customer_ID_Secrets = 'CRM-9001'
+
+Customer_Name_Secrets = 'Ines Kaltenbrunner'
+Customer_City_Secrets = 'Salzburg'
+
+Secret_API_Token   = 'sk-crm9001integration0abc'
+Secret_AWS_Key     = 'AKIA2E74XAMPLE9001AB'
+Secret_JWT         = 'eyJhbGciOiJIUzI1NiJ9.eyJjcm0iOiI5MDAxIn0.c2lnbmF0dXJlOTAwMQ'
+Secret_Bearer      = 'Bearer crm9001tokenvalue77'
+Secret_Conn_String = 'postgres://reporting:Zx9001pass@db.internal:5432/crm'
+
+# One body line of the record's PEM private key - the whole block is replaced,
+# so any one of its lines proves the block is gone
+Secret_Private_Key_Line = 'MIIEowIBAAKCAQEAcrm9001exampleline1'
+
+# Every secret value of the record, for the nothing-leaks sweeps
+Secret_Values = [
+    Secret_API_Token, Secret_AWS_Key, Secret_JWT,
+    Secret_Bearer, Secret_Conn_String, Secret_Private_Key_Line,
+]
+
 # What the reference service answers for the capital question and what the real answer is -
 # the model must repeat the tool's value, not the well-known one
 Fact_Answer       = 'Perth'
@@ -276,6 +302,7 @@ Gateway_Base64           = 'test.llm.base64'
 Gateway_PII_Two_Lands    = 'test.llm.pii.two-lands'
 Gateway_PII_Detector     = 'test.llm.pii.detector'
 Gateway_PII_No_Validate  = 'test.llm.pii.no-validate'
+Gateway_Secrets          = 'test.llm.secrets'
 Gateway_Unicode_Reject   = 'test.llm.unicode.reject'
 Gateway_URL_Neutralize   = 'test.llm.url.neutralize'
 Gateway_URL_Reject       = 'test.llm.url.reject'
@@ -322,6 +349,7 @@ Path_Base64          = '/mcp/llm/base64'
 Path_PII_Two_Lands   = '/mcp/llm/pii-two-lands'
 Path_PII_Detector    = '/mcp/llm/pii-detector'
 Path_PII_No_Validate = '/mcp/llm/pii-no-validate'
+Path_Secrets         = '/mcp/llm/secrets'
 Path_Unicode_Reject  = '/mcp/llm/unicode-reject'
 Path_URL_Neutralize  = '/mcp/llm/url-neutralize'
 Path_URL_Reject      = '/mcp/llm/url-reject'

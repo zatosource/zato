@@ -15,6 +15,9 @@ import _constants
 import _enmasse
 import _helpers
 
+# Zato
+from zato.common.test import rand_string
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -146,6 +149,37 @@ class TestSkillsAsPrompts:
 
         body = response.json()
         assert body['error']['code'] == _constants.Error_Invalid_Params, body
+
+# ################################################################################################################################
+
+    def test_a_prompt_name_with_line_breaks_renders_on_one_log_line(self, zato_server:'anydict') -> 'None':
+
+        server_log_path = zato_server['server_log_path']
+        log_offset = os.path.getsize(server_log_path)
+
+        client = _helpers.make_client(zato_server, _constants.Path_Skills)
+        session_id = _helpers.open_session(client)
+
+        # The prompt name carries line breaks and a distinctive trailer ..
+        trailer = 'crm.note.' + rand_string()
+        prompt_name = f'crm-house-style\r\n{trailer}'
+
+        params = {'name': prompt_name}
+        response = client.jsonrpc('prompts/get', params=params, session_id=session_id)
+
+        # .. the refusal is the same one an absent prompt gets ..
+        body = response.json()
+        assert body['error']['code'] == _constants.Error_Invalid_Params, body
+        assert body['error']['message'] == _message_not_found, body
+
+        # .. and in the server log the name sits inside the refusal's own line -
+        # the trailer never opens a line of its own.
+        new_log_text = _helpers.read_new_log_text(server_log_path, log_offset)
+        assert trailer in new_log_text, new_log_text
+
+        for line in new_log_text.splitlines():
+            if trailer in line:
+                assert 'Prompt not found' in line, line
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from concurrent.futures import ThreadPoolExecutor
 from http.client import BAD_REQUEST, NO_CONTENT, NOT_FOUND, OK
 from json import dumps
@@ -16,6 +17,7 @@ import requests
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
+from zato.common.test import rand_string
 from zato.server.connection.mcp.audit import Method_Unknown
 
 # local
@@ -478,6 +480,176 @@ class TestHTTPLayer:
             audit_db_path, 1, object_name=_constants.Gateway_Main, event_type=Method_Unknown, min_id=min_id)
 
         assert events[-1]['outcome'] == AuditOutcome.Error, events
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestRequestValueRendering:
+    """ Request-supplied names render as single bounded lines wherever a log or an error
+    message embeds them - the audit log is the one place that keeps the raw value.
+    """
+
+# ################################################################################################################################
+
+    def test_a_notification_method_renders_on_one_log_line(self, zato_server:'anydict') -> 'None':
+
+        audit_db_path = zato_server['audit_db_path']
+        server_log_path = zato_server['server_log_path']
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        min_id = _audit.last_event_id(audit_db_path)
+        log_offset = os.path.getsize(server_log_path)
+
+        # The method name carries line breaks and a distinctive trailer ..
+        trailer = 'orders.note.' + rand_string()
+        method = f'orders/refresh\r\n{trailer}'
+
+        notification = {'jsonrpc': '2.0', 'method': method, 'params': {}}
+        response = client.jsonrpc_raw(dumps(notification).encode('utf8'), session_id=session_id)
+
+        assert response.status_code == NO_CONTENT, response.text
+
+        # .. the audit event keeps the method exactly as it was sent ..
+        events = _audit.wait_for_events(
+            audit_db_path, 1, object_name=_constants.Gateway_Main, event_type=method, min_id=min_id)
+
+        assert events[-1]['outcome'] == AuditOutcome.OK, events
+
+        # .. and in the server log the whole method sits inside the notification's own line -
+        # the trailer never opens a line of its own.
+        new_log_text = _helpers.read_new_log_text(server_log_path, log_offset)
+        assert trailer in new_log_text, new_log_text
+
+        for line in new_log_text.splitlines():
+            if trailer in line:
+                assert 'Received notification' in line, line
+
+# ################################################################################################################################
+
+    def test_an_unknown_method_is_reported_on_one_line(self, zato_server:'anydict') -> 'None':
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        trailer = 'orders.note.' + rand_string()
+        method = f'orders/refresh\r\n{trailer}'
+
+        response = client.jsonrpc(method, session_id=session_id)
+        body = response.json()
+
+        assert body['error']['code'] == _constants.Error_Method_Not_Found, body
+
+        # The message names the method on one line - the line breaks became spaces
+        message = body['error']['message']
+
+        assert '\r' not in message, body
+        assert '\n' not in message, body
+        assert trailer in message, body
+
+# ################################################################################################################################
+
+    def test_an_over_long_method_is_described_by_its_length(self, zato_server:'anydict') -> 'None':
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        method = 'orders.' + 'a' * 400
+
+        response = client.jsonrpc(method, session_id=session_id)
+        body = response.json()
+
+        assert body['error']['code'] == _constants.Error_Method_Not_Found, body
+
+        # The message describes the name by its length instead of embedding it
+        message = body['error']['message']
+
+        assert method not in message, body
+        assert f'(value of {len(method)} characters)' in message, body
+
+# ################################################################################################################################
+
+    def test_a_protocol_version_mismatch_names_no_header_value(self, zato_server:'anydict') -> 'None':
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        # The header disagrees with the session's negotiated version ..
+        headers = {'MCP-Protocol-Version': _unsupported_version}
+        response = client.jsonrpc('ping', session_id=session_id, extra_headers=headers)
+
+        assert response.status_code == BAD_REQUEST, response.text
+
+        # .. and the error names neither the header's value nor the negotiated one.
+        message = response.json()['error']['message']
+
+        assert _unsupported_version not in message, message
+        assert _constants.Protocol_Version_Sessions not in message, message
+
+# ################################################################################################################################
+
+    def test_an_unsupported_version_names_only_supported_versions(self, zato_server:'anydict') -> 'None':
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+
+        headers = {'MCP-Protocol-Version': _unsupported_version}
+        response = _helpers.initialize_response(client, extra_headers=headers)
+
+        body = response.json()
+        assert body['error']['code'] == _constants.Error_Unsupported_Protocol_Version, body
+
+        # The supported versions are named, the requested one is not
+        message = body['error']['message']
+
+        assert _constants.Protocol_Version_Sessions in message, body
+        assert _constants.Protocol_Version_Stateless in message, body
+        assert _unsupported_version not in message, body
+
+# ################################################################################################################################
+
+    def test_a_session_id_with_a_tab_renders_as_plain_text(self, zato_server:'anydict') -> 'None':
+
+        server_log_path = zato_server['server_log_path']
+        log_offset = os.path.getsize(server_log_path)
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+
+        # A tab is the one control character an HTTP header value can carry -
+        # the session id is unknown, so the request is refused ..
+        trailer = 'orders.note.' + rand_string()
+        session_id = f'mcp00000000\t{trailer}'
+
+        response = client.jsonrpc('tools/list', session_id=session_id)
+        assert response.status_code == BAD_REQUEST, response.text
+
+        # .. and the log renders the id as plain text on the refusal's own line.
+        new_log_text = _helpers.read_new_log_text(server_log_path, log_offset)
+        assert trailer in new_log_text, new_log_text
+
+        for line in new_log_text.splitlines():
+            if trailer in line:
+                assert 'Invalid or expired session' in line, line
+                assert '\t' not in line, line
+
+# ################################################################################################################################
+
+    def test_a_stateless_header_mismatch_names_no_values(self, zato_server:'anydict') -> 'None':
+
+        mcp_url = zato_server['mcp_url'](_constants.Path_Main)
+        client = MCPStatelessClient(mcp_url, auth=zato_server['basic_auth'])
+
+        # The Mcp-Method header says one thing and the body another ..
+        response = client.jsonrpc('tools/list', mcp_method_header='ping')
+
+        body = response.json()
+        assert body['error']['code'] == _constants.Error_Header_Mismatch, body
+
+        # .. and the error names neither of the two values.
+        message = body['error']['message']
+
+        assert 'ping' not in message, body
+        assert 'tools/list' not in message, body
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -16,7 +16,7 @@ from traceback import format_exc
 # Zato
 from zato.common.json_internal import dumps
 from zato.server.connection.mcp.audit import build_audit_event, Method_Auth_Rejected, Method_Session_Delete
-from zato.server.connection.mcp.common import MCPResponse
+from zato.server.connection.mcp.common import MCPResponse, printable
 from zato.server.connection.mcp.schema import io_to_json_schema, io_to_output_json_schema
 from zato.server.service.internal import AdminService
 
@@ -165,9 +165,11 @@ class MCPEndpoint(AdminService):
         channel_security = self.channel.security
 
         if not channel_security.id:
+
+            # The username renders as one line of printable text - the audit event keeps its raw form
             logger.info(
                 'MCP gateway `%s` rejected unauthenticated request (sec name=`%s` username=`%s`)',
-                self.channel.name, channel_security.name, channel_security.username)
+                self.channel.name, channel_security.name, printable(channel_security.username))
             self.response.status_code = FORBIDDEN
             self.response.payload = ''
             self._audit_auth_rejection()
@@ -201,9 +203,11 @@ class MCPEndpoint(AdminService):
                 allowed_origins = wrapper.config.get('allowed_origins') or _default_allowed_origins
 
                 if origin not in allowed_origins:
+
+                    # The rejected Origin header renders as one line of printable text
                     logger.info(
                         'MCP gateway `%s` rejected origin `%s` (sec name=`%s` username=`%s`)',
-                        self.channel.name, origin, channel_security.name, channel_security.username)
+                        self.channel.name, printable(origin), channel_security.name, channel_security.username)
                     self.response.status_code = FORBIDDEN
                     self.response.payload = ''
                     return

@@ -20,7 +20,7 @@ from zato.server.connection.mcp.common import _error_invalid_params, _error_inva
     _error_parse, _jsonrpc_version, _message_bad_request, _message_invalid_cursor, _message_invalid_params, \
     _message_invalid_request, _message_missing_jsonrpc_version, _message_missing_method, _message_missing_tool_name, \
     _message_parse_error, _message_prompt_not_found, _method_prompts_get, _method_prompts_list, _method_tools_call, \
-    _server_name, _server_version, InvalidCursor, make_error_response, make_success_response, MCPResponse
+    _server_name, _server_version, get_depth, InvalidCursor, make_error_response, make_success_response, MCPResponse, printable
 from zato.server.connection.mcp.session import Session_Invalid_Identity, Session_Valid
 from zato.server.connection.mcp.tools_call import _response_filter_key, _response_filter_schema, handle_tools_call
 
@@ -65,6 +65,12 @@ _http_bad_request = BAD_REQUEST
 
 # What a request body over the published size bound is refused with
 _message_request_too_large = 'Request body exceeds the maximum size'
+
+# What a request body nested past the published depth bound is refused with
+_message_request_too_deep = 'Request body exceeds the maximum depth'
+
+# What a protocol version header that does not match the session's negotiated version is refused with
+_message_protocol_version_mismatch = 'Protocol version mismatch'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -128,7 +134,7 @@ class MCPHandler:
             validation_result = self.session_manager.validate(session_id, sec_def_id)
 
             if validation_result != Session_Valid:
-                logger.info('MCP: Invalid or expired session `%s`', session_id)
+                logger.info('MCP: Invalid or expired session `%s`', printable(session_id))
                 out = MCPResponse()
                 out.body = make_error_response(None, _error_invalid_request, _message_bad_request)
                 out.status_code = _http_bad_request
@@ -153,9 +159,8 @@ class MCPHandler:
         negotiated_version = self.session_manager.get_protocol_version(session_id)
 
         if protocol_version_header != negotiated_version:
-            message = f'Protocol version mismatch: header `{protocol_version_header}` does not match session `{negotiated_version}`'
             out = MCPResponse()
-            out.body = make_error_response(None, _error_invalid_request, message)
+            out.body = make_error_response(None, _error_invalid_request, _message_protocol_version_mismatch)
             out.status_code = _http_bad_request
             return out
 
@@ -197,6 +202,15 @@ class MCPHandler:
             logger.info('MCP: Could not parse the JSON body:\n%s', format_exc())
 
             out.body = make_error_response(None, _error_parse, _message_parse_error)
+            out.status_code = OK
+            return out
+
+        # .. a body nested past the published depth bound is an invalid request ..
+        request_depth = get_depth(parsed)
+
+        if request_depth > MCP.Max_Request_Depth:
+
+            out.body = make_error_response(None, _error_invalid_request, _message_request_too_deep)
             out.status_code = OK
             return out
 
@@ -248,7 +262,7 @@ class MCPHandler:
 
                         request_id = parsed.get('id')
                         supported = ', '.join(MCP.Protocol_Versions_Supported)
-                        error_message = f'Unsupported protocol version: `{requested_version}`, supported: {supported}'
+                        error_message = f'Unsupported protocol version, supported: {supported}'
                         code = stateless._error_unsupported_protocol_version
 
                         out.body = make_error_response(request_id, code, error_message)
@@ -282,7 +296,7 @@ class MCPHandler:
                 if parsed.get('jsonrpc') == _jsonrpc_version:
                     if method:
 
-                        logger.info('MCP: Received notification `%s`', method)
+                        logger.info('MCP: Received notification `%s`', printable(method))
                         out.body = None
                         out.status_code = NO_CONTENT
                         return out
@@ -389,7 +403,7 @@ class MCPHandler:
             return out
 
         # .. anything else is an unknown method.
-        error_message = f'Method not found: `{method}`'
+        error_message = f'Method not found: `{printable(method)}`'
         body = make_error_response(request_id, _error_method_not_found, error_message)
 
         out = DispatchResult(body, None)
@@ -558,12 +572,12 @@ class MCPHandler:
         try:
             document = self.skill_prompts.get_prompt(prompt_name)
         except OSError as e:
-            logger.warning('MCP: Prompt `%s` could not be read: %s', prompt_name, e)
+            logger.warning('MCP: Prompt `%s` could not be read: %s', printable(prompt_name), e)
             document = None
 
         if document is None:
 
-            logger.info('MCP: Prompt not found `%s`', prompt_name)
+            logger.info('MCP: Prompt not found `%s`', printable(prompt_name))
             out = make_error_response(request_id, _error_invalid_params, _message_prompt_not_found)
             return out
 

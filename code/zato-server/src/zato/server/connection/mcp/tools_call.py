@@ -20,8 +20,8 @@ from zato.common.util.safeguards.api import apply_safeguards
 from zato.common.util.safeguards.config import is_safeguards_active
 from zato.common.util.truncate.tokens import apply_token_cap
 from zato.server.connection.mcp.common import _error_invalid_params, _error_method_not_found, _message_bad_request, \
-    _message_missing_tool_name, _message_response_too_large, make_error_response, make_success_response
-from zato.server.connection.mcp.validate import validate_arguments
+    _message_missing_tool_name, _message_response_too_large, make_error_response, make_success_response, printable
+from zato.server.connection.mcp.validate import _message_not_an_object, validate_arguments
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,20 +89,25 @@ def handle_tools_call(handler:'MCPHandler', request_id:'any_', params:'anydict')
     # .. check if the tool is allowed on this gateway ..
     if not handler.tool_registry.is_tool_allowed(tool_name):
 
-        message = f'Tool not found: `{tool_name}`'
+        message = f'Tool not found: `{printable(tool_name)}`'
         out = make_error_response(request_id, _error_method_not_found, message)
         return out, None
 
     # .. extract arguments - optional per the MCP spec, defaults to empty dict ..
     arguments = params.get('arguments', {})
 
+    # .. whatever validation is configured, the arguments element must be an object ..
+    if not isinstance(arguments, dict):
+
+        out = make_error_response(request_id, _error_invalid_params, _message_not_an_object)
+        return out, None
+
     # .. on a gateway that allows client filters, the response_filter argument belongs
     # to the gateway, not to the service - it is taken out before validation ever sees it ..
     response_filter = None
 
     if handler.allow_client_filters:
-        if isinstance(arguments, dict):
-            response_filter = arguments.pop(_response_filter_key, None)
+        response_filter = arguments.pop(_response_filter_key, None)
 
     # .. when the gateway has input validation on, the arguments must match the tool's
     # input schema, the same one tools/list advertises - the error names the offending field ..
@@ -146,7 +151,7 @@ def handle_tools_call(handler:'MCPHandler', request_id:'any_', params:'anydict')
 
     # .. an invalid client filter is the caller's own mistake and is reported as invalid params ..
     except FilterInvalid as e:
-        logger.info('MCP: Invalid response filter for `%s`: %s', tool_name, e)
+        logger.info('MCP: Invalid response filter for `%s`: %s', tool_name, printable(e))
 
         out = make_error_response(request_id, _error_invalid_params, str(e))
         return out, _trace_or_none(trace)
@@ -231,6 +236,9 @@ def _record_safeguard_trace(result:'any_', trace:'stranydict') -> 'None':
 
     if result.pii_removed:
         trace['pii_removed'] = result.pii_removed
+
+    if result.secrets_removed:
+        trace['secrets_removed'] = result.secrets_removed
 
     if result.nulls_removed:
         trace['nulls_removed'] = result.nulls_removed

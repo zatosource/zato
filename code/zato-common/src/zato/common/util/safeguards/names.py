@@ -12,6 +12,7 @@ from piigex.detectors import get_registry
 # Zato
 from zato.common.typing_ import strset, strstrdict
 from zato.common.util.safeguards import detectors
+from zato.common.util.safeguards.detectors.secrets import Region_Secrets
 
 # The import above registers Zato's own detectors with the library's registry - this line keeps flake8 quiet about it.
 detectors = detectors
@@ -477,6 +478,20 @@ Detector_Nouns:'dict[str, choice_tuple]' = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The noun each secrets detector's findings are counted in - the secrets detectors
+# belong to no land, so they live outside Detector_Labels and Detector_Nouns.
+Secret_Detector_Nouns:'dict[str, choice_tuple]' = {
+    'secret_private_key':       ('private key', 'private keys'),
+    'secret_aws_access_key':    ('AWS access key', 'AWS access keys'),
+    'secret_jwt':               ('JWT', 'JWTs'),
+    'secret_bearer':            ('bearer token', 'bearer tokens'),
+    'secret_connection_string': ('connection string credential', 'connection string credentials'),
+    'secret_api_token':         ('API token', 'API tokens'),
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _choice_label(item:'choice_tuple') -> 'str':
     """ Returns the display label of a choice pair, for use as a sort key.
     """
@@ -492,10 +507,13 @@ def get_land_choices() -> 'choice_list':
     """
     registry = get_registry()
 
-    # Collect each land that has at least one detector registered ..
+    # Collect each land that has at least one detector registered -
+    # the secrets region is not a land and stays out ..
     lands:'strset' = set()
 
     for detector in registry.values():
+        if detector.region == Region_Secrets:
+            continue
         lands.add(detector.region)
 
     # .. build the country choices, keeping International aside for now ..
@@ -523,10 +541,13 @@ def get_detector_choices() -> 'grouped_choice_list':
     """
     registry = get_registry()
 
-    # Group the detectors under their lands ..
+    # Group the detectors under their lands - the secrets detectors belong to no land ..
     by_land:'choice_dict' = {}
 
     for detector in registry.values():
+        if detector.region == Region_Secrets:
+            continue
+
         label = Detector_Labels[detector.name]
 
         if group := by_land.get(detector.region):

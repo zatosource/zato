@@ -14,7 +14,7 @@ from logging import getLogger
 from zato.common.api import MCP
 from zato.server.connection.mcp.common import _error_invalid_params, _error_invalid_request, _error_method_not_found, \
     _jsonrpc_version, _message_invalid_params, _message_missing_jsonrpc_version, _message_missing_method, \
-    _method_tools_call, _server_name, _server_version, make_error_response, make_success_response, MCPResponse
+    _method_tools_call, _server_name, _server_version, make_error_response, make_success_response, MCPResponse, printable
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,6 +44,12 @@ _error_unsupported_protocol_version = -32022
 
 # The method that advertises supported protocol versions, capabilities and identity
 _method_discover = 'server/discover'
+
+# What a request whose Mcp-Method header does not agree with the body's method is refused with
+_message_method_header_mismatch = 'Header mismatch: Mcp-Method does not match the request method'
+
+# What a tools/call whose Mcp-Name header does not agree with the tool name is refused with
+_message_name_header_mismatch = 'Header mismatch: Mcp-Name does not match the tool name'
 
 # The method that lists the tools a gateway exposes
 _method_tools_list = 'tools/list'
@@ -191,8 +197,7 @@ def dispatch(
     # .. the Mcp-Method header must agree with the method in the body ..
     if mcp_method_header != method:
 
-        error_message = f'Header mismatch: Mcp-Method `{mcp_method_header}` does not match method `{method}`'
-        out.body = make_error_response(request_id, _error_header_mismatch, error_message)
+        out.body = make_error_response(request_id, _error_header_mismatch, _message_method_header_mismatch)
         out.status_code = OK
         return out
 
@@ -208,7 +213,7 @@ def dispatch(
     # .. a message without an ID is a notification and produces no response ..
     if 'id' not in message:
 
-        logger.info('MCP: Received notification `%s`', method)
+        logger.info('MCP: Received notification `%s`', printable(method))
         out.body = None
         out.status_code = NO_CONTENT
         return out
@@ -223,8 +228,7 @@ def dispatch(
 
         if mcp_name_header != tool_name:
 
-            error_message = f'Header mismatch: Mcp-Name `{mcp_name_header}` does not match tool `{tool_name}`'
-            out.body = make_error_response(request_id, _error_header_mismatch, error_message)
+            out.body = make_error_response(request_id, _error_header_mismatch, _message_name_header_mismatch)
             out.status_code = OK
             return out
 
@@ -246,7 +250,7 @@ def dispatch(
 
     # .. anything else, including the initialize and ping of the session-based revision, is unknown here.
     else:
-        error_message = f'Method not found: `{method}`'
+        error_message = f'Method not found: `{printable(method)}`'
         body = make_error_response(request_id, _error_method_not_found, error_message)
 
     # .. every result carries the resultType marker and the server identity.

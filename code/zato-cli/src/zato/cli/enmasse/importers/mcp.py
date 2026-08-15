@@ -88,6 +88,9 @@ class GatewayMCPImporter(GenericConnectionImporter):
         'safeguards_pii_validate': True,
         'safeguards_pii_stable_replacements': False,
 
+        # Secrets removal
+        'safeguards_secrets_enabled': False,
+
         # Content safety
         'safeguards_normalize_unicode': False,
         'safeguards_unicode_mode': Mode_Clean,

@@ -679,6 +679,7 @@ def get_object_order(object_type:'str') -> 'strlist':
         'safeguards_strip_nulls', 'safeguards_collapse_whitespace', 'safeguards_strip_base64', \
         'safeguards_pii_enabled', 'safeguards_pii_lands:list', 'safeguards_pii_detectors:list', \
         'safeguards_pii_exclude:list', 'safeguards_pii_validate', 'safeguards_pii_stable_replacements', \
+        'safeguards_secrets_enabled', \
         'safeguards_normalize_unicode', 'safeguards_unicode_mode', 'safeguards_sanitize_markup', \
         'safeguards_markup_mode', 'safeguards_url_policy_enabled', 'safeguards_url_allow_list:list', \
         'safeguards_url_mode',

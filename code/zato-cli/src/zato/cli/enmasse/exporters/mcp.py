@@ -63,6 +63,9 @@ GATEWAY_OPTIONAL_FIELDS = [
     'safeguards_pii_enabled', 'safeguards_pii_lands', 'safeguards_pii_detectors', 'safeguards_pii_exclude',
     'safeguards_pii_validate', 'safeguards_pii_stable_replacements',
 
+    # Secrets removal
+    'safeguards_secrets_enabled',
+
     # Content safety
     'safeguards_normalize_unicode', 'safeguards_unicode_mode', 'safeguards_sanitize_markup', 'safeguards_markup_mode',
     'safeguards_url_policy_enabled', 'safeguards_url_allow_list', 'safeguards_url_mode',

@@ -75,6 +75,10 @@ $.fn.zato.gateway.mcp.field_descriptions = {
         'Reject refuses the whole response with an error, treating active content ' +
         'in a tool response as a potential attack.',
 
+    'id_safeguards_secrets_enabled': 'Scans string values for credential-shaped secrets, such as API tokens, ' +
+        'private key blocks, AWS access keys, JWTs, bearer tokens or connection strings with inline passwords, ' +
+        'and replaces each match with a stable token naming the detector.',
+
     'id_safeguards_url_policy_enabled': 'Checks every URL found in string values against the allow list. ' +
         'Unexpected URLs in tool responses can be used to exfiltrate data or to lure the model ' +
         'into fetching hostile content.',

@@ -363,6 +363,10 @@ def build_gateway_list() -> 'dictlist':
             safeguards_pii_lands=[_constants.PII_Land_Main],
             safeguards_pii_validate=False),
 
+        # Secrets removal - credential-shaped values become stable tokens
+        _gateway(_constants.Gateway_Secrets, _constants.Path_Secrets,
+            safeguards_secrets_enabled=True),
+
         # Content safety in its remaining modes - unicode in reject mode
         # and the URL policy in its neutralize and reject modes
         _gateway(_constants.Gateway_Unicode_Reject, _constants.Path_Unicode_Reject,
@@ -435,6 +439,21 @@ def build_suite_config(
 
 # ################################################################################################################################
 
+def run_import_file(server_directory:'str', input_path:'str') -> 'None':
+    """ Runs one enmasse import of the given YAML file against the live server.
+    """
+
+    result = subprocess.run(
+        [_zato_bin, 'enmasse', server_directory, '--verbose', '--import', '--input', input_path],
+        capture_output=True, text=True, timeout=_enmasse_timeout,
+    )
+
+    if result.returncode != 0:
+        raise Exception(
+            f'enmasse --import failed (exit {result.returncode}):\nstdout: {result.stdout}\nstderr: {result.stderr}')
+
+# ################################################################################################################################
+
 def run_import(server_directory:'str', config:'stranydict') -> 'None':
     """ Writes the config out as YAML and runs one enmasse import against the live server.
     """
@@ -447,18 +466,27 @@ def run_import(server_directory:'str', config:'stranydict') -> 'None':
         with open(tmp_yaml, 'w') as yaml_file:
             _ = yaml_file.write(yaml_text)
 
-        result = subprocess.run(
-            [_zato_bin, 'enmasse', server_directory, '--verbose', '--import', '--input', tmp_yaml],
-            capture_output=True, text=True, timeout=_enmasse_timeout,
-        )
-
-        if result.returncode != 0:
-            raise Exception(
-                f'enmasse --import failed (exit {result.returncode}):\nstdout: {result.stdout}\nstderr: {result.stderr}')
+        run_import_file(server_directory, tmp_yaml)
 
     finally:
         if os.path.isfile(tmp_yaml):
             os.unlink(tmp_yaml)
+
+# ################################################################################################################################
+
+def run_export(server_directory:'str', output_path:'str', include_type:'str') -> 'None':
+    """ Runs one enmasse export of the given object types against the live server.
+    """
+
+    result = subprocess.run(
+        [_zato_bin, 'enmasse', server_directory, '--verbose', '--export',
+            '--output', output_path, '--include-type', include_type],
+        capture_output=True, text=True, timeout=_enmasse_timeout,
+    )
+
+    if result.returncode != 0:
+        raise Exception(
+            f'enmasse --export failed (exit {result.returncode}):\nstdout: {result.stdout}\nstderr: {result.stderr}')
 
 # ################################################################################################################################
 # ################################################################################################################################

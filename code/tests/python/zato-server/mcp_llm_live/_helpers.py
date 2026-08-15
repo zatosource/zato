@@ -329,6 +329,18 @@ def call_and_read_event(
 
 # ################################################################################################################################
 
+def read_new_log_text(server_log_path:'str', log_offset:'int') -> 'str':
+    """ What the server logged since the given offset.
+    """
+
+    with open(server_log_path) as server_log:
+        _ = server_log.seek(log_offset)
+        out = server_log.read()
+
+    return out
+
+# ################################################################################################################################
+
 def wait_until(condition:'callable_', description:'str') -> 'None':
     """ Polls until the condition function returns True, which is how the tests wait
     for a re-imported change to reach live enforcement.

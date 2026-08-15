@@ -67,6 +67,9 @@ class CreateForm(forms.Form):
     safeguards_pii_validate = forms.BooleanField(required=False)
     safeguards_pii_stable_replacements = forms.BooleanField(required=False)
 
+    # Response safeguards - secrets removal
+    safeguards_secrets_enabled = forms.BooleanField(required=False)
+
     # Response safeguards - unicode
     safeguards_normalize_unicode = forms.BooleanField(required=False)
     safeguards_unicode_mode = forms.ChoiceField(choices=_mode_choices)

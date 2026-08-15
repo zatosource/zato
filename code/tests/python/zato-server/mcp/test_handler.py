@@ -18,7 +18,7 @@ from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params, _error_invalid_request, \
     _error_method_not_found, _error_parse, _jsonrpc_version, _mcp_protocol_version, _message_bad_request, \
-    _server_name, _server_version
+    _message_request_too_deep, _server_name, _server_version
 from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.session import MCPSessionManager
 
@@ -594,6 +594,73 @@ class HandleMalformedInput(TestCase):
         body = mcp_response.body
         result = body['result']
         self.assertTrue(result['isError'])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _make_nested_value(levels:'int') -> 'anydict':
+    """ Builds a dict-in-dict chain of the given number of levels.
+    """
+
+    out:'anydict' = {'level': 'bottom'}
+
+    for _ in range(levels - 1):
+        out = {'level': out}
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HandleRequestDepth(TestCase):
+    """ Tests the bound on how deeply a request body may nest, over and above the byte size bound.
+    """
+
+    def test_a_body_past_the_depth_bound_is_invalid(self) -> 'None':
+        """ A body nested past the published depth bound is a clean invalid request.
+        """
+
+        registry = _MockToolRegistry()
+        handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
+
+        # The body and params levels sit on top of the nested chain,
+        # so the chain alone already exceeds the bound.
+        nested = _make_nested_value(MCP.Max_Request_Depth + 50)
+
+        request = _make_request('ping', params={'context': nested})
+        raw = dumps(request)
+
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+
+        self.assertEqual(mcp_response.status_code, OK)
+
+        body = mcp_response.body
+        error = body['error']
+        self.assertEqual(error['code'], _error_invalid_request)
+        self.assertEqual(error['message'], _message_request_too_deep)
+
+    def test_a_body_under_the_depth_bound_is_served(self) -> 'None':
+        """ A body whose nesting stays under the bound dispatches like any other.
+        """
+
+        registry = _MockToolRegistry()
+        handler = _make_handler(registry=registry)
+        session_id = _make_session(handler)
+
+        # The body and params levels sit on top of the nested chain, hence the headroom
+        nested = _make_nested_value(MCP.Max_Request_Depth - 10)
+
+        request = _make_request('ping', params={'context': nested})
+        raw = dumps(request)
+
+        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+
+        self.assertEqual(mcp_response.status_code, OK)
+
+        body = mcp_response.body
+        result = body['result']
+        self.assertEqual(result, {})
 
 # ################################################################################################################################
 # ################################################################################################################################

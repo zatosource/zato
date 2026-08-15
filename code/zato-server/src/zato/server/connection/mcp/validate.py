@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Zato
+from zato.server.connection.mcp.common import printable
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -108,12 +111,13 @@ def _validate_object(value:'anydict', schema:'stranydict', path:'str') -> 'strno
             out = f'Missing required parameter: `{full_path}`'
             return out
 
-    # .. no field outside the schema is accepted ..
+    # .. no field outside the schema is accepted - the offending name
+    # renders as one line of printable text ..
     for name, field_value in value.items():
 
         if name not in properties:
             full_path = _join_path(path, name)
-            out = f'Unknown parameter: `{full_path}`'
+            out = f'Unknown parameter: `{printable(full_path)}`'
             return out
 
         # .. and each value must match its declared type.

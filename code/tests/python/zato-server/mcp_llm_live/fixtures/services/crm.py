@@ -29,6 +29,9 @@ _marker_dir_env_key = 'Zato_Test_LLM_Marker_Dir'
 # The file each service invocation appends its name to
 _marker_file_name = 'invocations.txt'
 
+# The file the order status service appends each payload it received to
+_payload_file_name = 'payloads.txt'
+
 # The customer the CRM answers about
 _customer_id = 'CRM-1001'
 
@@ -54,12 +57,27 @@ _history_separator = '\u3000'
 _reaction_tokens = ('🚀', '👍🏽', '🧑\u200d💻', 'γειά', 'καφε\u0301δες')
 _reaction_repeat = 1200
 
+# The credential-shaped values of the secrets record - one value per detector of the secrets
+# removal stage, the AWS key written twice in one field for the stable-token assertions.
+_secret_api_token   = 'sk-crm9001integration0abc'
+_secret_aws_key     = 'AKIA2E74XAMPLE9001AB'
+_secret_jwt         = 'eyJhbGciOiJIUzI1NiJ9.eyJjcm0iOiI5MDAxIn0.c2lnbmF0dXJlOTAwMQ'
+_secret_bearer      = 'Bearer crm9001tokenvalue77'
+_secret_conn_string = 'postgres://reporting:Zx9001pass@db.internal:5432/crm'
+
+_secret_private_key = (
+    '-----BEGIN RSA PRIVATE KEY-----\n'
+    'MIIEowIBAAKCAQEAcrm9001exampleline1\n'
+    'MIIEowIBAAKCAQEAcrm9001exampleline2\n'
+    '-----END RSA PRIVATE KEY-----')
+
 # The customers beyond the main one - a Greek record whose contacts line carries two distinct
 # emails, a Japanese record with PII nested in objects and arrays plus a national id only
 # the jp land's detectors recognize, a diacritics record with PII inside Greek prose,
 # a Hebrew record with clean and padded text, a mixed-script record whose fields
 # exercise every pipeline stage at once, a Japanese history long enough to cross the size
-# cap and an emoji record for the truncation boundary.
+# cap, an emoji record for the truncation boundary and a record whose notes carry
+# credential-shaped values for the secrets removal stage.
 _extra_customers = {
     'CRM-2001': {
         'name': 'Νίκος Παπαδόπουλος',
@@ -110,6 +128,16 @@ _extra_customers = {
         'city': 'Innsbruck',
         'reactions': ' '.join(list(_reaction_tokens) * _reaction_repeat),
     },
+    'CRM-9001': {
+        'name': 'Ines Kaltenbrunner',
+        'city': 'Salzburg',
+        'api_note': f'The integration was provisioned with {_secret_api_token} last spring',
+        'aws_note': f'Backups sign with {_secret_aws_key}, the standby job reuses {_secret_aws_key} as well',
+        'session_note': f'The portal session cookie carries {_secret_jwt}',
+        'auth_note': f'Each call sends Authorization: {_secret_bearer}',
+        'db_note': f'Reports read from {_secret_conn_string} nightly',
+        'deploy_key': _secret_private_key,
+    },
 }
 
 # ################################################################################################################################
@@ -128,6 +156,22 @@ def _record_invocation(service_name:'str') -> 'None':
 
     with open(marker_path, 'a') as marker_file:
         _ = marker_file.write(service_name + '\n')
+
+# ################################################################################################################################
+
+def _record_payload(service_name:'str', payload:'object') -> 'None':
+    """ Appends the payload a service received to the payload marker file,
+    which is how tests prove exactly what did and did not reach a service.
+    """
+    marker_dir = os.environ.get(_marker_dir_env_key)
+
+    if not marker_dir:
+        return
+
+    payload_path = os.path.join(marker_dir, _payload_file_name)
+
+    with open(payload_path, 'a') as payload_file:
+        _ = payload_file.write(f'{service_name} {payload!r}\n')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -233,6 +277,7 @@ class OrderStatus(Service):
     def handle(self):
 
         _record_invocation(self.name)
+        _record_payload(self.name, self.request.raw_request)
 
         order_id = self.request.input.order_id
 

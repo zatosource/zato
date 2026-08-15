@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 The human-readable lines the MCP detail pane says about what response shaping did to one
-event - PII replacements per detector, compaction counts, content safety findings, token
-cuts and the client's own filter - each count in the grammatical number it calls for.
+event - PII and secrets replacements per detector, compaction counts, content safety findings,
+token cuts and the client's own filter - each count in the grammatical number it calls for.
 """
 
 # stdlib
@@ -15,7 +15,7 @@ import json
 
 # Zato
 from zato.common.util.logging_ import count_text
-from zato.common.util.safeguards.names import Detector_Nouns
+from zato.common.util.safeguards.names import Detector_Nouns, Secret_Detector_Nouns
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,6 +29,7 @@ if 0:
 
 # What each family of trace lines is labelled with in the pane
 _label_pii            = 'PII removed'
+_label_secrets        = 'Secrets removed'
 _label_compaction     = 'Compaction'
 _label_content_safety = 'Content safety'
 _label_size_cap       = 'Size cap'
@@ -64,6 +65,16 @@ def get_trace_lines(data:'stranydict') -> 'anylist':
             counted = count_text(count, singular, plural)
 
             out.append({'label': _label_pii, 'text': f'replaced {counted}'})
+
+    # .. one line per secrets detector too ..
+    if secrets_removed := data.get('secrets_removed'):
+        for detector_name in sorted(secrets_removed):
+
+            count = secrets_removed[detector_name]
+            singular, plural = Secret_Detector_Nouns[detector_name]
+            counted = count_text(count, singular, plural)
+
+            out.append({'label': _label_secrets, 'text': f'replaced {counted}'})
 
     # .. what compaction stripped out ..
     if nulls_removed := data.get('nulls_removed'):

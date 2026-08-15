@@ -6,9 +6,6 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import os
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -21,10 +18,6 @@ if 0:
 def read_invocations(marker_path:'str') -> 'strlist':
     """ The names of every service invocation recorded so far, in order.
     """
-
-    # No file yet means nothing was invoked yet
-    if not os.path.isfile(marker_path):
-        return []
 
     with open(marker_path) as marker_file:
         lines = marker_file.read().splitlines()
@@ -45,6 +38,18 @@ def count_invocations(marker_path:'str', service_name:'str') -> 'int':
     invocations = read_invocations(marker_path)
 
     out = invocations.count(service_name)
+    return out
+
+# ################################################################################################################################
+
+def read_payload_text(payload_path:'str', offset:'int') -> 'str':
+    """ The payloads services recorded since the given offset, as one text.
+    """
+
+    with open(payload_path) as payload_file:
+        _ = payload_file.seek(offset)
+        out = payload_file.read()
+
     return out
 
 # ################################################################################################################################

@@ -710,6 +710,23 @@ def attachments(req:'any_') -> 'HttpResponse':
 
 # ################################################################################################################################
 
+# In a downloaded filename, control characters become spaces
+# and quotes and backslashes become underscores.
+_filename_char_map = {}
+
+for _code_point in range(0, 32):
+    _filename_char_map[_code_point] = 32
+
+_filename_char_map[127] = 32
+
+for _code_point in range(128, 160):
+    _filename_char_map[_code_point] = 32
+
+_filename_char_map[ord('"')] = ord('_')
+_filename_char_map[ord('\\')] = ord('_')
+
+# ################################################################################################################################
+
 @method_allowed('GET')
 def attachment_download(req:'any_') -> 'HttpResponse':
     """ Streams one attachment's decoded bytes back under the filename and content type
@@ -735,7 +752,8 @@ def attachment_download(req:'any_') -> 'HttpResponse':
     source, object_name = owner_row
     _record_content_view(req, attachment['event_id'], source, object_name)
 
-    filename = attachment['filename']
+    # The stored filename goes through the character map first
+    filename = attachment['filename'].translate(_filename_char_map)
 
     out = HttpResponse(attachment['content'], content_type=attachment['content_type'])
     out['Content-Disposition'] = f'attachment; filename="{filename}"'
