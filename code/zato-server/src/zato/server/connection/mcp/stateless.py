@@ -20,7 +20,7 @@ from zato.server.connection.mcp.common import _error_invalid_params, _error_inva
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, stranydict, strnone
+    from zato.common.typing_ import any_, anydict, stranydict, strdictlist, strnone
     from zato.server.connection.mcp.handler import MCPHandler
 
     MCPHandler = MCPHandler
@@ -109,16 +109,35 @@ def _decorate_result(body:'stranydict') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _handle_discover(request_id:'any_') -> 'stranydict':
+def _handle_discover(handler:'MCPHandler', request_id:'any_') -> 'stranydict':
     """ Handles the server/discover request - advertises the protocol versions
-    this gateway speaks, its capabilities and its identity.
+    this gateway speaks, its capabilities, its identity and its tools,
+    so one probe is a sufficient tool source.
     """
 
+    # Every page of the tool registry goes into the advertisement ..
+    tools:'strdictlist' = []
+    cursor = None
+
+    while True:
+        page, cursor = handler.tool_registry.get_tools_page(cursor)
+        tools.extend(page)
+
+        if not cursor:
+            break
+
+    # .. a gateway that allows client filters advertises the filter property here
+    # the same way tools/list does ..
+    if handler.allow_client_filters:
+        tools = handler._add_response_filter_property(tools)
+
+    # .. and the whole advertisement goes out as one result.
     result:'stranydict' = {
         'protocolVersions': MCP.Protocol_Versions_Supported,
         'capabilities': {
             'tools': {},
         },
+        'tools': tools,
         'serverInfo': {
             'name': _server_name,
             'version': _server_version,
@@ -212,9 +231,9 @@ def dispatch(
         body, trace = handler._handle_tools_call(request_id, params)
         out.trace = trace
 
-    # .. server/discover advertises versions, capabilities and identity ..
+    # .. server/discover advertises versions, capabilities, identity and tools ..
     elif method == _method_discover:
-        body = _handle_discover(request_id)
+        body = _handle_discover(handler, request_id)
 
     # .. tools/list results carry their cache hints ..
     elif method == _method_tools_list:

@@ -10,8 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import _agent
 import _audit
 import _constants
+import _enmasse
 import _helpers
 import _markers
+from _helpers import wait_until as _wait_until
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
@@ -28,6 +30,13 @@ if 0:
 # What a final answer sounds like when the model reports that something did not work
 _failure_words = ('cannot', 'could not', "couldn't", 'unable', 'fail', 'error', 'not possible', 'was not', 'no result')
 
+# An argument no schema of the suite declares, with a value a caller could plausibly send
+_unknown_key   = 'delivery_notes'
+_unknown_value = 'Leave at the front desk'
+
+# The format the report service falls back to when the caller names none
+_default_report_format = 'summary'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -36,6 +45,20 @@ def _contains_failure_word(text:'str') -> 'bool':
     """
 
     out = _helpers.contains_any_word(text, _failure_words)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _call_customer(zato_server:'anydict', url_path:'str', arguments:'anydict') -> 'anydict':
+    """ One customer call through the given gateway on a fresh session,
+    returning the whole response body.
+    """
+
+    client = _helpers.make_client(zato_server, url_path)
+    session_id = _helpers.open_session(client)
+
+    out = _helpers.call_tool(client, session_id, _constants.Service_Customer_Get, arguments)
     return out
 
 # ################################################################################################################################
@@ -229,7 +252,7 @@ class TestValidationWithLLM:
         client = _helpers.make_client(zato_server, _constants.Path_Main)
 
         task = (
-            f'Cancel order {_constants.Order_ID_Broken} for me. If it does not work, '
+            f'Cancel order {_constants.Order_ID_Not_Cancellable} for me. If it does not work, '
             'say so plainly and do not pretend it worked.')
 
         result = _agent.run_agent(client, task)
@@ -263,3 +286,145 @@ class TestValidationWithLLM:
 
         assert cancel_events, events
         assert cancel_events[0]['outcome'] == AuditOutcome.Error, cancel_events
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestValidationOptions:
+    """ Input validation beyond the missing field and the wrong type - unknown parameters,
+    the same calls with validation off, optional fields and the live toggle.
+    """
+
+# ################################################################################################################################
+
+    def test_an_unknown_parameter_is_refused(self, zato_server:'anydict') -> 'None':
+
+        marker_path = zato_server['marker_path']
+        audit_db_path = zato_server['audit_db_path']
+
+        count_before = _markers.count_invocations(marker_path, _constants.Service_Customer_Get)
+        min_id = _audit.last_event_id(audit_db_path)
+
+        # A call with a field the schema does not declare is invalid params, naming the field ..
+        arguments = {'customer_id': _constants.Customer_ID, _unknown_key: _unknown_value}
+        body = _call_customer(zato_server, _constants.Path_Validate, arguments)
+
+        assert body['error']['code'] == _constants.Error_Invalid_Params, body
+        assert _unknown_key in body['error']['message'], body
+
+        # .. audited as an error ..
+        events = _audit.wait_for_events(
+            audit_db_path, 1,
+            object_name=_constants.Gateway_Validate,
+            event_type=AuditEvent.MCP_Tools_Call,
+            min_id=min_id)
+
+        assert events[-1]['outcome'] == AuditOutcome.Error, events
+
+        # .. and the service never ran.
+        count_after = _markers.count_invocations(marker_path, _constants.Service_Customer_Get)
+        assert count_after == count_before, (count_before, count_after)
+
+# ################################################################################################################################
+
+    def test_the_same_calls_with_validation_off(self, zato_server:'anydict') -> 'None':
+
+        marker_path = zato_server['marker_path']
+        audit_db_path = zato_server['audit_db_path']
+
+        # The unknown-parameter call reaches the service with the extra argument intact ..
+        count_before = _markers.count_invocations(marker_path, _constants.Service_Customer_Get)
+
+        arguments = {'customer_id': _constants.Customer_ID, _unknown_key: _unknown_value}
+        body = _call_customer(zato_server, _constants.Path_Main, arguments)
+
+        data = _helpers.get_result_data(body)
+        assert data['name'] == _constants.Customer_Name, body
+
+        count_after = _markers.count_invocations(marker_path, _constants.Service_Customer_Get)
+        assert count_after == count_before + 1, (count_before, count_after)
+
+        # .. while the missing-field call fails under the service's own input contract -
+        # a service error, not a validation one ..
+        min_id = _audit.last_event_id(audit_db_path)
+
+        body = _call_customer(zato_server, _constants.Path_Main, {})
+
+        result = body['result']
+        assert result['isError'] is True, body
+
+        # .. and the audit records the difference - an error outcome with no
+        # JSON-RPC error code, unlike a validation refusal.
+        events = _audit.wait_for_events(
+            audit_db_path, 1,
+            object_name=_constants.Gateway_Main,
+            event_type=AuditEvent.MCP_Tools_Call,
+            min_id=min_id)
+
+        event = events[-1]
+        assert event['outcome'] == AuditOutcome.Error, event
+        assert 'error_code' not in event['data'], event
+
+# ################################################################################################################################
+
+    def test_optional_fields_pass_by_omission(self, zato_server:'anydict') -> 'None':
+
+        client = _helpers.make_client(zato_server, _constants.Path_Validate)
+        session_id = _helpers.open_session(client)
+
+        # The call omits the optional format field and passes validation ..
+        arguments = {'customer_id': _constants.Customer_ID}
+        body = _helpers.call_tool(client, session_id, _constants.Service_Report_Build, arguments)
+
+        # .. and the service saw its own declared default.
+        data = _helpers.get_result_data(body)
+
+        assert data['customer_id'] == _constants.Customer_ID, body
+        assert data['format'] == _default_report_format, body
+
+# ################################################################################################################################
+
+    def test_the_toggle_is_live(self, zato_server:'anydict') -> 'None':
+
+        server_directory = zato_server['server_directory']
+
+        # The missing-field call is refused while validation is on ..
+        body = _call_customer(zato_server, _constants.Path_Validate, {})
+        assert body['error']['code'] == _constants.Error_Invalid_Params, body
+
+        try:
+            # .. one re-import turns validation off and the same call
+            # now reaches the service, failing under its own contract ..
+            overrides = {_constants.Gateway_Validate: {'validate_input': False}}
+            config = _enmasse.build_suite_config(gateway_overrides=overrides)
+            _enmasse.run_import(server_directory, config)
+
+            def call_reaches_the_service() -> 'bool':
+                body = _call_customer(zato_server, _constants.Path_Validate, {})
+
+                if 'error' in body:
+                    return False
+
+                out = 'isError' in body['result']
+                return out
+
+            _wait_until(call_reaches_the_service, 'validation off reached enforcement')
+
+        finally:
+            # .. and turning it back on refuses the call again - both ways, no restart.
+            config = _enmasse.build_suite_config()
+            _enmasse.run_import(server_directory, config)
+
+            def call_is_refused() -> 'bool':
+                body = _call_customer(zato_server, _constants.Path_Validate, {})
+
+                if 'error' not in body:
+                    return False
+
+                out = body['error']['code'] == _constants.Error_Invalid_Params
+                return out
+
+            _wait_until(call_is_refused, 'validation on came back')
+
+# ################################################################################################################################
+# ################################################################################################################################

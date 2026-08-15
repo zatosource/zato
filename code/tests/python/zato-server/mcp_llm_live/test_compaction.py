@@ -7,59 +7,58 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # local
-import _audit
 import _constants
 import _helpers
+from _helpers import call_and_read_event as _call_and_read_event
 
 # Zato
-from zato.common.audit_log.api import AuditEvent
+from zato.common.util.safeguards.common import Base64_Marker_Template
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import anydict, anytuple
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The customer record carries exactly these two null fields
-_null_field_count = 2
+# The customer record carries exactly these null fields - two at the top level and one nested
+_null_field_count = 3
 
 # What a stripped base64 blob is replaced with
 _base64_marker_prefix = '[binary content removed:'
 
+# The whitespace run the customer notes carry when no stage collapses it
+_notes_raw_run = 'Alpha    Beta'
+
+# The same words once the collapse has run
+_notes_collapsed_run = 'Alpha Beta'
+
+# The tags array of the record - its null element keeps its position under null stripping
+_tags_with_null = ['vip', None, 'beta']
+
+# The avatar blob as the fixture builds it - the marker must name exactly its length
+_avatar_blob = 'data:image/png;base64,' + 'QUJDREVG' * 40
+
+# The base64-looking string below the stripping floor - it always survives
+_thumb_blob = 'data:image/png;base64,QUJDREVG'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_customer_record(zato_server:'anydict', url_path:'str') -> 'tuple':
+def _get_customer_record(zato_server:'anydict', url_path:'str', gateway_name:'str') -> 'anytuple':
     """ One customer call through the given gateway, returning the record
     and the audit data document of the call's event.
     """
 
-    audit_db_path = zato_server['audit_db_path']
-    min_id = _audit.last_event_id(audit_db_path)
-
-    client = _helpers.make_client(zato_server, url_path)
-    session_id = _helpers.open_session(client)
-
-    body = _helpers.call_tool(client, session_id, _constants.Service_Customer_Get,
-        {'customer_id': _constants.Customer_ID})
+    body, event_data = _call_and_read_event(
+        zato_server, url_path, gateway_name,
+        _constants.Service_Customer_Get, {'customer_id': _constants.Customer_ID})
 
     data = _helpers.get_result_data(body)
 
-    gateway_name = {
-        _constants.Path_Compaction: _constants.Gateway_Compaction,
-        _constants.Path_Main: _constants.Gateway_Main,
-    }[url_path]
-
-    events = _audit.wait_for_events(
-        audit_db_path, 1,
-        object_name=gateway_name,
-        event_type=AuditEvent.MCP_Tools_Call,
-        min_id=min_id)
-
-    out = data, events[-1]['data']
+    out = data, event_data
     return out
 
 # ################################################################################################################################
@@ -74,11 +73,12 @@ class TestCompaction:
 
     def test_nulls_are_stripped_and_counted(self, zato_server:'anydict') -> 'None':
 
-        data, event_data = _get_customer_record(zato_server, _constants.Path_Compaction)
+        data, event_data = _get_customer_record(zato_server, _constants.Path_Compaction, _constants.Gateway_Compaction)
 
-        # The null fields are gone from the record ..
+        # The null fields are gone from the record, the nested one included ..
         assert 'fax' not in data, data
         assert 'secondary_email' not in data, data
+        assert 'iban' not in data['billing'], data
 
         # .. and the audit trace counts exactly them.
         assert event_data['nulls_removed'] == _null_field_count, event_data
@@ -87,11 +87,11 @@ class TestCompaction:
 
     def test_whitespace_is_collapsed_and_counted(self, zato_server:'anydict') -> 'None':
 
-        data, event_data = _get_customer_record(zato_server, _constants.Path_Compaction)
+        data, event_data = _get_customer_record(zato_server, _constants.Path_Compaction, _constants.Gateway_Compaction)
 
         # The runs in the notes have collapsed to single spaces ..
         notes = data['notes']
-        assert 'Alpha Beta' in notes, notes
+        assert _notes_collapsed_run in notes, notes
         assert '  ' not in notes, notes
 
         # .. and the count says how many characters the collapse removed.
@@ -101,7 +101,7 @@ class TestCompaction:
 
     def test_base64_blobs_are_stripped_and_counted(self, zato_server:'anydict') -> 'None':
 
-        data, event_data = _get_customer_record(zato_server, _constants.Path_Compaction)
+        data, event_data = _get_customer_record(zato_server, _constants.Path_Compaction, _constants.Gateway_Compaction)
 
         # The avatar blob is a size marker now ..
         avatar = data['avatar']
@@ -115,18 +115,118 @@ class TestCompaction:
 
     def test_stages_off_leave_the_content_untouched(self, zato_server:'anydict') -> 'None':
 
-        data, event_data = _get_customer_record(zato_server, _constants.Path_Main)
+        data, event_data = _get_customer_record(zato_server, _constants.Path_Main, _constants.Gateway_Main)
 
         # With every compaction stage off, the record comes back as the service built it ..
         assert data['fax'] is None, data
         assert data['secondary_email'] is None, data
-        assert 'Alpha    Beta' in data['notes'], data['notes']
+        assert _notes_raw_run in data['notes'], data['notes']
         assert 'base64' in data['avatar'], data['avatar']
 
         # .. and the audit event carries no compaction keys at all.
         assert 'nulls_removed' not in event_data, event_data
         assert 'whitespace_chars_removed' not in event_data, event_data
         assert 'base64_blobs_removed' not in event_data, event_data
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestCompactionBoundaries:
+    """ Each compaction rule alone and at its exact boundary - nulls in objects
+    against arrays, whitespace inside strings, the base64 marker and its floor.
+    """
+
+# ################################################################################################################################
+
+    def test_each_safeguard_acts_alone(self, zato_server:'anydict') -> 'None':
+
+        # The null-stripping gateway leaves whitespace and base64 alone ..
+        data, event_data = _get_customer_record(zato_server, _constants.Path_Nulls, _constants.Gateway_Nulls)
+
+        assert 'fax' not in data, data
+        assert _notes_raw_run in data['notes'], data['notes']
+        assert data['avatar'] == _avatar_blob, data['avatar']
+
+        assert event_data['nulls_removed'] == _null_field_count, event_data
+        assert 'whitespace_chars_removed' not in event_data, event_data
+        assert 'base64_blobs_removed' not in event_data, event_data
+
+        # .. the whitespace gateway leaves nulls and base64 alone ..
+        data, event_data = _get_customer_record(zato_server, _constants.Path_Whitespace, _constants.Gateway_Whitespace)
+
+        assert data['fax'] is None, data
+        assert _notes_collapsed_run in data['notes'], data['notes']
+        assert data['avatar'] == _avatar_blob, data['avatar']
+
+        assert event_data['whitespace_chars_removed'] > 0, event_data
+        assert 'nulls_removed' not in event_data, event_data
+        assert 'base64_blobs_removed' not in event_data, event_data
+
+        # .. and the base64 gateway leaves both alone.
+        data, event_data = _get_customer_record(zato_server, _constants.Path_Base64, _constants.Gateway_Base64)
+
+        assert data['fax'] is None, data
+        assert _notes_raw_run in data['notes'], data['notes']
+        assert data['avatar'] != _avatar_blob, data['avatar']
+
+        assert event_data['base64_blobs_removed'] == 1, event_data
+        assert 'nulls_removed' not in event_data, event_data
+        assert 'whitespace_chars_removed' not in event_data, event_data
+
+# ################################################################################################################################
+
+    def test_nulls_leave_objects_never_arrays(self, zato_server:'anydict') -> 'None':
+
+        data, _ = _get_customer_record(zato_server, _constants.Path_Nulls, _constants.Gateway_Nulls)
+
+        # Null-valued keys disappear at the top level and nested alike ..
+        assert 'fax' not in data, data
+        assert 'secondary_email' not in data, data
+        assert 'iban' not in data['billing'], data
+
+        # .. while the null array element keeps its position.
+        assert data['tags'] == _tags_with_null, data['tags']
+
+# ################################################################################################################################
+
+    def test_whitespace_collapses_inside_strings_only(self, zato_server:'anydict') -> 'None':
+
+        data, _ = _get_customer_record(zato_server, _constants.Path_Whitespace, _constants.Gateway_Whitespace)
+
+        # Runs of spaces inside string values become one space ..
+        notes = data['notes']
+
+        assert _notes_collapsed_run in notes, notes
+        assert '  ' not in notes, notes
+
+        # .. an IMEI written with single spaces keeps them - single spaces are no run ..
+        device_imeis = []
+
+        for device in data['devices']:
+            device_imeis.append(device['imei'])
+
+        assert _constants.Customer_IMEI_Spaced in device_imeis, device_imeis
+
+        # .. and the key names and the structure stay untouched.
+        assert data['name'] == _constants.Customer_Name, data
+        assert data['billing']['plan'] == 'monthly', data
+        assert len(data['devices']) == 4, data['devices']
+
+# ################################################################################################################################
+
+    def test_the_base64_marker_names_the_size(self, zato_server:'anydict') -> 'None':
+
+        data, event_data = _get_customer_record(zato_server, _constants.Path_Base64, _constants.Gateway_Base64)
+
+        # The long blob is a marker naming exactly the original length ..
+        expected_marker = Base64_Marker_Template.format(size=len(_avatar_blob))
+        assert data['avatar'] == expected_marker, data['avatar']
+
+        # .. the short base64-looking string below the floor passes through unchanged ..
+        assert data['thumb'] == _thumb_blob, data['thumb']
+
+        # .. and the count says one blob and one blob alone.
+        assert event_data['base64_blobs_removed'] == 1, event_data
 
 # ################################################################################################################################
 # ################################################################################################################################

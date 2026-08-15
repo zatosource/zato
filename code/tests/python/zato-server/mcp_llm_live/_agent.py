@@ -22,9 +22,11 @@ from containers import Model_Name, Ollama_OpenAI_URL
 
 if 0:
     from _client import MCPClient
-    from zato.common.typing_ import any_, anydict, dictlist, strnone
+    from _client_stateless import MCPStatelessClient
+    from zato.common.typing_ import any_, anydict, callable_, dictlist, strnone
 
     MCPClient = MCPClient
+    MCPStatelessClient = MCPStatelessClient
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,13 +97,16 @@ def _tools_for_model(mcp_tools:'dictlist') -> 'dictlist':
 
 def _chat_completion(messages:'dictlist', tools:'dictlist', model:'str', ollama_url:'str') -> 'anydict':
     """ Sends one chat completion request and returns the assistant message it produced.
+    A request without tools is how the loop asks for a plain text answer once the turn bound is hit.
     """
     body = {
         'model': model,
         'messages': messages,
-        'tools': tools,
         'temperature': _temperature,
     }
+
+    if tools:
+        body['tools'] = tools
 
     _diag.write_entry('chat_request', body)
 
@@ -153,6 +158,96 @@ def _execute_tool_call(client:'MCPClient', session_id:'str', function_name:'str'
 
 # ################################################################################################################################
 
+def _run_loop(
+    execute_call:'callable_',
+    mcp_tools:'dictlist',
+    task:'str',
+    system_text:'strnone',
+    model:'str',
+    ollama_url:'str',
+    max_turns:'int',
+    transform_arguments:'any_',
+    ) -> 'AgentResult':
+    """ The conversation loop both revisions share - the model gets the task and the tools,
+    every tool call it makes runs through the given executor, and the loop ends with the
+    model's final answer. A conversation that hits the turn bound gets one more completion
+    without tools, so the final answer is always a plain text message.
+    """
+
+    tools = _tools_for_model(mcp_tools)
+
+    # The conversation starts with the optional system context and the task itself
+    messages:'dictlist' = []
+
+    if system_text:
+        messages.append({'role': 'system', 'content': system_text})
+
+    messages.append({'role': 'user', 'content': task})
+
+    # Our response to produce
+    out = AgentResult()
+    out.tool_calls = []
+    out.session_id = ''
+    out.final_text = ''
+
+    has_final_answer = False
+
+    for _turn in range(max_turns):
+
+        assistant_message = _chat_completion(messages, tools, model, ollama_url)
+        messages.append(assistant_message)
+
+        tool_calls = assistant_message.get('tool_calls')
+
+        # No tool calls means this is the final answer and the conversation is over
+        if not tool_calls:
+            content = assistant_message['content']
+            if content is None:
+                content = ''
+            out.final_text = content
+            has_final_answer = True
+            break
+
+        # Every tool call runs against the gateway and its result goes back to the model
+        for call in tool_calls:
+
+            function = call['function']
+            arguments = function['arguments']
+
+            # The API delivers arguments as a JSON string, Ollama sometimes as a parsed object already
+            if isinstance(arguments, str):
+                arguments = loads(arguments)
+
+            if transform_arguments is not None:
+                tool_name = function['name'].replace(_dot_replacement, '.')
+                arguments = transform_arguments(tool_name, arguments)
+
+            executed = execute_call(function['name'], arguments)
+            out.tool_calls.append(executed)
+
+            messages.append({
+                'role': 'tool',
+                'tool_call_id': call['id'],
+                'content': executed.result_text,
+            })
+
+    # A conversation that spent every turn on tool calls still owes its caller an answer -
+    # one completion without tools makes the model state the outcome in plain text.
+    if not has_final_answer:
+
+        assistant_message = _chat_completion(messages, [], model, ollama_url)
+        messages.append(assistant_message)
+
+        content = assistant_message['content']
+        if content is None:
+            content = ''
+        out.final_text = content
+
+    out.messages = messages
+    return out
+
+# ################################################################################################################################
+
 def run_agent(
     client:'MCPClient',
     task:'str',
@@ -178,61 +273,74 @@ def run_agent(
     # The gateway's tools become the model's tools
     tools_response = client.jsonrpc('tools/list', session_id=session_id)
     mcp_tools = tools_response.json()['result']['tools']
-    tools = _tools_for_model(mcp_tools)
 
-    # The conversation starts with the optional system context and the task itself
-    messages:'dictlist' = []
+    def execute_call(function_name:'str', arguments:'anydict') -> 'ToolCall':
+        out = _execute_tool_call(client, session_id, function_name, arguments)
+        return out
 
-    if system_text:
-        messages.append({'role': 'system', 'content': system_text})
+    out = _run_loop(execute_call, mcp_tools, task, system_text, model, ollama_url, max_turns, transform_arguments)
+    out.session_id = session_id
+    return out
 
-    messages.append({'role': 'user', 'content': task})
+# ################################################################################################################################
+
+def _execute_stateless_tool_call(client:'MCPStatelessClient', function_name:'str', arguments:'anydict') -> 'ToolCall':
+    """ Executes one tool call of the stateless revision - the Mcp-Method and Mcp-Name
+    headers travel with it and there is no session anywhere.
+    """
+
+    tool_name = function_name.replace(_dot_replacement, '.')
+
+    response = client.tools_call(tool_name, arguments)
+    body = response.json()
 
     # Our response to produce
-    out = AgentResult()
-    out.tool_calls = []
-    out.session_id = session_id
-    out.final_text = ''
+    out = ToolCall()
+    out.tool_name = tool_name
+    out.arguments = arguments
 
-    for _turn in range(max_turns):
+    # A JSON-RPC error is reported to the model as text so it can react ..
+    if 'error' in body:
+        error = body['error']
+        out.result_text = f'Error {error["code"]}: {error["message"]}'
+        out.is_error = True
+        return out
 
-        assistant_message = _chat_completion(messages, tools, model, ollama_url)
-        messages.append(assistant_message)
+    # .. and so is a tool-level error.
+    result = body['result']
+    out.result_text = result['content'][0]['text']
+    out.is_error = bool(result.get('isError'))
 
-        tool_calls = assistant_message.get('tool_calls')
+    return out
 
-        # No tool calls means this is the final answer and the conversation is over
-        if not tool_calls:
-            content = assistant_message['content']
-            if content is None:
-                content = ''
-            out.final_text = content
-            break
+# ################################################################################################################################
 
-        # Every tool call runs against the gateway and its result goes back to the model
-        for call in tool_calls:
+def run_agent_stateless(
+    client:'MCPStatelessClient',
+    task:'str',
+    system_text:'strnone' = None,
+    model:'str' = Model_Name,
+    ollama_url:'str' = Ollama_OpenAI_URL,
+    max_turns:'int' = _max_turns,
+    tools_from_discover:'bool' = False,
+    ) -> 'AgentResult':
+    """ The same host role over the stateless revision - no initialize, no session,
+    each request self-contained. The tool list comes from tools/list, or from
+    server/discover when tools_from_discover says so.
+    """
 
-            function = call['function']
-            arguments = function['arguments']
+    if tools_from_discover:
+        tools_response = client.discover()
+    else:
+        tools_response = client.tools_list()
 
-            # The API delivers arguments as a JSON string, Ollama sometimes as a parsed object already
-            if isinstance(arguments, str):
-                arguments = loads(arguments)
+    mcp_tools = tools_response.json()['result']['tools']
 
-            if transform_arguments is not None:
-                tool_name = function['name'].replace(_dot_replacement, '.')
-                arguments = transform_arguments(tool_name, arguments)
+    def execute_call(function_name:'str', arguments:'anydict') -> 'ToolCall':
+        out = _execute_stateless_tool_call(client, function_name, arguments)
+        return out
 
-            executed = _execute_tool_call(client, session_id, function['name'], arguments)
-            out.tool_calls.append(executed)
-
-            messages.append({
-                'role': 'tool',
-                'tool_call_id': call['id'],
-                'content': executed.result_text,
-            })
-
-    out.messages = messages
+    out = _run_loop(execute_call, mcp_tools, task, system_text, model, ollama_url, max_turns, None)
     return out
 
 # ################################################################################################################################

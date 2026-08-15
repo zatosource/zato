@@ -72,8 +72,14 @@ class GatewayMCPWrapper:
         tool_registry = ToolRegistry(self.server.service_store, allowed_services)
         tool_registry.rebuild()
 
-        # .. build the session manager ..
-        session_manager = MCPSessionManager()
+        # .. build the session manager - a per-gateway idle TTL overrides the default,
+        # configs predating the field lack the key and zero means the default too ..
+        session_ttl = self.config.get('session_ttl')
+
+        if session_ttl:
+            session_manager = MCPSessionManager(ttl=session_ttl)
+        else:
+            session_manager = MCPSessionManager()
 
         # .. response shaping configs come from the same flat gateway config -
         # editing the gateway rebuilds this wrapper, so changes apply without a restart ..

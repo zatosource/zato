@@ -390,7 +390,7 @@ review._piiReviewRows = function() {
         ['Detectors', detectorLabels.length ? detectorLabels.join(', ') : config.noneLabel],
         ['Exclude', excludeLabels.length ? excludeLabels.join(', ') : config.noneLabel],
         ['Validate checksums', wizard.field('safeguards_pii_validate').prop('checked') ? config.onLabel : config.offLabel],
-        ['Stable tokens', wizard.field('safeguards_pii_stable_tokens').prop('checked') ? config.onLabel : config.offLabel]
+        ['Stable replacements', wizard.field('safeguards_pii_stable_replacements').prop('checked') ? config.onLabel : config.offLabel]
     ];
 
     return out;

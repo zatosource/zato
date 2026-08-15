@@ -124,6 +124,9 @@ _server_process   = None
 _listener_process = None
 _temp_directory   = None
 
+# Where the server's output is persisted, outside the temp dir so it survives teardown
+_server_log_path = os.path.join(tempfile.gettempdir(), 'zato_mcp_llm_live_server.log')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -267,6 +270,47 @@ def _copy_fixture_skills(server_directory:'str') -> 'None':
 
 # ################################################################################################################################
 
+def _spawn_server(server_directory:'str', server_env:'any_', log_mode:'str') -> 'None':
+    """ Starts the server process in foreground mode and streams its output
+    to the console and to the persistent log file.
+    """
+
+    global _server_process
+
+    _server_process = subprocess.Popen(
+        [_zato_bin, 'start', server_directory, '--fg'],
+        env=server_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+    popen_time = time.monotonic()
+    server_log_file = open(_server_log_path, log_mode)
+
+    # Stream server stdout in a background thread, printing each line and writing it to the log file.
+    def _stream_server_output() -> 'None':
+        """ Reads server stdout line by line, prints each with a timestamp prefix,
+        and writes it to the persistent log file.
+        """
+
+        server_process = _server_process
+        assert server_process is not None
+        assert server_process.stdout is not None
+        stdout = server_process.stdout
+        for line in iter(stdout.readline, b''):
+            text = line.decode('utf-8', errors='replace').rstrip()
+            elapsed = time.monotonic() - popen_time
+            print(f'[SERVER {elapsed:6.1f}s] {text}')
+
+            # .. mirror to the persistent log file and flush so it is readable on timeout ..
+            _ = server_log_file.write(f'[SERVER {elapsed:6.1f}s] {text}\n')
+            server_log_file.flush()
+
+    stdout_thread = threading.Thread(target=_stream_server_output, daemon=True)
+    stdout_thread.start()
+
+# ################################################################################################################################
+
 def _wait_for_gateways(host:'str', port:'int') -> 'None':
     """ Polls the main gateway until its tool registry answers with the CRM tools,
     which proves both the fixture services and the enmasse-created gateways are live.
@@ -395,6 +439,7 @@ def zato_server() -> 'any_':
     server_env['Zato_Config_Bind_Port'] = str(port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     server_env['Zato_Test_LLM_Marker_Dir'] = marker_directory
+    server_env['Zato_MCP_Session_Reaper_Interval'] = str(_constants.Reaper_Interval_Seconds)
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
     # Point the audit log at a file inside the temp directory so the live server
@@ -402,41 +447,8 @@ def zato_server() -> 'any_':
     audit_db_path = os.path.join(_temp_directory, 'audit.db')
     server_env['Zato_Audit_Log_DB_Name'] = audit_db_path
 
-    _server_process = subprocess.Popen(
-        [_zato_bin, 'start', server_directory, '--fg'],
-        env=server_env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
-
-    popen_time = time.monotonic()
-
-    # .. persist the server output to a file outside the temp dir so it survives teardown ..
-    server_log_path = os.path.join(tempfile.gettempdir(), 'zato_mcp_llm_live_server.log')
-    server_log_file = open(server_log_path, 'w')
-    print(f'[TIMING] server log: {server_log_path}')
-
-    # .. stream server stdout in a background thread, printing each line and writing it to the log file ..
-    def _stream_server_output() -> 'None':
-        """ Reads server stdout line by line, prints each with a timestamp prefix,
-        and writes it to the persistent log file.
-        """
-
-        server_process = _server_process
-        assert server_process is not None
-        assert server_process.stdout is not None
-        stdout = server_process.stdout
-        for line in iter(stdout.readline, b''):
-            text = line.decode('utf-8', errors='replace').rstrip()
-            elapsed = time.monotonic() - popen_time
-            print(f'[SERVER {elapsed:6.1f}s] {text}')
-
-            # .. mirror to the persistent log file and flush so it is readable on timeout ..
-            _ = server_log_file.write(f'[SERVER {elapsed:6.1f}s] {text}\n')
-            server_log_file.flush()
-
-    stdout_thread = threading.Thread(target=_stream_server_output, daemon=True)
-    stdout_thread.start()
+    _spawn_server(server_directory, server_env, 'w')
+    print(f'[TIMING] server log: {_server_log_path}')
 
     # .. wait for the server to come up ..
     host = '127.0.0.1'
@@ -444,7 +456,7 @@ def zato_server() -> 'any_':
     try:
         _wait_for_server(host, port)
         ready_time = time.monotonic()
-        print(f'[TIMING] server ready: {ready_time - popen_time:.1f}s')
+        print(f'[TIMING] server ready: {ready_time - start_time:.1f}s')
 
     except Exception:
 
@@ -454,11 +466,11 @@ def zato_server() -> 'any_':
         # .. dump the full captured server output so the real startup failure is visible ..
         print('\n--- Server did not become ready, full server output follows ---\n')
 
-        if os.path.isfile(server_log_path):
-            with open(server_log_path) as captured_log:
+        if os.path.isfile(_server_log_path):
+            with open(_server_log_path) as captured_log:
                 print(captured_log.read())
 
-        print(f'\n--- End of server output (also saved at {server_log_path}) ---\n')
+        print(f'\n--- End of server output (also saved at {_server_log_path}) ---\n')
 
         _kill_server()
         raise
@@ -498,8 +510,23 @@ def zato_server() -> 'any_':
         out = f'http://{host}:{port}{url_path}'
         return out
 
+    def _restart_server() -> 'None':
+        """ Stops the server process and starts it again with the same configuration,
+        returning once the gateways answer - the file listener keeps running throughout.
+        """
+
+        global _server_process
+
+        kill_server_process(_server_process, _process_kill_timeout, server_directory=_temp_directory or '')
+        _server_process = None
+
+        _spawn_server(server_directory, server_env, 'a')
+        _wait_for_server(host, port)
+        _wait_for_gateways(host, port)
+
     # .. yield connection details to the tests.
     yield {
+        'restart': _restart_server,
         'host': host,
         'port': port,
         'password': _password,
@@ -508,6 +535,7 @@ def zato_server() -> 'any_':
         'pickup_directory': pickup_directory,
         'audit_db_path': audit_db_path,
         'marker_path': marker_path,
+        'server_log_path': _server_log_path,
         'mcp_url': _mcp_url,
         'basic_auth': (_constants.Username_Basic, _constants.Password_Basic),
         'basic_auth_b': (_constants.Username_Basic_B, _constants.Password_Basic_B),

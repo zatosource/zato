@@ -43,7 +43,7 @@ def get_cleaner(config:'SafeguardConfig') -> 'Scrubber':
     lands     = tuple(config.pii_lands)
     exclude   = tuple(config.pii_exclude)
 
-    key = (detectors, lands, exclude, config.pii_validate, config.pii_stable_tokens)
+    key = (detectors, lands, exclude, config.pii_validate, config.pii_stable_replacements)
 
     # A cache hit skips compilation entirely.
     if out := _cache.get(key):
@@ -76,7 +76,7 @@ def get_cleaner(config:'SafeguardConfig') -> 'Scrubber':
         exclude=cleaner_exclude,
         regions=cleaner_lands,
         validate=config.pii_validate,
-        stable_tokens=config.pii_stable_tokens,
+        stable_tokens=config.pii_stable_replacements,
     )
 
     # The oldest entry makes room when the cache is full.

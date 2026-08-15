@@ -7,13 +7,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import time
 import unicodedata
 from json import loads
 
 # Zato
+from zato.common.audit_log.api import AuditEvent
 from zato.common.typing_ import cast_
 
 # local
+import _audit
 import _constants
 from _client import MCPClient
 
@@ -22,9 +25,18 @@ from _client import MCPClient
 
 if 0:
     from requests import Response
-    from zato.common.typing_ import anydict, anydictnone, anytuple, dictlist, strlist, tupnone
+    from zato.common.typing_ import anydict, anydictnone, anytuple, callable_, dictlist, strlist, tupnone
 
     Response = Response
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How long a re-imported change may take to reach live enforcement, in seconds
+_reimport_timeout = 60
+
+# How often to poll for it, in seconds
+_reimport_poll_interval = 0.5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -222,6 +234,54 @@ def apikey_headers(key_value:'str') -> 'anydict':
 
     out = {_constants.APIKey_Header: key_value}
     return out
+
+# ################################################################################################################################
+
+def call_and_read_event(
+    zato_server:'anydict',
+    url_path:'str',
+    gateway_name:'str',
+    tool_name:'str',
+    arguments:'anydict',
+    ) -> 'anytuple':
+    """ One tool call through the given gateway on a fresh session, returning
+    the whole response body and the audit data document of the call's event.
+    """
+
+    audit_db_path = zato_server['audit_db_path']
+    min_id = _audit.last_event_id(audit_db_path)
+
+    client = make_client(zato_server, url_path)
+    session_id = open_session(client)
+
+    body = call_tool(client, session_id, tool_name, arguments)
+
+    events = _audit.wait_for_events(
+        audit_db_path, 1,
+        object_name=gateway_name,
+        event_type=AuditEvent.MCP_Tools_Call,
+        min_id=min_id)
+
+    out = body, events[-1]['data']
+    return out
+
+# ################################################################################################################################
+
+def wait_until(condition:'callable_', description:'str') -> 'None':
+    """ Polls until the condition function returns True, which is how the tests wait
+    for a re-imported change to reach live enforcement.
+    """
+
+    deadline = time.monotonic() + _reimport_timeout
+
+    while time.monotonic() < deadline:
+
+        if condition():
+            return
+
+        time.sleep(_reimport_poll_interval)
+
+    raise Exception(f'Condition did not hold within {_reimport_timeout}s: {description}')
 
 # ################################################################################################################################
 # ################################################################################################################################

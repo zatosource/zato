@@ -53,7 +53,7 @@ _row_numeric_columns = ('id', 'size', 'duration_ms', 'cid_sequence')
 # The free-text search covers these columns - every one the detail pane offers a Search beside,
 # so no value shown as searchable comes back with nothing
 _search_columns = ('data', 'event_type', 'msg_id', 'correl_id', 'endpoint', 'ext_client_id',
-    'status', 'classification')
+    'status', 'classification', 'sub_key')
 
 # The status query parameter value narrowing the page down to open exchanges
 _status_outstanding = 'outstanding'

@@ -94,10 +94,10 @@ Negative_Text = 'Order ORD-2026-000123 shipped on 2026-07-15 at 11:32 for 1,099.
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _new_scrubber(name:'str', stable_tokens:'bool'=False) -> 'Scrubber':
+def _new_scrubber(name:'str', stable_replacements:'bool'=False) -> 'Scrubber':
     """ Returns a scrubber running just the one named detector.
     """
-    out = Scrubber(detectors=[name], stable_tokens=stable_tokens)
+    out = Scrubber(detectors=[name], stable_tokens=stable_replacements)
     return out
 
 # ################################################################################################################################
@@ -148,14 +148,14 @@ class TestBrokenSamples:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestStableTokens:
+class TestStableReplacements:
 
-    def test_every_valid_sample_gets_a_numbered_token(self) -> 'None':
+    def test_every_valid_sample_gets_a_numbered_replacement(self) -> 'None':
 
-        # Stable tokens number each identifier by its normalized form, which is what every detector's
-        # normalize method produces - one fresh token map per call, so the first identifier is always number one.
+        # Stable replacements number each identifier by its normalized form, which is what every detector's
+        # normalize method produces - one fresh replacement map per call, so the first identifier is always number one.
         for name, sample_list in Valid_Samples.items():
-            scrubber = _new_scrubber(name, stable_tokens=True)
+            scrubber = _new_scrubber(name, stable_replacements=True)
 
             for sample in sample_list:
                 text = f'Customer identifier {sample} received in the payload'

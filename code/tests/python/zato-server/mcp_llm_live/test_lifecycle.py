@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import time
 from concurrent.futures import ThreadPoolExecutor
 from http.client import NOT_FOUND, OK
 
@@ -16,6 +15,7 @@ import _audit
 import _constants
 import _enmasse
 import _helpers
+from _helpers import wait_until as _wait_until
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
@@ -24,16 +24,10 @@ from zato.common.audit_log.api import AuditEvent, AuditOutcome
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, callable_
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# How long a re-imported change may take to reach live enforcement, in seconds
-_reimport_timeout = 60
-
-# How often to poll for it, in seconds
-_reimport_poll_interval = 0.5
 
 # A response of this many invoices goes over the lifecycle gateway's cap
 _oversized_count = '200'
@@ -54,24 +48,6 @@ def _call_invoices(zato_server:'anydict') -> 'anydict':
 
     out = _helpers.call_tool(client, session_id, _constants.Service_Invoice_List, {'count': _oversized_count})
     return out
-
-# ################################################################################################################################
-
-def _wait_until(condition:'callable_', description:'str') -> 'None':
-    """ Polls until the condition function returns True, which is how the tests wait
-    for a re-imported change to reach live enforcement.
-    """
-
-    deadline = time.monotonic() + _reimport_timeout
-
-    while time.monotonic() < deadline:
-
-        if condition():
-            return
-
-        time.sleep(_reimport_poll_interval)
-
-    raise Exception(f'Condition did not hold within {_reimport_timeout}s: {description}')
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -74,12 +74,12 @@ class SafeguardConfig:
 
     # PII removal - lands select detector groups, explicit detector names win over lands,
     # exclusions are removed from whatever the other two selected.
-    pii_enabled:       bool = False
-    pii_lands:         strlist
-    pii_detectors:     strlist
-    pii_exclude:       strlist
-    pii_validate:      bool = True
-    pii_stable_tokens: bool = False
+    pii_enabled:             bool = False
+    pii_lands:               strlist
+    pii_detectors:           strlist
+    pii_exclude:             strlist
+    pii_validate:            bool = True
+    pii_stable_replacements: bool = False
 
     # Unicode normalization
     normalize_unicode: bool = False

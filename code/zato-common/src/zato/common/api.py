@@ -1278,6 +1278,9 @@ class MCP:
 
     Protocol_Versions_Supported = [Protocol_Version_Sessions, Protocol_Version_Stateless]
 
+    # The most bytes one JSON-RPC request body may carry
+    Max_Request_Size = 1_000_000
+
 # ################################################################################################################################
 # ################################################################################################################################
 

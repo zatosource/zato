@@ -536,7 +536,7 @@ $.fn.zato.gateway.mcp.safeguard_groups = {
         'safeguards_pii_detectors',
         'safeguards_pii_exclude',
         'safeguards_pii_validate',
-        'safeguards_pii_stable_tokens'
+        'safeguards_pii_stable_replacements'
     ],
     'safeguards_normalize_unicode': [
         'safeguards_unicode_mode'

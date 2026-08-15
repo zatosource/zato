@@ -158,7 +158,7 @@ class TestAuditCompleteness:
         main_session = _helpers.open_session(main_client)
 
         body = _helpers.call_tool(main_client, main_session, _constants.Service_Order_Cancel,
-            {'order_id': _constants.Order_ID_Broken})
+            {'order_id': _constants.Order_ID_Not_Cancellable})
         assert body['result']['isError'] is True, body
 
         events = _audit.wait_for_events(

@@ -137,13 +137,13 @@ class TestValidation:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestStableTokens:
+class TestStableReplacements:
 
-    def test_stable_tokens_number_repeated_values(self) -> 'None':
+    def test_stable_replacements_number_repeated_values(self) -> 'None':
 
         result = _new_result()
         config = _new_config([], ['intl_iban'], [])
-        config.pii_stable_tokens = True
+        config.pii_stable_replacements = True
         value = {'note': f'First {_valid_iban} and again {_valid_iban}'}
 
         cleaned = remove_pii(value, result, config)

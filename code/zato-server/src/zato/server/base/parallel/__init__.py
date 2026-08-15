@@ -1085,9 +1085,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self._create_mcp_gateways()
 
         # .. now all wrappers exist with their registries populated,
-        # spawn a single reaper greenlet to periodically clean up expired sessions ..
+        # spawn a single reaper greenlet to periodically clean up expired sessions -
+        # the sweep interval may come from the environment ..
         gateway_mcp_dict = self.config_manager.gateway_mcp
-        self._mcp_session_reaper = MCPSessionReaper(gateway_mcp_dict)
+
+        if reaper_interval := os.environ.get('Zato_MCP_Session_Reaper_Interval'):
+            self._mcp_session_reaper = MCPSessionReaper(gateway_mcp_dict, interval=int(reaper_interval))
+        else:
+            self._mcp_session_reaper = MCPSessionReaper(gateway_mcp_dict)
 
         _ = spawn(self._mcp_session_reaper.run)
 

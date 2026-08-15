@@ -16,7 +16,7 @@ from json import dumps
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strlist, strnone
+    from zato.common.typing_ import any_, dictlist, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,6 +37,10 @@ _ollama_suffix = '.ollama.txt'
 
 # The wire log file of the test currently running, set by the conftest fixture
 _current_path:'strnone' = None
+
+# The wire entries of the test currently running, in order - the tests that assert
+# on their own traffic read them back through get_entries.
+_current_entries:'dictlist' = []
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,6 +75,8 @@ def set_current_test(node_id:'str') -> 'None':
     file_name = _sanitize_node_id(node_id) + _wire_suffix
     _current_path = os.path.join(_wire_directory, file_name)
 
+    _current_entries.clear()
+
     # A rerun of the same test starts with an empty file.
     with open(_current_path, 'w') as wire_file:
         _ = wire_file.write('')
@@ -83,6 +89,26 @@ def clear_current_test() -> 'None':
 
     global _current_path
     _current_path = None
+
+    _current_entries.clear()
+
+# ################################################################################################################################
+
+def get_entries(kind:'strnone' = None) -> 'dictlist':
+    """ The wire entries of the test currently running, in order,
+    optionally narrowed to one kind.
+    """
+
+    out:'dictlist' = []
+
+    for entry in _current_entries:
+
+        if kind is None:
+            out.append(entry)
+        elif entry['kind'] == kind:
+            out.append(entry)
+
+    return out
 
 # ################################################################################################################################
 
@@ -103,6 +129,8 @@ def write_entry(kind:'str', payload:'any_') -> 'None':
         return
 
     document = {'kind': kind, 'payload': payload}
+    _current_entries.append(document)
+
     text = dumps(document, indent=2, default=str)
 
     with open(_current_path, 'a') as wire_file:

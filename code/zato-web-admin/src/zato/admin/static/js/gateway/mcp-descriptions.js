@@ -56,7 +56,7 @@ $.fn.zato.gateway.mcp.field_descriptions = {
     'id_safeguards_pii_validate': 'Verifies each match with its checksum algorithm before it is replaced. ' +
         'A number that merely looks like an identifier but fails its checksum is left untouched, ' +
         'which prevents false positives.',
-    'id_safeguards_pii_stable_tokens': 'The same value receives the same numbered token throughout one response, ' +
+    'id_safeguards_pii_stable_replacements': 'The same value receives the same numbered replacement throughout one response, ' +
         'so the model can still correlate occurrences of one person or account ' +
         'without ever seeing the underlying value.',
 

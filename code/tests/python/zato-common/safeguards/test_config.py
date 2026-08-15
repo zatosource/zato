@@ -29,7 +29,7 @@ class TestBuildSafeguardConfig:
         assert config.pii_detectors == []
         assert config.pii_exclude == []
         assert config.pii_validate is True
-        assert config.pii_stable_tokens is False
+        assert config.pii_stable_replacements is False
 
         assert config.normalize_unicode is False
         assert config.unicode_mode == Mode_Clean
@@ -52,7 +52,7 @@ class TestBuildSafeguardConfig:
             'safeguards_pii_detectors': ['intl_iban'],
             'safeguards_pii_exclude': ['es_phone'],
             'safeguards_pii_validate': False,
-            'safeguards_pii_stable_tokens': True,
+            'safeguards_pii_stable_replacements': True,
             'safeguards_normalize_unicode': True,
             'safeguards_unicode_mode': Mode_Reject,
             'safeguards_sanitize_markup': True,
@@ -73,7 +73,7 @@ class TestBuildSafeguardConfig:
         assert config.pii_detectors == ['intl_iban']
         assert config.pii_exclude == ['es_phone']
         assert config.pii_validate is False
-        assert config.pii_stable_tokens is True
+        assert config.pii_stable_replacements is True
 
         assert config.normalize_unicode is True
         assert config.unicode_mode == Mode_Reject
@@ -150,7 +150,7 @@ class TestIsSafeguardsActive:
 
         gateway_config = {
             'safeguards_pii_validate': True,
-            'safeguards_pii_stable_tokens': True,
+            'safeguards_pii_stable_replacements': True,
             'safeguards_unicode_mode': Mode_Reject,
             'safeguards_url_allow_list': ['example.com'],
         }

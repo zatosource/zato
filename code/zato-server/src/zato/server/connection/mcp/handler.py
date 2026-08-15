@@ -81,6 +81,9 @@ _response_filter_schema:'stranydict' = {
 # What the trace records as the rejection kind when the size cap blocks a response
 _reject_kind_size = 'size'
 
+# What a request body over the published size bound is refused with
+_message_request_too_large = 'Request body exceeds the maximum size'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -209,7 +212,16 @@ class MCPHandler:
         # Our response to produce
         out = MCPResponse()
 
-        # Try to parse the incoming data as JSON ..
+        # A request past the published size bound is refused before it is parsed at all ..
+        request_size = len(raw_data)
+
+        if request_size > MCP.Max_Request_Size:
+
+            out.body = make_error_response(None, _error_invalid_request, _message_request_too_large)
+            out.status_code = OK
+            return out
+
+        # .. try to parse the incoming data as JSON ..
         try:
             parsed = loads(raw_data)
         except Exception:

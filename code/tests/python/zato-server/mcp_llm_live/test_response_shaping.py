@@ -14,6 +14,7 @@ import _agent
 import _audit
 import _constants
 import _helpers
+from _helpers import call_and_read_event as _call_and_read_event
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
@@ -32,6 +33,13 @@ _oversized_count = '200'
 
 # What a final answer sounds like when the model reports that something did not work
 _failure_words = ('too large', 'cannot', 'could not', "couldn't", 'unable', 'fail', 'error', 'not possible')
+
+# How many padded text blocks make a response whose raw size is over the cap
+# while its whitespace-collapsed size fits under it
+_padded_count = '20'
+
+# What one padded block collapses to once its whitespace run becomes a single space
+_collapsed_text = 'edge end'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -207,6 +215,74 @@ class TestBlockModeWithLLM:
         event = blocked_events[0]
         assert event['outcome'] == AuditOutcome.Error, event
         assert event['data']['tokens_before'] > _constants.Shaping_Cap_Tokens, event['data']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestSizeCapBoundaries:
+    """ The size cap at its boundaries - the threshold crossed, the zero cap
+    and a cap that measures the shaped response.
+    """
+
+# ################################################################################################################################
+
+    def test_just_over_the_threshold_is_shaped(self, zato_server:'anydict') -> 'None':
+
+        # The same oversized response the high-threshold gateway passes untouched
+        # is shaped here, where the threshold is low enough to cross ..
+        body, event_data = _call_and_read_event(
+            zato_server, _constants.Path_Threshold_Low, _constants.Gateway_Threshold_Low,
+            _constants.Service_Invoice_List, {'count': _oversized_count})
+
+        assert event_data['was_truncated'] is True, event_data
+
+        # .. with the sizes on both sides of the threshold in the trace.
+        assert event_data['tokens_before'] > _constants.Threshold_Low_Tokens, event_data
+        assert event_data['tokens_after'] <= _constants.Shaping_Cap_Tokens, event_data
+
+        assert 'isError' not in body['result'], body
+
+# ################################################################################################################################
+
+    def test_zero_means_no_cap(self, zato_server:'anydict') -> 'None':
+
+        # The main gateway's cap is zero, so a response of substantial size passes untouched ..
+        body, event_data = _call_and_read_event(
+            zato_server, _constants.Path_Main, _constants.Gateway_Main,
+            _constants.Service_Invoice_List, {'count': _oversized_count})
+
+        data = _helpers.get_result_data(body)
+
+        invoice_count = len(data['invoices'])
+        assert invoice_count == int(_oversized_count), invoice_count
+
+        # .. with no shaping trace anywhere in the audit event.
+        assert 'was_truncated' not in event_data, event_data
+        assert 'tokens_before' not in event_data, event_data
+
+# ################################################################################################################################
+
+    def test_the_cap_counts_the_shaped_response(self, zato_server:'anydict') -> 'None':
+
+        # The raw response is over the cap, its whitespace-collapsed form is under it ..
+        body, event_data = _call_and_read_event(
+            zato_server, _constants.Path_Compact_Cap, _constants.Gateway_Compact_Cap,
+            _constants.Service_Text_Pad, {'count': _padded_count})
+
+        # .. compaction provably ran ..
+        assert event_data['whitespace_chars_removed'] > 0, event_data
+
+        # .. and the response passed untruncated - the cap measured what leaves
+        # the pipeline, not what entered it.
+        assert 'was_truncated' not in event_data, event_data
+
+        data = _helpers.get_result_data(body)
+
+        blocks = data['blocks']
+        assert len(blocks) == int(_padded_count), data
+
+        for block in blocks:
+            assert block['text'] == _collapsed_text, block
 
 # ################################################################################################################################
 # ################################################################################################################################

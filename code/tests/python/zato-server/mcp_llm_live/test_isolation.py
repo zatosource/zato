@@ -59,7 +59,7 @@ _all_trace_keys = (
     'client_filter',
 )
 
-# What the stable-token PII gateways make of the network field - the numbering
+# What the stable-replacement PII gateways make of the network field - the numbering
 # starts at one inside every response, never carrying over from another one
 _network_tokenized = 'primary {{IPV4_1}} standby {{IPV4_1}} gateway {{IPV4_2}}'
 
@@ -370,7 +370,7 @@ class TestProcessingIsolation:
 
 # ################################################################################################################################
 
-    def test_stable_tokens_do_not_leak_across_gateways_or_responses(self, zato_server:'anydict') -> 'None':
+    def test_stable_replacements_do_not_leak_across_gateways_or_responses(self, zato_server:'anydict') -> 'None':
 
         arguments = {'customer_id': _constants.Customer_ID}
 
@@ -388,7 +388,7 @@ class TestProcessingIsolation:
         assert first['network'] == _network_tokenized, first['network']
         assert second['network'] == _network_tokenized, second['network']
 
-        # .. and the same input through the PII gateway, another stable-token gateway,
+        # .. and the same input through the PII gateway, another stable-replacement gateway,
         # gets the same fresh numbering - no mapping travels between gateways.
         pii_client = _helpers.make_client(zato_server, _constants.Path_PII)
         pii_session = _helpers.open_session(pii_client)

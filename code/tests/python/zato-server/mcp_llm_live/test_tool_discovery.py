@@ -160,7 +160,7 @@ class TestToolDiscovery:
             time.sleep(_hot_deploy_poll_interval)
 
         else:
-            raise AssertionError(f'Hot-deployed schema change did not show up within {_hot_deploy_timeout}s: {schema}')
+            raise Exception(f'Hot-deployed schema change did not show up within {_hot_deploy_timeout}s: {schema}')
 
         # The new field is optional, so the required list still names only the revision
         assert schema['required'] == ['revision'], schema
