@@ -118,10 +118,6 @@ def delete_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_')
 
 # ################################################################################################################################
 
-config_dict_id_name_outconnn = {
-    'ftp_source': 'out_ftp',
-}
-
 sec_def_sep = '/'
 
 # ################################################################################################################################
@@ -586,9 +582,6 @@ class GetList(AdminService):
         # Local aliases
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
 
-        # New items that will be potentially added to conn_dict
-        to_add = {}
-
         # Secrets never leave the server in listings ..
         for key in never_returned_keys:
             _ = conn_dict.pop(key, None)
@@ -618,20 +611,8 @@ class GetList(AdminService):
                     else:
                         conn_dict[service_attr] = service_name
 
-                else:
-                    for id_name_base, out_name in config_dict_id_name_outconnn.items():
-                        item_id = '{}_id'.format(id_name_base)
-                        if key == item_id:
-                            config_dict = self.server.config.get_config_by_item_id(out_name, value)
-                            item_name = '{}_name'.format(id_name_base)
-                            to_add[item_name] = config_dict['name']
-
-        # .. add custom fields that do not exist in the database ..
+        # .. add custom fields that do not exist in the database.
         self._add_custom_conn_dict_fields(conn_dict)
-
-        # .. and hand the final result back to our caller.
-        if to_add:
-            conn_dict.update(to_add)
 
 # ################################################################################################################################
 # ################################################################################################################################

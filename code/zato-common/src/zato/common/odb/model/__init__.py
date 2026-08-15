@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timezone
-from ftplib import FTP_PORT
 
 # SQLAlchemy
 from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, \
@@ -796,47 +795,6 @@ class OutgoingAMQP(Base):
         self.app_id = app_id
         self.delivery_mode_text = delivery_mode_text # Not used by the DB
         self.def_name = def_name # Not used by the DB
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class OutgoingFTP(Base):
-    """ An outgoing FTP connection.
-    """
-    __tablename__ = 'out_ftp'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('out_ftp_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-
-    host = Column(String(200), nullable=False)
-    user = Column(String(200), nullable=True)
-    password = Column(String(200), nullable=True)
-    acct = Column(String(200), nullable=True)
-    timeout = Column(Integer, nullable=True)
-    port = Column(Integer, server_default=str(FTP_PORT), nullable=False)
-    dircache = Column(Boolean(), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('out_conns_ftp', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, host=None, user=None, password=None, acct=None, timeout=None,
-            port=None, dircache=None, cluster_id=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.host = host
-        self.user = user
-        self.password = password
-        self.acct = acct
-        self.timeout = timeout
-        self.port = port
-        self.dircache = dircache
-        self.cluster_id = cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################

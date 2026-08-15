@@ -177,7 +177,7 @@ _source_page_url = {
     AuditSource.Email_IMAP: f'/zato/email/imap/?cluster={default_cluster_id}',
     AuditSource.Email_SMTP: f'/zato/email/smtp/?cluster={default_cluster_id}',
     AuditSource.PubSub: f'/zato/pubsub/topic/?cluster={default_cluster_id}',
-    AuditSource.File_Outgoing: f'/zato/outgoing/ftp/?cluster={default_cluster_id}',
+    AuditSource.File_Outgoing: f'/zato/outgoing/sftp/?cluster={default_cluster_id}&type_=outconn-sftp',
     AuditSource.LLM: f'/zato/outgoing/llm/?cluster={default_cluster_id}&type_=outconn-llm',
 }
 

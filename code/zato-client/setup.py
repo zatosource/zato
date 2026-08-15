@@ -59,7 +59,6 @@ _ = setup(
           'Topic :: Database',
           'Topic :: Internet',
           'Topic :: Internet :: WWW/HTTP :: WSGI :: Server',
-          'Topic :: Internet :: File Transfer Protocol (FTP)',
           'Topic :: Software Development :: Libraries :: Python Modules',
           'Topic :: Software Development :: Object Brokering',
           ],

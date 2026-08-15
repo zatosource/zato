@@ -23,7 +23,7 @@ from zato.common.api import AMQP_Subtype_Plain, GENERIC, MISC, \
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import APIKeySecurity, ChannelAMQP, Cluster, \
     DeployedService, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
-    MTLSSecurity, NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubSubscription, \
+    MTLSSecurity, NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, PubSubPermission, PubSubSubscription, \
     PubSubSubscriptionTopic, PubSubTopic, SecurityBase, Server, Service, SMTP, SPNEGOSecurity, SQLConnectionPool, WSSecurity
 from zato.common.util.search import SearchResults as _SearchResults
 
@@ -630,39 +630,6 @@ def out_sql_list(session, cluster_id, needs_columns=False):
     """ Outgoing SQL connections.
     """
     return _out_sql(session, cluster_id)
-
-# ################################################################################################################################
-
-def _out_ftp(session, cluster_id):
-    return session.query(
-        OutgoingFTP.id,
-        OutgoingFTP.name,
-        OutgoingFTP.is_active,
-        OutgoingFTP.host,
-        OutgoingFTP.port,
-        OutgoingFTP.user,
-        OutgoingFTP.password,
-        OutgoingFTP.acct,
-        OutgoingFTP.timeout,
-        OutgoingFTP.dircache,
-        OutgoingFTP.opaque1,
-        ).\
-        filter(Cluster.id==OutgoingFTP.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(OutgoingFTP.name)
-
-def out_ftp(session, cluster_id, id):
-    """ An outgoing FTP connection.
-    """
-    return _out_ftp(session, cluster_id).\
-        filter(OutgoingFTP.id==id).\
-        one()
-
-@query_wrapper
-def out_ftp_list(session, cluster_id, needs_columns=False):
-    """ Outgoing FTP connections.
-    """
-    return _out_ftp(session, cluster_id)
 
 # ################################################################################################################################
 

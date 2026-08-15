@@ -103,7 +103,6 @@ if 0:
     from zato.common.pubsub.sql.backend import PublishResult
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
-    from zato.server.connection.ftp import FTPStore
     from zato.server.connection.http_soap.outgoing import RESTWrapper
     from zato.server.base.config_manager import ConfigManager
     from zato.server.base.parallel import ParallelServer
@@ -119,7 +118,6 @@ if 0:
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
     IOProcessor = IOProcessor # type: ignore
-    FTPStore = FTPStore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
     Redis = Redis

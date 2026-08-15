@@ -1370,22 +1370,6 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_out_ftp(self, cluster_id, out_id):
-        """ Returns an outgoing FTP connection's details.
-        """
-        with closing(self.session()) as session:
-            return query.out_ftp(session, cluster_id, out_id)
-
-# ################################################################################################################################
-
-    def get_out_ftp_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of outgoing FTP connections.
-        """
-        with closing(self.session()) as session:
-            return query.out_ftp_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
     def get_email_smtp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of SMTP connections.
         """

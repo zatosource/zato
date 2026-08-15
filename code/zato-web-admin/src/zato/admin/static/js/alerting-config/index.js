@@ -155,7 +155,7 @@ config.typeHelp = {
     microsoft: 'Alert rules for Microsoft cloud connections - failures in a row, error rates, service health and slow calls.',
     email: 'Alert rules for SMTP and IMAP connections - failures in a row, error rates and authentication failures.',
     odoo: 'Alert rules for Odoo connections - failures in a row, error rates, authentication failures and slow calls.',
-    file_transfer: 'Alert rules for SMB, SFTP and FTP connections - failure counts and periodic test transfers.',
+    file_transfer: 'Alert rules for SMB and SFTP connections - failure counts and periodic test transfers.',
     scheduler: 'Alert rules for scheduler jobs - error rates, overdue runs and late starts.',
     channels: 'Alert rules for channels of every kind - the share of failed requests.',
     common: 'Alert rules that watch the environment as a whole - expiring certificates, backlogs and silent feeds.',
