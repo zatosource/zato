@@ -12,7 +12,8 @@ from piigex import Match, Scrubber
 # Zato
 from zato.common.typing_ import any_, anytuple, strlistnone
 from zato.common.util.safeguards import detectors
-from zato.common.util.safeguards.common import Max_Cleaner_Cache_Entries, SafeguardConfig, SafeguardResult
+from zato.common.util.safeguards.common import Max_Cleaner_Cache_Entries, Replacement_Format, SafeguardConfig, \
+    SafeguardResult
 from zato.common.util.safeguards.walk import walk_strings
 
 # The import above registers Zato's own detectors with the library's registry - this line keeps flake8 quiet about it.
@@ -43,7 +44,7 @@ def get_cleaner(config:'SafeguardConfig') -> 'Scrubber':
     lands     = tuple(config.pii_lands)
     exclude   = tuple(config.pii_exclude)
 
-    key = (detectors, lands, exclude, config.pii_validate, config.pii_stable_tokens)
+    key = (detectors, lands, exclude, config.pii_validate, config.pii_stable_replacements)
 
     # A cache hit skips compilation entirely.
     if out := _cache.get(key):
@@ -76,7 +77,8 @@ def get_cleaner(config:'SafeguardConfig') -> 'Scrubber':
         exclude=cleaner_exclude,
         regions=cleaner_lands,
         validate=config.pii_validate,
-        stable_tokens=config.pii_stable_tokens,
+        stable_tokens=config.pii_stable_replacements,
+        token_format=Replacement_Format,
     )
 
     # The oldest entry makes room when the cache is full.
@@ -95,7 +97,7 @@ def get_cleaner(config:'SafeguardConfig') -> 'Scrubber':
 # ################################################################################################################################
 
 def remove_pii(value:'any_', result:'SafeguardResult', config:'SafeguardConfig') -> 'any_':
-    """ Replaces PII matches in string values with their detector tokens, counting the matches per detector.
+    """ Replaces PII matches in string values with their detector replacements, counting the matches per detector.
     An explicit selection is required - with no lands and no detectors picked, no detector runs at all.
     """
 
@@ -135,7 +137,7 @@ def remove_pii(value:'any_', result:'SafeguardResult', config:'SafeguardConfig')
             else:
                 counts[match.name] = 1
 
-        # .. and the clean itself replaces them with tokens.
+        # .. and the clean itself replaces them with replacements.
         out = cleaner.clean(text)
 
         return out

@@ -59,12 +59,12 @@ _all_trace_keys = (
     'client_filter',
 )
 
-# What the stable-token PII gateways make of the network field - the numbering
+# What the stable-replacement PII gateways make of the network field - the numbering
 # starts at one inside every response, never carrying over from another one
-_network_tokenized = 'primary {{IPV4_1}} standby {{IPV4_1}} gateway {{IPV4_2}}'
+_network_replaced = 'primary REPLACED_IPV4_1 standby REPLACED_IPV4_1 gateway REPLACED_IPV4_2'
 
-# The stable token the one email of the record becomes
-_token_email_stable = '{{EMAIL_1}}'
+# The stable replacement the one email of the record becomes
+_replacement_email_stable = 'REPLACED_EMAIL_1'
 
 # A URL path that shares the isolation pair's prefix but belongs to no gateway
 _path_unrouted = '/mcp/llm/crm-nothing'
@@ -238,7 +238,7 @@ class TestProcessingIsolation:
         body = _helpers.call_tool(client_a, session_a, _constants.Service_Customer_Get, arguments)
         data = _helpers.get_result_data(body)
 
-        assert data['email'] == _token_email_stable, data['email']
+        assert data['email'] == _replacement_email_stable, data['email']
         assert _constants.Customer_Email not in str(data), data
 
         events = _audit.wait_for_events(
@@ -370,7 +370,7 @@ class TestProcessingIsolation:
 
 # ################################################################################################################################
 
-    def test_stable_tokens_do_not_leak_across_gateways_or_responses(self, zato_server:'anydict') -> 'None':
+    def test_stable_replacements_do_not_leak_across_gateways_or_responses(self, zato_server:'anydict') -> 'None':
 
         arguments = {'customer_id': _constants.Customer_ID}
 
@@ -385,10 +385,10 @@ class TestProcessingIsolation:
         body = _helpers.call_tool(client_a, session_a, _constants.Service_Customer_Get, arguments)
         second = _helpers.get_result_data(body)
 
-        assert first['network'] == _network_tokenized, first['network']
-        assert second['network'] == _network_tokenized, second['network']
+        assert first['network'] == _network_replaced, first['network']
+        assert second['network'] == _network_replaced, second['network']
 
-        # .. and the same input through the PII gateway, another stable-token gateway,
+        # .. and the same input through the PII gateway, another stable-replacement gateway,
         # gets the same fresh numbering - no mapping travels between gateways.
         pii_client = _helpers.make_client(zato_server, _constants.Path_PII)
         pii_session = _helpers.open_session(pii_client)
@@ -396,8 +396,8 @@ class TestProcessingIsolation:
         body = _helpers.call_tool(pii_client, pii_session, _constants.Service_Customer_Get, arguments)
         third = _helpers.get_result_data(body)
 
-        assert third['network'] == _network_tokenized, third['network']
-        assert third['email'] == _token_email_stable, third['email']
+        assert third['network'] == _network_replaced, third['network']
+        assert third['email'] == _replacement_email_stable, third['email']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -766,9 +766,10 @@ class TestConcurrentIsolation:
         client_truncate = _helpers.make_client(zato_server, _constants.Path_Shaping_Truncate)
         client_block = _helpers.make_client(zato_server, _constants.Path_Shaping_Block)
 
+        # The invoice tool takes only a count, so the task names no customer.
         task = (
-            f'List the last {_oversized_count} invoices of customer {_constants.Customer_ID} '
-            'with their invoice numbers. If the tools cannot give you the data, say so plainly.')
+            f'Use the invoice tool to list the last {_oversized_count} invoices '
+            'and report their invoice numbers. If the tools cannot give you the data, say so plainly.')
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             future_truncate = executor.submit(_agent.run_agent, client_truncate, task)

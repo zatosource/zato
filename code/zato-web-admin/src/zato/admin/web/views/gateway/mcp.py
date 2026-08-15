@@ -26,7 +26,7 @@ from zato.common.api import API_Key, GENERIC, Groups, MCP, SEC_DEF_TYPE, SEC_DEF
 from zato.common.defaults import http_plain_server_port
 from zato.common.skills.api import get_skill_name_list
 from zato.common.util.api import asbool
-from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
+from zato.common.util.safeguards.common import Mode_Clean, SafeguardConfig, Url_Mode_Remove
 from zato.common.util.tcp import get_current_ip
 from zato.common.util.truncate.tokens import Default_Characters_Per_Token, Size_Cap_Mode_Truncate
 
@@ -81,7 +81,8 @@ _shaping_checkbox_fields = (
     'safeguards_strip_base64',
     'safeguards_pii_enabled',
     'safeguards_pii_validate',
-    'safeguards_pii_stable_tokens',
+    'safeguards_pii_stable_replacements',
+    'safeguards_secrets_enabled',
     'safeguards_normalize_unicode',
     'safeguards_sanitize_markup',
     'safeguards_url_policy_enabled',
@@ -100,13 +101,22 @@ _shaping_list_fields = (
     'safeguards_pii_exclude',
 )
 
-# Response shaping selects - these always carry a value and need no processing.
+# Response shaping selects - these always carry a value while their stage is enabled.
 _shaping_choice_fields = (
     'size_cap_mode',
     'safeguards_unicode_mode',
     'safeguards_markup_mode',
     'safeguards_url_mode',
 )
+
+# The documented default of each select - a disabled stage keeps its select
+# out of the POST and the default is what gets stored then.
+_choice_field_defaults = {
+    'size_cap_mode':           Size_Cap_Mode_Truncate,
+    'safeguards_unicode_mode': Mode_Clean,
+    'safeguards_markup_mode':  Mode_Clean,
+    'safeguards_url_mode':     Url_Mode_Remove,
+}
 
 # All the response shaping fields the dashboard persists in the gateway's opaque configuration.
 _shaping_fields = _shaping_checkbox_fields + _shaping_int_fields + _shaping_list_fields + _shaping_choice_fields + \
@@ -115,29 +125,30 @@ _shaping_fields = _shaping_checkbox_fields + _shaping_int_fields + _shaping_list
 # What each response shaping field renders as in the data table when a gateway's config predates it
 # or when a falsy value was filtered out on the way from the backend.
 _shaping_display_defaults = {
-    'validate_input':                 False,
-    'is_audit_log_active':            False,
-    'allow_client_filters':           False,
-    'safeguards_strip_nulls':         False,
-    'safeguards_collapse_whitespace': False,
-    'safeguards_strip_base64':        False,
-    'safeguards_pii_enabled':         False,
-    'safeguards_pii_validate':        False,
-    'safeguards_pii_stable_tokens':   False,
-    'safeguards_normalize_unicode':   False,
-    'safeguards_sanitize_markup':     False,
-    'safeguards_url_policy_enabled':  False,
-    'max_response_size':              '',
-    'min_size_threshold':             '',
-    'characters_per_token':           Default_Characters_Per_Token,
-    'size_cap_mode':                  Size_Cap_Mode_Truncate,
-    'safeguards_pii_lands':           '',
-    'safeguards_pii_detectors':       '',
-    'safeguards_pii_exclude':         '',
-    'safeguards_unicode_mode':        Mode_Clean,
-    'safeguards_markup_mode':         Mode_Clean,
-    'safeguards_url_allow_list':      '',
-    'safeguards_url_mode':            Url_Mode_Remove,
+    'validate_input':                      False,
+    'is_audit_log_active':                 False,
+    'allow_client_filters':                False,
+    'safeguards_strip_nulls':              False,
+    'safeguards_collapse_whitespace':      False,
+    'safeguards_strip_base64':             False,
+    'safeguards_pii_enabled':              False,
+    'safeguards_pii_validate':             False,
+    'safeguards_pii_stable_replacements':  False,
+    'safeguards_secrets_enabled':          False,
+    'safeguards_normalize_unicode':        False,
+    'safeguards_sanitize_markup':          False,
+    'safeguards_url_policy_enabled':       False,
+    'max_response_size':                   '',
+    'min_size_threshold':                  '',
+    'characters_per_token':                Default_Characters_Per_Token,
+    'size_cap_mode':                       Size_Cap_Mode_Truncate,
+    'safeguards_pii_lands':                '',
+    'safeguards_pii_detectors':            '',
+    'safeguards_pii_exclude':              '',
+    'safeguards_unicode_mode':             Mode_Clean,
+    'safeguards_markup_mode':              Mode_Clean,
+    'safeguards_url_allow_list':           '',
+    'safeguards_url_mode':                 Url_Mode_Remove,
 }
 
 # The server's simple-type parser turns 0 and 1 into booleans on their way into the opaque
@@ -339,6 +350,17 @@ class _CreateEdit(CreateEdit):
         for name in _shaping_checkbox_fields:
             value = input_dict[name]
             input_dict[name] = value is True or value == 'on'
+
+        # .. a select of a disabled stage is excluded from the POST altogether,
+        # so an absent value means the stage's documented default ..
+        for name in _shaping_choice_fields:
+            if not input_dict[name]:
+                input_dict[name] = _choice_field_defaults[name]
+
+        # .. the PII validate checkbox is only ever absent along with its whole
+        # stage, in which case its documented default holds too ..
+        if not input_dict['safeguards_pii_enabled']:
+            input_dict['safeguards_pii_validate'] = SafeguardConfig.pii_validate
 
         # .. integer fields arrive as strings and an empty input means zero ..
         for name in _shaping_int_fields:

@@ -13,7 +13,9 @@ import dataclasses
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydictnone, stranydict, strnone
+    from zato.common.typing_ import any_, anydictnone, anylist, stranydict, strnone
+
+    anylist = anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,8 +58,11 @@ _message_missing_tool_name = 'Missing required parameter: name'
 # Error message returned when the prompt name does not point to a skill this gateway serves
 _message_prompt_not_found = 'Prompt not found'
 
-# Error message returned when the cursor parameter is not a valid integer
+# Error message returned when the cursor parameter is not one the gateway issued
 _message_invalid_cursor = 'Invalid cursor value'
+
+# Error message returned when the size cap blocks a response
+_message_response_too_large = 'Response too large'
 
 # Error message returned when params is present but is not an object
 _message_invalid_params = 'Invalid params: expected an object'
@@ -65,6 +70,85 @@ _message_invalid_params = 'Invalid params: expected an object'
 # Server metadata returned to clients
 _server_name    = 'Apache'
 _server_version = '2.4'
+
+# The longest request-supplied value that is embedded in a log or error message as it is -
+# anything longer is described by its length instead.
+_max_embed_length = 200
+
+# Control characters are rendered as spaces when a request-supplied value
+# is embedded in a log or error message.
+_control_char_map = {}
+
+for _code_point in range(0, 32):
+    _control_char_map[_code_point] = 32
+
+_control_char_map[127] = 32
+
+for _code_point in range(128, 160):
+    _control_char_map[_code_point] = 32
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def printable(value:'any_') -> 'str':
+    """ Renders a request-supplied value as one line of printable text of bounded length,
+    for embedding in a log or error message - the value itself travels on unchanged.
+    """
+
+    if not isinstance(value, str):
+        value = str(value)
+
+    value_length = len(value)
+
+    if value_length > _max_embed_length:
+        out = f'(value of {value_length} characters)'
+        return out
+
+    out = value.translate(_control_char_map)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_depth(value:'any_') -> 'int':
+    """ Returns how deeply containers nest in a parsed request, measured iteratively -
+    a scalar is zero, an empty container is one.
+    """
+
+    # Our response to produce
+    out = 0
+
+    # Each entry pairs a value with the nesting level it sits at
+    stack:'anylist' = [(value, 1)]
+
+    while stack:
+
+        current, depth = stack.pop()
+
+        # Only containers count as levels, scalars contribute nothing ..
+        if isinstance(current, dict):
+            children = current.values()
+        elif isinstance(current, list):
+            children = current
+        else:
+            continue
+
+        # .. record the deepest level seen so far ..
+        if depth > out:
+            out = depth
+
+        # .. and each child sits one level below its container.
+        for child in children:
+            stack.append((child, depth + 1))
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class InvalidCursor(Exception):
+    """ Raised when a tools/list or prompts/list cursor is not one the gateway issued.
+    """
 
 # ################################################################################################################################
 # ################################################################################################################################

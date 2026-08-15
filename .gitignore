@@ -64,6 +64,7 @@ package-lock.json
 package.json
 pidfile
 vscode
+zato-rule-engine-dashboard.db
 *.egg-info*
 *.geany*
 *.pyc

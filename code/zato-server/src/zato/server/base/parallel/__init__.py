@@ -207,6 +207,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.cluster_id = -1
         self.cluster_name = ''
         self.startup_jobs = {}
+
+        # The configuration each MCP gateway's wrapper was last built from, keyed by gateway name -
+        # a config reload compares against these to leave unchanged gateways untouched.
+        self._mcp_gateway_source_configs:'anydict' = {}
+
         self.deployment_lock_expires = -1
         self.deployment_lock_timeout = -1
         self.deployment_key = ''
@@ -1029,6 +1034,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         MCP gateways are skipped in init_generic_connections because their tool registries
         can only resolve services once all of them are deployed, which is why the wrappers
         are built here instead - after deployment at startup and on each config reload.
+        A gateway whose configuration has not changed since its wrapper was built keeps
+        that wrapper - and with it, its live sessions.
         """
 
         # Names of the MCP gateways that exist in the configuration store ..
@@ -1041,7 +1048,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             config_type = config['type_']
 
             if config_type == GENERIC.CONNECTION.TYPE.GATEWAY_MCP:
-                config_gateway_names.add(config['name'])
+
+                gateway_name = config['name']
+                config_gateway_names.add(gateway_name)
+
+                # An unchanged gateway keeps the wrapper it already has.
+                previous_config = self._mcp_gateway_source_configs.get(gateway_name)
+
+                if previous_config == config:
+                    continue
+
+                # The snapshot is a copy, independent of the store's dict.
+                self._mcp_gateway_source_configs[gateway_name] = deepcopy(config)
+
                 config_as_bunch = bunchify(config)
                 self.config_manager._create_generic_connection(config_as_bunch)
 
@@ -1052,6 +1071,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         for name in removed_names:
             gateway_config = gateway_mcp.pop(name)
             gateway_config.conn.delete()
+            _ = self._mcp_gateway_source_configs.pop(name, None)
 
 # ################################################################################################################################
 
@@ -1065,9 +1085,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self._create_mcp_gateways()
 
         # .. now all wrappers exist with their registries populated,
-        # spawn a single reaper greenlet to periodically clean up expired sessions ..
+        # spawn a single reaper greenlet to periodically clean up expired sessions -
+        # the sweep interval may come from the environment ..
         gateway_mcp_dict = self.config_manager.gateway_mcp
-        self._mcp_session_reaper = MCPSessionReaper(gateway_mcp_dict)
+
+        if reaper_interval := os.environ.get('Zato_MCP_Session_Reaper_Interval'):
+            self._mcp_session_reaper = MCPSessionReaper(gateway_mcp_dict, interval=int(reaper_interval))
+        else:
+            self._mcp_session_reaper = MCPSessionReaper(gateway_mcp_dict)
 
         _ = spawn(self._mcp_session_reaper.run)
 

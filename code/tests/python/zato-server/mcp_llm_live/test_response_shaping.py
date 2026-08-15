@@ -8,15 +8,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import re
+from math import ceil
 
 # local
 import _agent
 import _audit
 import _constants
 import _helpers
+from _helpers import call_and_read_event as _call_and_read_event
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
+from zato.common.util.truncate.common import Truncation_Marker
+from zato.common.util.truncate.measure import serialize
+from zato.common.util.truncate.tokens import Default_Characters_Per_Token
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,11 +32,18 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many invoices make a response that goes over the 80-token cap under the default ratio
+# How many invoices make a response that goes over the token cap under the default ratio
 _oversized_count = '200'
 
 # What a final answer sounds like when the model reports that something did not work
 _failure_words = ('too large', 'cannot', 'could not', "couldn't", 'unable', 'fail', 'error', 'not possible')
+
+# How many padded text blocks make a response whose raw size is over the cap
+# while its whitespace-collapsed size fits under it
+_padded_count = '20'
+
+# What one padded block collapses to once its whitespace run becomes a single space
+_collapsed_text = 'edge end'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,15 +52,7 @@ def _contains_failure_word(text:'str') -> 'bool':
     """ Whether the text reports a failure in any of the usual wordings.
     """
 
-    text = text.lower()
-
-    for word in _failure_words:
-        if word in text:
-            out = True
-            break
-    else:
-        out = False
-
+    out = _helpers.contains_any_word(text, _failure_words)
     return out
 
 # ################################################################################################################################
@@ -163,9 +167,10 @@ class TestBlockModeWithLLM:
 
         client = _helpers.make_client(zato_server, _constants.Path_Shaping_Block)
 
+        # The invoice tool takes only a count, so the task names no customer.
         task = (
-            f'List the last {_oversized_count} invoices of customer {_constants.Customer_ID} '
-            'with their invoice numbers. If the tools cannot give you the data, say so plainly.')
+            f'Use the invoice tool to list the last {_oversized_count} invoices '
+            'and report their invoice numbers. If the tools cannot give you the data, say so plainly.')
 
         result = _agent.run_agent(client, task)
 
@@ -214,6 +219,129 @@ class TestBlockModeWithLLM:
         event = blocked_events[0]
         assert event['outcome'] == AuditOutcome.Error, event
         assert event['data']['tokens_before'] > _constants.Shaping_Cap_Tokens, event['data']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestSizeCapBoundaries:
+    """ The size cap at its boundaries - the threshold crossed, the zero cap
+    and a cap that measures the shaped response.
+    """
+
+# ################################################################################################################################
+
+    def test_just_over_the_threshold_is_shaped(self, zato_server:'anydict') -> 'None':
+
+        # The same oversized response the high-threshold gateway passes untouched
+        # is shaped here, where the threshold is low enough to cross ..
+        body, event_data = _call_and_read_event(
+            zato_server, _constants.Path_Threshold_Low, _constants.Gateway_Threshold_Low,
+            _constants.Service_Invoice_List, {'count': _oversized_count})
+
+        assert event_data['was_truncated'] is True, event_data
+
+        # .. with the sizes on both sides of the threshold in the trace.
+        assert event_data['tokens_before'] > _constants.Threshold_Low_Tokens, event_data
+        assert event_data['tokens_after'] <= _constants.Shaping_Cap_Tokens, event_data
+
+        assert 'isError' not in body['result'], body
+
+# ################################################################################################################################
+
+    def test_zero_means_no_cap(self, zato_server:'anydict') -> 'None':
+
+        # The main gateway's cap is zero, so a response of substantial size passes untouched ..
+        body, event_data = _call_and_read_event(
+            zato_server, _constants.Path_Main, _constants.Gateway_Main,
+            _constants.Service_Invoice_List, {'count': _oversized_count})
+
+        data = _helpers.get_result_data(body)
+
+        invoice_count = len(data['invoices'])
+        assert invoice_count == int(_oversized_count), invoice_count
+
+        # .. with no shaping trace anywhere in the audit event.
+        assert 'was_truncated' not in event_data, event_data
+        assert 'tokens_before' not in event_data, event_data
+
+# ################################################################################################################################
+
+    def test_the_cap_counts_the_shaped_response(self, zato_server:'anydict') -> 'None':
+
+        # The raw response is over the cap, its whitespace-collapsed form is under it ..
+        body, event_data = _call_and_read_event(
+            zato_server, _constants.Path_Compact_Cap, _constants.Gateway_Compact_Cap,
+            _constants.Service_Text_Pad, {'count': _padded_count})
+
+        # .. compaction provably ran ..
+        assert event_data['whitespace_chars_removed'] > 0, event_data
+
+        # .. and the response passed untruncated - the cap measured what leaves
+        # the pipeline, not what entered it.
+        assert 'was_truncated' not in event_data, event_data
+
+        data = _helpers.get_result_data(body)
+
+        blocks = data['blocks']
+        assert len(blocks) == int(_padded_count), data
+
+        for block in blocks:
+            assert block['text'] == _collapsed_text, block
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestScriptsThroughShaping:
+    """ Token counting on a non-Latin script - a Japanese payload against the size cap,
+    with the character-per-token ratio acting on it exactly as the trace reports.
+    """
+
+# ################################################################################################################################
+
+    def test_japanese_token_counting_matches_the_trace(self, zato_server:'anydict') -> 'None':
+
+        body, event_data = _call_and_read_event(
+            zato_server, _constants.Path_Shaping_Truncate, _constants.Gateway_Shaping_Truncate,
+            _constants.Service_Customer_Get, {'customer_id': _constants.Customer_ID_History})
+
+        data = _helpers.get_result_data(body)
+
+        assert event_data['was_truncated'] is True, event_data
+
+        # The record is deterministic, so the before-count is computable to the token -
+        # each Japanese character counts as one character, never as its bytes ..
+        history = _constants.Japanese_History_Separator.join(
+            [_constants.Japanese_History_Sentence] * _constants.Japanese_History_Repeat)
+
+        record = {
+            'name': _constants.Customer_Name_History,
+            'city': _constants.Customer_City_History,
+            'history': history,
+            'customer_id': _constants.Customer_ID_History,
+            'found': True,
+        }
+
+        tokens_before = ceil(len(serialize(record)) / Default_Characters_Per_Token)
+        assert event_data['tokens_before'] == tokens_before, (event_data, tokens_before)
+
+        # .. the after-count is the same arithmetic on what actually came back ..
+        tokens_after = ceil(len(serialize(data)) / Default_Characters_Per_Token)
+
+        assert event_data['tokens_after'] == tokens_after, (event_data, tokens_after)
+        assert event_data['tokens_after'] <= _constants.Shaping_Cap_Tokens, event_data
+
+        # .. and the cut kept whole sentences - it landed on an ideographic-space
+        # boundary, never inside the Japanese text.
+        suffix = ' ' + Truncation_Marker
+        history_cut = data['history']
+
+        assert history_cut.endswith(suffix), history_cut[-64:]
+
+        kept_sentences = history_cut[:-len(suffix)].split(_constants.Japanese_History_Separator)
+        assert kept_sentences, history_cut[:64]
+
+        for sentence in kept_sentences:
+            assert sentence == _constants.Japanese_History_Sentence, sentence
 
 # ################################################################################################################################
 # ################################################################################################################################

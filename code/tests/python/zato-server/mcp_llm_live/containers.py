@@ -24,9 +24,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Docker details of the Ollama instance the LLM tests run against - the container and the model volume
-# are created once and reused forever, the way the Keycloak test container is, because pulling
-# the model weights is measured in tens of gigabytes and must never be a per-run cost.
+# The Ollama instance the LLM tests run against - the container and the model volume
+# are created once and reused across runs.
 Ollama_Image          = 'ollama/ollama'
 Ollama_Container_Name = 'zato-test-ollama'
 Ollama_Volume_Name    = 'zato-test-ollama-models'
@@ -36,12 +35,14 @@ Ollama_Base_URL       = f'http://localhost:{Ollama_Port}'
 # The OpenAI-compatible endpoint the agent loop and self.llm speak to
 Ollama_OpenAI_URL = f'{Ollama_Base_URL}/v1'
 
-# The model the tests drive - Apache-2.0 licensed, with native tool calling
-Model_Name = 'gpt-oss:120b'
+# The model the tests drive
+Model_Name = 'gpt-oss:20b'
 
-# Docker details of the browser console - Open WebUI connected to the Ollama instance above.
-# The console is its own container, created once and reused forever, and nothing
-# in the test suite ever starts it or depends on it.
+# The context window the instance serves - the default of 4096 truncates longer agent
+# conversations mid-reasoning, which degenerates the model's output.
+Context_Length = 16384
+
+# The browser console - Open WebUI connected to the Ollama instance above
 Console_Image          = 'ghcr.io/open-webui/open-webui:main'
 Console_Container_Name = 'zato-test-open-webui'
 Console_Volume_Name    = 'zato-test-open-webui-data'
@@ -63,6 +64,10 @@ _ollama_internal_port = 11434
 # How long to wait for the container to accept requests, in seconds
 _startup_timeout = 180
 
+# How long to wait for the console to accept requests, in seconds - its first boot
+# downloads its embedding model before the web server answers
+_console_startup_timeout = 600
+
 # Timeout for individual HTTP requests, in seconds
 _http_timeout = 30
 
@@ -72,11 +77,10 @@ _readiness_poll_interval = 1.0
 # Timeout for docker commands, in seconds
 _docker_timeout = 120
 
-# Timeout for docker commands that create a container, in seconds - the first
-# creation also downloads the image itself, which is measured in gigabytes
+# Timeout for docker commands that create a container, in seconds - the first creation also downloads the image
 _docker_create_timeout = 1800
 
-# A model pull is measured in tens of gigabytes, so its read timeout is measured in hours
+# Read timeout for the model pull, in seconds
 _pull_timeout = 4 * 60 * 60
 
 # How often to report pull progress, in seconds
@@ -95,6 +99,44 @@ def _run_docker(arguments:'strlist', timeout:'int' = _docker_timeout) -> 'subpro
 
 # ################################################################################################################################
 
+def _has_usable_gpu() -> 'bool':
+    """ Whether an NVIDIA GPU is usable from containers - the driver must answer
+    and docker must have the nvidia runtime configured.
+    """
+
+    if not shutil.which('nvidia-smi'):
+        return False
+
+    result = subprocess.run(['nvidia-smi'], capture_output=True, text=True, timeout=_docker_timeout)
+
+    if result.returncode != 0:
+        return False
+
+    result = _run_docker(['info', '--format', '{{.Runtimes}}'])
+
+    out = 'nvidia' in result.stdout
+    return out
+
+# ################################################################################################################################
+
+def _pull_image(image:'str') -> 'None':
+    """ Pulls a docker image only when it is absent locally, streaming the progress.
+    """
+
+    result = _run_docker(['image', 'inspect', image])
+
+    if result.returncode == 0:
+        return
+
+    command = ['docker', 'pull', image]
+
+    result = subprocess.run(command, timeout=_docker_create_timeout)
+
+    if result.returncode != 0:
+        raise Exception(f'Could not pull image `{image}`')
+
+# ################################################################################################################################
+
 def is_docker_available() -> 'bool':
     """ Whether the docker CLI exists and its daemon answers - the suite skips cleanly when it does not.
     """
@@ -109,6 +151,16 @@ def is_docker_available() -> 'bool':
 
 # ################################################################################################################################
 
+def _has_expected_context_length() -> 'bool':
+    """ Whether the existing container was created with the context length the tests need.
+    """
+    result = _run_docker(['inspect', '--format', '{{.Config.Env}}', Ollama_Container_Name])
+
+    out = f'OLLAMA_CONTEXT_LENGTH={Context_Length}' in result.stdout
+    return out
+
+# ################################################################################################################################
+
 def _ensure_container_running() -> 'None':
     """ Starts the Ollama container, creating it first if it does not exist at all.
     The model weights live on a named volume, so recreating the container never repeats the pull.
@@ -117,25 +169,46 @@ def _ensure_container_running() -> 'None':
     # Find out whether the container exists and whether it is running ..
     result = _run_docker(['inspect', '--format', '{{.State.Running}}', Ollama_Container_Name])
 
-    # .. a non-zero exit code means there is no such container, so create it ..
+    if result.returncode == 0:
+
+        # .. a container created with an older context length is replaced -
+        # the model volume outlives it, so nothing is pulled again ..
+        if _has_expected_context_length():
+
+            # .. an existing but stopped container only needs to be started again.
+            if result.stdout.strip() != 'true':
+                result = _run_docker(['start', Ollama_Container_Name])
+
+                if result.returncode != 0:
+                    raise Exception(f'Could not restart Ollama -> {result.stderr}')
+
+            return
+
+        result = _run_docker(['rm', '--force', Ollama_Container_Name])
+
+        if result.returncode != 0:
+            raise Exception(f'Could not remove Ollama -> {result.stderr}')
+
+    # .. there is no container now, so create it, with GPU access when the host has a usable card.
+    _pull_image(Ollama_Image)
+
+    run_arguments = [
+        'run', '-d',
+        '--name', Ollama_Container_Name,
+        '-p', f'{Ollama_Port}:{_ollama_internal_port}',
+        '-v', f'{Ollama_Volume_Name}:/root/.ollama',
+        '-e', f'OLLAMA_CONTEXT_LENGTH={Context_Length}',
+    ]
+
+    if _has_usable_gpu():
+        run_arguments += ['--gpus', 'all']
+
+    run_arguments.append(Ollama_Image)
+
+    result = _run_docker(run_arguments)
+
     if result.returncode != 0:
-        result = _run_docker([
-            'run', '-d',
-            '--name', Ollama_Container_Name,
-            '-p', f'{Ollama_Port}:{_ollama_internal_port}',
-            '-v', f'{Ollama_Volume_Name}:/root/.ollama',
-            Ollama_Image,
-        ], timeout=_docker_create_timeout)
-
-        if result.returncode != 0:
-            raise Exception(f'Could not start Ollama -> {result.stderr}')
-
-    # .. an existing but stopped container only needs to be started again.
-    elif result.stdout.strip() != 'true':
-        result = _run_docker(['start', Ollama_Container_Name])
-
-        if result.returncode != 0:
-            raise Exception(f'Could not restart Ollama -> {result.stderr}')
+        raise Exception(f'Could not start Ollama -> {result.stderr}')
 
 # ################################################################################################################################
 
@@ -180,8 +253,7 @@ def _is_model_present(model:'str') -> 'bool':
 # ################################################################################################################################
 
 def _pull_model(model:'str') -> 'None':
-    """ Pulls the model through the streaming pull endpoint, reporting progress every few seconds
-    so a pull measured in tens of gigabytes is visibly alive the whole time.
+    """ Pulls the model through the streaming pull endpoint, reporting progress every few seconds.
     """
     pull_url = f'{Ollama_Base_URL}/api/pull'
     body = json.dumps({'model': model})
@@ -227,15 +299,14 @@ def ensure_ollama() -> 'None':
 # ################################################################################################################################
 
 def ensure_model(model:'str'=Model_Name) -> 'None':
-    """ Makes sure the model is available in the running instance, pulling it only when it is absent -
-    the named volume keeps the weights across container recreations, so the pull happens once per machine.
+    """ Makes sure the model is available in the running instance, pulling it only when it is absent.
     """
 
     if _is_model_present(model):
         print(f'[OLLAMA] model `{model}` already present')
         return
 
-    print(f'[OLLAMA] model `{model}` absent, pulling now - the first pull downloads the full weights')
+    print(f'[OLLAMA] model `{model}` absent, pulling now')
     _pull_model(model)
 
     if not _is_model_present(model):
@@ -253,6 +324,8 @@ def _ensure_console_container_running() -> 'None':
 
     # .. a non-zero exit code means there is no such container, so create it ..
     if result.returncode != 0:
+        _pull_image(Console_Image)
+
         result = _run_docker([
             'run', '-d',
             '--name', Console_Container_Name,
@@ -260,9 +333,11 @@ def _ensure_console_container_running() -> 'None':
             '--add-host', f'{_console_host_name}:host-gateway',
             '-e', f'OLLAMA_BASE_URL=http://{_console_host_name}:{Ollama_Port}',
             '-e', f'WEBUI_SECRET_KEY={_console_secret_key}',
+            '-e', 'RAG_EMBEDDING_ENGINE=ollama',
+            '-e', 'OFFLINE_MODE=1',
             '-v', f'{Console_Volume_Name}:/app/backend/data',
             Console_Image,
-        ], timeout=_docker_create_timeout)
+        ])
 
         if result.returncode != 0:
             raise Exception(f'Could not start the console -> {result.stderr}')
@@ -279,7 +354,7 @@ def _ensure_console_container_running() -> 'None':
 def _wait_until_console_ready() -> 'None':
     """ Polls the console's front page until it responds or the timeout expires.
     """
-    deadline = time.monotonic() + _startup_timeout
+    deadline = time.monotonic() + _console_startup_timeout
 
     while time.monotonic() < deadline:
 
@@ -294,7 +369,7 @@ def _wait_until_console_ready() -> 'None':
 
         time.sleep(_readiness_poll_interval)
 
-    raise Exception(f'The console did not become ready within {_startup_timeout}s')
+    raise Exception(f'The console did not become ready within {_console_startup_timeout}s')
 
 # ################################################################################################################################
 

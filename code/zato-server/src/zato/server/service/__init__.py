@@ -376,6 +376,10 @@ class Service:
     invokes = []
     http_method_handlers = {}
 
+    # A service with this flag on receives requests whose credentials did not authenticate -
+    # it responds to and audits such requests itself, and their security context stays empty.
+    handles_auth_rejection:'bool' = False
+
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
     aws = AWSFacade()
     cloud = Cloud()

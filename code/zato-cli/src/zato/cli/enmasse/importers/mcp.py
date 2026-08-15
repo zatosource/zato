@@ -59,6 +59,12 @@ class GatewayMCPImporter(GenericConnectionImporter):
         # Skills served as prompts
         'skills': [],
 
+        # Sessions - zero keeps the default idle TTL
+        'session_ttl': 0,
+
+        # How long one tools/call invocation may run for, in seconds - zero keeps the default
+        'invoke_timeout': 0,
+
         # Input validation and client-supplied JSONata response filters
         'validate_input': False,
         'allow_client_filters': False,
@@ -80,7 +86,10 @@ class GatewayMCPImporter(GenericConnectionImporter):
         'safeguards_pii_detectors': [],
         'safeguards_pii_exclude': [],
         'safeguards_pii_validate': True,
-        'safeguards_pii_stable_tokens': False,
+        'safeguards_pii_stable_replacements': False,
+
+        # Secrets removal
+        'safeguards_secrets_enabled': False,
 
         # Content safety
         'safeguards_normalize_unicode': False,

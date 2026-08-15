@@ -154,8 +154,9 @@ def build_gateway_list() -> 'dictlist':
         # The plain gateway - tool discovery, security, protocol, sessions and audit completeness
         _gateway(_constants.Gateway_Main, _constants.Path_Main),
 
-        # Input validation on
+        # Input validation on - the report service is the one with an optional field
         _gateway(_constants.Gateway_Validate, _constants.Path_Validate,
+            services=[*_constants.Service_List_CRM, _constants.Service_Report_Build],
             validate_input=True),
 
         # Skills served as prompts
@@ -193,13 +194,13 @@ def build_gateway_list() -> 'dictlist':
             safeguards_collapse_whitespace=True,
             safeguards_strip_base64=True),
 
-        # PII removal - the international detectors with validation and stable tokens,
+        # PII removal - the international detectors with validation and stable replacements,
         # the same land with one detector excluded, and a land the record never matches
         _gateway(_constants.Gateway_PII, _constants.Path_PII,
             safeguards_pii_enabled=True,
             safeguards_pii_lands=[_constants.PII_Land_Main],
             safeguards_pii_validate=True,
-            safeguards_pii_stable_tokens=True),
+            safeguards_pii_stable_replacements=True),
 
         _gateway(_constants.Gateway_PII_Exclude, _constants.Path_PII_Exclude,
             safeguards_pii_enabled=True,
@@ -248,7 +249,7 @@ def build_gateway_list() -> 'dictlist':
             safeguards_pii_enabled=True,
             safeguards_pii_lands=[_constants.PII_Land_Main],
             safeguards_pii_validate=True,
-            safeguards_pii_stable_tokens=True),
+            safeguards_pii_stable_replacements=True),
 
         _gateway(_constants.Gateway_Iso_B, _constants.Path_Iso_B,
             security_groups=[_constants.Group_Shared_B],
@@ -257,6 +258,146 @@ def build_gateway_list() -> 'dictlist':
         _gateway(_constants.Gateway_Iso_C, _constants.Path_Iso_C,
             services=[_constants.Service_Order_Status],
             security_groups=[_constants.Group_Iso_C]),
+
+        # The conduct gateway - the reference service and the two tools told apart only by their docstrings
+        _gateway(_constants.Gateway_Conduct, _constants.Path_Conduct,
+            services=[_constants.Service_Fact_Get, _constants.Service_Account_Lookup, _constants.Service_Account_Query]),
+
+        # The identity gateway admits only the B definition, whose password changes mid-suite
+        _gateway(_constants.Gateway_Identity, _constants.Path_Identity,
+            services=[_constants.Service_Order_Status],
+            security_groups=[_constants.Group_Iso_B]),
+
+        # The session-cap gateway is filled to the per-identity cap, so no other test shares it
+        _gateway(_constants.Gateway_Sessions, _constants.Path_Sessions,
+            services=[_constants.Service_Order_Status]),
+
+        # The TTL gateway expires idle sessions after seconds, not the default half hour
+        _gateway(_constants.Gateway_TTL, _constants.Path_TTL,
+            services=[_constants.Service_Order_Status],
+            session_ttl=_constants.Session_TTL_Seconds),
+
+        # The runtime gateway serves the slow echo and the order confirmation services
+        _gateway(_constants.Gateway_Runtime, _constants.Path_Runtime,
+            services=[_constants.Service_Echo_Slow, _constants.Service_Order_Confirm]),
+
+        # The docstring gateway serves the probe whose docstring changes mid-suite
+        # and the service that has no docstring at all
+        _gateway(_constants.Gateway_Docstring, _constants.Path_Docstring,
+            services=[_constants.Service_Docstring_Probe, _constants.Service_Blank_Probe]),
+
+        # The pipeline gateway runs every stage at once - compaction, PII, safety, the cap and client filters
+        _gateway(_constants.Gateway_Pipeline, _constants.Path_Pipeline,
+            services=[*_constants.Service_List_CRM, _constants.Service_Customer_List],
+            safeguards_strip_nulls=True,
+            safeguards_collapse_whitespace=True,
+            safeguards_strip_base64=True,
+            safeguards_pii_enabled=True,
+            safeguards_pii_lands=[_constants.PII_Land_Main],
+            safeguards_pii_validate=True,
+            safeguards_pii_stable_replacements=True,
+            safeguards_normalize_unicode=True,
+            safeguards_sanitize_markup=True,
+            safeguards_url_policy_enabled=True,
+            safeguards_url_allow_list=[_constants.Safety_Allowed_Host],
+            safeguards_url_mode='remove',
+            max_response_size=_constants.Pipeline_Cap_Tokens,
+            size_cap_mode='truncate',
+            allow_client_filters=True),
+
+        # PII removal together with truncation, for the boundary of the cut
+        _gateway(_constants.Gateway_PII_Truncate, _constants.Path_PII_Truncate,
+            services=[_constants.Service_Customer_List],
+            safeguards_pii_enabled=True,
+            safeguards_pii_lands=[_constants.PII_Land_Main],
+            safeguards_pii_validate=True,
+            safeguards_pii_stable_replacements=True,
+            max_response_size=_constants.Pipeline_Cap_Tokens,
+            size_cap_mode='truncate'),
+
+        # Markup rejection together with a blocking cap - one response can violate both
+        _gateway(_constants.Gateway_Reject_Both, _constants.Path_Reject_Both,
+            services=[_constants.Service_Customer_List],
+            safeguards_sanitize_markup=True,
+            safeguards_markup_mode='reject',
+            max_response_size=_constants.Pipeline_Cap_Tokens,
+            size_cap_mode='block'),
+
+        # Compaction together with a cap - the cap measures the compacted response
+        _gateway(_constants.Gateway_Compact_Cap, _constants.Path_Compact_Cap,
+            services=[_constants.Service_Text_Pad],
+            safeguards_collapse_whitespace=True,
+            max_response_size=_constants.Pipeline_Cap_Tokens,
+            size_cap_mode='truncate'),
+
+        # The same cap as the threshold gateway, with a threshold low enough to cross
+        _gateway(_constants.Gateway_Threshold_Low, _constants.Path_Threshold_Low,
+            max_response_size=_constants.Shaping_Cap_Tokens,
+            size_cap_mode='truncate',
+            min_size_threshold=_constants.Threshold_Low_Tokens),
+
+        # One compaction stage per gateway - each acts alone
+        _gateway(_constants.Gateway_Nulls, _constants.Path_Nulls,
+            safeguards_strip_nulls=True),
+
+        _gateway(_constants.Gateway_Whitespace, _constants.Path_Whitespace,
+            safeguards_collapse_whitespace=True),
+
+        _gateway(_constants.Gateway_Base64, _constants.Path_Base64,
+            safeguards_strip_base64=True),
+
+        # PII in its remaining variants - two lands, a directly named
+        # detector with no land, and validation off
+        _gateway(_constants.Gateway_PII_Two_Lands, _constants.Path_PII_Two_Lands,
+            safeguards_pii_enabled=True,
+            safeguards_pii_lands=[_constants.PII_Land_Main, _constants.PII_Land_Japan],
+            safeguards_pii_validate=True),
+
+        _gateway(_constants.Gateway_PII_Detector, _constants.Path_PII_Detector,
+            safeguards_pii_enabled=True,
+            safeguards_pii_detectors=[_constants.PII_Named_Detector],
+            safeguards_pii_validate=True),
+
+        _gateway(_constants.Gateway_PII_No_Validate, _constants.Path_PII_No_Validate,
+            safeguards_pii_enabled=True,
+            safeguards_pii_lands=[_constants.PII_Land_Main],
+            safeguards_pii_validate=False),
+
+        # Secrets removal - credential-shaped values become stable replacements
+        _gateway(_constants.Gateway_Secrets, _constants.Path_Secrets,
+            safeguards_secrets_enabled=True),
+
+        # Content safety in its remaining modes - unicode in reject mode
+        # and the URL policy in its neutralize and reject modes
+        _gateway(_constants.Gateway_Unicode_Reject, _constants.Path_Unicode_Reject,
+            safeguards_normalize_unicode=True,
+            safeguards_unicode_mode='reject'),
+
+        _gateway(_constants.Gateway_URL_Neutralize, _constants.Path_URL_Neutralize,
+            safeguards_url_policy_enabled=True,
+            safeguards_url_allow_list=[_constants.Safety_Allowed_Host],
+            safeguards_url_mode='neutralize'),
+
+        _gateway(_constants.Gateway_URL_Reject, _constants.Path_URL_Reject,
+            safeguards_url_policy_enabled=True,
+            safeguards_url_allow_list=[_constants.Safety_Allowed_Host],
+            safeguards_url_mode='reject'),
+
+        # The one gateway whose audit log is off
+        _gateway(_constants.Gateway_Audit_Off, _constants.Path_Audit_Off,
+            is_audit_log_active=False),
+
+        # The operations gateway - services whose conduct the gateway must contain,
+        # with an invoke timeout short enough for the archive build to overrun
+        _gateway(_constants.Gateway_Ops, _constants.Path_Ops,
+            services=[
+                _constants.Service_Archive_Build,
+                _constants.Service_Badge_Render,
+                _constants.Service_Tag_Collect,
+                _constants.Service_Ack_Silent,
+                _constants.Service_Order_Status,
+            ],
+            invoke_timeout=_constants.Invoke_Timeout_Seconds),
     ]
 
     return out
@@ -269,8 +410,8 @@ def build_suite_config(
     shared_a_members:'strlist | None' = None,
     ) -> 'stranydict':
     """ The whole enmasse document of the suite as a dict - security, groups, gateways
-    and the self.llm outconn. Gateway overrides are merged in by gateway name, which is
-    how the lifecycle tests flip one option and import again.
+    and the self.llm outconn. Gateway overrides are merged in by name,
+    which is how the tests flip one option and import again.
     """
 
     gateway_list = build_gateway_list()
@@ -298,6 +439,21 @@ def build_suite_config(
 
 # ################################################################################################################################
 
+def run_import_file(server_directory:'str', input_path:'str') -> 'None':
+    """ Runs one enmasse import of the given YAML file against the live server.
+    """
+
+    result = subprocess.run(
+        [_zato_bin, 'enmasse', server_directory, '--verbose', '--import', '--input', input_path],
+        capture_output=True, text=True, timeout=_enmasse_timeout,
+    )
+
+    if result.returncode != 0:
+        raise Exception(
+            f'enmasse --import failed (exit {result.returncode}):\nstdout: {result.stdout}\nstderr: {result.stderr}')
+
+# ################################################################################################################################
+
 def run_import(server_directory:'str', config:'stranydict') -> 'None':
     """ Writes the config out as YAML and runs one enmasse import against the live server.
     """
@@ -310,18 +466,27 @@ def run_import(server_directory:'str', config:'stranydict') -> 'None':
         with open(tmp_yaml, 'w') as yaml_file:
             _ = yaml_file.write(yaml_text)
 
-        result = subprocess.run(
-            [_zato_bin, 'enmasse', server_directory, '--verbose', '--import', '--input', tmp_yaml],
-            capture_output=True, text=True, timeout=_enmasse_timeout,
-        )
-
-        if result.returncode != 0:
-            raise Exception(
-                f'enmasse --import failed (exit {result.returncode}):\nstdout: {result.stdout}\nstderr: {result.stderr}')
+        run_import_file(server_directory, tmp_yaml)
 
     finally:
         if os.path.isfile(tmp_yaml):
             os.unlink(tmp_yaml)
+
+# ################################################################################################################################
+
+def run_export(server_directory:'str', output_path:'str', include_type:'str') -> 'None':
+    """ Runs one enmasse export of the given object types against the live server.
+    """
+
+    result = subprocess.run(
+        [_zato_bin, 'enmasse', server_directory, '--verbose', '--export',
+            '--output', output_path, '--include-type', include_type],
+        capture_output=True, text=True, timeout=_enmasse_timeout,
+    )
+
+    if result.returncode != 0:
+        raise Exception(
+            f'enmasse --export failed (exit {result.returncode}):\nstdout: {result.stdout}\nstderr: {result.stderr}')
 
 # ################################################################################################################################
 # ################################################################################################################################

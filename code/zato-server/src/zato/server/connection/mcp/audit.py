@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from math import ceil
+
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.json_internal import dumps
@@ -154,7 +157,10 @@ def build_audit_event(
     if trace:
         data.update(trace)
 
-    # .. and this is the whole published mapping.
+    # .. and this is the whole published mapping - the duration column holds whole
+    # milliseconds for the listings, rounded up so a sub-millisecond request never
+    # stores the zero that marks an event nothing was timed for, while the data
+    # document keeps the precise value.
     out:'stranydict' = {
         'source': AuditSource.MCP,
         'event_type': event_type,
@@ -165,6 +171,7 @@ def build_audit_event(
         'sub_key': session_id,
         'size': response_size,
         'outcome': outcome,
+        'duration_ms': ceil(duration_ms),
         'data': dumps(data),
     }
 

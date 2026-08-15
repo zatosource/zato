@@ -14,13 +14,13 @@ from logging import getLogger
 from zato.common.api import MCP
 from zato.server.connection.mcp.common import _error_invalid_params, _error_invalid_request, _error_method_not_found, \
     _jsonrpc_version, _message_invalid_params, _message_missing_jsonrpc_version, _message_missing_method, \
-    _method_tools_call, _server_name, _server_version, make_error_response, make_success_response, MCPResponse
+    _method_tools_call, _server_name, _server_version, make_error_response, make_success_response, MCPResponse, printable
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, stranydict, strnone
+    from zato.common.typing_ import any_, anydict, stranydict, strdictlist, strnone
     from zato.server.connection.mcp.handler import MCPHandler
 
     MCPHandler = MCPHandler
@@ -44,6 +44,12 @@ _error_unsupported_protocol_version = -32022
 
 # The method that advertises supported protocol versions, capabilities and identity
 _method_discover = 'server/discover'
+
+# What a request whose Mcp-Method header does not agree with the body's method is refused with
+_message_method_header_mismatch = 'Header mismatch: Mcp-Method does not match the request method'
+
+# What a tools/call whose Mcp-Name header does not agree with the tool name is refused with
+_message_name_header_mismatch = 'Header mismatch: Mcp-Name does not match the tool name'
 
 # The method that lists the tools a gateway exposes
 _method_tools_list = 'tools/list'
@@ -109,16 +115,35 @@ def _decorate_result(body:'stranydict') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _handle_discover(request_id:'any_') -> 'stranydict':
+def _handle_discover(handler:'MCPHandler', request_id:'any_') -> 'stranydict':
     """ Handles the server/discover request - advertises the protocol versions
-    this gateway speaks, its capabilities and its identity.
+    this gateway speaks, its capabilities, its identity and its tools,
+    so one probe is a sufficient tool source.
     """
 
+    # Every page of the tool registry goes into the advertisement ..
+    tools:'strdictlist' = []
+    cursor = None
+
+    while True:
+        page, cursor = handler.tool_registry.get_tools_page(cursor)
+        tools.extend(page)
+
+        if not cursor:
+            break
+
+    # .. a gateway that allows client filters advertises the filter property here
+    # the same way tools/list does ..
+    if handler.allow_client_filters:
+        tools = handler._add_response_filter_property(tools)
+
+    # .. and the whole advertisement goes out as one result.
     result:'stranydict' = {
         'protocolVersions': MCP.Protocol_Versions_Supported,
         'capabilities': {
             'tools': {},
         },
+        'tools': tools,
         'serverInfo': {
             'name': _server_name,
             'version': _server_version,
@@ -172,8 +197,7 @@ def dispatch(
     # .. the Mcp-Method header must agree with the method in the body ..
     if mcp_method_header != method:
 
-        error_message = f'Header mismatch: Mcp-Method `{mcp_method_header}` does not match method `{method}`'
-        out.body = make_error_response(request_id, _error_header_mismatch, error_message)
+        out.body = make_error_response(request_id, _error_header_mismatch, _message_method_header_mismatch)
         out.status_code = OK
         return out
 
@@ -189,7 +213,7 @@ def dispatch(
     # .. a message without an ID is a notification and produces no response ..
     if 'id' not in message:
 
-        logger.info('MCP: Received notification `%s`', method)
+        logger.info('MCP: Received notification `%s`', printable(method))
         out.body = None
         out.status_code = NO_CONTENT
         return out
@@ -204,17 +228,16 @@ def dispatch(
 
         if mcp_name_header != tool_name:
 
-            error_message = f'Header mismatch: Mcp-Name `{mcp_name_header}` does not match tool `{tool_name}`'
-            out.body = make_error_response(request_id, _error_header_mismatch, error_message)
+            out.body = make_error_response(request_id, _error_header_mismatch, _message_name_header_mismatch)
             out.status_code = OK
             return out
 
         body, trace = handler._handle_tools_call(request_id, params)
         out.trace = trace
 
-    # .. server/discover advertises versions, capabilities and identity ..
+    # .. server/discover advertises versions, capabilities, identity and tools ..
     elif method == _method_discover:
-        body = _handle_discover(request_id)
+        body = _handle_discover(handler, request_id)
 
     # .. tools/list results carry their cache hints ..
     elif method == _method_tools_list:
@@ -227,7 +250,7 @@ def dispatch(
 
     # .. anything else, including the initialize and ping of the session-based revision, is unknown here.
     else:
-        error_message = f'Method not found: `{method}`'
+        error_message = f'Method not found: `{printable(method)}`'
         body = make_error_response(request_id, _error_method_not_found, error_message)
 
     # .. every result carries the resultType marker and the server identity.

@@ -45,7 +45,7 @@ $.fn.zato.gateway.mcp.field_descriptions = {
         'thousands of tokens without giving the model anything it can use.',
 
     'id_safeguards_pii_enabled': 'Scans string values for personally identifiable information, ' +
-        'such as national identity numbers or IBANs, and replaces each match with a token naming the detector. ' +
+        'such as national identity numbers or IBANs, and replaces each match with a replacement naming the detector. ' +
         'The underlying data never reaches the client or its model.',
     'id_safeguards_pii_lands': 'The lands whose detectors run, e.g. Spain, Germany or International. ' +
         'Nothing is scanned until at least one land or detector is picked.',
@@ -56,7 +56,7 @@ $.fn.zato.gateway.mcp.field_descriptions = {
     'id_safeguards_pii_validate': 'Verifies each match with its checksum algorithm before it is replaced. ' +
         'A number that merely looks like an identifier but fails its checksum is left untouched, ' +
         'which prevents false positives.',
-    'id_safeguards_pii_stable_tokens': 'The same value receives the same numbered token throughout one response, ' +
+    'id_safeguards_pii_stable_replacements': 'The same value receives the same numbered replacement throughout one response, ' +
         'so the model can still correlate occurrences of one person or account ' +
         'without ever seeing the underlying value.',
 
@@ -74,6 +74,10 @@ $.fn.zato.gateway.mcp.field_descriptions = {
     'id_safeguards_markup_mode': 'Clean removes the findings and delivers the response. ' +
         'Reject refuses the whole response with an error, treating active content ' +
         'in a tool response as a potential attack.',
+
+    'id_safeguards_secrets_enabled': 'Scans string values for credential-shaped secrets, such as API tokens, ' +
+        'private key blocks, AWS access keys, JWTs, bearer tokens or connection strings with inline passwords, ' +
+        'and replaces each match with a stable replacement naming the detector.',
 
     'id_safeguards_url_policy_enabled': 'Checks every URL found in string values against the allow list. ' +
         'Unexpected URLs in tool responses can be used to exfiltrate data or to lure the model ' +

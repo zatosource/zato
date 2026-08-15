@@ -18,6 +18,7 @@ from gevent.lock import RLock
 from zato.common.api import Groups, Sec_Def_Type
 from zato.common.crypto.api import CryptoManager, is_string_equal
 from zato.common.groups import Member
+from zato.server.connection.mcp.common import printable
 from zato.server.groups.ctx_bearer import BearerTokenCtx
 
 # ################################################################################################################################
@@ -123,9 +124,11 @@ class SecurityGroupsCtx(BearerTokenCtx):
             if is_string_equal(password, sec_info.password):
                 return sec_info.security_id
             else:
-                logger.info(f'Invalid password; username={username}; channel={channel_name}; cid={cid}')
+                # The username renders as one line of printable text
+                logger.info(f'Invalid password; username={printable(username)}; channel={channel_name}; cid={cid}')
         else:
-            logger.info(f'Username not found; username={username}; channel={channel_name}; cid={cid}')
+            # The username renders as one line of printable text
+            logger.info(f'Username not found; username={printable(username)}; channel={channel_name}; cid={cid}')
 
 # ################################################################################################################################
 

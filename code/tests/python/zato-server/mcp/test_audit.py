@@ -82,6 +82,7 @@ class BuildAuditEvent(TestCase):
         self.assertEqual(event['sub_key'], _session_id)
         self.assertEqual(event['size'], 512)
         self.assertEqual(event['outcome'], AuditOutcome.OK)
+        self.assertEqual(event['duration_ms'], 13)
 
         data = loads(event['data'])
         self.assertEqual(data, {

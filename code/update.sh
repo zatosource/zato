@@ -11,8 +11,8 @@ export Zato_Should_Update_Base=False
 Zato_Current_Branch=$(git -C "$CURDIR" rev-parse --abbrev-ref HEAD)
 
 echo "*** Downloading updates ***"
-git_pull_output=$(git -C $CURDIR pull 2>&1)
-echo "$git_pull_output"
+git -C $CURDIR fetch origin
+git -C $CURDIR reset --hard "origin/${Zato_Current_Branch}"
 
 # An optional, specific branch or commit provided on input
 while getopts "c:" opt; do

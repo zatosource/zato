@@ -70,7 +70,8 @@ review.config = {
     safetyFields: [
         'safeguards_normalize_unicode',
         'safeguards_sanitize_markup',
-        'safeguards_url_policy_enabled'
+        'safeguards_url_policy_enabled',
+        'safeguards_secrets_enabled'
     ],
 
     // The words the picker card summaries are written with
@@ -390,7 +391,7 @@ review._piiReviewRows = function() {
         ['Detectors', detectorLabels.length ? detectorLabels.join(', ') : config.noneLabel],
         ['Exclude', excludeLabels.length ? excludeLabels.join(', ') : config.noneLabel],
         ['Validate checksums', wizard.field('safeguards_pii_validate').prop('checked') ? config.onLabel : config.offLabel],
-        ['Stable tokens', wizard.field('safeguards_pii_stable_tokens').prop('checked') ? config.onLabel : config.offLabel]
+        ['Stable replacements', wizard.field('safeguards_pii_stable_replacements').prop('checked') ? config.onLabel : config.offLabel]
     ];
 
     return out;
@@ -598,7 +599,8 @@ review.render = function() {
     var safetyRows = [
         ['Unicode', review._safetyModeSummary('safeguards_normalize_unicode', 'safeguards_unicode_mode')],
         ['Markup', review._safetyModeSummary('safeguards_sanitize_markup', 'safeguards_markup_mode')],
-        ['URL policy', review._urlPolicySummary()]
+        ['URL policy', review._urlPolicySummary()],
+        ['Secrets', wizard.field('safeguards_secrets_enabled').prop('checked') ? config.onLabel : config.offLabel]
     ];
 
     review.renderGroups([

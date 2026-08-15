@@ -22,8 +22,8 @@ from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
 from zato.cli.enmasse.importers.security import SecurityImporter
-from zato.common.api import GENERIC
-from zato.common.odb.model import GenericConn
+from zato.common.api import CONNECTION, GENERIC
+from zato.common.odb.model import GenericConn, HTTPSOAP
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -117,9 +117,10 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
 
         self.assertTrue(opaque['safeguards_pii_enabled'])
         self.assertEqual(opaque['safeguards_pii_lands'], ['intl'])
+        self.assertEqual(opaque['safeguards_pii_detectors'], ['intl_ipv4'])
         self.assertEqual(opaque['safeguards_pii_exclude'], ['intl_email'])
         self.assertFalse(opaque['safeguards_pii_validate'])
-        self.assertTrue(opaque['safeguards_pii_stable_tokens'])
+        self.assertTrue(opaque['safeguards_pii_stable_replacements'])
 
         self.assertTrue(opaque['safeguards_normalize_unicode'])
         self.assertEqual(opaque['safeguards_unicode_mode'], 'reject')
@@ -148,6 +149,7 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
         self.assertEqual(opaque2['max_response_size'], 0)
         self.assertFalse(opaque2['safeguards_strip_nulls'])
         self.assertFalse(opaque2['safeguards_pii_enabled'])
+        self.assertEqual(opaque2['safeguards_pii_detectors'], [])
         self.assertTrue(opaque2['safeguards_pii_validate'])
         self.assertFalse(opaque2['safeguards_normalize_unicode'])
         self.assertFalse(opaque2['safeguards_url_policy_enabled'])
@@ -188,6 +190,113 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
         created2, updated2 = self.mcp_importer.sync_definitions(mcp_list, self.session)
         self.assertEqual(len(created2), 0)
         self.assertEqual(len(updated2), 2)
+
+# ################################################################################################################################
+
+    def test_the_companion_rest_channel(self):
+        self._setup_test_environment()
+
+        mcp_defs = self.yaml_config['mcp_gateway']
+        _ = self.mcp_importer.sync_definitions(mcp_defs, self.session)
+
+        # The import created the gateway's HTTP channel row ..
+        channel = self.session.query(HTTPSOAP).filter_by(
+            name='enmasse.mcp.gateway.1',
+            connection=CONNECTION.CHANNEL,
+        ).one()
+
+        self.assertEqual(channel.url_path, '/mcp/enmasse-1')
+        self.assertTrue(channel.is_active)
+
+        # .. a url_path change on re-import moves the row and is_active propagates to it.
+        changed_def = {
+            'name': 'enmasse.mcp.gateway.1',
+            'is_active': False,
+            'url_path': '/mcp/enmasse-1-moved',
+            'services': ['crm.get-customer'],
+            'security_groups': ['enmasse.group.1'],
+        }
+
+        _ = self.mcp_importer.sync_definitions([changed_def], self.session)
+
+        self.session.expire_all()
+
+        channel = self.session.query(HTTPSOAP).filter_by(
+            name='enmasse.mcp.gateway.1',
+            connection=CONNECTION.CHANNEL,
+        ).one()
+
+        self.assertEqual(channel.url_path, '/mcp/enmasse-1-moved')
+        self.assertFalse(channel.is_active)
+
+# ################################################################################################################################
+
+    def test_deletion_removes_both_rows(self):
+        self._setup_test_environment()
+
+        mcp_defs = self.yaml_config['mcp_gateway']
+        _ = self.mcp_importer.sync_definitions(mcp_defs, self.session)
+
+        # Both rows exist after the import ..
+        connection_query = self.session.query(GenericConn).filter_by(
+            name='enmasse.mcp.gateway.2',
+            type_=GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
+        )
+
+        channel_query = self.session.query(HTTPSOAP).filter_by(
+            name='enmasse.mcp.gateway.2',
+            connection=CONNECTION.CHANNEL,
+        )
+
+        self.assertIsNotNone(connection_query.first())
+        self.assertIsNotNone(channel_query.first())
+
+        # .. and the should_delete path removes the generic connection
+        # and its REST channel together.
+        delete_def = {
+            'name': 'enmasse.mcp.gateway.2',
+            'should_delete': True,
+        }
+
+        _ = self.mcp_importer.sync_definitions([delete_def], self.session)
+
+        self.session.expire_all()
+
+        self.assertIsNone(connection_query.first())
+        self.assertIsNone(channel_query.first())
+
+# ################################################################################################################################
+
+    def test_names_resolve_or_the_import_refuses(self):
+        self._setup_test_environment()
+
+        mcp_defs = self.yaml_config['mcp_gateway']
+        _ = self.mcp_importer.sync_definitions(mcp_defs, self.session)
+
+        # The channel row stores the group ids the names resolved to,
+        # with the name keys gone from that storage ..
+        channel = self.session.query(HTTPSOAP).filter_by(
+            name='enmasse.mcp.gateway.1',
+            connection=CONNECTION.CHANNEL,
+        ).one()
+
+        channel_opaque = parse_instance_opaque_attr(channel)
+        stored_groups = channel_opaque['security_groups']
+
+        expected_group_id = self.importer.group_defs['enmasse.group.1']['id']
+        self.assertEqual(stored_groups, [expected_group_id])
+
+        # .. and an unknown group name refuses the import outright.
+        unknown_group_def = {
+            'name': 'enmasse.mcp.gateway.unknown-group',
+            'url_path': '/mcp/enmasse-unknown-group',
+            'security_groups': ['enmasse.group.no-such-group'],
+        }
+
+        with self.assertRaises(Exception) as caught:
+            _ = self.mcp_importer.sync_definitions([unknown_group_def], self.session)
+
+        self.assertIn('enmasse.group.no-such-group', str(caught.exception))
 
 # ################################################################################################################################
 # ################################################################################################################################

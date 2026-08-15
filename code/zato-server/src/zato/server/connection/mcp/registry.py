@@ -9,16 +9,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 from operator import itemgetter
+from secrets import token_hex
 
 # Zato
 from zato.common.util.logging_ import count_text
+from zato.server.connection.mcp.common import InvalidCursor
 from zato.server.connection.mcp.schema import io_to_json_schema
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strdictlist, strnone, strlist
+    from zato.common.typing_ import any_, stranydict, strdictlist, strnone, strlist
     from zato.server.service.store import ServiceStore
 
 # ################################################################################################################################
@@ -35,6 +37,12 @@ _internal_prefix = 'zato.'
 # Default page size for tools/list pagination
 _default_page_size = 100
 
+# How many random bytes go into a registry's cursor token
+_cursor_token_bytes = 4
+
+# What separates the cursor token from the page index
+_cursor_separator = '.'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -47,6 +55,10 @@ class ToolRegistry:
         self.allowed_services = allowed_services
         self._cached_tools:'strdictlist' = []
         self._schema_by_name:'stranydict' = {}
+
+        # Cursors are opaque and bound to this registry - a cursor obtained from one
+        # gateway is refused by every other one.
+        self._cursor_token = token_hex(_cursor_token_bytes)
 
 # ################################################################################################################################
 
@@ -118,11 +130,12 @@ class ToolRegistry:
 
 # ################################################################################################################################
 
-    def get_tools_page(self, cursor:'strnone'=None) -> 'tuple[strdictlist, strnone]':
+    def get_tools_page(self, cursor:'any_'=None) -> 'tuple[strdictlist, strnone]':
         """ Returns a page of tools starting from the given cursor.
-        The cursor is an opaque string representing the start index.
+        The cursor is an opaque string this registry itself issued - one of another
+        registry, or of any other shape, is refused.
         Returns (tools_page, next_cursor) where next_cursor is None if no more pages.
-        Raises ValueError if the cursor is not a valid integer.
+        Raises InvalidCursor if the cursor is not one this registry issued.
         """
 
         all_tools = self._cached_tools
@@ -132,14 +145,11 @@ class ToolRegistry:
         if cursor is None:
             start = 0
         else:
-            # Non-numeric cursors are rejected
-            try:
-                start = int(cursor)
-            except (ValueError, TypeError):
-                raise ValueError(f'Invalid cursor value: `{cursor}`')
+            start = self._decode_cursor(cursor)
 
-            # Clamp to valid range [0, total]
-            start = max(0, min(start, total))
+            # Clamp to the valid range of [0, total]
+            upper_bound = min(start, total)
+            start = max(0, upper_bound)
 
         # .. slice out the current page ..
         end = start + _default_page_size
@@ -147,12 +157,42 @@ class ToolRegistry:
 
         # .. if there are more tools beyond this page, produce a next cursor ..
         if end < total:
-            next_cursor = str(end)
+            next_cursor = f'{self._cursor_token}{_cursor_separator}{end}'
         else:
             next_cursor = None
 
         # .. and return both the page and the cursor for the next one.
         out = (page, next_cursor)
+        return out
+
+# ################################################################################################################################
+
+    def _decode_cursor(self, cursor:'any_') -> 'int':
+        """ Returns the start index a cursor carries.
+        Raises InvalidCursor unless the cursor holds this registry's own token and an integer index.
+        """
+
+        message = f'Invalid cursor value: `{cursor}`'
+
+        # A cursor is not necessarily a string at all - the client controls what it sends
+        if not isinstance(cursor, str):
+            raise InvalidCursor(message)
+
+        token, separator, index_text = cursor.partition(_cursor_separator)
+
+        # A cursor without the separator never came from any registry
+        if not separator:
+            raise InvalidCursor(message)
+
+        # A token this registry never issued makes the cursor foreign
+        if token != self._cursor_token:
+            raise InvalidCursor(message)
+
+        try:
+            out = int(index_text)
+        except ValueError:
+            raise InvalidCursor(message)
+
         return out
 
 # ################################################################################################################################

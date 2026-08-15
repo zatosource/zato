@@ -65,7 +65,10 @@ class CreateForm(forms.Form):
     safeguards_pii_exclude = forms.MultipleChoiceField(required=False, choices=get_detector_choices,
         widget=forms.SelectMultiple(attrs={'class':'chosen-multi', 'data-placeholder':'Nothing excluded'}))
     safeguards_pii_validate = forms.BooleanField(required=False)
-    safeguards_pii_stable_tokens = forms.BooleanField(required=False)
+    safeguards_pii_stable_replacements = forms.BooleanField(required=False)
+
+    # Response safeguards - secrets removal
+    safeguards_secrets_enabled = forms.BooleanField(required=False)
 
     # Response safeguards - unicode
     safeguards_normalize_unicode = forms.BooleanField(required=False)

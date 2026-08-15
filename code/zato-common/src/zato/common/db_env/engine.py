@@ -150,4 +150,16 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
     return out
 
 # ################################################################################################################################
+
+def dispose_env_engine(config:'EnvDBConfig') -> 'None':
+    """ Removes this configuration's engine from the cache and closes its pooled
+    connections - the next get_env_engine call builds a fresh engine.
+    """
+    cache_key = _get_cache_key(config)
+
+    # An engine that was never built has nothing to close
+    if engine := _engine_cache.pop(cache_key, None):
+        engine.dispose()
+
+# ################################################################################################################################
 # ################################################################################################################################

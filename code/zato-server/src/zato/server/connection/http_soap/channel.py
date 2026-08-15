@@ -416,34 +416,71 @@ class RequestDispatcher:
         security_groups_ctx = channel_item.get('security_groups_ctx')
         has_sec_def = sec.sec_def != ZATO_NONE
 
-        if has_sec_def:
+        try:
 
-            # .. this will raise an exception if the sec_def check fails ..
-            _ = self.url_data.check_security(
-                sec,
-                cid,
-                channel_item,
-                meta.path_info,
-                payload,
-                wsgi_environ,
-                post_data,
-                config_manager,
-                enforce_auth=True
-            )
+            if has_sec_def:
 
-        if security_groups_ctx:
-            if security_groups_ctx.has_members():
+                # .. this will raise an exception if the sec_def check fails ..
+                _ = self.url_data.check_security(
+                    sec,
+                    cid,
+                    channel_item,
+                    meta.path_info,
+                    payload,
+                    wsgi_environ,
+                    post_data,
+                    config_manager,
+                    enforce_auth=True
+                )
 
-                # .. this will raise an exception if the group check fails ..
-                self.check_security_via_groups(cid, channel_item['name'], security_groups_ctx, wsgi_environ)
+            if security_groups_ctx:
+                if security_groups_ctx.has_members():
 
-            # .. a channel protected by groups alone, whose groups have no members, has no credentials
-            # .. to check the caller against, so no caller passes - this is the same default deny
-            # .. that check_security_via_groups applies when a credential does not match ..
-            elif not has_sec_def:
-                logger.warning('Channel `%s` is protected by security groups that have no members, cid:`%s`',
-                    channel_item['name'], cid)
-                raise Forbidden(cid)
+                    # .. this will raise an exception if the group check fails ..
+                    self.check_security_via_groups(cid, channel_item['name'], security_groups_ctx, wsgi_environ)
+
+                # .. a channel protected by groups alone, whose groups have no members, has no credentials
+                # .. to check the caller against, so no caller passes - this is the same default deny
+                # .. that check_security_via_groups applies when a credential does not match ..
+                elif not has_sec_def:
+                    logger.warning('Channel `%s` is protected by security groups that have no members, cid:`%s`',
+                        channel_item['name'], cid)
+                    raise Forbidden(cid)
+
+        except (Forbidden, Unauthorized):
+
+            # .. the service behind the channel may accept requests whose credentials did not
+            # .. authenticate, responding to and auditing them itself - such a request proceeds
+            # .. with an empty security context instead of being rejected here.
+            if self._service_handles_auth_rejection(channel_item):
+                return
+
+            raise
+
+# ################################################################################################################################
+
+    def _service_handles_auth_rejection(self, channel_item:'anydict') -> 'bool':
+        """ Whether the service behind the channel accepts requests whose credentials
+        did not authenticate, responding to and auditing them itself.
+        """
+
+        service_name = channel_item['service_name']
+        service_store = self.server.service_store
+
+        # A channel names its service either by its short name or, as with the channels
+        # of MCP gateways, by its implementation name directly - both forms resolve here.
+        impl_name = service_store.name_to_impl_name.get(service_name, service_name)
+        service_info = service_store.services.get(impl_name)
+
+        # A channel whose service is not deployed has nothing to hand the request to.
+        if service_info is None:
+            out = False
+            return out
+
+        service_class = service_info['service_class']
+
+        out = service_class.handles_auth_rejection
+        return out
 
 # ################################################################################################################################
 

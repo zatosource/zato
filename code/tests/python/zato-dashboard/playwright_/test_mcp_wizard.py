@@ -493,13 +493,12 @@ class TestMCPWizard:
             wizard_page.set_size_caps(page, size_cap_mode='block')
             wizard_page.save_edit(page)
 
-            # .. makes the gateway refuse an oversized response outright, naming the size and the cap.
+            # .. makes the gateway refuse an oversized response outright, naming neither the size nor the cap.
             result = _wait_until_rejected_as_too_large(
                 server_port, url_path, auth, {'status': 'ok', 'rows': _make_rows(_Oversized_Row_Count)})
 
             text = _get_text(result)
-            assert 'Response too large:' in text, f'Expected a size refusal, got: {text}'
-            assert f'cap is {_Max_Response_Tokens}' in text, f'Expected the cap to be named, got: {text}'
+            assert text == 'Response too large', f'Expected a size refusal, got: {text}'
 
             # The delete goes through the list page row ..
             _ = wizard_page.go_to_list(page, base_url, gateway_name)

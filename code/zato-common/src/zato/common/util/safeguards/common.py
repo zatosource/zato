@@ -37,6 +37,10 @@ Whitespace_Pattern = re_compile(r'\s+')
 # Marker replacing a removed URL.
 Url_Marker = '[link removed]'
 
+# The shape of the text a PII or secrets match is replaced with,
+# e.g. REPLACED_IBAN, or REPLACED_IBAN_1 with stable replacements on.
+Replacement_Format = 'REPLACED_{name}'
+
 # What a stage does when it finds something - clean it and continue, or refuse the whole document.
 Mode_Clean  = 'clean'
 Mode_Reject = 'reject'
@@ -74,12 +78,15 @@ class SafeguardConfig:
 
     # PII removal - lands select detector groups, explicit detector names win over lands,
     # exclusions are removed from whatever the other two selected.
-    pii_enabled:       bool = False
-    pii_lands:         strlist
-    pii_detectors:     strlist
-    pii_exclude:       strlist
-    pii_validate:      bool = True
-    pii_stable_tokens: bool = False
+    pii_enabled:             bool = False
+    pii_lands:               strlist
+    pii_detectors:           strlist
+    pii_exclude:             strlist
+    pii_validate:            bool = True
+    pii_stable_replacements: bool = False
+
+    # Secrets removal - credential-shaped values are redacted with stable replacements
+    secrets_enabled: bool = False
 
     # Unicode normalization
     normalize_unicode: bool = False
@@ -135,6 +142,9 @@ class SafeguardResult:
 
     # PII matches by detector name
     pii_removed: strintdict
+
+    # Secrets matches by detector name
+    secrets_removed: strintdict
 
     # Security findings by kind
     signals: signal_dict

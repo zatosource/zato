@@ -316,12 +316,11 @@ class TestMCPResponseControls:
 
         wizard_page.save_edit(page)
 
-        # .. makes the gateway refuse an oversized response outright, naming the size and the cap.
+        # .. makes the gateway refuse an oversized response outright, naming neither the size nor the cap.
         result = _wait_until_rejected_as_too_large(mcp_url, auth, {'status': 'ok', 'rows': _make_rows(_Oversized_Row_Count)})
 
         text = _get_text(result)
-        assert 'Response too large:' in text, f'Expected a size refusal, got: {text}'
-        assert f'cap is {_Max_Response_Tokens}' in text, f'Expected the cap to be named, got: {text}'
+        assert text == 'Response too large', f'Expected a size refusal, got: {text}'
 
 # ################################################################################################################################
 # ################################################################################################################################

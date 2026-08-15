@@ -42,12 +42,15 @@ def build_safeguard_config(config:'stranydict') -> 'SafeguardConfig':
     out.strip_base64        = _get(config, 'safeguards_strip_base64', SafeguardConfig.strip_base64)
 
     # PII removal - the list fields carry no dataclass defaults, so they are always assigned here.
-    out.pii_enabled       = _get(config, 'safeguards_pii_enabled', SafeguardConfig.pii_enabled)
-    out.pii_lands         = _get(config, 'safeguards_pii_lands', [])
-    out.pii_detectors     = _get(config, 'safeguards_pii_detectors', [])
-    out.pii_exclude       = _get(config, 'safeguards_pii_exclude', [])
-    out.pii_validate      = _get(config, 'safeguards_pii_validate', SafeguardConfig.pii_validate)
-    out.pii_stable_tokens = _get(config, 'safeguards_pii_stable_tokens', SafeguardConfig.pii_stable_tokens)
+    out.pii_enabled             = _get(config, 'safeguards_pii_enabled', SafeguardConfig.pii_enabled)
+    out.pii_lands               = _get(config, 'safeguards_pii_lands', [])
+    out.pii_detectors           = _get(config, 'safeguards_pii_detectors', [])
+    out.pii_exclude             = _get(config, 'safeguards_pii_exclude', [])
+    out.pii_validate            = _get(config, 'safeguards_pii_validate', SafeguardConfig.pii_validate)
+    out.pii_stable_replacements = _get(config, 'safeguards_pii_stable_replacements', SafeguardConfig.pii_stable_replacements)
+
+    # Secrets removal
+    out.secrets_enabled = _get(config, 'safeguards_secrets_enabled', SafeguardConfig.secrets_enabled)
 
     # Unicode normalization
     out.normalize_unicode = _get(config, 'safeguards_normalize_unicode', SafeguardConfig.normalize_unicode)
@@ -85,6 +88,7 @@ def is_safeguards_active(config:'SafeguardConfig') -> 'bool':
         config.collapse_whitespace,
         config.strip_base64,
         config.pii_enabled,
+        config.secrets_enabled,
         config.normalize_unicode,
         config.sanitize_markup,
         config.url_policy_enabled,

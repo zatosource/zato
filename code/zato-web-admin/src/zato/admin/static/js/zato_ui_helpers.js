@@ -26,8 +26,9 @@
         out = out.replace(/</g, '&lt;');
         out = out.replace(/>/g, '&gt;');
 
-        // .. and finally double quotes.
+        // .. and finally both kinds of quotes.
         out = out.replace(/"/g, '&quot;');
+        out = out.replace(/'/g, '&#39;');
 
         return out;
     };

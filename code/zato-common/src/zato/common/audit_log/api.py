@@ -8,9 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import stat
 from collections import OrderedDict
 from logging import getLogger
 from time import monotonic
+
+# SQLAlchemy
+from sqlalchemy.exc import OperationalError
 
 # Zato
 from zato.common.audit_log.attachment import build_attachment_rows
@@ -23,8 +27,8 @@ from zato.common.audit_log.common import Attr_Value_Max_Len, Audit_DB_File_Name,
 from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days, \
     Env_Content_Retention_Days_Prefix, get_content_retention_days, register_prunability, run_retention
 from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
-from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, EnvDBConfig, get_env_engine, \
-    Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
+from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, dispose_env_engine, EnvDBConfig, \
+    get_env_engine, get_env_values, Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
 from zato.common.util.api import as_bool, utcnow
 
 # ################################################################################################################################
@@ -119,6 +123,9 @@ class ModuleCtx:
 # Retention runs after every that many inserts
 _retention_check_interval = 1000
 
+# The files SQLite keeps next to a WAL-mode database
+_sqlite_companion_suffixes = ('-wal', '-shm')
+
 logger = getLogger(__name__)
 
 # Per-write trace diagnostics - opt-in through the environment
@@ -142,14 +149,12 @@ Retention_Days = get_retention_days()
 # The pool matters for SQLite too - without it every event opens and closes its own
 # connection, and closing the last WAL connection runs a checkpoint with an fsync,
 # which serializes high-volume producers like pub/sub behind disk flushes.
-_env_config_options = {
-    'env_prefix': 'Zato_Audit_Log_DB_',
-    'sqlite_file_name': Audit_DB_File_Name,
-    'metadata': metadata,
-    'needs_pool': True,
-}
-
-_env_config = EnvDBConfig(**_env_config_options)
+_env_config = EnvDBConfig(
+    env_prefix='Zato_Audit_Log_DB_',
+    sqlite_file_name=Audit_DB_File_Name,
+    metadata=metadata,
+    needs_pool=True,
+)
 
 # ################################################################################################################################
 
@@ -168,6 +173,57 @@ def get_audit_engine() -> 'Engine':
     """
     out = get_env_engine(_env_config)
     return out
+
+# ################################################################################################################################
+
+def _repair_sqlite_companions(db_path:'str') -> 'None':
+    """ Aligns -wal and -shm permissions with the main file. SQLite creates them with
+    the main file's bits, so ones born during a read-only window stay read-only and
+    refuse every writer even after the main file's permissions come back.
+    """
+    db_mode = stat.S_IMODE(os.stat(db_path).st_mode)
+
+    for suffix in _sqlite_companion_suffixes:
+
+        companion_path = db_path + suffix
+
+        if not os.path.exists(companion_path):
+            continue
+
+        if os.access(companion_path, os.W_OK):
+            continue
+
+        os.chmod(companion_path, db_mode)
+
+        # Connections that mapped the companion while it was read-only stay read-only
+        dispose_env_engine(_env_config)
+
+# ################################################################################################################################
+
+def _dispose_stale_sqlite_engine() -> 'None':
+    """ Disposes the cached engine when its SQLite file was deleted or made read-only
+    on disk - the engine's open descriptors would otherwise keep writing into the old inode.
+    """
+    values = get_env_values(_env_config)
+
+    # Only a file-based database can change on disk behind a live engine
+    if values['type'] != Type_SQLite:
+        return
+
+    db_path = values['name']
+
+    file_exists = os.path.exists(db_path)
+    file_writable = os.access(db_path, os.W_OK)
+
+    if not file_exists:
+        dispose_env_engine(_env_config)
+        return
+
+    if not file_writable:
+        dispose_env_engine(_env_config)
+        return
+
+    _repair_sqlite_companions(db_path)
 
 # ################################################################################################################################
 
@@ -224,13 +280,11 @@ class AuditLog:
         self.flush_max_size = flush_max_size
 
         # .. and the buffer holds events between flushes.
-        buffer_options = {
-            'max_size': flush_max_size,
-            'max_wait_ms': flush_max_wait_ms,
-            'write_batch': self._write_batch,
-        }
-
-        self._buffer = EventBuffer(**buffer_options)
+        self._buffer = EventBuffer(
+            max_size=flush_max_size,
+            max_wait_ms=flush_max_wait_ms,
+            write_batch=self._write_batch,
+        )
 
 # ################################################################################################################################
 
@@ -448,11 +502,52 @@ class AuditLog:
         bodies and lineage links. Returns the id of the last event written.
         """
 
-        # Our response to produce
-        out:'intnone' = None
-
         # Trace point 9: every database transaction with its size and duration
         write_start = monotonic()
+
+        # A deleted or read-only database file is only visible to a fresh engine
+        _dispose_stale_sqlite_engine()
+
+        try:
+            out = self._insert_batch(batch)
+        except OperationalError:
+
+            # A pooled connection that opened the file while it was read-only stays
+            # read-only after the permissions come back - a fresh engine self-heals that.
+            dispose_env_engine(_env_config)
+            out = self._insert_batch(batch)
+
+        write_elapsed = monotonic() - write_start
+        write_elapsed_ms = write_elapsed * 1000
+        batch_size = len(batch)
+
+        _trace('db write of %d events done %.1fms', batch_size, write_elapsed_ms)
+
+        # Periodically delete rows older than the retention window
+        self._insert_count += batch_size
+
+        if self._insert_count >= _retention_check_interval:
+            self._insert_count = 0
+            now = utcnow()
+
+            # Trace point 10: the inline retention run, a suspect for long stalls
+            _trace('retention run begins')
+            retention_start = monotonic()
+
+            self._run_retention(now)
+
+            _trace('retention run done %.1fms', (monotonic() - retention_start) * 1000)
+
+        return out
+
+# ################################################################################################################################
+
+    def _insert_batch(self, batch:'pending_event_list') -> 'intnone':
+        """ Inserts one batch of events in a single transaction and returns the id of the last event written.
+        """
+
+        # Our response to produce
+        out:'intnone' = None
 
         with self.engine.begin() as connection:
 
@@ -516,27 +611,6 @@ class AuditLog:
                     link_insert = event_link_table.insert()
 
                     _ = connection.execute(link_insert, link_rows)
-
-        write_elapsed = monotonic() - write_start
-        write_elapsed_ms = write_elapsed * 1000
-        batch_size = len(batch)
-
-        _trace('db write of %d events done %.1fms', batch_size, write_elapsed_ms)
-
-        # Periodically delete rows older than the retention window
-        self._insert_count += batch_size
-
-        if self._insert_count >= _retention_check_interval:
-            self._insert_count = 0
-            now = utcnow()
-
-            # Trace point 10: the inline retention run, a suspect for long stalls
-            _trace('retention run begins')
-            retention_start = monotonic()
-
-            self._run_retention(now)
-
-            _trace('retention run done %.1fms', (monotonic() - retention_start) * 1000)
 
         return out
 

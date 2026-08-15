@@ -86,6 +86,42 @@ def read_events(
 
 # ################################################################################################################################
 
+def read_events_page(
+    audit_db_path:'str',
+    object_name:'str',
+    limit:'int',
+    offset:'int',
+    min_id:'int' = 0,
+    ) -> 'dictlist':
+    """ Reads one page of a gateway's MCP audit events, newest first - the ordering
+    and the offset arithmetic the listings use.
+    """
+
+    column_list = ', '.join(_event_columns)
+
+    query_filter = f'select {column_list} from event where source = ? and id > ? and object_name = ?'
+    query = query_filter + ' order by id desc limit ? offset ?'
+    query_args:'anylist' = [AuditSource.MCP, min_id, object_name, limit, offset]
+
+    connection = sqlite3.connect(audit_db_path)
+
+    try:
+        cursor = connection.execute(query, query_args)
+        db_rows = cursor.fetchall()
+    finally:
+        connection.close()
+
+    out:'dictlist' = []
+
+    for db_row in db_rows:
+        row = dict(zip(_event_columns, db_row))
+        row['data'] = loads(row['data'])
+        out.append(row)
+
+    return out
+
+# ################################################################################################################################
+
 def last_event_id(audit_db_path:'str') -> 'int':
     """ The highest event ID written so far, so a test can look only at the rows
     its own traffic produces.

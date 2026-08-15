@@ -16,6 +16,7 @@ from zato.common.util.safeguards.common import Kind_Markup, Kind_Unicode, Kind_U
 from zato.common.util.safeguards.markup import sanitize_markup
 from zato.common.util.safeguards.noise import collapse_whitespace, strip_base64, strip_nulls
 from zato.common.util.safeguards.pii import remove_pii
+from zato.common.util.safeguards.secrets_ import remove_secrets
 from zato.common.util.safeguards.unicode_ import normalize_unicode
 from zato.common.util.safeguards.urls import apply_url_policy
 from zato.common.util.truncate.measure import get_size
@@ -42,15 +43,16 @@ def _finalize(out:'SafeguardResult', value:'any_', work:'any_', reject_kind:'str
 
 def apply_safeguards(value:'any_', config:'SafeguardConfig') -> 'SafeguardResult':
     """ Applies the enabled safeguards to a JSON-serializable value - null stripping, unicode normalization,
-    base64 stripping, markup sanitization, URL policy, PII removal and whitespace collapsing, in that order -
-    and returns the outcome with a full account of what happened. The input is never mutated and this function
-    never raises - a rejection is expressed on the result, the caller decides what to do with it.
+    base64 stripping, markup sanitization, URL policy, whitespace collapsing, PII removal and secrets removal,
+    in that order - and returns the outcome with a full account of what happened. The input is never mutated
+    and this function never raises - a rejection is expressed on the result, the caller decides what to do with it.
     """
 
     # Our response to produce
     out = SafeguardResult()
     out.value = value
     out.pii_removed = {}
+    out.secrets_removed = {}
     out.signals = {}
 
     size_before = get_size(value)
@@ -102,9 +104,13 @@ def apply_safeguards(value:'any_', config:'SafeguardConfig') -> 'SafeguardResult
     if config.collapse_whitespace:
         work = collapse_whitespace(work, out)
 
-    # PII removal runs last, on the already normalized, sanitized and collapsed strings.
+    # PII removal runs on the already normalized, sanitized and collapsed strings.
     if config.pii_enabled:
         work = remove_pii(work, out, config)
+
+    # Secrets removal closes the pipeline - credential-shaped values become stable replacements.
+    if config.secrets_enabled:
+        work = remove_secrets(work, out)
 
     out = _finalize(out, value, work, '')
 
