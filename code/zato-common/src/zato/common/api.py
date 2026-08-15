@@ -1281,6 +1281,10 @@ class MCP:
     # The most bytes one JSON-RPC request body may carry
     Max_Request_Size = 1_000_000
 
+    # How many seconds one tools/call invocation may run for before it times out -
+    # each gateway may override it through its invoke_timeout option.
+    Default_Invoke_Timeout = 90
+
 # ################################################################################################################################
 # ################################################################################################################################
 

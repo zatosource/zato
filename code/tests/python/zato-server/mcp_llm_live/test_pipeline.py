@@ -14,6 +14,10 @@ import _constants
 import _helpers
 from _helpers import call_and_read_event as _call_and_read_event
 
+# Zato
+from zato.common.util.safeguards.common import Base64_Marker_Template
+from zato.common.util.truncate.common import Truncation_Marker
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -38,6 +42,18 @@ _whole_token = re.compile(r'\{\{[A-Z0-9_]+\}\}')
 
 # What the markup rejection audits as
 _reject_kind_markup = 'markup'
+
+# The detector name and the first stable replacement of the one email
+# the mixed-script record carries
+_detector_email = 'intl_email'
+_token_email_first = '{{EMAIL_1}}'
+
+# The code point range UTF-16 surrogates occupy - a lone one means half an astral character
+_surrogate_first = 0xD800
+_surrogate_last  = 0xDFFF
+
+# The avatar blob as the fixture builds it - the base64 marker must name exactly its length
+_avatar_blob = 'data:image/png;base64,' + 'QUJDREVG' * 40
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -164,6 +180,90 @@ class TestPipelineInterplay:
         # the cap never ran, so no size keys are in the trace.
         assert event_data['reject_kind'] == _reject_kind_markup, event_data
         assert 'tokens_before' not in event_data, event_data
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestScriptsThroughThePipeline:
+    """ Multi-script data through the cut and through every stage at once - the truncation
+    boundary never splits a character and a mixed-script record is exact end to end.
+    """
+
+# ################################################################################################################################
+
+    def test_truncation_never_splits_a_character(self, zato_server:'anydict') -> 'None':
+
+        body, event_data = _call_and_read_event(
+            zato_server, _constants.Path_Shaping_Truncate, _constants.Gateway_Shaping_Truncate,
+            _constants.Service_Customer_Get, {'customer_id': _constants.Customer_ID_Reactions})
+
+        assert event_data['was_truncated'] is True, event_data
+
+        # The whole content is valid text - no half of an astral character anywhere,
+        # which is the only way a code point can break in transit ..
+        text = _helpers.get_result_text(body)
+
+        for character in text:
+            assert not _surrogate_first <= ord(character) <= _surrogate_last, hex(ord(character))
+
+        _ = text.encode('utf8')
+
+        # .. and the cut field consists of whole reaction tokens alone - the emoji,
+        # the skin-tone pair, the joiner sequence, the diacritics and the combining
+        # sequence each survive complete or are gone complete, plus the end marker.
+        data = _helpers.get_result_data(body)
+        reactions = data['reactions']
+
+        suffix = ' ' + Truncation_Marker
+        assert reactions.endswith(suffix), reactions[-64:]
+
+        kept_tokens = reactions[:-len(suffix)].split(' ')
+        assert kept_tokens, reactions[:64]
+
+        for token in kept_tokens:
+            assert token in _constants.Reaction_Tokens, repr(token)
+
+# ################################################################################################################################
+
+    def test_a_mixed_script_response_through_every_stage(self, zato_server:'anydict') -> 'None':
+
+        body, event_data = _call_and_read_event(
+            zato_server, _constants.Path_Pipeline, _constants.Gateway_Pipeline,
+            _constants.Service_Customer_Get, {'customer_id': _constants.Customer_ID_Mixed})
+
+        data = _helpers.get_result_data(body)
+
+        # The record is deterministic end to end - the multi-script fields nothing applied
+        # to decode to their original values byte for byte, and every touched field
+        # reads exactly what its one stage leaves behind.
+        expected = {
+            'name': _constants.Customer_Name_Mixed,
+            'city': _constants.Customer_City_Mixed,
+            'motto': _constants.Customer_Motto_Mixed,
+            'note': _constants.Customer_Note_Mixed_Collapsed,
+            'email': _token_email_first,
+            'banner': _constants.Customer_Banner_Mixed_Clean,
+            'links': _constants.Customer_Links_Mixed_Clean,
+            'attachment': Base64_Marker_Template.format(size=len(_avatar_blob)),
+            'customer_id': _constants.Customer_ID_Mixed,
+            'found': True,
+        }
+
+        assert data == expected, data
+
+        # Every stage's trace is exact - one null, the note's two whitespace runs,
+        # one blob, one email, one script element and one disallowed URL.
+        assert event_data['nulls_removed'] == 1, event_data
+        assert event_data['whitespace_chars_removed'] == _constants.Mixed_Whitespace_Removed, event_data
+        assert event_data['base64_blobs_removed'] == 1, event_data
+        assert event_data['pii_removed'] == {_detector_email: 1}, event_data
+        assert event_data['markup_items_removed'] == 1, event_data
+        assert event_data['urls_flagged'] == 1, event_data
+
+        # Nothing else ran - no smuggled characters, no truncation, no rejection.
+        assert 'unicode_chars_removed' not in event_data, event_data
+        assert 'was_truncated' not in event_data, event_data
+        assert 'reject_kind' not in event_data, event_data
 
 # ################################################################################################################################
 # ################################################################################################################################

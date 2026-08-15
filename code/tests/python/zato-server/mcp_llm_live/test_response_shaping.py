@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import re
+from math import ceil
 
 # local
 import _agent
@@ -18,6 +19,9 @@ from _helpers import call_and_read_event as _call_and_read_event
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
+from zato.common.util.truncate.common import Truncation_Marker
+from zato.common.util.truncate.measure import serialize
+from zato.common.util.truncate.tokens import Default_Characters_Per_Token
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -283,6 +287,61 @@ class TestSizeCapBoundaries:
 
         for block in blocks:
             assert block['text'] == _collapsed_text, block
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestScriptsThroughShaping:
+    """ Token counting on a non-Latin script - a Japanese payload against the size cap,
+    with the character-per-token ratio acting on it exactly as the trace reports.
+    """
+
+# ################################################################################################################################
+
+    def test_japanese_token_counting_matches_the_trace(self, zato_server:'anydict') -> 'None':
+
+        body, event_data = _call_and_read_event(
+            zato_server, _constants.Path_Shaping_Truncate, _constants.Gateway_Shaping_Truncate,
+            _constants.Service_Customer_Get, {'customer_id': _constants.Customer_ID_History})
+
+        data = _helpers.get_result_data(body)
+
+        assert event_data['was_truncated'] is True, event_data
+
+        # The record is deterministic, so the before-count is computable to the token -
+        # each Japanese character counts as one character, never as its bytes ..
+        history = _constants.Japanese_History_Separator.join(
+            [_constants.Japanese_History_Sentence] * _constants.Japanese_History_Repeat)
+
+        record = {
+            'name': _constants.Customer_Name_History,
+            'city': _constants.Customer_City_History,
+            'history': history,
+            'customer_id': _constants.Customer_ID_History,
+            'found': True,
+        }
+
+        tokens_before = ceil(len(serialize(record)) / Default_Characters_Per_Token)
+        assert event_data['tokens_before'] == tokens_before, (event_data, tokens_before)
+
+        # .. the after-count is the same arithmetic on what actually came back ..
+        tokens_after = ceil(len(serialize(data)) / Default_Characters_Per_Token)
+
+        assert event_data['tokens_after'] == tokens_after, (event_data, tokens_after)
+        assert event_data['tokens_after'] <= _constants.Shaping_Cap_Tokens, event_data
+
+        # .. and the cut kept whole sentences - it landed on an ideographic-space
+        # boundary, never inside the Japanese text.
+        suffix = ' ' + Truncation_Marker
+        history_cut = data['history']
+
+        assert history_cut.endswith(suffix), history_cut[-64:]
+
+        kept_sentences = history_cut[:-len(suffix)].split(_constants.Japanese_History_Separator)
+        assert kept_sentences, history_cut[:64]
+
+        for sentence in kept_sentences:
+            assert sentence == _constants.Japanese_History_Sentence, sentence
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -8,7 +8,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from concurrent.futures import ThreadPoolExecutor
-from http.client import BAD_REQUEST, NOT_FOUND, OK
+from http.client import BAD_REQUEST, NO_CONTENT, NOT_FOUND, OK
+from json import dumps
+
+# requests
+import requests
+
+# Zato
+from zato.common.audit_log.api import AuditEvent, AuditOutcome
+from zato.server.connection.mcp.audit import Method_Unknown
 
 # local
 import _agent
@@ -28,6 +36,15 @@ if 0:
 
 # A protocol revision no gateway speaks
 _unsupported_version = '1999-01-01'
+
+# The notification the MCP handshake defines - a message without an id
+_notification_method = 'notifications/initialized'
+
+# How deeply the nested-arguments test nests them
+_nesting_depth = 100
+
+# Timeout in seconds for the requests this module sends without the shared client
+_request_timeout = 30
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,6 +76,14 @@ class TestProtocolNegotiation:
 
         body = response.json()
         assert body['error']['code'] == _constants.Error_Unsupported_Protocol_Version, body
+
+        # The error names every version the gateway does speak ..
+        message = body['error']['message']
+        assert _constants.Protocol_Version_Sessions in message, body
+        assert _constants.Protocol_Version_Stateless in message, body
+
+        # .. and no session was created for the refused initialize.
+        assert 'Mcp-Session-Id' not in response.headers, response.headers
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -219,6 +244,240 @@ class TestConcurrentSessions:
         assert cids_one, events
         assert cids_two, events
         assert not (cids_one & cids_two), (cids_one, cids_two)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestMalformedRequests:
+    """ Requests outside the protocol's shape each have one defined refusal or outcome -
+    nothing malformed ever crashes the gateway or slips through half-processed.
+    """
+
+# ################################################################################################################################
+
+    def test_a_batch_array_is_refused_whole(self, zato_server:'anydict') -> 'None':
+
+        audit_db_path = zato_server['audit_db_path']
+        min_id = _audit.last_event_id(audit_db_path)
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        # A JSON-RPC batch - a top-level array - gets one error for the whole body ..
+        messages = [
+            {'jsonrpc': '2.0', 'method': 'tools/list', 'id': 1},
+            {'jsonrpc': '2.0', 'method': 'ping', 'id': 2},
+        ]
+        response = client.jsonrpc_array_body(messages, session_id=session_id)
+
+        body = response.json()
+        assert response.status_code == OK, response.text
+        assert body['error']['code'] == _constants.Error_Invalid_Request, body
+
+        # .. no element of it was executed - the session still works afterwards ..
+        tools = _helpers.list_tools(client, session_id)
+        assert tools, tools
+
+        # .. and one audit event records the refusal under the unknown-method marker.
+        events = _audit.wait_for_events(
+            audit_db_path, 1, object_name=_constants.Gateway_Main, event_type=Method_Unknown, min_id=min_id)
+
+        assert events[-1]['outcome'] == AuditOutcome.Error, events
+
+# ################################################################################################################################
+
+    def test_a_notification_returns_no_body(self, zato_server:'anydict') -> 'None':
+
+        audit_db_path = zato_server['audit_db_path']
+        min_id = _audit.last_event_id(audit_db_path)
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        # A request without an id is a notification - it gets no JSON-RPC body at all ..
+        notification = {'jsonrpc': '2.0', 'method': _notification_method, 'params': {}}
+        response = client.jsonrpc_raw(dumps(notification).encode('utf8'), session_id=session_id)
+
+        assert response.status_code == NO_CONTENT, response.text
+        assert response.text == '', response.text
+
+        # .. the session stays valid ..
+        tools = _helpers.list_tools(client, session_id)
+        assert tools, tools
+
+        # .. and the audit event carries the literal method name.
+        events = _audit.wait_for_events(
+            audit_db_path, 1, object_name=_constants.Gateway_Main, event_type=_notification_method, min_id=min_id)
+
+        assert events[-1]['outcome'] == AuditOutcome.OK, events
+
+# ################################################################################################################################
+
+    def test_ids_of_every_shape_echo_back(self, zato_server:'anydict') -> 'None':
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        # A string id, an explicit null id, a float id and a very large integer id
+        # each come back exactly as they went in.
+        request_ids = ['req-abc', None, 1.5, 10 ** 18]
+
+        for request_id in request_ids:
+
+            response = client.jsonrpc('ping', request_id=request_id, session_id=session_id)
+            body = response.json()
+
+            assert response.status_code == OK, response.text
+            assert 'result' in body, body
+            assert body['id'] == request_id, body
+
+# ################################################################################################################################
+
+    def test_a_duplicate_key_keeps_the_last_value(self, zato_server:'anydict') -> 'None':
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        # The same key twice inside arguments - the last value is the one the service sees ..
+        arguments = '{"order_id": "' + _constants.Order_ID_Not_Cancellable + '", "order_id": "' + _constants.Order_ID + '"}'
+        params = '{"name": "' + _constants.Service_Order_Status + '", "arguments": ' + arguments + '}'
+        raw_body = '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": ' + params + '}'
+
+        response = client.jsonrpc_raw(raw_body.encode('utf8'), session_id=session_id)
+
+        body = response.json()
+        assert response.status_code == OK, response.text
+
+        # .. which the response proves by echoing it back.
+        data = _helpers.get_result_data(body)
+        assert data['order_id'] == _constants.Order_ID, data
+
+# ################################################################################################################################
+
+    def test_deeply_nested_arguments_are_served(self, zato_server:'anydict') -> 'None':
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        # Arguments nested a hundred levels deep parse and dispatch like any others ..
+        nested:'object' = 'bottom'
+
+        for _ in range(_nesting_depth):
+            nested = {'level': nested}
+
+        arguments = {'order_id': _constants.Order_ID, 'context': nested}
+        body = _helpers.call_tool(client, session_id, _constants.Service_Order_Status, arguments)
+
+        # .. and the call itself succeeds the way a flat one does.
+        data = _helpers.get_result_data(body)
+        assert data['order_id'] == _constants.Order_ID, data
+        assert data['status'] == _constants.Order_Status, data
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestInvalidCursors:
+    """ Cursors are opaque and issued by the gateway itself - anything else refuses cleanly.
+    """
+
+# ################################################################################################################################
+
+    def test_invalid_cursors_are_invalid_params(self, zato_server:'anydict') -> 'None':
+
+        audit_db_path = zato_server['audit_db_path']
+        min_id = _audit.last_event_id(audit_db_path)
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        # A garbage cursor, an empty-string cursor and one of another gateway's shape -
+        # a foreign token with a valid-looking index - each refuse the same way.
+        cursors = ['no-such-cursor', '', '0123abcd.100']
+
+        for cursor in cursors:
+
+            response = client.jsonrpc('tools/list', params={'cursor': cursor}, session_id=session_id)
+            body = response.json()
+
+            assert response.status_code == OK, response.text
+            assert body['error']['code'] == _constants.Error_Invalid_Params, body
+
+        # Every refusal landed in the audit log with the error outcome.
+        events = _audit.wait_for_events(
+            audit_db_path, len(cursors), object_name=_constants.Gateway_Main,
+            event_type=AuditEvent.MCP_Tools_List, min_id=min_id)
+
+        for event in events:
+            assert event['outcome'] == AuditOutcome.Error, events
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestHTTPLayer:
+    """ The HTTP layer's own refusals and tolerances - content types and encodings.
+    """
+
+# ################################################################################################################################
+
+    def test_a_missing_content_type_is_served(self, zato_server:'anydict') -> 'None':
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        # The body decides, not the header - a request without any content type still serves ..
+        raw_body = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+        headers = {'Mcp-Session-Id': session_id}
+
+        mcp_url = zato_server['mcp_url'](_constants.Path_Main)
+        response = requests.post(
+            mcp_url, data=raw_body, headers=headers, auth=zato_server['basic_auth'], timeout=_request_timeout)
+
+        body = response.json()
+        assert response.status_code == OK, response.text
+        assert body['result'] == {}, body
+
+# ################################################################################################################################
+
+    def test_a_non_json_content_type_is_served(self, zato_server:'anydict') -> 'None':
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        # .. the same for a content type that says the body is not JSON at all.
+        raw_body = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+        headers = {'Mcp-Session-Id': session_id, 'Content-Type': 'text/plain'}
+
+        mcp_url = zato_server['mcp_url'](_constants.Path_Main)
+        response = requests.post(
+            mcp_url, data=raw_body, headers=headers, auth=zato_server['basic_auth'], timeout=_request_timeout)
+
+        body = response.json()
+        assert response.status_code == OK, response.text
+        assert body['result'] == {}, body
+
+# ################################################################################################################################
+
+    def test_a_non_utf8_body_is_a_parse_error(self, zato_server:'anydict') -> 'None':
+
+        audit_db_path = zato_server['audit_db_path']
+        min_id = _audit.last_event_id(audit_db_path)
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        # Bytes that are not UTF-8 at all cannot parse and refuse as a parse error ..
+        raw_body = b'\xff\xfe{"jsonrpc": "2.0"}'
+        response = client.jsonrpc_raw(raw_body, session_id=session_id)
+
+        body = response.json()
+        assert response.status_code == OK, response.text
+        assert body['error']['code'] == _constants.Error_Parse, body
+
+        # .. audited under the unknown-method marker with the error outcome.
+        events = _audit.wait_for_events(
+            audit_db_path, 1, object_name=_constants.Gateway_Main, event_type=Method_Unknown, min_id=min_id)
+
+        assert events[-1]['outcome'] == AuditOutcome.Error, events
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -286,3 +286,34 @@ class TestPIIOptions:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class TestScriptsThroughPII:
+    """ PII inside Greek diacritic prose - the values are replaced
+    and the surrounding text comes back byte-identical.
+    """
+
+# ################################################################################################################################
+
+    def test_diacritics_around_pii_survive_byte_identical(self, zato_server:'anydict') -> 'None':
+
+        data, event_data = _get_customer_record(
+            zato_server, _constants.Path_PII, _constants.Gateway_PII,
+            _constants.Customer_ID_Diacritics)
+
+        # Each notes line is a string of its own, so both emails get the first number,
+        # and everything around them is untouched to the byte ..
+        expected_support = _constants.Customer_Notes_Support.replace(_constants.Customer_Email_Support, _token_email_stable)
+        expected_billing = _constants.Customer_Notes_Billing.replace(_constants.Customer_Email_Billing, _token_email_stable)
+
+        assert data['notes_support'] == expected_support, data['notes_support']
+        assert data['notes_billing'] == expected_billing, data['notes_billing']
+
+        # .. the fields with no PII at all are byte-identical too ..
+        assert data['name'] == _constants.Customer_Name_Diacritics, data['name']
+        assert data['city'] == _constants.Customer_City_Diacritics, data['city']
+
+        # .. and the trace counts the two emails, nothing else.
+        assert event_data['pii_removed'] == {_detector_email: 2}, event_data
+
+# ################################################################################################################################
+# ################################################################################################################################

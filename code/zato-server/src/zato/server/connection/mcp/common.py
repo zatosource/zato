@@ -56,8 +56,11 @@ _message_missing_tool_name = 'Missing required parameter: name'
 # Error message returned when the prompt name does not point to a skill this gateway serves
 _message_prompt_not_found = 'Prompt not found'
 
-# Error message returned when the cursor parameter is not a valid integer
+# Error message returned when the cursor parameter is not one the gateway issued
 _message_invalid_cursor = 'Invalid cursor value'
+
+# Error message returned when the size cap blocks a response
+_message_response_too_large = 'Response too large'
 
 # Error message returned when params is present but is not an object
 _message_invalid_params = 'Invalid params: expected an object'
@@ -65,6 +68,13 @@ _message_invalid_params = 'Invalid params: expected an object'
 # Server metadata returned to clients
 _server_name    = 'Apache'
 _server_version = '2.4'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class InvalidCursor(Exception):
+    """ Raised when a tools/list or prompts/list cursor is not one the gateway issued.
+    """
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -230,3 +230,53 @@ class TestCompactionBoundaries:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class TestScriptsThroughCompaction:
+    """ Right-to-left text through the whitespace and pipeline gateways - clean Hebrew
+    passes byte-identical and the collapse keeps its characters intact.
+    """
+
+# ################################################################################################################################
+
+    def test_hebrew_collapses_safely_and_clean_text_is_byte_identical(self, zato_server:'anydict') -> 'None':
+
+        # Through the whitespace gateway - the runs collapse and the letters stay ..
+        body, event_data = _call_and_read_event(
+            zato_server, _constants.Path_Whitespace, _constants.Gateway_Whitespace,
+            _constants.Service_Customer_Get, {'customer_id': _constants.Customer_ID_Hebrew})
+
+        data = _helpers.get_result_data(body)
+
+        assert data['notes'] == _constants.Customer_Notes_Hebrew_Collapsed, data['notes']
+        assert data['greeting'] == _constants.Customer_Greeting_Hebrew, data['greeting']
+
+        # .. counting exactly the characters of the two runs ..
+        assert event_data['whitespace_chars_removed'] == _constants.Hebrew_Whitespace_Removed, event_data
+
+        # .. and through the everything-on pipeline - compaction, PII, safety and the cap -
+        # the whole record is exact, the clean fields byte-identical among them.
+        body, event_data = _call_and_read_event(
+            zato_server, _constants.Path_Pipeline, _constants.Gateway_Pipeline,
+            _constants.Service_Customer_Get, {'customer_id': _constants.Customer_ID_Hebrew})
+
+        data = _helpers.get_result_data(body)
+
+        expected = {
+            'name': _constants.Customer_Name_Hebrew,
+            'city': _constants.Customer_City_Hebrew,
+            'greeting': _constants.Customer_Greeting_Hebrew,
+            'notes': _constants.Customer_Notes_Hebrew_Collapsed,
+            'customer_id': _constants.Customer_ID_Hebrew,
+            'found': True,
+        }
+
+        assert data == expected, data
+
+        # No stage but the collapse found anything in the right-to-left text.
+        assert event_data['whitespace_chars_removed'] == _constants.Hebrew_Whitespace_Removed, event_data
+        assert 'pii_removed' not in event_data, event_data
+        assert 'unicode_chars_removed' not in event_data, event_data
+        assert 'was_truncated' not in event_data, event_data
+
+# ################################################################################################################################
+# ################################################################################################################################

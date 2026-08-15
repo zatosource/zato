@@ -13,6 +13,7 @@ from zato.common.test import rand_string
 # ################################################################################################################################
 
 # JSON-RPC 2.0 error codes used across the suite
+Error_Parse            = -32700
 Error_Invalid_Request  = -32600
 Error_Method_Not_Found = -32601
 Error_Invalid_Params   = -32602
@@ -48,6 +49,14 @@ Service_Customer_List   = 'crm.customer.list'
 Service_Report_Build    = 'crm.report.build'
 Service_Docstring_Probe = 'crm.docstring.probe'
 Service_Blank_Probe     = 'crm.blank.probe'
+
+# The operations services - an archive build that overruns its gateway's invoke timeout,
+# a badge rendered as binary image data, a tag collection that is not representable
+# in JSON, and an acknowledgment that says nothing back
+Service_Archive_Build = 'crm.archive.build'
+Service_Badge_Render  = 'crm.badge.render'
+Service_Tag_Collect   = 'crm.tag.collect'
+Service_Ack_Silent    = 'crm.ack.silent'
 
 # Every CRM service except the hot-deploy probe, which has a gateway of its own
 Service_List_CRM = [Service_Customer_Get, Service_Invoice_List, Service_Order_Status, Service_Order_Cancel]
@@ -99,6 +108,73 @@ Customer_Email_Greek_B = 'n.papadopoulos@example.org'
 Customer_Email_Japanese       = 'taro.yamada@example.com'
 Customer_IMEI_Japanese        = '490154203237518'
 Customer_National_ID_Japanese = '123456789018'
+
+# The diacritics customer - PII inside Greek prose full of accented letters
+Customer_ID_Diacritics = 'CRM-4001'
+
+Customer_Name_Diacritics = 'Αντιγόνη Χατζή'
+Customer_City_Diacritics = 'Ηράκλειο'
+
+Customer_Email_Support = 'antigoni.chatzi@example.com'
+Customer_Email_Billing = 'thalia.oikonomou@example.com'
+
+Customer_Notes_Support = f'Ώρες εξυπηρέτησης καθημερινά, γράψτε στο {Customer_Email_Support} το απόγευμα'
+Customer_Notes_Billing = f'Μεγαλύτερες αλλαγές θέλουν έγκριση, στείλτε στο {Customer_Email_Billing} ευχαριστώ πολύ'
+
+# The Hebrew customer - clean right-to-left text and one field with whitespace runs
+Customer_ID_Hebrew = 'CRM-5001'
+
+Customer_Name_Hebrew     = 'דוד לוי'
+Customer_City_Hebrew     = 'תל אביב'
+Customer_Greeting_Hebrew = 'שלום וברכה מצוות שירות הלקוחות'
+
+Customer_Notes_Hebrew_Raw       = 'לקוח   ותיק    נאמן'
+Customer_Notes_Hebrew_Collapsed = 'לקוח ותיק נאמן'
+
+# How many characters the collapse removes from the Hebrew notes - the runs of three
+# and four spaces each become a single space
+Hebrew_Whitespace_Removed = 5
+
+# The mixed-script customer - its fields exercise every pipeline stage at once
+Customer_ID_Mixed = 'CRM-6001'
+
+Customer_Name_Mixed  = 'Θεοδώρα Μακρή-Ζαφείρη'
+Customer_City_Mixed  = 'Αθήνα'
+Customer_Motto_Mixed = '顧客第一 שלום וברכה καλή τύχη 🚀 👍🏽'
+Customer_Email_Mixed = 'theodora.makri@example.com'
+
+Customer_Note_Mixed_Raw       = 'Καλή    τύχη   φίλε'
+Customer_Note_Mixed_Collapsed = 'Καλή τύχη φίλε'
+
+# The mixed record's banner once the script element is gone and its links line
+# once the disallowed URL is removed
+Customer_Banner_Mixed_Raw   = '<script>showBanner()</script>Ωμέγα δράση'
+Customer_Banner_Mixed_Clean = 'Ωμέγα δράση'
+
+Customer_Links_Mixed_Raw   = 'see https://example.com/kb and https://tracking.invalid/kb'
+Customer_Links_Mixed_Clean = 'see https://example.com/kb and [link removed]'
+
+# How many characters the collapse removes from the mixed note - the runs of four
+# and three spaces each become a single space
+Mixed_Whitespace_Removed = 5
+
+# The Japanese history customer - one sentence repeated and joined with ideographic
+# spaces, long enough to cross the size cap, mirroring the fixture exactly
+Customer_ID_History = 'CRM-7001'
+
+Customer_Name_History = '佐藤花子'
+Customer_City_History = '大阪'
+
+Japanese_History_Sentence  = '東京の顧客担当チームは請求書の確認と発送状況の連絡を毎営業日に行います'
+Japanese_History_Repeat    = 700
+Japanese_History_Separator = '\u3000'
+
+# The emoji reactions customer - tokens the truncation boundary must never split,
+# mirroring the fixture exactly
+Customer_ID_Reactions = 'CRM-8001'
+
+Reaction_Tokens = ('🚀', '👍🏽', '🧑\u200d💻', 'γειά', 'καφε\u0301δες')
+Reaction_Repeat = 1200
 
 # What the reference service answers for the capital question and what the real answer is -
 # the model must repeat the tool's value, not the well-known one
@@ -204,6 +280,7 @@ Gateway_Unicode_Reject   = 'test.llm.unicode.reject'
 Gateway_URL_Neutralize   = 'test.llm.url.neutralize'
 Gateway_URL_Reject       = 'test.llm.url.reject'
 Gateway_Audit_Off        = 'test.llm.audit.off'
+Gateway_Ops              = 'test.llm.ops'
 
 Path_Main             = '/mcp/llm/main'
 Path_Validate         = '/mcp/llm/validate'
@@ -249,6 +326,7 @@ Path_Unicode_Reject  = '/mcp/llm/unicode-reject'
 Path_URL_Neutralize  = '/mcp/llm/url-neutralize'
 Path_URL_Reject      = '/mcp/llm/url-reject'
 Path_Audit_Off       = '/mcp/llm/audit-off'
+Path_Ops             = '/mcp/llm/ops'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -275,6 +353,10 @@ Threshold_Low_Tokens = 1000
 # the conftest configures the server with
 Session_TTL_Seconds     = 3
 Reaper_Interval_Seconds = 5
+
+# How long the ops gateway lets one tools/call invocation run, in seconds -
+# the archive build service runs longer than that on purpose
+Invoke_Timeout_Seconds = 3
 
 # The per-identity session cap the server enforces by default
 Session_Cap = 100

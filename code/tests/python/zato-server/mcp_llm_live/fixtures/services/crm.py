@@ -42,9 +42,24 @@ _avatar_blob = 'data:image/png;base64,' + 'QUJDREVG' * 40
 # A base64-looking string below the stripping stage's length floor - it always survives
 _thumb_blob = 'data:image/png;base64,QUJDREVG'
 
+# One Japanese sentence of the history record, repeated and joined with ideographic
+# spaces so a truncation boundary always lands between whole sentences
+_history_sentence = '東京の顧客担当チームは請求書の確認と発送状況の連絡を毎営業日に行います'
+_history_repeat = 700
+_history_separator = '\u3000'
+
+# The reaction tokens of the emoji record - an astral-plane emoji, a skin-tone pair,
+# a joiner sequence, Greek diacritics and a decomposed combining sequence -
+# repeated until the record is long enough for the size cap to cut it
+_reaction_tokens = ('🚀', '👍🏽', '🧑\u200d💻', 'γειά', 'καφε\u0301δες')
+_reaction_repeat = 1200
+
 # The customers beyond the main one - a Greek record whose contacts line carries two distinct
-# emails and a Japanese record with PII nested in objects and arrays, plus a national id
-# only the jp land's detectors recognize.
+# emails, a Japanese record with PII nested in objects and arrays plus a national id only
+# the jp land's detectors recognize, a diacritics record with PII inside Greek prose,
+# a Hebrew record with clean and padded text, a mixed-script record whose fields
+# exercise every pipeline stage at once, a Japanese history long enough to cross the size
+# cap and an emoji record for the truncation boundary.
 _extra_customers = {
     'CRM-2001': {
         'name': 'Νίκος Παπαδόπουλος',
@@ -61,6 +76,39 @@ _extra_customers = {
             'emails': ['taro.yamada@example.com'],
             'device': {'imei': '490154203237518'},
         },
+    },
+    'CRM-4001': {
+        'name': 'Αντιγόνη Χατζή',
+        'city': 'Ηράκλειο',
+        'notes_support': 'Ώρες εξυπηρέτησης καθημερινά, γράψτε στο antigoni.chatzi@example.com το απόγευμα',
+        'notes_billing': 'Μεγαλύτερες αλλαγές θέλουν έγκριση, στείλτε στο thalia.oikonomou@example.com ευχαριστώ πολύ',
+    },
+    'CRM-5001': {
+        'name': 'דוד לוי',
+        'city': 'תל אביב',
+        'greeting': 'שלום וברכה מצוות שירות הלקוחות',
+        'notes': 'לקוח   ותיק    נאמן',
+    },
+    'CRM-6001': {
+        'name': 'Θεοδώρα Μακρή-Ζαφείρη',
+        'city': 'Αθήνα',
+        'motto': '顧客第一 שלום וברכה καλή τύχη 🚀 👍🏽',
+        'fax': None,
+        'note': 'Καλή    τύχη   φίλε',
+        'email': 'theodora.makri@example.com',
+        'banner': '<script>showBanner()</script>Ωμέγα δράση',
+        'links': 'see https://example.com/kb and https://tracking.invalid/kb',
+        'attachment': _avatar_blob,
+    },
+    'CRM-7001': {
+        'name': '佐藤花子',
+        'city': '大阪',
+        'history': _history_separator.join([_history_sentence] * _history_repeat),
+    },
+    'CRM-8001': {
+        'name': 'Renata Brixen',
+        'city': 'Innsbruck',
+        'reactions': ' '.join(list(_reaction_tokens) * _reaction_repeat),
     },
 }
 

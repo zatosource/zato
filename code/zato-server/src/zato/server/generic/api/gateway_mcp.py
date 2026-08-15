@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 
 # Zato
+from zato.common.api import MCP
 from zato.common.audit_log.api import AuditLog
 from zato.common.util.logging_ import count_text
 from zato.common.util.safeguards.config import build_safeguard_config
@@ -105,10 +106,15 @@ class GatewayMCPWrapper:
 
         skill_prompts = SkillPrompts(self.server.repo_location, allowed_skills)
 
+        # .. how long one tools/call invocation may run for - configs predating the field
+        # lack the key and zero means the default too ..
+        if not (invoke_timeout := self.config.get('invoke_timeout')):
+            invoke_timeout = MCP.Default_Invoke_Timeout
+
         # .. build the handler with an invoke function that calls services through the server.
         self.handler = MCPHandler(
             tool_registry, self._invoke_service, session_manager, safeguard_config, token_cap_config, validate_input,
-            skill_prompts, allow_client_filters)
+            skill_prompts, allow_client_filters, invoke_timeout)
 
         service_count_text = count_text(len(allowed_services), 'allowed service', 'allowed services')
         sorted_services = sorted(allowed_services)

@@ -184,7 +184,7 @@ class TokenCapInToolsCall(TestCase):
 
     def test_block_mode_refuses_an_oversized_response(self) -> 'None':
         """ With a small cap in block mode, an oversized response is refused
-        with a message naming the size and the cap.
+        with a message that names neither the size nor the cap.
         """
 
         def invoke_func(service_name:'str', payload:'anydict') -> 'anydict':
@@ -204,8 +204,7 @@ class TokenCapInToolsCall(TestCase):
         self.assertTrue(result['isError'])
 
         text = _get_text(result)
-        self.assertIn('Response too large:', text)
-        self.assertIn('cap is 10', text)
+        self.assertEqual(text, 'Response too large')
 
     def test_truncate_mode_delivers_a_trimmed_response(self) -> 'None':
         """ With a cap in truncate mode, an oversized response is trimmed to fit

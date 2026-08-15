@@ -124,31 +124,16 @@ class TestToolsList:
 
 # ################################################################################################################################
 
-    def test_pagination_with_cursor_zero(self, client:'MCPClient', session_id:'str') -> 'None':
-        """ Requesting tools/list with cursor 0 returns a valid page.
+    def test_a_bare_numeric_cursor_is_refused(self, client:'MCPClient', session_id:'str') -> 'None':
+        """ Cursors are opaque and issued by the server - a bare number is not one of them.
         """
 
         response = client.jsonrpc('tools/list', params={'cursor': '0'}, session_id=session_id)
         json_body = response.json()
-        result = json_body['result']
+        error = json_body['error']
 
-        # The response must contain a tools array.
-        assert 'tools' in result
-
-# ################################################################################################################################
-
-    def test_pagination_beyond_end(self, client:'MCPClient', session_id:'str') -> 'None':
-        """ A cursor value beyond the total tool count returns an empty page with no nextCursor.
-        """
-
-        response = client.jsonrpc('tools/list', params={'cursor': '99999'}, session_id=session_id)
-        json_body = response.json()
-        result = json_body['result']
-
-        # Beyond the end, the tools list must be empty
-        # and there must be no nextCursor.
-        assert result['tools'] == []
-        assert 'nextCursor' not in result
+        assert error['code'] == _error_invalid_params
+        assert 'cursor' in error['message'].lower()
 
 # ################################################################################################################################
 # ################################################################################################################################

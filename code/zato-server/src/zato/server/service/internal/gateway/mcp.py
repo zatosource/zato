@@ -11,6 +11,7 @@ import logging
 import os
 from http.client import FORBIDDEN, NO_CONTENT, NOT_FOUND
 from time import monotonic
+from traceback import format_exc
 
 # Zato
 from zato.common.json_internal import dumps
@@ -390,7 +391,12 @@ class MCPEndpoint(AdminService):
             trace=mcp_response.trace,
         )
 
-        wrapper.get_audit_log().insert(**event)
+        # A refused audit write drops this one event with a logged warning,
+        # the client's response goes out regardless.
+        try:
+            wrapper.get_audit_log().insert(**event)
+        except Exception:
+            logger.warning('MCP: Audit event dropped for `%s`:\n%s', gateway_name, format_exc())
 
 # ################################################################################################################################
 # ################################################################################################################################

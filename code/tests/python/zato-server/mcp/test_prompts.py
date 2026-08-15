@@ -19,8 +19,9 @@ from zato.common.test import _test_sec_def_id
 from zato.common.typing_ import cast_
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
+from zato.server.connection.mcp.common import _message_prompt_not_found, InvalidCursor
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params, _mcp_protocol_version
-from zato.server.connection.mcp.prompts import InvalidCursor, SkillPrompts, _default_page_size
+from zato.server.connection.mcp.prompts import SkillPrompts, _default_page_size
 from zato.server.connection.mcp.session import MCPSessionManager
 
 # ################################################################################################################################
@@ -44,6 +45,11 @@ description: Description of {name}
 
 Instructions of {name}.
 """
+
+# The file mode that takes all permissions away from a skill file
+# and the one that makes it deletable again
+_no_access_mode = 0
+_full_access_mode = 0o644
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -177,6 +183,28 @@ class SkillPromptsListing(TestCase):
 
             self.assertEqual(len(page), 1)
             self.assertEqual(page[0]['name'], 'invoice-mapping')
+
+    def test_unreadable_file_has_no_line_and_others_keep_serving(self) -> 'None':
+        """ A skill file without read permissions has no line in the listing
+        and the readable skills keep serving.
+        """
+        with TemporaryDirectory() as repo_location:
+
+            _write_skill(repo_location, 'invoice-mapping')
+            _write_skill(repo_location, 'order-lookup')
+
+            unreadable_path = os.path.join(repo_location, skills_directory_name, 'order-lookup', skill_file_name)
+            os.chmod(unreadable_path, _no_access_mode)
+
+            try:
+                prompts = SkillPrompts(repo_location, ['invoice-mapping', 'order-lookup'])
+                page, _ = prompts.get_prompts_page()
+
+                self.assertEqual(len(page), 1)
+                self.assertEqual(page[0]['name'], 'invoice-mapping')
+            finally:
+                # The temporary directory can only be cleaned up once the file is deletable again
+                os.chmod(unreadable_path, _full_access_mode)
 
     def test_pagination(self) -> 'None':
         """ A listing larger than one page produces a cursor and the next page picks up from it.
@@ -344,6 +372,30 @@ class HandlePromptsGet(TestCase):
 
             error = mcp_response.body['error']
             self.assertEqual(error['code'], _error_invalid_params)
+
+    def test_prompts_get_unreadable_file(self) -> 'None':
+        """ A file that exists but cannot be read answers exactly the way an absent one does.
+        """
+        with TemporaryDirectory() as repo_location:
+
+            _write_skill(repo_location, 'invoice-mapping')
+
+            unreadable_path = os.path.join(repo_location, skills_directory_name, 'invoice-mapping', skill_file_name)
+            os.chmod(unreadable_path, _no_access_mode)
+
+            try:
+                handler = _make_handler(SkillPrompts(repo_location, ['invoice-mapping']))
+                session_id = _make_session(handler)
+
+                request = _make_request('prompts/get', params={'name': 'invoice-mapping'})
+                mcp_response = handler.handle_raw_request(dumps(request), _test_sec_def_id, session_id=session_id)
+
+                error = mcp_response.body['error']
+                self.assertEqual(error['code'], _error_invalid_params)
+                self.assertEqual(error['message'], _message_prompt_not_found)
+            finally:
+                # The temporary directory can only be cleaned up once the file is deletable again
+                os.chmod(unreadable_path, _full_access_mode)
 
     def test_prompts_get_missing_name(self) -> 'None':
         """ A request without a name answers with the invalid-params error.

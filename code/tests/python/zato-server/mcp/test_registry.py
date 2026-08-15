@@ -10,7 +10,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import TestCase
 
 # Zato
-from zato.server.connection.mcp.registry import ToolRegistry, _default_page_size
+from zato.server.connection.mcp.common import InvalidCursor
+from zato.server.connection.mcp.registry import ToolRegistry, _cursor_separator, _default_page_size
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _cursor(registry:'ToolRegistry', index:'int | str') -> 'str':
+    """ Builds a cursor the given registry accepts as its own.
+    """
+
+    out = f'{registry._cursor_token}{_cursor_separator}{index}'
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -319,7 +330,7 @@ class ToolRegistryPagination(TestCase):
 # ################################################################################################################################
 
     def test_cursor_zero_same_as_no_cursor(self) -> 'None':
-        """ Verifies that cursor '0' produces the same result as no cursor.
+        """ Verifies that a cursor at index 0 produces the same result as no cursor.
         """
 
         store = _MockServiceStore()
@@ -329,7 +340,7 @@ class ToolRegistryPagination(TestCase):
         registry.rebuild()
 
         tools_no_cursor, _ = registry.get_tools_page()
-        tools_cursor_zero, _ = registry.get_tools_page('0')
+        tools_cursor_zero, _ = registry.get_tools_page(_cursor(registry, 0))
 
         self.assertEqual(tools_no_cursor, tools_cursor_zero)
 
@@ -359,7 +370,7 @@ class ToolRegistryPagination(TestCase):
 
         self.assertEqual(len(tools_page1), _default_page_size)
         self.assertIsNotNone(next_cursor)
-        self.assertEqual(next_cursor, str(_default_page_size))
+        self.assertEqual(next_cursor, _cursor(registry, _default_page_size))
 
         # Second page
         tools_page2, next_cursor2 = registry.get_tools_page(next_cursor)
@@ -379,7 +390,7 @@ class ToolRegistryPagination(TestCase):
         registry = ToolRegistry(store, ['crm.get-customer']) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
-        tools, next_cursor = registry.get_tools_page('999')
+        tools, next_cursor = registry.get_tools_page(_cursor(registry, 999))
 
         self.assertEqual(len(tools), 0)
         self.assertIsNone(next_cursor)
@@ -487,8 +498,8 @@ class RegistryCursorGuard(TestCase):
         registry = ToolRegistry(store, ['crm.get-customer']) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
-        tools_negative, cursor_negative = registry.get_tools_page('-5')
-        tools_zero, cursor_zero = registry.get_tools_page('0')
+        tools_negative, cursor_negative = registry.get_tools_page(_cursor(registry, -5))
+        tools_zero, cursor_zero = registry.get_tools_page(_cursor(registry, 0))
 
         self.assertEqual(tools_negative, tools_zero)
         self.assertEqual(cursor_negative, cursor_zero)
@@ -506,7 +517,7 @@ class RegistryCursorGuard(TestCase):
         registry = ToolRegistry(store, ['crm.get-customer', 'billing.create-invoice']) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
-        tools, next_cursor = registry.get_tools_page('99999')
+        tools, next_cursor = registry.get_tools_page(_cursor(registry, 99999))
 
         self.assertEqual(len(tools), 0)
         self.assertIsNone(next_cursor)
@@ -514,7 +525,7 @@ class RegistryCursorGuard(TestCase):
 # ################################################################################################################################
 
     def test_valid_cursor_returns_expected_page(self) -> 'None':
-        """ Verifies that a valid numeric cursor returns the correct slice and nextCursor.
+        """ Verifies that a registry-issued cursor returns the correct slice and nextCursor.
         """
 
         store = _MockServiceStore()
@@ -532,7 +543,7 @@ class RegistryCursorGuard(TestCase):
         registry.rebuild()
 
         # Request second page starting at _default_page_size
-        cursor_value = str(_default_page_size)
+        cursor_value = _cursor(registry, _default_page_size)
         tools, next_cursor = registry.get_tools_page(cursor_value)
 
         self.assertEqual(len(tools), 10)
@@ -546,7 +557,7 @@ class RegistryCursorGuard(TestCase):
 # ################################################################################################################################
 
     def test_non_numeric_cursor_raises(self) -> 'None':
-        """ Verifies that a non-numeric cursor raises ValueError.
+        """ Verifies that a non-numeric cursor raises InvalidCursor.
         """
 
         store = _MockServiceStore()
@@ -555,8 +566,71 @@ class RegistryCursorGuard(TestCase):
         registry = ToolRegistry(store, ['crm.get-customer']) # pyright: ignore[reportArgumentType]
         registry.rebuild()
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InvalidCursor):
             _ = registry.get_tools_page('abc')
+
+# ################################################################################################################################
+
+    def test_bare_integer_cursor_raises(self) -> 'None':
+        """ Verifies that a cursor without this registry's token raises InvalidCursor,
+        even when it looks like a valid index.
+        """
+
+        store = _MockServiceStore()
+        store.add_service('crm.get-customer', _ServiceWithDoc)
+
+        registry = ToolRegistry(store, ['crm.get-customer']) # pyright: ignore[reportArgumentType]
+        registry.rebuild()
+
+        with self.assertRaises(InvalidCursor):
+            _ = registry.get_tools_page('0')
+
+# ################################################################################################################################
+
+    def test_empty_cursor_raises(self) -> 'None':
+        """ Verifies that an empty-string cursor raises InvalidCursor.
+        """
+
+        store = _MockServiceStore()
+        store.add_service('crm.get-customer', _ServiceWithDoc)
+
+        registry = ToolRegistry(store, ['crm.get-customer']) # pyright: ignore[reportArgumentType]
+        registry.rebuild()
+
+        with self.assertRaises(InvalidCursor):
+            _ = registry.get_tools_page('')
+
+# ################################################################################################################################
+
+    def test_another_registry_cursor_raises(self) -> 'None':
+        """ Verifies that a genuine cursor issued by one registry is refused by another.
+        """
+
+        store = _MockServiceStore()
+
+        total_services = _default_page_size + 1
+        service_names = []
+
+        for _ in range(total_services):
+            name = f'svc.service-{len(service_names):04d}'
+            store.add_service(name, _ServiceWithDoc)
+            service_names.append(name)
+
+        registry_one = ToolRegistry(store, service_names) # pyright: ignore[reportArgumentType]
+        registry_one.rebuild()
+
+        registry_two = ToolRegistry(store, service_names) # pyright: ignore[reportArgumentType]
+        registry_two.rebuild()
+
+        # The first registry pages fine with its own cursor ..
+        _, next_cursor = registry_one.get_tools_page()
+        assert next_cursor is not None
+
+        _ = registry_one.get_tools_page(next_cursor)
+
+        # .. and the second one refuses it.
+        with self.assertRaises(InvalidCursor):
+            _ = registry_two.get_tools_page(next_cursor)
 
 # ################################################################################################################################
 # ################################################################################################################################

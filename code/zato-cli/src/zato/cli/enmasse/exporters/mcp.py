@@ -47,6 +47,9 @@ GATEWAY_OPTIONAL_FIELDS = [
     # Sessions
     'session_ttl',
 
+    # Invocation timeout
+    'invoke_timeout',
+
     # Input validation and client-supplied JSONata response filters
     'validate_input', 'allow_client_filters',
 

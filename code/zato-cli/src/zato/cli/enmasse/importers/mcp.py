@@ -62,6 +62,9 @@ class GatewayMCPImporter(GenericConnectionImporter):
         # Sessions - zero keeps the default idle TTL
         'session_ttl': 0,
 
+        # How long one tools/call invocation may run for, in seconds - zero keeps the default
+        'invoke_timeout': 0,
+
         # Input validation and client-supplied JSONata response filters
         'validate_input': False,
         'allow_client_filters': False,

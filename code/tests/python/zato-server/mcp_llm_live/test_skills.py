@@ -6,16 +6,59 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import os
+
 # local
 import _agent
 import _constants
+import _enmasse
 import _helpers
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import anydict, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The JSON-RPC error message of a prompt the gateway does not serve,
+# whether its file is absent or unreadable
+_message_not_found = 'Prompt not found'
+
+# The file mode that takes all permissions away from a skill file
+_no_access_mode = 0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _skill_file_path(zato_server:'anydict', skill_name:'str') -> 'str':
+    """ Where one skill's file lives in the server's own repository.
+    """
+
+    out = os.path.join(zato_server['server_directory'], 'config', 'repo', 'skills', skill_name, 'SKILL.md')
+    return out
+
+# ################################################################################################################################
+
+def _list_prompt_names(zato_server:'anydict') -> 'strlist':
+    """ The prompt names the skills gateway lists right now, on a fresh session.
+    """
+
+    client = _helpers.make_client(zato_server, _constants.Path_Skills)
+    session_id = _helpers.open_session(client)
+
+    response = client.jsonrpc('prompts/list', session_id=session_id)
+    prompts = response.json()['result']['prompts']
+
+    out = []
+
+    for prompt in prompts:
+        out.append(prompt['name'])
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -139,6 +182,85 @@ class TestSkillUseByLLM:
         # Both runs answered the actual question, so the difference is the format alone.
         assert _helpers.text_contains(with_skill.final_text, _constants.Customer_Name), with_skill.final_text
         assert _helpers.text_contains(without_skill.final_text, _constants.Customer_Name), without_skill.final_text
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestSkillStorageFailure:
+    """ A skill file the process cannot read drops out of the listing and answers
+    prompts/get the same way an absent one does, while the other skills keep serving.
+    """
+
+# ################################################################################################################################
+
+    def test_an_unreadable_skill_file_answers_as_an_absent_one(self, zato_server:'anydict') -> 'None':
+
+        server_directory = zato_server['server_directory']
+
+        skill_path = _skill_file_path(zato_server, _constants.Skill_Unassigned)
+        original_mode = os.stat(skill_path).st_mode
+
+        try:
+            # Both skills are assigned and served first ..
+            skills = [_constants.Skill_House_Style, _constants.Skill_Unassigned]
+            overrides = {_constants.Gateway_Skills: {'skills': skills}}
+
+            config = _enmasse.build_suite_config(gateway_overrides=overrides)
+            _enmasse.run_import(server_directory, config)
+
+            def both_are_listed() -> 'bool':
+                out = _constants.Skill_Unassigned in _list_prompt_names(zato_server)
+                return out
+
+            _helpers.wait_until(both_are_listed, 'both skills are listed')
+
+            # .. the file stays on disk but its read permissions are gone ..
+            os.chmod(skill_path, _no_access_mode)
+
+            # .. prompts/list drops the unreadable line and keeps the readable one -
+            # which is also how the other skill proves it keeps serving the listing ..
+            names = _list_prompt_names(zato_server)
+            assert names == [_constants.Skill_House_Style], names
+
+            client = _helpers.make_client(zato_server, _constants.Path_Skills)
+            session_id = _helpers.open_session(client)
+
+            # .. prompts/get refuses the unreadable skill exactly the way it refuses
+            # an absent one - the client cannot tell the two apart ..
+            params = {'name': _constants.Skill_Unassigned}
+            response = client.jsonrpc('prompts/get', params=params, session_id=session_id)
+
+            body = response.json()
+            assert body['error']['code'] == _constants.Error_Invalid_Params, body
+            assert body['error']['message'] == _message_not_found, body
+
+            # .. the readable skill serves whole all along ..
+            params = {'name': _constants.Skill_House_Style}
+            response = client.jsonrpc('prompts/get', params=params, session_id=session_id)
+
+            instructions = response.json()['result']['messages'][0]['content']['text']
+            assert _constants.Skill_Marker in instructions, instructions
+
+            # .. and restored permissions serve the skill again - no restart, no re-import.
+            os.chmod(skill_path, original_mode)
+
+            params = {'name': _constants.Skill_Unassigned}
+            response = client.jsonrpc('prompts/get', params=params, session_id=session_id)
+
+            assert response.json()['result']['messages'], response.text
+
+        finally:
+            # The permissions and the baseline assignment always come back for the other tests.
+            os.chmod(skill_path, original_mode)
+
+            config = _enmasse.build_suite_config()
+            _enmasse.run_import(server_directory, config)
+
+            def extra_skill_is_gone() -> 'bool':
+                out = _constants.Skill_Unassigned not in _list_prompt_names(zato_server)
+                return out
+
+            _helpers.wait_until(extra_skill_is_gone, 'the baseline skills list is back')
 
 # ################################################################################################################################
 # ################################################################################################################################

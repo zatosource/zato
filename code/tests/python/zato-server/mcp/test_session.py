@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from http.client import BAD_REQUEST, NOT_FOUND, OK
+from time import sleep
 from unittest import TestCase
 
 # Zato
@@ -151,6 +152,33 @@ class SessionManagerCreate(TestCase):
         session_id_2 = manager.create(_mcp_protocol_version, _test_sec_def_id)
 
         self.assertNotEqual(session_id_1, session_id_2)
+
+    def test_cap_reached_rejects_creation(self) -> 'None':
+
+        manager = MCPSessionManager(max_sessions=2)
+
+        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+
+        with self.assertRaises(ValueError):
+            _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+
+    def test_expired_sessions_do_not_count_against_the_cap(self) -> 'None':
+        """ A session past its TTL frees its slot even before the reaper sweeps it.
+        """
+
+        manager = MCPSessionManager(ttl=0, max_sessions=2)
+
+        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+
+        # With a zero TTL both sessions above are already expired,
+        # so the cap has room even though neither was swept yet.
+        sleep(0.01)
+        session_id = manager.create(_mcp_protocol_version, _test_sec_def_id)
+
+        self.assertTrue(session_id)
+        self.assertEqual(manager.session_count, 3)
 
 # ################################################################################################################################
 # ################################################################################################################################

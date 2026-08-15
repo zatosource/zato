@@ -6,8 +6,12 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from logging import getLogger
+
 # Zato
 from zato.common.skills.api import load_skill
+from zato.server.connection.mcp.common import InvalidCursor
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,15 +25,13 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # Default page size for prompts/list pagination, the same size tools/list pages by
 _default_page_size = 100
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class InvalidCursor(Exception):
-    """ Raised when a prompts/list cursor is not a valid integer.
-    """
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,7 +70,13 @@ class SkillPrompts:
 
         for name in sorted(self.allowed_skills):
 
-            document = load_skill(self.repo_location, name)
+            # A file the process cannot read has no description to list, so its line
+            # is dropped with a logged warning and the other skills keep serving
+            try:
+                document = load_skill(self.repo_location, name)
+            except OSError as e:
+                logger.warning('MCP: Skill `%s` could not be read: %s', name, e)
+                continue
 
             if document is None:
                 continue
@@ -109,7 +117,8 @@ class SkillPrompts:
 
     def get_prompt(self, name:'str') -> 'SkillDocument | None':
         """ Returns the skill of this name, read from disk now. A name outside the
-        gateway's allow list, or one whose file is gone, returns None.
+        gateway's allow list, or one whose file is gone, returns None. A file that
+        exists but cannot be read raises OSError.
         """
 
         # The allow list is checked first, so a skill that exists on disk

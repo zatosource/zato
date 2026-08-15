@@ -96,15 +96,31 @@ class MCPSessionManager:
 
     def create(self, protocol_version:'str', sec_def_id:'int', remote_address:'str' = '') -> 'str':
         """ Creates a new session and returns its ID.
-        Raises ValueError if the per-identity session cap has been reached.
+        Raises ValueError if the per-identity session cap has been reached -
+        only live sessions count against it, never expired ones the reaper
+        has not swept yet.
         """
 
-        # Count how many sessions this sec_def already owns ..
+        # Count how many live sessions this sec_def already owns ..
+        now = monotonic()
         identity_count = 0
 
         for session in self._sessions.values():
-            if session.sec_def_id == sec_def_id:
-                identity_count += 1
+
+            if session.sec_def_id != sec_def_id:
+                continue
+
+            # An expired session awaiting the reaper takes no slot
+            idle_time = now - session.last_seen_at
+            lifetime = now - session.created_at
+
+            if idle_time > self.ttl:
+                continue
+
+            if lifetime > self.max_lifetime:
+                continue
+
+            identity_count += 1
 
         # .. reject if the cap is reached ..
         cap_reached = identity_count >= self.max_sessions

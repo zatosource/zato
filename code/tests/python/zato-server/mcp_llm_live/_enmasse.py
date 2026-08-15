@@ -382,6 +382,18 @@ def build_gateway_list() -> 'dictlist':
         # The one gateway whose audit log is off
         _gateway(_constants.Gateway_Audit_Off, _constants.Path_Audit_Off,
             is_audit_log_active=False),
+
+        # The operations gateway - services whose conduct the gateway must contain,
+        # with an invoke timeout short enough for the archive build to overrun
+        _gateway(_constants.Gateway_Ops, _constants.Path_Ops,
+            services=[
+                _constants.Service_Archive_Build,
+                _constants.Service_Badge_Render,
+                _constants.Service_Tag_Collect,
+                _constants.Service_Ack_Silent,
+                _constants.Service_Order_Status,
+            ],
+            invoke_timeout=_constants.Invoke_Timeout_Seconds),
     ]
 
     return out
