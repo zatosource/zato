@@ -363,7 +363,7 @@ def build_gateway_list() -> 'dictlist':
             safeguards_pii_lands=[_constants.PII_Land_Main],
             safeguards_pii_validate=False),
 
-        # Secrets removal - credential-shaped values become stable tokens
+        # Secrets removal - credential-shaped values become stable replacements
         _gateway(_constants.Gateway_Secrets, _constants.Path_Secrets,
             safeguards_secrets_enabled=True),
 

@@ -58,7 +58,7 @@ _reaction_tokens = ('🚀', '👍🏽', '🧑\u200d💻', 'γειά', 'καφε\
 _reaction_repeat = 1200
 
 # The credential-shaped values of the secrets record - one value per detector of the secrets
-# removal stage, the AWS key written twice in one field for the stable-token assertions.
+# removal stage, the AWS key written twice in one field for the stable-replacement assertions.
 _secret_api_token   = 'sk-crm9001integration0abc'
 _secret_aws_key     = 'AKIA2E74XAMPLE9001AB'
 _secret_jwt         = 'eyJhbGciOiJIUzI1NiJ9.eyJjcm0iOiI5MDAxIn0.c2lnbmF0dXJlOTAwMQ'

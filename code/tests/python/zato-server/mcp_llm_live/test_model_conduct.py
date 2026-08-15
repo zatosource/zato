@@ -48,7 +48,7 @@ _raw_pii_values = (
 )
 
 # The prefix every PII replacement of the international land carries
-_pii_replacement_prefix = '{{INTL_'
+_pii_replacement_prefix = 'REPLACED_INTL_'
 
 # The same customer question in three wordings
 _paraphrased_tasks = (
@@ -67,7 +67,7 @@ class TestModelConduct:
 
 # ################################################################################################################################
 
-    def test_tokenized_data_is_all_the_model_ever_sees(self, zato_server:'anydict', ollama:'anydict') -> 'None':
+    def test_replaced_data_is_all_the_model_ever_sees(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         client = _helpers.make_client(zato_server, _constants.Path_PII)
 

@@ -37,6 +37,10 @@ Whitespace_Pattern = re_compile(r'\s+')
 # Marker replacing a removed URL.
 Url_Marker = '[link removed]'
 
+# The shape of the text a PII or secrets match is replaced with,
+# e.g. REPLACED_IBAN, or REPLACED_IBAN_1 with stable replacements on.
+Replacement_Format = 'REPLACED_{name}'
+
 # What a stage does when it finds something - clean it and continue, or refuse the whole document.
 Mode_Clean  = 'clean'
 Mode_Reject = 'reject'

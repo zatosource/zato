@@ -12,7 +12,7 @@ from piigex import Scrubber
 # Zato
 from zato.common.typing_ import any_
 from zato.common.util.safeguards import detectors
-from zato.common.util.safeguards.common import SafeguardResult
+from zato.common.util.safeguards.common import Replacement_Format, SafeguardResult
 from zato.common.util.safeguards.detectors.secrets import Region_Secrets
 from zato.common.util.safeguards.walk import walk_strings
 
@@ -30,12 +30,12 @@ _cleaner:'Scrubber | None' = None
 
 def get_secrets_cleaner() -> 'Scrubber':
     """ Returns the secrets cleaner, compiling it on first use. Replacements are always stable -
-    the same secret renders as the same numbered token throughout one string.
+    the same secret renders as the same numbered replacement throughout one string.
     """
     global _cleaner
 
     if _cleaner is None:
-        _cleaner = Scrubber(regions=[Region_Secrets], stable_tokens=True)
+        _cleaner = Scrubber(regions=[Region_Secrets], stable_tokens=True, token_format=Replacement_Format)
 
     return _cleaner
 
@@ -43,7 +43,7 @@ def get_secrets_cleaner() -> 'Scrubber':
 # ################################################################################################################################
 
 def remove_secrets(value:'any_', result:'SafeguardResult') -> 'any_':
-    """ Replaces credential-shaped values in string values with their detector tokens,
+    """ Replaces credential-shaped values in string values with their detector replacements,
     counting the matches per detector. The detector set is fixed, the stage toggle
     is the only per-gateway choice.
     """
@@ -66,7 +66,7 @@ def remove_secrets(value:'any_', result:'SafeguardResult') -> 'any_':
             else:
                 counts[match.name] = 1
 
-        # .. and the clean itself replaces them with stable tokens.
+        # .. and the clean itself replaces them with stable replacements.
         out = cleaner.clean(text)
 
         return out

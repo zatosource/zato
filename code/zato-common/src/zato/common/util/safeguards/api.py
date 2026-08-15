@@ -108,7 +108,7 @@ def apply_safeguards(value:'any_', config:'SafeguardConfig') -> 'SafeguardResult
     if config.pii_enabled:
         work = remove_pii(work, out, config)
 
-    # Secrets removal closes the pipeline - credential-shaped values become stable tokens.
+    # Secrets removal closes the pipeline - credential-shaped values become stable replacements.
     if config.secrets_enabled:
         work = remove_secrets(work, out)
 

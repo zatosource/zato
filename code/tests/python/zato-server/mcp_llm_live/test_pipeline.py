@@ -30,15 +30,14 @@ if 0:
 # A roster of this many customers goes over the pipeline gateways' cap
 _oversized_count = '100'
 
-# The replacement every email of the roster turns into - the pipeline gateways
-# use the default replacement format
-_email_token_prefix = '{{EMAIL_'
+# The prefix every replacement of the roster's emails carries
+_email_replacement_prefix = 'REPLACED_EMAIL_'
 
-# A truncated text must never end inside a replacement token
-_dangling_token = re.compile(r'\{\{[A-Z0-9_]*$')
+# A truncated text must never end inside a replacement
+_dangling_replacement = re.compile(r'REPLACED_[A-Z_]*$')
 
-# A complete replacement token, e.g. {{EMAIL_1}}
-_whole_token = re.compile(r'\{\{[A-Z0-9_]+\}\}')
+# A complete numbered replacement, e.g. REPLACED_EMAIL_1
+_whole_replacement = re.compile(r'REPLACED_[A-Z_]+\d+')
 
 # What the markup rejection audits as
 _reject_kind_markup = 'markup'
@@ -46,7 +45,7 @@ _reject_kind_markup = 'markup'
 # The detector name and the first stable replacement of the one email
 # the mixed-script record carries
 _detector_email = 'intl_email'
-_token_email_first = '{{EMAIL_1}}'
+_email_replacement_first = 'REPLACED_EMAIL_1'
 
 # The code point range UTF-16 surrogates occupy - a lone one means half an astral character
 _surrogate_first = 0xD800
@@ -87,7 +86,7 @@ class TestPipelineInterplay:
 
         # .. and what the client received is the shaped result, replacements included.
         text = _helpers.get_result_text(body)
-        assert _email_token_prefix in text, text
+        assert _email_replacement_prefix in text, text
 
 # ################################################################################################################################
 
@@ -105,7 +104,7 @@ class TestPipelineInterplay:
         # The projection of the email field returns its replacement, never the raw value ..
         text = _helpers.get_result_text(body)
 
-        assert _email_token_prefix in text, text
+        assert _email_replacement_prefix in text, text
         assert _constants.Customer_Email not in text, text
 
         # .. and the trace records both the removal and the filter.
@@ -149,17 +148,17 @@ class TestPipelineInterplay:
 
         assert event_data['was_truncated'] is True, event_data
 
-        # The truncated content carries replacement tokens ..
+        # The truncated content carries replacements ..
         text = _helpers.get_result_text(body)
-        assert _email_token_prefix in text, text
+        assert _email_replacement_prefix in text, text
 
-        # .. every one of them whole - each opening starts a complete token
-        # and the cut never ends inside one.
-        opening_count = text.count('{{')
-        whole_tokens = _whole_token.findall(text)
+        # .. every one of them whole - each prefix starts a complete numbered
+        # replacement and the cut never ends inside one.
+        prefix_count = text.count('REPLACED_')
+        whole_replacements = _whole_replacement.findall(text)
 
-        assert opening_count == len(whole_tokens), text
-        assert not _dangling_token.search(text), text
+        assert prefix_count == len(whole_replacements), text
+        assert not _dangling_replacement.search(text), text
 
 # ################################################################################################################################
 
@@ -241,7 +240,7 @@ class TestScriptsThroughThePipeline:
             'city': _constants.Customer_City_Mixed,
             'motto': _constants.Customer_Motto_Mixed,
             'note': _constants.Customer_Note_Mixed_Collapsed,
-            'email': _token_email_first,
+            'email': _email_replacement_first,
             'banner': _constants.Customer_Banner_Mixed_Clean,
             'links': _constants.Customer_Links_Mixed_Clean,
             'attachment': Base64_Marker_Template.format(size=len(_avatar_blob)),

@@ -6,13 +6,16 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from re import compile as re_compile
+
 # piigex
 from piigex import Scrubber
 
 # Zato
 from zato.common.typing_ import strlist
 from zato.common.util.safeguards import detectors
-from zato.common.util.safeguards.common import SafeguardConfig, SafeguardResult
+from zato.common.util.safeguards.common import Replacement_Format, SafeguardConfig, SafeguardResult
 from zato.common.util.safeguards.pii import remove_pii
 
 # The import above registers Zato's own detectors with the library's registry - this line keeps flake8 quiet about it.
@@ -23,6 +26,9 @@ detectors = detectors
 
 # Type aliases
 sample_dict = dict[str, strlist]
+
+# The shape of a numbered replacement, e.g. REPLACED_AU_TFN_1
+_numbered_replacement = re_compile(r'REPLACED_[A-Z0-9_]+_1\b')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,7 +103,7 @@ Negative_Text = 'Order ORD-2026-000123 shipped on 2026-07-15 at 11:32 for 1,099.
 def _new_scrubber(name:'str', stable_replacements:'bool'=False) -> 'Scrubber':
     """ Returns a scrubber running just the one named detector.
     """
-    out = Scrubber(detectors=[name], stable_tokens=stable_replacements)
+    out = Scrubber(detectors=[name], stable_tokens=stable_replacements, token_format=Replacement_Format)
     return out
 
 # ################################################################################################################################
@@ -162,7 +168,7 @@ class TestStableReplacements:
                 cleaned = scrubber.clean(text)
 
                 assert sample not in cleaned, f'{name} left {sample} in place'
-                assert '_1}}' in cleaned, f'{name} did not number {sample}'
+                assert _numbered_replacement.search(cleaned), f'{name} did not number {sample}'
 
 # ################################################################################################################################
 # ################################################################################################################################

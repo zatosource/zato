@@ -160,7 +160,7 @@ class TestSingleToggles:
 
         result = apply_safeguards(value, config)
 
-        assert result.value == {'note': 'Pay to {{IBAN}} today'}
+        assert result.value == {'note': 'Pay to REPLACED_IBAN today'}
         assert result.pii_removed == {'intl_iban': 1}
 
 # ################################################################################################################################
@@ -177,7 +177,7 @@ class TestStageOrder:
 
         result = apply_safeguards(value, config)
 
-        assert result.value == {'payment': 'Pay to {{IBAN}} today'}
+        assert result.value == {'payment': 'Pay to REPLACED_IBAN today'}
         assert result.unicode_chars_removed == 1
         assert result.pii_removed == {'intl_iban': 1}
 
@@ -233,7 +233,7 @@ class TestRoots:
 
         result = apply_safeguards(value, config)
 
-        assert result.value == 'Wire the amount to {{IBAN}} by Friday'
+        assert result.value == 'Wire the amount to REPLACED_IBAN by Friday'
         assert result.pii_removed == {'intl_iban': 1}
 
     def test_list_root_is_walked(self) -> 'None':
@@ -243,7 +243,7 @@ class TestRoots:
 
         result = apply_safeguards(value, config)
 
-        assert result.value == ['Reach {{EMAIL}} for help', {}]
+        assert result.value == ['Reach REPLACED_EMAIL for help', {}]
         assert result.nulls_removed == 1
 
     def test_scalar_root_passes_unchanged(self) -> 'None':

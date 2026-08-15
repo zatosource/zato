@@ -148,10 +148,10 @@ class TestStableReplacements:
 
         cleaned = remove_pii(value, result, config)
 
-        assert cleaned == {'note': 'First {{IBAN_1}} and again {{IBAN_1}}'}
+        assert cleaned == {'note': 'First REPLACED_IBAN_1 and again REPLACED_IBAN_1'}
         assert result.pii_removed == {'intl_iban': 2}
 
-    def test_plain_tokens_carry_no_numbers(self) -> 'None':
+    def test_plain_replacements_carry_no_numbers(self) -> 'None':
 
         result = _new_result()
         config = _new_config([], ['intl_iban'], [])
@@ -159,7 +159,7 @@ class TestStableReplacements:
 
         cleaned = remove_pii(value, result, config)
 
-        assert cleaned == {'note': 'First {{IBAN}} and again {{IBAN}}'}
+        assert cleaned == {'note': 'First REPLACED_IBAN and again REPLACED_IBAN'}
         assert result.pii_removed == {'intl_iban': 2}
 
 # ################################################################################################################################
@@ -220,17 +220,17 @@ class TestCleanerCache:
 
 class TestIMEI:
 
-    def test_both_written_forms_leave_the_token(self) -> 'None':
+    def test_both_written_forms_leave_the_replacement(self) -> 'None':
 
         # The compact run and the 2-6-6-1 grouped form of the same device are both
-        # found and each leaves the detector's token behind.
+        # found and each leaves the detector's replacement behind.
         result = _new_result()
         config = _new_config([], ['intl_imei'], [])
         value = {'note': f'Device {_valid_imei_compact} also written as {_valid_imei_grouped}'}
 
         cleaned = remove_pii(value, result, config)
 
-        assert cleaned == {'note': 'Device {{INTL_IMEI}} also written as {{INTL_IMEI}}'}
+        assert cleaned == {'note': 'Device REPLACED_INTL_IMEI also written as REPLACED_INTL_IMEI'}
         assert result.pii_removed == {'intl_imei': 2}
 
     def test_broken_check_digit_survives_with_validation_on(self) -> 'None':
@@ -281,7 +281,7 @@ class TestRemovePii:
 
         cleaned = remove_pii(value, result, config)
 
-        assert cleaned == {'rows': [{'contact': 'Reach {{EMAIL}} for help'}, {'payment': 'Wire to {{IBAN}} today'}]}
+        assert cleaned == {'rows': [{'contact': 'Reach REPLACED_EMAIL for help'}, {'payment': 'Wire to REPLACED_IBAN today'}]}
         assert result.pii_removed == {'intl_email': 1, 'intl_iban': 1}
 
     def test_counts_accumulate_per_detector(self) -> 'None':

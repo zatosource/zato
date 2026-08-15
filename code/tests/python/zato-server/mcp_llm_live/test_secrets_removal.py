@@ -33,18 +33,18 @@ _detector_conn_string = 'secret_connection_string'
 _detector_jwt         = 'secret_jwt'
 _detector_private_key = 'secret_private_key'
 
-# What the record's fields read once their credential-shaped values are stable tokens -
-# each string value is tokenized on its own, so a lone value always gets the first number
+# What the record's fields read once their credential-shaped values are stable replacements -
+# each string value is replaced on its own, so a lone value always gets the first number
 # and the twice-written AWS key shares one number within its field.
-_api_note_tokenized  = 'The integration was provisioned with {{SECRET_API_TOKEN_1}} last spring'
-_aws_note_tokenized  = 'Backups sign with {{SECRET_AWS_ACCESS_KEY_1}}, the standby job reuses {{SECRET_AWS_ACCESS_KEY_1}} as well'
-_session_tokenized   = 'The portal session cookie carries {{SECRET_JWT_1}}'
-_auth_note_tokenized = 'Each call sends Authorization: {{SECRET_BEARER_1}}'
-_db_note_tokenized   = 'Reports read from {{SECRET_CONNECTION_STRING_1}} nightly'
-_deploy_key_tokenized = '{{SECRET_PRIVATE_KEY_1}}'
+_api_note_replaced  = 'The integration was provisioned with REPLACED_SECRET_API_TOKEN_1 last spring'
+_aws_note_replaced  = 'Backups sign with REPLACED_SECRET_AWS_ACCESS_KEY_1, the standby job reuses REPLACED_SECRET_AWS_ACCESS_KEY_1 as well'
+_session_replaced   = 'The portal session cookie carries REPLACED_SECRET_JWT_1'
+_auth_note_replaced = 'Each call sends Authorization: REPLACED_SECRET_BEARER_1'
+_db_note_replaced   = 'Reports read from REPLACED_SECRET_CONNECTION_STRING_1 nightly'
+_deploy_key_replaced = 'REPLACED_SECRET_PRIVATE_KEY_1'
 
 # The prefix every secrets replacement carries, for the wire sweeps
-_secret_replacement_prefix = '{{SECRET_'
+_secret_replacement_prefix = 'REPLACED_SECRET_'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,7 +71,7 @@ def _get_customer_record(
 # ################################################################################################################################
 
 class TestSecretsRemoval:
-    """ The secrets stage replaces credential-shaped values with stable tokens
+    """ The secrets stage replaces credential-shaped values with stable replacements
     and the audit trace counts the findings per detector.
     """
 
@@ -83,11 +83,11 @@ class TestSecretsRemoval:
             zato_server, _constants.Path_Secrets, _constants.Gateway_Secrets)
 
         # Each field's credential-shaped value is a token now ..
-        assert data['api_note'] == _api_note_tokenized, data['api_note']
-        assert data['session_note'] == _session_tokenized, data['session_note']
-        assert data['auth_note'] == _auth_note_tokenized, data['auth_note']
-        assert data['db_note'] == _db_note_tokenized, data['db_note']
-        assert data['deploy_key'] == _deploy_key_tokenized, data['deploy_key']
+        assert data['api_note'] == _api_note_replaced, data['api_note']
+        assert data['session_note'] == _session_replaced, data['session_note']
+        assert data['auth_note'] == _auth_note_replaced, data['auth_note']
+        assert data['db_note'] == _db_note_replaced, data['db_note']
+        assert data['deploy_key'] == _deploy_key_replaced, data['deploy_key']
 
         # .. no secret survives anywhere in the response ..
         data_text = str(data)
@@ -112,8 +112,8 @@ class TestSecretsRemoval:
         data, event_data = _get_customer_record(
             zato_server, _constants.Path_Secrets, _constants.Gateway_Secrets)
 
-        # The AWS key written twice in one field shares one numbered token
-        assert data['aws_note'] == _aws_note_tokenized, data['aws_note']
+        # The AWS key written twice in one field shares one numbered replacement
+        assert data['aws_note'] == _aws_note_replaced, data['aws_note']
         assert event_data['secrets_removed'][_detector_aws_key] == 2, event_data
 
 # ################################################################################################################################
@@ -148,12 +148,12 @@ class TestSecretsRemoval:
 
 class TestSecretsThroughModel:
     """ The model wire - every chat request and the final answer carry
-    the stable tokens only, never a credential-shaped value.
+    the stable replacements only, never a credential-shaped value.
     """
 
 # ################################################################################################################################
 
-    def test_tokenized_secrets_are_all_the_model_ever_sees(self, zato_server:'anydict', ollama:'anydict') -> 'None':
+    def test_replaced_secrets_are_all_the_model_ever_sees(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         client = _helpers.make_client(zato_server, _constants.Path_Secrets)
 

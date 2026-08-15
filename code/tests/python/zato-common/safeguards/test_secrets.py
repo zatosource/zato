@@ -126,8 +126,8 @@ class TestStableReplacements:
 
         cleaned = remove_secrets(value, result)
 
-        # Both mentions of the one key collapse into one numbered token
-        assert cleaned['note'] == 'Key {{SECRET_AWS_ACCESS_KEY_1}} rotated, previous value was {{SECRET_AWS_ACCESS_KEY_1}} too'
+        # Both mentions of the one key collapse into one numbered replacement
+        assert cleaned['note'] == 'Key REPLACED_SECRET_AWS_ACCESS_KEY_1 rotated, previous value was REPLACED_SECRET_AWS_ACCESS_KEY_1 too'
         assert result.secrets_removed == {'secret_aws_access_key': 2}
 
     def test_two_different_secrets_render_as_two_tokens(self) -> 'None':
@@ -138,7 +138,7 @@ class TestStableReplacements:
 
         cleaned = remove_secrets(value, result)
 
-        assert cleaned['note'] == 'Old key {{SECRET_AWS_ACCESS_KEY_1}} was replaced by {{SECRET_AWS_ACCESS_KEY_2}} in May'
+        assert cleaned['note'] == 'Old key REPLACED_SECRET_AWS_ACCESS_KEY_1 was replaced by REPLACED_SECRET_AWS_ACCESS_KEY_2 in May'
         assert result.secrets_removed == {'secret_aws_access_key': 2}
 
 # ################################################################################################################################
