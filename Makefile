@@ -123,7 +123,7 @@ mq-client:
 	@if [ ! -f $(MQ_CLIENT_LIB) ]; then \
 		echo ">>> Downloading IBM MQ client to $(MQ_CLIENT_DIR)"; \
 		mkdir -p $(MQ_CLIENT_DIR) && \
-		curl -fL $(MQ_CLIENT_URL) -o $(MQ_CLIENT_DIR)/mqclient.tar.gz && \
+		curl -fL --http1.1 --retry 5 --retry-delay 5 --retry-all-errors $(MQ_CLIENT_URL) -o $(MQ_CLIENT_DIR)/mqclient.tar.gz && \
 		tar -xzf $(MQ_CLIENT_DIR)/mqclient.tar.gz -C $(MQ_CLIENT_DIR) && \
 		rm $(MQ_CLIENT_DIR)/mqclient.tar.gz; \
 	fi
