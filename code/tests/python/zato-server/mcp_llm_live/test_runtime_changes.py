@@ -128,7 +128,7 @@ class TestRuntimeChanges:
 
 # ################################################################################################################################
 
-    def test_a_restart_starts_clean(self, zato_server:'anydict') -> 'None':
+    def test_a_restart_starts_clean(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         audit_db_path = zato_server['audit_db_path']
 
@@ -223,7 +223,7 @@ class TestRuntimeChanges:
 
 # ################################################################################################################################
 
-    def test_a_retried_confirmation_leaves_an_exact_trail(self, zato_server:'anydict') -> 'None':
+    def test_a_retried_confirmation_leaves_an_exact_trail(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         audit_db_path = zato_server['audit_db_path']
         min_id = _audit.last_event_id(audit_db_path)

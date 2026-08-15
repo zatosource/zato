@@ -45,6 +45,18 @@ _completion_timeout = 900
 # The model answers deterministically so the assertions on its behavior are repeatable
 _temperature = 0
 
+# What the model is told once the turn bound is hit and only a text answer remains -
+# a system message, so a test's own system instructions cannot outrank the stop order
+_finalize_instruction = (
+    'The tool phase is over and no tools are available anymore - any further tool call fails. '
+    'State the outcome so far in plain text.')
+
+# How many closing completions a model that keeps asking for withdrawn tools is granted
+_max_finalize_turns = 3
+
+# What a tool call made after the tools were withdrawn is answered with
+_no_tools_error = 'Error: no tools are available anymore'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -222,6 +234,11 @@ def _run_loop(
                 tool_name = function['name'].replace(_dot_replacement, '.')
                 arguments = transform_arguments(tool_name, arguments)
 
+                # The transcript must show the arguments the gateway actually received -
+                # a model whose history says one thing while the error reports another
+                # cannot reconcile the two and spirals instead of reacting.
+                function['arguments'] = dumps(arguments)
+
             executed = execute_call(function['name'], arguments)
             out.tool_calls.append(executed)
 
@@ -232,16 +249,35 @@ def _run_loop(
             })
 
     # A conversation that spent every turn on tool calls still owes its caller an answer -
-    # one completion without tools makes the model state the outcome in plain text.
+    # the model is told the tools are gone and completions without them
+    # make it state the outcome in plain text.
     if not has_final_answer:
 
-        assistant_message = _chat_completion(messages, [], model, ollama_url)
-        messages.append(assistant_message)
+        messages.append({'role': 'system', 'content': _finalize_instruction})
 
-        content = assistant_message['content']
-        if content is None:
-            content = ''
-        out.final_text = content
+        for _finalize_turn in range(_max_finalize_turns):
+
+            assistant_message = _chat_completion(messages, [], model, ollama_url)
+            messages.append(assistant_message)
+
+            tool_calls = assistant_message.get('tool_calls')
+
+            # A model may still ask for a tool it no longer has - the call is refused
+            # without reaching the gateway and the model is asked once more.
+            if tool_calls:
+                for call in tool_calls:
+                    messages.append({
+                        'role': 'tool',
+                        'tool_call_id': call['id'],
+                        'content': _no_tools_error,
+                    })
+                continue
+
+            content = assistant_message['content']
+            if content is None:
+                content = ''
+            out.final_text = content
+            break
 
     out.messages = messages
     return out

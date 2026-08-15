@@ -38,10 +38,9 @@ _enmasse_timeout = 120
 # ################################################################################################################################
 # ################################################################################################################################
 
-def build_security_list(security_overrides:'anydict | None' = None) -> 'dictlist':
+def build_security_list() -> 'dictlist':
     """ The security definitions every import carries - basic auth, an API key,
-    a static bearer token and a Keycloak-issued one. Overrides are merged in
-    by definition name, which is how the tests change a password and import again.
+    a static bearer token and a Keycloak-issued one.
     """
 
     keycloak_token_url = keycloak_.get_token_url()
@@ -88,11 +87,6 @@ def build_security_list(security_overrides:'anydict | None' = None) -> 'dictlist
             'claims': [f'{keycloak_.Claim_Department}={keycloak_.Department_Accounting}'],
         },
     ]
-
-    if security_overrides:
-        for definition in out:
-            if overrides := security_overrides.get(definition['name']):
-                definition.update(overrides)
 
     return out
 
@@ -398,11 +392,10 @@ def build_suite_config(
     gateway_overrides:'anydict | None' = None,
     main_members:'strlist | None' = None,
     shared_a_members:'strlist | None' = None,
-    security_overrides:'anydict | None' = None,
     ) -> 'stranydict':
     """ The whole enmasse document of the suite as a dict - security, groups, gateways
-    and the self.llm outconn. Gateway and security overrides are merged in by name,
-    which is how the tests flip one option or change one credential and import again.
+    and the self.llm outconn. Gateway overrides are merged in by name,
+    which is how the tests flip one option and import again.
     """
 
     gateway_list = build_gateway_list()
@@ -413,7 +406,7 @@ def build_suite_config(
                 gateway.update(overrides)
 
     out:'stranydict' = {
-        'security': build_security_list(security_overrides),
+        'security': build_security_list(),
         'groups': build_group_list(main_members, shared_a_members),
         'mcp_gateway': gateway_list,
         'llm': [

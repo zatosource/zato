@@ -39,6 +39,7 @@ import _constants  # noqa: E402
 import _diag  # noqa: E402
 import _enmasse  # noqa: E402
 import containers  # noqa: E402
+import keycloak_  # noqa: E402
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,6 +127,9 @@ _temp_directory   = None
 
 # Where the server's output is persisted, outside the temp dir so it survives teardown
 _server_log_path = os.path.join(tempfile.gettempdir(), 'zato_mcp_llm_live_server.log')
+
+# Where the file listener's output is persisted
+_listener_log_path = os.path.join(tempfile.gettempdir(), 'zato_mcp_llm_live_listener.log')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -311,6 +315,27 @@ def _spawn_server(server_directory:'str', server_env:'any_', log_mode:'str') -> 
 
 # ################################################################################################################################
 
+def _spawn_listener(pickup_directory:'str', listener_env:'any_', log_mode:'str') -> 'None':
+    """ Starts the file-transfer listener that watches the pickup directory,
+    with its output going to the persistent listener log file.
+    """
+
+    global _listener_process
+
+    listener_log_file = open(_listener_log_path, log_mode)
+
+    _listener_process = subprocess.Popen(
+        [_zato_py, _listener_path, pickup_directory],
+        env=listener_env,
+        stdout=listener_log_file,
+        stderr=subprocess.STDOUT,
+    )
+
+    # Give the listener a moment to initialize its directory watch
+    time.sleep(_listener_settle_seconds)
+
+# ################################################################################################################################
+
 def _wait_for_gateways(host:'str', port:'int') -> 'None':
     """ Polls the main gateway until its tool registry answers with the CRM tools,
     which proves both the fixture services and the enmasse-created gateways are live.
@@ -373,6 +398,20 @@ def ollama() -> 'any_':
     }
 
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def keycloak() -> 'None':
+    """ Session-scoped fixture that makes sure the Keycloak container is running and provisioned.
+    Only the tests that use Keycloak-issued tokens depend on it.
+    """
+
+    if not containers.is_docker_available():
+        pytest.skip('Docker is not available')
+
+    keycloak_.ensure_keycloak()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -480,8 +519,6 @@ def zato_server() -> 'any_':
 
     # .. start the file-transfer listener that watches the pickup directory, so that
     # files dropped at runtime trigger hot-deploy - the runtime hot-deploy tests need it ..
-    global _listener_process
-
     pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
     web_admin_repo = os.path.join(_temp_directory, 'web-admin', 'config', 'repo')
 
@@ -490,15 +527,7 @@ def zato_server() -> 'any_':
     listener_env['Zato_Web_Admin_Repo_Dir'] = web_admin_repo
     _ = listener_env.pop('COVERAGE_PROCESS_START', None)
 
-    _listener_process = subprocess.Popen(
-        [_zato_py, _listener_path, pickup_directory],
-        env=listener_env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
-
-    # .. give the listener a moment to initialize its directory watch ..
-    time.sleep(_listener_settle_seconds)
+    _spawn_listener(pickup_directory, listener_env, 'w')
 
     # .. wait until the main gateway answers with the CRM tools ..
     _wait_for_gateways(host, port)
@@ -512,10 +541,15 @@ def zato_server() -> 'any_':
 
     def _restart_server() -> 'None':
         """ Stops the server process and starts it again with the same configuration,
-        returning once the gateways answer - the file listener keeps running throughout.
+        returning once the gateways answer. The kill matches every process whose
+        command line carries the temp directory, which includes the listener,
+        so the listener stops first and starts anew once the server is back.
         """
 
-        global _server_process
+        global _server_process, _listener_process
+
+        _kill_process(_listener_process)
+        _listener_process = None
 
         kill_server_process(_server_process, _process_kill_timeout, server_directory=_temp_directory or '')
         _server_process = None
@@ -523,6 +557,8 @@ def zato_server() -> 'any_':
         _spawn_server(server_directory, server_env, 'a')
         _wait_for_server(host, port)
         _wait_for_gateways(host, port)
+
+        _spawn_listener(pickup_directory, listener_env, 'a')
 
     # .. yield connection details to the tests.
     yield {

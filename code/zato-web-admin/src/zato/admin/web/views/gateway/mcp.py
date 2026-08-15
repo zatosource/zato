@@ -26,7 +26,7 @@ from zato.common.api import API_Key, GENERIC, Groups, MCP, SEC_DEF_TYPE, SEC_DEF
 from zato.common.defaults import http_plain_server_port
 from zato.common.skills.api import get_skill_name_list
 from zato.common.util.api import asbool
-from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
+from zato.common.util.safeguards.common import Mode_Clean, SafeguardConfig, Url_Mode_Remove
 from zato.common.util.tcp import get_current_ip
 from zato.common.util.truncate.tokens import Default_Characters_Per_Token, Size_Cap_Mode_Truncate
 
@@ -100,13 +100,22 @@ _shaping_list_fields = (
     'safeguards_pii_exclude',
 )
 
-# Response shaping selects - these always carry a value and need no processing.
+# Response shaping selects - these always carry a value while their stage is enabled.
 _shaping_choice_fields = (
     'size_cap_mode',
     'safeguards_unicode_mode',
     'safeguards_markup_mode',
     'safeguards_url_mode',
 )
+
+# The documented default of each select - a disabled stage keeps its select
+# out of the POST and the default is what gets stored then.
+_choice_field_defaults = {
+    'size_cap_mode':           Size_Cap_Mode_Truncate,
+    'safeguards_unicode_mode': Mode_Clean,
+    'safeguards_markup_mode':  Mode_Clean,
+    'safeguards_url_mode':     Url_Mode_Remove,
+}
 
 # All the response shaping fields the dashboard persists in the gateway's opaque configuration.
 _shaping_fields = _shaping_checkbox_fields + _shaping_int_fields + _shaping_list_fields + _shaping_choice_fields + \
@@ -339,6 +348,17 @@ class _CreateEdit(CreateEdit):
         for name in _shaping_checkbox_fields:
             value = input_dict[name]
             input_dict[name] = value is True or value == 'on'
+
+        # .. a select of a disabled stage is excluded from the POST altogether,
+        # so an absent value means the stage's documented default ..
+        for name in _shaping_choice_fields:
+            if not input_dict[name]:
+                input_dict[name] = _choice_field_defaults[name]
+
+        # .. the PII validate checkbox is only ever absent along with its whole
+        # stage, in which case its documented default holds too ..
+        if not input_dict['safeguards_pii_enabled']:
+            input_dict['safeguards_pii_validate'] = SafeguardConfig.pii_validate
 
         # .. integer fields arrive as strings and an empty input means zero ..
         for name in _shaping_int_fields:

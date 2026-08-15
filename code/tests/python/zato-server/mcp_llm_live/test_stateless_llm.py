@@ -52,7 +52,7 @@ class TestStatelessLLM:
 
 # ################################################################################################################################
 
-    def test_a_whole_conversation_no_sessions(self, zato_server:'anydict') -> 'None':
+    def test_a_whole_conversation_no_sessions(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         client = _make_stateless_client(zato_server)
         result = _agent.run_agent_stateless(client, _task)
@@ -88,7 +88,7 @@ class TestStatelessLLM:
 
 # ################################################################################################################################
 
-    def test_stateless_and_session_callers_share_a_gateway(self, zato_server:'anydict') -> 'None':
+    def test_stateless_and_session_callers_share_a_gateway(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         audit_db_path = zato_server['audit_db_path']
         min_id = _audit.last_event_id(audit_db_path)
@@ -134,7 +134,7 @@ class TestStatelessLLM:
 
 # ################################################################################################################################
 
-    def test_discovery_is_a_sufficient_tool_source(self, zato_server:'anydict') -> 'None':
+    def test_discovery_is_a_sufficient_tool_source(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         client = _make_stateless_client(zato_server)
         result = _agent.run_agent_stateless(client, _task, tools_from_discover=True)

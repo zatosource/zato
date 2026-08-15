@@ -26,11 +26,15 @@ if 0:
 # A roster of this many customers goes over the pipeline gateways' cap
 _oversized_count = '100'
 
-# The token every tokenized email of the roster starts with
-_email_token_prefix = '{{INTL_EMAIL'
+# The replacement every email of the roster turns into - the pipeline gateways
+# use the default replacement format
+_email_token_prefix = '{{EMAIL_'
 
 # A truncated text must never end inside a replacement token
 _dangling_token = re.compile(r'\{\{[A-Z0-9_]*$')
+
+# A complete replacement token, e.g. {{EMAIL_1}}
+_whole_token = re.compile(r'\{\{[A-Z0-9_]+\}\}')
 
 # What the markup rejection audits as
 _reject_kind_markup = 'markup'
@@ -133,12 +137,12 @@ class TestPipelineInterplay:
         text = _helpers.get_result_text(body)
         assert _email_token_prefix in text, text
 
-        # .. every one of them whole - openings and closings pair up
+        # .. every one of them whole - each opening starts a complete token
         # and the cut never ends inside one.
         opening_count = text.count('{{')
-        closing_count = text.count('}}')
+        whole_tokens = _whole_token.findall(text)
 
-        assert opening_count == closing_count, text
+        assert opening_count == len(whole_tokens), text
         assert not _dangling_token.search(text), text
 
 # ################################################################################################################################

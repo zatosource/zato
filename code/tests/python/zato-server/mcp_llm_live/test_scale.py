@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import time
 from http.client import NOT_FOUND, OK
+from json import loads
 
 # local
 import _agent
@@ -147,7 +148,7 @@ class TestConversationsAtScale:
 
 # ################################################################################################################################
 
-    def test_non_ascii_data_survives_the_whole_path(self, zato_server:'anydict') -> 'None':
+    def test_non_ascii_data_survives_the_whole_path(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         # The Greek record comes through the tools and the final answer intact ..
         client = _helpers.make_client(zato_server, _constants.Path_Main)
@@ -155,8 +156,9 @@ class TestConversationsAtScale:
         task = f'Get the record of customer {_constants.Customer_ID_Greek} and report the name and city exactly as returned.'
         result = _agent.run_agent(client, task)
 
-        result_text = result.tool_calls[0].result_text
-        assert _constants.Customer_Name_Greek in result_text, result_text
+        record = loads(result.tool_calls[0].result_text)
+        assert record['name'] == _constants.Customer_Name_Greek, record
+        assert record['city'] == _constants.Customer_City_Greek, record
 
         assert _helpers.text_contains(result.final_text, _constants.Customer_Name_Greek), result.final_text
         assert _helpers.text_contains(result.final_text, _constants.Customer_City_Greek), result.final_text
@@ -167,8 +169,9 @@ class TestConversationsAtScale:
         task = f'Get the record of customer {_constants.Customer_ID_Japanese} and report the name and city exactly as returned.'
         result = _agent.run_agent(client, task)
 
-        result_text = result.tool_calls[0].result_text
-        assert _constants.Customer_Name_Japanese in result_text, result_text
+        record = loads(result.tool_calls[0].result_text)
+        assert record['name'] == _constants.Customer_Name_Japanese, record
+        assert record['city'] == _constants.Customer_City_Japanese, record
 
         assert _helpers.text_contains(result.final_text, _constants.Customer_Name_Japanese), result.final_text
         assert _helpers.text_contains(result.final_text, _constants.Customer_City_Japanese), result.final_text

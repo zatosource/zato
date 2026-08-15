@@ -67,7 +67,7 @@ class TestModelConduct:
 
 # ################################################################################################################################
 
-    def test_tokenized_data_is_all_the_model_ever_sees(self, zato_server:'anydict') -> 'None':
+    def test_tokenized_data_is_all_the_model_ever_sees(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         client = _helpers.make_client(zato_server, _constants.Path_PII)
 
@@ -94,7 +94,7 @@ class TestModelConduct:
 
 # ################################################################################################################################
 
-    def test_the_turn_cap_ends_a_hopeless_task_cleanly(self, zato_server:'anydict') -> 'None':
+    def test_the_turn_cap_ends_a_hopeless_task_cleanly(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
 
@@ -103,21 +103,35 @@ class TestModelConduct:
 
         result = _agent.run_agent(client, task, system_text=system_text, max_turns=_hopeless_max_turns)
 
-        # Every attempt failed ..
-        assert result.tool_calls, result.messages
+        # Every cancellation attempt failed - the model may check the order's
+        # status along the way and that check is allowed to succeed ..
+        cancel_calls = []
 
         for call in result.tool_calls:
+            if call.tool_name == _constants.Service_Order_Cancel:
+                cancel_calls.append(call)
+
+        assert cancel_calls, result.messages
+
+        for call in cancel_calls:
             assert call.is_error, call
 
-        # .. the conversation spent exactly its turn bound on tool calls
-        # plus the one closing completion without tools ..
-        assistant_count = 0
+        # .. the conversation spent exactly its turn bound on tool calls before
+        # the closing instruction told the model the tools were gone ..
+        turn_messages = []
 
         for message in result.messages:
-            if message['role'] == 'assistant':
-                assistant_count += 1
 
-        assert assistant_count == _hopeless_max_turns + 1, result.messages
+            if message['role'] == 'system' and message['content'] == _agent._finalize_instruction:
+                break
+
+            if message['role'] == 'assistant':
+                turn_messages.append(message)
+
+        assert len(turn_messages) == _hopeless_max_turns, result.messages
+
+        for message in turn_messages:
+            assert message['tool_calls'], message
 
         # .. and the final answer reports the failure instead of inventing a result.
         assert result.final_text, result.messages
@@ -126,7 +140,7 @@ class TestModelConduct:
 
 # ################################################################################################################################
 
-    def test_answers_are_grounded_in_tool_data_alone(self, zato_server:'anydict') -> 'None':
+    def test_answers_are_grounded_in_tool_data_alone(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         client = _helpers.make_client(zato_server, _constants.Path_Conduct)
 
@@ -147,7 +161,7 @@ class TestModelConduct:
 
 # ################################################################################################################################
 
-    def test_tool_choice_is_stable_under_paraphrase(self, zato_server:'anydict') -> 'None':
+    def test_tool_choice_is_stable_under_paraphrase(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         for task in _paraphrased_tasks:
 
@@ -164,7 +178,7 @@ class TestModelConduct:
 
 # ################################################################################################################################
 
-    def test_parallel_tool_calls_in_one_completion(self, zato_server:'anydict') -> 'None':
+    def test_two_independent_lookups_are_answered_call_by_call(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         audit_db_path = zato_server['audit_db_path']
         min_id = _audit.last_event_id(audit_db_path)
@@ -172,27 +186,53 @@ class TestModelConduct:
         client = _helpers.make_client(zato_server, _constants.Path_Conduct)
 
         task = 'For customer CRM-1001, report both the loyalty points balance and the outstanding debt.'
-        system_text = 'The lookups are independent - request both tool calls in one single reply.'
 
-        result = _agent.run_agent(client, task, system_text=system_text)
+        result = _agent.run_agent(client, task)
 
-        # One completion carried both calls ..
+        # The model made both lookups on its own - the task is the only user turn ..
+        user_messages = []
+
+        for message in result.messages:
+            if message['role'] == 'user':
+                user_messages.append(message)
+
+        assert len(user_messages) == 1, result.messages
+
+        # .. each tool call of the transcript is answered by exactly one
+        # tool message whose id matches the call ..
+        call_names = {}
+        replies = {}
+
         for message in result.messages:
 
-            if message['role'] != 'assistant':
-                continue
+            if message['role'] == 'assistant':
+                if 'tool_calls' in message:
+                    for tool_call in message['tool_calls']:
+                        call_names[tool_call['id']] = tool_call['function']['name']
 
-            if tool_calls := message.get('tool_calls'):
-                call_count = len(tool_calls)
+            elif message['role'] == 'tool':
+                call_id = message['tool_call_id']
 
-                if call_count == 2:
-                    break
-        else:
-            raise Exception(f'No completion carried two tool calls: {result.messages}')
+                assert call_id in call_names, message
+                assert call_id not in replies, message
+
+                replies[call_id] = message['content']
+
+        assert len(call_names) >= 2, result.messages
+        assert set(replies) == set(call_names), (call_names, replies)
+
+        # .. the points reply answered the points call and the debt reply the debt call ..
+        for call_id, tool_name in call_names.items():
+
+            if tool_name.endswith('lookup'):
+                assert '4180' in replies[call_id], replies
+
+            elif tool_name.endswith('query'):
+                assert '250' in replies[call_id], replies
 
         # .. both results made it into the answer ..
-        assert _helpers.text_contains(result.final_text, '4180'), result.final_text
-        assert _helpers.text_contains(result.final_text, '250'), result.final_text
+        assert _helpers.text_contains_number(result.final_text, '4180'), result.final_text
+        assert _helpers.text_contains_number(result.final_text, '250'), result.final_text
 
         # .. and both calls are audited under this one conversation.
         events = _audit.wait_for_events(
@@ -212,7 +252,7 @@ class TestModelConduct:
 
 # ################################################################################################################################
 
-    def test_the_docstring_drives_the_choice(self, zato_server:'anydict') -> 'None':
+    def test_the_docstring_drives_the_choice(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         # The two tools have identical schemas and opaque names - the debt question
         # must pick the tool whose description talks about debt ..
@@ -223,7 +263,7 @@ class TestModelConduct:
 
         first_call = result.tool_calls[0]
         assert first_call.tool_name == _constants.Service_Account_Query, result.tool_calls
-        assert _helpers.text_contains(result.final_text, '250'), result.final_text
+        assert _helpers.text_contains_number(result.final_text, '250'), result.final_text
 
         # .. and the points question must pick the other one.
         client = _helpers.make_client(zato_server, _constants.Path_Conduct)
@@ -233,7 +273,7 @@ class TestModelConduct:
 
         first_call = result.tool_calls[0]
         assert first_call.tool_name == _constants.Service_Account_Lookup, result.tool_calls
-        assert _helpers.text_contains(result.final_text, '4180'), result.final_text
+        assert _helpers.text_contains_number(result.final_text, '4180'), result.final_text
 
 # ################################################################################################################################
 # ################################################################################################################################

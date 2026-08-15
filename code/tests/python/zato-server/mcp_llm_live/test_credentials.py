@@ -10,9 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import time
 from http.client import FORBIDDEN, OK
 
-# pytest
-import pytest
-
 # local
 import _agent
 import _audit
@@ -20,7 +17,6 @@ import _constants
 import _enmasse
 import _helpers
 import _markers
-import containers
 import keycloak_
 
 # Zato
@@ -43,19 +39,6 @@ _reimport_poll_interval = 0.5
 
 # How long past its lifespan to wait before using a short-lived token, in seconds
 _token_expiry_wait = keycloak_.Short_Token_Lifespan + 2
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@pytest.fixture(scope='module')
-def keycloak() -> 'None':
-    """ The Keycloak-issued token tests need the container running and provisioned.
-    """
-
-    if not containers.is_docker_available():
-        pytest.skip('Docker is not available')
-
-    keycloak_.ensure_keycloak()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -13,7 +13,6 @@ from http.client import BAD_REQUEST, OK
 # local
 import _audit
 import _constants
-import _enmasse
 import _helpers
 import keycloak_
 from _helpers import wait_until as _wait_until
@@ -34,6 +33,9 @@ if 0:
 # How long to wait until a short-lived token has provably expired, in seconds
 _past_token_expiry_seconds = keycloak_.Short_Token_Lifespan + 2
 
+# The admin service that changes a basic auth password
+_service_change_password = 'zato.security.basic-auth.change-password'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -46,8 +48,6 @@ class TestIdentityOverTime:
 # ################################################################################################################################
 
     def test_a_password_change_takes_effect_live(self, zato_server:'anydict') -> 'None':
-
-        server_directory = zato_server['server_directory']
 
         old_auth = (_constants.Username_Basic_B, _constants.Password_Basic_B)
         old_client = _helpers.make_client(zato_server, _constants.Path_Identity, auth=old_auth)
@@ -62,10 +62,11 @@ class TestIdentityOverTime:
         new_client = _helpers.make_client(zato_server, _constants.Path_Identity, auth=new_auth)
 
         try:
-            # .. one re-import changes the password ..
-            overrides = {_constants.Sec_Basic_B: {'password': new_password}}
-            config = _enmasse.build_suite_config(security_overrides=overrides)
-            _enmasse.run_import(server_directory, config)
+            # .. one password-change call swaps the password ..
+            _ = _helpers.admin_invoke(zato_server, _service_change_password, {
+                'name': _constants.Sec_Basic_B,
+                'password': new_password,
+            })
 
             # .. the old password is refused on the next call ..
             def old_password_is_refused() -> 'bool':
@@ -81,8 +82,10 @@ class TestIdentityOverTime:
 
         finally:
             # The original password always comes back for the other tests.
-            config = _enmasse.build_suite_config()
-            _enmasse.run_import(server_directory, config)
+            _ = _helpers.admin_invoke(zato_server, _service_change_password, {
+                'name': _constants.Sec_Basic_B,
+                'password': _constants.Password_Basic_B,
+            })
 
             def old_password_is_back() -> 'bool':
                 response = _helpers.initialize_response(old_client)
@@ -93,7 +96,7 @@ class TestIdentityOverTime:
 
 # ################################################################################################################################
 
-    def test_a_keycloak_token_expires_mid_session(self, zato_server:'anydict') -> 'None':
+    def test_a_keycloak_token_expires_mid_session(self, zato_server:'anydict', keycloak:'None') -> 'None':
 
         token = keycloak_.get_token(keycloak_.Client_Short_Lived, keycloak_.Secret_Short_Lived)
         headers = _helpers.bearer_headers(token)

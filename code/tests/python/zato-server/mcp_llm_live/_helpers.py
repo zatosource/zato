@@ -7,12 +7,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
+import re
 import time
 import unicodedata
-from json import loads
+from json import dumps, loads
+
+# requests
+import requests
 
 # Zato
 from zato.common.audit_log.api import AuditEvent
+from zato.common.crypto.api import WebAdminCryptoManager
 from zato.common.typing_ import cast_
 
 # local
@@ -47,6 +53,10 @@ _initialize_params = {
     'capabilities': {},
     'clientInfo': {'name': 'zato-mcp-test', 'version': '1.0'},
 }
+
+# A digit-grouping separator between two digits - NFKC folds the space variants first,
+# so a comma and a plain space are all that can remain.
+_digit_group_separator = re.compile(r'(?<=\d)[, ](?=\d)')
 
 # NFKC already folds the space variants, so this table holds only the characters NFKC keeps.
 _unicode_variants = (
@@ -93,6 +103,19 @@ def text_contains(haystack:'str', needle:'str') -> 'bool':
 
 # ################################################################################################################################
 
+def text_contains_number(haystack:'str', number:'str') -> 'bool':
+    """ Whether the model's output contains the given number, with any digit-grouping
+    separators the model writes between digits removed first.
+    """
+
+    normalized = normalize_llm_text(haystack)
+    normalized = _digit_group_separator.sub('', normalized)
+
+    out = number in normalized
+    return out
+
+# ################################################################################################################################
+
 def contains_any_word(text:'str', words:'anytuple') -> 'bool':
     """ Whether the model's output contains any of the given lower-case words,
     with its Unicode variants folded and its case lowered first.
@@ -111,6 +134,45 @@ def contains_any_word(text:'str', words:'anytuple') -> 'bool':
     return out
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def admin_invoke(zato_server:'anydict', service_name:'str', request:'anydict') -> 'anydict':
+    """ Invokes an admin service through the server's REST API, authenticated
+    with the invoke credentials of the test environment's web-admin.
+    """
+
+    repo_dir = os.path.join(zato_server['temp_directory'], 'web-admin', 'config', 'repo')
+    config_path = os.path.join(repo_dir, 'web-admin.conf')
+
+    with open(config_path) as config_file:
+        config = loads(config_file.read())
+
+    crypto_manager = WebAdminCryptoManager(repo_dir=repo_dir)
+    password = crypto_manager.decrypt(config['ADMIN_INVOKE_PASSWORD'])
+
+    if isinstance(password, bytes):
+        password = password.decode('utf8')
+
+    url = zato_server['mcp_url'](f'/zato/api/invoke/{service_name}')
+    auth = (config['ADMIN_INVOKE_NAME'], password)
+
+    response = requests.post(url, data=dumps(request), auth=auth)
+
+    if not response.ok:
+        raise Exception(f'Admin invoke of `{service_name}` failed with HTTP {response.status_code}: {response.text}')
+
+    out = response.json()
+
+    # The invoker proxies the target service, so a failure inside the target
+    # still comes back as HTTP 200 - the envelope carries the actual result.
+    if 'zato_env' in out:
+        zato_env = out['zato_env']
+
+        if zato_env['result'] != 'ZATO_OK':
+            raise Exception(f'Admin invoke of `{service_name}` failed: {response.text}')
+
+    return out
+
 # ################################################################################################################################
 
 def make_client(zato_server:'anydict', url_path:'str', auth:'tupnone | str' = 'default') -> 'MCPClient':

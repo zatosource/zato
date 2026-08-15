@@ -38,6 +38,10 @@ Ollama_OpenAI_URL = f'{Ollama_Base_URL}/v1'
 # The model the tests drive
 Model_Name = 'gpt-oss:20b'
 
+# The context window the instance serves - the default of 4096 truncates longer agent
+# conversations mid-reasoning, which degenerates the model's output.
+Context_Length = 16384
+
 # The browser console - Open WebUI connected to the Ollama instance above
 Console_Image          = 'ghcr.io/open-webui/open-webui:main'
 Console_Container_Name = 'zato-test-open-webui'
@@ -147,6 +151,16 @@ def is_docker_available() -> 'bool':
 
 # ################################################################################################################################
 
+def _has_expected_context_length() -> 'bool':
+    """ Whether the existing container was created with the context length the tests need.
+    """
+    result = _run_docker(['inspect', '--format', '{{.Config.Env}}', Ollama_Container_Name])
+
+    out = f'OLLAMA_CONTEXT_LENGTH={Context_Length}' in result.stdout
+    return out
+
+# ################################################################################################################################
+
 def _ensure_container_running() -> 'None':
     """ Starts the Ollama container, creating it first if it does not exist at all.
     The model weights live on a named volume, so recreating the container never repeats the pull.
@@ -155,34 +169,46 @@ def _ensure_container_running() -> 'None':
     # Find out whether the container exists and whether it is running ..
     result = _run_docker(['inspect', '--format', '{{.State.Running}}', Ollama_Container_Name])
 
-    # .. a non-zero exit code means there is no such container, so create it,
-    # with GPU access when the host has a usable card ..
+    if result.returncode == 0:
+
+        # .. a container created with an older context length is replaced -
+        # the model volume outlives it, so nothing is pulled again ..
+        if _has_expected_context_length():
+
+            # .. an existing but stopped container only needs to be started again.
+            if result.stdout.strip() != 'true':
+                result = _run_docker(['start', Ollama_Container_Name])
+
+                if result.returncode != 0:
+                    raise Exception(f'Could not restart Ollama -> {result.stderr}')
+
+            return
+
+        result = _run_docker(['rm', '--force', Ollama_Container_Name])
+
+        if result.returncode != 0:
+            raise Exception(f'Could not remove Ollama -> {result.stderr}')
+
+    # .. there is no container now, so create it, with GPU access when the host has a usable card.
+    _pull_image(Ollama_Image)
+
+    run_arguments = [
+        'run', '-d',
+        '--name', Ollama_Container_Name,
+        '-p', f'{Ollama_Port}:{_ollama_internal_port}',
+        '-v', f'{Ollama_Volume_Name}:/root/.ollama',
+        '-e', f'OLLAMA_CONTEXT_LENGTH={Context_Length}',
+    ]
+
+    if _has_usable_gpu():
+        run_arguments += ['--gpus', 'all']
+
+    run_arguments.append(Ollama_Image)
+
+    result = _run_docker(run_arguments)
+
     if result.returncode != 0:
-        _pull_image(Ollama_Image)
-
-        run_arguments = [
-            'run', '-d',
-            '--name', Ollama_Container_Name,
-            '-p', f'{Ollama_Port}:{_ollama_internal_port}',
-            '-v', f'{Ollama_Volume_Name}:/root/.ollama',
-        ]
-
-        if _has_usable_gpu():
-            run_arguments += ['--gpus', 'all']
-
-        run_arguments.append(Ollama_Image)
-
-        result = _run_docker(run_arguments)
-
-        if result.returncode != 0:
-            raise Exception(f'Could not start Ollama -> {result.stderr}')
-
-    # .. an existing but stopped container only needs to be started again.
-    elif result.stdout.strip() != 'true':
-        result = _run_docker(['start', Ollama_Container_Name])
-
-        if result.returncode != 0:
-            raise Exception(f'Could not restart Ollama -> {result.stderr}')
+        raise Exception(f'Could not start Ollama -> {result.stderr}')
 
 # ################################################################################################################################
 

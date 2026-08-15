@@ -292,6 +292,11 @@ class ChangePasswordBase(AdminService):
                     raise Exception('Could not find instance with id:`{}` and name:`{}` ({})'.format(
                         instance_id, instance_name, class_))
 
+                # A lookup by name still publishes the id, so the live config layers
+                # that cache credentials by id, e.g. security groups, can update themselves.
+                if not instance_id:
+                    instance_id = instance.id
+
                 auth_func(instance, password_decrypted)
 
                 session.add(instance)
