@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The one write every outgoing file transfer goes through - a file handed to an SMB share,
-# an FTP server or an SFTP one leaves one request-sent event saying which connection moved
+# The one write every outgoing file transfer goes through - a file handed to an SMB share
+# or an SFTP server leaves one request-sent event saying which connection moved
 # which remote path, how big it was, how long it took and how it ended. The file's bytes
 # are not stored unless the connection asks for that, and then they travel as an attachment
 # envelope under the same size cap every attachment observes, so the file can be reread

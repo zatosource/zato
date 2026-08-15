@@ -32,10 +32,8 @@ from zato.common.util.sql import ElemsWithOpaqueMaker
 
 if 0:
     from zato.common.typing_ import anylist, stranydict
-    from zato.server.connection.ftp import FTPStore
     anylist = anylist
     stranydict = stranydict
-    FTPStore = FTPStore
 
 # ################################################################################################################################
 
@@ -299,7 +297,6 @@ class ConfigStore:
 
         # Outgoing connections
         self.out_as4 = None   # type: ConfigDict
-        self.out_ftp = None   # type: ConfigDict
         self.out_odoo = None  # type: ConfigDict
         self.out_soap = None  # type: ConfigDict
         self.out_sql = None   # type: ConfigDict
@@ -351,25 +348,11 @@ class ConfigStore:
     def get_config_by_item_id(self, attr_name, item_id):
         # type: (str, object) -> dict
 
-        # Imported here to avoid circular references
-        from zato.server.connection.ftp import FTPStore
-
         item_id = int(item_id)
         config = getattr(self, attr_name) # type: dict
 
-        if isinstance(config, FTPStore):
-            needs_inner_config = False
-            values = config.conn_params.values()
-        else:
-            needs_inner_config = True
-            values = config.values()
-
-        for value in values:
-            if needs_inner_config:
-                config_dict = value['config']
-            else:
-                config_dict = value
-
+        for value in config.values():
+            config_dict = value['config']
             if config_dict['id'] == item_id:
                 return config_dict
 
@@ -383,7 +366,7 @@ class ConfigStore:
     def outgoing_connections(self):
         """ Returns all the outgoing connections.
         """
-        return self.out_ftp, self.out_odoo, self.out_plain_http, self.out_soap
+        return self.out_odoo, self.out_plain_http, self.out_soap
 
 # ################################################################################################################################
 

@@ -164,7 +164,6 @@ $.namespace('zato.outgoing.file_transfer.schedules');
 $.namespace('zato.outgoing.file_transfer.wizard');
 $.namespace('zato.outgoing.file_transfer.wizard.forms');
 $.namespace('zato.outgoing.file_transfer.wizard.review');
-$.namespace('zato.outgoing.ftp');
 $.namespace('zato.outgoing.hl7');
 $.namespace('zato.outgoing.hl7.fhir');
 $.namespace('zato.outgoing.hl7.fhir.data_table');

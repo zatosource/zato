@@ -341,13 +341,12 @@ class DeleteMany(Service):
 
         # Zato
         from zato.common.odb.model import ChannelAMQP, IMAP, OutgoingAMQP, \
-            OutgoingFTP, OutgoingOdoo, Service, SMTP
+            OutgoingOdoo, Service, SMTP
 
         tables:'any_' = {
             ChannelAMQP.__table__: [ChannelAMQP.name],
             IMAP.__table__: [IMAP.name],
             OutgoingAMQP.__table__: [OutgoingAMQP.name],
-            OutgoingFTP.__table__: [OutgoingFTP.name],
             OutgoingOdoo.__table__: [OutgoingOdoo.name],
             Service.__table__: [Service.name],
             SMTP.__table__: [SMTP.name],

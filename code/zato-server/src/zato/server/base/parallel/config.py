@@ -159,10 +159,6 @@ class ConfigLoader:
         query = self.odb.get_out_amqp_list(server.cluster.id, True)
         self.config.out_amqp = ConfigDict.from_query('out_amqp', query, decrypt_func=self.decrypt)
 
-        # FTP
-        query = self.odb.get_out_ftp_list(server.cluster.id, True)
-        self.config.out_ftp = ConfigDict.from_query('out_ftp', query, decrypt_func=self.decrypt)
-
         # Odoo
         query = self.odb.get_out_odoo_list(server.cluster.id, True)
         self.config.out_odoo = ConfigDict.from_query('out_odoo', query, decrypt_func=self.decrypt)

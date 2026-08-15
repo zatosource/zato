@@ -20,7 +20,6 @@ Channel_OpenAPI     = 'channel_openapi'
 Outgoing_REST       = 'outgoing_rest'
 Outgoing_SOAP       = 'outgoing_soap'
 Outgoing_AMQP       = 'outgoing_amqp'
-Outgoing_FTP        = 'outgoing_ftp'
 SQL                 = 'sql'
 Odoo                = 'odoo'
 Cache               = 'cache'
@@ -51,7 +50,6 @@ All_Sections = frozenset([
     Outgoing_REST,
     Outgoing_SOAP,
     Outgoing_AMQP,
-    Outgoing_FTP,
     SQL,
     Odoo,
     Cache,

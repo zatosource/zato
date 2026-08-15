@@ -118,10 +118,6 @@ class OUTGOING(Constants):
     HTTP_SOAP_CREATE_EDIT = ValueConstant('') # Same for creating and updating
     HTTP_SOAP_DELETE = ValueConstant('')
 
-    FTP_CREATE_EDIT = ValueConstant('') # Same for creating and updating
-    FTP_DELETE = ValueConstant('')
-    FTP_CHANGE_PASSWORD = ValueConstant('')
-
     ODOO_CREATE = ValueConstant('')
     ODOO_EDIT = ValueConstant('')
     ODOO_DELETE = ValueConstant('')
@@ -140,15 +136,6 @@ class CHANNEL(Constants):
     HTTP_SOAP_DELETE = ValueConstant('')
     HTTP_SOAP_RATE_LIMITING_EDIT = ValueConstant('')
     HTTP_SOAP_RESPONSE_CACHE_EDIT = ValueConstant('')
-
-    FTP_CREATE = ValueConstant('')
-    FTP_EDIT = ValueConstant('')
-    FTP_DELETE = ValueConstant('')
-    FTP_PING = ValueConstant('')
-    FTP_USER_CREATE = ValueConstant('')
-    FTP_USER_EDIT = ValueConstant('')
-    FTP_USER_DELETE = ValueConstant('')
-    FTP_USER_CHANGE_PASSWORD = ValueConstant('')
 
 class SERVICE(Constants):
 

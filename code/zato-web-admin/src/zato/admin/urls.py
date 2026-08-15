@@ -35,7 +35,6 @@ from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views import groups
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
-from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing.hl7 import fhir as out_hl7_fhir
 from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
 from zato.admin.web.views.channel import ibm_mq as channel_ibm_mq
@@ -605,19 +604,6 @@ urlpatterns += [
         login_required(out_hl7_mllp.wizard_edit), name='outgoing-hl7-mllp-wizard-edit'),
     url(r'^zato/outgoing/hl7/mllp/invoke/action/(?P<conn_name>.*)/$',
         login_required(out_hl7_mllp.invoke_action), name='outgoing-hl7-mllp-invoke-action'),
-
-    # .. FTP
-
-    url(r'^zato/outgoing/ftp/$',
-        login_required(out_ftp.Index()), name=out_ftp.Index.url_name),
-    url(r'^zato/outgoing/ftp/create/$',
-        login_required(out_ftp.Create()), name=out_ftp.Create.url_name),
-    url(r'^zato/outgoing/ftp/edit/$',
-        login_required(out_ftp.Edit()), name=out_ftp.Edit.url_name),
-    url(r'^zato/outgoing/ftp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_ftp.Delete()), name=out_ftp.Delete.url_name),
-    url(r'^zato/outgoing/ftp/change-password/$',
-        login_required(out_ftp.change_password), name='out-ftp-change-password'),
     ]
 
 # ################################################################################################################################

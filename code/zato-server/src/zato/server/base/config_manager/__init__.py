@@ -54,7 +54,6 @@ from zato.server.connection.as4 import AS4Wrapper
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.connector import ConnectorStore, Connector_Type
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
-from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 from zato.server.connection.http_soap.response_cache import purge_channel as purge_response_cache
@@ -491,13 +490,6 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def early_init(self) -> 'None':
-        """ Initialises these parts of our configuration that are needed earlier than others.
-        """
-        self.init_ftp()
-
-# ################################################################################################################################
-
     def _config_to_dict(self, config_list:'anylist', key:'str'='name') -> 'strdict':
         """ Converts a list of dictionaries produced by ConfigDict instances to a dictionary keyed with 'key' elements.
         """
@@ -761,14 +753,6 @@ class ConfigManager(_ConfigManagerBase):
             config = self.config_store.out_sql[pool_name]['config']
             config['fs_sql_config'] = self.server.fs_sql_config
             self.sql_pool_store[pool_name] = config
-
-    def init_ftp(self) -> 'None':
-        """ Initializes FTP connections. The method replaces whatever value self.out_ftp
-        previously had (initially this would be a ConfigDict of connection definitions).
-        """
-        config_list = self.config_store.out_ftp.get_config_list()
-        self.config_store.out_ftp = FTPStore(self.server.name) # type: ignore
-        self.config_store.out_ftp.add_params(config_list)
 
     def init_http_soap(self, *, has_sec_config:'bool'=True) -> 'None':
         """ Initializes plain HTTP/SOAP connections.
@@ -2578,20 +2562,6 @@ class ConfigManager(_ConfigManagerBase):
             return {'error': str(e)}
         else:
             return response
-
-# ################################################################################################################################
-
-    def on_config_event_OUTGOING_FTP_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
-        out_ftp = cast_('FTPStore', self.config_store.out_ftp)
-        out_ftp.create_edit(msg, msg.get('old_name'))
-
-    def on_config_event_OUTGOING_FTP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
-        out_ftp = cast_('FTPStore', self.config_store.out_ftp)
-        out_ftp.delete(msg.name)
-
-    def on_config_event_OUTGOING_FTP_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
-        out_ftp = cast_('FTPStore', self.config_store.out_ftp)
-        out_ftp.change_password(msg.name, msg.password)
 
 # ################################################################################################################################
 

@@ -496,24 +496,6 @@ class AlertingCanary(AdminService):
             _ = run_canary_probe(audit_log, conn_name, transfer_sftp, now, cid=self.cid)
             checked += 1
 
-        # FTP connections - the same round trip over the FTP filesystem API.
-        # Inactive connections are skipped because building their facade raises.
-        for conn_name, params in sorted(self.out.ftp.conn_params.items()):
-
-            if not params.is_active:
-                continue
-
-            def transfer_ftp(conn_name:'str'=conn_name) -> 'None':
-                conn = self.out.ftp.get(conn_name)
-                conn.writebytes(remote_path, _canary_contents)
-                data = conn.readbytes(remote_path)
-                conn.remove(remote_path)
-                if data != _canary_contents:
-                    raise Exception(f'The canary file came back different -> {data!r}')
-
-            _ = run_canary_probe(audit_log, conn_name, transfer_ftp, now, cid=self.cid)
-            checked += 1
-
         self.logger.info('Canary probe checked %d connection(s)', checked)
 
 # ################################################################################################################################

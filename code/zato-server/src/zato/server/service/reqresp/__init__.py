@@ -55,7 +55,6 @@ if 0:
     from zato.server.connection.cloud.microsoft_teams import MicrosoftTeamsClient
     from zato.server.connection.email import EMailAPI
     from zato.server.connection.facade import GraphQLFacade, KafkaFacade
-    from zato.server.connection.ftp import FTPStore
     from zato.server.generic.api.outconn_llm import OutconnLLMWrapper
     from zato.server.service import AMQPFacade, Service
 
@@ -76,7 +75,6 @@ if 0:
     ConfigStore = ConfigStore
     IOProcessor = IOProcessor
     EMailAPI = EMailAPI
-    FTPStore = FTPStore
     GraphQLFacade = GraphQLFacade
     KafkaFacade = KafkaFacade
     KombuAMQPMessage = KombuAMQPMessage
@@ -302,7 +300,7 @@ class Outgoing:
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
     fetched from the service's config manager.
     """
-    __slots__ = ('amqp', 'as2', 'as4', 'ftp', 'graphql', 'kafka', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'ldap',
+    __slots__ = ('amqp', 'as2', 'as4', 'graphql', 'kafka', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'ldap',
         '_config_manager')
 
     def __init__(self, amqp=None, graphql=None, kafka=None, odoo=None, plain_http=None, soap=None, sql=None,

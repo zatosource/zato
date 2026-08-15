@@ -905,10 +905,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # API keys configuration
         self.set_up_api_key_config()
 
-        # Some parts of the config manager's configuration are required during the deployment of services
-        # which is why we are doing it here, before config_manager.init() is called.
-        self.config_manager.early_init()
-
         # Deploys services
         locally_deployed = self._after_init_common(server) # type: ignore
 
@@ -2674,7 +2670,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'channel_as4': 'http_soap',
             'channel_openapi': 'generic_conn',
             'outgoing_amqp': 'out_amqp',
-            'outgoing_ftp': 'out_ftp',
             'outgoing_odoo': 'out_odoo',
             'outgoing_sql': 'sql_pool',
             'groups': 'generic_object',
