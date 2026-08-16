@@ -1,6 +1,6 @@
 .status-message {
     display: none;
-    color: #067f39;
+    color: var(--zato-status-ok-color);
     font-weight: 600;
     font-size: 12px;
     opacity: 1;
@@ -16,7 +16,7 @@
 }
 
 .status-message.status-message-success {
-    color: #067f39;
+    color: var(--zato-status-ok-color);
     margin-right: 4px;
 }
 

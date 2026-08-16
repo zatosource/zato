@@ -111,9 +111,8 @@ tables.config = {
     // The class the status line wears - plain, once something went through, and
     // once something did not
     statusPlain: 'config-files-status',
-    statusOK: 'config-files-status config-files-status-ok',
+    statusOK: 'config-files-status zato-status-ok',
     statusError: 'config-files-status config-files-status-error',
-    statusChecked: 'config-files-status config-files-status-ok config-files-status-strong',
 
     // The units a file size is given in, smallest first, and what each step is
     sizeUnits: ['B', 'KB', 'MB', 'GB'],
@@ -869,14 +868,12 @@ tables.setStatus = function(text, isError) {
 // ////////////////////////////////////////////////////////////////////////
 
 // The answer to Check, which is the one message on the line that is asked for rather than reported
-// - it is read at a glance, so it is set in bold and is gone in half the time.
+// - it is read at a glance, so it is gone in half the time.
 tables.setChecked = function() {
 
     var config = tables.config;
 
     tables.setStatus(config.checkedMessage);
-
-    tables.get('status').className = config.statusChecked;
     tables.holdStatus(config.checkedShownMS);
 };
 

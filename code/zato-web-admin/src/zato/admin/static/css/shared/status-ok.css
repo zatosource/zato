@@ -1,0 +1,7 @@
+/* The word a status line answers with once something went through - Saved, OK,
+   No changes - set in bold and in the one green they all share. */
+
+.zato-status-ok {
+    color: var(--zato-status-ok-color);
+    font-weight: 600;
+}
