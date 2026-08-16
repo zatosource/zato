@@ -228,7 +228,7 @@ class TestBuildFactMessage:
 
         message = build_fact_message('test_connection_down', fact)
 
-        assert '3 consecutive failure(s)' in message
+        assert '3 consecutive failures' in message
         assert '(REST outgoing)' in message
 
 # ################################################################################################################################
@@ -467,7 +467,7 @@ class TestRunSweep:
         joined = '\n'.join(bodies)
 
         assert 'REST check failed 3 times' in joined
-        assert '3 consecutive failure(s)' in joined
+        assert '3 consecutive failures' in joined
 
 # ################################################################################################################################
 

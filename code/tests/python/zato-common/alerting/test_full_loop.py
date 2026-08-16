@@ -413,7 +413,7 @@ class TestFullLoop:
         ]
 
         # What every message about the REST connection says
-        rest_measures = 'error rate 100% (12 of 12 over 300s), 3 consecutive failure(s)'
+        rest_measures = 'error rate 100% (12 of 12 over 300s), 3 consecutive failures'
 
         # Where every message about the REST connection points - the audit log page
         # filtered down to the connection. Its failures are response events, a type

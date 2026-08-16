@@ -24,7 +24,7 @@ from zato.common.alerting.sweep import load_alert_rules, run_sweep
 from zato.common.audit_log.api import get_audit_engine, AuditLog, AuditSource
 from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericConn, IntervalBasedJob, Job
-from zato.common.util.api import utcnow
+from zato.common.util.api import pluralize, utcnow
 from zato.common.util.file_transfer_scheduler import get_schedule_list
 from zato.common.util.scheduler import set_job_active
 from zato.server.generic.api.channel_hl7_mllp import get_current_metrics
@@ -325,9 +325,13 @@ class AlertingRun(AdminService):
             defaults=defaults, dashboard_url=dashboard_url, template_dir=template_dir, job_intervals=job_intervals,
             arrival_windows=arrival_windows)
 
-        self.logger.info('Alerting sweep ran %d rule(s) over %d fact(s) - %d finding(s), %d raised, %d deduplicated, %d dispatched',
-            result.rule_count, result.fact_count, result.finding_count, result.raised_count, result.deduplicated_count,
-            len(result.dispatched))
+        rule_label       = pluralize(result.rule_count, 'rule')
+        fact_label       = pluralize(result.fact_count, 'fact')
+        finding_label    = pluralize(result.finding_count, 'finding')
+        dispatched_count = len(result.dispatched)
+
+        self.logger.info('Alerting sweep ran %s over %s - %s, %d raised, %d deduplicated, %d dispatched',
+            rule_label, fact_label, finding_label, result.raised_count, result.deduplicated_count, dispatched_count)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -393,7 +397,8 @@ class AlertingCertCheck(AdminService):
         targets = self._get_targets()
         checked = run_certificate_probe(audit_log, targets, now, cid=self.cid)
 
-        self.logger.info('Certificate check measured %d connection(s)', checked)
+        connection_label = pluralize(checked, 'connection')
+        self.logger.info('Certificate check measured %s', connection_label)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -435,7 +440,8 @@ class AlertingMicrosoftHealth(AdminService):
 
         recorded = run_health_probe(audit_log, states, now, cid=self.cid)
 
-        self.logger.info('Microsoft health probe recorded %d service(s) through `%s`', recorded, conn_name)
+        service_label = pluralize(recorded, 'service')
+        self.logger.info('Microsoft health probe recorded %s through `%s`', service_label, conn_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -496,7 +502,8 @@ class AlertingTestTransfer(AdminService):
             _ = run_test_transfer_probe(audit_log, conn_name, transfer_sftp, now, cid=self.cid)
             checked += 1
 
-        self.logger.info('Test transfer probe checked %d connection(s)', checked)
+        connection_label = pluralize(checked, 'connection')
+        self.logger.info('Test transfer probe checked %s', connection_label)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -14,6 +14,9 @@ import subprocess
 import sys
 from logging import getLogger
 
+# Zato
+from zato.common.util.api import pluralize
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -203,7 +206,9 @@ def _rewrite_blocks(config_path:'str', pattern:'re.Pattern', builder:'object', d
     with open(config_path, 'w') as config_file:
         _ = config_file.write(updated_content)
 
-    logger.info('Rewrote %d %s block(s) in %s', block_count, description, config_path)
+    block_noun = f'{description} block'
+    block_label = pluralize(block_count, block_noun)
+    logger.info('Rewrote %s in %s', block_label, config_path)
 
     return block_count
 
