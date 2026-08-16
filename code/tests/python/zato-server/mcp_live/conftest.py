@@ -88,6 +88,11 @@ _mcp_bearer_sales_name      = 'test.mcp.live.bearer.sales'
 
 _mcp_group_name = 'mcp.test-live-group'
 
+# The group with no members and the two gateways that carry no security
+_mcp_empty_group_name       = 'mcp.test-live-empty-group'
+_mcp_without_groups_gateway = 'test.mcp.live.without-groups'
+_mcp_empty_group_gateway    = 'test.mcp.live.empty-group'
+
 _reports_directory = os.path.join(_zato_base, 'code', 'tests', 'python', 'zato-server', 'mcp_live', 'reports')
 
 _coverage_source = os.path.join(
@@ -270,6 +275,7 @@ groups:
       - {_mcp_bearer_static_name}
       - {_mcp_bearer_accounting_name}
       - {_mcp_bearer_sales_name}
+  - name: {_mcp_empty_group_name}
 
 mcp_gateway:
   - name: {mcp_gateway_name}
@@ -280,6 +286,18 @@ mcp_gateway:
       - test.raise
     security_groups:
       - {_mcp_group_name}
+  - name: {_mcp_without_groups_gateway}
+    is_active: true
+    url_path: /mcp/without-groups
+    services:
+      - demo.echo
+  - name: {_mcp_empty_group_gateway}
+    is_active: true
+    url_path: /mcp/empty-group
+    services:
+      - demo.echo
+    security_groups:
+      - {_mcp_empty_group_name}
 '''
 
     tmp_yaml = os.path.join(tempfile.gettempdir(), f'zato-mcp-live-security-{os.getpid()}.yaml')
@@ -556,6 +574,8 @@ def zato_server(request:'any_') -> 'any_':
     time.sleep(_hot_deploy_settle_seconds)
 
     mcp_url = f'http://{host}:{port}/mcp/demo'
+    mcp_url_without_groups = f'http://{host}:{port}/mcp/without-groups'
+    mcp_url_empty_group = f'http://{host}:{port}/mcp/empty-group'
 
     # .. yield connection details to the tests.
     yield {
@@ -563,6 +583,8 @@ def zato_server(request:'any_') -> 'any_':
         'port': port,
         'password': _password,
         'mcp_url': mcp_url,
+        'mcp_url_without_groups': mcp_url_without_groups,
+        'mcp_url_empty_group': mcp_url_empty_group,
         'mcp_auth': (_mcp_username, _mcp_password),
         'mcp_auth_b': (_mcp_username_b, _mcp_password_b),
         'bearer_static_token': _mcp_bearer_static_token,

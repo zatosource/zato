@@ -11,8 +11,10 @@ from http.client import FORBIDDEN, NOT_FOUND, OK
 from unittest import TestCase
 
 # Zato
+from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.json_internal import dumps, loads
 from zato.common.test import _test_sec_def_id
+from zato.common.typing_ import cast_
 from zato.server.connection.mcp.handler import _error_invalid_request, _mcp_protocol_version, MCPHandler
 from zato.server.generic.api.gateway_mcp import GatewayMCPWrapper
 from zato.server.service.internal.gateway import mcp as mcp_endpoint_module
@@ -22,7 +24,7 @@ from zato.server.service.internal.gateway.mcp import MCPEndpoint
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -202,12 +204,17 @@ class GatewayMCPWrapperInvoke(TestCase):
 # ################################################################################################################################
 
 class _MockChannelSecurity:
-    """ Mock of the authenticated security definition on a channel.
+    """ Mock of the security definition on a channel - authenticated by default, or empty.
     """
-    def __init__(self) -> 'None':
-        self.id = _test_sec_def_id
-        self.name = 'test.sec.def'
-        self.username = 'test.user'
+    def __init__(self, is_authenticated:'bool'=True) -> 'None':
+        if is_authenticated:
+            self.id = _test_sec_def_id
+            self.name = 'test.sec.def'
+            self.username = 'test.user'
+        else:
+            self.id = ''
+            self.name = ''
+            self.username = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -215,9 +222,9 @@ class _MockChannelSecurity:
 class _MockChannel:
     """ Mock of the channel a service runs on.
     """
-    def __init__(self, name:'str') -> 'None':
+    def __init__(self, name:'str', is_authenticated:'bool'=True) -> 'None':
         self.name = name
-        self.security = _MockChannelSecurity()
+        self.security = _MockChannelSecurity(is_authenticated)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -272,14 +279,15 @@ class _MockEndpointServer:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_endpoint(gateway_name:'str', wrapper:'GatewayMCPWrapper') -> 'MCPEndpoint':
+def _make_endpoint(gateway_name:'str', wrapper:'GatewayMCPWrapper', is_authenticated:'bool'=True) -> 'MCPEndpoint':
     """ Builds an MCPEndpoint with only the attributes that handle() uses,
     bypassing the full service initialization machinery.
     """
 
     endpoint = MCPEndpoint.__new__(MCPEndpoint)
 
-    endpoint.channel = _MockChannel(gateway_name) # pyright: ignore[reportAttributeAccessIssue]
+    channel = _MockChannel(gateway_name, is_authenticated)
+    endpoint.channel = cast_('any_', channel)
     endpoint.request = _MockRequest() # pyright: ignore[reportAttributeAccessIssue]
     endpoint.response = _MockResponse() # pyright: ignore[reportAttributeAccessIssue]
     endpoint.wsgi_environ = {'zato.http.remote_addr': '127.0.0.1'}
@@ -573,6 +581,131 @@ class MCPEndpointServiceDispatch(TestCase):
         body = mcp_response.body
         error = body['error']
         self.assertEqual(error['code'], _error_invalid_request)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _MockUntouchableHandler:
+    """ A handler stand-in that fails the test if the endpoint ever dispatches to it.
+    """
+    def handle_raw_request(self, *args:'any_', **kwargs:'any_') -> 'None':
+        raise Exception('The handler must not be reached without credentials')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _MockAuditLog:
+    """ Records the audit events the endpoint inserts.
+    """
+    def __init__(self) -> 'None':
+        self.events:'anylist' = []
+
+    def insert(self, **kwargs:'any_') -> 'None':
+        self.events.append(kwargs)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MCPEndpointWithoutCredentials(TestCase):
+    """ Tests requests reaching the endpoint when nothing authenticated at the HTTP layer.
+    """
+
+    def test_initialize_without_credentials_is_rejected(self) -> 'None':
+        """ A well-formed initialize request without an authenticated definition
+        gets 403 with an empty payload and the handler is never dispatched to.
+        """
+
+        server:'any_' = _MockServer()
+
+        config:'any_' = _MockBunch({
+            'name': 'no-security-gateway',
+            'services': [],
+        })
+
+        wrapper = GatewayMCPWrapper(config, server)
+        wrapper.build_wrapper()
+
+        wrapper.handler = cast_('any_', _MockUntouchableHandler())
+
+        endpoint = _make_endpoint('no-security-gateway', wrapper, is_authenticated=False)
+        endpoint.request.raw = dumps({
+            'jsonrpc': '2.0',
+            'method': 'initialize',
+            'id': 1,
+            'params': {
+                'protocolVersion': _mcp_protocol_version,
+                'capabilities': {},
+                'clientInfo': {'name': 'test-client', 'version': '1.0'},
+            },
+        })
+
+        endpoint.handle()
+
+        self.assertEqual(endpoint.response.status_code, FORBIDDEN)
+        self.assertEqual(endpoint.response.payload, '')
+
+    def test_valid_session_without_credentials_is_rejected(self) -> 'None':
+        """ A ping that carries a valid session id is still rejected when nothing authenticated.
+        """
+
+        server:'any_' = _MockServer()
+
+        config:'any_' = _MockBunch({
+            'name': 'no-security-gateway',
+            'services': [],
+        })
+
+        wrapper = GatewayMCPWrapper(config, server)
+        wrapper.build_wrapper()
+
+        assert wrapper.handler is not None
+        session_manager = wrapper.handler.session_manager
+        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+
+        endpoint = _make_endpoint('no-security-gateway', wrapper, is_authenticated=False)
+        endpoint.request.http.headers['mcp-session-id'] = session_id
+        endpoint.request.raw = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+
+        endpoint.handle()
+
+        self.assertEqual(endpoint.response.status_code, FORBIDDEN)
+        self.assertEqual(endpoint.response.payload, '')
+
+    def test_rejection_writes_audit_event(self) -> 'None':
+        """ A rejection on a gateway with its audit log on writes one auth-failed
+        event with an empty identity and an error outcome.
+        """
+
+        server:'any_' = _MockServer()
+
+        config:'any_' = _MockBunch({
+            'name': 'no-security-gateway',
+            'services': [],
+            'is_audit_log_active': True,
+        })
+
+        wrapper = GatewayMCPWrapper(config, server)
+        wrapper.build_wrapper()
+
+        # The wrapper's cached audit log is this in-memory recorder
+        audit_log = _MockAuditLog()
+        wrapper._audit_log = cast_('any_', audit_log)
+
+        endpoint = _make_endpoint('no-security-gateway', wrapper, is_authenticated=False)
+        endpoint.cid = 'test-cid-1'
+        endpoint.request.raw = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+
+        endpoint.handle()
+
+        self.assertEqual(endpoint.response.status_code, FORBIDDEN)
+        self.assertEqual(len(audit_log.events), 1)
+
+        event = audit_log.events[0]
+        self.assertEqual(event['event_type'], AuditEvent.Auth_Failed)
+        self.assertEqual(event['object_name'], 'no-security-gateway')
+        self.assertEqual(event['ext_client_id'], '')
+        self.assertEqual(event['outcome'], AuditOutcome.Error)
+        self.assertEqual(event['cid'], 'test-cid-1')
 
 # ################################################################################################################################
 # ################################################################################################################################

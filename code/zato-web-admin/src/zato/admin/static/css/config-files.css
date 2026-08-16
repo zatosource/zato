@@ -68,7 +68,6 @@
     /* A link with nothing to do - read as far back as a link may go while still being read */
     --config-files-link-off: #a8afb6;
     --config-files-accent: var(--zato-seablue-light2);
-    --config-files-ok: #28a745;
     --config-files-error: #dc3545;
 }
 
@@ -588,15 +587,6 @@ input[type="text"].config-files-file-rename {
    says it has been */
 .config-files-status-error {
     cursor: pointer;
-}
-
-.config-files-status-ok {
-    color: var(--config-files-ok);
-}
-
-/* The answer to Check is one word, so it is set in bold to be taken in at a glance */
-.config-files-status-strong {
-    font-weight: 600;
 }
 
 .config-files-status-error {
