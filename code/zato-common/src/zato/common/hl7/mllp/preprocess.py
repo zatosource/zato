@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 
+# Zato
+from zato.common.util.api import pluralize
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -149,7 +152,8 @@ def _pad_short_msh(data:'str') -> 'str':
     if missing_count <= 0:
         return data
 
-    logger.warning('Padded MSH with %d missing field(s): %r', missing_count, msh_line)
+    missing_fields_label = pluralize(missing_count, 'missing field')
+    logger.warning('Padded MSH with %s: %r', missing_fields_label, msh_line)
 
     fields.extend([''] * missing_count)
     out = '|'.join(fields) + separator + remainder

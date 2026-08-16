@@ -16,6 +16,7 @@ import unittest
 # local
 from zato.common.test.client import PublishClient
 from zato.common.test.config_pubsub_push import TestConfig
+from zato.common.util.api import pluralize
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,7 +63,8 @@ class TestCrossDomainIsolation(unittest.TestCase):
         delivery_timeout = 30.0
         source_messages = source_receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
         source_count = len(source_messages)
-        logger.info('Source receiver (%s) delivered %d message(s) -> %s', source_topic, source_count, source_messages)
+        message_label = pluralize(source_count, 'message')
+        logger.info('Source receiver (%s) delivered %s -> %s', source_topic, message_label, source_messages)
 
         # .. verify the source got it ..
         self.assertEqual(source_count, 1)
@@ -73,7 +75,8 @@ class TestCrossDomainIsolation(unittest.TestCase):
 
         unrelated_messages = unrelated_receiver.get_delivered_messages()
         unrelated_count = len(unrelated_messages)
-        logger.info('Unrelated receiver (%s) delivered %d message(s) -> %s', unrelated_topic, unrelated_count, unrelated_messages)
+        message_label = pluralize(unrelated_count, 'message')
+        logger.info('Unrelated receiver (%s) delivered %s -> %s', unrelated_topic, message_label, unrelated_messages)
 
         # .. verify the unrelated endpoint got nothing.
         self.assertEqual(unrelated_count, 0)

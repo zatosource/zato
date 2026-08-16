@@ -25,7 +25,7 @@ from _local_docker import Container_Name
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anytuple
+    from zato.common.typing_ import anytuple, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,8 +40,7 @@ _base_url = 'http://127.0.0.1:17010'
 # The gateway of this suite
 _url_path = '/mcp/test/local-docker'
 
-# The objects are named the same on every run, so a rerun updates them
-# instead of growing the environment
+# The objects are named the same on every run
 _security_name = 'test.mcp.local-docker.basic-auth'
 _group_name    = 'test.mcp.local-docker.group'
 _gateway_name  = 'test.mcp.local-docker.gateway'
@@ -66,7 +65,7 @@ _propagation_poll_interval = 0.5
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _run_command(command:'list') -> 'None':
+def _run_command(command:'strlist') -> 'None':
     """ Runs one host command, raising with the full output when it fails.
     """
 

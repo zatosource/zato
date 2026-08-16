@@ -30,6 +30,7 @@ from zato.common.audit_log.common import get_source_label, health_sources
 from zato.common.defaults import default_cluster_id
 from zato.common.rule_engine.loading import documents_from_version, load_documents
 from zato.common.typing_ import list_field
+from zato.common.util.api import pluralize
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -186,22 +187,24 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
     if fact['silent_seconds']:
         parts.append(f'silent for {fact["silent_seconds"]}s')
 
-    if fact['consecutive_failures']:
+    if failure_count := fact['consecutive_failures']:
         if is_health_check:
-            failure_count = fact['consecutive_failures']
-            times = 'time' if failure_count == 1 else 'times'
-            parts.append(f'{source_label} failed {failure_count} {times}')
+            times_label = pluralize(failure_count, 'time')
+            parts.append(f'{source_label} failed {times_label}')
         else:
-            parts.append(f'{fact["consecutive_failures"]} consecutive failure(s)')
+            failure_label = pluralize(failure_count, 'consecutive failure')
+            parts.append(failure_label)
 
     if fact['avg_duration_ms']:
         parts.append(f'average duration {fact["avg_duration_ms"]}ms')
 
-    if fact['auth_failure_count']:
-        parts.append(f'{fact["auth_failure_count"]} authentication failure(s)')
+    if auth_failure_count := fact['auth_failure_count']:
+        auth_failure_label = pluralize(auth_failure_count, 'authentication failure')
+        parts.append(auth_failure_label)
 
-    if fact['cert_days_left']:
-        parts.append(f'certificate expires in {fact["cert_days_left"]} day(s)')
+    if cert_days_left := fact['cert_days_left']:
+        days_label = pluralize(cert_days_left, 'day')
+        parts.append(f'certificate expires in {days_label}')
 
     if fact['health_state']:
         parts.append(f'reported health state `{fact["health_state"]}`')

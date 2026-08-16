@@ -314,8 +314,16 @@ def test_packages(req):
         response_data['success'] = not has_errors
 
         if has_errors:
-            error_packages = [r['package'] for r in results if r['status'] == 'error']
-            response_data['error'] = 'Package(s) not found: {}'.format(', '.join(error_packages))
+            error_packages = []
+
+            for result in results:
+                if result['status'] == 'error':
+                    error_packages.append(result['package'])
+
+            error_count = len(error_packages)
+            noun = 'Package' if error_count == 1 else 'Packages'
+            joined_packages = ', '.join(error_packages)
+            response_data['error'] = f'{noun} not found: {joined_packages}'
 
         return json_response(response_data, success=not has_errors)
 

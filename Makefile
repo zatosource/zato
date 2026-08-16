@@ -11,7 +11,7 @@
 	test-pubsub _test-pubsub test-pubsub-core test-pubsub-backend test-pubsub-backend-amqp test-pubsub-outgoing \
 	test-pubsub-backend-perf test-pubsub-backend-amqp-perf test-pubsub-backend-perf-mass test-pubsub-system-perf \
 	test-mcp _test-mcp test-mcp-local-docker test-bearer _test-bearer test-graphql test-grpc \
-	test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm \
+	test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm _test-llm test-llm-local-docker \
 	test-sql-cloud test-sql-cloud-live test-aws test-sdk test-microsoft-cloud \
 	test-hl7 test-hl7-fhir test-hl7-mllp-channels test-hl7-mllp-outconns test-hl7-languages test-hl7-volume \
 	test-ui _test-ui test-ui-pubsub test-ui-openapi test-ui-analytics test-ui-audit-log test-ui-webapp test-ui-rule-engine-dashboard \
@@ -872,11 +872,53 @@ test-soap: ## SOAP messaging and channel tests - fully offline, no external serv
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_soap \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-llm: ## LLM connection tests against a local provider simulator and a test-managed Redis - fully offline.
+test-llm: ## All outgoing LLM connection tests - offline simulator, enmasse, browser, real Ollama and the local container.
+	$(MAKE) _test-llm 2>&1 | tee /tmp/logs-test-llm.txt
+
+_test-llm:
+	ruff check \
+		$(CURDIR)/code/tests/python/zato-server/llm/ \
+		$(CURDIR)/code/tests/python/zato-server/llm_live/ \
+		2>&1 | $(TS)
+	pyright \
+		$(CURDIR)/code/tests/python/zato-server/llm/ \
+		$(CURDIR)/code/tests/python/zato-server/llm_live/ \
+		2>&1 | $(TS)
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/llm/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_llm -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS)
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/importers/test_importer_enmasse_llm.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/exporters/test_exporter_enmasse_llm.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_llm_enmasse -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_llm_outconn_end_to_end.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/llm_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_llm_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
+	$(MAKE) test-llm-local-docker
+
+test-llm-local-docker: ## Outgoing LLM test against the local zato-4.1 container, skips when the container is absent.
+	ruff check \
+		$(CURDIR)/code/tests/python/zato-server/llm_local_docker/ \
+		2>&1 | $(TS)
+	pyright \
+		$(CURDIR)/code/tests/python/zato-server/llm_local_docker/ \
+		2>&1 | $(TS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/llm_local_docker/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_llm_local_docker -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
 
 test-sql-cloud: ## Snowflake and Redshift SQL tests against local protocol simulators - fully offline.
 	$(ZATO_PY) -m pytest \

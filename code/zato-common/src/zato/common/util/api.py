@@ -284,6 +284,18 @@ def object_attrs(_object, ignore_double_underscore, to_avoid_list, sort):
 
 # ################################################################################################################################
 
+def pluralize(count:'int', singular:'str') -> 'str':
+    """ Returns the count with the correctly pluralized noun, e.g. 1 rule, 45 rules.
+    """
+    if count == 1:
+        out = f'{count} {singular}'
+    else:
+        out = f'{count} {singular}s'
+
+    return out
+
+# ################################################################################################################################
+
 def make_repr(_object, ignore_double_underscore=True, to_avoid_list='repr_to_avoid', sort=True):
     """ Makes a nice string representation of an object, suitable for logging purposes.
     """
