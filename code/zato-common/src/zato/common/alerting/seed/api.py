@@ -87,7 +87,7 @@ _alert_sources = [
     AuditSource.Microsoft_Cloud,
     AuditSource.Certificate,
     AuditSource.Microsoft_Health,
-    AuditSource.Canary,
+    AuditSource.Test_Transfer,
 ]
 
 # The actions an outcome may name - the value list behind `outcome.action`.
@@ -116,10 +116,10 @@ _health_states = [
     'interruption',
 ]
 
-# The canary rule ships inactive because the canary writes to remote systems -
-# activating the rule together with the canary job is the documented opt-in.
+# The test transfer rule ships inactive because the test transfer writes to remote
+# systems - activating the rule together with the test transfer job is the documented opt-in.
 _inactive_rule_full_names = [
-    'alerts_file_transfer_Canary_Failing',
+    'alerts_file_transfer_Test_Transfer_Failing',
 ]
 
 # ################################################################################################################################
@@ -180,7 +180,7 @@ def alerting_vocabulary() -> 'anydict':
         _term('cert_days_left',         TermType.Number, 'how many days the TLS certificate has left, zero when unmeasured'),
         _term('health_state',           TermType.Choice, 'the health state the remote service reports about itself',
             values=_health_states),
-        _term('canary_failed',          TermType.Number, 'whether the newest canary check failed'),
+        _term('test_transfer_failed',   TermType.Number, 'whether the newest test transfer check failed'),
         _term('overdue_ratio',          TermType.Number, 'time since the newest run as a multiple of the job interval'),
         _term('start_delay_ms',         TermType.Number, 'the worst delay between planned and actual fire time in the window'),
         _term('seconds_since_last_arrival', TermType.Number, 'how long ago a schedule last received a file'),

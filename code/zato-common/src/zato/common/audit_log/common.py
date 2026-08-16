@@ -87,7 +87,7 @@ class AuditSource:
     # per-call event can, writing ordinary audit events the collectors read.
     Certificate      = 'certificate'
     Microsoft_Health = 'microsoft-health'
-    Canary           = 'canary'
+    Test_Transfer    = 'test-transfer'
 
 # ################################################################################################################################
 
@@ -124,7 +124,7 @@ _source_label = {
     AuditSource.Microsoft_Cloud: 'Microsoft cloud',
     AuditSource.Certificate: 'Certificate',
     AuditSource.Microsoft_Health: 'Microsoft health',
-    AuditSource.Canary: 'Canary',
+    AuditSource.Test_Transfer: 'Test transfer',
 }
 
 # ################################################################################################################################
@@ -238,10 +238,10 @@ class AuditEvent:
     Auth_Failed          = 'auth-failed'
 
     # What the probe jobs write - a certificate's days left, a remote service's
-    # own health state and a canary transfer's outcome.
-    Cert_Checked         = 'cert-checked'
-    Health_Checked       = 'health-checked'
-    Canary_Executed      = 'canary-executed'
+    # own health state and a test transfer's outcome.
+    Cert_Checked           = 'cert-checked'
+    Health_Checked         = 'health-checked'
+    Test_Transfer_Executed = 'test-transfer-executed'
 
 # ################################################################################################################################
 

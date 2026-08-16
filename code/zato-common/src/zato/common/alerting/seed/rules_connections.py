@@ -557,14 +557,15 @@ then
     outcome.severity = 'critical'
 
 rule
-    Canary_Failing
+    Test_Transfer_Failing
 docs
-    A failing canary check raises a critical email alert at once - the canary uploads, downloads and removes
+    A failing test transfer check raises a critical email alert at once - the test transfer uploads, downloads and removes
     a small test file, so its newest outcome speaks for the whole transfer path.
-    Ships inactive, like the canary job itself, because the canary writes to the remote system - activating both is the opt-in.
+    Ships inactive, like the test transfer job itself, because the test transfer writes to the remote system -
+    activating both is the opt-in.
 when
-    alert.source is 'canary' and
-    alert.canary_failed is 1
+    alert.source is 'test-transfer' and
+    alert.test_transfer_failed is 1
 then
     outcome.action = 'email'
     outcome.severity = 'critical'

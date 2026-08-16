@@ -13,10 +13,10 @@ from datetime import timedelta
 from sqlalchemy import update
 
 # Zato
-from zato.common.alerting.collectors import collect_auth_failure_facts, collect_canary_facts, collect_certificate_facts, \
+from zato.common.alerting.collectors import collect_auth_failure_facts, collect_certificate_facts, \
     collect_consecutive_failure_facts, collect_error_rate_facts, collect_facts, collect_feed_silent_facts, \
     collect_file_transfer_facts, collect_health_facts, collect_latency_facts, collect_outstanding_facts, \
-    collect_scheduler_facts, new_fact, Attr_Days_Left
+    collect_scheduler_facts, collect_test_transfer_facts, new_fact, Attr_Days_Left
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.scheduler import Attr_Delay_Ms
 from zato.common.monitoring.health import EndpointMetrics
@@ -616,30 +616,30 @@ class TestHealthFacts:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestCanaryFacts:
+class TestTransferFacts:
 
     def test_the_newest_outcome_is_the_current_truth(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         now = utcnow()
 
-        # A connection whose canary failed and one whose canary recovered
-        _ = audit_log.insert(AuditSource.Canary, AuditEvent.Canary_Executed, _channel_name,
-            cid='canary-1', outcome=AuditOutcome.OK)
-        _ = audit_log.insert(AuditSource.Canary, AuditEvent.Canary_Executed, _channel_name,
-            cid='canary-2', outcome=AuditOutcome.Error, status='Upload failed')
+        # A connection whose test transfer failed and one whose test transfer recovered
+        _ = audit_log.insert(AuditSource.Test_Transfer, AuditEvent.Test_Transfer_Executed, _channel_name,
+            cid='test-transfer-1', outcome=AuditOutcome.OK)
+        _ = audit_log.insert(AuditSource.Test_Transfer, AuditEvent.Test_Transfer_Executed, _channel_name,
+            cid='test-transfer-2', outcome=AuditOutcome.Error, status='Upload failed')
 
-        _ = audit_log.insert(AuditSource.Canary, AuditEvent.Canary_Executed, _other_channel_name,
-            cid='canary-3', outcome=AuditOutcome.Error, status='Upload failed')
-        _ = audit_log.insert(AuditSource.Canary, AuditEvent.Canary_Executed, _other_channel_name,
-            cid='canary-4', outcome=AuditOutcome.OK)
+        _ = audit_log.insert(AuditSource.Test_Transfer, AuditEvent.Test_Transfer_Executed, _other_channel_name,
+            cid='test-transfer-3', outcome=AuditOutcome.Error, status='Upload failed')
+        _ = audit_log.insert(AuditSource.Test_Transfer, AuditEvent.Test_Transfer_Executed, _other_channel_name,
+            cid='test-transfer-4', outcome=AuditOutcome.OK)
 
-        facts = collect_canary_facts(engine, now)
+        facts = collect_test_transfer_facts(engine, now)
         by_name = {fact['object_name']: fact for fact in facts}
 
         assert len(facts) == 2
-        assert by_name[_channel_name]['canary_failed'] == 1
-        assert by_name[_other_channel_name]['canary_failed'] == 0
+        assert by_name[_channel_name]['test_transfer_failed'] == 1
+        assert by_name[_other_channel_name]['test_transfer_failed'] == 0
 
 # ################################################################################################################################
 # ################################################################################################################################

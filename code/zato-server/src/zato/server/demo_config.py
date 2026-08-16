@@ -850,7 +850,7 @@ def import_demo_config_on_first_start(server:'ParallelServer') -> 'None':
 
     # .. an environment that already holds anything user-defined is never touched ..
     if not is_cluster_empty(server):
-        logger.info('Demo config: the cluster is not empty, skipping the first-start import')
+        logger.debug('Demo config: the cluster is not empty, skipping the first-start import')
         return
 
     # .. and an empty one receives all the demo config sets.

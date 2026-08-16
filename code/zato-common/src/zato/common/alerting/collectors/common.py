@@ -54,7 +54,7 @@ Default_Consecutive_Depth = 3
 # The probe sources - each probe collector reads the events one probe job writes.
 Probe_Source_Certificate      = AuditSource.Certificate
 Probe_Source_Microsoft_Health = AuditSource.Microsoft_Health
-Probe_Source_Canary           = AuditSource.Canary
+Probe_Source_Test_Transfer    = AuditSource.Test_Transfer
 
 # The attr the certificate probe writes its days-left measure under.
 Attr_Days_Left = 'days_left'
@@ -94,8 +94,8 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
         # The health state the remote service reports about itself - empty means unmeasured.
         'health_state': '',
 
-        # Whether the object's newest canary check failed.
-        'canary_failed': 0,
+        # Whether the object's newest test transfer check failed.
+        'test_transfer_failed': 0,
 
         # The scheduler measures - how late the job's runs start and how far past
         # its own interval the newest run is. A ratio of 2.0 means twice the interval

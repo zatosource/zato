@@ -338,7 +338,7 @@ class TestRoundTripOverSeededRules:
 
 # ################################################################################################################################
 
-    def test_the_canary_toggle_reads_the_shipped_inactive_state(self, backend:'RuleSQLBackend') -> 'None':
+    def test_the_test_transfer_toggle_reads_the_shipped_inactive_state(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
 
         matches = backend.definitions.find_by_name(name='alerts_file_transfer', object_type=Definition_Type_Ruleset)
@@ -347,7 +347,7 @@ class TestRoundTripOverSeededRules:
 
         values = config_map.read_type_values('file_transfer', documents)
 
-        # The canary rule ships inactive, so its toggle reads off out of the box
+        # The test transfer rule ships inactive, so its toggle reads off out of the box
         assert values['test_transfers'] is False
 
 # ################################################################################################################################

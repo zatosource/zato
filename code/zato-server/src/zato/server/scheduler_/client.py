@@ -81,12 +81,18 @@ class SchedulerClient:
 # ################################################################################################################################
 
     def new_redis_conn(self) -> 'Redis':
-        """ Returns a new Redis connection using the same config as this client. """
+        """ Returns a new Redis connection using the same config as this client.
+
+        The connection is used for blocking stream reads (XREADGROUP with block=...), so it must not
+        carry any socket timeout - otherwise the socket aborts the read at the timeout boundary
+        instead of letting the server end the block, which surfaces as spurious TimeoutError warnings.
+        """
         return Redis(
             host=self.redis.connection_pool.connection_kwargs['host'],
             port=self.redis.connection_pool.connection_kwargs['port'],
             password=self.redis.connection_pool.connection_kwargs.get('password'),
             decode_responses=True,
+            socket_timeout=None,
         )
 
     def _ensure_reply_group(self) -> 'None':

@@ -15,8 +15,8 @@ from __future__ import annotations
 from sqlalchemy import func, select
 
 # Zato
-from zato.common.alerting.collectors.common import new_fact, Attr_Days_Left, Probe_Source_Canary, \
-    Probe_Source_Certificate, Probe_Source_Microsoft_Health
+from zato.common.alerting.collectors.common import new_fact, Attr_Days_Left, Probe_Source_Certificate, \
+    Probe_Source_Microsoft_Health, Probe_Source_Test_Transfer
 from zato.common.audit_log.api import event_attr_table, event_table, AuditOutcome
 
 # ################################################################################################################################
@@ -126,23 +126,23 @@ def collect_health_facts(engine:'Engine', now:'datetime') -> 'dictlist':
 
 # ################################################################################################################################
 
-def collect_canary_facts(engine:'Engine', now:'datetime') -> 'dictlist':
-    """ Surfaces whether each object's newest canary check failed - the canary uploads,
-    downloads and removes a test file, so its newest outcome is the current truth
-    about the whole transfer path.
+def collect_test_transfer_facts(engine:'Engine', now:'datetime') -> 'dictlist':
+    """ Surfaces whether each object's newest test transfer check failed - the test
+    transfer uploads, downloads and removes a test file, so its newest outcome is
+    the current truth about the whole transfer path.
     """
 
     # Our response to produce
     out:'dictlist' = []
 
-    rows = _collect_latest_events(engine, Probe_Source_Canary)
+    rows = _collect_latest_events(engine, Probe_Source_Test_Transfer)
 
     for _, object_name, outcome, _ in rows:
 
-        fact = new_fact(Probe_Source_Canary, object_name)
+        fact = new_fact(Probe_Source_Test_Transfer, object_name)
 
         if outcome == AuditOutcome.Error:
-            fact['canary_failed'] = 1
+            fact['test_transfer_failed'] = 1
 
         out.append(fact)
 

@@ -153,7 +153,7 @@ type_fields:'dict[str, list[stranydict]]' = {
             'default': 'critical_failure_count', 'is_percent': False},
         {'name': 'arrival_overdue', 'kind': Kind_Number, 'rules': ['Arrival_Overdue'],
             'default': 'arrival_overdue_multiplier', 'is_percent': False},
-        {'name': 'test_transfers', 'kind': Kind_Toggle, 'rules': ['Canary_Failing']},
+        {'name': 'test_transfers', 'kind': Kind_Toggle, 'rules': ['Test_Transfer_Failing']},
         {'name': 'use_llm', 'kind': Kind_Toggle, 'rules': ['Error_Rate_Diagnose']},
     ],
     'scheduler': [

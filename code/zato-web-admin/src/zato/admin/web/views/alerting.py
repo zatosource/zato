@@ -305,13 +305,13 @@ def config_save(req:'any_') -> 'JsonResponse':
         out = JsonResponse({'error': str(e)}, status=INTERNAL_SERVER_ERROR)
         return out
 
-    # The test transfers checkbox also drives the canary scheduler job - the rule
-    # decides whether canary findings match, the job decides whether the canary
+    # The test transfers checkbox also drives the test transfer scheduler job - the rule
+    # decides whether test transfer findings match, the job decides whether the test
     # transfers run at all, and the two always move together.
     values = body.get('values')
 
     if values and 'test_transfers' in values:
-        _ = req.zato.client.invoke(Alerting.Set_Canary_State_Service, {'is_active': values['test_transfers']})
+        _ = req.zato.client.invoke(Alerting.Set_Test_Transfer_State_Service, {'is_active': values['test_transfers']})
 
     out = JsonResponse({'is_ok': True, 'changed': changed})
     return out

@@ -59,7 +59,7 @@ _alerting_service_impl_name = 'zato.server.service.internal.alerting.AlertingRun
 # The Python paths of the three alerting probe services, created upfront the same way.
 _cert_check_service_impl_name = 'zato.server.service.internal.alerting.AlertingCertCheck'
 _ms_health_service_impl_name = 'zato.server.service.internal.alerting.AlertingMicrosoftHealth'
-_canary_service_impl_name = 'zato.server.service.internal.alerting.AlertingCanary'
+_test_transfer_service_impl_name = 'zato.server.service.internal.alerting.AlertingTestTransfer'
 
 # The Python paths of the two services the AS2 reliability jobs invoke, created upfront the same way.
 _as2_async_mdn_service_impl_name = 'zato.server.service.internal.as2.DeliverAsyncMDNs'
@@ -70,6 +70,9 @@ _as4_resend_service_impl_name = 'zato.server.service.internal.as4.ResendOverdueM
 
 # Whether the AS2/AS4 jobs are created on startup
 _as2_as4_jobs_enabled = False
+
+# Whether the B2B alerting job is created on startup
+_b2b_alerting_job_enabled = False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -227,6 +230,8 @@ def ensure_b2b_alerting_job_exists(session:'any_', cluster_id:'int') -> 'bool':
     """ Checks if the interval job that runs the B2B alerting sweep exists, creates it if not.
     Returns True if created, False if already existed.
     """
+    if not _b2b_alerting_job_enabled:
+        return False
 
     existing = session.query(Job).\
         filter(Job.name==AS2.Alerting.Job_Name).\
@@ -337,13 +342,13 @@ def ensure_ms_health_job_exists(session:'any_', cluster_id:'int') -> 'bool':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def ensure_canary_job_exists(session:'any_', cluster_id:'int') -> 'bool':
-    """ Checks if the file transfer canary job exists, creates it if not - inactive,
-    because the canary writes to remote systems and activating it is the opt-in.
+def ensure_test_transfer_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+    """ Checks if the test transfer job exists, creates it if not - inactive,
+    because the test transfer writes to remote systems and activating it is the opt-in.
     Returns True if created, False if already existed.
     """
-    out = _ensure_interval_job_exists(session, cluster_id, Alerting.Canary_Job_Name, Alerting.Canary_Service,
-        _canary_service_impl_name, minutes=Alerting.Canary_Job_Interval_Minutes, is_active=False)
+    out = _ensure_interval_job_exists(session, cluster_id, Alerting.Test_Transfer_Job_Name, Alerting.Test_Transfer_Service,
+        _test_transfer_service_impl_name, minutes=Alerting.Test_Transfer_Job_Interval_Minutes, is_active=False)
 
     return out
 

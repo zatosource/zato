@@ -120,7 +120,7 @@ def get_io_elems(attrs, elems_name, is_edit, is_required, is_output, is_get_list
 
     if elems and isclass(elems) and issubclass(elems, Base):
 
-        columns_to_visit = [elem for elem in elems._sa_class_manager.mapper.mapped_table.columns]
+        columns_to_visit = [elem for elem in elems._sa_class_manager.mapper.persist_selectable.columns]
         columns_to_visit = get_columns_to_visit(columns_to_visit, is_required)
 
         for column in columns_to_visit:
