@@ -209,12 +209,12 @@ class TestAlertRulesImport:
         assert transfer_rule.defaults['warning_failure_count'] == 12
         assert transfer_rule.defaults['critical_failure_count'] == 24
 
-        # The test transfers toggle turned its canary rule off while the type
+        # The test transfers toggle turned its test transfer rule off while the type
         # itself stays active - the entry's is_active did not overwrite the toggle
         definition = get_type_definition(backend, 'file_transfer')
         documents = deserialize_document(definition.document)[Documents_Key]
 
-        assert documents['alerts_file_transfer_Canary_Failing']['is_active'] is False
+        assert documents['alerts_file_transfer_Test_Transfer_Failing']['is_active'] is False
         assert is_rule_active(documents['alerts_file_transfer_Transfer_Failures']) is True
 
 # ################################################################################################################################

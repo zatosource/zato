@@ -60,8 +60,8 @@ _conn_name = 'CRM'
 _rest_ruleset_name = 'alerts_rest'
 _diagnose_rule_name = 'Error_Rate_Diagnose'
 
-# The rule that ships inactive - the canary writes to remote systems, activating it is the opt-in
-_canary_full_name = 'alerts_file_transfer_Canary_Failing'
+# The rule that ships inactive - the test transfer writes to remote systems, activating it is the opt-in
+_test_transfer_full_name = 'alerts_file_transfer_Test_Transfer_Failing'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -181,14 +181,14 @@ class TestEnsureAlertingDefinitions:
 
 # ################################################################################################################################
 
-    def test_the_canary_rule_ships_inactive(self, backend:'RuleSQLBackend') -> 'None':
+    def test_the_test_transfer_rule_ships_inactive(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
 
         ruleset = _get_ruleset(backend, 'alerts_file_transfer')
         document = deserialize_document(ruleset.document)
 
-        canary = document[Documents_Key][_canary_full_name]
-        assert canary['is_active'] is False
+        test_transfer = document[Documents_Key][_test_transfer_full_name]
+        assert test_transfer['is_active'] is False
 
 # ################################################################################################################################
 # ################################################################################################################################

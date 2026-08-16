@@ -10,9 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import select
 
 # Zato
-from zato.common.alerting.collectors import collect_canary_facts, collect_certificate_facts, collect_health_facts
-from zato.common.alerting.probes import normalize_health_state, parse_tls_target, run_canary_probe, \
-    run_certificate_probe, run_health_probe
+from zato.common.alerting.collectors import collect_certificate_facts, collect_health_facts, collect_test_transfer_facts
+from zato.common.alerting.probes import normalize_health_state, parse_tls_target, run_certificate_probe, \
+    run_health_probe, run_test_transfer_probe
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.util.api import utcnow
 
@@ -173,7 +173,7 @@ class TestHealthProbe:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestCanaryProbe:
+class TestTransferProbe:
 
     def test_a_successful_transfer_writes_an_ok_outcome(self) -> 'None':
         audit_log = AuditLog(_server_name)
@@ -185,18 +185,18 @@ class TestCanaryProbe:
         def transfer() -> 'None':
             transfers.append(True)
 
-        is_ok = run_canary_probe(audit_log, 'sftp.backups', transfer, now, cid='canary-probe-1')
+        is_ok = run_test_transfer_probe(audit_log, 'sftp.backups', transfer, now, cid='test-transfer-probe-1')
 
         assert is_ok is True
         assert transfers == [True]
 
-        events = _load_events(AuditSource.Canary)
+        events = _load_events(AuditSource.Test_Transfer)
         assert len(events) == 1
-        assert events[0].event_type == AuditEvent.Canary_Executed
+        assert events[0].event_type == AuditEvent.Test_Transfer_Executed
         assert events[0].outcome == AuditOutcome.OK
 
-        facts = collect_canary_facts(engine, now)
-        assert facts[0]['canary_failed'] == 0
+        facts = collect_test_transfer_facts(engine, now)
+        assert facts[0]['test_transfer_failed'] == 0
 
 # ################################################################################################################################
 
@@ -208,17 +208,17 @@ class TestCanaryProbe:
         def transfer() -> 'None':
             raise Exception('Upload failed')
 
-        is_ok = run_canary_probe(audit_log, 'sftp.backups', transfer, now, cid='canary-probe-2')
+        is_ok = run_test_transfer_probe(audit_log, 'sftp.backups', transfer, now, cid='test-transfer-probe-2')
 
         assert is_ok is False
 
-        events = _load_events(AuditSource.Canary)
+        events = _load_events(AuditSource.Test_Transfer)
         assert len(events) == 1
         assert events[0].outcome == AuditOutcome.Error
         assert events[0].status == 'Upload failed'
 
-        facts = collect_canary_facts(engine, now)
-        assert facts[0]['canary_failed'] == 1
+        facts = collect_test_transfer_facts(engine, now)
+        assert facts[0]['test_transfer_failed'] == 1
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -22,8 +22,8 @@ in the pack.
 
 The audit trail records transfers. An event with the outcome of error is a failed transfer -
 its data field carries the error text and its endpoint field the remote path when one was
-recorded. A canary event, when present, is the newest result of the test transfer that
-uploads, downloads and removes a small file.
+recorded. A test transfer event, when present, is the newest result of the test transfer
+that uploads, downloads and removes a small file.
 
 ## Failure modes to consider
 

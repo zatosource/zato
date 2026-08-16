@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The probe implementations - what the default probe scheduler jobs run. Each probe
 # measures a fact no per-call audit event can produce - certificate expiry, a remote
-# service's own health, a canary transfer - and writes ordinary audit events under
+# service's own health, a test transfer - and writes ordinary audit events under
 # a source of its own, which the probe collectors read like any other source.
 # The remote I/O of each probe is injectable, so tests fake the remote side
 # and the probe's own bookkeeping is tested for real.
@@ -221,7 +221,7 @@ def run_health_probe(
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_canary_probe(
+def run_test_transfer_probe(
     audit_log:'AuditLog',
     object_name:'str',
     transfer:'callable_',
@@ -229,7 +229,7 @@ def run_canary_probe(
     *,
     cid:'str' = '',
     ) -> 'bool':
-    """ Runs one canary transfer - the callable uploads, downloads, compares and deletes
+    """ Runs one test transfer - the callable uploads, downloads, compares and deletes
     a small test file, raising on any failure - and writes its outcome as one audit event.
     Returns True when the transfer succeeded.
     """
@@ -237,11 +237,11 @@ def run_canary_probe(
         transfer()
     except Exception as e:
 
-        logger.info('Canary transfer of `%s` failed -> %s', object_name, e)
+        logger.info('Test transfer of `%s` failed -> %s', object_name, e)
 
         _ = audit_log.insert(
-            AuditSource.Canary,
-            AuditEvent.Canary_Executed,
+            AuditSource.Test_Transfer,
+            AuditEvent.Test_Transfer_Executed,
             object_name,
             cid=cid,
             outcome=AuditOutcome.Error,
@@ -250,8 +250,8 @@ def run_canary_probe(
         return False
 
     _ = audit_log.insert(
-        AuditSource.Canary,
-        AuditEvent.Canary_Executed,
+        AuditSource.Test_Transfer,
+        AuditEvent.Test_Transfer_Executed,
         object_name,
         cid=cid,
         outcome=AuditOutcome.OK,

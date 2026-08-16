@@ -1427,7 +1427,7 @@ class Alerting:
     Service              = 'zato.alerting.run'
 
     # The probe jobs - each measures a fact no per-call audit event can produce
-    # and writes ordinary audit events the collectors read. The canary ships
+    # and writes ordinary audit events the collectors read. The test transfer ships
     # inactive because it writes to remote systems - activating it is the opt-in.
     Cert_Job_Name            = 'zato.alerting.cert-check'
     Cert_Job_Interval_Hours  = 24
@@ -1437,13 +1437,13 @@ class Alerting:
     Health_Job_Interval_Minutes = 15
     Health_Service              = 'zato.alerting.microsoft-health.run'
 
-    Canary_Job_Name             = 'zato.alerting.canary'
-    Canary_Job_Interval_Minutes = 15
-    Canary_Service              = 'zato.alerting.canary.run'
+    Test_Transfer_Job_Name             = 'zato.alerting.test-transfer'
+    Test_Transfer_Job_Interval_Minutes = 15
+    Test_Transfer_Service              = 'zato.alerting.test-transfer.run'
 
     # The service the config screen's test transfers checkbox drives - it flips
-    # the canary job's active flag in ODB, next to the Canary_Failing rule's own flip.
-    Set_Canary_State_Service = 'zato.alerting.set-canary-state'
+    # the test transfer job's active flag in ODB, next to the Test_Transfer_Failing rule's own flip.
+    Set_Test_Transfer_State_Service = 'zato.alerting.set-test-transfer-state'
 
     # The keys the scheduler job's extra data may carry - the email addressing,
     # where the catch-all digest goes, the Dashboard address the links point to

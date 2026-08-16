@@ -29,7 +29,7 @@ from zato.common.odb.model import Base, Cluster, IntervalBasedJob, Job, Service
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
-from zato.common.util.scheduler import ensure_canary_job_exists, set_job_active
+from zato.common.util.scheduler import ensure_test_transfer_job_exists, set_job_active
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,13 +47,13 @@ engine_generator:TypeAlias = Generator[Engine, None, None]
 # ################################################################################################################################
 
 # Who the test says made the changes
-_actor = 'test-canary-state'
+_actor = 'test-test-transfer-state'
 
 # The cluster the test jobs belong to
 _cluster_id = 1
 
 # The rule the test transfers checkbox flips
-_canary_full_name = 'alerts_file_transfer_Canary_Failing'
+_test_transfer_full_name = 'alerts_file_transfer_Test_Transfer_Failing'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,19 +107,19 @@ def backend(tmp_path:'Path') -> 'RuleSQLBackend':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_canary_job(session:'any_') -> 'Job':
+def _get_test_transfer_job(session:'any_') -> 'Job':
     out = session.query(Job).\
-        filter(Job.name==Alerting.Canary_Job_Name).\
+        filter(Job.name==Alerting.Test_Transfer_Job_Name).\
         filter(Job.cluster_id==_cluster_id).\
         one()
     return out
 
 # ################################################################################################################################
 
-def _get_canary_rule_state(backend:'RuleSQLBackend') -> 'bool':
+def _get_test_transfer_rule_state(backend:'RuleSQLBackend') -> 'bool':
     definition = get_type_definition(backend, 'file_transfer')
     document = deserialize_document(definition.document)
-    rule_document = document[Documents_Key][_canary_full_name]
+    rule_document = document[Documents_Key][_test_transfer_full_name]
 
     out = rule_document.get('is_active') is not False
     return out
@@ -127,52 +127,52 @@ def _get_canary_rule_state(backend:'RuleSQLBackend') -> 'bool':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestCanaryJobState:
+class TestTransferJobState:
 
-    def test_the_canary_job_ships_inactive(self, odb_session:'any_') -> 'None':
+    def test_the_test_transfer_job_ships_inactive(self, odb_session:'any_') -> 'None':
 
-        created = ensure_canary_job_exists(odb_session, _cluster_id)
+        created = ensure_test_transfer_job_exists(odb_session, _cluster_id)
         odb_session.commit()
         assert created is True
 
-        job = _get_canary_job(odb_session)
+        job = _get_test_transfer_job(odb_session)
         assert job.is_active is False
 
 # ################################################################################################################################
 
     def test_the_job_row_follows_the_checkbox_in_either_direction(self, odb_session:'any_') -> 'None':
 
-        _ = ensure_canary_job_exists(odb_session, _cluster_id)
+        _ = ensure_test_transfer_job_exists(odb_session, _cluster_id)
         odb_session.commit()
 
         # On - the way the service flips it when the checkbox is checked
-        changed = set_job_active(odb_session, _cluster_id, Alerting.Canary_Job_Name, True)
+        changed = set_job_active(odb_session, _cluster_id, Alerting.Test_Transfer_Job_Name, True)
         odb_session.commit()
         assert changed is True
-        assert _get_canary_job(odb_session).is_active is True
+        assert _get_test_transfer_job(odb_session).is_active is True
 
         # Off again
-        changed = set_job_active(odb_session, _cluster_id, Alerting.Canary_Job_Name, False)
+        changed = set_job_active(odb_session, _cluster_id, Alerting.Test_Transfer_Job_Name, False)
         odb_session.commit()
         assert changed is True
-        assert _get_canary_job(odb_session).is_active is False
+        assert _get_test_transfer_job(odb_session).is_active is False
 
 # ################################################################################################################################
 
     def test_a_flip_to_the_same_state_changes_nothing(self, odb_session:'any_') -> 'None':
 
-        _ = ensure_canary_job_exists(odb_session, _cluster_id)
+        _ = ensure_test_transfer_job_exists(odb_session, _cluster_id)
         odb_session.commit()
 
         # The job already ships inactive, so another off is a no-op
-        changed = set_job_active(odb_session, _cluster_id, Alerting.Canary_Job_Name, False)
+        changed = set_job_active(odb_session, _cluster_id, Alerting.Test_Transfer_Job_Name, False)
         odb_session.commit()
         assert changed is False
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestCanaryRuleAndJobTogether:
+class TestTransferRuleAndJobTogether:
 
     def test_the_rule_and_the_job_both_follow_the_checkbox(
         self,
@@ -180,32 +180,32 @@ class TestCanaryRuleAndJobTogether:
         backend:'RuleSQLBackend',
     ) -> 'None':
 
-        _ = ensure_canary_job_exists(odb_session, _cluster_id)
+        _ = ensure_test_transfer_job_exists(odb_session, _cluster_id)
         odb_session.commit()
 
-        # Both ship off - the canary writes to remote systems, so both are the opt-in
-        assert _get_canary_rule_state(backend) is False
-        assert _get_canary_job(odb_session).is_active is False
+        # Both ship off - the test transfer writes to remote systems, so both are the opt-in
+        assert _get_test_transfer_rule_state(backend) is False
+        assert _get_test_transfer_job(odb_session).is_active is False
 
         # The checkbox goes on - the save path flips the rule, the service flips the job
         changed = apply_type_config(backend, 'file_transfer', actor=_actor, values={'test_transfers': True})
         assert changed is True
 
-        _ = set_job_active(odb_session, _cluster_id, Alerting.Canary_Job_Name, True)
+        _ = set_job_active(odb_session, _cluster_id, Alerting.Test_Transfer_Job_Name, True)
         odb_session.commit()
 
-        assert _get_canary_rule_state(backend) is True
-        assert _get_canary_job(odb_session).is_active is True
+        assert _get_test_transfer_rule_state(backend) is True
+        assert _get_test_transfer_job(odb_session).is_active is True
 
         # And off again, through the same pair of flips
         changed = apply_type_config(backend, 'file_transfer', actor=_actor, values={'test_transfers': False})
         assert changed is True
 
-        _ = set_job_active(odb_session, _cluster_id, Alerting.Canary_Job_Name, False)
+        _ = set_job_active(odb_session, _cluster_id, Alerting.Test_Transfer_Job_Name, False)
         odb_session.commit()
 
-        assert _get_canary_rule_state(backend) is False
-        assert _get_canary_job(odb_session).is_active is False
+        assert _get_test_transfer_rule_state(backend) is False
+        assert _get_test_transfer_job(odb_session).is_active is False
 
 # ################################################################################################################################
 

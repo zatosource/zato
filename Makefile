@@ -10,7 +10,7 @@
 	test-server test-rest test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub _test-pubsub test-pubsub-core test-pubsub-backend test-pubsub-backend-amqp test-pubsub-outgoing \
 	test-pubsub-backend-perf test-pubsub-backend-amqp-perf test-pubsub-backend-perf-mass test-pubsub-system-perf \
-	test-mcp _test-mcp test-bearer _test-bearer test-graphql test-grpc \
+	test-mcp _test-mcp test-mcp-local-docker test-bearer _test-bearer test-graphql test-grpc \
 	test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm \
 	test-sql-cloud test-sql-cloud-live test-aws test-sdk test-microsoft-cloud \
 	test-hl7 test-hl7-fhir test-hl7-mllp-channels test-hl7-mllp-outconns test-hl7-languages test-hl7-volume \
@@ -770,6 +770,20 @@ _test-mcp:
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/mcp_llm_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp_llm -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
+	$(MAKE) test-mcp-local-docker
+
+test-mcp-local-docker: ## MCP gateway test against the local zato-4.1 container, skips when the container is absent.
+	ruff check \
+		$(CURDIR)/code/tests/python/zato-server/mcp_local_docker/ \
+		2>&1 | $(TS)
+	pyright \
+		$(CURDIR)/code/tests/python/zato-server/mcp_local_docker/ \
+		2>&1 | $(TS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/mcp_local_docker/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp_local_docker -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		2>&1 | $(TS)
 

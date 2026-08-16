@@ -18,7 +18,7 @@ from zato.common.api import Alerting, EMAIL, FileTransfer, SMTPMessage
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.names import get_notification_conn_name
 from zato.common.alerting.notification_config import read_notification_config, set_notification_config
-from zato.common.alerting.probes import parse_tls_target, run_canary_probe, run_certificate_probe, run_health_probe
+from zato.common.alerting.probes import parse_tls_target, run_certificate_probe, run_health_probe, run_test_transfer_probe
 from zato.common.alerting.rendering import Template_Dir_Name
 from zato.common.alerting.sweep import load_alert_rules, run_sweep
 from zato.common.audit_log.api import get_audit_engine, AuditLog, AuditSource
@@ -52,11 +52,11 @@ _seconds_per_minute = 60
 # Where the Microsoft service health overviews live.
 _graph_health_url = 'https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/healthOverviews'
 
-# The canary's test file - its name, its contents and the extra-data key
+# The test transfer's file - its name, its contents and the extra-data key
 # naming the remote directory it goes to.
-_canary_file_name = 'zato-canary.txt'
-_canary_contents = b'zato-canary'
-_canary_extra_directory = 'directory'
+_test_transfer_file_name = 'zato-test-transfer.txt'
+_test_transfer_contents = b'zato-test-transfer'
+_test_transfer_extra_directory = 'directory'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -440,31 +440,31 @@ class AlertingMicrosoftHealth(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class AlertingCanary(AdminService):
-    """ Runs one canary transfer per active file transfer connection - upload, download,
+class AlertingTestTransfer(AdminService):
+    """ Runs one test transfer per active file transfer connection - upload, download,
     compare and delete a small test file - writing each outcome as an audit event the
-    canary collector reads and rule Canary_Failing compares. The job ships inactive,
-    like the rule, because the canary writes to remote systems - activating both
-    is the documented opt-in.
+    test transfer collector reads and rule Test_Transfer_Failing compares. The job ships
+    inactive, like the rule, because the test transfer writes to remote systems -
+    activating both is the documented opt-in.
     """
-    name = Alerting.Canary_Service
+    name = Alerting.Test_Transfer_Service
 
     def handle(self) -> 'None':
 
         now = utcnow()
         audit_log = AuditLog(self.server.name)
 
-        # The canary file's remote directory comes from the job's extra data when given
+        # The test transfer file's remote directory comes from the job's extra data when given
         context = self.request.payload
 
         if not isinstance(context, dict):
             context = {}
 
-        if directory := context.get(_canary_extra_directory):
+        if directory := context.get(_test_transfer_extra_directory):
             directory = directory.rstrip('/')
-            remote_path = f'{directory}/{_canary_file_name}'
+            remote_path = f'{directory}/{_test_transfer_file_name}'
         else:
-            remote_path = _canary_file_name
+            remote_path = _test_transfer_file_name
 
         checked = 0
 
@@ -473,13 +473,13 @@ class AlertingCanary(AdminService):
 
             def transfer_smb(conn_name:'str'=conn_name) -> 'None':
                 conn = self.smb[conn_name]
-                conn.write(_canary_contents, remote_path)
+                conn.write(_test_transfer_contents, remote_path)
                 data = conn.read(remote_path)
                 conn.delete_file(remote_path)
-                if data != _canary_contents:
-                    raise Exception(f'The canary file came back different -> {data!r}')
+                if data != _test_transfer_contents:
+                    raise Exception(f'The test transfer file came back different -> {data!r}')
 
-            _ = run_canary_probe(audit_log, conn_name, transfer_smb, now, cid=self.cid)
+            _ = run_test_transfer_probe(audit_log, conn_name, transfer_smb, now, cid=self.cid)
             checked += 1
 
         # SFTP connections - the same round trip over the SFTP command channel
@@ -487,16 +487,16 @@ class AlertingCanary(AdminService):
 
             def transfer_sftp(conn_name:'str'=conn_name) -> 'None':
                 conn = self.sftp[conn_name]
-                conn.write(_canary_contents, remote_path, overwrite=True)
+                conn.write(_test_transfer_contents, remote_path, overwrite=True)
                 data = conn.read(remote_path)
                 _ = conn.delete(remote_path)
-                if data != _canary_contents:
-                    raise Exception(f'The canary file came back different -> {data!r}')
+                if data != _test_transfer_contents:
+                    raise Exception(f'The test transfer file came back different -> {data!r}')
 
-            _ = run_canary_probe(audit_log, conn_name, transfer_sftp, now, cid=self.cid)
+            _ = run_test_transfer_probe(audit_log, conn_name, transfer_sftp, now, cid=self.cid)
             checked += 1
 
-        self.logger.info('Canary probe checked %d connection(s)', checked)
+        self.logger.info('Test transfer probe checked %d connection(s)', checked)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -544,22 +544,23 @@ class AlertingSetNotificationConfig(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class AlertingSetCanaryState(AdminService):
-    """ Flips the canary scheduler job's active flag in ODB - the config screen's
+class AlertingSetTestTransferState(AdminService):
+    """ Flips the test transfer scheduler job's active flag in ODB - the config screen's
     test transfers checkbox drives this service next to its flip of the
-    Canary_Failing rule, so the job and the rule always move together.
+    Test_Transfer_Failing rule, so the job and the rule always move together.
     """
-    name = Alerting.Set_Canary_State_Service
+    name = Alerting.Set_Test_Transfer_State_Service
 
     def handle(self) -> 'None':
 
         is_active = self.request.payload['is_active']
 
         with closing(self.odb.session()) as session:
-            changed = set_job_active(session, self.server.cluster_id, Alerting.Canary_Job_Name, is_active)
+            changed = set_job_active(session, self.server.cluster_id, Alerting.Test_Transfer_Job_Name, is_active)
             session.commit()
 
-        self.logger.info('Canary job `%s` set to is_active=%s (changed=%s)', Alerting.Canary_Job_Name, is_active, changed)
+        self.logger.info('Test transfer job `%s` set to is_active=%s (changed=%s)',
+            Alerting.Test_Transfer_Job_Name, is_active, changed)
 
 # ################################################################################################################################
 # ################################################################################################################################

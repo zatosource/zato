@@ -1865,8 +1865,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from zato.common.util.gateway import ensure_mcp_gateway_exists
         from zato.common.util.scheduler import ensure_alerting_job_exists, ensure_as2_async_mdn_job_exists, \
             ensure_as2_resend_job_exists, ensure_as2_rotation_job_exists, ensure_as4_resend_job_exists, \
-            ensure_b2b_alerting_job_exists, ensure_canary_job_exists, ensure_cert_check_job_exists, \
-            ensure_ms_health_job_exists
+            ensure_b2b_alerting_job_exists, ensure_cert_check_job_exists, ensure_ms_health_job_exists, \
+            ensure_test_transfer_job_exists
 
         with closing(self.odb.session()) as session:
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
@@ -1892,14 +1892,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             alerting_job_created = ensure_alerting_job_exists(session, self.cluster_id)
 
             # The alerting probes - the daily certificate check, the Microsoft health poll
-            # and the file transfer canary, the last one inactive because it is the opt-in.
+            # and the test transfer over file transfer connections, the last one inactive
+            # because it is the opt-in.
             cert_check_job_created = ensure_cert_check_job_exists(session, self.cluster_id)
             ms_health_job_created = ensure_ms_health_job_exists(session, self.cluster_id)
-            canary_job_created = ensure_canary_job_exists(session, self.cluster_id)
+            test_transfer_job_created = ensure_test_transfer_job_exists(session, self.cluster_id)
 
             needs_commit = openapi_created or mcp_created or as2_rotation_job_created or as2_async_mdn_job_created or \
                 as2_resend_job_created or as4_resend_job_created or b2b_alerting_job_created or alerting_job_created or \
-                cert_check_job_created or ms_health_job_created or canary_job_created
+                cert_check_job_created or ms_health_job_created or test_transfer_job_created
 
             if needs_commit:
                 session.commit()
@@ -1934,8 +1935,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             if ms_health_job_created:
                 logger.info('Created Microsoft health probe job')
 
-            if canary_job_created:
-                logger.info('Created file transfer canary job (inactive)')
+            if test_transfer_job_created:
+                logger.info('Created test transfer job (inactive)')
 
         # AS2 channels are auto-created in the external AS2/AS4 database when one is configured
         if is_ext_db_configured():

@@ -17,7 +17,8 @@ from zato.common.alerting.collectors.backlogs import collect_feed_silent_facts, 
 from zato.common.alerting.collectors.common import Default_Begin_Event_Type, Default_End_Event_Type, \
     Default_Window_Seconds, Default_Window_Seconds_By_Source
 from zato.common.alerting.collectors.file_transfer import collect_file_transfer_facts
-from zato.common.alerting.collectors.probes import collect_canary_facts, collect_certificate_facts, collect_health_facts
+from zato.common.alerting.collectors.probes import collect_certificate_facts, collect_health_facts, \
+    collect_test_transfer_facts
 from zato.common.alerting.collectors.rates import collect_auth_failure_facts, collect_consecutive_failure_facts, \
     collect_error_rate_facts, collect_latency_facts
 from zato.common.alerting.collectors.scheduler import collect_scheduler_facts
@@ -71,7 +72,7 @@ def collect_facts(
     silent_facts = collect_feed_silent_facts(metrics_by_name, source)
     certificate_facts = collect_certificate_facts(engine, now)
     health_facts = collect_health_facts(engine, now)
-    canary_facts = collect_canary_facts(engine, now)
+    test_transfer_facts = collect_test_transfer_facts(engine, now)
     scheduler_facts = collect_scheduler_facts(engine, window_seconds, now, job_intervals)
     file_transfer_facts = collect_file_transfer_facts(engine, now, arrival_windows)
 
@@ -116,7 +117,7 @@ def collect_facts(
         silent_facts,
         certificate_facts,
         health_facts,
-        canary_facts,
+        test_transfer_facts,
         scheduler_facts,
         file_transfer_facts,
     )

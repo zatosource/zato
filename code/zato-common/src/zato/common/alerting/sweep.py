@@ -206,8 +206,8 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
     if fact['health_state']:
         parts.append(f'reported health state `{fact["health_state"]}`')
 
-    if fact['canary_failed']:
-        parts.append('the canary check failed')
+    if fact['test_transfer_failed']:
+        parts.append('the test transfer check failed')
 
     if fact['start_delay_ms']:
         parts.append(f'started {fact["start_delay_ms"]}ms late')
