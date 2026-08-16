@@ -45,6 +45,24 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 _deleted_file_patterns = [
     'zato-server/src/zato/server/service/internal/pubsub/client.py',
     'zato-server/src/zato/server/service/internal/pubsub/__pycache__/client.*.pyc',
+    'zato-server/src/zato/server/service/internal/outgoing/ftp.py',
+    'zato-server/src/zato/server/service/internal/outgoing/__pycache__/ftp.*.pyc',
+    'zato-server/src/zato/server/service/internal/outgoing/sap.py',
+    'zato-server/src/zato/server/service/internal/outgoing/__pycache__/sap.*.pyc',
+    'zato-server/src/zato/server/service/internal/search/*.py',
+    'zato-server/src/zato/server/service/internal/search/__pycache__/*.pyc',
+    'zato-server/src/zato/server/connection/ftp.py',
+    'zato-server/src/zato/server/connection/__pycache__/ftp.*.pyc',
+    'zato-server/src/zato/server/connection/file_client/*.py',
+    'zato-server/src/zato/server/connection/file_client/__pycache__/*.pyc',
+    'zato-common/src/zato/common/test/ftp.py',
+    'zato-common/src/zato/common/test/__pycache__/ftp.*.pyc',
+    'zato-web-admin/src/zato/admin/web/views/outgoing/ftp.py',
+    'zato-web-admin/src/zato/admin/web/views/outgoing/__pycache__/ftp.*.pyc',
+    'zato-web-admin/src/zato/admin/web/forms/outgoing/ftp.py',
+    'zato-web-admin/src/zato/admin/web/forms/outgoing/__pycache__/ftp.*.pyc',
+    'zato-web-admin/src/zato/admin/templates/zato/outgoing/ftp.html',
+    'zato-web-admin/src/zato/admin/static/js/outgoing/ftp.js',
 ]
 
 # ################################################################################################################################
