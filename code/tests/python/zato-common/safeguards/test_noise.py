@@ -198,7 +198,7 @@ class TestCollapseWhitespace:
         found = []
 
         for match in matches:
-            if match.name == 'intl_iban':
+            if match.name == 'iban':
                 found.append(match)
 
         assert len(found) == 1

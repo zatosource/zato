@@ -51,7 +51,7 @@ def _build_config(suffix:'str') -> 'stranydict':
         'security_groups': [group_name],
         'skills': [_constants.Skill_House_Style],
         'validate_input': True,
-        'allow_client_filters': True,
+        'allow_agent_filters': True,
         'max_response_size': 2000,
         'size_cap_mode': 'block',
         'min_size_threshold': 100,
@@ -61,8 +61,8 @@ def _build_config(suffix:'str') -> 'stranydict':
         'safeguards_strip_base64': True,
         'safeguards_pii_enabled': True,
         'safeguards_pii_lands': [_constants.PII_Land_Main],
-        'safeguards_pii_detectors': ['intl_ipv4'],
-        'safeguards_pii_exclude': ['intl_email'],
+        'safeguards_pii_detectors': ['ipv4'],
+        'safeguards_pii_exclude': ['email'],
         'safeguards_pii_validate': False,
         'safeguards_pii_stable_replacements': True,
         'safeguards_secrets_enabled': True,
@@ -160,7 +160,7 @@ class TestEnmasseRoundTrip:
             assert full['is_audit_log_active'] is True, full
             assert full['skills'] == [_constants.Skill_House_Style], full
             assert full['validate_input'] is True, full
-            assert full['allow_client_filters'] is True, full
+            assert full['allow_agent_filters'] is True, full
 
             assert full['max_response_size'] == 2000, full
             assert full['size_cap_mode'] == 'block', full
@@ -173,8 +173,8 @@ class TestEnmasseRoundTrip:
 
             assert full['safeguards_pii_enabled'] is True, full
             assert full['safeguards_pii_lands'] == [_constants.PII_Land_Main], full
-            assert full['safeguards_pii_detectors'] == ['intl_ipv4'], full
-            assert full['safeguards_pii_exclude'] == ['intl_email'], full
+            assert full['safeguards_pii_detectors'] == ['ipv4'], full
+            assert full['safeguards_pii_exclude'] == ['email'], full
             assert full['safeguards_pii_stable_replacements'] is True, full
             assert full['safeguards_secrets_enabled'] is True, full
 
@@ -200,7 +200,7 @@ class TestEnmasseRoundTrip:
             assert 'security_groups' not in minimal, minimal
             assert 'skills' not in minimal, minimal
             assert 'validate_input' not in minimal, minimal
-            assert 'allow_client_filters' not in minimal, minimal
+            assert 'allow_agent_filters' not in minimal, minimal
             assert 'max_response_size' not in minimal, minimal
             assert 'safeguards_pii_enabled' not in minimal, minimal
             assert 'safeguards_secrets_enabled' not in minimal, minimal

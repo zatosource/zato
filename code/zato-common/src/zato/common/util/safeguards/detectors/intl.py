@@ -29,8 +29,8 @@ class IMEIDetector(Detector):
     """ International mobile equipment identity (IMEI) - 15 digits with a Luhn check digit, written as one compact run
     or in 2-6-6-1 groups separated by spaces or dashes.
     """
-    name            = 'intl_imei'
-    token           = 'INTL_IMEI'
+    name            = 'imei'
+    token           = 'IMEI'
     region          = 'intl'
     feasibility     = 'high'
     default_enabled = True

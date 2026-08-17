@@ -44,7 +44,7 @@ _reject_kind_markup = 'markup'
 
 # The detector name and the first stable replacement of the one email
 # the mixed-script record carries
-_detector_email = 'intl_email'
+_detector_email = 'email'
 _email_replacement_first = 'REPLACED_EMAIL_1'
 
 # The code point range UTF-16 surrogates occupy - a lone one means half an astral character
@@ -90,7 +90,7 @@ class TestPipelineInterplay:
 
 # ################################################################################################################################
 
-    def test_client_filters_run_after_safeguards(self, zato_server:'anydict') -> 'None':
+    def test_agent_filters_run_after_safeguards(self, zato_server:'anydict') -> 'None':
 
         arguments = {
             'customer_id': _constants.Customer_ID,
@@ -109,7 +109,7 @@ class TestPipelineInterplay:
 
         # .. and the trace records both the removal and the filter.
         assert event_data['pii_removed'], event_data
-        assert event_data['client_filter'] == 'email', event_data
+        assert event_data['agent_filter'] == 'email', event_data
 
 # ################################################################################################################################
 
@@ -135,7 +135,7 @@ class TestPipelineInterplay:
         text = _helpers.get_result_text(body)
         assert text == _oversized_count, text
 
-        assert event_data['client_filter'] == 'count', event_data
+        assert event_data['agent_filter'] == 'count', event_data
         assert 'was_truncated' not in event_data, event_data
 
 # ################################################################################################################################

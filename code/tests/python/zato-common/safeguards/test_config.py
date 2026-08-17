@@ -49,7 +49,7 @@ class TestBuildSafeguardConfig:
             'safeguards_strip_base64': True,
             'safeguards_pii_enabled': True,
             'safeguards_pii_lands': ['es', 'de'],
-            'safeguards_pii_detectors': ['intl_iban'],
+            'safeguards_pii_detectors': ['iban'],
             'safeguards_pii_exclude': ['es_phone'],
             'safeguards_pii_validate': False,
             'safeguards_pii_stable_replacements': True,
@@ -71,7 +71,7 @@ class TestBuildSafeguardConfig:
 
         assert config.pii_enabled is True
         assert config.pii_lands == ['es', 'de']
-        assert config.pii_detectors == ['intl_iban']
+        assert config.pii_detectors == ['iban']
         assert config.pii_exclude == ['es_phone']
         assert config.pii_validate is False
         assert config.pii_stable_replacements is True

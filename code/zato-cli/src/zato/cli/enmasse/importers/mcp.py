@@ -46,7 +46,7 @@ class GatewayMCPImporter(GenericConnectionImporter):
     }
 
     # Every runtime field of an MCP gateway - routing, tools, skills, validation,
-    # client filters, response shaping and the whole safeguards family - so a YAML
+    # agent filters, response shaping and the whole safeguards family - so a YAML
     # definition can state any of them and an unstated one gets its documented default.
     connection_extra_field_defaults = {
 
@@ -65,9 +65,9 @@ class GatewayMCPImporter(GenericConnectionImporter):
         # How long one tools/call invocation may run for, in seconds - zero keeps the default
         'invoke_timeout': 0,
 
-        # Input validation and client-supplied JSONata response filters
+        # Input validation and agent-supplied JSONata response filters
         'validate_input': False,
-        'allow_client_filters': False,
+        'allow_agent_filters': False,
 
         # Response shaping - zeroes keep the cap and its threshold off
         'max_response_size': 0,

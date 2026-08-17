@@ -93,10 +93,10 @@ class GatewayMCPWrapper:
         if validate_input is None:
             validate_input = False
 
-        # .. the same applies to client-supplied JSONata response filters ..
-        allow_client_filters = self.config.get('allow_client_filters')
-        if allow_client_filters is None:
-            allow_client_filters = False
+        # .. the same applies to agent-supplied JSONata response filters ..
+        allow_agent_filters = self.config.get('allow_agent_filters')
+        if allow_agent_filters is None:
+            allow_agent_filters = False
 
         # .. the skills this gateway serves as prompts - a config without the key serves none,
         # and the files themselves are read from the server's config/repo/skills on each request ..
@@ -114,7 +114,7 @@ class GatewayMCPWrapper:
         # .. build the handler with an invoke function that calls services through the server.
         self.handler = MCPHandler(
             tool_registry, self._invoke_service, session_manager, safeguard_config, token_cap_config, validate_input,
-            skill_prompts, allow_client_filters, invoke_timeout)
+            skill_prompts, allow_agent_filters, invoke_timeout)
 
         service_count_text = count_text(len(allowed_services), 'allowed service', 'allowed services')
         sorted_services = sorted(allowed_services)

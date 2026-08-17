@@ -674,7 +674,7 @@ def get_object_order(object_type:'str') -> 'strlist':
         'username', 'ssl', 'cipher_spec', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file',
     order['channel_kafka'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service',
     order['mcp_gateway'] = 'name', 'is_active', 'url_path', 'services:list', 'security_groups:list', \
-        'is_audit_log_active', 'skills:list', 'session_ttl', 'validate_input', 'allow_client_filters', \
+        'is_audit_log_active', 'skills:list', 'session_ttl', 'validate_input', 'allow_agent_filters', \
         'max_response_size', 'size_cap_mode', 'min_size_threshold', 'characters_per_token', \
         'safeguards_strip_nulls', 'safeguards_collapse_whitespace', 'safeguards_strip_base64', \
         'safeguards_pii_enabled', 'safeguards_pii_lands:list', 'safeguards_pii_detectors:list', \

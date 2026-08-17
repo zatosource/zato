@@ -62,7 +62,7 @@
             'name',
             '_is_active',
             'url_path',
-            '_client_filters',
+            '_agent_filters',
             '_size_cap',
             '_services',
             '_security',
@@ -72,7 +72,7 @@
             '_delete',
                 'id',
                 'is_active',
-                'allow_client_filters'
+                'allow_agent_filters'
         ]
     }
     </script>
@@ -106,7 +106,7 @@
                         <th><a href="#">Name</a></th>
                         <th style="text-align:center"><a href="#">Active</a></th>
                         <th><a href="#">URL path</a></th>
-                        <th style="text-align:center"><a href="#">Client filters</a></th>
+                        <th style="text-align:center"><a href="#">Agent filters</a></th>
                         <th><a href="#">Size caps</a></th>
                         <th style="text-align:center"><a href="#">Services</a></th>
                         <th style="text-align:center"><a href="#">Security</a></th>
@@ -134,7 +134,7 @@
                         {# Both flags are turned over where they are read #}
                         <td class="text-center"><a href="javascript:void(0)" onclick="$.fn.zato.gateway.mcp.toggle_active('{{ item.id }}', this)">{{ item.is_active|yesno:'Yes,No' }}</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.gateway.mcp.edit_url_path('{{ item.id }}', this)">{{ item.url_path }}</a></td>
-                        <td class="text-center"><a href="javascript:void(0)" onclick="$.fn.zato.gateway.mcp.toggle_client_filters('{{ item.id }}', this)">{{ item.allow_client_filters|yesno:'Yes,No' }}</a></td>
+                        <td class="text-center"><a href="javascript:void(0)" onclick="$.fn.zato.gateway.mcp.toggle_agent_filters('{{ item.id }}', this)">{{ item.allow_agent_filters|yesno:'Yes,No' }}</a></td>
                         {# What the gateway caps responses at, the line opening the very editor the wizard uses #}
                         <td><a href="javascript:void(0)" class="zato-table-note" data-id="{{ item.id }}"
                             onclick="$.fn.zato.gateway.mcp.size_caps.open(this)">{{ item.size_cap_label }}</a></td>
@@ -150,7 +150,7 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         {# What the two flags stand at #}
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.allow_client_filters }}</td>
+                        <td class='ignore'>{{ item.allow_agent_filters }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}

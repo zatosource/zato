@@ -344,7 +344,7 @@ class TestMCPAgentAudit:
         gateway_name = _Test_Name_Prefix + 'markup-gateway'
         url_path = '/mcp/test/agent/markup/' + CryptoManager.generate_hex_string()
 
-        # The gateway comes from enmasse because the filter expression needs client filters allowed ..
+        # The gateway comes from enmasse because the filter expression needs agent filters allowed ..
         yaml_content = f"""
 security:
   - name: {definition_name}
@@ -365,7 +365,7 @@ mcp_gateway:
     security_groups:
       - {group_name}
     is_audit_log_active: true
-    allow_client_filters: true
+    allow_agent_filters: true
 """
 
         input_path = os.path.join(tempfile.gettempdir(), f'zato-mcp-agent-markup-{os.getpid()}.yaml')

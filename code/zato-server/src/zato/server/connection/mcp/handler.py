@@ -101,7 +101,7 @@ class MCPHandler:
         token_cap_config:'TokenCapConfig',
         validate_input:'bool',
         skill_prompts:'SkillPrompts',
-        allow_client_filters:'bool' = False,
+        allow_agent_filters:'bool' = False,
         invoke_timeout:'int' = MCP.Default_Invoke_Timeout,
         ) -> 'None':
         self.tool_registry = tool_registry
@@ -111,7 +111,7 @@ class MCPHandler:
         self.token_cap_config = token_cap_config
         self.validate_input = validate_input
         self.skill_prompts = skill_prompts
-        self.allow_client_filters = allow_client_filters
+        self.allow_agent_filters = allow_agent_filters
         self.invoke_timeout = invoke_timeout
 
 # ################################################################################################################################
@@ -510,9 +510,9 @@ class MCPHandler:
             out = make_error_response(request_id, _error_invalid_params, _message_invalid_cursor)
             return out
 
-        # When the gateway allows client filters, every tool advertises the optional
+        # When the gateway allows agent filters, every tool advertises the optional
         # response_filter argument so callers can discover it from the schema alone.
-        if self.allow_client_filters:
+        if self.allow_agent_filters:
             tools = self._add_response_filter_property(tools)
 
         result:'stranydict' = {

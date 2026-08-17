@@ -79,10 +79,10 @@ def _make_handler(
     invoke_func:'callable_',
     gateway_config:'stranydict',
     validate_input:'bool' = False,
-    allow_client_filters:'bool' = True,
+    allow_agent_filters:'bool' = True,
     ) -> 'MCPHandler':
     """ Creates an MCPHandler the way the gateway wrapper builds one at runtime,
-    with client filters allowed unless a test says otherwise.
+    with agent filters allowed unless a test says otherwise.
     """
 
     # The mock stands in for the real registry, which the handler only ever duck-types against
@@ -93,7 +93,7 @@ def _make_handler(
     token_cap_config = build_token_cap_config(gateway_config)
 
     out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, validate_input,
-        SkillPrompts('', []), allow_client_filters)
+        SkillPrompts('', []), allow_agent_filters)
     return out
 
 # ################################################################################################################################
@@ -151,7 +151,7 @@ def _invoke_invoices(service_name:'str', payload:'any_') -> 'anydict':
 class ResponseFilterInToolsList(TestCase):
 
     def test_enabled_gateway_advertises_response_filter(self) -> 'None':
-        """ With client filters allowed, every tool's schema advertises the optional
+        """ With agent filters allowed, every tool's schema advertises the optional
         response_filter property next to the tool's own fields.
         """
 
@@ -171,10 +171,10 @@ class ResponseFilterInToolsList(TestCase):
         self.assertEqual(properties['response_filter']['type'], 'string')
 
     def test_disabled_gateway_says_nothing_of_response_filter(self) -> 'None':
-        """ Without client filters, the schemas carry only the tools' own fields.
+        """ Without agent filters, the schemas carry only the tools' own fields.
         """
 
-        handler = _make_handler(_invoke_invoices, {}, allow_client_filters=False)
+        handler = _make_handler(_invoke_invoices, {}, allow_agent_filters=False)
         mcp_response = _run_method(handler, 'tools/list', {})
 
         body = mcp_response.body
@@ -228,7 +228,7 @@ class ResponseFilterInToolsCall(TestCase):
         self.assertIsNotNone(trace)
 
         if trace:
-            self.assertEqual(trace['client_filter'], expression)
+            self.assertEqual(trace['agent_filter'], expression)
 
     def test_a_call_without_a_filter_leaves_no_trace(self) -> 'None':
         """ On an enabled gateway, a call that passes no filter is delivered whole
@@ -314,7 +314,7 @@ class ResponseFilterInToolsCall(TestCase):
         self.assertEqual(response, ['name', 'city'])
 
     def test_validation_never_sees_the_filter_on_an_enabled_gateway(self) -> 'None':
-        """ With both validation and client filters on, the filter is taken out
+        """ With both validation and agent filters on, the filter is taken out
         before validation runs, so the tool's own schema still matches.
         """
 
@@ -336,7 +336,7 @@ class ResponseFilterInToolsCall(TestCase):
         self.assertEqual(response, 3)
 
     def test_disabled_gateway_refuses_the_filter_as_unknown_parameter(self) -> 'None':
-        """ Without client filters, response_filter is a parameter like any other
+        """ Without agent filters, response_filter is a parameter like any other
         and a validating gateway refuses it as unknown.
         """
 
@@ -345,7 +345,7 @@ class ResponseFilterInToolsCall(TestCase):
             'arguments': {'customer_id': 'abc-123', 'response_filter': 'total_count'},
         }
 
-        handler = _make_handler(_invoke_invoices, {}, validate_input=True, allow_client_filters=False)
+        handler = _make_handler(_invoke_invoices, {}, validate_input=True, allow_agent_filters=False)
         mcp_response = _run_method(handler, 'tools/call', params)
 
         body = mcp_response.body

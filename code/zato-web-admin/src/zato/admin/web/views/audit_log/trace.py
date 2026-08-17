@@ -33,7 +33,7 @@ _label_secrets        = 'Secrets removed'
 _label_compaction     = 'Compaction'
 _label_content_safety = 'Content safety'
 _label_size_cap       = 'Size cap'
-_label_client_filter  = 'Client filter'
+_label_agent_filter   = 'Agent filter'
 _label_rejected       = 'Rejected'
 
 # How each rejection kind reads on its pane line - every kind a safeguard
@@ -111,9 +111,9 @@ def get_trace_lines(data:'stranydict') -> 'anylist':
 
         out.append({'label': _label_size_cap, 'text': f'truncated from {before} to {after}'})
 
-    # .. the filter the client itself asked for ..
-    if client_filter := data.get('client_filter'):
-        out.append({'label': _label_client_filter, 'text': client_filter})
+    # .. the filter the agent itself asked for ..
+    if agent_filter := data.get('agent_filter'):
+        out.append({'label': _label_agent_filter, 'text': agent_filter})
 
     # .. and a rejection names its kind, with the measured size when size was the reason -
     # a size rejection always records what it measured before it blocked.

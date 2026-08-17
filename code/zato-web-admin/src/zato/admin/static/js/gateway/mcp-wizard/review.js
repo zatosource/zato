@@ -575,7 +575,7 @@ review.render = function() {
 
     // Response shaping
     var shapingRows = [
-        ['Allow client filters', wizard.field('allow_client_filters').prop('checked') ? config.allowedLabel : config.notAllowedLabel],
+        ['Allow agent filters', wizard.field('allow_agent_filters').prop('checked') ? config.allowedLabel : config.notAllowedLabel],
         ['Size cap', review._sizeCapsSummary()],
         ['Characters per token', wizard.field('characters_per_token').val().trim()]
     ];

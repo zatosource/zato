@@ -17,7 +17,7 @@ $.fn.zato.gateway.mcp.field_descriptions = {
     'id_is_audit_log_active': 'Whether this gateway\'s traffic is recorded in the audit log - one event per request ' +
         'with the method, tool, caller and outcome. Payloads themselves are never recorded, only their sizes are.',
 
-    'id_allow_client_filters': 'Adds an optional response_filter parameter to every tool, letting an AI agent ' +
+    'id_allow_agent_filters': 'Adds an optional response_filter parameter to every tool, letting an AI agent ' +
         'pass its own JSONata expression per call. The expression runs on the server and the agent receives ' +
         'only the fields it asked for, which cuts its context usage on every invocation.',
     'id_max_response_size': 'The maximum size of a tool response in tokens, empty means no cap. ' +

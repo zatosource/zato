@@ -71,26 +71,26 @@ class TestLandSelection:
 
         # The detector list names only emails, so the us land selection has no say and the SSN survives.
         result = _new_result()
-        config = _new_config(['us'], ['intl_email'], [])
+        config = _new_config(['us'], ['email'], [])
         value = {'note': f'SSN 536-90-4399 wrote from {_email} yesterday'}
 
         cleaned = remove_pii(value, result, config)
 
         assert '536-90-4399' in cleaned['note']
         assert _email not in cleaned['note']
-        assert result.pii_removed == {'intl_email': 1}
+        assert result.pii_removed == {'email': 1}
 
     def test_exclusions_are_honored(self) -> 'None':
 
         result = _new_result()
-        config = _new_config(['intl'], [], ['intl_email'])
+        config = _new_config(['intl'], [], ['email'])
         value = {'note': f'Pay to {_valid_iban}, questions go to {_email}'}
 
         cleaned = remove_pii(value, result, config)
 
         assert _valid_iban not in cleaned['note']
         assert _email in cleaned['note']
-        assert result.pii_removed == {'intl_iban': 1}
+        assert result.pii_removed == {'iban': 1}
 
     def test_empty_selection_runs_no_detectors(self) -> 'None':
 
@@ -132,7 +132,7 @@ class TestValidation:
         cleaned = remove_pii(value, result, config)
 
         assert _broken_iban not in cleaned['note']
-        assert result.pii_removed == {'intl_iban': 1}
+        assert result.pii_removed == {'iban': 1}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,25 +142,25 @@ class TestStableReplacements:
     def test_stable_replacements_number_repeated_values(self) -> 'None':
 
         result = _new_result()
-        config = _new_config([], ['intl_iban'], [])
+        config = _new_config([], ['iban'], [])
         config.pii_stable_replacements = True
         value = {'note': f'First {_valid_iban} and again {_valid_iban}'}
 
         cleaned = remove_pii(value, result, config)
 
         assert cleaned == {'note': 'First REPLACED_IBAN_1 and again REPLACED_IBAN_1'}
-        assert result.pii_removed == {'intl_iban': 2}
+        assert result.pii_removed == {'iban': 2}
 
     def test_plain_replacements_carry_no_numbers(self) -> 'None':
 
         result = _new_result()
-        config = _new_config([], ['intl_iban'], [])
+        config = _new_config([], ['iban'], [])
         value = {'note': f'First {_valid_iban} and again {_valid_iban}'}
 
         cleaned = remove_pii(value, result, config)
 
         assert cleaned == {'note': 'First REPLACED_IBAN and again REPLACED_IBAN'}
-        assert result.pii_removed == {'intl_iban': 2}
+        assert result.pii_removed == {'iban': 2}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -187,8 +187,8 @@ class TestCleanerCache:
 
         names = [match.name for match in matches]
 
-        assert 'intl_iban' in names
-        assert 'intl_email' in names
+        assert 'iban' in names
+        assert 'email' in names
 
         _cache.clear()
 
@@ -196,7 +196,7 @@ class TestCleanerCache:
 
         # The cache is filled to the brim with entries sharing one cleaner -
         # building one more evicts the oldest of them.
-        config = _new_config([], ['intl_email'], [])
+        config = _new_config([], ['email'], [])
         filler = get_cleaner(config)
 
         _cache.clear()
@@ -225,18 +225,18 @@ class TestIMEI:
         # The compact run and the 2-6-6-1 grouped form of the same device are both
         # found and each leaves the detector's replacement behind.
         result = _new_result()
-        config = _new_config([], ['intl_imei'], [])
+        config = _new_config([], ['imei'], [])
         value = {'note': f'Device {_valid_imei_compact} also written as {_valid_imei_grouped}'}
 
         cleaned = remove_pii(value, result, config)
 
-        assert cleaned == {'note': 'Device REPLACED_INTL_IMEI also written as REPLACED_INTL_IMEI'}
-        assert result.pii_removed == {'intl_imei': 2}
+        assert cleaned == {'note': 'Device REPLACED_IMEI also written as REPLACED_IMEI'}
+        assert result.pii_removed == {'imei': 2}
 
     def test_broken_check_digit_survives_with_validation_on(self) -> 'None':
 
         result = _new_result()
-        config = _new_config([], ['intl_imei'], [])
+        config = _new_config([], ['imei'], [])
         value = {'note': f'Device {_broken_imei} fails the Luhn check'}
 
         cleaned = remove_pii(value, result, config)
@@ -255,7 +255,7 @@ class TestIMEI:
 
         assert _valid_imei_compact not in cleaned['note']
         assert 'ORD-2026-000123' in cleaned['note']
-        assert result.pii_removed == {'intl_imei': 1}
+        assert result.pii_removed == {'imei': 1}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -282,7 +282,7 @@ class TestRemovePii:
         cleaned = remove_pii(value, result, config)
 
         assert cleaned == {'rows': [{'contact': 'Reach REPLACED_EMAIL for help'}, {'payment': 'Wire to REPLACED_IBAN today'}]}
-        assert result.pii_removed == {'intl_email': 1, 'intl_iban': 1}
+        assert result.pii_removed == {'email': 1, 'iban': 1}
 
     def test_counts_accumulate_per_detector(self) -> 'None':
 
@@ -295,7 +295,7 @@ class TestRemovePii:
 
         _ = remove_pii(value, result, config)
 
-        assert result.pii_removed == {'intl_iban': 2, 'intl_email': 1}
+        assert result.pii_removed == {'iban': 2, 'email': 1}
 
 # ################################################################################################################################
 # ################################################################################################################################

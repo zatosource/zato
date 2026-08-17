@@ -90,7 +90,7 @@ class TestNormalizeUnicode:
         found_before = []
 
         for match in before:
-            if match.name == 'intl_iban':
+            if match.name == 'iban':
                 found_before.append(match)
 
         assert len(found_before) == 0
@@ -101,7 +101,7 @@ class TestNormalizeUnicode:
         found_after = []
 
         for match in after:
-            if match.name == 'intl_iban':
+            if match.name == 'iban':
                 found_after.append(match)
 
         assert len(found_after) == 1

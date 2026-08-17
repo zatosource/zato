@@ -400,8 +400,8 @@ PII_Land_Other = 'de'
 PII_Land_Japan = 'jp'
 
 # The detector the exclude gateway leaves out and the one the detector-only gateway names directly
-PII_Exclude_Detector = 'intl_email'
-PII_Named_Detector   = 'intl_email'
+PII_Exclude_Detector = 'email'
+PII_Named_Detector   = 'email'
 
 # The name of the self.llm outconn the suite creates - no tests use it yet, it is the setup for them
 LLM_Outconn_Name = 'test.mcp.llm'

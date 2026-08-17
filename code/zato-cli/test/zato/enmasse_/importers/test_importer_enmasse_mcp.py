@@ -104,7 +104,7 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
         # .. and so is every other runtime field the YAML states ..
         self.assertEqual(opaque['skills'], ['crm-house-style'])
         self.assertTrue(opaque['validate_input'])
-        self.assertTrue(opaque['allow_client_filters'])
+        self.assertTrue(opaque['allow_agent_filters'])
 
         self.assertEqual(opaque['max_response_size'], 2000)
         self.assertEqual(opaque['size_cap_mode'], 'block')
@@ -117,8 +117,8 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
 
         self.assertTrue(opaque['safeguards_pii_enabled'])
         self.assertEqual(opaque['safeguards_pii_lands'], ['intl'])
-        self.assertEqual(opaque['safeguards_pii_detectors'], ['intl_ipv4'])
-        self.assertEqual(opaque['safeguards_pii_exclude'], ['intl_email'])
+        self.assertEqual(opaque['safeguards_pii_detectors'], ['ipv4'])
+        self.assertEqual(opaque['safeguards_pii_exclude'], ['email'])
         self.assertFalse(opaque['safeguards_pii_validate'])
         self.assertTrue(opaque['safeguards_pii_stable_replacements'])
 
@@ -145,7 +145,7 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
         # .. and every option family defaults to off.
         self.assertEqual(opaque2['skills'], [])
         self.assertFalse(opaque2['validate_input'])
-        self.assertFalse(opaque2['allow_client_filters'])
+        self.assertFalse(opaque2['allow_agent_filters'])
         self.assertEqual(opaque2['max_response_size'], 0)
         self.assertFalse(opaque2['safeguards_strip_nulls'])
         self.assertFalse(opaque2['safeguards_pii_enabled'])
