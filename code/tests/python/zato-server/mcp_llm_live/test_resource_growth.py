@@ -99,7 +99,11 @@ class TestResourceGrowth:
             out = response.headers.get('Mcp-Session-Id')
             return out
 
-        # Wave after wave fills the whole cap and is left to expire ..
+        # All the waves are created past this log offset ..
+        server_log_path = zato_server['server_log_path']
+        log_offset = os.path.getsize(server_log_path)
+
+        # .. wave after wave fills the whole cap and is left to expire ..
         first_wave_ids = []
 
         for wave_index in range(_expiry_waves):
@@ -118,9 +122,6 @@ class TestResourceGrowth:
             time.sleep(_past_ttl_seconds)
 
         # .. the reaper's sweep removes what expired and the server says so ..
-        server_log_path = zato_server['server_log_path']
-        log_offset = os.path.getsize(server_log_path)
-
         time.sleep(_past_sweep_seconds)
 
         with open(server_log_path) as server_log:
