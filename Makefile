@@ -17,7 +17,7 @@
 	test-ui _test-ui test-ui-pubsub test-ui-openapi test-ui-analytics test-ui-audit-log test-ui-webapp test-ui-rule-engine-dashboard \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-rest-outgoing-audit test-alerting test-destinations test-analytics test-demo-seed test-logging \
-	test-ibm-mq test-mongodb test-es \
+	test-ibm-mq test-kafka _test-kafka test-mongodb test-es \
 	test-rule-engine test-rule-engine-perf test-rule-engine-jobs \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
 	test-all test test-all-reset test-perf \
@@ -1087,6 +1087,21 @@ test-ibm-mq: ## IBM MQ queue bridge tests against a live queue manager, plain an
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ibm_mq \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-kafka: ## Kafka end-to-end tests against a live broker in Docker, driven through the Dashboard.
+	$(MAKE) _test-kafka 2>&1 | tee /tmp/logs-test-kafka.txt
+
+_test-kafka:
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/tests/python/zato-common/lib/live_kafka/ \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/lib/kafka_channel.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/lib/kafka_outconn.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/fixtures/services/kafka_test_services.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_kafka_end_to_end.py
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_kafka_end_to_end.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_kafka \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, plain and TLS, plus live Redis tests.
 	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-common/audit_log/
 	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-common/redis_/
@@ -1332,7 +1347,7 @@ Zato_Test_Toolchain := \
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub-backend test-mongodb test-es \
 	test-sql-cloud-live test-microsoft-cloud test-bearer test-pubsub-backend-amqp test-as2-live \
-	test-as2-interop test-ibm-mq test-sdk test-hl7-languages test-pubsub-outgoing \
+	test-as2-interop test-ibm-mq test-kafka test-sdk test-hl7-languages test-pubsub-outgoing \
 	test-hl7-mllp-outconns test-pubsub-core test-hl7
 
 # The browser suite end to end
