@@ -134,8 +134,8 @@ class TestEnmasseGatewayMCPExport(TestCase):
 
         self.assertTrue(exported_1['safeguards_pii_enabled'])
         self.assertEqual(exported_1['safeguards_pii_lands'], ['intl'])
-        self.assertEqual(exported_1['safeguards_pii_detectors'], ['intl_ipv4'])
-        self.assertEqual(exported_1['safeguards_pii_exclude'], ['intl_email'])
+        self.assertEqual(exported_1['safeguards_pii_detectors'], ['ipv4'])
+        self.assertEqual(exported_1['safeguards_pii_exclude'], ['email'])
         self.assertTrue(exported_1['safeguards_pii_stable_replacements'])
 
         # An explicit False against a True default survives the export,

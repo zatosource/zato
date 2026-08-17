@@ -47,8 +47,8 @@ _raw_pii_values = (
     _constants.Customer_IPv4,
 )
 
-# The prefix every PII replacement of the international land carries
-_pii_replacement_prefix = 'REPLACED_INTL_'
+# The prefix every PII replacement carries
+_pii_replacement_prefix = 'REPLACED_'
 
 # The same customer question in three wordings
 _paraphrased_tasks = (

@@ -44,7 +44,7 @@ _reject_kind_markup = 'markup'
 
 # The detector name and the first stable replacement of the one email
 # the mixed-script record carries
-_detector_email = 'intl_email'
+_detector_email = 'email'
 _email_replacement_first = 'REPLACED_EMAIL_1'
 
 # The code point range UTF-16 surrogates occupy - a lone one means half an astral character

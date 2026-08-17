@@ -473,10 +473,10 @@ class TestMCPWizard:
             assert sorted(lands) == ['de', 'pl'], f'Expected the lands prefilled, got: {lands}'
 
             detectors = wizard_page.get_multi_select_values(page, 'safeguards_pii_detectors', is_edit=True)
-            assert sorted(detectors) == ['intl_email', 'intl_imei'], f'Expected the detectors prefilled, got: {detectors}'
+            assert sorted(detectors) == ['email', 'imei'], f'Expected the detectors prefilled, got: {detectors}'
 
             exclude = wizard_page.get_multi_select_values(page, 'safeguards_pii_exclude', is_edit=True)
-            assert exclude == ['intl_ipv4'], f'Expected the exclusion prefilled, got: {exclude}'
+            assert exclude == ['ipv4'], f'Expected the exclusion prefilled, got: {exclude}'
 
             assert page.is_checked('#id_edit-safeguards_normalize_unicode'), 'Expected the Unicode check prefilled'
             assert page.is_checked('#id_edit-safeguards_sanitize_markup'), 'Expected the Markup check prefilled'

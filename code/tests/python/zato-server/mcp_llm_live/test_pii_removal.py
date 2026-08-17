@@ -21,20 +21,20 @@ if 0:
 # ################################################################################################################################
 
 # The detector names the audit trace counts findings under
-_detector_email     = 'intl_email'
-_detector_imei      = 'intl_imei'
-_detector_ipv4      = 'intl_ipv4'
+_detector_email     = 'email'
+_detector_imei      = 'imei'
+_detector_ipv4      = 'ipv4'
 _detector_my_number = 'jp_my_number'
 
 # The plain replacements of gateways without stable replacements
 _replacement_email_plain     = 'REPLACED_EMAIL'
-_replacement_imei_plain      = 'REPLACED_INTL_IMEI'
+_replacement_imei_plain      = 'REPLACED_IMEI'
 _replacement_my_number_plain = 'REPLACED_JP_MY_NUMBER'
 
 # The numbered replacements of the stable-replacement gateways - each string value is replaced
 # on its own, so a value that is the whole string always gets the first number of its detector.
 _replacement_email_stable = 'REPLACED_EMAIL_1'
-_replacement_imei_stable  = 'REPLACED_INTL_IMEI_1'
+_replacement_imei_stable  = 'REPLACED_IMEI_1'
 
 # What the network field of the customer record reads once its addresses are replaced -
 # the repeated address shares one replacement and the distinct one gets the next number.

@@ -161,7 +161,7 @@ class TestSingleToggles:
         result = apply_safeguards(value, config)
 
         assert result.value == {'note': 'Pay to REPLACED_IBAN today'}
-        assert result.pii_removed == {'intl_iban': 1}
+        assert result.pii_removed == {'iban': 1}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -179,7 +179,7 @@ class TestStageOrder:
 
         assert result.value == {'payment': 'Pay to REPLACED_IBAN today'}
         assert result.unicode_chars_removed == 1
-        assert result.pii_removed == {'intl_iban': 1}
+        assert result.pii_removed == {'iban': 1}
 
     def test_all_stages_together(self) -> 'None':
 
@@ -199,7 +199,7 @@ class TestStageOrder:
         assert result.whitespace_chars_removed >= 1
         assert result.markup_items_removed == 1
         assert result.urls_flagged == 1
-        assert result.pii_removed == {'intl_email': 1}
+        assert result.pii_removed == {'email': 1}
         assert result.was_modified is True
         assert result.was_rejected is False
 
@@ -234,7 +234,7 @@ class TestRoots:
         result = apply_safeguards(value, config)
 
         assert result.value == 'Wire the amount to REPLACED_IBAN by Friday'
-        assert result.pii_removed == {'intl_iban': 1}
+        assert result.pii_removed == {'iban': 1}
 
     def test_list_root_is_walked(self) -> 'None':
 

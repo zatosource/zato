@@ -173,16 +173,16 @@ Detector_Labels:'strstrdict' = {
     'in_passport': 'Passport number',
 
     # International
-    'intl_bic':         'Bank identifier code (BIC)',
-    'intl_credit_card': 'Credit card number',
-    'intl_email':       'Email address',
-    'intl_eu_vat':      'EU VAT number',
-    'intl_iban':        'Bank account number (IBAN)',
-    'intl_imei':        'Mobile equipment identity (IMEI)',
-    'intl_ipv4':        'IPv4 address',
-    'intl_ipv6':        'IPv6 address',
-    'intl_mac':         'MAC address',
-    'intl_phone_e164':  'Phone number (E.164)',
+    'bic':          'Bank identifier code (BIC)',
+    'credit_card':  'Credit card number',
+    'email':        'Email address',
+    'eu_vat':       'EU VAT number',
+    'iban':         'Bank account number (IBAN)',
+    'imei':         'Mobile equipment identity (IMEI)',
+    'ipv4':         'IPv4 address',
+    'ipv6':         'IPv6 address',
+    'mac':          'MAC address',
+    'phone_number': 'Phone number',
 
     # Italy
     'it_codice_fiscale': 'Tax code (Codice fiscale)',
@@ -375,16 +375,16 @@ Detector_Nouns:'dict[str, choice_tuple]' = {
     'in_passport': ('passport number', 'passport numbers'),
 
     # International
-    'intl_bic':         ('BIC code', 'BIC codes'),
-    'intl_credit_card': ('credit card number', 'credit card numbers'),
-    'intl_email':       ('email', 'emails'),
-    'intl_eu_vat':      ('EU VAT number', 'EU VAT numbers'),
-    'intl_iban':        ('IBAN number', 'IBAN numbers'),
-    'intl_imei':        ('IMEI number', 'IMEI numbers'),
-    'intl_ipv4':        ('IPv4 address', 'IPv4 addresses'),
-    'intl_ipv6':        ('IPv6 address', 'IPv6 addresses'),
-    'intl_mac':         ('MAC address', 'MAC addresses'),
-    'intl_phone_e164':  ('phone number', 'phone numbers'),
+    'bic':          ('BIC code', 'BIC codes'),
+    'credit_card':  ('credit card number', 'credit card numbers'),
+    'email':        ('email', 'emails'),
+    'eu_vat':       ('EU VAT number', 'EU VAT numbers'),
+    'iban':         ('IBAN number', 'IBAN numbers'),
+    'imei':         ('IMEI number', 'IMEI numbers'),
+    'ipv4':         ('IPv4 address', 'IPv4 addresses'),
+    'ipv6':         ('IPv6 address', 'IPv6 addresses'),
+    'mac':          ('MAC address', 'MAC addresses'),
+    'phone_number': ('phone number', 'phone numbers'),
 
     # Italy
     'it_codice_fiscale': ('tax code', 'tax codes'),

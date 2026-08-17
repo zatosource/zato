@@ -248,7 +248,7 @@ class TestProcessingIsolation:
             min_id=min_id)
 
         event_data_a = events[-1]['data']
-        assert event_data_a['pii_removed']['intl_email'] == 1, event_data_a
+        assert event_data_a['pii_removed']['email'] == 1, event_data_a
 
         # .. A's row carries only its own family's trace keys ..
         assert 'nulls_removed' not in event_data_a, event_data_a

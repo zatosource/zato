@@ -117,8 +117,8 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
 
         self.assertTrue(opaque['safeguards_pii_enabled'])
         self.assertEqual(opaque['safeguards_pii_lands'], ['intl'])
-        self.assertEqual(opaque['safeguards_pii_detectors'], ['intl_ipv4'])
-        self.assertEqual(opaque['safeguards_pii_exclude'], ['intl_email'])
+        self.assertEqual(opaque['safeguards_pii_detectors'], ['ipv4'])
+        self.assertEqual(opaque['safeguards_pii_exclude'], ['email'])
         self.assertFalse(opaque['safeguards_pii_validate'])
         self.assertTrue(opaque['safeguards_pii_stable_replacements'])
 

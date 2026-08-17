@@ -61,8 +61,8 @@ def _build_config(suffix:'str') -> 'stranydict':
         'safeguards_strip_base64': True,
         'safeguards_pii_enabled': True,
         'safeguards_pii_lands': [_constants.PII_Land_Main],
-        'safeguards_pii_detectors': ['intl_ipv4'],
-        'safeguards_pii_exclude': ['intl_email'],
+        'safeguards_pii_detectors': ['ipv4'],
+        'safeguards_pii_exclude': ['email'],
         'safeguards_pii_validate': False,
         'safeguards_pii_stable_replacements': True,
         'safeguards_secrets_enabled': True,
@@ -173,8 +173,8 @@ class TestEnmasseRoundTrip:
 
             assert full['safeguards_pii_enabled'] is True, full
             assert full['safeguards_pii_lands'] == [_constants.PII_Land_Main], full
-            assert full['safeguards_pii_detectors'] == ['intl_ipv4'], full
-            assert full['safeguards_pii_exclude'] == ['intl_email'], full
+            assert full['safeguards_pii_detectors'] == ['ipv4'], full
+            assert full['safeguards_pii_exclude'] == ['email'], full
             assert full['safeguards_pii_stable_replacements'] is True, full
             assert full['safeguards_secrets_enabled'] is True, full
 

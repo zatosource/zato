@@ -422,9 +422,9 @@ mcp_gateway:
     safeguards_pii_lands:
       - intl
     safeguards_pii_detectors:
-      - intl_ipv4
+      - ipv4
     safeguards_pii_exclude:
-      - intl_email
+      - email
     safeguards_pii_validate: false
     safeguards_pii_stable_replacements: true
     safeguards_normalize_unicode: true
