@@ -121,7 +121,7 @@ class TestEnmasseGatewayMCPExport(TestCase):
         # Every non-default runtime field of the fully configured gateway round-trips ..
         self.assertEqual(exported_1['skills'], ['crm-house-style'])
         self.assertTrue(exported_1['validate_input'])
-        self.assertTrue(exported_1['allow_client_filters'])
+        self.assertTrue(exported_1['allow_agent_filters'])
 
         self.assertEqual(exported_1['max_response_size'], 2000)
         self.assertEqual(exported_1['size_cap_mode'], 'block')
@@ -157,7 +157,7 @@ class TestEnmasseGatewayMCPExport(TestCase):
         self.assertNotIn('skills', exported_2)
         self.assertNotIn('session_ttl', exported_2)
         self.assertNotIn('validate_input', exported_2)
-        self.assertNotIn('allow_client_filters', exported_2)
+        self.assertNotIn('allow_agent_filters', exported_2)
         self.assertNotIn('max_response_size', exported_2)
         self.assertNotIn('size_cap_mode', exported_2)
         self.assertNotIn('characters_per_token', exported_2)

@@ -51,7 +51,7 @@ def _build_config(suffix:'str') -> 'stranydict':
         'security_groups': [group_name],
         'skills': [_constants.Skill_House_Style],
         'validate_input': True,
-        'allow_client_filters': True,
+        'allow_agent_filters': True,
         'max_response_size': 2000,
         'size_cap_mode': 'block',
         'min_size_threshold': 100,
@@ -160,7 +160,7 @@ class TestEnmasseRoundTrip:
             assert full['is_audit_log_active'] is True, full
             assert full['skills'] == [_constants.Skill_House_Style], full
             assert full['validate_input'] is True, full
-            assert full['allow_client_filters'] is True, full
+            assert full['allow_agent_filters'] is True, full
 
             assert full['max_response_size'] == 2000, full
             assert full['size_cap_mode'] == 'block', full
@@ -200,7 +200,7 @@ class TestEnmasseRoundTrip:
             assert 'security_groups' not in minimal, minimal
             assert 'skills' not in minimal, minimal
             assert 'validate_input' not in minimal, minimal
-            assert 'allow_client_filters' not in minimal, minimal
+            assert 'allow_agent_filters' not in minimal, minimal
             assert 'max_response_size' not in minimal, minimal
             assert 'safeguards_pii_enabled' not in minimal, minimal
             assert 'safeguards_secrets_enabled' not in minimal, minimal

@@ -50,8 +50,8 @@ GATEWAY_OPTIONAL_FIELDS = [
     # Invocation timeout
     'invoke_timeout',
 
-    # Input validation and client-supplied JSONata response filters
-    'validate_input', 'allow_client_filters',
+    # Input validation and agent-supplied JSONata response filters
+    'validate_input', 'allow_agent_filters',
 
     # Response shaping
     'max_response_size', 'size_cap_mode', 'min_size_threshold', 'characters_per_token',

@@ -225,9 +225,9 @@ def build_gateway_list() -> 'dictlist':
             safeguards_sanitize_markup=True,
             safeguards_markup_mode='reject'),
 
-        # Client JSONata filters, with input validation on so unknown parameters are provable
+        # Agent JSONata filters, with input validation on so unknown parameters are provable
         _gateway(_constants.Gateway_Filters, _constants.Path_Filters,
-            allow_client_filters=True,
+            allow_agent_filters=True,
             validate_input=True),
 
         # The lifecycle gateway - its options are flipped by re-imports mid-suite
@@ -286,7 +286,7 @@ def build_gateway_list() -> 'dictlist':
         _gateway(_constants.Gateway_Docstring, _constants.Path_Docstring,
             services=[_constants.Service_Docstring_Probe, _constants.Service_Blank_Probe]),
 
-        # The pipeline gateway runs every stage at once - compaction, PII, safety, the cap and client filters
+        # The pipeline gateway runs every stage at once - compaction, PII, safety, the cap and agent filters
         _gateway(_constants.Gateway_Pipeline, _constants.Path_Pipeline,
             services=[*_constants.Service_List_CRM, _constants.Service_Customer_List],
             safeguards_strip_nulls=True,
@@ -303,7 +303,7 @@ def build_gateway_list() -> 'dictlist':
             safeguards_url_mode='remove',
             max_response_size=_constants.Pipeline_Cap_Tokens,
             size_cap_mode='truncate',
-            allow_client_filters=True),
+            allow_agent_filters=True),
 
         # PII removal together with truncation, for the boundary of the cut
         _gateway(_constants.Gateway_PII_Truncate, _constants.Path_PII_Truncate,

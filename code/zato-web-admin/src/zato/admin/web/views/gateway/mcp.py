@@ -56,7 +56,7 @@ _wizard_template = 'zato/gateway/mcp-wizard.html'
 _row_edit_prefix = 'mcp-row'
 
 # The two flags a row of the gateway list turns over where it stands.
-_inline_flag_names = ['is_active', 'allow_client_filters']
+_inline_flag_names = ['is_active', 'allow_agent_filters']
 
 # The two lines a row edits in a small form of their own.
 _inline_text_names = ['name', 'url_path']
@@ -75,7 +75,7 @@ _no_size_cap_label = 'No cap'
 _shaping_checkbox_fields = (
     'validate_input',
     'is_audit_log_active',
-    'allow_client_filters',
+    'allow_agent_filters',
     'safeguards_strip_nulls',
     'safeguards_collapse_whitespace',
     'safeguards_strip_base64',
@@ -127,7 +127,7 @@ _shaping_fields = _shaping_checkbox_fields + _shaping_int_fields + _shaping_list
 _shaping_display_defaults = {
     'validate_input':                      False,
     'is_audit_log_active':                 False,
-    'allow_client_filters':                False,
+    'allow_agent_filters':                 False,
     'safeguards_strip_nulls':              False,
     'safeguards_collapse_whitespace':      False,
     'safeguards_strip_base64':             False,
@@ -915,7 +915,7 @@ def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
         'name': item_dict['name'],
         'url_path': item_dict['url_path'],
         'is_active': asbool(item_dict['is_active']),
-        'allow_client_filters': asbool(item_dict['allow_client_filters']),
+        'allow_agent_filters': asbool(item_dict['allow_agent_filters']),
         'max_response_size': max_response_size if max_response_size else '',
         'min_size_threshold': min_size_threshold if min_size_threshold else '',
         'characters_per_token': item_dict['characters_per_token'],

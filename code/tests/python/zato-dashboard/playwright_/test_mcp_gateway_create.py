@@ -59,7 +59,7 @@ _Test_Name_Prefix = 'test.mcp.playwright.' + rand_string() + '.'
 _No_Members_Log = 'is protected by security groups that have no members'
 
 # Column indexes on the gateway list - numbering, selection, name, active,
-# URL path, client filters, size caps, services, security
+# URL path, agent filters, size caps, services, security
 _Column_Name       = 2
 _Column_Is_Active  = 3
 _Column_URL_Path   = 4

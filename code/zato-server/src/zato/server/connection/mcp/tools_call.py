@@ -40,8 +40,8 @@ logger = getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The optional argument through which a client passes a JSONata expression to shape a tool's response,
-# available only on gateways whose configuration allows client filters.
+# The optional argument through which an agent passes a JSONata expression to shape a tool's response,
+# available only on gateways whose configuration allows agent filters.
 _response_filter_key = 'response_filter'
 
 # What the advertised response_filter property says about itself
@@ -102,11 +102,11 @@ def handle_tools_call(handler:'MCPHandler', request_id:'any_', params:'anydict')
         out = make_error_response(request_id, _error_invalid_params, _message_not_an_object)
         return out, None
 
-    # .. on a gateway that allows client filters, the response_filter argument belongs
+    # .. on a gateway that allows agent filters, the response_filter argument belongs
     # to the gateway, not to the service - it is taken out before validation ever sees it ..
     response_filter = None
 
-    if handler.allow_client_filters:
+    if handler.allow_agent_filters:
         response_filter = arguments.pop(_response_filter_key, None)
 
     # .. when the gateway has input validation on, the arguments must match the tool's
@@ -149,7 +149,7 @@ def handle_tools_call(handler:'MCPHandler', request_id:'any_', params:'anydict')
         out = make_success_response(request_id, refused_result)
         return out, _trace_or_none(trace)
 
-    # .. an invalid client filter is the caller's own mistake and is reported as invalid params ..
+    # .. an invalid agent filter is the caller's own mistake and is reported as invalid params ..
     except FilterInvalid as e:
         logger.info('MCP: Invalid response filter for `%s`: %s', tool_name, printable(e))
 
@@ -293,7 +293,7 @@ def serialize_service_response(
 
         response = safeguard_result.value
 
-    # .. the client's filter runs after the safeguards, so it only ever sees cleaned data,
+    # .. the agent's filter runs after the safeguards, so it only ever sees cleaned data,
     # and before the token cap, so the cap enforces the size of what actually goes out ..
     if response_filter is not None:
 
@@ -306,7 +306,7 @@ def serialize_service_response(
         if filter_result.error:
             raise FilterInvalid(f'Invalid {_response_filter_key}: {filter_result.error}')
 
-        trace['client_filter'] = response_filter
+        trace['agent_filter'] = response_filter
         response = filter_result.value
 
     # .. the token cap runs on the possibly cleaned and filtered value, only when a cap is set at all ..

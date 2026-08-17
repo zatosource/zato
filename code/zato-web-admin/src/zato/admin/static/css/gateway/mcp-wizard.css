@@ -14,7 +14,7 @@
 /* ------------------------------------------------------------ */
 
 /* The step 2 label column is just wide enough for the longest question,
-   "Allow client filters" - the shared 14.5em default would push the
+   "Allow agent filters" - the shared 14.5em default would push the
    answers far off to the right */
 #mcp-wizard {
     --wizard-line-label-width: 9.5em;

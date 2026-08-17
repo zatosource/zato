@@ -132,9 +132,9 @@ def _handle_discover(handler:'MCPHandler', request_id:'any_') -> 'stranydict':
         if not cursor:
             break
 
-    # .. a gateway that allows client filters advertises the filter property here
+    # .. a gateway that allows agent filters advertises the filter property here
     # the same way tools/list does ..
-    if handler.allow_client_filters:
+    if handler.allow_agent_filters:
         tools = handler._add_response_filter_property(tools)
 
     # .. and the whole advertisement goes out as one result.

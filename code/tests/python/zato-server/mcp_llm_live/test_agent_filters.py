@@ -73,7 +73,7 @@ def _call_invoices(client:'MCPClient', session_id:'str', expression:'str') -> 'a
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestClientFilterAdvertisement:
+class TestAgentFilterAdvertisement:
     """ The response_filter argument is advertised on every tool of the enabled gateway
     and on none of a disabled one.
     """
@@ -113,7 +113,7 @@ class TestClientFilterAdvertisement:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestClientFilterApplication:
+class TestAgentFilterApplication:
     """ A filter reshapes the response on the way out, an invalid one is the caller's error,
     and a disabled gateway knows nothing of the argument at all.
     """
@@ -143,7 +143,7 @@ class TestClientFilterApplication:
             min_id=min_id)
 
         event_data = events[-1]['data']
-        assert event_data['client_filter'] == _totals_expression, event_data
+        assert event_data['agent_filter'] == _totals_expression, event_data
 
 # ################################################################################################################################
 
@@ -161,7 +161,7 @@ class TestClientFilterApplication:
 
     def test_the_disabled_gateway_refuses_the_argument_under_validation(self, zato_server:'anydict') -> 'None':
 
-        # The validating gateway has client filters off, so the argument is simply unknown there
+        # The validating gateway has agent filters off, so the argument is simply unknown there
         client = _helpers.make_client(zato_server, _constants.Path_Validate)
         session_id = _helpers.open_session(client)
 
@@ -174,7 +174,7 @@ class TestClientFilterApplication:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestClientFiltersWithLLM:
+class TestAgentFiltersWithLLM:
     """ The model, told the tools accept a JSONata response filter, uses one on its own -
     and reports an error it caused with an invalid one.
     """
@@ -227,8 +227,8 @@ class TestClientFiltersWithLLM:
         traced_filters = []
 
         for event in events:
-            if 'client_filter' in event['data']:
-                traced_filters.append(event['data']['client_filter'])
+            if 'agent_filter' in event['data']:
+                traced_filters.append(event['data']['agent_filter'])
 
         assert traced_filters, events
 
@@ -327,7 +327,7 @@ class TestFilterLanguage:
 
         for event in events:
             if event['sub_key'] == session_id:
-                traced.append(event['data']['client_filter'])
+                traced.append(event['data']['agent_filter'])
 
         assert traced == [_expression_predicate, _expression_aggregation, _expression_object], traced
 
@@ -355,7 +355,7 @@ class TestFilterLanguage:
             min_id=min_id)
 
         event_data = events[-1]['data']
-        assert event_data['client_filter'] == _expression_no_match, event_data
+        assert event_data['agent_filter'] == _expression_no_match, event_data
 
 # ################################################################################################################################
 
@@ -385,7 +385,7 @@ class TestFilterLanguage:
         event = events[-1]
         assert event['outcome'] == AuditOutcome.Error, event
         assert event['data']['error_code'] == _constants.Error_Invalid_Params, event
-        assert 'client_filter' not in event['data'], event
+        assert 'agent_filter' not in event['data'], event
 
 # ################################################################################################################################
 
@@ -459,7 +459,7 @@ class TestFilterLanguage:
 
         event = events[-1]
         assert event['outcome'] == AuditOutcome.Error, event
-        assert 'client_filter' not in event['data'], event
+        assert 'agent_filter' not in event['data'], event
 
 # ################################################################################################################################
 
@@ -493,7 +493,7 @@ class TestFilterLanguage:
 
         for event in events:
             if event['sub_key'] == session_id:
-                traced.append(event['data']['client_filter'])
+                traced.append(event['data']['agent_filter'])
 
         assert traced == list(expressions), traced
 

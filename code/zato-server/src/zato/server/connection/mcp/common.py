@@ -158,7 +158,7 @@ class MCPResponse:
     """ Wraps a JSON-RPC response body, HTTP status code, and optional session ID.
     The method and tool name are recorded during dispatch for the audit log,
     so the endpoint never has to re-parse the raw body to learn them.
-    The trace carries what the response safeguards, the token cap and the client filter
+    The trace carries what the response safeguards, the token cap and the agent filter
     did to a tools/call response - only tool calls that changed or refused anything have one.
     """
     body:         'any_'

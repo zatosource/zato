@@ -106,7 +106,7 @@ def build_audit_event(
     """ Builds the keyword dict for one AuditLog.insert call out of plain inputs -
     this is the published column mapping of the MCP audit log. The request and response
     payloads are never included, only their sizes are. The trace of what response shaping
-    did - PII counts, compaction counts, token cuts, the client filter - lands in the data
+    did - PII counts, compaction counts, token cuts, the agent filter - lands in the data
     document, one key per finding, with nothing written for stages that did nothing.
     """
 

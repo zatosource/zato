@@ -56,7 +56,7 @@ _all_trace_keys = (
     'tokens_before',
     'tokens_after',
     'reject_kind',
-    'client_filter',
+    'agent_filter',
 )
 
 # What the stable-replacement PII gateways make of the network field - the numbering
@@ -354,7 +354,7 @@ class TestProcessingIsolation:
         body = _helpers.call_tool(client_b, session_b, _constants.Service_Customer_Get, {})
         assert 'error' not in body, body
 
-        # .. and client filters are advertised only on the filters gateway.
+        # .. and agent filters are advertised only on the filters gateway.
         filters_client = _helpers.make_client(zato_server, _constants.Path_Filters)
         filters_session = _helpers.open_session(filters_client)
 

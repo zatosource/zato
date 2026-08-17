@@ -410,7 +410,7 @@ mcp_gateway:
     skills:
       - crm-house-style
     validate_input: true
-    allow_client_filters: true
+    allow_agent_filters: true
     max_response_size: 2000
     size_cap_mode: block
     min_size_threshold: 100

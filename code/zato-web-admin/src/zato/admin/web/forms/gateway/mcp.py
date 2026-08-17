@@ -45,7 +45,7 @@ class CreateForm(forms.Form):
 
     # Response shaping - the filter expression itself has no form field, an editor pane
     # holds it in the page and the page's JS injects it as a hidden input on submit.
-    allow_client_filters = forms.BooleanField(required=False)
+    allow_agent_filters = forms.BooleanField(required=False)
     max_response_size = forms.IntegerField(required=False, widget=forms.TextInput(attrs={'style':'width:5em'}))
     size_cap_mode = forms.ChoiceField(choices=_size_cap_mode_choices)
     min_size_threshold = forms.IntegerField(required=False, widget=forms.TextInput(attrs={'style':'width:5em'}))
