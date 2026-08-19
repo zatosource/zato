@@ -19,31 +19,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Map of object types to their display names
-type_display_names = {
-    'security': 'security definition',
-    'groups': 'security group',
-    'channel_rest': 'REST channel',
-    'odoo': 'Odoo connection',
-    'email_smtp': 'SMTP connection',
-    'email_imap': 'IMAP connection',
-    'sql': 'SQL connection',
-    'scheduler': 'scheduler job',
-    'confluence': 'Confluence connection',
-    'jira': 'Jira connection',
-    'ldap': 'LDAP connection',
-    'mongodb': 'MongoDB connection',
-    'smb': 'SMB connection',
-    'microsoft_cloud': 'Microsoft 365 connection',
-    'microsoft_fabric': 'Microsoft Fabric connection',
-    'microsoft_power_automate': 'Microsoft Power Automate connection',
-    'elastic_search': 'ElasticSearch connection'
-}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-
 class Enmasse(ZatoCommand):
 
     opts:'dictlist' = [
@@ -56,16 +31,12 @@ class Enmasse(ZatoCommand):
 
         {'name':'--include-type', 'help':'Comma-separated list of object types to limit the export to'},
 
-        {'name':'--ignore-missing-includes', 'help':'Ignore include files that do not exist', 'action':'store_true'},
         {'name':'--exit-on-missing-file', 'help':'If input file does not exist, exit with status code 0', 'action':'store_true'},
 
         {'name':'--initial-wait-time', 'help':'How many seconds to initially wait for a server', 'default':10},
         {'name':'--missing-wait-time', 'help':'How many seconds to wait for missing objects', 'default':2},
 
         {'name':'--env-file', 'help':'Path to an .ini file with environment variables'},
-
-        # zato enmasse --import --input=/path/to/input-enmasse.yaml   ~/qs-1/server1     --verbose
-        # zato enmasse --export --output /path/to/output-enmasse.yaml ~/env/qs-1/server1 --verbose
     ]
 
     def get_cluster_id(self, args):
@@ -95,7 +66,7 @@ class Enmasse(ZatoCommand):
         self.component_dir = server_path
 
         # Process environment variables if specified
-        if getattr(args, 'env_file', None):
+        if args.env_file:
             self.logger.info('Loading environment variables from %s', args.env_file)
 
             # ConfigObj for parsing the file
@@ -115,7 +86,7 @@ class Enmasse(ZatoCommand):
         session = get_session_from_server_dir(server_path)
 
         # Handle export
-        if getattr(args, 'export', False) or getattr(args, 'export_odb', False):
+        if args.export:
             self.logger.info('Exporting objects to YAML')
 
             # Make sure we have an output file
@@ -131,8 +102,19 @@ class Enmasse(ZatoCommand):
                 # If requested, limit the export to specific object types only,
                 # e.g. --include-type channel_mllp or a comma-separated list of types.
                 if args.include_type:
-                    include_types = {item.strip() for item in args.include_type.split(',')}
-                    data_dict = {key: value for key, value in data_dict.items() if key in include_types}
+
+                    include_types = set()
+
+                    for item in args.include_type.split(','):
+                        include_types.add(item.strip())
+
+                    filtered_dict = {}
+
+                    for key, value in data_dict.items():
+                        if key in include_types:
+                            filtered_dict[key] = value
+
+                    data_dict = filtered_dict
 
                 file_writer = FileWriter(args.output)
                 file_writer.write(data_dict)
@@ -152,9 +134,10 @@ class Enmasse(ZatoCommand):
                 sys.exit(self.SYS_ERROR.PARAMETER_MISSING)
 
             # Check if file exists
-            if not os.path.exists(args.input) and args.exit_on_missing_file:
-                self.logger.warning('Input file %s not found, exiting', args.input)
-                sys.exit(0)
+            if not os.path.exists(args.input):
+                if args.exit_on_missing_file:
+                    self.logger.warning('Input file %s not found, exiting', args.input)
+                    sys.exit(0)
 
             # Import from YAML
             importer = EnmasseYAMLImporter()
@@ -162,9 +145,6 @@ class Enmasse(ZatoCommand):
             try:
                 # Load configuration from file
                 yaml_config:'stranydict' = importer.from_path(args.input)
-
-                # Set import context
-                ModuleCtx.ignore_missing_includes = args.ignore_missing_includes
 
                 # Sync objects ..
                 _ = importer.sync_from_yaml(

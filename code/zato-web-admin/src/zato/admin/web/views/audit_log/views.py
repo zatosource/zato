@@ -26,8 +26,8 @@ from django.template.response import TemplateResponse
 from zato.admin.web.views import action_json_response, invoke_action_handler, method_allowed, \
     Action_Message_Max_Length, _traceback_marker
 from zato.admin.web.views.audit_log.columns import _all_sources_columns, _all_sources_section_title, _all_sources_title, \
-    _data_preview_len, _default_page, _endpoint_page_url, _event_type_label, _flow_columns, _get_outcomes, _object_page_url, \
-    _poll_url, _preview_len, _row_columns, _run_page_url, _source_columns, _source_endpoint_label, _source_event_label, \
+    _data_preview_length, _default_page, _endpoint_page_url, _event_type_label, _flow_columns, _get_outcomes, _object_page_url, \
+    _poll_url, _preview_length, _row_columns, _run_page_url, _source_columns, _source_endpoint_label, _source_event_label, \
     _source_except_label, _source_label, _source_object_label, _source_page_url, _source_title, _status_outstanding
 from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import get_resubmit_labels, _source_outstanding, _source_parse, \
@@ -309,7 +309,7 @@ def poll(req:'any_') -> 'HttpResponse':
                     attach_trace_lines(row, data)
 
             # .. and only a preview of the payload goes into the table.
-            row['data'] = data[:_data_preview_len]
+            row['data'] = data[:_data_preview_length]
 
             rows.append(row)
 
@@ -516,7 +516,7 @@ def _read_flow_rows(connection:'any_', seed_id:'int') -> 'anylist':
 
         # Only a preview of the payload travels with a line - the whole of it is fetched
         # by the line that is opened, and only then.
-        row['data'] = data[:_data_preview_len]
+        row['data'] = data[:_data_preview_length]
 
         # Why this event is in the flow, and whether it is the one the flow was read from
         relation = relation_by_id[row['id']]
@@ -662,7 +662,7 @@ def details(req:'any_') -> 'HttpResponse':
 
     # A preview is the top of the message and nothing else ..
     if is_preview:
-        data = data[:_preview_len]
+        data = data[:_preview_length]
         parsed = ''
 
     # .. and the whole message additionally gets its parsed view, from the source's own renderer

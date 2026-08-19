@@ -85,7 +85,7 @@ def lookup(ctx:'ResponseCacheContext') -> 'strnone':
 
     # A no-cache request never reads from the cache
     if ctx.skip_lookup:
-        zato_rest_channel_cache_operations_total.labels(ctx.channel_name, ModuleCtx.Outcome_Bypass).inc()
+        zato_rest_channel_cache_operations_total.labels(ctx.channel_name, ModuleCtx.Outcome_Not_Cached).inc()
         return None
 
     value = ctx.cache_api.get(ctx.key)
@@ -147,9 +147,9 @@ def store(ctx:'ResponseCacheContext', body:'any_', status_code:'int') -> 'None':
                 if directive in ModuleCtx.Uncacheable_Directives:
                     return
 
-    # .. and responses above the size cap bypass caching entirely.
+    # .. and responses above the size cap are not cached.
     if len(body) > ctx.config.max_body_size:
-        zato_rest_channel_cache_operations_total.labels(ctx.channel_name, ModuleCtx.Outcome_Bypass).inc()
+        zato_rest_channel_cache_operations_total.labels(ctx.channel_name, ModuleCtx.Outcome_Not_Cached).inc()
         return
 
     # The first miss of a key stores a one-byte marker instead of the body - one-hit-wonder

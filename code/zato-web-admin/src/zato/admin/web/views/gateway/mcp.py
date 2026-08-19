@@ -22,7 +22,7 @@ from zato.admin.web.forms import populate_form_initial
 from zato.admin.web.forms.gateway.mcp import CreateForm, EditForm
 from zato.admin.web.util import get_server_directory
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.api import API_Key, GENERIC, Groups, MCP, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME
+from zato.common.api import API_Key, GENERIC, Groups, MCP, SEC_DEF_TYPE, Sec_Def_Type_Name
 from zato.common.defaults import http_plain_server_port
 from zato.common.skills.api import get_skill_name_list
 from zato.common.util.api import asbool
@@ -553,7 +553,7 @@ def get_security_list(req:'any_') -> 'HttpResponse':
             continue
 
         sec_type = item['sec_type']
-        sec_type_name = SEC_DEF_TYPE_NAME[sec_type] # type: ignore
+        sec_type_name = Sec_Def_Type_Name[sec_type] # type: ignore
         items.append({
             'id': item['id'],
             'name': name,

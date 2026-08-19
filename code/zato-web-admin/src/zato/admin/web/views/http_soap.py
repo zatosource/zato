@@ -25,7 +25,7 @@ from zato.admin.web.views import get_group_list as common_get_group_list, get_ht
         method_allowed, ping_json_response, SecurityList
 from zato.admin.web.views.security.tier import get_tier_list
 from zato.common.api import generic_attrs, Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
-     SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
+     Sec_Def_Type_Name, SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.content_type import format_content, get_content_type
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps, loads
@@ -629,7 +629,7 @@ def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
     # Connections without security carry no name at all here.
     if security_name := updated.get('security_name'):
         security_href = _get_security_href(req.zato.cluster_id, updated['sec_type'], security_name)
-        sec_type_name = SEC_DEF_TYPE_NAME[updated['sec_type']]
+        sec_type_name = Sec_Def_Type_Name[updated['sec_type']]
     else:
         security_name = ''
         security_href = ''

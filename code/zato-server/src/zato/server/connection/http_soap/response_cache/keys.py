@@ -131,7 +131,7 @@ def get_context(
     # Requests carrying cookies are cached only when the channel varies its entries by the Cookie header ..
     if ModuleCtx.Cookie_Header in wsgi_environ:
         if ModuleCtx.Cookie_Header_Name not in config.vary_by_headers:
-            zato_rest_channel_cache_operations_total.labels(channel_name, ModuleCtx.Outcome_Bypass).inc()
+            zato_rest_channel_cache_operations_total.labels(channel_name, ModuleCtx.Outcome_Not_Cached).inc()
             return None
 
     # .. GET and HEAD are cacheable as they are, POST only when the body joins the key ..
@@ -143,10 +143,10 @@ def get_context(
         if not config.include_body_in_key:
             return None
 
-    # .. a request body above the cap bypasses caching entirely ..
+    # .. a request body above the cap is not cached ..
     if config.include_body_in_key:
         if len(payload) > config.max_body_size:
-            zato_rest_channel_cache_operations_total.labels(channel_name, ModuleCtx.Outcome_Bypass).inc()
+            zato_rest_channel_cache_operations_total.labels(channel_name, ModuleCtx.Outcome_Not_Cached).inc()
             return None
 
     channel_id = channel_item['id']

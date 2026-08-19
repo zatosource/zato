@@ -27,7 +27,7 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index,
     get_http_channel_security_id, get_security_id_from_select, SecurityList
 from zato.common.api import GENERIC, generic_attrs, Groups, HL7, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.destination.model import count_entries
-from zato.common.hl7.mllp.fields import Channel_Defaults, resolve_max_msg_size
+from zato.common.hl7.mllp.fields import Channel_Defaults, resolve_max_message_size
 from zato.common.hl7.mllp.settings import describe_bounds_violations
 from zato.common.model.hl7 import HL7MLLPChannelConfigObject
 from zato.common.util.api import asbool
@@ -309,7 +309,7 @@ class _CreateEdit(CreateEdit):
         idle_timeout = float(post_data[f'{prefix}idle_timeout'])
 
         violations = describe_bounds_violations(
-            resolve_max_msg_size(max_msg_size, max_msg_size_unit),
+            resolve_max_message_size(max_msg_size, max_msg_size_unit),
             idle_timeout,
         )
 
@@ -670,8 +670,8 @@ def _populate_rest_bridge(req:'any_', item_dict:'stranydict', rest_channel_id:'i
 def wizard_create(req:'any_') -> 'TemplateResponse':
     """ A multi-step wizard for a new HL7 MLLP channel.
     """
-    security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.BASIC_AUTH)
-    mtls_security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.MTLS)
+    security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, [SEC_DEF_TYPE.BASIC_AUTH])
+    mtls_security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, [SEC_DEF_TYPE.MTLS])
 
     return_data = {
         'cluster_id': req.zato.cluster_id,
@@ -723,8 +723,8 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     if rest_channel_id:
         _populate_rest_bridge(req, item_dict, rest_channel_id)
 
-    security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.BASIC_AUTH)
-    mtls_security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.MTLS)
+    security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, [SEC_DEF_TYPE.BASIC_AUTH])
+    mtls_security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, [SEC_DEF_TYPE.MTLS])
 
     # .. the edit endpoint reads its input under the edit- prefix, which is what the form
     # .. is built with and what the wizard's own fieldPrefix mirrors ..

@@ -43,18 +43,36 @@ _max_msg_size_unit_choices = [
     ('mb', 'MB'),
 ]
 
+# What a checkbox that starts out ticked renders with.
+_checked_attrs = {'checked':'checked'}
+
+# ################################################################################################################################
+
+def _new_checkbox_field(is_checked:'bool'=False) -> 'any_':
+    """ Returns a checkbox, ticked by default or not.
+    """
+    if is_checked:
+        attrs = dict(_checked_attrs)
+    else:
+        attrs = {}
+
+    widget = forms.CheckboxInput(attrs=attrs)
+
+    out = forms.BooleanField(required=False, widget=widget)
+    return out
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    should_parse_on_input = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_active = _new_checkbox_field(is_checked=True)
+    should_parse_on_input = _new_checkbox_field(is_checked=True)
 
-    should_validate = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    should_return_errors = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    should_log_messages = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    should_validate = _new_checkbox_field()
+    should_return_errors = _new_checkbox_field()
+    should_log_messages = _new_checkbox_field()
+    is_audit_log_active = _new_checkbox_field(is_checked=True)
 
     # A channel hands each message to a service, to its destinations, or to both, so this
     # is not required on its own - the page checks that at least one of the two is there.
@@ -92,7 +110,7 @@ class CreateForm(forms.Form):
     msh9_trigger_event      = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:30%'}))
     msh11_processing_id     = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:15%'}))
     msh12_version_id        = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:15%'}))
-    is_default              = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_default              = _new_checkbox_field()
 
     # Dedup
     dedup_ttl_value = forms.CharField(
@@ -115,20 +133,20 @@ class CreateForm(forms.Form):
     )
 
     # Message tolerance toggles (MLLP preprocessing layer)
-    normalize_line_endings        = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    force_standard_delimiters     = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    restore_truncated_msh          = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    split_concatenated_messages   = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    use_msh18_encoding            = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    normalize_line_endings        = _new_checkbox_field(is_checked=True)
+    force_standard_delimiters     = _new_checkbox_field(is_checked=True)
+    restore_truncated_msh         = _new_checkbox_field(is_checked=True)
+    split_concatenated_messages   = _new_checkbox_field(is_checked=True)
+    use_msh18_encoding            = _new_checkbox_field(is_checked=True)
 
     # Parser tolerance toggles (Rust ER7 content-level fixups)
-    normalize_obx2_value_type           = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    replace_invalid_obx2_value_type     = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    normalize_invalid_escape_sequences  = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    normalize_obx8_abnormal_flags       = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    normalize_quadruple_quoted_empty    = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    allow_short_encoding_characters     = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    fix_off_by_one_field_index          = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    normalize_obx2_value_type          = _new_checkbox_field(is_checked=True)
+    replace_invalid_obx2_value_type    = _new_checkbox_field(is_checked=True)
+    normalize_invalid_escape_sequences = _new_checkbox_field(is_checked=True)
+    normalize_obx8_abnormal_flags      = _new_checkbox_field(is_checked=True)
+    normalize_quadruple_quoted_empty   = _new_checkbox_field(is_checked=True)
+    allow_short_encoding_characters    = _new_checkbox_field(is_checked=True)
+    fix_off_by_one_field_index         = _new_checkbox_field()
 
     # Destinations - serialized by JS to hidden JSON fields
     destinations  = forms.CharField(required=False, widget=forms.HiddenInput())
@@ -136,8 +154,8 @@ class CreateForm(forms.Form):
     delivery_mode = forms.CharField(required=False, widget=forms.HiddenInput())
 
     # REST bridge
-    use_rest         = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    rest_only        = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    use_rest         = _new_checkbox_field()
+    rest_only        = _new_checkbox_field()
     rest_url_path    = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     rest_security_id = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
 
@@ -182,16 +200,15 @@ class RowEditForm(forms.Form):
 # ################################################################################################################################
 
 class EditForm(CreateForm):
-    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_active = _new_checkbox_field()
 
     def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
-        super(EditForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
-        # A widget rendering the checked attribute renders it whatever its value is, so a switch
-        # declared that way would come up on for a channel that has it off. An existing channel
-        # says what each of its switches is set to, and that is what the page opens with.
+        # An edit form opens with the values the object already has.
         for field in self.fields.values():
-            _ = field.widget.attrs.pop('checked', None)
+            if 'checked' in field.widget.attrs:
+                del field.widget.attrs['checked']
 
 # ################################################################################################################################
 # ################################################################################################################################

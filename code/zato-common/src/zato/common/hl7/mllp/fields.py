@@ -16,8 +16,10 @@ from zato.common.hl7.fields import ConnectionField, get_column_defaults, get_def
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strtuple
+    from zato.common.typing_ import strlist, strtuple
 
+    # Add dummy assignments to satisfy type checkers
+    strlist = strlist
     strtuple = strtuple
 
 # ################################################################################################################################
@@ -29,21 +31,20 @@ mllp_field_list = list[MLLPField]
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many bytes each unit the channel form offers stands for
-Max_Msg_Size_Multipliers = {
+# How many bytes each unit the channel form offers stands for.
+Max_Message_Size_Multipliers = {
     'kb': 1024,
     'mb': 1024 * 1024,
 }
 
 # ################################################################################################################################
 
-def resolve_max_msg_size(value:'int', unit:'str') -> 'int':
-    """ Turns a size and the unit it was entered in into bytes, which is what every bound the
-    listener holds a channel to is expressed in.
+def resolve_max_message_size(value:'int', unit:'str') -> 'int':
+    """ Turns a size and the unit it was entered in into bytes.
     """
 
-    # The multiplier map is keyed lower-case and a stored unit may carry either casing
-    multiplier = Max_Msg_Size_Multipliers[unit.lower()]
+    # The multiplier map is keyed lower-case and a stored unit may carry either casing.
+    multiplier = Max_Message_Size_Multipliers[unit.lower()]
 
     out = value * multiplier
     return out
@@ -59,8 +60,7 @@ Channel_Fields:'mllp_field_list' = [
     MLLPField('hl7_version', HL7.Const.Version.v2.id),
     MLLPField('service', ''),
 
-    # How this channel's own messages are framed and read. Each is capped at the listener's
-    # matching bound rather than able to exceed it.
+    # How this channel's own messages are framed and read.
     MLLPField('start_seq', HL7.Default.start_seq),
     MLLPField('end_seq', HL7.Default.end_seq),
     MLLPField('recv_timeout', HL7.Default.recv_timeout),
@@ -71,7 +71,7 @@ Channel_Fields:'mllp_field_list' = [
     MLLPField('keepalive_interval', HL7.Default.keepalive_interval),
     MLLPField('keepalive_probe_count', HL7.Default.keepalive_probe_count),
 
-    # Who this channel accepts a message from
+    # Who this channel accepts a message from.
     MLLPField('security_id', 0),
     MLLPField('allowed_networks', ''),
 
@@ -82,7 +82,7 @@ Channel_Fields:'mllp_field_list' = [
     # Logging and audit
     MLLPField('should_log_messages', False),
     MLLPField('should_return_errors', False),
-    MLLPField('is_audit_log_active', False),
+    MLLPField('is_audit_log_active', True),
 
     # Routing
     MLLPField('msh3_sending_app', ''),
@@ -95,11 +95,11 @@ Channel_Fields:'mllp_field_list' = [
     MLLPField('msh12_version_id', ''),
     MLLPField('is_default', False),
 
-    # Deduplication - a TTL of zero means every message is delivered
+    # Deduplication - a TTL of zero means every message is delivered.
     MLLPField('dedup_ttl_value', HL7.Default.dedup_ttl_value),
     MLLPField('dedup_ttl_unit', HL7.Default.dedup_ttl_unit),
 
-    # Encoding, used when MSH-18 is absent or its toggle is off
+    # Encoding, used when MSH-18 is absent or its toggle is off.
     MLLPField('default_character_encoding', HL7.Default.data_encoding),
 
     # Message tolerance toggles
@@ -136,7 +136,7 @@ Channel_Fields:'mllp_field_list' = [
 
 # Every field an MLLP outgoing connection carries. Name and address are not here
 # because they are required rather than defaulted.
-Outconn_Fields:'mllp_field_list' = [
+Outgoing_Fields:'mllp_field_list' = [
 
     MLLPField('is_active', True, is_column=True),
     MLLPField('pool_size', HL7.Default.pool_size, is_column=True),
@@ -152,7 +152,7 @@ Outconn_Fields:'mllp_field_list' = [
     # Logging and audit
     MLLPField('should_log_messages', False),
     MLLPField('logging_level', HL7.Default.logging_level),
-    MLLPField('is_audit_log_active', False),
+    MLLPField('is_audit_log_active', True),
 
     # Retry engine
     MLLPField('max_retries', HL7.Default.max_retries),
@@ -165,7 +165,7 @@ Outconn_Fields:'mllp_field_list' = [
     MLLPField('circuit_breaker_window_seconds', HL7.Default.circuit_breaker_window_seconds),
     MLLPField('circuit_breaker_reset_seconds', HL7.Default.circuit_breaker_reset_seconds),
 
-    # TLS turns on once a CA bundle is configured
+    # TLS turns on once a CA bundle is configured.
     MLLPField('tls_ca_path', ''),
     MLLPField('tls_cert_path', ''),
     MLLPField('tls_key_path', ''),
@@ -210,7 +210,7 @@ def get_enmasse_channel_names() -> 'strtuple':
     """ The channel field names as enmasse presents them, which is every stored field except that
     the security definition appears under the name YAML refers to it by.
     """
-    names = []
+    names:'strlist' = []
 
     for name in Channel_Names:
 
@@ -228,11 +228,11 @@ Channel_Enmasse_Names = get_enmasse_channel_names()
 
 # ################################################################################################################################
 
-Outconn_Column_Defaults = get_column_defaults(Outconn_Fields)
-Outconn_Opaque_Defaults = get_opaque_defaults(Outconn_Fields)
-Outconn_Defaults        = get_defaults(Outconn_Fields)
-Outconn_Int_Names       = get_int_names(Outconn_Fields)
-Outconn_Names           = get_names(Outconn_Fields)
+Outgoing_Column_Defaults = get_column_defaults(Outgoing_Fields)
+Outgoing_Opaque_Defaults = get_opaque_defaults(Outgoing_Fields)
+Outgoing_Defaults        = get_defaults(Outgoing_Fields)
+Outgoing_Int_Names       = get_int_names(Outgoing_Fields)
+Outgoing_Names           = get_names(Outgoing_Fields)
 
 # ################################################################################################################################
 # ################################################################################################################################

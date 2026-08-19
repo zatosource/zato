@@ -170,7 +170,6 @@ class ModuleCtx:
     Cluster_ID = 1
     Initial_Wait_Time = 10
     Missing_Wait_Time = 1
-    ignore_missing_includes = False
 
     ObjectType  = _object_type
     ObjectAlias = _object_alias

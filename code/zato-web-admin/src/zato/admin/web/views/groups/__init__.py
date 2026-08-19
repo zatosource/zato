@@ -20,7 +20,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.forms.groups import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, get_group_list as common_get_group_list,  \
     get_security_name_link, Index as _Index, method_allowed
-from zato.common.api import Groups, SEC_DEF_TYPE_NAME
+from zato.common.api import Groups, Sec_Def_Type_Name
 from zato.common.model.groups import GroupObject
 
 # ################################################################################################################################
@@ -196,7 +196,7 @@ def _extract_items_from_response(req:'any_', response:'any_') -> 'anylist':
             sec_type = item['sec_type']
             sec_name = item['name']
             security_name = get_security_name_link(req, sec_type, sec_name, needs_type=False)
-            sec_type_name = SEC_DEF_TYPE_NAME[sec_type] # type: ignore
+            sec_type_name = Sec_Def_Type_Name[sec_type] # type: ignore
             item['sec_type_name'] = sec_type_name
             item['security_name'] = security_name
             out.append(item)

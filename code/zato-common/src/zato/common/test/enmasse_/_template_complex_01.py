@@ -610,7 +610,8 @@ sql:
     db_name: MYDB_01
     username: enmasse.2
     password: Zato_Enmasse_Env.SQL_Password_2
-    extra: connect_timeout=10
+    extra:
+      - connect_timeout=10
     pool_size: 10
 
   - name: enmasse.sql.3
@@ -620,7 +621,8 @@ sql:
     db_name: MYDB_01
     username: enmasse.3
     password: Zato_Enmasse_Env.SQL_Password_3
-    extra: warehouse=COMPUTE_WH;role=ANALYST;schema=PUBLIC
+    extra:
+      - warehouse=COMPUTE_WH;role=ANALYST;schema=PUBLIC
 
   - name: enmasse.sql.4
     type: redshift
@@ -629,7 +631,8 @@ sql:
     db_name: MYDB_01
     username: enmasse.4
     password: Zato_Enmasse_Env.SQL_Password_4
-    extra: sslmode=verify-ca
+    extra:
+      - sslmode=verify-ca
 
 outgoing_soap:
 

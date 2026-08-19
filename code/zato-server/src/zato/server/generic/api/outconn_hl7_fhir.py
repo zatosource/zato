@@ -19,7 +19,7 @@ from fhirpy import SyncFHIRClient
 from zato.common.api import HL7
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.bearer_token import normalize_scopes
-from zato.common.hl7.fhir.fields import Outconn_Config_Defaults, Outconn_Int_Names
+from zato.common.hl7.fhir.fields import Outgoing_Config_Defaults, Outgoing_Int_Names
 from zato.common.json_internal import dumps
 from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
 from zato.common.typing_ import cast_
@@ -55,10 +55,10 @@ _ms_per_second = 1000
 
 # Defaults applied by the config manager when the create path does not supply a field,
 # e.g. when an outconn is created directly through zato.generic.connection.create.
-outconn_fhir_config_defaults = Outconn_Config_Defaults
+outconn_fhir_config_defaults = Outgoing_Config_Defaults
 
 # Config keys that must be integers but may arrive as strings from opaque storage
-outconn_fhir_int_config_keys = Outconn_Int_Names
+outconn_fhir_int_config_keys = Outgoing_Int_Names
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -25,10 +25,10 @@ from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo
     Channel_Main, Facilities_By_Channel, Outconn_FHIR, Outconn_Forward, Route_Clinic, Route_Lab, Route_Main, SeedConfig
 from zato.common.destination.constants import DestinationType
 from zato.common.hl7.feed import generate_feed_items, rewrite_msh_field, FeedConfig, MSH3_Index, MSH4_Index
-from zato.common.hl7.fhir.fields import Outconn_Config_Defaults as FHIR_Outconn_Defaults
+from zato.common.hl7.fhir.fields import Outgoing_Config_Defaults as FHIR_Outgoing_Defaults
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.fields import Channel_Defaults as MLLP_Channel_Defaults, \
-    Outconn_Defaults as MLLP_Outconn_Defaults
+    Outgoing_Defaults as MLLP_Outgoing_Defaults
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn, HTTPSOAP
 from zato.common.typing_ import cast_
@@ -63,8 +63,8 @@ _type_outconn_fhir = 'outconn-hl7-fhir'
 # rather than only the few fields named below - a reader of any other field finds it there
 _type_defaults = {
     _type_channel_mllp: MLLP_Channel_Defaults,
-    _type_outconn_mllp: MLLP_Outconn_Defaults,
-    _type_outconn_fhir: FHIR_Outconn_Defaults,
+    _type_outconn_mllp: MLLP_Outgoing_Defaults,
+    _type_outconn_fhir: FHIR_Outgoing_Defaults,
 }
 
 # The service behind the demo MLLP channels and the one behind the archive's REST intake -

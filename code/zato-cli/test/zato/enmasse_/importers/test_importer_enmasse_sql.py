@@ -155,14 +155,14 @@ class TestEnmasseSQLFromYAML(TestCase):
         sql_created, sql_updated = self.sql_importer.sync_sql_definitions(sql_list, self.session)
 
         # Update importer's SQL definitions
-        self.importer.sql_defs = self.sql_importer.sql_defs
+        self.importer.sql_defs = self.sql_importer.sql_definitions
 
         # Verify SQL definitions were created (4 in the template)
         self.assertEqual(len(sql_created), 4)
         self.assertEqual(len(sql_updated), 0)
 
         # Verify the SQL definitions dictionary was populated
-        self.assertEqual(len(self.sql_importer.sql_defs), 4)
+        self.assertEqual(len(self.sql_importer.sql_definitions), 4)
 
         # Verify that these definitions are accessible from the main importer
         self.assertEqual(len(self.importer.sql_defs), 4)

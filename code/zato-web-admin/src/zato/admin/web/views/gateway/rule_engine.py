@@ -16,7 +16,7 @@ from django.http import HttpResponse
 # Zato
 from zato.admin.web.forms.gateway.rule_engine import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.api import GENERIC, Groups, SEC_DEF_TYPE_NAME
+from zato.common.api import GENERIC, Groups, Sec_Def_Type_Name
 from zato.common.rule_engine.invocation import unmatched_ruleset_patterns
 
 # Bunch
@@ -281,7 +281,7 @@ def get_security_list(req:'any_') -> 'HttpResponse':
             continue
 
         sec_type = item['sec_type']
-        sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
+        sec_type_name = Sec_Def_Type_Name[sec_type]
         items.append({
             'id': item['id'],
             'name': name,

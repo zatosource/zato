@@ -11,7 +11,7 @@ from zato.common.api import GENERIC, HL7
 from zato.common.destination.constants import Default_Delivery_Mode, Respond_From_Service
 from zato.common.destination.model import count_entries, dump_entries, parse_config
 from zato.common.hl7.mllp.fields import Channel_Column_Defaults, Channel_Opaque_Defaults, Channel_Security_Id_Key, \
-    Channel_Security_Name_Key, resolve_max_msg_size
+    Channel_Security_Name_Key, resolve_max_message_size
 from zato.common.hl7.mllp.settings import describe_bounds_violations
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 
@@ -121,7 +121,7 @@ class ChannelMLLPImporter(GenericConnectionImporter):
         idle_timeout = connection_def.get('idle_timeout', HL7.Default.idle_timeout)
 
         violations = describe_bounds_violations(
-            resolve_max_msg_size(max_msg_size, max_msg_size_unit),
+            resolve_max_message_size(max_msg_size, max_msg_size_unit),
             idle_timeout,
         )
 

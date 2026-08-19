@@ -16,13 +16,13 @@ from uuid import uuid4
 
 # Zato
 from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, query_parameters, \
-     SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, ZATO_NONE
+     SEC_DEF_TYPE, Sec_Def_Type_Name, ZATO_NONE
 from zato.common.as2.rotation import complete_rotation, needs_rotation_completion
 from zato.common.audit_log.common import AuditEvent
 from zato.common.broker_message import GENERIC
 from zato.common.const import SECRETS
 from zato.common.hl7.mllp.fields import Channel_Int_Names as MLLP_Channel_Int_Names, \
-    Outconn_Int_Names as MLLP_Outconn_Int_Names
+    Outgoing_Int_Names as MLLP_Outgoing_Int_Names
 from zato.common.ext_db.api import get_ext_db_session, is_ext_db_configured, is_ext_object_id, needs_ext_db, \
      to_local_id, to_public_id
 from zato.common.json_internal import dumps, loads
@@ -206,7 +206,7 @@ skip_simple_type = {
 # outgoing connection's counts, sizes, timeouts and ids are among them because they travel as
 # opaque attributes rather than as columns of their own, so nothing else says they are numbers.
 int_attrs = ['pool_size', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout']
-int_attrs = int_attrs + list(MLLP_Channel_Int_Names) + list(MLLP_Outconn_Int_Names)
+int_attrs = int_attrs + list(MLLP_Channel_Int_Names) + list(MLLP_Outgoing_Int_Names)
 
 # ################################################################################################################################
 
@@ -333,7 +333,7 @@ class _CreateEdit(_BaseService):
 
             # Extract the components ..
             sec_def_type, security_id = security_id.split(sec_def_sep)
-            sec_def_type_name = SEC_DEF_TYPE_NAME[sec_def_type]
+            sec_def_type_name = Sec_Def_Type_Name[sec_def_type]
 
             security_id = int(security_id)
 

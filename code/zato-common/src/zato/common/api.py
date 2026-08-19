@@ -460,7 +460,7 @@ Sec_Def_Type = SEC_DEF_TYPE
 # ################################################################################################################################
 # ################################################################################################################################
 
-SEC_DEF_TYPE_NAME = {
+Sec_Def_Type_Name = {
     SEC_DEF_TYPE.APIKEY: 'API key',
     SEC_DEF_TYPE.BASIC_AUTH: 'Basic Auth',
     SEC_DEF_TYPE.MTLS: 'mTLS',
@@ -470,7 +470,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.WSS: 'WS-Security',
 }
 
-All_Sec_Def_Types = sorted(SEC_DEF_TYPE_NAME)
+All_Sec_Def_Types = sorted(Sec_Def_Type_Name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -604,23 +604,6 @@ class SCHEDULER:
     Default_API_Client_For_Server_Auth_Required = True
     Default_API_Client_For_Server_Username = 'server_api_client1'
 
-    TLS_Enabled = False
-    TLS_Verify = True
-    TLS_Client_Certs = 'optional'
-
-    TLS_Private_Key_Location  = 'zato-scheduler-priv-key.pem'
-    TLS_Public_Key_Location   = 'zato-scheduler-pub-key.pem'
-    TLS_Cert_Location         = 'zato-scheduler-cert.pem'
-    TLS_CA_Certs_Key_Location = 'zato-scheduler-ca-certs.pem'
-
-    TLS_Version_Default_Linux   = 'TLSv1_3'
-    TLS_Version_Default_Windows = 'TLSv1_2'
-
-    TLS_Ciphers_13 = 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256'
-    TLS_Ciphers_12 = 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:' + \
-                     'ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:'  + \
-                     'DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305'
-
     class Status:
         Active = 'Active'
         Paused = 'Paused'
@@ -636,17 +619,6 @@ class SCHEDULER:
 
         Bind_Host = 'Zato_Scheduler_scheduler_conf_bind_host'
         Bind_Port = 'Zato_Scheduler_Bind_Port'
-        Use_TLS = 'Zato_Scheduler_Use_TLS'
-        TLS_Verify = 'Zato_Scheduler_TLS_Verify'
-        TLS_Client_Certs = 'Zato_Scheduler_TLS_Client_Certs'
-
-        TLS_Private_Key_Location  = 'Zato_Scheduler_TLS_Private_Key_Location'
-        TLS_Public_Key_Location   = 'Zato_Scheduler_TLS_Public_Key_Location'
-        TLS_Cert_Location         = 'Zato_Scheduler_TLS_Cert_Location'
-        TLS_CA_Certs_Key_Location = 'Zato_Scheduler_TLS_CA_Certs_Key_Location'
-
-        TLS_Version = 'Zato_Scheduler_TLS_Version'
-        TLS_Ciphers = 'Zato_Scheduler_TLS_Ciphers'
         Path_Action_Prefix = 'Zato_Scheduler_Path_Action_'
 
         # These are used by servers to invoke the scheduler

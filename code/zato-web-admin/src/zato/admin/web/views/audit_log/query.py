@@ -13,7 +13,7 @@ what a page of rows is enriched with before it reaches the browser.
 from sqlalchemy import and_, func, or_, select
 
 # Zato
-from zato.admin.web.views.audit_log.columns import _data_preview_len, _row_numeric_columns, _search_columns, \
+from zato.admin.web.views.audit_log.columns import _data_preview_length, _row_numeric_columns, _search_columns, \
     _source_attr_columns, _source_body_preview, _status_outstanding
 from zato.admin.web.views.audit_log.sources import _source_outstanding, _source_resubmit, _source_row_enrich
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table
@@ -395,7 +395,7 @@ def _attach_body_previews(connection:'any_', source:'str', rows:'anylist') -> 'N
     if not row_by_event_id:
         return
 
-    data_preview = func.substr(event_body_table.c.data, 1, _data_preview_len)
+    data_preview = func.substr(event_body_table.c.data, 1, _data_preview_length)
     is_wanted_event = event_body_table.c.event_id.in_(row_by_event_id)
 
     statement = select(event_body_table.c.event_id, data_preview)

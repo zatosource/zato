@@ -679,7 +679,7 @@ class EnmasseYAMLImporter:
         sql_created, sql_updated = self.sql_importer.sync_sql_definitions(sql_list, session)
 
         # Get SQL definitions from the SQL importer
-        self.sql_defs = self.sql_importer.sql_defs
+        self.sql_defs = self.sql_importer.sql_definitions
         logger.info('Processed SQL connection pool definitions: created=%d updated=%d', len(sql_created), len(sql_updated))
 
         return sql_created, sql_updated

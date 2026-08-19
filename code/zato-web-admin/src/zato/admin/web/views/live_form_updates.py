@@ -16,7 +16,7 @@ from django.http import HttpResponse, HttpResponseBadRequest
 # Zato
 from zato.admin.web.util import get_pubsub_security_definitions
 from zato.admin.web.views import method_allowed
-from zato.common.api import SEC_DEF_TYPE_NAME
+from zato.common.api import Sec_Def_Type_Name
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
@@ -226,8 +226,8 @@ def _fetch_list(req:'any_', object_type:'str') -> 'dictlist':
 
         # Derive sec_type_name from sec_type if available
         sec_type = item.get('sec_type')
-        if sec_type and sec_type in SEC_DEF_TYPE_NAME:
-            entry['sec_type_name'] = SEC_DEF_TYPE_NAME[sec_type]
+        if sec_type and sec_type in Sec_Def_Type_Name:
+            entry['sec_type_name'] = Sec_Def_Type_Name[sec_type]
 
         # Build the exact label that the page displays for this item - the client snapshots
         # the displayed text, so both sides of the comparison use the same formatting.

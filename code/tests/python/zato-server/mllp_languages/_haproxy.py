@@ -46,10 +46,10 @@ Haproxy_Binary = 'haproxy'
 # which is right for a container and wrong for a test run on somebody's own machine.
 Bind_Address = '127.0.0.1'
 
-# What the shipped configuration binds without a placeholder, and so what has to be moved out of
+# What the shipped configuration binds on every interface, and so what has to be moved out of
 # the way before a test run can bind it without colliding with whatever else is on this machine.
 _Fixed_Internal_Port = '11225'
-_Fixed_Stats_Bind    = 'bind *:8404'
+_Fixed_Stats_Bind    = 'bind *:${Zato_Port_Load_Balancer_Stats}'
 
 # The path the shipped configuration reads its blocked paths from, which exists in a container only
 _Blocked_Paths_Path = '/opt/zato/env/qs-1/blocked-paths.txt'
@@ -156,7 +156,7 @@ def _render_config(
     # and that port may well belong to something already running here
     content = content.replace(_Fixed_Internal_Port, str(find_free_port()))
 
-    # The statistics listener has one too, and it binds every interface on top of that
+    # The statistics listener binds every interface, so a test run gives it the loopback and its own port
     content = content.replace(_Fixed_Stats_Bind, f'bind {Bind_Address}:{find_free_port()}')
 
     # The list of paths to turn away lives at a container path, so the run points at its own copy

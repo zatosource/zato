@@ -9,8 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+from base64 import b64decode
+from contextlib import closing
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+from json import dumps as json_dumps, loads as json_loads
 from logging import INFO, WARN
 from pathlib import Path
 from platform import system as platform_system
@@ -23,23 +26,28 @@ from uuid import uuid4
 from gevent import sleep, spawn
 from gevent.lock import RLock
 
+# Redis
+from redis.exceptions import RedisError
+
 # Zato
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
 from zato.common.ext.bunch import Bunch, bunchify
-from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, SERVER_STARTUP, \
-    SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common.api import API_Key, AS4, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, PubSub, \
+    SCHEDULER, SEC_DEF_TYPE, SERVER_STARTUP, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
 from zato.common.bearer_token import BearerTokenManager
-from zato.common.broker_message import HOT_DEPLOY, PUBSUB
+from zato.common.broker_message import HOT_DEPLOY, PUBSUB, SCHEDULER as SCHEDULER_MSG
 from zato.common.const import SECRETS
 from zato.common.ext_db.api import get_ext_db_session, is_ext_db_configured, is_ext_object_id, needs_ext_db
-from zato.common.facade import SecurityFacade
+from zato.common.facade import SecurityFacade, _service_sub_key_prefix
 from zato.common.json_internal import loads
 from zato.common.log_streaming import LogStreamingManager
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
+from zato.common.odb.model import Job, PubSubPermission, PubSubSubscription, SecurityBase
 from zato.common.odb.post_process import ODBPostProcess
+from zato.common.odb.query.generic import connection_list
 from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.subscriptions_store import SubscriptionsStore
@@ -51,30 +59,41 @@ from zato.common.user_config import UserConfigFile
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
     parse_extra_into_dict, register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
+from zato.common.util.channel import ensure_as2_channel_exists, ensure_as2_mdn_channel_exists, ensure_openapi_channel_exists
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.file_system import get_python_files
+from zato.common.util.gateway import ensure_mcp_gateway_exists
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.log_destinations import delete_log_destination, get_log_destinations, ping_log_destination, \
     set_log_destination
 from zato.common.util.logging_ import get_logging_levels, set_logging_levels, test_logging_levels
 from zato.common.util.platform_ import is_posix
+from zato.common.util.scheduler import ensure_alerting_job_exists, ensure_as2_async_mdn_job_exists, \
+    ensure_as2_resend_job_exists, ensure_as2_rotation_job_exists, ensure_as4_resend_job_exists, \
+    ensure_b2b_alerting_job_exists, ensure_cert_check_job_exists, ensure_ms_health_job_exists, \
+    ensure_test_transfer_job_exists
 from zato.common.util.time_ import TimeUtil
 from zato.common.util.url_dispatcher import build_methods_allowed_re
 from zato.hl7.common import add_config_location as hl7_add_config_location
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
+from zato.server.base.parallel.delivery import PushDelivery
 from zato.server.base.config_manager import ConfigManager
 from zato.server.config import ConfigStore
 from zato.server.connection.mcp.session import MCPSessionReaper
 from zato.server.connection.outgoing_delivery import register_delivery_handlers
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
+from zato.server.generic.connection import GenericConnection
 from zato.server.groups.base import GroupsManager
 from zato.server.groups.ctx import SecurityGroupsCtxBuilder
+from zato.server.queue_bridge.client import QueueBridgeClient
 from zato.server.quota_tiers import QuotaTiersManager
-from zato.server.scheduler_.client import ModuleCtx as SchedulerStreamCtx
+from zato.server.rule_engine_api import start_rule_engine_change_listener
+from zato.server.scheduler_.adapter import SchedulerODBAdapter
+from zato.server.scheduler_.client import ModuleCtx as SchedulerStreamCtx, SchedulerClient
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,7 +107,6 @@ if 0:
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset, strtuple
-    from zato.server.base.parallel.delivery import PushDelivery
     from zato.server.service.store import ServiceStore
     from zato.input_output import IOProcessor  # type: ignore[attr-defined]
     from zato.server.startup_callable import StartupCallableTool
@@ -115,6 +133,12 @@ redis_logger = logging.getLogger('zato_redis')
 megabyte = 10 ** 6
 
 floatpair = tuple_[float, float]
+
+# The default hot-deployment batch size, in kilobytes.
+_default_max_batch_size = 1000
+
+# How many bytes one kilobyte has.
+_bytes_per_kilobyte = 1000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -243,8 +267,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
         self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
         self.needs_x_zato_cid = False
-        self._queue_bridge = None
+        self._queue_bridge = cast_('QueueBridgeClient', None)
         self._queue_bridge_started = False
+        self._scheduler_started = False
         self.rate_limiting_manager = RateLimitingManager()
 
         # Our arbiter may potentially call the cleanup procedure multiple times
@@ -765,7 +790,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def log_environment_details(self):
 
         # First, we need to have the correct variable set ..
-        if log_details := os.environ.get(EnvVariable.Log_Env_Details) or True:
+        if log_details := os.environ.get(EnvVariable.Log_Env_Details):
 
             # .. now, make sure it is set to True ..
             if as_bool(log_details):
@@ -885,21 +910,28 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
 
-        # The first name was used prior to v3.2, note pick_up vs. pickup
-        if 'delete_after_pick_up':
-            delete_after_pickup = self.fs_server_config.hot_deploy.get('delete_after_pick_up')
+        # Both spellings are accepted, note pick_up vs. pickup, and the older one wins when present.
+        fs_hot_deploy_config = self.fs_server_config.hot_deploy
+
+        if 'delete_after_pick_up' in fs_hot_deploy_config:
+            delete_after_pickup = fs_hot_deploy_config['delete_after_pick_up']
+        elif 'delete_after_pickup' in fs_hot_deploy_config:
+            delete_after_pickup = fs_hot_deploy_config['delete_after_pickup']
         else:
-            delete_after_pickup = self.fs_server_config.hot_deploy.get('delete_after_pickup')
+            delete_after_pickup = None
 
         self.hot_deploy_config.delete_after_pickup = delete_after_pickup
 
-        # Added in 3.1, hence optional
-        max_batch_size = int(self.fs_server_config.hot_deploy.get('max_batch_size', 1000))
+        # How big one hot-deployment batch may be ..
+        if max_batch_size := fs_hot_deploy_config.get('max_batch_size'):
+            max_batch_size = int(max_batch_size)
+        else:
+            max_batch_size = _default_max_batch_size
 
-        # Turn it into megabytes
-        max_batch_size = max_batch_size * 1000
+        # .. the size is configured in kilobytes and used in bytes ..
+        max_batch_size = max_batch_size * _bytes_per_kilobyte
 
-        # Finally, assign it to ServiceStore
+        # .. and it belongs to the service store.
         self.service_store.max_batch_size = max_batch_size
 
         # API keys configuration
@@ -921,13 +953,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Bearer tokens (OAuth)
         self.bearer_token_manager = BearerTokenManager(self)
 
-        # Support pre-3.x hot-deployment directories
+        # Hot-deployment directories.
         for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pickup'):
 
-            # New in 2.0
             if name == 'delete_after_pickup':
 
-                # For backward compatibility, we need to support both names
+                # Both names are accepted and the older one wins when present.
                 old_name = 'delete_after_pick_up'
 
                 if old_name in self.fs_server_config.hot_deploy:
@@ -999,22 +1030,17 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
 
-        # Start the Redis pub/sub backend
         self._start_pubsub_backend()
 
-        # Start the Rust scheduler thread (in-process)
+        # Connect to the scheduler.
         self._start_scheduler()
 
-        # Start the queue bridge (Kafka, SQS, etc.)
         self._start_queue_bridge()
 
-        # Start the listener that serves OpenAPI console requests
         self._start_openapi_console_listener()
 
-        # Start the listener that keeps rule engine caches correct
         self._start_rule_engine_change_listener()
 
-        # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
 
         # A new environment that holds no user-defined objects receives all the demo config
@@ -1110,17 +1136,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _start_scheduler(self) -> 'None':
         """ Connect to the standalone scheduler binary via Redis Streams and HTTP.
         """
-        self._scheduler_started = False
-
         try:
-            from zato.server.scheduler_.adapter import SchedulerODBAdapter
-            from zato.server.scheduler_.client import SchedulerClient
-
             logger.info('Connecting to scheduler')
 
             scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
 
-            # Job runs are recorded in the audit log the same way any other source's events are
+            # Job runs are recorded in the audit log the same way any other source's events are.
             self._scheduler_audit_log = AuditLog(self.name)
 
             self._scheduler = SchedulerClient()
@@ -1130,9 +1151,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             self._start_scheduler_fire_listener()
             self._start_scheduler_request_listener(scheduler_adapter)
 
-            logger.info('Scheduler client connected, fire listener started')
-        except Exception:
+            logger.info('Scheduler client connected, fire and request listeners started')
+        except (OSError, RedisError):
             logger.warning('Scheduler could not be started: %s', format_exc())
+
+# ################################################################################################################################
 
     def _start_scheduler_fire_listener(self) -> 'None':
         """ Starts a dedicated greenlet that consumes fire and timeout events
@@ -1210,6 +1233,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         _ = spawn(_fire_listener_loop)
         logger.info('Scheduler fire listener greenlet started')
 
+# ################################################################################################################################
+
     def _start_scheduler_request_listener(self, scheduler_adapter:'any_') -> 'None':
         """ Listens for request_jobs messages from the scheduler and responds with a reload. """
         req_redis = self._scheduler.new_redis_conn()
@@ -1260,15 +1285,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         _ = spawn(_request_listener_loop)
         logger.info('Scheduler request listener greenlet started')
 
+# ################################################################################################################################
+
     def _handle_fire_event(self, fields:'dict') -> 'None':
         """ Processes a fire event from the scheduler - invokes the target service.
         """
-        import time as _time
-        from json import loads as json_loads
-        from zato.common.ext.bunch import Bunch
-        from zato.common.api import SCHEDULER
-        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
-
         logger.info('Fire event: handler entered, fields_keys=%s', list(fields.keys()))
 
         payload_json = fields['payload']
@@ -1336,7 +1357,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Run the main service and capture the outcome ..
         outcome = SCHEDULER.OUTCOME.OK
         error_traceback = ''
-        _t0 = _time.monotonic()
+        invocation_start = monotonic()
 
         try:
             self.config_manager.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
@@ -1345,7 +1366,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             error_traceback = format_exc()
             logger.warning('Fire event: service exception job_id=%s name=%s traceback=%s', job_id, job_name, error_traceback)
 
-        duration_ms = int((_time.monotonic() - _t0) * 1000)
+        duration_ms = int((monotonic() - invocation_start) * 1000)
 
         logger.info('Fire event: before mark_complete job_id=%s name=%s outcome=%s duration_ms=%s run=%s error_tb_len=%s',
             job_id, job_name, outcome, duration_ms, current_run, len(error_traceback))
@@ -1387,13 +1408,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         if on_callback_job:
             _ = spawn(self._invoke_callback_job, on_callback_job, callback_context, event_label)
 
+# ################################################################################################################################
+
     def _invoke_callback_service(self, service_name:'str', callback_context:'dict', event_label:'str') -> 'None':
         """ Invokes a Zato service as a scheduler job callback, passing the original job's context.
         """
-        from json import dumps as json_dumps
-        from zato.common.ext.bunch import Bunch
-        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
-
         job_id = callback_context['job_id']
         job_name = callback_context['job_name']
 
@@ -1421,12 +1440,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         except Exception:
             logger.warning('Callback service=%s failed for job_id=%s; traceback=%s', service_name, job_id, format_exc())
 
+# ################################################################################################################################
+
     def _invoke_callback_job(self, target_job_name:'str', callback_context:'dict', event_label:'str') -> 'None':
         """ Executes another scheduler job as a callback by looking up its ID and triggering it.
         """
-        from contextlib import closing
-        from zato.common.odb.model import Job
-
         source_job_id = callback_context['job_id']
         source_job_name = callback_context['job_name']
 
@@ -1453,6 +1471,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         except Exception:
             logger.warning(
                 'Callback job=%s failed for source job_id=%s; traceback=%s', target_job_name, source_job_id, format_exc())
+
+# ################################################################################################################################
 
     def _handle_timeout_event(self, fields:'dict') -> 'None':
         """ Processes a timeout event from the scheduler - marks the run as timed out
@@ -1484,10 +1504,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _enrich_queue_bridge_config(self, config:'anydict') -> 'None':
         """ Decrypts the connection's secret, if any, into the password field the bridge expects.
         """
-        secret = config.get('secret')
-        if isinstance(secret, str) and secret:
-            if secret.startswith(SECRETS.Encrypted_Indicator) or secret.startswith(SECRETS.PREFIX):
+        if secret := config.get('secret'):
+
+            # A secret stored encrypted is decrypted before the bridge sees it.
+            if secret.startswith((SECRETS.Encrypted_Indicator, SECRETS.PREFIX)):
                 secret = self.decrypt(secret)
+
             config['password'] = secret
 
 # ################################################################################################################################
@@ -1495,16 +1517,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _start_queue_bridge(self) -> 'None':
         """ Connect to the standalone queue bridge binary via Redis Streams and HTTP.
         """
-        from contextlib import closing
-        from base64 import b64decode
-
-        from zato.common.api import GENERIC
-        from zato.server.generic.connection import GenericConnection
-        from zato.common.odb.query.generic import connection_list
-
         try:
-            from zato.server.queue_bridge.client import QueueBridgeClient
-
             logger.info('Connecting to queue bridge')
 
             channels = []
@@ -1518,7 +1531,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     items = connection_list(session, self.cluster_id, type_, False)
                     for item in items:
                         conn = GenericConnection.from_model(item)
-                        config = cast_('anydict', conn.to_dict())
+                        config = conn.to_dict()
                         self._enrich_queue_bridge_config(config)
                         logger.info('Queue bridge loading %s', type_)
 
@@ -1528,14 +1541,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                             outgoing.append(config)
 
             self._queue_bridge = QueueBridgeClient()
-            ch_noun = 'channel' if len(channels) == 1 else 'channels'
-            out_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
-            logger.info('Sending reload to queue bridge with %d %s and %d %s', len(channels), ch_noun, len(outgoing), out_noun)
+            channel_noun = 'channel' if len(channels) == 1 else 'channels'
+            outgoing_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
+            logger.info('Sending reload to queue bridge with %d %s and %d %s',
+                len(channels), channel_noun, len(outgoing), outgoing_noun)
             self._queue_bridge.reload(channels=channels, outgoing=outgoing)
             self._queue_bridge_started = True
 
             self._start_queue_bridge_request_listener()
-            self._start_queue_bridge_recv_listener(b64decode)
+            self._start_queue_bridge_recv_listener()
 
             logger.info('Queue bridge client connected, recv listener started')
         except Exception:
@@ -1544,10 +1558,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     def _reload_queue_bridge(self) -> 'None':
-        from contextlib import closing
-        from zato.common.api import GENERIC
-        from zato.server.generic.connection import GenericConnection
-        from zato.common.odb.query.generic import connection_list
 
         channels = []
         outgoing = []
@@ -1560,17 +1570,17 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 items = connection_list(session, self.cluster_id, type_, False)
                 for item in items:
                     conn = GenericConnection.from_model(item)
-                    config = cast_('anydict', conn.to_dict())
+                    config = conn.to_dict()
                     self._enrich_queue_bridge_config(config)
                     if type_ in channel_types:
                         channels.append(config)
                     else:
                         outgoing.append(config)
 
-        ch_noun = 'channel' if len(channels) == 1 else 'channels'
-        out_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
-        logger.info('Reloading queue bridge with %d %s and %d %s', len(channels), ch_noun, len(outgoing), out_noun)
-        self._queue_bridge.reload(channels=channels, outgoing=outgoing)  # type: ignore[union-attr]
+        channel_noun = 'channel' if len(channels) == 1 else 'channels'
+        outgoing_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
+        logger.info('Reloading queue bridge with %d %s and %d %s', len(channels), channel_noun, len(outgoing), outgoing_noun)
+        self._queue_bridge.reload(channels=channels, outgoing=outgoing)
 
 # ################################################################################################################################
 
@@ -1639,7 +1649,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """ Listens for request_config messages from the queue bridge and responds with a reload.
         The bridge sends them when it starts after this server is already up, e.g. when it is restarted.
         """
-        request_redis = self._queue_bridge.new_redis_conn() # type: ignore[union-attr]
+        request_redis = self._queue_bridge.new_redis_conn()
 
         request_stream = 'zato:queue_bridge:stream:request'
         group_name = 'server-request'
@@ -1671,7 +1681,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     if not result:
                         continue
 
-                    for stream_name, messages in result: # type: ignore[union-attr]
+                    for stream_name, messages in result:
                         for msg_id, fields in messages:
                             command = fields['command']
                             if command == 'request_config':
@@ -1689,12 +1699,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _start_queue_bridge_recv_listener(self, b64decode:'any_') -> 'None':
+    def _start_queue_bridge_recv_listener(self) -> 'None':
         """ Starts a dedicated greenlet that consumes recv events from the queue bridge via Redis Streams.
         """
-        from json import dumps as json_dumps, loads as json_loads
-
-        recv_redis = self._queue_bridge.new_redis_conn()  # type: ignore[union-attr]
+        recv_redis = self._queue_bridge.new_redis_conn()
 
         recv_stream = 'zato:queue_bridge:stream:recv'
         group_name = 'server-recv'
@@ -1750,7 +1758,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                                 else:
                                     reply_data = json_dumps(response).encode('utf8')
 
-                                _ = self._queue_bridge.send_reply( # type: ignore[union-attr]
+                                _ = self._queue_bridge.send_reply(
                                     fields['channel_name'],
                                     reply_to_queue,
                                     fields['reply_to_queue_manager'],
@@ -1787,7 +1795,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         and keeps this process's invocation caches correct.
         """
         try:
-            from zato.server.rule_engine_api import start_rule_engine_change_listener
             start_rule_engine_change_listener(self)
         except Exception:
             logger.warning('Rule engine change listener could not be started: %s', format_exc())
@@ -1795,9 +1802,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     def _start_pubsub_backend(self):
-
-        from zato.common.audit_log.api import AuditLog
-        from zato.server.base.parallel.delivery import PushDelivery
 
         # Messages, queues and delivery state live in the pub/sub database,
         # selected through the Zato_PubSub_DB_* environment variables
@@ -1836,11 +1840,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     def _setup_as4_delivery_subscription(self) -> 'None':
         """ Registers the built-in push subscription that consumes the outbound AS4 topic
-        and hands each message over to the AS4 delivery service.
+        and hands each message over to         the AS4 delivery service.
         """
-        from zato.common.api import AS4, PubSub
-        from zato.common.facade import _service_sub_key_prefix
-
         sub_key = _service_sub_key_prefix + AS4.Delivery_Service
 
         # Record the subscription in the pub/sub database ..
@@ -1859,48 +1860,44 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     def _pre_initialize(self) -> 'None':
 
-        from contextlib import closing
-        from zato.common.util.channel import ensure_as2_channel_exists, ensure_as2_mdn_channel_exists, \
-            ensure_openapi_channel_exists
-        from zato.common.util.gateway import ensure_mcp_gateway_exists
-        from zato.common.util.scheduler import ensure_alerting_job_exists, ensure_as2_async_mdn_job_exists, \
-            ensure_as2_resend_job_exists, ensure_as2_rotation_job_exists, ensure_as4_resend_job_exists, \
-            ensure_b2b_alerting_job_exists, ensure_cert_check_job_exists, ensure_ms_health_job_exists, \
-            ensure_test_transfer_job_exists
-
         with closing(self.odb.session()) as session:
+
+            # The built-in channels and gateways ..
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
             mcp_created = ensure_mcp_gateway_exists(session, self.cluster_id)
 
-            # The job completing AS2 certificate rotations always lives in the main ODB,
-            # no matter where the AS2 connections themselves are stored.
+            # .. the AS2 jobs, which always live in the main ODB ..
             as2_rotation_job_created = ensure_as2_rotation_job_exists(session, self.cluster_id)
-
-            # So do the two jobs AS2 reliability rests on - the drain of the asynchronous MDN queue
-            # and the resend of messages whose receipt never came back.
             as2_async_mdn_job_created = ensure_as2_async_mdn_job_exists(session, self.cluster_id)
             as2_resend_job_created = ensure_as2_resend_job_exists(session, self.cluster_id)
 
-            # AS4 reception awareness rests on a job of its own, which repeats the delivery
-            # of a message whose receipt never came back.
+            # .. the AS4 resend job ..
             as4_resend_job_created = ensure_as4_resend_job_exists(session, self.cluster_id)
 
-            # So does the job running the B2B alerting sweep.
+            # .. the alerting sweeps ..
             b2b_alerting_job_created = ensure_b2b_alerting_job_exists(session, self.cluster_id)
-
-            # And the job running the generic alerting sweep.
             alerting_job_created = ensure_alerting_job_exists(session, self.cluster_id)
 
-            # The alerting probes - the daily certificate check, the Microsoft health poll
-            # and the test transfer over file transfer connections, the last one inactive
-            # because it is the opt-in.
+            # .. and the alerting probes, of which the test transfer one is created inactive.
             cert_check_job_created = ensure_cert_check_job_exists(session, self.cluster_id)
             ms_health_job_created = ensure_ms_health_job_exists(session, self.cluster_id)
             test_transfer_job_created = ensure_test_transfer_job_exists(session, self.cluster_id)
 
-            needs_commit = openapi_created or mcp_created or as2_rotation_job_created or as2_async_mdn_job_created or \
-                as2_resend_job_created or as4_resend_job_created or b2b_alerting_job_created or alerting_job_created or \
-                cert_check_job_created or ms_health_job_created or test_transfer_job_created
+            created_flags = [
+                openapi_created,
+                mcp_created,
+                as2_rotation_job_created,
+                as2_async_mdn_job_created,
+                as2_resend_job_created,
+                as4_resend_job_created,
+                b2b_alerting_job_created,
+                alerting_job_created,
+                cert_check_job_created,
+                ms_health_job_created,
+                test_transfer_job_created,
+            ]
+
+            needs_commit = any(created_flags)
 
             if needs_commit:
                 session.commit()
@@ -1962,13 +1959,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _load_pubsub_permissions(self) -> 'None':
         """ Load pub/sub permissions from database into the pattern matcher.
         """
-        # stdlib
-        from contextlib import closing
-
-        # Zato
-        from zato.common.api import PubSub
-        from zato.common.odb.model import PubSubPermission, PubSubSubscription, SecurityBase
-
         with closing(self.odb.session()) as session:
 
             permissions = session.query(
@@ -2061,8 +2051,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         pubsub_msg.action = PUBSUB.RELOAD_CONFIG.value
 
         # .. reload the scheduler if it was started ..
-        if getattr(self, '_scheduler_started', False):
-            from zato.server.scheduler_.adapter import SchedulerODBAdapter
+        if self._scheduler_started:
             scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
             self._scheduler.reload(odb_adapter=scheduler_adapter)
 
