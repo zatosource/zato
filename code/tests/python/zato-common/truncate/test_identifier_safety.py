@@ -41,7 +41,7 @@ _emails = [
 _all_identifiers = _compact_ibans + _spaced_ibans + _emails
 
 # The detectors whose matches the assertions below reason about.
-_watched_detectors = {'iban', 'email'}
+_watched_detectors = {'intl_iban', 'intl_email'}
 
 # Filler prose deliberately free of digits, so trailing-token trimming decisions are driven
 # by the identifiers themselves and not by the surrounding text.

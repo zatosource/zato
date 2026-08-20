@@ -12,6 +12,9 @@
 //   3. the cookie header - the session and the CSRF cookie
 //   4. the webapp static root on disk (serves /static/webapp/...)
 //   5. the dashboard static root on disk (serves /static/rule-engine/...)
+//   6. the shared rule-engine static root on disk - the editor core ships
+//      with the UI kit in zato-common and Django's app finders merge it
+//      with the dashboard's own files under the same /static/rule-engine/
 
 const fs = require('fs');
 const path = require('path');
@@ -22,6 +25,7 @@ const serverBase = process.argv[3];
 const cookieHeader = process.argv[4];
 const webappStaticRoot = process.argv[5];
 const dashboardStaticRoot = process.argv[6];
+const sharedRuleEngineStaticRoot = process.argv[7];
 
 // How long a screen may take to settle after its scripts run
 const settleTimeoutMs = 10000;
@@ -46,7 +50,13 @@ const diskInterceptor = requestInterceptor((request) => {
         filePath = path.join(webappStaticRoot, urlPath.slice('/static/webapp/'.length));
     }
     if (urlPath.startsWith('/static/rule-engine/')) {
-        filePath = path.join(dashboardStaticRoot, urlPath.slice('/static/rule-engine/'.length));
+        // The dashboard's own file wins, the shared UI kit answers otherwise,
+        // the same merge Django's app finders perform at runtime
+        const relativePath = urlPath.slice('/static/rule-engine/'.length);
+        filePath = path.join(dashboardStaticRoot, relativePath);
+        if (!fs.existsSync(filePath)) {
+            filePath = path.join(sharedRuleEngineStaticRoot, relativePath);
+        }
     }
 
     if (filePath === null) {

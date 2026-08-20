@@ -805,7 +805,7 @@
     --pane-split-pill-face: var(--panel-raised);
     --pane-split-pill-rim-lit: var(--blue);
     --pane-split-pill-face-lit: var(--input-background);
-    --pane-split-pill-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+    --pane-split-pill-shadow: 0 1px 3px var(--shadow-soft);
 
     position: relative;
     flex: 0 0 auto;

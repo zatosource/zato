@@ -1,11 +1,11 @@
 /* A Clear control standing inside a search box - the badge itself and, for a plain input,
-   the wrapper that keeps room for it so a long term is not typed underneath. Self-contained,
-   every value it reads is defined here. */
+   the wrapper that keeps room for it so a long term is not typed underneath. Every value
+   it reads is defined here, with the colours drawn from the active theme. */
 
 .search-clear {
     /* The badge's own colours - a quiet grey word on a faint wash */
-    --search-clear-text: #6b7280;
-    --search-clear-fill: rgba(0, 0, 0, 0.05);
+    --search-clear-text: var(--text3);
+    --search-clear-fill: var(--shadow-inset);
 
     display: inline-block;
     min-width: 42px;
