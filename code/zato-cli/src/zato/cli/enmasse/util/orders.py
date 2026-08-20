@@ -149,7 +149,9 @@ _object_order['outgoing_as4'] = 'name', 'is_active', 'host', 'url_path', 'timeou
     'as4_signing_key', 'as4_signing_cert_chain', 'as4_decryption_key', 'as4_saml_assertion', \
     'as4_peer_signing_cert', 'as4_peer_encryption_cert', 'as4_trust_anchors',
 
-_object_order['microsoft_cloud']          = 'name', 'is_active', 'client_id', 'tenant_id', 'scopes:list',
+# The scopes field carries no :list marker because it is a string when the definition
+# has one line of scopes and a list when it has more, so the writer picks the shape itself.
+_object_order['microsoft_cloud']          = 'name', 'is_active', 'client_id', 'tenant_id', 'scopes',
 _object_order['microsoft_fabric']         = 'name', 'is_active', 'address', 'client_id', 'tenant_id',
 _object_order['microsoft_power_automate'] = 'name', 'is_active', 'address', 'client_id', 'tenant_id', 'environment_id',
 
@@ -199,7 +201,9 @@ _object_order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'user
 _object_order['email_smtp'] = 'name', 'is_active', 'host', 'port', 'username',
 
 _object_order['odoo']           = 'name', 'is_active', 'host', 'port', 'database', 'user'
-_object_order['elastic_search'] = 'name', 'is_active', 'address_list:list', 'username', 'timeout', \
+# The address_list field carries no :list marker because it is a string when the definition
+# has one address and a list when it has more, so the writer picks the shape itself.
+_object_order['elastic_search'] = 'name', 'is_active', 'address_list', 'username', 'timeout', \
     'is_tls_validation_enabled', 'tls_ca_certs_file', 'tls_cert_key_file'
 _object_order['mongodb']        = 'name', 'is_active', 'server_list', 'username', 'auth_source', 'replica_set', \
     'app_name', 'pool_size_max', 'connect_timeout', 'server_select_timeout', 'is_tls_enabled', 'tls_ca_certs_file', \

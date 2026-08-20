@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.common.alerting.names import get_llm_conn_name
 from zato.common.api import GENERIC, LLM
 from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
@@ -69,7 +70,14 @@ class LLMExporter:
 
         exported = []
 
+        # The default alert diagnosis connection is a built-in placeholder
+        # seeded with every environment, so it never travels.
+        excluded_name = get_llm_conn_name()
+
         for row in connections:
+
+            if row['name'] == excluded_name:
+                continue
 
             if GENERIC.ATTR_NAME in row:
                 opaque = parse_instance_opaque_attr(row)

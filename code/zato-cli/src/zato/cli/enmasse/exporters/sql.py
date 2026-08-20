@@ -103,12 +103,12 @@ class SQLExporter:
                 if pool_size != SQL_Default_Pool_Size:
                     item['pool_size'] = pool_size
 
-            # .. same goes for the timeout ..
-            if timeout := row['timeout']:
-                item['timeout'] = timeout
-
-            # .. the SSL/TLS configuration and the audit level are kept in the opaque attributes ..
+            # .. the timeout, the SSL/TLS configuration and the audit level are kept in the opaque attributes ..
             opaque = parse_instance_opaque_attr(row)
+
+            # .. the timeout travels only if the definition carries one ..
+            if timeout := opaque.get('timeout'):
+                item['timeout'] = timeout
 
             # .. a connection that is not audited says nothing about it in its YAML ..
             if audit_log := opaque.get('audit_log'):
