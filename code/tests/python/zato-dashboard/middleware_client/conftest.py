@@ -17,6 +17,7 @@ from django.conf import settings
 # Zato
 import zato.admin.zato_settings as zato_settings
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,13 +33,16 @@ _database_path = os.path.join(_work_directory, 'web-admin.db')
 
 _default_database = {'NAME': _database_path, 'USER': '', 'PASSWORD': '', 'HOST': '', 'PORT': ''}
 
-zato_settings.db_type               = 'sqlite'
-zato_settings.DATABASES             = {'default': _default_database}
-zato_settings.config_dir            = _work_directory
-zato_settings.log_config            = ''
-zato_settings.ADMIN_INVOKE_NAME     = 'admin.invoke'
-zato_settings.ADMIN_INVOKE_PASSWORD = CryptoManager.generate_password(to_str=True)
-zato_settings.SECRET_KEY            = CryptoManager.generate_secret(as_str=True)
+# The settings module receives these values dynamically, the way update_globals injects them.
+_settings:'any_' = cast_('any_', zato_settings)
+
+_settings.db_type               = 'sqlite'
+_settings.DATABASES             = {'default': _default_database}
+_settings.config_dir            = _work_directory
+_settings.log_config            = ''
+_settings.ADMIN_INVOKE_NAME     = 'admin.invoke'
+_settings.ADMIN_INVOKE_PASSWORD = CryptoManager.generate_password(to_str=True)
+_settings.SECRET_KEY            = CryptoManager.generate_secret(as_str=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
