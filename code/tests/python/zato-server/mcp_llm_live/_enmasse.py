@@ -16,7 +16,7 @@ from yaml import safe_dump
 
 # local
 import _constants
-import containers
+import ollama_containers as containers
 import keycloak_
 
 # ################################################################################################################################

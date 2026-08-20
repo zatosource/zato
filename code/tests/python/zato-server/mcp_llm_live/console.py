@@ -14,7 +14,7 @@ Nothing in the test suite imports this module, it is run by make llm-console onl
 import sys
 
 # local
-import containers
+import ollama_containers as containers
 
 # ################################################################################################################################
 # ################################################################################################################################

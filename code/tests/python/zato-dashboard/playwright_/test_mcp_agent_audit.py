@@ -44,11 +44,7 @@ from _client import MCPClient
 
 import _agent
 import _mcp_wizard as wizard_page
-import containers
-
-# The IBM MQ suite has a containers module of its own that sits earlier on the search path,
-# so the Ollama helpers are reached through a name typed as any_.
-ollama_containers = cast_('any_', containers)
+import ollama_containers
 
 # ################################################################################################################################
 # ################################################################################################################################

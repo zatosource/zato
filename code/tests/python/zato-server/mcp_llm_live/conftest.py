@@ -38,7 +38,7 @@ from zato.common.util.config import get_config_object, update_config_file  # noq
 import _constants  # noqa: E402
 import _diag  # noqa: E402
 import _enmasse  # noqa: E402
-import containers  # noqa: E402
+import ollama_containers as containers  # noqa: E402
 import keycloak_  # noqa: E402
 
 # ################################################################################################################################
