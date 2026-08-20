@@ -7,6 +7,9 @@
 
     $.fn.zato.outgoing.soap.config = {
 
+        // There is always exactly one cluster.
+        cluster_id: '1',
+
         // The default 40em dialog is too narrow for all the tabs this screen has.
         dialogWidth: '55em',
 
@@ -532,6 +535,11 @@
         row += String.format('<td>{0}</td>', valueOr(item.soap_action, config.emptyCellValue));
         row += String.format('<td>{0}</td>', item.soap_version);
         row += String.format('<td>{0}</td>', securityCell);
+
+        // A connection created through the UI is never internal, so the cell is always a link
+        row += String.format(
+            '<td><a href="/zato/audit-log/?source=soap-outgoing&object_name={0}&cluster={1}">Audit log</a></td>',
+            encodeURIComponent(item.name), config.cluster_id);
 
         row += String.format(
             '<td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping(\'{0}\', this)" class="ping-link">Ping</a></td>',

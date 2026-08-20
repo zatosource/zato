@@ -22,9 +22,6 @@ if _imap_server_lib_dir not in sys.path:
 # pytest
 import pytest
 
-# Playwright
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-
 # Zato
 from zato.common.test import rand_string
 
@@ -33,12 +30,16 @@ from zato.common.test import rand_string
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anydict, anydictnone, anylist, strlist
+    from zato.common.typing_ import any_, anydict, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 from _imap_test_server import IMAPTestServer
+from audit_log_ui import attach_diagnostics, format_diagnostics, get_details_value, get_row_cid, get_row_event, \
+    get_row_main_text, get_row_outcome, get_row_time_text, get_rows, goto_audit_log, open_cid_overlay, open_data, \
+    open_details, close_cid_overlay, search, wait_for_empty, wait_for_payload_text, wait_for_row_count, wait_for_table
+
 from rest_channel import create_channel, deploy_service_file, invoke_until_status, wait_for_service_in_dialog
 
 # ################################################################################################################################
@@ -48,35 +49,25 @@ logger = logging.getLogger(__name__)
 
 _Test_Name_Prefix = 'test.imap.audit.' + rand_string() + '.'
 
-_IMAP_Page_Url = '/zato/email/imap/?cluster=1'
+_IMAP_Page_URL = '/zato/email/imap/?cluster=1'
 
-_Audit_Log_Url_Prefix = '/zato/audit-log/'
-_Poll_Url_Path        = '/zato/audit-log/poll/'
+_Audit_Log_URL_Prefix = '/zato/audit-log/'
 
-_Event_Message_Received    = 'message-received'
-_Event_Message_Marked_Seen = 'message-marked-seen'
-_Event_Message_Deleted     = 'message-deleted'
+_Source = 'email-imap'
+
+# How the events of a mailbox read run through the log
+_Event_Message_Received_Label    = 'Message received'
+_Event_Message_Marked_Seen_Label = 'Message marked seen'
+_Event_Message_Deleted_Label     = 'Message deleted'
 
 _Outcome_OK    = 'ok'
 _Outcome_Error = 'error'
-
-_No_Events_Text = 'No events found'
 
 # The section title for the IMAP source, compared lowercase because the heading is styled with CSS
 _IMAP_Title = 'imap audit log'
 
 # The folder that the helper service reads messages from
 _Folder = 'INBOX'
-
-# Column indexes: Time, CID, Event, Folder, Message id, Outcome, Size, Data preview
-_Column_Time    = 0
-_Column_CID     = 1
-_Column_Event   = 2
-_Column_Folder  = 3
-_Column_Msg_ID  = 4
-_Column_Outcome = 5
-_Column_Size    = 6
-_Column_Data    = 7
 
 # A TCP port that nothing listens on, for connections that must fail
 _Closed_Port = 1
@@ -180,7 +171,7 @@ def _create_imap_connection(page:'Page', base_url:'str', name:'str', host:'str',
     """
 
     # Open the IMAP connections page ..
-    _ = page.goto(f'{base_url}{_IMAP_Page_Url}')
+    _ = page.goto(f'{base_url}{_IMAP_Page_URL}')
     _ = page.wait_for_selector('#data-table', state='visible')
 
     # .. open the create dialog ..
@@ -242,153 +233,14 @@ def _invoke_helper(server_port:'int', url_path:'str', conn_name:'str', action:'s
 
 # ################################################################################################################################
 
-def _goto_audit_log(page:'Page', base_url:'str', conn_name:'str') -> 'None':
-    """ Navigates to the audit log page of one IMAP connection and waits for the first page of events to load.
+def _get_row_msg_id(page:'Page', row:'any_') -> 'str':
+    """ The message id of one row's event, read off the Message id fact in the pane's Details tab.
     """
 
-    # Build the per-object URL ..
-    encoded_name = quote(conn_name)
-    url = f'{base_url}{_Audit_Log_Url_Prefix}?source=email-imap&object_name={encoded_name}&cluster=1'
+    open_details(page, row)
 
-    # .. go there ..
-    _ = page.goto(url)
-
-    # .. and wait for the initial poll to replace the loading row.
-    _wait_for_table(page)
-
-# ################################################################################################################################
-
-def _wait_for_table(page:'Page') -> 'None':
-    """ Waits until the audit log table has finished loading its current page of events,
-    i.e. until the table body exists, has rows and none of them is the loading placeholder.
-    """
-    _ = page.wait_for_function(
-        '''() => {
-            let body = document.querySelector('#audit-log-table-body');
-            if (!body) return false;
-            let rows = body.querySelectorAll('tr');
-            if (!rows.length) return false;
-            return !body.querySelector('tr.detail-loading-row');
-        }''',
-        timeout=10000)
-
-# ################################################################################################################################
-
-def _get_rows(page:'Page') -> 'anylist':
-    """ Returns all rows currently shown in the audit log table.
-    """
-    out = page.query_selector_all('#audit-log-table-body tr')
+    out = get_details_value(page, 'Message id')
     return out
-
-# ################################################################################################################################
-
-def _get_row_cells(row:'any_') -> 'anylist':
-    """ Returns the text of each cell in one audit log row.
-    """
-    out = [] # type: anylist
-
-    for cell in row.query_selector_all('td'):
-        out.append(cell.inner_text().strip())
-
-    return out
-
-# ################################################################################################################################
-
-def _attach_diagnostics(page:'Page') -> 'anydict':
-    """ Captures everything the browser and Django report while a test runs - console messages,
-    uncaught page errors, failed requests and the full body of each poll response.
-    """
-
-    # All the captured facts go here ..
-    out = {
-        'console': [],
-        'page_errors': [],
-        'failed_requests': [],
-        'poll_responses': [],
-    } # type: anydict
-
-    # .. every console message is recorded with its severity ..
-    def _on_console(message:'any_') -> 'None':
-        out['console'].append(f'[console.{message.type}] {message.text}')
-
-    # .. uncaught JavaScript exceptions are recorded in full ..
-    def _on_page_error(error:'any_') -> 'None':
-        out['page_errors'].append(f'[pageerror] {error}')
-
-    # .. requests that never completed are recorded with their failure reason, except for
-    # .. requests aborted by navigation, e.g. the session keepalive ping, which are not errors ..
-    def _on_request_failed(request:'any_') -> 'None':
-        if request.failure != 'net::ERR_ABORTED':
-            out['failed_requests'].append(f'[requestfailed] {request.method} {request.url} -> {request.failure}')
-
-    # .. and each poll response is recorded with its status and body, which is what Django returned.
-    def _on_response(response:'any_') -> 'None':
-        if _Poll_Url_Path in response.url:
-            body = response.text()
-            out['poll_responses'].append(f'[poll] {response.status} {response.url} -> {body}')
-
-    page.on('console', _on_console)
-    page.on('pageerror', _on_page_error)
-    page.on('requestfailed', _on_request_failed)
-    page.on('response', _on_response)
-
-    return out
-
-# ################################################################################################################################
-
-def _format_diagnostics(diagnostics:'anydict') -> 'str':
-    """ Turns the captured diagnostics into one readable block for assertion messages.
-    """
-
-    lines = [] # type: anylist
-
-    for key in ('page_errors', 'failed_requests', 'console', 'poll_responses'):
-        for entry in diagnostics[key]:
-            lines.append(entry)
-
-    out = '\n'.join(lines)
-    return out
-
-# ################################################################################################################################
-
-def _search(page:'Page', query:'str') -> 'None':
-    """ Types a query into the audit log search form and submits it with the search button.
-    """
-
-    # Fill in the query ..
-    page.fill('#audit-log-search-input', query)
-
-    # .. and submit the form.
-    page.click('#audit-log-search-form button[type="submit"]')
-
-# ################################################################################################################################
-
-def _wait_for_body_text(page:'Page', text:'str', diagnostics:'anydictnone' = None) -> 'None':
-    """ Waits until the audit log table body contains the given text.
-    On timeout, the assertion message includes everything the browser and Django reported.
-    """
-    try:
-        _ = page.wait_for_function(
-            f'document.querySelector("#audit-log-table-body").innerText.includes(\'{text}\')', timeout=10000)
-    except PlaywrightTimeoutError:
-        body_text = page.inner_text('#audit-log-table-body')
-        details = _format_diagnostics(diagnostics) if diagnostics else '(no diagnostics attached)'
-        pytest.fail(f'Timed out waiting for "{text}" in the table, the table shows:\n{body_text}\n\nDiagnostics:\n{details}')
-
-# ################################################################################################################################
-
-def _wait_for_body_without_text(page:'Page', text:'str', diagnostics:'anydictnone' = None) -> 'None':
-    """ Waits until the audit log table body no longer contains the given text.
-    On timeout, the assertion message includes everything the browser and Django reported.
-    """
-    try:
-        _ = page.wait_for_function(
-            f'!document.querySelector("#audit-log-table-body").innerText.includes(\'{text}\')', timeout=10000)
-    except PlaywrightTimeoutError:
-        body_text = page.inner_text('#audit-log-table-body')
-        details = _format_diagnostics(diagnostics) if diagnostics else '(no diagnostics attached)'
-        pytest.fail(
-            f'Timed out waiting for "{text}" to disappear, the table shows:\n{body_text}\n\nDiagnostics:\n{details}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -422,7 +274,7 @@ class TestEmailIMAPAuditLog:
         assert uids == [first_uid, second_uid], f'Expected uids {first_uid} and {second_uid}, got: {uids}'
 
         # .. open the audit log page for that connection ..
-        _goto_audit_log(page, base_url, conn_name)
+        goto_audit_log(page, base_url, _Source, conn_name)
 
         # .. the section title names the source, compared case-insensitively because of CSS styling ..
         title_text = page.inner_text('#detail-section-title')
@@ -436,52 +288,49 @@ class TestEmailIMAPAuditLog:
         pill_text = pill_text.lower()
         assert pill_text == conn_name, f'Expected connection name "{conn_name}" in the pill, got: "{pill_text}"'
 
-        # .. the table shows the IMAP columns, compared case-insensitively
-        # .. because the headers are uppercased with CSS ..
-        header_text = page.inner_text('#audit-log-table thead')
-        header_text = header_text.lower()
-        assert 'folder' in header_text, f'Expected a Folder column, got: "{header_text}"'
-        assert 'message id' in header_text, f'Expected a Message id column, got: "{header_text}"'
-        assert 'outcome' in header_text, f'Expected an Outcome column, got: "{header_text}"'
-
         # .. reading two messages and marking each as seen produces four events ..
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 4, f'Expected 4 audit log rows, got {row_count}'
 
         # .. the events come newest first - each message's marked-seen event precedes its received event ..
         expected_rows = (
-            (_Event_Message_Marked_Seen, second_uid, ''),
-            (_Event_Message_Received, second_uid, 'The first invoice was updated'),
-            (_Event_Message_Marked_Seen, first_uid, ''),
-            (_Event_Message_Received, first_uid, 'The first invoice was created'),
+            (_Event_Message_Marked_Seen_Label, second_uid, ''),
+            (_Event_Message_Received_Label, second_uid, 'The first invoice was updated'),
+            (_Event_Message_Marked_Seen_Label, first_uid, ''),
+            (_Event_Message_Received_Label, first_uid, 'The first invoice was created'),
         )
 
         for row_index, (expected_event, expected_uid, expected_body) in enumerate(expected_rows):
 
-            cells = _get_row_cells(rows[row_index])
+            row = rows[row_index]
 
-            assert cells[_Column_Event] == expected_event, \
-                f'Row {row_index}: expected event "{expected_event}", got: "{cells[_Column_Event]}"'
-            assert cells[_Column_Msg_ID] == expected_uid, \
-                f'Row {row_index}: expected message id "{expected_uid}", got: "{cells[_Column_Msg_ID]}"'
-            assert cells[_Column_Folder] == _Folder, \
-                f'Row {row_index}: expected folder "{_Folder}", got: "{cells[_Column_Folder]}"'
-            assert cells[_Column_Outcome] == _Outcome_OK, \
-                f'Row {row_index}: expected outcome "{_Outcome_OK}", got: "{cells[_Column_Outcome]}"'
+            event_label = get_row_event(row)
+            assert event_label == expected_event, \
+                f'Row {row_index}: expected event "{expected_event}", got: "{event_label}"'
+
+            # .. the folder is worn as a chip on the row ..
+            main_text = get_row_main_text(row)
+            assert _Folder in main_text, f'Row {row_index}: expected folder "{_Folder}" on the row, got: "{main_text}"'
 
             # .. the time is shown in the browser's locale format, not as a raw ISO string ..
-            assert cells[_Column_Time] != '', f'Row {row_index}: expected a non-empty event time'
-            assert '+00:00' not in cells[_Column_Time], \
-                f'Row {row_index}: expected a locale-formatted time, got a raw ISO string: "{cells[_Column_Time]}"'
+            time_text = get_row_time_text(row)
+            assert time_text != '', f'Row {row_index}: expected a non-empty event time'
+            assert '+00:00' not in time_text, \
+                f'Row {row_index}: expected a locale-formatted time, got a raw ISO string: "{time_text}"'
 
-            # .. received events carry the message summary while marked-seen events carry no data.
+            # .. the message id is read off the pane's Details tab ..
+            msg_id = _get_row_msg_id(page, row)
+            assert msg_id == expected_uid, \
+                f'Row {row_index}: expected message id "{expected_uid}", got: "{msg_id}"'
+
+            outcome = get_row_outcome(page, row)
+            assert outcome == _Outcome_OK, f'Row {row_index}: expected outcome "{_Outcome_OK}", got: "{outcome}"'
+
+            # .. and received events carry the message summary while marked-seen events carry no data.
             if expected_body:
-                assert expected_body in cells[_Column_Data], \
-                    f'Row {row_index}: expected "{expected_body}" in the data preview, got: "{cells[_Column_Data]}"'
-
-                size = int(cells[_Column_Size])
-                assert size > 0, f'Row {row_index}: expected a positive size, got {size}'
+                open_data(page, row)
+                wait_for_payload_text(page, expected_body)
 
 # ################################################################################################################################
 
@@ -506,7 +355,7 @@ class TestEmailIMAPAuditLog:
         _ = _invoke_helper(server_port, url_path, conn_name, 'get')
 
         # .. go back to the IMAP connections page ..
-        _ = page.goto(f'{base_url}{_IMAP_Page_Url}')
+        _ = page.goto(f'{base_url}{_IMAP_Page_URL}')
         _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. click the audit log link in this connection's row ..
@@ -514,22 +363,21 @@ class TestEmailIMAPAuditLog:
         page.click(f'{row_selector} a:text-is("Audit log")')
 
         # .. wait for the audit log page to load ..
-        page.wait_for_url(f'**{_Audit_Log_Url_Prefix}**')
-        _wait_for_table(page)
+        page.wait_for_url(f'**{_Audit_Log_URL_Prefix}**')
+        wait_for_table(page)
 
         # .. the URL points to the audit log page for this connection ..
-        assert _Audit_Log_Url_Prefix in page.url, f'Expected an audit log URL, got: "{page.url}"'
+        assert _Audit_Log_URL_Prefix in page.url, f'Expected an audit log URL, got: "{page.url}"'
         assert 'source=email-imap' in page.url, f'Expected source=email-imap in the URL, got: "{page.url}"'
         assert quote(conn_name) in page.url, f'Expected the connection name in the URL, got: "{page.url}"'
 
-        # .. and the events of the earlier read are shown.
-        rows = _get_rows(page)
+        # .. and the events of the earlier read are shown, with the message body in the Data tab.
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 2, f'Expected 2 audit log rows, got {row_count}'
 
-        cells = _get_row_cells(rows[1])
-        assert 'The order from the list was confirmed' in cells[_Column_Data], \
-            f'Expected the message body in the data preview, got: "{cells[_Column_Data]}"'
+        open_data(page, rows[1])
+        wait_for_payload_text(page, 'The order from the list was confirmed')
 
 # ################################################################################################################################
 
@@ -558,30 +406,28 @@ class TestEmailIMAPAuditLog:
         _ = _invoke_helper(server_port, url_path, conn_name, 'get')
 
         # .. open the audit log page ..
-        _goto_audit_log(page, base_url, conn_name)
+        goto_audit_log(page, base_url, _Source, conn_name)
 
         # .. both reads are shown, two events each ..
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 4, f'Expected 4 audit log rows, got {row_count}'
 
-        first_read_seen_cells      = _get_row_cells(rows[2])
-        first_read_received_cells  = _get_row_cells(rows[3])
-        second_read_seen_cells     = _get_row_cells(rows[0])
-        second_read_received_cells = _get_row_cells(rows[1])
+        second_read_seen_cid     = get_row_cid(page, rows[0])
+        second_read_received_cid = get_row_cid(page, rows[1])
+        first_read_seen_cid      = get_row_cid(page, rows[2])
+        first_read_received_cid  = get_row_cid(page, rows[3])
 
         # .. a message's received and marked-seen events share the same CID ..
-        assert first_read_received_cells[_Column_CID] == first_read_seen_cells[_Column_CID], \
-            'Expected one shared CID within a read, got: ' + \
-            f'"{first_read_received_cells[_Column_CID]}" and "{first_read_seen_cells[_Column_CID]}"'
+        assert first_read_received_cid == first_read_seen_cid, \
+            f'Expected one shared CID within a read, got: "{first_read_received_cid}" and "{first_read_seen_cid}"'
 
-        assert second_read_received_cells[_Column_CID] == second_read_seen_cells[_Column_CID], \
-            'Expected one shared CID within a read, got: ' + \
-            f'"{second_read_received_cells[_Column_CID]}" and "{second_read_seen_cells[_Column_CID]}"'
+        assert second_read_received_cid == second_read_seen_cid, \
+            f'Expected one shared CID within a read, got: "{second_read_received_cid}" and "{second_read_seen_cid}"'
 
         # .. and separate reads carry separate CIDs.
-        assert first_read_received_cells[_Column_CID] != second_read_received_cells[_Column_CID], \
-            f'Expected distinct CIDs across reads, got: "{first_read_received_cells[_Column_CID]}" twice'
+        assert first_read_received_cid != second_read_received_cid, \
+            f'Expected distinct CIDs across reads, got: "{first_read_received_cid}" twice'
 
 # ################################################################################################################################
 
@@ -593,7 +439,7 @@ class TestEmailIMAPAuditLog:
         server_port = zato_dashboard['server_port']
 
         # Record everything the browser and Django report during this test ..
-        diagnostics = _attach_diagnostics(page)
+        diagnostics = attach_diagnostics(page)
 
         # .. start with an empty mailbox and add three messages with distinct bodies ..
         imap_test_server.clear()
@@ -611,41 +457,33 @@ class TestEmailIMAPAuditLog:
         _ = _invoke_helper(server_port, url_path, conn_name, 'get')
 
         # .. open the audit log page and confirm all six events are there ..
-        _goto_audit_log(page, base_url, conn_name)
+        goto_audit_log(page, base_url, _Source, conn_name)
 
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 6, f'Expected 6 audit log rows, got {row_count}'
 
-        # .. search for one body and wait for the others to disappear ..
-        _search(page, 'invoice-paid')
-        _wait_for_body_without_text(page, 'invoice-created', diagnostics)
+        # .. the search runs over the stored message summaries, so one body keeps only
+        # .. the matching received event - marked-seen events carry no data to match ..
+        search(page, 'invoice-paid')
+        wait_for_row_count(page, 1, diagnostics)
 
-        # .. only the matching received event remains - marked-seen events carry no data to match ..
-        rows = _get_rows(page)
-        row_count = len(rows)
-        assert row_count == 1, f'Expected 1 filtered row, got {row_count}'
+        rows = get_rows(page)
 
-        cells = _get_row_cells(rows[0])
-        assert 'invoice-paid' in cells[_Column_Data], \
-            f'Expected the matching body, got: "{cells[_Column_Data]}"'
+        open_data(page, rows[0])
+        wait_for_payload_text(page, 'invoice-paid', diagnostics)
 
         # .. a query matching nothing shows the empty placeholder ..
-        _search(page, 'no-such-message-anywhere')
-        _wait_for_body_text(page, _No_Events_Text, diagnostics)
+        search(page, 'no-such-message-anywhere')
+        wait_for_empty(page, diagnostics)
 
         # .. clearing the query brings all six events back ..
-        _search(page, '')
-        _wait_for_body_text(page, 'invoice-created', diagnostics)
-        _wait_for_body_text(page, 'invoice-cancelled', diagnostics)
-
-        rows = _get_rows(page)
-        row_count = len(rows)
-        assert row_count == 6, f'Expected 6 rows after clearing the search, got {row_count}'
+        search(page, '')
+        wait_for_row_count(page, 6, diagnostics)
 
         # .. and no JavaScript errors or failed requests happened along the way.
-        assert not diagnostics['page_errors'], f'Unexpected page errors:\n{_format_diagnostics(diagnostics)}'
-        assert not diagnostics['failed_requests'], f'Unexpected failed requests:\n{_format_diagnostics(diagnostics)}'
+        assert not diagnostics['page_errors'], f'Unexpected page errors:\n{format_diagnostics(diagnostics)}'
+        assert not diagnostics['failed_requests'], f'Unexpected failed requests:\n{format_diagnostics(diagnostics)}'
 
 # ################################################################################################################################
 
@@ -657,9 +495,9 @@ class TestEmailIMAPAuditLog:
         server_port = zato_dashboard['server_port']
 
         # Record everything the browser and Django report during this test ..
-        diagnostics = _attach_diagnostics(page)
+        diagnostics = attach_diagnostics(page)
 
-        # .. build a body much longer than the 200-character preview shown in the table,
+        # .. build a body long enough that no row could ever show it whole,
         # .. made of space-separated tokens so e-mail line wrapping cannot split any of them ..
         tokens:'strlist' = []
 
@@ -682,42 +520,28 @@ class TestEmailIMAPAuditLog:
         _ = _invoke_helper(server_port, url_path, conn_name, 'get')
 
         # .. open the audit log page ..
-        _goto_audit_log(page, base_url, conn_name)
+        goto_audit_log(page, base_url, _Source, conn_name)
 
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 2, f'Expected 2 audit log rows, got {row_count}'
 
-        # .. the table shows only a truncated preview of the message summary ..
+        # .. the row itself carries no message body - the summary is read in the pane ..
         received_row = rows[1]
-        cells = _get_row_cells(received_row)
-        preview = cells[_Column_Data]
-        size = int(cells[_Column_Size])
-        assert len(preview) < size, \
-            f'Expected a truncated preview, got {len(preview)} characters for a {size}-character summary'
+        main_text = get_row_main_text(received_row)
+        assert 'test-product-0' not in main_text, f'Expected no message body on the row, got: "{main_text}"'
 
-        # .. clicking the received event's CID opens the overlay with the complete message ..
-        cid_link = received_row.query_selector('a.audit-log-cid-link')
-        cid_link.click()
-        _ = page.wait_for_selector('#zato-highlight-pane-overlay:not(.hidden)', state='visible', timeout=10000)
-
-        # .. the overlay editor holds the summary in full, read through the Ace API
-        # .. because Ace renders only the visible part of the text into the DOM ..
-        editor_value = page.evaluate(
-            '''() => {
-                let element = document.querySelector('#zato-highlight-pane-overlay .zato-highlight-pane-editor');
-                return ace.edit(element).getValue();
-            }''')
-
-        assert len(editor_value) > len(preview), \
-            f'Expected the complete summary in the overlay, got {len(editor_value)} characters'
+        # .. while the overlay behind the received event's CID holds the summary in full.
+        editor_value = open_cid_overlay(page, received_row)
 
         for token in tokens:
             assert token in editor_value, f'Expected "{token}" in the overlay, got: "{editor_value}"'
 
+        close_cid_overlay(page)
+
         # .. and no JavaScript errors or failed requests happened along the way.
-        assert not diagnostics['page_errors'], f'Unexpected page errors:\n{_format_diagnostics(diagnostics)}'
-        assert not diagnostics['failed_requests'], f'Unexpected failed requests:\n{_format_diagnostics(diagnostics)}'
+        assert not diagnostics['page_errors'], f'Unexpected page errors:\n{format_diagnostics(diagnostics)}'
+        assert not diagnostics['failed_requests'], f'Unexpected failed requests:\n{format_diagnostics(diagnostics)}'
 
 # ################################################################################################################################
 
@@ -744,22 +568,23 @@ class TestEmailIMAPAuditLog:
             f'Expected INTERNAL_SERVER_ERROR, got {response.status_code}: {response.text}'
 
         # .. open the audit log page ..
-        _goto_audit_log(page, base_url, conn_name)
+        goto_audit_log(page, base_url, _Source, conn_name)
 
         # .. the failed read produced exactly one event ..
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 1, f'Expected 1 audit log row, got {row_count}'
 
-        cells = _get_row_cells(rows[0])
-
         # .. and it carries the error outcome together with the traceback.
-        assert cells[_Column_Event] == _Event_Message_Received, \
-            f'Expected event type "{_Event_Message_Received}", got: "{cells[_Column_Event]}"'
-        assert cells[_Column_Outcome] == _Outcome_Error, \
-            f'Expected outcome "{_Outcome_Error}", got: "{cells[_Column_Outcome]}"'
-        assert 'Traceback' in cells[_Column_Data], \
-            f'Expected a traceback in the data preview, got: "{cells[_Column_Data]}"'
+        event_label = get_row_event(rows[0])
+        assert event_label == _Event_Message_Received_Label, \
+            f'Expected event "{_Event_Message_Received_Label}", got: "{event_label}"'
+
+        outcome = get_row_outcome(page, rows[0])
+        assert outcome == _Outcome_Error, f'Expected outcome "{_Outcome_Error}", got: "{outcome}"'
+
+        open_data(page, rows[0])
+        wait_for_payload_text(page, 'Traceback')
 
 # ################################################################################################################################
 
@@ -791,40 +616,40 @@ class TestEmailIMAPAuditLog:
         assert imap_test_server.has_received('EXPUNGE'), 'Expected the IMAP server to receive an expunge command'
 
         # .. open the audit log page ..
-        _goto_audit_log(page, base_url, conn_name)
+        goto_audit_log(page, base_url, _Source, conn_name)
 
         # .. two received events and two deleted events are shown ..
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 4, f'Expected 4 audit log rows, got {row_count}'
 
-        second_deleted_cells  = _get_row_cells(rows[0])
-        first_deleted_cells   = _get_row_cells(rows[1])
-        second_received_cells = _get_row_cells(rows[2])
-        first_received_cells  = _get_row_cells(rows[3])
-
         # .. the newest events are the deletions, in the reverse order of their uids ..
-        for cells, expected_uid in ((second_deleted_cells, second_uid), (first_deleted_cells, first_uid)):
+        for row, expected_uid in ((rows[0], second_uid), (rows[1], first_uid)):
 
-            assert cells[_Column_Event] == _Event_Message_Deleted, \
-                f'Expected event type "{_Event_Message_Deleted}", got: "{cells[_Column_Event]}"'
-            assert cells[_Column_Msg_ID] == expected_uid, \
-                f'Expected message id "{expected_uid}", got: "{cells[_Column_Msg_ID]}"'
-            assert cells[_Column_Outcome] == _Outcome_OK, \
-                f'Expected outcome "{_Outcome_OK}", got: "{cells[_Column_Outcome]}"'
+            event_label = get_row_event(row)
+            assert event_label == _Event_Message_Deleted_Label, \
+                f'Expected event "{_Event_Message_Deleted_Label}", got: "{event_label}"'
+
+            msg_id = _get_row_msg_id(page, row)
+            assert msg_id == expected_uid, f'Expected message id "{expected_uid}", got: "{msg_id}"'
+
+            outcome = get_row_outcome(page, row)
+            assert outcome == _Outcome_OK, f'Expected outcome "{_Outcome_OK}", got: "{outcome}"'
 
         # .. both deletions ran in one call so they share one CID ..
-        assert first_deleted_cells[_Column_CID] == second_deleted_cells[_Column_CID], \
-            'Expected one shared CID for both deletions, got: ' + \
-            f'"{first_deleted_cells[_Column_CID]}" and "{second_deleted_cells[_Column_CID]}"'
+        second_deleted_cid = get_row_cid(page, rows[0])
+        first_deleted_cid = get_row_cid(page, rows[1])
+        assert first_deleted_cid == second_deleted_cid, \
+            f'Expected one shared CID for both deletions, got: "{first_deleted_cid}" and "{second_deleted_cid}"'
 
         # .. while the earlier read carries its own, separate CID.
-        assert first_received_cells[_Column_CID] == second_received_cells[_Column_CID], \
-            'Expected one shared CID for the read, got: ' + \
-            f'"{first_received_cells[_Column_CID]}" and "{second_received_cells[_Column_CID]}"'
+        second_received_cid = get_row_cid(page, rows[2])
+        first_received_cid = get_row_cid(page, rows[3])
+        assert first_received_cid == second_received_cid, \
+            f'Expected one shared CID for the read, got: "{first_received_cid}" and "{second_received_cid}"'
 
-        assert first_received_cells[_Column_CID] != first_deleted_cells[_Column_CID], \
-            f'Expected distinct CIDs for the read and the deletions, got: "{first_deleted_cells[_Column_CID]}" twice'
+        assert first_received_cid != first_deleted_cid, \
+            f'Expected distinct CIDs for the read and the deletions, got: "{first_deleted_cid}" twice'
 
 # ################################################################################################################################
 # ################################################################################################################################

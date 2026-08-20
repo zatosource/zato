@@ -86,9 +86,11 @@ def open_soap_outconn_page(page:'Page', base_url:'str', query:'str'='') -> 'None
 
 def find_soap_outconn_row(page:'Page', name:'str') -> 'any_':
     """ Returns the table row of an outgoing SOAP connection of the given name or None if there is no such row.
+    The name cell wraps its text in a span for the inline name editor, and :text-is only matches
+    the innermost element holding the text, so the span is what the selector looks for.
     """
 
-    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
+    row_selector = f'#data-table tbody tr:has(span.name-value:text-is("{name}"))'
 
     out = page.query_selector(row_selector)
     return out
@@ -99,7 +101,7 @@ def wait_for_soap_outconn_row(page:'Page', name:'str') -> 'any_':
     """ Waits for the row of an outgoing SOAP connection with the given name to appear and returns it.
     """
 
-    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
+    row_selector = f'#data-table tbody tr:has(span.name-value:text-is("{name}"))'
 
     out = page.wait_for_selector(row_selector, state='visible', timeout=10000)
     return out
@@ -315,7 +317,7 @@ def ping_soap_outconn(page:'Page', name:'str') -> 'anydict':
     """ Clicks the Ping link of an outgoing SOAP connection's row and returns the parsed ping response.
     """
 
-    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
+    row_selector = f'#data-table tbody tr:has(span.name-value:text-is("{name}"))'
 
     # Click the link and wait for the ping response to arrive ..
     def is_ping_response(response:'any_') -> 'bool':

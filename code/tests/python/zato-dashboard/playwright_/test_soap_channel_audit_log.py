@@ -14,9 +14,6 @@ from urllib.parse import quote
 # pytest
 import pytest
 
-# Playwright
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.soap.client import SOAPClient
@@ -28,10 +25,14 @@ from zato.common.soap.message import SOAPMessage
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anydict, anydictnone, anylist, strlist
+    from zato.common.typing_ import any_, anydict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+from audit_log_ui import attach_diagnostics, format_diagnostics, get_row_cid, get_row_event, get_row_main_text, \
+    get_row_outcome, get_row_time_text, get_rows, goto_audit_log, close_cid_overlay, open_cid_overlay, open_data, \
+    search, wait_for_empty, wait_for_payload_text, wait_for_row_count, wait_for_table
 
 from soap_channel import create_soap_channel, open_soap_channel_page, wait_for_channel_fixture_services
 
@@ -47,32 +48,23 @@ _Echo_Service   = 'test.soap.channel.echo'
 _Faulty_Service = 'test.soap.channel.faulty'
 
 # The SOAPAction the echo service's operation is invoked with
-_Echo_Soap_Action = 'urn:cdc:iisb:2014:connectivityTest'
+_Echo_SOAP_Action = 'urn:cdc:iisb:2014:connectivityTest'
 _Echo_Namespace   = 'urn:cdc:iisb:2014'
 _Echo_Operation   = 'connectivityTest'
 
-_Audit_Log_Url_Prefix = '/zato/audit-log/'
-_Poll_Url_Path        = '/zato/audit-log/poll/'
+_Audit_Log_URL_Prefix = '/zato/audit-log/'
 
-_Event_Request_Received = 'request-received'
-_Event_Response_Sent    = 'response-sent'
+_Source = 'soap-channel'
+
+# How the events of one invocation read on their rows
+_Event_Request_Received_Label = 'Request received'
+_Event_Response_Sent_Label    = 'Response sent'
 
 _Outcome_OK    = 'ok'
 _Outcome_Error = 'error'
 
-_No_Events_Text = 'No events found'
-
 # The section title for the SOAP channel source, compared lowercase because the heading is styled with CSS
 _SOAP_Channel_Title = 'soap channel audit log'
-
-# Column indexes: Time, CID, Event, Endpoint, Outcome, Size, Data preview
-_Column_Time     = 0
-_Column_CID      = 1
-_Column_Event    = 2
-_Column_Endpoint = 3
-_Column_Outcome  = 4
-_Column_Size     = 5
-_Column_Data     = 6
 
 # How long to keep retrying an invocation while a UI change propagates to the server
 _Propagation_Timeout = 30
@@ -81,193 +73,6 @@ _Propagation_Timeout = 30
 _Propagation_Poll_Interval = 1.0
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _goto_audit_log(page:'Page', base_url:'str', channel_name:'str') -> 'None':
-    """ Navigates to the audit log page of one SOAP channel and waits for the first page of events to load.
-    """
-
-    # Build the per-object URL ..
-    encoded_name = quote(channel_name)
-    url = f'{base_url}{_Audit_Log_Url_Prefix}?source=soap-channel&object_name={encoded_name}&cluster=1'
-
-    # .. go there ..
-    _ = page.goto(url)
-
-    # .. and wait for the initial poll to replace the loading row.
-    _wait_for_table(page)
-
-# ################################################################################################################################
-
-def _wait_for_table(page:'Page') -> 'None':
-    """ Waits until the audit log table has finished loading its current page of events,
-    i.e. until the table body exists, has rows and none of them is the loading placeholder.
-    """
-    _ = page.wait_for_function(
-        '''() => {
-            let body = document.querySelector('#audit-log-table-body');
-            if (!body) return false;
-            let rows = body.querySelectorAll('tr');
-            if (!rows.length) return false;
-            return !body.querySelector('tr.detail-loading-row');
-        }''',
-        timeout=10000)
-
-# ################################################################################################################################
-
-def _get_rows(page:'Page') -> 'anylist':
-    """ Returns all rows currently shown in the audit log table.
-    """
-    out = page.query_selector_all('#audit-log-table-body tr')
-    return out
-
-# ################################################################################################################################
-
-def _get_row_cells(row:'any_') -> 'anylist':
-    """ Returns the text of each cell in one audit log row.
-    """
-    out = [] # type: anylist
-
-    for cell in row.query_selector_all('td'):
-        out.append(cell.inner_text().strip())
-
-    return out
-
-# ################################################################################################################################
-
-def _attach_diagnostics(page:'Page') -> 'anydict':
-    """ Captures everything the browser and Django report while a test runs - console messages,
-    uncaught page errors, failed requests and the full body of each poll response.
-    """
-
-    # All the captured facts go here ..
-    out = {
-        'console': [],
-        'page_errors': [],
-        'failed_requests': [],
-        'poll_responses': [],
-    } # type: anydict
-
-    # .. every console message is recorded with its severity ..
-    def _on_console(message:'any_') -> 'None':
-        out['console'].append(f'[console.{message.type}] {message.text}')
-
-    # .. uncaught JavaScript exceptions are recorded in full ..
-    def _on_page_error(error:'any_') -> 'None':
-        out['page_errors'].append(f'[pageerror] {error}')
-
-    # .. requests that never completed are recorded with their failure reason, except for
-    # .. requests aborted by navigation, e.g. the session keepalive ping, which are not errors ..
-    def _on_request_failed(request:'any_') -> 'None':
-        if request.failure != 'net::ERR_ABORTED':
-            out['failed_requests'].append(f'[requestfailed] {request.method} {request.url} -> {request.failure}')
-
-    # .. and each poll response is recorded with its status and body, which is what Django returned.
-    def _on_response(response:'any_') -> 'None':
-        if _Poll_Url_Path in response.url:
-            body = response.text()
-            out['poll_responses'].append(f'[poll] {response.status} {response.url} -> {body}')
-
-    page.on('console', _on_console)
-    page.on('pageerror', _on_page_error)
-    page.on('requestfailed', _on_request_failed)
-    page.on('response', _on_response)
-
-    return out
-
-# ################################################################################################################################
-
-def _format_diagnostics(diagnostics:'anydict') -> 'str':
-    """ Turns the captured diagnostics into one readable block for assertion messages.
-    """
-
-    lines = [] # type: anylist
-
-    for key in ('page_errors', 'failed_requests', 'console', 'poll_responses'):
-        for entry in diagnostics[key]:
-            lines.append(entry)
-
-    out = '\n'.join(lines)
-    return out
-
-# ################################################################################################################################
-
-def _search(page:'Page', query:'str') -> 'None':
-    """ Types a query into the audit log search form and submits it with the search button.
-    """
-
-    # Fill in the query ..
-    page.fill('#audit-log-search-input', query)
-
-    # .. and submit the form.
-    page.click('#audit-log-search-form button[type="submit"]')
-
-# ################################################################################################################################
-
-def _wait_for_row_count(page:'Page', count:'int', diagnostics:'anydictnone' = None) -> 'None':
-    """ Waits until the audit log table shows exactly that many event rows. A SOAP envelope's
-    preview never contains the payload markers - the envelope prefix alone exceeds the preview
-    length - so search results are awaited by row count rather than by visible text.
-    On timeout, the assertion message includes everything the browser and Django reported.
-    """
-    try:
-        _ = page.wait_for_function(
-            f'''() => {{
-                let body = document.querySelector('#audit-log-table-body');
-                let rows = body.querySelectorAll('tr');
-                if (body.querySelector('tr.detail-loading-row')) return false;
-                return rows.length === {count};
-            }}''',
-            timeout=10000)
-    except PlaywrightTimeoutError:
-        body_text = page.inner_text('#audit-log-table-body')
-        details = _format_diagnostics(diagnostics) if diagnostics else '(no diagnostics attached)'
-        pytest.fail(f'Timed out waiting for {count} rows, the table shows:\n{body_text}\n\nDiagnostics:\n{details}')
-
-# ################################################################################################################################
-
-def _wait_for_body_text(page:'Page', text:'str', diagnostics:'anydictnone' = None) -> 'None':
-    """ Waits until the audit log table body contains the given text.
-    On timeout, the assertion message includes everything the browser and Django reported.
-    """
-    try:
-        _ = page.wait_for_function(
-            f'document.querySelector("#audit-log-table-body").innerText.includes(\'{text}\')', timeout=10000)
-    except PlaywrightTimeoutError:
-        body_text = page.inner_text('#audit-log-table-body')
-        details = _format_diagnostics(diagnostics) if diagnostics else '(no diagnostics attached)'
-        pytest.fail(f'Timed out waiting for "{text}" in the table, the table shows:\n{body_text}\n\nDiagnostics:\n{details}')
-
-# ################################################################################################################################
-
-def _open_cid_overlay(page:'Page', row:'any_') -> 'str':
-    """ Clicks the CID link of one row and returns the complete message the overlay shows,
-    read through the Ace API because Ace renders only the visible part of the text into the DOM.
-    """
-
-    # Open the overlay ..
-    cid_link = row.query_selector('a.audit-log-cid-link')
-    assert cid_link is not None, 'Expected the CID cell to be a link'
-    cid_link.click()
-    _ = page.wait_for_selector('#zato-highlight-pane-overlay:not(.hidden)', state='visible', timeout=10000)
-
-    # .. and read the editor's full contents.
-    out = page.evaluate(
-        '''() => {
-            let element = document.querySelector('#zato-highlight-pane-overlay .zato-highlight-pane-editor');
-            return ace.edit(element).getValue();
-        }''')
-
-    return out
-
-# ################################################################################################################################
-
-def _close_cid_overlay(page:'Page') -> 'None':
-    """ Closes the complete message overlay and waits for it to disappear.
-    """
-    page.evaluate('$.fn.zato.highlight_pane.close_overlay()')
-    _ = page.wait_for_selector('#zato-highlight-pane-overlay', state='hidden', timeout=5000)
-
 # ################################################################################################################################
 
 def _new_channel_client(server_port:'int', url_path:'str') -> 'SOAPClient':
@@ -279,7 +84,7 @@ def _new_channel_client(server_port:'int', url_path:'str') -> 'SOAPClient':
         'address': f'http://127.0.0.1:{server_port}{url_path}',
         'timeout': 10,
         'soap_version': SOAPVersion.V11,
-        'soap_action': _Echo_Soap_Action,
+        'soap_action': _Echo_SOAP_Action,
     } # type: anydict
 
     out = SOAPClient(client_config)
@@ -339,7 +144,7 @@ def _create_echo_channel(page:'Page', base_url:'str', name_suffix:'str') -> 'any
     url_path = '/' + channel_name
 
     channel_id = create_soap_channel(page, base_url, channel_name, _Echo_Service, url_path, {
-        'soap_action': _Echo_Soap_Action,
+        'soap_action': _Echo_SOAP_Action,
     })
 
     out = {
@@ -392,7 +197,7 @@ class TestSOAPChannelAuditLog:
         _invoke_echo(server_port, channel['url_path'], 'single-invocation')
 
         # .. open the audit log page for that channel ..
-        _goto_audit_log(page, base_url, channel['name'])
+        goto_audit_log(page, base_url, _Source, channel['name'])
 
         # .. the section title names the source, compared case-insensitively because of CSS styling ..
         title_text = page.inner_text('#detail-section-title')
@@ -406,59 +211,49 @@ class TestSOAPChannelAuditLog:
         pill_text = pill_text.lower()
         assert pill_text == channel['name'], f'Expected channel name "{channel["name"]}" in the pill, got: "{pill_text}"'
 
-        # .. the table shows the SOAP channel columns - there is an Outcome column
-        # .. and no pub/sub Message id column, compared case-insensitively
-        # .. because the headers are uppercased with CSS ..
-        header_text = page.inner_text('#audit-log-table thead')
-        header_text = header_text.lower()
-        assert 'outcome' in header_text, f'Expected an Outcome column, got: "{header_text}"'
-        assert 'message id' not in header_text, f'Expected no Message id column, got: "{header_text}"'
-
         # .. one invocation produces exactly two events ..
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 2, f'Expected 2 audit log rows, got {row_count}'
 
         # .. the newest event is the response, the older one is the request ..
-        response_cells = _get_row_cells(rows[0])
-        request_cells = _get_row_cells(rows[1])
+        event_label = get_row_event(rows[0])
+        assert event_label == _Event_Response_Sent_Label, \
+            f'Expected event "{_Event_Response_Sent_Label}", got: "{event_label}"'
 
-        assert response_cells[_Column_Event] == _Event_Response_Sent, \
-            f'Expected event type "{_Event_Response_Sent}", got: "{response_cells[_Column_Event]}"'
-        assert request_cells[_Column_Event] == _Event_Request_Received, \
-            f'Expected event type "{_Event_Request_Received}", got: "{request_cells[_Column_Event]}"'
+        event_label = get_row_event(rows[1])
+        assert event_label == _Event_Request_Received_Label, \
+            f'Expected event "{_Event_Request_Received_Label}", got: "{event_label}"'
 
         # .. both events point at the channel's service and completed fine ..
-        for cells in (response_cells, request_cells):
+        for row in rows:
 
-            assert cells[_Column_Endpoint] == _Echo_Service, \
-                f'Expected the endpoint "{_Echo_Service}", got: "{cells[_Column_Endpoint]}"'
-            assert cells[_Column_Outcome] == _Outcome_OK, \
-                f'Expected outcome "{_Outcome_OK}", got: "{cells[_Column_Outcome]}"'
+            main_text = get_row_main_text(row)
+            assert _Echo_Service in main_text, f'Expected the service "{_Echo_Service}" on the row, got: "{main_text}"'
 
             # .. the time is shown in the browser's locale format, not as a raw ISO string ..
-            assert cells[_Column_Time] != '', 'Expected a non-empty event time'
-            assert '+00:00' not in cells[_Column_Time], \
-                f'Expected a locale-formatted time, got a raw ISO string: "{cells[_Column_Time]}"'
+            time_text = get_row_time_text(row)
+            assert time_text != '', 'Expected a non-empty event time'
+            assert '+00:00' not in time_text, f'Expected a locale-formatted time, got a raw ISO string: "{time_text}"'
 
-            size = int(cells[_Column_Size])
-            assert size > 0, f'Expected a positive size, got {size}'
+            outcome = get_row_outcome(page, row)
+            assert outcome == _Outcome_OK, f'Expected outcome "{_Outcome_OK}", got: "{outcome}"'
 
-            # .. the preview holds the beginning of the raw envelope as it was on the wire.
-            assert 'Envelope' in cells[_Column_Data], \
-                f'Expected a SOAP envelope in the data preview, got: "{cells[_Column_Data]}"'
+            # .. the raw envelope as it was on the wire is read in the pane's Data tab ..
+            open_data(page, row)
+            wait_for_payload_text(page, 'Envelope')
 
         # .. the request's CID opens the complete envelope, which carries the marker ..
-        request_envelope = _open_cid_overlay(page, rows[1])
+        request_envelope = open_cid_overlay(page, rows[1])
         assert 'single-invocation' in request_envelope, \
             f'Expected the marker in the complete request, got: "{request_envelope}"'
-        _close_cid_overlay(page)
+        close_cid_overlay(page)
 
         # .. and so does the response's.
-        response_envelope = _open_cid_overlay(page, rows[0])
+        response_envelope = open_cid_overlay(page, rows[0])
         assert 'single-invocation' in response_envelope, \
             f'Expected the marker in the complete response, got: "{response_envelope}"'
-        _close_cid_overlay(page)
+        close_cid_overlay(page)
 
 # ################################################################################################################################
 
@@ -482,24 +277,24 @@ class TestSOAPChannelAuditLog:
         page.click(f'{row_selector} a:text-is("Audit log")')
 
         # .. wait for the audit log page to load ..
-        page.wait_for_url(f'**{_Audit_Log_Url_Prefix}**')
-        _wait_for_table(page)
+        page.wait_for_url(f'**{_Audit_Log_URL_Prefix}**')
+        wait_for_table(page)
 
         # .. the URL points to the audit log page for this channel ..
-        assert _Audit_Log_Url_Prefix in page.url, f'Expected an audit log URL, got: "{page.url}"'
+        assert _Audit_Log_URL_Prefix in page.url, f'Expected an audit log URL, got: "{page.url}"'
         assert 'source=soap-channel' in page.url, f'Expected source=soap-channel in the URL, got: "{page.url}"'
         assert quote(channel['name']) in page.url, f'Expected the channel name in the URL, got: "{page.url}"'
 
         # .. and the invocation's events are shown ..
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 2, f'Expected 2 audit log rows, got {row_count}'
 
         # .. carrying this invocation's marker in the complete request.
-        request_envelope = _open_cid_overlay(page, rows[1])
+        request_envelope = open_cid_overlay(page, rows[1])
         assert 'from-channel-list' in request_envelope, \
             f'Expected the marker in the complete request, got: "{request_envelope}"'
-        _close_cid_overlay(page)
+        close_cid_overlay(page)
 
 # ################################################################################################################################
 
@@ -517,43 +312,43 @@ class TestSOAPChannelAuditLog:
         _invoke_echo(server_port, channel['url_path'], 'second-invocation')
 
         # .. open the audit log page ..
-        _goto_audit_log(page, base_url, channel['name'])
+        goto_audit_log(page, base_url, _Source, channel['name'])
 
         # .. both invocations are shown, two events each ..
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 4, f'Expected 4 audit log rows, got {row_count}'
 
         # .. the newest invocation comes first - the markers travel inside the envelopes,
         # .. which only the complete messages behind the CID links reveal ..
-        first_row_cells = _get_row_cells(rows[0])
-        last_row_cells = _get_row_cells(rows[3])
-
-        newest_request_envelope = _open_cid_overlay(page, rows[1])
+        newest_request_envelope = open_cid_overlay(page, rows[1])
         assert 'second-invocation' in newest_request_envelope, \
             f'Expected the newest marker first, got: "{newest_request_envelope}"'
-        _close_cid_overlay(page)
+        close_cid_overlay(page)
 
-        oldest_request_envelope = _open_cid_overlay(page, rows[3])
+        oldest_request_envelope = open_cid_overlay(page, rows[3])
         assert 'first-invocation' in oldest_request_envelope, \
             f'Expected the oldest marker last, got: "{oldest_request_envelope}"'
-        _close_cid_overlay(page)
+        close_cid_overlay(page)
 
         # .. within one invocation the response comes before the request ..
-        second_row_cells = _get_row_cells(rows[1])
+        event_label = get_row_event(rows[0])
+        assert event_label == _Event_Response_Sent_Label, \
+            f'Expected event "{_Event_Response_Sent_Label}", got: "{event_label}"'
 
-        assert first_row_cells[_Column_Event] == _Event_Response_Sent, \
-            f'Expected event type "{_Event_Response_Sent}", got: "{first_row_cells[_Column_Event]}"'
-        assert second_row_cells[_Column_Event] == _Event_Request_Received, \
-            f'Expected event type "{_Event_Request_Received}", got: "{second_row_cells[_Column_Event]}"'
+        event_label = get_row_event(rows[1])
+        assert event_label == _Event_Request_Received_Label, \
+            f'Expected event "{_Event_Request_Received_Label}", got: "{event_label}"'
 
         # .. the request and response of one invocation share the same CID ..
-        assert first_row_cells[_Column_CID] == second_row_cells[_Column_CID], \
-            f'Expected one shared CID, got: "{first_row_cells[_Column_CID]}" and "{second_row_cells[_Column_CID]}"'
+        response_cid = get_row_cid(page, rows[0])
+        request_cid = get_row_cid(page, rows[1])
+        assert response_cid == request_cid, \
+            f'Expected one shared CID, got: "{response_cid}" and "{request_cid}"'
 
         # .. and separate invocations carry separate CIDs.
-        assert first_row_cells[_Column_CID] != last_row_cells[_Column_CID], \
-            f'Expected distinct CIDs across invocations, got: "{first_row_cells[_Column_CID]}" twice'
+        oldest_cid = get_row_cid(page, rows[3])
+        assert response_cid != oldest_cid, f'Expected distinct CIDs across invocations, got: "{response_cid}" twice'
 
 # ################################################################################################################################
 
@@ -566,7 +361,7 @@ class TestSOAPChannelAuditLog:
         wait_for_channel_fixture_services(page, base_url)
 
         # Record everything the browser and Django report during this test ..
-        diagnostics = _attach_diagnostics(page)
+        diagnostics = attach_diagnostics(page)
 
         # .. create a channel and invoke it with three distinct markers ..
         channel = _create_echo_channel(page, base_url, 'search')
@@ -575,35 +370,35 @@ class TestSOAPChannelAuditLog:
         _invoke_echo(server_port, channel['url_path'], 'invoice-cancelled')
 
         # .. open the audit log page and confirm all six events are there ..
-        _goto_audit_log(page, base_url, channel['name'])
+        goto_audit_log(page, base_url, _Source, channel['name'])
 
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 6, f'Expected 6 audit log rows, got {row_count}'
 
         # .. the search runs over the complete stored envelopes, so one marker matches
-        # .. its invocation's request and response even though no preview shows it ..
-        _search(page, 'invoice-paid')
-        _wait_for_row_count(page, 2, diagnostics)
+        # .. its invocation's request and response ..
+        search(page, 'invoice-paid')
+        wait_for_row_count(page, 2, diagnostics)
 
         # .. and the complete request behind the CID carries the matching marker ..
-        rows = _get_rows(page)
-        request_envelope = _open_cid_overlay(page, rows[1])
+        rows = get_rows(page)
+        request_envelope = open_cid_overlay(page, rows[1])
         assert 'invoice-paid' in request_envelope, \
             f'Expected the matching marker in the complete request, got: "{request_envelope}"'
-        _close_cid_overlay(page)
+        close_cid_overlay(page)
 
         # .. a query matching nothing shows the empty placeholder ..
-        _search(page, 'no-such-payload-anywhere')
-        _wait_for_body_text(page, _No_Events_Text, diagnostics)
+        search(page, 'no-such-payload-anywhere')
+        wait_for_empty(page, diagnostics)
 
         # .. clearing the query brings all six events back ..
-        _search(page, '')
-        _wait_for_row_count(page, 6, diagnostics)
+        search(page, '')
+        wait_for_row_count(page, 6, diagnostics)
 
         # .. and no JavaScript errors or failed requests happened along the way.
-        assert not diagnostics['page_errors'], f'Unexpected page errors:\n{_format_diagnostics(diagnostics)}'
-        assert not diagnostics['failed_requests'], f'Unexpected failed requests:\n{_format_diagnostics(diagnostics)}'
+        assert not diagnostics['page_errors'], f'Unexpected page errors:\n{format_diagnostics(diagnostics)}'
+        assert not diagnostics['failed_requests'], f'Unexpected failed requests:\n{format_diagnostics(diagnostics)}'
 
 # ################################################################################################################################
 
@@ -616,10 +411,9 @@ class TestSOAPChannelAuditLog:
         wait_for_channel_fixture_services(page, base_url)
 
         # Record everything the browser and Django report during this test ..
-        diagnostics = _attach_diagnostics(page)
+        diagnostics = attach_diagnostics(page)
 
-        # .. build a marker much longer than the 200-character preview shown in the table,
-        # .. so it can never fit into the preview together with the envelope around it ..
+        # .. build a marker long enough that no row could ever show it whole ..
         marker_parts:'strlist' = []
 
         for item_index in range(20):
@@ -632,32 +426,30 @@ class TestSOAPChannelAuditLog:
         _invoke_echo(server_port, channel['url_path'], long_marker)
 
         # .. open the audit log page ..
-        _goto_audit_log(page, base_url, channel['name'])
+        goto_audit_log(page, base_url, _Source, channel['name'])
 
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 2, f'Expected 2 audit log rows, got {row_count}'
 
-        # .. the table shows only a truncated preview of the request envelope ..
+        # .. the row itself carries no envelope - the message is read in the pane ..
         request_row = rows[1]
-        cells = _get_row_cells(request_row)
-        preview = cells[_Column_Data]
-        assert long_marker not in preview, \
-            f'Expected a truncated preview without the complete marker, got {len(preview)} characters'
+        main_text = get_row_main_text(request_row)
+        assert long_marker not in main_text, f'Expected no envelope on the row, got: "{main_text}"'
 
         # .. while the overlay behind the request's CID holds the envelope in full.
-        editor_value = _open_cid_overlay(page, request_row)
+        editor_value = open_cid_overlay(page, request_row)
 
         assert long_marker in editor_value, \
             f'Expected the complete marker in the overlay, got: "{editor_value}"'
         assert 'Envelope' in editor_value, \
             f'Expected the complete envelope in the overlay, got: "{editor_value}"'
 
-        _close_cid_overlay(page)
+        close_cid_overlay(page)
 
         # .. and no JavaScript errors or failed requests happened along the way.
-        assert not diagnostics['page_errors'], f'Unexpected page errors:\n{_format_diagnostics(diagnostics)}'
-        assert not diagnostics['failed_requests'], f'Unexpected failed requests:\n{_format_diagnostics(diagnostics)}'
+        assert not diagnostics['page_errors'], f'Unexpected page errors:\n{format_diagnostics(diagnostics)}'
+        assert not diagnostics['failed_requests'], f'Unexpected failed requests:\n{format_diagnostics(diagnostics)}'
 
 # ################################################################################################################################
 
@@ -675,7 +467,7 @@ class TestSOAPChannelAuditLog:
         url_path = '/' + channel_name
 
         _ = create_soap_channel(page, base_url, channel_name, _Faulty_Service, url_path, {
-            'soap_action': _Echo_Soap_Action,
+            'soap_action': _Echo_SOAP_Action,
         })
 
         # .. invoke the channel and let the service raise, which the channel
@@ -693,33 +485,34 @@ class TestSOAPChannelAuditLog:
             client.close()
 
         # .. open the audit log page ..
-        _goto_audit_log(page, base_url, channel_name)
+        goto_audit_log(page, base_url, _Source, channel_name)
 
         # .. the invocation produced its two events ..
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 2, f'Expected 2 audit log rows, got {row_count}'
 
-        response_cells = _get_row_cells(rows[0])
-        request_cells = _get_row_cells(rows[1])
-
         # .. the request itself was received fine ..
-        assert request_cells[_Column_Event] == _Event_Request_Received, \
-            f'Expected event type "{_Event_Request_Received}", got: "{request_cells[_Column_Event]}"'
-        assert request_cells[_Column_Outcome] == _Outcome_OK, \
-            f'Expected outcome "{_Outcome_OK}", got: "{request_cells[_Column_Outcome]}"'
+        event_label = get_row_event(rows[1])
+        assert event_label == _Event_Request_Received_Label, \
+            f'Expected event "{_Event_Request_Received_Label}", got: "{event_label}"'
+
+        outcome = get_row_outcome(page, rows[1])
+        assert outcome == _Outcome_OK, f'Expected outcome "{_Outcome_OK}", got: "{outcome}"'
 
         # .. while the response carries the error outcome ..
-        assert response_cells[_Column_Event] == _Event_Response_Sent, \
-            f'Expected event type "{_Event_Response_Sent}", got: "{response_cells[_Column_Event]}"'
-        assert response_cells[_Column_Outcome] == _Outcome_Error, \
-            f'Expected outcome "{_Outcome_Error}", got: "{response_cells[_Column_Outcome]}"'
+        event_label = get_row_event(rows[0])
+        assert event_label == _Event_Response_Sent_Label, \
+            f'Expected event "{_Event_Response_Sent_Label}", got: "{event_label}"'
+
+        outcome = get_row_outcome(page, rows[0])
+        assert outcome == _Outcome_Error, f'Expected outcome "{_Outcome_Error}", got: "{outcome}"'
 
         # .. and the complete response is the fault envelope that went out on the wire.
-        response_envelope = _open_cid_overlay(page, rows[0])
+        response_envelope = open_cid_overlay(page, rows[0])
         assert 'Fault' in response_envelope, \
             f'Expected a fault envelope in the complete response, got: "{response_envelope}"'
-        _close_cid_overlay(page)
+        close_cid_overlay(page)
 
 # ################################################################################################################################
 # ################################################################################################################################
