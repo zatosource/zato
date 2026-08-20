@@ -52,6 +52,10 @@ _live_burst_count = 20
 _connection_count = 5
 _rule_count = 3
 
+# The archive's REST pieces - the outgoing connection the channels deliver
+# through and the intake channel that receives what they deliver
+_rest_object_count = 2
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -156,12 +160,13 @@ class TestDemoImport:
 # ################################################################################################################################
 
     def test_04_removal_undoes_the_import(self, zato_client:'any_', zato_server:'anydict') -> 'None':
-        """ The removal path deletes the connections and every demo audit row,
-        so the other test modules start from a clean slate.
+        """ The removal path deletes the connections - the archive's REST pieces
+        among them - and every demo audit row, so the other test modules start
+        from a clean slate.
         """
         result = zato_client.invoke('test.demo.purge', {})
 
-        assert len(result['deleted_connections']) == _connection_count, result
+        assert len(result['deleted_connections']) == _connection_count + _rest_object_count, result
 
         # No demo rows are left in the audit database
         audit_db_path = zato_server['audit_db_path']

@@ -354,7 +354,8 @@ class TestMLLPAudit:
         assert 'id' in response
         self.__class__.error_channel_id = response['id']
 
-        # The unaudited quiet route - it must write nothing
+        # The unaudited quiet route - it must write nothing, so the audit log,
+        # which is on by default, is turned off explicitly
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
             cluster_id=1,
@@ -367,6 +368,7 @@ class TestMLLPAudit:
             service='test.hl7.mllp.accept',
             msh3_sending_app=_quiet_sender_application,
             pool_size=1,
+            is_audit_log_active=False,
         )
 
         assert 'id' in response

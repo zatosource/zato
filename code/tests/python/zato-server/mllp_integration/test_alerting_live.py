@@ -16,6 +16,7 @@ from sqlalchemy import create_engine, select
 
 # Zato
 from zato.common.api import Alerting
+from zato.common.alerting.names import get_notification_conn_name
 from zato.common.audit_log.api import AuditEvent
 from zato.common.audit_log.common import alert_table
 
@@ -42,7 +43,6 @@ _smtp_service_name       = 'zato.email.smtp'
 # The names of everything this module creates
 _channel_name      = 'test-alerting-accept'
 _error_channel_name = 'test-alerting-error'
-_smtp_conn_name    = 'test-alerting-smtp'
 _rule_name         = 'test_alerting_error_rate'
 
 # The MSH-3 value routing messages to the error channel
@@ -179,6 +179,46 @@ def _wait_for_messages(messages:'strlist', expected_count:'int') -> 'None':
         time.sleep(0.1)
 
 # ################################################################################################################################
+
+def _get_smtp_conn(zato_client:'any_', name:'str') -> 'any_':
+    """ Returns the SMTP connection of the given name - the seeded notification
+    connection always exists, so not finding it is an error of its own.
+    """
+
+    data, _ = zato_client.get_list(f'{_smtp_service_name}.get-list', cluster_id=1)
+
+    for item in data:
+        if item['name'] == name:
+            return item
+
+    raise Exception(f'SMTP connection `{name}` not found')
+
+# ################################################################################################################################
+
+def _set_notification_smtp_conn(zato_client:'any_', host:'str', port:'int', is_active:'bool') -> 'None':
+    """ Points the seeded notification SMTP connection - the one the alerting sweep
+    delivers through - at the given address, active or not.
+    """
+
+    conn_name = get_notification_conn_name()
+    item = _get_smtp_conn(zato_client, conn_name)
+
+    _ = zato_client.invoke(f'{_smtp_service_name}.edit', {
+        'id': item['id'],
+        'cluster_id': 1,
+        'name': conn_name,
+        'is_active': is_active,
+        'host': host,
+        'port': port,
+        'timeout': 30,
+        'is_debug': False,
+        'mode': 'plain',
+        'needs_tls_verify': False,
+        'ping_address': _alert_addresses[0],
+        'username': 'alerts-test',
+    })
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestAlertingLive:
@@ -190,7 +230,7 @@ class TestAlertingLive:
 
     channel_id:'int' = 0
     error_channel_id:'int' = 0
-    smtp_conn_id:'int' = 0
+    smtp_conn_edited:'bool' = False
 
 # ################################################################################################################################
 
@@ -295,24 +335,10 @@ class TestAlertingLive:
 
         try:
 
-            # The SMTP connection the sweep sends through
-            response = zato_client.create(
-                f'{_smtp_service_name}.create',
-                cluster_id=1,
-                name=_smtp_conn_name,
-                is_active=True,
-                host='127.0.0.1',
-                port=smtp_port,
-                timeout=30,
-                is_debug=False,
-                mode='plain',
-                needs_tls_verify=False,
-                ping_address=_alert_addresses[0],
-                username='alerts-test',
-            )
-
-            assert 'id' in response
-            self.__class__.smtp_conn_id = response['id']
+            # The sweep delivers through the seeded notification connection, which ships
+            # inactive with placeholder details - point it at the capture and activate it
+            _set_notification_smtp_conn(zato_client, '127.0.0.1', smtp_port, True)
+            self.__class__.smtp_conn_edited = True
 
             # The rule watching the error channel, published into the rule engine's
             # alerts ruleset - it replaces the seeded defaults for the test's duration
@@ -325,7 +351,6 @@ class TestAlertingLive:
 
             # The first sweep - exactly what the scheduler job invokes on its interval
             _ = zato_client.invoke(Alerting.Service, {
-                Alerting.Extra_Email_Connection: _smtp_conn_name,
                 Alerting.Extra_From: _alert_from,
             })
 
@@ -357,7 +382,6 @@ class TestAlertingLive:
             # The second sweep, still inside the dedup window, only counts -
             # the alert's count grows and no second email goes out
             _ = zato_client.invoke(Alerting.Service, {
-                Alerting.Extra_Email_Connection: _smtp_conn_name,
                 Alerting.Extra_From: _alert_from,
             })
 
@@ -387,8 +411,9 @@ class TestAlertingLive:
         response = zato_client.invoke('test.alerting.rule.delete', {})
         assert response['is_ok'], response
 
-        if self.__class__.smtp_conn_id:
-            _ = zato_client.delete(f'{_smtp_service_name}.delete', id=self.__class__.smtp_conn_id)
+        # The seeded notification connection goes back to being inactive
+        if self.__class__.smtp_conn_edited:
+            _set_notification_smtp_conn(zato_client, '127.0.0.1', 25, False)
 
         for connection_id in (
             self.__class__.channel_id,
