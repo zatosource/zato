@@ -138,38 +138,44 @@ def _read_in_popover(page:'Page', link_name:'str', field_name:'str') -> 'str':
 # ################################################################################################################################
 
 def _send_through_connection(page:'Page', base_url:'str', name:'str', control_id:'str') -> 'None':
-    """ Sends one message through the saved connection from the Invoke page, retrying while
-    the connection is still on its way to the server.
+    """ Sends one message through the saved connection from the per-row Invoke overlay,
+    retrying while the connection is still on its way to the server.
     """
     navigate_to_outgoing(page, base_url)
 
+    # The Invoke link opens the shared invoker overlay ..
     page.click(f'#data-table tbody tr:has(td:text-is("{name}")) a:text-is("Invoke")')
-    _ = page.wait_for_selector('#send_message_form', state='visible')
+    _ = page.wait_for_selector('#invoker-modal-overlay:not(.hidden)', state='visible', timeout=_Mark_Timeout)
 
-    # The segments are separated by carriage returns and a textarea filled the way a person
-    # fills one would not keep them, so the value is written as it stands
+    # .. the segments are separated by carriage returns and an editor filled the way a person
+    # fills one would not keep them, so the value is written as it stands ..
     message = _Wire_Message.format(control_id=control_id)
-    page.evaluate('text => document.getElementById("request_data").value = text', message)
+    page.evaluate('text => $.fn.zato.invoker._request_pane.setValue(text)', message)
 
     deadline = time.monotonic() + _Deploy_Timeout
     last_response = ''
 
     while time.monotonic() < deadline:
 
-        # The page writes what came back as the field's text, which is where it is read from
-        page.evaluate('document.getElementById("response_data").textContent = ""')
-        page.click('#send_message_form input[type="submit"]')
+        # The status line is cleared first so each attempt waits for its own verdict
+        page.evaluate('$("#invoker-modal-status").text("")')
+        page.click('#invoker-modal-invoke-button')
 
         _ = page.wait_for_function(
-            'document.getElementById("response_data").textContent !== ""',
+            '''() => {
+                let status = document.querySelector("#invoker-modal-status");
+                let text = status.textContent;
+                return text && text.indexOf("Invoking") === -1 && text.trim().length > 0;
+            }''',
             timeout=_Invoke_Timeout,
         )
 
-        last_response = page.evaluate('document.getElementById("response_data").textContent')
+        last_response = page.evaluate('$("#invoker-modal-response-pane").data("raw-response")')
 
         # An acknowledgment carries the control id back, which is what says the message
         # went out rather than that the connection was not there yet
         if control_id in last_response:
+            page.evaluate('$.fn.zato.invoker.close_overlay()')
             return
 
         time.sleep(_Deploy_Poll_Interval)

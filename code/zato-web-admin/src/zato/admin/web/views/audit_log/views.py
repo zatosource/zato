@@ -308,16 +308,18 @@ def poll(req:'any_') -> 'HttpResponse':
                 if data:
                     attach_trace_lines(row, data)
 
-            # .. and only a preview of the payload goes into the table.
-            row['data'] = data[:_data_preview_length]
-
             rows.append(row)
 
         # Everything else the frontend reads off a row - this source's own extra columns, its
         # attrs, a preview of a payload kept elsewhere, the lineage, the message bodies there
         # are to read and the resubmitted marker - is merged in here, a query per set of rows
-        # rather than one per row.
+        # rather than one per row. The rows still carry their full data documents because
+        # the per-source enrichment reads columns out of them, e.g. an AS4 conversation id.
         _hydrate_rows(connection, rows)
+
+        # Only a preview of each payload goes into the table.
+        for row in rows:
+            row['data'] = row['data'][:_data_preview_length]
 
     response_json = json.dumps({'rows': rows, 'total': total, 'page': page})
     response_bytes = response_json.encode('utf-8')

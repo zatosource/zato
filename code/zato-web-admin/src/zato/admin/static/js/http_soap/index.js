@@ -928,18 +928,29 @@ $.fn.zato.http_soap.invoke = function(id) {
 
 ;(function() {
     var connection = $(document).getUrlParam('connection');
+    var transport = $(document).getUrlParam('transport');
     var is_channel = connection === 'channel';
+
+    // The poll's list must match what the page itself renders - channels never offer
+    // outgoing-only security types and outgoing REST connections only offer their supported set
+    var security_object_type = 'security';
+    if(is_channel) {
+        security_object_type = 'security_channel';
+    }
+    else if(transport === 'plain_http') {
+        security_object_type = 'security_rest_outgoing';
+    }
 
     var create_configs = [
         {
-            object_type: 'security',
+            object_type: security_object_type,
             target_select: '#id_security'
         }
     ];
 
     var edit_configs = [
         {
-            object_type: 'security',
+            object_type: security_object_type,
             target_select: '#id_edit-security'
         }
     ];

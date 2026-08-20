@@ -170,8 +170,8 @@ class TestRESTChannelGroups:
         # .. with no groups and no security definition the security cell shows a placeholder ..
         row = find_channel_row(page, channel_name)
         cells = get_row_cell_texts(row)
-        assert cells[_Cell_Security] == '---', \
-            f'Expected "---", got: "{cells[_Cell_Security]}"'
+        assert cells[_Cell_Security] == 'Click to add', \
+            f'Expected "Click to add", got: "{cells[_Cell_Security]}"'
 
         # .. and the channel is open now.
         response = invoke_until_status(server_port, url_path, OK, data='{"group": "off"}')

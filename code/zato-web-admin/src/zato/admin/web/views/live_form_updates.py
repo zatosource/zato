@@ -16,6 +16,7 @@ from django.http import HttpResponse, HttpResponseBadRequest
 # Zato
 from zato.admin.web.util import get_pubsub_security_definitions
 from zato.admin.web.views import method_allowed
+from zato.admin.web.views.http_soap import _outgoing_only_security_types, _rest_security_type_supported
 from zato.common.api import Sec_Def_Type_Name
 from zato.common.json_internal import dumps, loads
 
@@ -46,6 +47,21 @@ logger = getLogger(__name__)
 #
 # The fetch, the filter and the label must all match exactly what the page itself renders,
 # otherwise each poll would keep reporting differences that do not exist.
+
+def _security_channel_filter(item:'strdict') -> 'bool':
+
+    # This must match the filter that the channel pages apply when they render their own select -
+    # outgoing-only types authenticate a connection elsewhere, so a channel never offers them.
+    return item['sec_type'] not in _outgoing_only_security_types
+
+# ################################################################################################################################
+
+def _security_rest_outgoing_filter(item:'strdict') -> 'bool':
+
+    # This must match the filter that the outgoing REST connection page applies when it renders its own select.
+    return item['sec_type'] in _rest_security_type_supported
+
+# ################################################################################################################################
 
 def _security_basic_filter(item:'strdict') -> 'bool':
 
@@ -99,6 +115,28 @@ OBJECT_TYPE_CONFIG:'stranydict' = {
             'paginate': False,
         },
         'filter_func': None,
+    },
+
+    'security_channel': {
+        'service_name': 'zato.security.get-list',
+        'id_field': 'id',
+        'id_format': '{sec_type}/{id}',
+        'label_format': '{sec_type_name}/{name}',
+        'extra_params': {
+            'paginate': False,
+        },
+        'filter_func': _security_channel_filter,
+    },
+
+    'security_rest_outgoing': {
+        'service_name': 'zato.security.get-list',
+        'id_field': 'id',
+        'id_format': '{sec_type}/{id}',
+        'label_format': '{sec_type_name}/{name}',
+        'extra_params': {
+            'paginate': False,
+        },
+        'filter_func': _security_rest_outgoing_filter,
     },
 
     'security_basic': {

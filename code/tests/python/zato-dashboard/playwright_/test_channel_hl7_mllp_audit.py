@@ -13,6 +13,7 @@ import time
 import pytest
 
 # Zato
+from audit_log_ui import goto_audit_log, wait_for_msg_id_row
 from audit_resubmit import is_report_ok, resubmit_until
 from hl7_client.mllp_receiver import MLLPReceiver
 from mllp_channel import create_channel, create_outgoing_connection, delete_channel, delete_outgoing_connection, \
@@ -36,14 +37,12 @@ _Test_Name_Prefix = 'test.mllp.audit.' + CryptoManager.generate_hex_string(32) +
 # The sender the channel's routing criteria are about
 _Audit_App = 'AUDIT_SENDER'
 
-# The audit log page of one channel, by the source the channel-side MLLP events are filed under
-_Audit_Page_Url = '/zato/audit-log/?source=mllp-channel&object_name={name}&cluster=1'
+# The source the channel-side MLLP events are filed under
+_Audit_Source = 'mllp-channel'
 
-# The audit row of one arrived message, by the control id its sender gave it
-_Received_Row = '#audit-log-table-body tr:has(td:text-is("{control_id}")):has(td:text-is("message-received"))'
-
-# How long the audit page has to list an event after the wire send that caused it
-_Audit_Row_Timeout_Ms = 30000
+# The event an arrival is written down as - the channel also records the acknowledgment
+# it answered with, under the same control id
+_Event_Message_Received = 'message-received'
 
 # How long a failed delivery's own retries take to run their course - each hop gets two more
 # attempts a second apart, so by now what failed stays failed until an operator steps in
@@ -52,23 +51,11 @@ _Retry_Exhaustion_Wait = 6.0
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _open_audit_page(page:'Page', base_url:'str', channel_name:'str') -> 'None':
-    """ Opens the audit log page of one channel and waits for its table to render.
-    """
-    url = base_url + _Audit_Page_Url.format(name=channel_name)
-
-    _ = page.goto(url)
-    _ = page.wait_for_selector('#audit-log-table-body tr', state='visible', timeout=_Audit_Row_Timeout_Ms)
-
-# ################################################################################################################################
-
 def _wait_for_received_row(page:'Page', control_id:'str') -> 'str':
-    """ Waits until the audit table lists the arrival of the message with this control id
-    and returns the selector of its row.
+    """ Waits until the audit list holds the arrival of the message with this control id
+    and returns the selector of its row - an HL7 message is named by its control id, MSH-10.
     """
-    out = _Received_Row.format(control_id=control_id)
-    _ = page.wait_for_selector(out, state='visible', timeout=_Audit_Row_Timeout_Ms)
-
+    out = wait_for_msg_id_row(page, control_id, event_type=_Event_Message_Received)
     return out
 
 # ################################################################################################################################
@@ -136,7 +123,7 @@ class TestChannelHL7MLLPAudit:
 
             # .. and each is on the channel's audit log page under the control id its
             # sender gave it.
-            _open_audit_page(page, base_url, channel_name)
+            goto_audit_log(page, base_url, _Audit_Source, channel_name)
 
             for control_id in control_ids:
                 _ = _wait_for_received_row(page, control_id)
@@ -153,7 +140,7 @@ class TestChannelHL7MLLPAudit:
 
             _ = wait_for_item(receiver.deliveries, _text_has(saved_control_id), f'delivery of {saved_control_id}')
 
-            _open_audit_page(page, base_url, channel_name)
+            goto_audit_log(page, base_url, _Audit_Source, channel_name)
             _ = _wait_for_received_row(page, saved_control_id)
 
             # .. the recovery half - the receiver goes down and a message arrives while it is gone ..
@@ -177,7 +164,7 @@ class TestChannelHL7MLLPAudit:
             receiver.start()
 
             # .. an operator reprocesses the message from the audit log page ..
-            _open_audit_page(page, base_url, channel_name)
+            goto_audit_log(page, base_url, _Audit_Source, channel_name)
             row_selector = _wait_for_received_row(page, lost_control_id)
 
             _ = resubmit_until(page, row_selector, is_report_ok)

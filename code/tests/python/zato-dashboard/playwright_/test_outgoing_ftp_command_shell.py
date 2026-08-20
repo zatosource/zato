@@ -254,10 +254,10 @@ class TestOutgoingFTPCommandShell:
 
         # .. the old path is empty now and the new one is taken ..
         old_exists = _run_command(page, f'exists {file_name}')
-        assert old_exists['stdout'].strip() == 'false', f'Expected "false" after the move, got: "{old_exists["stdout"]}"'
+        assert old_exists['stdout'].strip() == 'False', f'Expected "False" after the move, got: "{old_exists["stdout"]}"'
 
         new_exists = _run_command(page, f'exists {directory}/{file_name}')
-        assert new_exists['stdout'].strip() == 'true', f'Expected "true" after the move, got: "{new_exists["stdout"]}"'
+        assert new_exists['stdout'].strip() == 'True', f'Expected "True" after the move, got: "{new_exists["stdout"]}"'
 
         # .. and the file really did land there, with its contents intact.
         moved_path = os.path.join(server.files_dir, directory, file_name)
@@ -286,7 +286,7 @@ class TestOutgoingFTPCommandShell:
         assert file_name in first_result['stdout'], f'Expected "{file_name}" in stdout, got: "{first_result["stdout"]}"'
 
         # .. the exists output is in stdout too ..
-        assert 'true' in first_result['stdout'], f'Expected the exists output in stdout, got: "{first_result["stdout"]}"'
+        assert 'True' in first_result['stdout'], f'Expected the exists output in stdout, got: "{first_result["stdout"]}"'
 
         # .. and a second run must be numbered after the first one.
         second_result = _run_command(page, 'ls .')

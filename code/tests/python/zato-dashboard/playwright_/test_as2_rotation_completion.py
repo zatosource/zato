@@ -14,6 +14,7 @@ from zato.common.api import AS2
 from zato.common.crypto.api import CryptoManager
 from zato.common.defaults import default_cluster_id
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery
+from zato.common.util.scheduler import _as2_as4_jobs_enabled
 from as2_outconn import create_as2_outconn, delete_as2_outconn, open_as2_outconn_page, open_edit_dialog, \
     wait_for_as2_outconn_row
 from as4_keys import new_test_parties
@@ -174,7 +175,9 @@ class TestAS2RotationCompletion:
 # ################################################################################################################################
 
     def test_rotation_completion_job_exists(self, logged_in_page:'Page', api_client:'ZatoClient') -> 'None':
-        """ Server startup creates the interval job that runs the sweep in production.
+        """ Server startup creates the interval job that runs the sweep in production,
+        but only when the AS2/AS4 startup jobs are enabled - the job's presence
+        always matches that toggle.
         """
         jobs, _ = api_client.get_list('zato.scheduler.job.get-list', cluster_id=cast_('any_', default_cluster_id))
 
@@ -182,7 +185,10 @@ class TestAS2RotationCompletion:
         for job in jobs:
             job_names.append(job['name'])
 
-        assert AS2.Default.Rotation_Job_Name in job_names
+        job_exists = AS2.Default.Rotation_Job_Name in job_names
+        assert job_exists is _as2_as4_jobs_enabled, \
+            f'Expected the job\'s presence ({job_exists}) to match the startup toggle ({_as2_as4_jobs_enabled}), ' \
+            f'jobs: {job_names}'
 
 # ################################################################################################################################
 # ################################################################################################################################

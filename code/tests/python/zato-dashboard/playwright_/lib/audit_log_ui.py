@@ -63,13 +63,17 @@ _UI_Timeout = 10000
 # ################################################################################################################################
 # ################################################################################################################################
 
-def goto_audit_log(page:'Page', base_url:'str', source:'str', object_name:'str') -> 'None':
+def goto_audit_log(page:'Page', base_url:'str', source:'str', object_name:'str', status:'str'='') -> 'None':
     """ Navigates to the audit log page of one object and waits for the first page of events to load.
     """
 
     # Build the per-object URL ..
     encoded_name = quote(object_name)
     url = f'{base_url}{_Audit_Log_URL_Prefix}?source={source}&object_name={encoded_name}&cluster=1'
+
+    # .. a status filter, e.g. outstanding, narrows the page down from the URL itself ..
+    if status:
+        url += f'&status={status}'
 
     # .. go there ..
     _ = page.goto(url)
@@ -99,6 +103,97 @@ def get_rows(page:'Page') -> 'anylist':
     """ Returns all event rows currently shown in the audit log list.
     """
     out = page.query_selector_all(Row_Selector)
+    return out
+
+# ################################################################################################################################
+
+def row_selector_by_event(event_label:'str') -> 'str':
+    """ The selector of the rows showing one kind of event, by the event's on-screen label -
+    the role tag of a row carries that label in its title.
+    """
+    out = f'{Row_Selector}:has(.audit-log-cell-role .dashboard-tag[title="{event_label}"])'
+    return out
+
+# ################################################################################################################################
+
+def get_row_by_event(page:'Page', event_label:'str') -> 'any_':
+    """ The first row showing one kind of event, by the event's on-screen label.
+    """
+    out = page.query_selector(row_selector_by_event(event_label))
+
+    assert out, f'Expected a row with the event "{event_label}"'
+    return out
+
+# ################################################################################################################################
+
+def get_row_msg_ids(page:'Page') -> 'anylist':
+    """ The message id of every event row currently shown, top to bottom. The ids are read
+    off the row models because a row wears its protocol-level name in the pane, not on itself.
+    """
+    out = page.evaluate(
+        '''() => {
+            let out = [];
+            for (const model of $.fn.zato.audit_log.listing.visible) {
+                out.push(model.msgId);
+            }
+            return out;
+        }''')
+
+    return out
+
+# ################################################################################################################################
+
+def get_row_event_types(page:'Page') -> 'anylist':
+    """ The raw event type of every event row currently shown, top to bottom, read off
+    the row models - the rows themselves show the event's on-screen label instead.
+    """
+    out = page.evaluate(
+        '''() => {
+            let out = [];
+            for (const model of $.fn.zato.audit_log.listing.visible) {
+                out.push(model.eventType);
+            }
+            return out;
+        }''')
+
+    return out
+
+# ################################################################################################################################
+
+def wait_for_msg_id_row(page:'Page', msg_id:'str', event_type:'str'='') -> 'str':
+    """ Waits until the list holds a row for this message id and returns that row's selector,
+    optionally narrowed down to one raw event type - one message may be written down more
+    than once, e.g. as its arrival and as the acknowledgment it was answered with.
+    The selector is built on the event's own id, so it survives the refreshes the table
+    gives itself, e.g. after a resubmit.
+    """
+    match_args = {'msg_id': msg_id, 'event_type': event_type}
+
+    # Wait until a row model carries the message id ..
+    _ = page.wait_for_function(
+        '''args => {
+            for (const model of $.fn.zato.audit_log.listing.visible) {
+                if (model.msgId === args.msg_id) {
+                    if (args.event_type === '' || model.eventType === args.event_type) return true;
+                }
+            }
+            return false;
+        }''',
+        arg=match_args, timeout=_UI_Timeout)
+
+    # .. and read that model's event id, which is what the row is addressed by.
+    item_id = page.evaluate(
+        '''args => {
+            for (const model of $.fn.zato.audit_log.listing.visible) {
+                if (model.msgId === args.msg_id) {
+                    if (args.event_type === '' || model.eventType === args.event_type) return String(model.id);
+                }
+            }
+            return '';
+        }''',
+        arg=match_args)
+
+    out = f'{Row_Selector}[data-item-id="{item_id}"]'
     return out
 
 # ################################################################################################################################

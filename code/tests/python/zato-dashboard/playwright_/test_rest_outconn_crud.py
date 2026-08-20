@@ -144,7 +144,7 @@ class TestRESTOutconnCRUD:
         assert cells[_Cell_Is_Active] == 'Yes', f'Expected is_active "Yes", got: "{cells[_Cell_Is_Active]}"'
         assert cells[_Cell_Host] == _Test_Host, f'Expected host "{_Test_Host}", got: "{cells[_Cell_Host]}"'
         assert cells[_Cell_Url_Path] == url_path, f'Expected url_path "{url_path}", got: "{cells[_Cell_Url_Path]}"'
-        assert cells[_Cell_Security] == '---', f'Expected no security definition, got: "{cells[_Cell_Security]}"'
+        assert cells[_Cell_Security] == 'Click to add', f'Expected no security definition, got: "{cells[_Cell_Security]}"'
         assert cells[_Cell_Edit] == 'Edit', f'Expected the edit link, got: "{cells[_Cell_Edit]}"'
         assert cells[_Cell_Delete] == 'Delete', f'Expected the delete link, got: "{cells[_Cell_Delete]}"'
         assert cells[_Cell_Ping] == 'Ping', f'Expected the ping link, got: "{cells[_Cell_Ping]}"'

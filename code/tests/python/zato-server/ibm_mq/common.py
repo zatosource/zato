@@ -18,7 +18,7 @@ from mq_client import build_rfh2, ModuleCtx as MQClientCtx
 # ################################################################################################################################
 
 if 0:
-    from certificates import CertificatePaths
+    from mq_certificates import CertificatePaths
     from containers import MQServer
     from harness import QueueBridgeHarness
     from mq_client import MQTestClient

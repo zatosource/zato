@@ -47,19 +47,21 @@ _Selector_Timeout_Ms = 10000
 # ################################################################################################################################
 # ################################################################################################################################
 
-def row_selector_of_event(event_type:'str') -> 'str':
-    """ Returns the selector of the audit log row showing one event type - the pages these helpers
-    drive are pre-filtered to a single exchange, so one type names one row.
+def row_selector_of_event(event_label:'str') -> 'str':
+    """ Returns the selector of the audit log row showing one kind of event, by the event's
+    on-screen label, which the row's role tag carries in its title - the pages these helpers
+    drive are pre-filtered to a single exchange, so one kind names one row.
     """
-    out = f'#audit-log-table-body tr:has(td:text-is("{event_type}"))'
+    out = f'#audit-log-table-body tr.audit-log-row:has(.audit-log-cell-role .dashboard-tag[title="{event_label}"])'
     return out
 
 # ################################################################################################################################
 
 def get_resubmit_label(page:'Page', row_selector:'str') -> 'str':
-    """ Returns the text of the resubmit action of one row.
+    """ Returns the text of the resubmit action of one row. The text is read out of the DOM
+    rather than the rendered text because a list drawn narrow drops its action column with CSS.
     """
-    out = page.inner_text(row_selector + ' a.audit-log-resubmit-link')
+    out = page.eval_on_selector(row_selector + ' a.audit-log-resubmit-link', 'element => element.textContent')
     return out
 
 # ################################################################################################################################
@@ -78,8 +80,10 @@ def click_resubmit(page:'Page', row_selector:'str') -> 'anydict | None':
     """
     selector = row_selector + ' a.audit-log-resubmit-link'
 
+    # The click goes through the DOM rather than the pointer because a list drawn narrow
+    # drops its action column with CSS - the delegated handler fires either way.
     with page.expect_response(_is_resubmit_response, timeout=_Response_Timeout_Ms) as response_info:
-        page.click(selector)
+        page.eval_on_selector(selector, 'element => element.click()')
 
     response = response_info.value
 
@@ -88,7 +92,15 @@ def click_resubmit(page:'Page', row_selector:'str') -> 'anydict | None':
     if response.status != 200:
         return None
 
-    out = loads(response.text())
+    # The endpoint answers display-ready - the raw report the resubmit service produced
+    # travels in the details field, as JSON for a success and as the error text otherwise.
+    envelope = loads(response.text())
+
+    if envelope['is_success']:
+        out = loads(envelope['details'])
+    else:
+        out = {'is_ok': False, 'error': envelope['details']}
+
     return out
 
 # ################################################################################################################################
@@ -121,11 +133,12 @@ def resubmit_until(page:'Page', row_selector:'str', is_done_func:'any_') -> 'any
 # ################################################################################################################################
 
 def wait_for_marker(page:'Page', row_selector:'str') -> 'None':
-    """ Waits until the row of the original event shows the resubmitted marker - the table refreshes
-    itself once the report arrives.
+    """ Waits until the row of the original event carries the resubmitted marker - the table
+    refreshes itself once the report arrives. The wait is for the marker being there rather
+    than for it showing, because a list drawn narrow hides the row's badges with CSS.
     """
     selector = row_selector + ' .audit-log-resubmitted-marker'
-    _ = page.wait_for_selector(selector, state='visible', timeout=_Selector_Timeout_Ms)
+    _ = page.wait_for_selector(selector, state='attached', timeout=_Selector_Timeout_Ms)
 
 # ################################################################################################################################
 

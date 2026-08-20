@@ -6,11 +6,6 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from json import loads
-from time import monotonic, sleep
-from urllib.parse import quote
-
 # pytest
 import pytest
 
@@ -23,13 +18,15 @@ from zato.common.audit_log.api import AuditLog
 from zato.common.crypto.api import CryptoManager
 from as2_outconn import create_as2_outconn, delete_as2_outconn
 from as4_keys import new_party
+from audit_log_ui import get_rows, goto_audit_log, wait_for_msg_id_row
+from audit_resubmit import get_resubmit_label, is_report_ok, resubmit_until, wait_for_marker
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict
     from client import ZatoClient
 
 # ################################################################################################################################
@@ -37,27 +34,11 @@ if 0:
 
 _Test_Name_Prefix = 'test.audit.resubmit.' + CryptoManager.generate_hex_string(32) + '.'
 
-_Audit_Log_Url_Prefix = '/zato/audit-log/'
-
-# The endpoint of the Dashboard view the row action talks to
-_Resubmit_Url_Path = '/zato/audit-log/resubmit/'
+_Audit_Source = 'as2'
 
 # The services managing the inbound channel's keystore
 _Service_Get  = 'zato.channel.as2.keystore.get'
 _Service_Edit = 'zato.channel.as2.keystore.edit'
-
-# How long to keep retrying while the connections and the keystore propagate to the server
-_Propagation_Timeout = 60
-
-# How long to wait between retries
-_Retry_Sleep = 2
-
-# How long one click may take - a resend blocks while the connection pool is still being built
-_Response_Timeout_Ms = 60000
-
-# AS2 column indexes: Time, CID, Event, Partner, Message id, Disposition, MIC, Size, Data preview, Actions
-_Column_Msg_ID = 4
-_Column_Action = 9
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,120 +74,6 @@ def channel_keystore(api_client:'ZatoClient') -> 'any_':
     })
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _goto_audit_log(page:'Page', base_url:'str', object_name:'str') -> 'None':
-    """ Navigates to the AS2 audit log page of one identity pair and waits
-    for the first page of events to load.
-    """
-    encoded_name = quote(object_name)
-    url = f'{base_url}{_Audit_Log_Url_Prefix}?source=as2&object_name={encoded_name}&cluster=1'
-
-    _ = page.goto(url)
-    _wait_for_table(page)
-
-# ################################################################################################################################
-
-def _wait_for_table(page:'Page') -> 'None':
-    """ Waits until the audit log table has finished loading its current page of events.
-    """
-    _ = page.wait_for_function(
-        '''() => {
-            let body = document.querySelector('#audit-log-table-body');
-            if (!body) return false;
-            let rows = body.querySelectorAll('tr');
-            if (!rows.length) return false;
-            return !body.querySelector('tr.detail-loading-row');
-        }''',
-        timeout=10000)
-
-# ################################################################################################################################
-
-def _is_resubmit_response(response:'any_') -> 'bool':
-    """ Matches the response of the resubmit view.
-    """
-    out = _Resubmit_Url_Path in response.url
-    return out
-
-# ################################################################################################################################
-
-def _row_selector(message_id:'str') -> 'str':
-    """ Returns the selector of the audit log row showing the given message id.
-    """
-    out = f'#audit-log-table-body tr:has(td:text-is("{message_id}"))'
-    return out
-
-# ################################################################################################################################
-
-def _click_resubmit(page:'Page', message_id:'str') -> 'anydict | None':
-    """ Clicks the resubmit link of one row and returns the parsed report,
-    or None if the endpoint did not answer with one.
-    """
-    selector = _row_selector(message_id) + ' a.audit-log-resubmit-link'
-
-    with page.expect_response(_is_resubmit_response, timeout=_Response_Timeout_Ms) as response_info:
-        page.click(selector)
-
-    response = response_info.value
-
-    # A non-2xx response means the invocation itself failed, e.g. the service
-    # has not deployed yet - the retry loop treats it the same as a failed report.
-    if response.status != 200:
-        return None
-
-    out = loads(response.text())
-    return out
-
-# ################################################################################################################################
-
-def _resubmit_until(page:'Page', message_id:'str', is_done_func:'any_') -> 'anydict':
-    """ Clicks the resubmit link until the report satisfies the given condition,
-    retrying while the connections propagate to the server.
-    """
-    deadline = monotonic() + _Propagation_Timeout
-
-    while True:
-        out = _click_resubmit(page, message_id)
-
-        if out is not None:
-            if is_done_func(out):
-                break
-
-        if monotonic() > deadline:
-            pytest.fail(f'Resubmit did not reach the expected outcome in time, the last report was: {out}')
-
-        sleep(_Retry_Sleep)
-
-        # The report handler refreshes the table after each attempt, so wait for it
-        # to settle and close the previous attempt's tooltip before clicking again.
-        _wait_for_table(page)
-        page.keyboard.press('Escape')
-
-    return out
-
-# ################################################################################################################################
-
-def _wait_for_marker(page:'Page', message_id:'str') -> 'None':
-    """ Waits until the row of the original event shows the resubmitted marker -
-    the table refreshes itself once the report arrives.
-    """
-    selector = _row_selector(message_id) + ' .audit-log-resubmitted-marker'
-    _ = page.wait_for_selector(selector, state='visible', timeout=10000)
-
-# ################################################################################################################################
-
-def _get_rows(page:'Page') -> 'anylist':
-    """ Returns all rows currently shown in the audit log table.
-    """
-    out = page.query_selector_all('#audit-log-table-body tr')
-    return out
-
-# ################################################################################################################################
-
-def _is_report_ok(report:'anydict') -> 'bool':
-    out = report['is_ok']
-    return out
-
 # ################################################################################################################################
 
 def _is_reprocessed_to_service(report:'anydict') -> 'bool':
@@ -288,14 +155,15 @@ class TestAuditLogResubmit:
             )
 
             # The row of an outbound event carries the resend action ..
-            _goto_audit_log(page, base_url, pair)
+            goto_audit_log(page, base_url, _Audit_Source, pair)
+            original_row = wait_for_msg_id_row(page, original_id)
 
-            link_text = page.inner_text(_row_selector(original_id) + ' a.audit-log-resubmit-link')
+            link_text = get_resubmit_label(page, original_row)
             assert link_text == 'Resubmit', f'Expected a Resubmit link, got: "{link_text}"'
 
             # .. clicking it sends the stored payload out again through the real pipeline,
             # retrying while the connections propagate to the server ..
-            report = _resubmit_until(page, original_id, _is_report_ok)
+            report = resubmit_until(page, original_row, is_report_ok)
 
             # .. the report carries the complete outcome of the new delivery ..
             assert report['action'] == 'resend'
@@ -307,14 +175,13 @@ class TestAuditLogResubmit:
             assert report['cid']
 
             # .. the original row shows the resubmitted marker once the table refreshes ..
-            _wait_for_marker(page, original_id)
+            wait_for_marker(page, original_row)
 
             # .. and the new attempt is its own row, under a fresh Message-ID - the resend
             # went through this server's own inbound channel, so the pair also collected
             # the inbound and MDN evidence of the exchange, each as its own row.
             resent_id = normalize_message_id(report['message_id'])
-            resent_row = page.query_selector(_row_selector(resent_id))
-            assert resent_row, f'Expected a row for the resent message `{resent_id}`'
+            _ = wait_for_msg_id_row(page, resent_id)
 
         finally:
             delete_as2_outconn(page, sender_id)
@@ -371,15 +238,16 @@ class TestAuditLogResubmit:
             )
 
             # The row of an inbound event carries the reprocess action ..
-            _goto_audit_log(page, base_url, pair)
+            goto_audit_log(page, base_url, _Audit_Source, pair)
+            original_row = wait_for_msg_id_row(page, original_id)
 
-            link_text = page.inner_text(_row_selector(original_id) + ' a.audit-log-resubmit-link')
+            link_text = get_resubmit_label(page, original_row)
             assert link_text == 'Resubmit', f'Expected a Resubmit link, got: "{link_text}"'
 
             # .. clicking it re-publishes the stored payload to the partner's routing target,
             # retrying while the connection propagates to the server - until it has,
             # a reprocess lands on the default shared topic rather than the partner's service ..
-            report = _resubmit_until(page, original_id, _is_reprocessed_to_service)
+            report = resubmit_until(page, original_row, _is_reprocessed_to_service)
 
             # .. the report says where the payload went ..
             assert report['action'] == 'reprocess'
@@ -388,11 +256,11 @@ class TestAuditLogResubmit:
             assert report['cid']
 
             # .. the original row shows the resubmitted marker once the table refreshes ..
-            _wait_for_marker(page, original_id)
+            wait_for_marker(page, original_row)
 
             # .. and each new attempt is its own row under the same Message-ID,
             # so the pair now has more events than the one it started with.
-            rows = _get_rows(page)
+            rows = get_rows(page)
             row_count = len(rows)
             assert row_count >= 2, f'Expected at least 2 audit log rows, got {row_count}'
 
