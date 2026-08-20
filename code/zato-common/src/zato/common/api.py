@@ -1223,6 +1223,7 @@ class GENERIC:
             GATEWAY_RULE_ENGINE = 'gateway-rule-engine'
             OUTCONN_AS2 = 'outconn-as2'
             OUTCONN_ES = 'outconn-es'
+            OUTCONN_FTP = 'outconn-ftp'
             OUTCONN_LDAP = 'outconn-ldap'
             OUTCONN_LLM = 'outconn-llm'
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
@@ -1264,15 +1265,23 @@ class MCP:
 # ################################################################################################################################
 
 class FileTransfer:
-    """ File transfer schedules - each one polls a remote directory of an SFTP or SMB connection
+    """ File transfer schedules - each one polls a remote directory of an SFTP, SMB or FTP connection
     and invokes a target service once per each file received.
     """
 
     class ConnType:
         SFTP = GENERIC.CONNECTION.TYPE.OUTCONN_SFTP
         SMB = GENERIC.CONNECTION.TYPE.OUTCONN_SMB
+        FTP = GENERIC.CONNECTION.TYPE.OUTCONN_FTP
 
-    ConnTypeList = (ConnType.SFTP, ConnType.SMB)
+    ConnTypeList = (ConnType.SFTP, ConnType.SMB, ConnType.FTP)
+
+    # Which attribute of a service holds the facade of each connection type, e.g. self.sftp or self.smb
+    Facade_Attr = {
+        ConnType.SFTP: 'sftp',
+        ConnType.SMB: 'smb',
+        ConnType.FTP: 'ftp',
+    }
 
     class Scheduler:
 
@@ -1316,12 +1325,14 @@ class FileTransfer:
         Job_Prefix = {
             GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: 'sftp.',
             GENERIC.CONNECTION.TYPE.OUTCONN_SMB: 'smb.',
+            GENERIC.CONNECTION.TYPE.OUTCONN_FTP: 'ftp.',
         }
 
         # Names of the internal services that the auto-created jobs invoke to poll a directory
         Dispatch_Service = {
             GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: 'zato.outgoing.sftp.process-files',
             GENERIC.CONNECTION.TYPE.OUTCONN_SMB: 'zato.outgoing.smb.process-files',
+            GENERIC.CONNECTION.TYPE.OUTCONN_FTP: 'zato.outgoing.ftp.process-files',
         }
 
         # Names of the keys in the extra data that an auto-created job carries - the schedule itself
@@ -1676,6 +1687,14 @@ class SMB:
 
     class DEFAULT:
         PORT = 445
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FTP:
+
+    class DEFAULT:
+        PORT = 21
 
 # ################################################################################################################################
 # ################################################################################################################################

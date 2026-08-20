@@ -32,6 +32,7 @@ from zato.common.api import AS4, SCHEDULER
 from zato.common.as2.common import DeliveryKind as AS2DeliveryKind
 from zato.common.json_internal import dumps
 from zato.common.typing_ import cast_
+from zato.server.connection.ftp import FTPConnection
 from zato.server.connection.sftp import SFTPConnection
 from zato.server.connection.smb import SMBConnection
 
@@ -945,6 +946,36 @@ class SMBFacade:
         wrapper = item['conn']
 
         out = SMBConnection(self.cid, wrapper)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FTPFacade:
+    """ Provides dict-like access to FTP outgoing connections from services via self.ftp.
+    """
+    cid: 'str'
+    _outconn_ftp: 'anydict'
+
+    def init(self, cid:'str', config_manager:'ConfigManager') -> 'None':
+        self.cid = cid
+        self._outconn_ftp = config_manager.outconn_ftp
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'FTPConnection':
+
+        # A bare KeyError here would report the name and nothing else, which leaves the reader
+        # with no way of telling a missing connection apart from any other error carrying that name.
+        if name not in self._outconn_ftp:
+            raise Exception('No such outgoing FTP connection `{}`'.format(name))
+
+        item = self._outconn_ftp[name]
+
+        # The wrapper holds a queue with the underlying FTP client
+        wrapper = item['conn']
+
+        out = FTPConnection(self.cid, wrapper)
         return out
 
 # ################################################################################################################################

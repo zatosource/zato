@@ -109,4 +109,4 @@ class TestSharePointCrud(CrudTests):
 ```
 
 Anything a protocol has that no other one does goes into a `test_<protocol>_only.py` module of its own,
-the way `test_sftp_only.py` and `test_smb_only.py` do.
+the way `test_sftp_only.py`, `test_smb_only.py` and `test_ftp_only.py` do.

@@ -33,6 +33,8 @@ from zato.server.generic.api.outconn_hl7_mllp import outconn_config_defaults, ou
 from zato.server.generic.api.outconn_llm import llm_config_defaults, llm_int_config_keys
 from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys, outconn_odata_config_defaults, \
     outconn_odata_int_config_keys, outconn_sap_config_defaults
+from zato.server.generic.api.outconn_ftp import Outconn_FTP_Bool_Config_Keys, Outconn_FTP_Config_Defaults, \
+    Outconn_FTP_Int_Config_Keys, Outconn_FTP_String_Config_Keys
 from zato.server.generic.api.outconn_sdk import normalize_connector_config
 from zato.server.generic.api.outconn_sftp import outconn_sftp_bool_config_keys, outconn_sftp_config_defaults, \
     outconn_sftp_int_config_keys, outconn_sftp_string_config_keys
@@ -677,6 +679,36 @@ class Generic(ConfigManagerImpl):
             value = config[key]
             if isinstance(value, str):
                 config[key] = as_bool(value)
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_outconn_ftp(self, config:'stranydict') -> 'None':
+        """ Fills in defaults for fields that the create path did not supply and coerces
+        numeric and boolean fields that may arrive as strings from opaque storage.
+        """
+
+        # Apply a default for every field that is missing or None ..
+        for key, default in Outconn_FTP_Config_Defaults.items():
+            if config.get(key) is None:
+                config[key] = default
+
+        # .. make sure numeric fields are integers ..
+        for key in Outconn_FTP_Int_Config_Keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = int(value)
+
+        # .. make sure boolean fields are booleans ..
+        for key in Outconn_FTP_Bool_Config_Keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = as_bool(value)
+
+        # .. and make sure string fields are strings.
+        for key in Outconn_FTP_String_Config_Keys:
+            value = config[key]
+            if isinstance(value, int):
+                config[key] = str(value)
 
 # ################################################################################################################################
 

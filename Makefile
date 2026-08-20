@@ -17,7 +17,7 @@
 	test-ui _test-ui test-ui-pubsub test-ui-openapi test-ui-analytics test-ui-audit-log test-ui-webapp test-ui-rule-engine-dashboard \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-rest-outgoing-audit test-alerting test-destinations test-analytics test-demo-seed test-logging \
-	test-ibm-mq test-mongodb test-es \
+	test-ibm-mq test-mongodb test-es test-ftp \
 	test-rule-engine test-rule-engine-perf test-rule-engine-jobs \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
 	test-all test test-all-reset test-perf \
@@ -1111,6 +1111,37 @@ test-alerting: ## Alerting engine tests - rules, actions, dedup, lifecycle and c
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/alerting/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_alerting -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-ftp: ## FTP and FTPS tests - the outconn, enmasse and scheduler suites against live FTP servers, plus the audit and delivery suites against stubs.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/zato-common/src/zato/common/test/ftp_.py \
+		$(CURDIR)/code/zato-common/src/zato/common/test/file_transfer_harness/ftp_adapter.py \
+		$(CURDIR)/code/zato-server/src/zato/server/connection/ftp.py \
+		$(CURDIR)/code/zato-server/src/zato/server/generic/api/outconn_ftp.py \
+		$(CURDIR)/code/zato-server/test/zato/connection/test_outconn_ftp.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/ftp_stub.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_ftp_audit.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_scheduler/test_ftp_only.py \
+		$(CURDIR)/code/zato-cli/src/zato/cli/enmasse/importers/ftp.py \
+		$(CURDIR)/code/zato-cli/src/zato/cli/enmasse/exporters/ftp.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/importers/test_importer_enmasse_ftp.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/exporters/test_exporter_enmasse_ftp.py
+	Zato_Test_FTP=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/zato-server/test/zato/connection/test_outconn_ftp.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/importers/test_importer_enmasse_ftp.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/exporters/test_exporter_enmasse_ftp.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ftp -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_ftp_audit.py \
+		$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/test_file_delivery_handlers.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ftp_audit -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_scheduler/ \
+		-k "FTP and not SFTP" \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ftp_scheduler -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-destinations: ## Channel destination tests - the destination list, payload overrides, delivery order, retries, the dispatchers, the per-hop trail and the Dashboard views, fully offline.

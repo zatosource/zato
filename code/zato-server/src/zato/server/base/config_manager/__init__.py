@@ -40,7 +40,6 @@ from zato.common.dispatch import dispatcher
 from zato.common.facade import _service_name_to_topic, _service_sub_key_prefix
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
-from zato.common.typing_ import cast_
 from zato.common.pubsub.outgoing import audit_disabled_conn_types, find_outgoing_conn, get_outgoing_sub_config, \
     get_outgoing_sub_key, get_outgoing_topic_name, locate_outgoing_conn, OutgoingPublisher, OutgoingType, \
     parse_outgoing_sub_key
@@ -76,6 +75,7 @@ from zato.server.generic.api.channel_ibm_mq import ChannelIBMMQWrapper
 from zato.server.generic.api.channel_kafka import ChannelKafkaWrapper
 from zato.server.generic.api.outconn_as2 import OutconnAS2Wrapper
 from zato.server.generic.api.outconn_es import OutconnESWrapper
+from zato.server.generic.api.outconn_ftp import OutconnFTPWrapper
 from zato.server.generic.api.outconn_graphql import OutconnGraphQLWrapper
 from zato.server.generic.api.outconn_grpc import OutconnGRPCWrapper
 from zato.server.generic.api.outconn_hl7_fhir import OutconnHL7FHIRWrapper
@@ -287,6 +287,9 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - SMB outconns
         self.outconn_smb = {}
 
+        # Generic connections - FTP outconns
+        self.outconn_ftp = {}
+
         # Generic connections - connector types registered from hot-deployed SDK modules,
         # mapping full type names, e.g. outconn-crm, to their Connector subclasses.
         self.sdk_connector_types = {}
@@ -364,6 +367,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA: self.outconn_odata,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP: self.outconn_sap,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_FTP: self.outconn_ftp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.outconn_sftp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB: self.outconn_smb,
         }
@@ -397,6 +401,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA: OutconnODataWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP: OutconnODataWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_FTP: OutconnFTPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: OutconnSFTPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB: OutconnSMBWrapper,
         }
@@ -1068,6 +1073,7 @@ class ConfigManager(_ConfigManagerBase):
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
         outconn_odata_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA, {})
         outconn_sap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP, {})
+        outconn_ftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_FTP, {})
         outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
         outconn_smb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB, {})
 
@@ -1099,6 +1105,7 @@ class ConfigManager(_ConfigManagerBase):
             outconn_ldap_map,
             outconn_llm_map,
             outconn_mongodb_map,
+            outconn_ftp_map,
             outconn_odata_map,
             outconn_sap_map,
             outconn_sftp_map,
@@ -1118,6 +1125,7 @@ class ConfigManager(_ConfigManagerBase):
             outconn_ldap_map,
             outconn_llm_map,
             outconn_mongodb_map,
+            outconn_ftp_map,
             outconn_odata_map,
             outconn_sap_map,
             outconn_sftp_map,

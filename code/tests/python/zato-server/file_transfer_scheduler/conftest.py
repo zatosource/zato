@@ -25,6 +25,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.test.client import AdminClient
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 from zato.common.test.file_transfer_harness.deliveries import build_test_services_source
+from zato.common.test.file_transfer_harness.ftp_adapter import FTPAdapter
 from zato.common.test.file_transfer_harness.sftp_adapter import SFTPAdapter
 from zato.common.test.file_transfer_harness.smb_adapter import SMBAdapter
 from zato.common.util.tcp import get_free_port
@@ -173,6 +174,33 @@ def smb_adapter() -> 'any_':
     """ The SMB protocol under test, with its own SMB server.
     """
     adapter = SMBAdapter()
+    adapter.start_server()
+
+    yield adapter
+
+    adapter.stop_server()
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def ftp_adapter() -> 'any_':
+    """ The FTP protocol under test, with its own FTP server.
+    """
+    adapter = FTPAdapter()
+    adapter.start_server()
+
+    yield adapter
+
+    adapter.stop_server()
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def ftps_adapter() -> 'any_':
+    """ The FTPS side of the FTP protocol under test - a server of its own that encrypts
+    both the control and data connections.
+    """
+    adapter = FTPAdapter(use_ssl=True)
     adapter.start_server()
 
     yield adapter

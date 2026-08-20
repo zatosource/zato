@@ -48,12 +48,13 @@ from zato.admin.web.views.outgoing import kafka as out_kafka
 from zato.admin.web.views.outgoing import as2 as out_as2
 from zato.admin.web.views.outgoing import as4 as out_as4
 from zato.admin.web.views.outgoing import es as out_es
+from zato.admin.web.views.outgoing import file_transfer_schedule as out_file_transfer_schedule
+from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import llm as out_llm
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odata as out_odata
 from zato.admin.web.views.outgoing import odoo as out_odoo
-from zato.admin.web.views.outgoing import file_transfer_schedule as out_file_transfer_schedule
 from zato.admin.web.views.outgoing import sftp as out_sftp
 from zato.admin.web.views.outgoing import smb as out_smb
 from zato.admin.web.views.outgoing import soap as out_soap
@@ -812,6 +813,28 @@ urlpatterns += [
         login_required(out_smb.Delete()), name=out_smb.Delete.url_name),
     url(r'^zato/outgoing/smb/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_smb.ping), name='out-smb-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. FTP
+
+    url(r'^zato/outgoing/ftp/$',
+        login_required(out_ftp.Index()), name=out_ftp.Index.url_name),
+    url(r'^zato/outgoing/ftp/create/$',
+        login_required(out_ftp.Create()), name=out_ftp.Create.url_name),
+    url(r'^zato/outgoing/ftp/edit/$',
+        login_required(out_ftp.Edit()), name=out_ftp.Edit.url_name),
+    url(r'^zato/outgoing/ftp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_ftp.Delete()), name=out_ftp.Delete.url_name),
+    url(r'^zato/outgoing/ftp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_ftp.ping), name='out-ftp-ping'),
+    url(r'^zato/outgoing/ftp/command-shell/(?P<id>.*)/cluster/(?P<cluster_id>.*)/(?P<name_slug>.*)/$',
+        login_required(out_ftp.command_shell), name='out-ftp-command-shell'),
+    url(r'^zato/outgoing/ftp/command-shell-action/(?P<id>.*)/cluster/(?P<cluster_id>.*)/(?P<name_slug>.*)/$',
+        login_required(out_ftp.command_shell_action), name='out-ftp-command-shell-action'),
     ]
 
 # ################################################################################################################################

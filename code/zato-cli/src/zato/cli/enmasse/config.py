@@ -43,6 +43,7 @@ class _object_type:
     SAP = 'sap'                                   #
     SFTP = 'sftp'                                 #
     SMB = 'smb'                                   #
+    FTP = 'ftp'                                   #
     Confluence = 'confluence'                     #
     Jira = 'jira'                                 #
     Microsoft_Cloud = 'microsoft_cloud'           #
@@ -84,6 +85,7 @@ _object_alias[_object_type.Search_ElasticSearch] = 'outgoing_elastic_search'
 _object_alias[_object_type.Security] = ['def_sec', 'security_name']
 _object_alias[_object_type.SFTP] = 'outgoing_sftp'
 _object_alias[_object_type.SMB] = 'outgoing_smb'
+_object_alias[_object_type.FTP] = 'outgoing_ftp'
 _object_alias[_object_type.SQL] = 'outconn_sql'
 
 # ################################################################################################################################

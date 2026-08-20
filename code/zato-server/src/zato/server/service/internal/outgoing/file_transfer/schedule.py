@@ -65,17 +65,18 @@ def get_connection(service:'Service', conn_id:'int') -> 'any_':
     or is not of a file transfer type.
     """
     with closing(service.odb.session()) as session:
-        row = session.query(GenericConn).filter_by(id=conn_id).first()
-        if row:
-            session.expunge(row)
+        query = session.query(GenericConn)
+        filtered = query.filter_by(id=conn_id)
+        if out := filtered.first():
+            session.expunge(out)
 
-    if not row:
+    if not out:
         raise BadRequest(service.cid, f'Connection `{conn_id}` does not exist')
 
-    if row.type_ not in FileTransfer.ConnTypeList:
-        raise BadRequest(service.cid, f'Connection `{row.name}` is not an SFTP or SMB connection')
+    if out.type_ not in FileTransfer.ConnTypeList:
+        raise BadRequest(service.cid, f'Connection `{out.name}` is not an SFTP, SMB or FTP connection')
 
-    return row
+    return out
 
 # ################################################################################################################################
 
@@ -289,7 +290,7 @@ def delete_connection_jobs(service:'Service', instance:'any_') -> 'None':
 # ################################################################################################################################
 
 class GetList(AdminService):
-    """ Returns the list of file transfer schedules of one SFTP or SMB connection.
+    """ Returns the list of file transfer schedules of one file transfer connection.
     """
     input = Int('conn_id')
 
@@ -308,7 +309,7 @@ class GetList(AdminService):
 # ################################################################################################################################
 
 class Create(AdminService):
-    """ Creates a new file transfer schedule of one SFTP or SMB connection,
+    """ Creates a new file transfer schedule of one file transfer connection,
     along with the scheduler job that runs it.
     """
     input = (Int('conn_id'),) + _schedule_input
@@ -362,7 +363,7 @@ class Create(AdminService):
 # ################################################################################################################################
 
 class Edit(AdminService):
-    """ Updates an existing file transfer schedule of one SFTP or SMB connection,
+    """ Updates an existing file transfer schedule of one file transfer connection,
     keeping its scheduler job in sync.
     """
     input = (Int('conn_id'), 'id') + _schedule_input
@@ -429,7 +430,7 @@ class Edit(AdminService):
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes a file transfer schedule of one SFTP or SMB connection, along with its scheduler job.
+    """ Deletes a file transfer schedule of one file transfer connection, along with its scheduler job.
     """
     input = Int('conn_id'), 'id'
 

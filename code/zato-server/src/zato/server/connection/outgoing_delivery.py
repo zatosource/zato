@@ -17,7 +17,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from json import loads
 from logging import getLogger
-from tempfile import mkstemp
 
 # gevent
 from gevent.fileobject import FileObjectThread
@@ -25,6 +24,8 @@ from gevent.fileobject import FileObjectThread
 # Zato
 from zato.common.api import GENERIC
 from zato.common.pubsub.outgoing import OutgoingType, register_outgoing_conn_type
+from zato.server.connection.file_transfer_base import Key_Remote_Path, Key_Spool_Path
+from zato.server.connection.ftp import FTPConnection
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,15 +46,6 @@ _fhir_block_timeout = 30
 # A FHIR resource is created by posting it to the path its own type names.
 _fhir_method = 'POST'
 
-# The keys of the envelope a queued file transfer travels under - the bytes stay on the local disk
-# and only the spool path and the remote destination go through the queue, so a file of any size
-# travels without ever touching a pub/sub row.
-Key_Spool_Path = 'spool_path'
-Key_Remote_Path = 'remote_path'
-
-# What a spool file's name ends with, so a stray one can be told apart in the temporary directory.
-_spool_suffix = '-zato-file-delivery-spool.dat'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -63,6 +55,7 @@ publishable_generic_types = {
     GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: OutgoingType.FHIR,
     GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: OutgoingType.SFTP,
     GENERIC.CONNECTION.TYPE.OUTCONN_SMB: OutgoingType.SMB,
+    GENERIC.CONNECTION.TYPE.OUTCONN_FTP: OutgoingType.FTP,
 }
 
 # ################################################################################################################################
@@ -150,19 +143,18 @@ def _locate_smb(server:'ParallelServer', conn_id:'int') -> 'anytuple':
 
 # ################################################################################################################################
 
-def spool_file_payload(data:'bytes') -> 'str':
-    """ Writes the bytes of one queued file transfer to a local spool file, returning its path -
-    what the publication puts in its envelope in place of the bytes themselves. The write runs
-    in its own thread so as not to block the event loop.
+def _locate_ftp(server:'ParallelServer', conn_id:'int') -> 'anytuple':
+    """ Finds an outgoing FTP connection by its id. These connections live in a dict keyed by name,
+    so the id is what each of them is compared by.
     """
-    spool_fd, spool_path = mkstemp(suffix=_spool_suffix)
-    os.close(spool_fd)
+    for item in server.config_manager.outconn_ftp.values():
+        if item['id'] == conn_id:
+            out = (item['name'], item['conn'])
+            break
+    else:
+        out = ()
 
-    thread_file = FileObjectThread(spool_path, 'wb')
-    _ = thread_file.write(data)
-    thread_file.close()
-
-    return spool_path
+    return out
 
 # ################################################################################################################################
 
@@ -223,6 +215,26 @@ def _deliver_to_smb(server:'ParallelServer', cid:'str', wrapper:'any_', data:'st
     os.remove(envelope[Key_Spool_Path])
 
 # ################################################################################################################################
+
+def _deliver_to_ftp(server:'ParallelServer', cid:'str', wrapper:'any_', data:'str') -> 'None':
+    """ Hands one queued file over to an outgoing FTP connection, the same way the SFTP handler
+    does - FTP stores always overwrite, so a retry after a partial upload starts clean.
+    """
+    envelope = loads(data)
+
+    spool_path = envelope[Key_Spool_Path]
+    remote_path = envelope[Key_Remote_Path]
+
+    payload = _read_spool_file(spool_path)
+
+    conn = FTPConnection(cid, wrapper)
+    conn.write(payload, remote_path)
+
+    # Only a delivered file's spool is removed - a failed delivery raised above,
+    # keeping the bytes in place for the retry.
+    os.remove(spool_path)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def register_delivery_handlers() -> 'None':
@@ -235,6 +247,7 @@ def register_delivery_handlers() -> 'None':
     # so their queue topics write no pub/sub events of their own.
     register_outgoing_conn_type(OutgoingType.SFTP, _locate_sftp, _deliver_to_sftp, is_audit_log_active=False)
     register_outgoing_conn_type(OutgoingType.SMB, _locate_smb, _deliver_to_smb, is_audit_log_active=False)
+    register_outgoing_conn_type(OutgoingType.FTP, _locate_ftp, _deliver_to_ftp, is_audit_log_active=False)
 
 # ################################################################################################################################
 # ################################################################################################################################

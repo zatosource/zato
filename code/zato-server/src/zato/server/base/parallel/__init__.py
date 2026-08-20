@@ -1043,8 +1043,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         self.log_environment_details()
 
-        # A new environment that holds no user-defined objects receives all the demo config
-        # on its first start - the pass runs in the background so startup never waits for it.
+        # A fresh environment - one with no user services to deploy and no user-defined
+        # objects - receives the configured demo config sets on its first start. The pass
+        # runs in the background so startup never waits for it.
         _ = spawn_greenlet(self._import_demo_config_on_first_start)
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)

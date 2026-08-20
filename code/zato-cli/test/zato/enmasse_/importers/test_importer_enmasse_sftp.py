@@ -362,7 +362,11 @@ class TestEnmasseSFTPFromYAML(TestCase):
 
         first = schedules[0]
 
-        self.assertEqual(first['id'], 'invoices.hourly')
+        # The id is generated rather than derived from the name.
+        self.assertTrue(first['id'])
+        self.assertNotEqual(first['id'], 'invoices.hourly')
+
+        self.assertEqual(first['name'], 'invoices.hourly')
         self.assertEqual(first['directory'], '/incoming/invoices')
         self.assertEqual(first['pattern'], _scheduler.Default_Pattern)
         self.assertEqual(first['ready_how'], _scheduler.ReadyHow.Stability)
@@ -396,7 +400,7 @@ class TestEnmasseSFTPFromYAML(TestCase):
 
         self.assertEqual(first_job_opaque[SchedulerLink.Conn_ID], instance.id)
         self.assertEqual(first_job_opaque[SchedulerLink.Conn_Type], GENERIC.CONNECTION.TYPE.OUTCONN_SFTP)
-        self.assertEqual(first_job_opaque[SchedulerLink.Kind], 'invoices.hourly')
+        self.assertEqual(first_job_opaque[SchedulerLink.Kind], first['id'])
 
         # A re-import with the first schedule changed and the second one removed
         # must update the first job in place and delete the second one.
@@ -418,6 +422,9 @@ class TestEnmasseSFTPFromYAML(TestCase):
 
         self.assertEqual(len(updated_schedules), 1)
         self.assertEqual(updated_schedules[0]['directory'], '/incoming/invoices-v2')
+
+        # A re-import keeps the id the schedule was created with.
+        self.assertEqual(updated_schedules[0]['id'], first['id'])
 
         # It is still the same job, just with a new interval ..
         updated_job = self.session.query(Job).filter_by(name=first_job_name).one()

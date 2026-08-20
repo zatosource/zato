@@ -1,0 +1,160 @@
+/* ------------------------------------------------------------ */
+/* File transfer command shell - tokens                          */
+/* ------------------------------------------------------------ */
+
+:root {
+    --file-shell-done: #28a745;
+    --file-shell-error: #dc3545;
+    --file-shell-hairline: rgba(0, 0, 0, 0.06);
+    --file-shell-border: rgba(0, 0, 0, 0.15);
+    --file-shell-text: #1a1a2e;
+    --file-shell-text-muted: #71717a;
+    --file-shell-output-bg: #fbfbfc;
+    --file-shell-output-height: 260px;
+    --file-shell-editor-height: 96px;
+    --file-shell-control-height: 26px;
+    --file-shell-font-family: monospace;
+    --file-shell-font-size: 12px;
+    --file-shell-radius: 6px;
+}
+
+/* ------------------------------------------------------------ */
+/* File transfer command shell - layout overrides                */
+/* ------------------------------------------------------------ */
+
+.dashboard-hero,
+.dashboard-chart-section {
+    display: none;
+}
+
+.dashboard-grid-section {
+    grid-template-columns: 1fr;
+    max-width: 960px;
+    margin-top: 20px;
+}
+
+.dashboard-grid-section .dashboard-card {
+    max-height: none;
+}
+
+/* ------------------------------------------------------------ */
+/* File transfer command shell - shared control styling          */
+/* ------------------------------------------------------------ */
+
+.file-shell-editor textarea,
+.file-shell-actions select,
+.file-shell-connection-select,
+.file-shell-output {
+    box-sizing: border-box;
+    font-size: var(--file-shell-font-size);
+    border: 1px solid var(--file-shell-border);
+    border-radius: var(--file-shell-radius);
+}
+
+/* ------------------------------------------------------------ */
+/* File transfer command shell - card                            */
+/* ------------------------------------------------------------ */
+
+.file-shell-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.file-shell-card .dashboard-card-header {
+    gap: 10px;
+}
+
+.file-shell-card form {
+    margin: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* File transfer command shell - command editor                  */
+/* ------------------------------------------------------------ */
+
+.file-shell-editor textarea {
+    width: 100%;
+    height: var(--file-shell-editor-height);
+    padding: 10px 12px;
+    font-family: var(--file-shell-font-family);
+    line-height: 1.5;
+    resize: vertical;
+}
+
+/* ------------------------------------------------------------ */
+/* File transfer command shell - action bar                      */
+/* ------------------------------------------------------------ */
+
+.file-shell-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 0 0 0;
+}
+
+.file-shell-actions .secondary-button {
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.file-shell-log-level-label {
+    font-size: var(--file-shell-font-size);
+    color: var(--file-shell-text);
+}
+
+/* Overrides the site-wide 1.8em select height. */
+.file-shell-actions select {
+    height: var(--file-shell-control-height);
+    min-width: 60px;
+    padding: 0 6px;
+}
+
+/* No taller than the pill next to it. */
+.file-shell-connection-select {
+    height: 20px;
+    padding: 0 4px;
+}
+
+.file-shell-status {
+    margin-right: auto;
+    font-size: var(--file-shell-font-size);
+    color: var(--file-shell-text-muted);
+    transition: opacity 300ms ease;
+}
+
+.file-shell-status-ok {
+    color: var(--file-shell-done);
+}
+
+.file-shell-status-error {
+    color: var(--file-shell-error);
+}
+
+.file-shell-timing[hidden] {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* File transfer command shell - output panes                    */
+/* ------------------------------------------------------------ */
+
+.file-shell-output-header {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--file-shell-hairline);
+}
+
+.file-shell-output {
+    margin: 0;
+    padding: 12px;
+    min-height: var(--file-shell-output-height);
+    max-height: var(--file-shell-output-height);
+    overflow: auto;
+    font-family: var(--file-shell-font-family);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--file-shell-text);
+    background: var(--file-shell-output-bg);
+}

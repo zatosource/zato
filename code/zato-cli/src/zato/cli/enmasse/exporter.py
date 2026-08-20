@@ -26,6 +26,7 @@ from zato.cli.enmasse.exporters.channel_as4 import ChannelAS4Exporter
 from zato.cli.enmasse.exporters.channel_rest import ChannelExporter
 from zato.cli.enmasse.exporters.channel_soap import ChannelSOAPExporter
 from zato.cli.enmasse.exporters.channel_openapi import ChannelOpenAPIExporter
+from zato.cli.enmasse.exporters.ftp import FTPExporter
 from zato.cli.enmasse.exporters.jira import JiraExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
 from zato.cli.enmasse.exporters.llm import LLMExporter
@@ -65,7 +66,7 @@ from zato.common.odb.model import Cluster
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, dictlist, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -122,6 +123,7 @@ class EnmasseYAMLExporter:
         self.sap_exporter = ODataExporter(self, 'sap')
         self.sftp_exporter = SFTPExporter(self)
         self.smb_exporter = SMBExporter(self)
+        self.ftp_exporter = FTPExporter(self)
         self.microsoft_cloud_exporter = MicrosoftCloudExporter(self)
         self.microsoft_fabric_exporter = MicrosoftFabricExporter(self)
         self.microsoft_power_automate_exporter = MicrosoftPowerAutomateExporter(self)
@@ -520,6 +522,16 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_ftp(self, session:'SASession') -> 'dictlist':
+        """ Exports FTP connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded.
+
+        out = self.ftp_exporter.export(session, self.cluster_id)
+        return out
+
+# ################################################################################################################################
+
     def export_mongodb(self, session:'SASession') -> 'list':
         """ Exports MongoDB connection definitions.
         """
@@ -849,6 +861,11 @@ class EnmasseYAMLExporter:
         smb_defs = self.export_smb(session)
         if smb_defs:
             output_dict['smb'] = smb_defs
+
+        # Export FTP connection definitions.
+        ftp_defs = self.export_ftp(session)
+        if ftp_defs:
+            output_dict['ftp'] = ftp_defs
 
         # Export MongoDB connection definitions
         mongodb_defs = self.export_mongodb(session)

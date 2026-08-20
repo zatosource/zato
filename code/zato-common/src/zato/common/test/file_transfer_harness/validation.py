@@ -163,7 +163,7 @@ class ValidationTests(FileTransferScheduleTestBase):
 
         directory = harness.make_directory()
 
-        with pytest.raises(Exception, match='is not an SFTP or SMB connection'):
+        with pytest.raises(Exception, match='is not an SFTP, SMB or FTP connection'):
             _ = harness.client.create_schedule(conn_id, 'wrong.kind.of.conn', directory)
 
 # ################################################################################################################################

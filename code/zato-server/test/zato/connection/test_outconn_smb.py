@@ -8,17 +8,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from tempfile import NamedTemporaryFile
+from tempfile import mkdtemp, NamedTemporaryFile
 from unittest import main, TestCase
-from uuid import uuid4
 
 # Bunch
-from zato.common.ext.bunch import bunchify
+from zato.common.ext.bunch import Bunch, bunchify
 
 # smbprotocol
 import smbclient
 
 # Zato
+from zato.common.audit_log.api import AuditLog, ModuleCtx as AuditLogCtx
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.smb_ import SMBTestServer
 from zato.common.typing_ import cast_
 from zato.server.connection.smb import SMBConnection
@@ -28,10 +29,8 @@ from zato.server.generic.api.outconn_smb import SMBClient
 # ################################################################################################################################
 
 if 0:
-    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_
     any_ = any_
-    Bunch = Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,12 +43,12 @@ class ModuleCtx:
 
 # Letters from four alphabets - file names and file contents in the tests below
 # use them all to prove that Unicode round trips are byte-for-byte exact.
-Ascii_Letters = 'ABCDEF'
-Dutch_Letters = 'ÁÉÍÓÚË'
+Ascii_Letters       = 'ABCDEF'
+Dutch_Letters       = 'ÁÉÍÓÚË'
 Dutch_Letters_Lower = 'áéíóúë'
-Greek_Letters = 'ΑΒΓΔΕΖ'
+Greek_Letters       = 'ΑΒΓΔΕΖ'
 Greek_Letters_Lower = 'αβγδεζ'
-Korean_Letters = 'ㄱㄴㄷㄹㅁㅂ'
+Korean_Letters      = 'ㄱㄴㄷㄹㅁㅂ'
 
 All_Letters = Ascii_Letters + Dutch_Letters + Dutch_Letters_Lower + Greek_Letters + Greek_Letters_Lower + Korean_Letters
 
@@ -62,8 +61,12 @@ class _TestWrapperClient:
     def __init__(self, client:'SMBClient') -> 'None':
         self.client_object = client
 
+# ################################################################################################################################
+
     def __enter__(self) -> 'SMBClient':
         return self.client_object
+
+# ################################################################################################################################
 
     def __exit__(self, _type:'object', _value:'object', _traceback:'object') -> 'None':
         pass
@@ -72,14 +75,24 @@ class _TestWrapperClient:
 # ################################################################################################################################
 
 class _TestWrapper:
-    """ A minimal stand-in for OutconnSMBWrapper - it exposes the same .client and .ping API
-    but holds a single client object directly instead of a queue.
+    """ Exposes a .client and .ping API over a single client object,
+    along with an audit writer and a content storage flag.
     """
     def __init__(self, client:'SMBClient') -> 'None':
-        self.client_object = client
+        self.client_object        = client
+        self.should_store_content = False
+        self.audit_log            = AuditLog('test-outconn-smb')
 
-    def client(self) -> '_TestWrapperClient':
-        return _TestWrapperClient(self.client_object)
+        self.config = Bunch()
+        self.config.name = 'test-outconn-smb'
+
+# ################################################################################################################################
+
+    def client(self, **kwargs:'any_') -> '_TestWrapperClient':
+        out = _TestWrapperClient(self.client_object)
+        return out
+
+# ################################################################################################################################
 
     def ping(self) -> 'None':
         self.client_object.ping()
@@ -88,6 +101,8 @@ class _TestWrapper:
 # ################################################################################################################################
 
 class OutconnSMBTestCase(TestCase):
+    """ Tests the outgoing SMB connection API against a real SMB server.
+    """
 
     server: 'SMBTestServer'
 
@@ -95,6 +110,11 @@ class OutconnSMBTestCase(TestCase):
     def setUpClass(class_) -> 'None':
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
+
+        # The audit log is pointed at a throwaway SQLite database for the duration of the suite.
+        audit_db_dir = mkdtemp(prefix='zato-test-smb-audit-')
+        os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
+        os.environ[AuditLogCtx.Env_Name] = os.path.join(audit_db_dir, 'audit.db')
 
         class_.server = SMBTestServer()
         class_.server.start()
@@ -106,12 +126,15 @@ class OutconnSMBTestCase(TestCase):
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
 
-        # Close all the cached client sessions first - otherwise their worker threads
-        # would keep both the client and the server alive after the tests are done ..
+        # Close all the cached client sessions first ..
         smbclient.reset_connection_cache()
 
         # .. and only then stop the server itself.
         class_.server.stop()
+
+        # The audit log is no longer pointed at this suite's database.
+        del os.environ[AuditLogCtx.Env_Type]
+        del os.environ[AuditLogCtx.Env_Name]
 
 # ################################################################################################################################
 
@@ -127,16 +150,18 @@ class OutconnSMBTestCase(TestCase):
             'secret': self.server.password,
         })
 
-        return config
+        out = cast_('Bunch', config)
+        return out
 
 # ################################################################################################################################
 
     def get_client(self, conn_name:'str') -> 'SMBClient':
 
         config = self.get_config(conn_name)
-        client = SMBClient(config, cast_('any_', None))
+        server = cast_('any_', None)
+        out = SMBClient(config, server)
 
-        return client
+        return out
 
 # ################################################################################################################################
 
@@ -144,10 +169,11 @@ class OutconnSMBTestCase(TestCase):
 
         client = self.get_client(conn_name)
         wrapper = _TestWrapper(client)
+        wrapper_typed = cast_('any_', wrapper)
 
-        conn = SMBConnection('test-cid', cast_('any_', wrapper))
+        out = SMBConnection('test-cid', wrapper_typed)
 
-        return conn
+        return out
 
 # ################################################################################################################################
 
@@ -155,7 +181,8 @@ class OutconnSMBTestCase(TestCase):
         """ Builds a unique file name that contains letters from all four alphabets.
         """
 
-        out = 'test-{}-{}-{}'.format(uuid4().hex, All_Letters, suffix)
+        hex_string = CryptoManager.generate_hex_string()
+        out = f'test-{hex_string}-{All_Letters}-{suffix}'
 
         return out
 
@@ -165,7 +192,8 @@ class OutconnSMBTestCase(TestCase):
         """ Builds a remote path that includes the share name, as the public API expects.
         """
 
-        out = '{}/{}'.format(self.server.share_name, file_name)
+        share_name = self.server.share_name
+        out = f'{share_name}/{file_name}'
 
         return out
 
@@ -208,8 +236,12 @@ class OutconnSMBTestCase(TestCase):
         self.assertEqual(result.decode('utf8'), data)
 
         # .. and confirm the bytes actually landed on disk, under the expected name.
-        with open(self.get_local_path(file_name), 'rb') as local_file:
-            self.assertEqual(local_file.read(), data.encode('utf8'))
+        local_path = self.get_local_path(file_name)
+        expected = data.encode('utf8')
+
+        with open(local_path, 'rb') as local_file:
+            on_disk = local_file.read()
+            self.assertEqual(on_disk, expected)
 
 # ################################################################################################################################
 
@@ -223,7 +255,8 @@ class OutconnSMBTestCase(TestCase):
         remote_path = self.get_remote_path(file_name)
 
         # Write the initial data ..
-        conn.write('Initial data ' + All_Letters, remote_path)
+        initial_data = 'Initial data ' + All_Letters
+        conn.write(initial_data, remote_path)
 
         # .. overwrite it ..
         data = 'New data ' + All_Letters
@@ -254,8 +287,12 @@ class OutconnSMBTestCase(TestCase):
             conn.upload(local_file.name, remote_path)
 
         # .. the uploaded bytes are on the server's disk ..
-        with open(self.get_local_path(file_name), 'rb') as uploaded:
-            self.assertEqual(uploaded.read(), data.encode('utf8'))
+        local_path = self.get_local_path(file_name)
+        expected = data.encode('utf8')
+
+        with open(local_path, 'rb') as uploaded:
+            on_disk = uploaded.read()
+            self.assertEqual(on_disk, expected)
 
         # .. download it to another local path ..
         with NamedTemporaryFile('w+', suffix='-zato-test-smb.txt', encoding='utf8') as download_file:
@@ -263,7 +300,8 @@ class OutconnSMBTestCase(TestCase):
 
             # .. and confirm the round trip did not change the contents.
             with open(download_file.name, encoding='utf8') as downloaded:
-                self.assertEqual(downloaded.read(), data)
+                downloaded_data = downloaded.read()
+                self.assertEqual(downloaded_data, data)
 
 # ################################################################################################################################
 
@@ -280,7 +318,8 @@ class OutconnSMBTestCase(TestCase):
         self.assertFalse(conn.exists(remote_path))
 
         # .. create it ..
-        conn.write('Test data ' + All_Letters, remote_path)
+        data = 'Test data ' + All_Letters
+        conn.write(data, remote_path)
 
         # .. and now it does exist.
         self.assertTrue(conn.exists(remote_path))
@@ -301,8 +340,15 @@ class OutconnSMBTestCase(TestCase):
 
         # Create a directory with two files inside ..
         conn.create_directory(directory_path)
-        conn.write('First file ' + All_Letters, directory_path + '/' + first_name)
-        conn.write('Second file ' + All_Letters, directory_path + '/' + second_name)
+
+        first_data = 'First file ' + All_Letters
+        first_path = directory_path + '/' + first_name
+
+        second_data = 'Second file ' + All_Letters
+        second_path = directory_path + '/' + second_name
+
+        conn.write(first_data, first_path)
+        conn.write(second_data, second_path)
 
         # .. list the directory ..
         result = conn.list(directory_path)
@@ -332,9 +378,12 @@ class OutconnSMBTestCase(TestCase):
 
         info = conn.get_info(remote_path)
 
+        data_bytes = data.encode('utf8')
+        expected_size = len(data_bytes)
+
         self.assertTrue(info.is_file)
         self.assertFalse(info.is_directory)
-        self.assertEqual(info.size, len(data.encode('utf8')))
+        self.assertEqual(info.size, expected_size)
         self.assertEqual(info.name, file_name)
 
 # ################################################################################################################################
@@ -358,9 +407,12 @@ class OutconnSMBTestCase(TestCase):
         self.assertTrue(conn.exists(directory_path))
         self.assertTrue(conn.is_directory(directory_path))
 
-        # A file created in that directory is a file, not a directory
-        file_path = directory_path + '/' + self.get_file_name('file.txt')
-        conn.write('Test data ' + All_Letters, file_path)
+        # A file created in that directory is a file, not a directory.
+        file_name = self.get_file_name('file.txt')
+        file_path = directory_path + '/' + file_name
+
+        data = 'Test data ' + All_Letters
+        conn.write(data, file_path)
 
         self.assertTrue(conn.is_file(file_path))
         self.assertFalse(conn.is_directory(file_path))

@@ -71,6 +71,7 @@ _top_level_order = [
     'elastic_search',
     'sftp',
     'smb',
+    'ftp',
     'pubsub_topic',
     'pubsub_permission',
     'pubsub_subscription',
@@ -206,6 +207,8 @@ _object_order['mongodb']        = 'name', 'is_active', 'server_list', 'username'
 _object_order['sftp']           = 'name', 'is_active', 'address', 'username', 'private_key', 'strict_host_key_checking', \
     'ignore_host_key_changes', 'should_store_content', 'schedules:list',
 _object_order['smb']            = 'name', 'is_active', 'host', 'port', 'username', 'should_store_content', 'schedules:list',
+_object_order['ftp']            = 'name', 'is_active', 'host', 'port', 'username', 'use_ssl', 'should_store_content', \
+    'schedules:list',
 
 _object_order['pubsub_topic']        = 'name', 'description'
 _object_order['pubsub_permission']   = 'security', 'pub', 'sub'

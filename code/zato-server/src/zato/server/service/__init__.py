@@ -46,8 +46,9 @@ from zato.common.util.time_ import utcnow
 from zato.common.util.xml_.message import XMLMessage
 from zato.server.commands import CommandsFacade
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import AS2Facade, AS4Facade, ESFacade, FHIRFacade, IBMMQFacade, KafkaFacade, GraphQLFacade, \
-    KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SchedulerFacade, SFTPFacade, SMBFacade, SOAPFacade
+from zato.server.connection.facade import AS2Facade, AS4Facade, ESFacade, FHIRFacade, FTPFacade, IBMMQFacade, KafkaFacade, \
+    GraphQLFacade, KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SchedulerFacade, SFTPFacade, \
+    SMBFacade, SOAPFacade
 from zato.server.connection.grpc_ import GRPCFacade
 from zato.server.destination.facade import DestinationFacade
 from zato.server.destination.hook import run_for_service as run_destinations_for_service
@@ -520,6 +521,9 @@ class Service:
         # SMB facade for outgoing connections
         self.smb = SMBFacade()
 
+        # FTP facade for outgoing connections
+        self.ftp = FTPFacade()
+
         # MongoDB facade for outgoing connections
         self.mongodb = MongoDBFacade()
 
@@ -685,6 +689,9 @@ class Service:
 
         # SMB facade
         self.smb.init(self.cid, self._config_manager)
+
+        # FTP facade
+        self.ftp.init(self.cid, self._config_manager)
 
         # MongoDB facade
         self.mongodb.init(self.cid, self._config_manager)

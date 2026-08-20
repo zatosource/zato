@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# How a file published to an outgoing SFTP or SMB connection reaches it - the bytes come
+# How a file published to an outgoing SFTP, SMB or FTP connection reaches it - the bytes come
 # from the local spool file the publication left behind, the write overwrites so a retry
 # after a partial upload starts clean, the spool outlives every failed attempt and goes
 # away only once the file was actually written out, and each attempt leaves the write's
@@ -28,8 +28,8 @@ from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, A
 from zato.common.ext.bunch import Bunch
 from zato.common.pubsub.outgoing import audit_disabled_conn_types, deliver_envelope, OutgoingType
 from zato.common.sftp import SFTPOutput
-from zato.server.connection.outgoing_delivery import publishable_generic_types, register_delivery_handlers, \
-    spool_file_payload, Key_Remote_Path, Key_Spool_Path
+from zato.server.connection.file_transfer_base import spool_file_payload, Key_Remote_Path, Key_Spool_Path
+from zato.server.connection.outgoing_delivery import publishable_generic_types, register_delivery_handlers
 
 # Test support
 from live_sql.env import database_env
@@ -206,6 +206,50 @@ class _SMBWrapper:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _FTPClientRecorder:
+    """ Stands in for the FTP client - it remembers what it was told to write.
+    """
+
+    def __init__(self) -> 'None':
+        self.written:'anylist' = []
+
+# ################################################################################################################################
+
+    def write(self, remote_path:'any_', data:'any_') -> 'None':
+        self.written.append((remote_path, data))
+
+# ################################################################################################################################
+
+class _FTPRaisingClient(_FTPClientRecorder):
+    """ An FTP client whose server went away - every write fails.
+    """
+
+    def write(self, remote_path:'any_', data:'any_') -> 'None':
+        raise Exception(_raised_error)
+
+# ################################################################################################################################
+
+class _FTPWrapper:
+    """ Stands in for an outgoing FTP connection's wrapper.
+    """
+
+    def __init__(self, ftp_client:'_FTPClientRecorder') -> 'None':
+        self.ftp_client = ftp_client
+        self.should_store_content = False
+        self.audit_log = AuditLog(_server_name)
+
+        self.config = Bunch()
+        self.config.name = _conn_name
+
+# ################################################################################################################################
+
+    @contextmanager
+    def client(self, *, should_block:'bool', block_timeout:'int') -> 'any_':
+        yield self.ftp_client
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _new_server(conn_type_attr:'str', wrapper:'any_') -> 'MagicMock':
     """ A server whose configuration holds one file transfer connection of the given kind.
     """
@@ -262,6 +306,7 @@ def test_the_file_types_are_registered_without_pubsub_audit() -> 'None':
 
     assert OutgoingType.SFTP in audit_disabled_conn_types
     assert OutgoingType.SMB in audit_disabled_conn_types
+    assert OutgoingType.FTP in audit_disabled_conn_types
 
 # ################################################################################################################################
 
@@ -271,6 +316,7 @@ def test_the_file_types_use_the_generic_rename_and_delete_machinery() -> 'None':
     """
     assert publishable_generic_types[GENERIC.CONNECTION.TYPE.OUTCONN_SFTP] == OutgoingType.SFTP
     assert publishable_generic_types[GENERIC.CONNECTION.TYPE.OUTCONN_SMB] == OutgoingType.SMB
+    assert publishable_generic_types[GENERIC.CONNECTION.TYPE.OUTCONN_FTP] == OutgoingType.FTP
 
 # ################################################################################################################################
 
@@ -448,6 +494,78 @@ def test_a_failed_smb_delivery_keeps_the_spool_for_the_retry(tmp_path:'any_') ->
 
         assert not os.path.exists(spool_path)
         assert smb_client.written == [(_remote_path, _payload)]
+
+# ################################################################################################################################
+
+def test_a_queued_file_reaches_the_ftp_connection_and_the_spool_goes_away(tmp_path:'any_') -> 'None':
+    """ A delivered file was written to the server, its spool file is gone
+    and the write left its own audit event.
+    """
+    with _audit_db_env(tmp_path):
+
+        register_delivery_handlers()
+
+        ftp_client = _FTPClientRecorder()
+        wrapper = _FTPWrapper(ftp_client)
+        server = _new_server('outconn_ftp', wrapper)
+
+        spool_path = spool_file_payload(_payload)
+        envelope = _new_envelope(OutgoingType.FTP, spool_path)
+
+        deliver_envelope(server, 'test-cid', envelope)
+
+        # The bytes reached the server whole ..
+        assert ftp_client.written == [(_remote_path, _payload)]
+
+        # .. the spool file is gone now that the file was written out ..
+        assert not os.path.exists(spool_path)
+
+        # .. and the write recorded the attempt as its own file-outgoing event.
+        events = _get_events()
+        assert len(events) == 1
+
+        event = events[0]
+        assert event['source'] == AuditSource.File_Outgoing
+        assert event['object_name'] == _conn_name
+        assert event['endpoint'] == _remote_path
+        assert event['outcome'] == AuditOutcome.OK
+
+# ################################################################################################################################
+
+def test_a_failed_ftp_delivery_keeps_the_spool_for_the_retry(tmp_path:'any_') -> 'None':
+    """ A delivery the server refused raises, which keeps the message queued, and the spool
+    file stays in place so the retry has the same bytes to send.
+    """
+    with _audit_db_env(tmp_path):
+
+        register_delivery_handlers()
+
+        raising_client = _FTPRaisingClient()
+        wrapper = _FTPWrapper(raising_client)
+        server = _new_server('outconn_ftp', wrapper)
+
+        spool_path = spool_file_payload(_payload)
+        envelope = _new_envelope(OutgoingType.FTP, spool_path)
+
+        try:
+            deliver_envelope(server, 'test-cid', envelope)
+        except Exception:
+            pass
+        else:
+            raise Exception('A failed delivery was expected to propagate')
+
+        # The bytes wait for the retry ..
+        assert os.path.exists(spool_path)
+
+        # .. and once the server is back, the same envelope goes through and the spool goes away.
+        ftp_client = _FTPClientRecorder()
+        wrapper = _FTPWrapper(ftp_client)
+        server = _new_server('outconn_ftp', wrapper)
+
+        deliver_envelope(server, 'test-cid', envelope)
+
+        assert not os.path.exists(spool_path)
+        assert ftp_client.written == [(_remote_path, _payload)]
 
 # ################################################################################################################################
 

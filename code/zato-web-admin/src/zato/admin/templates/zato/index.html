@@ -388,8 +388,9 @@
                                         </ul>
                                     </li>
                                     <li class="child menu-wide">
-                                        <a class="menu-link" href="#">File transfer &rarr;</a>
+                                        <a class="menu-link" href="#"><span>File transfer</span> <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
                                         <ul>
+                                            <li class="child"><a class="menu-link" href="{% url "out-ftp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ftp">FTP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-sftp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-sftp">SFTP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-smb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-smb">SMB</a></li>
                                         </ul>

@@ -29,6 +29,7 @@ from zato.cli.enmasse.importers.audit_extraction import AuditExtractionImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
 from zato.cli.enmasse.importers.email_imap import IMAPImporter
 from zato.cli.enmasse.importers.es import ElasticSearchImporter
+from zato.cli.enmasse.importers.ftp import FTPImporter
 from zato.cli.enmasse.importers.odoo import OdooImporter
 from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
@@ -72,7 +73,7 @@ from zato.common.odb.model import Cluster
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, anylist, anytuple, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -110,6 +111,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.slack',
                         'zato.cli.enmasse.importers.mongodb',
                         'zato.cli.enmasse.importers.odata',
+                        'zato.cli.enmasse.importers.ftp',
                         'zato.cli.enmasse.importers.sftp', 'zato.cli.enmasse.importers.smb',
                         'zato.cli.enmasse.importers.outgoing_rest', 'zato.cli.enmasse.importers.outgoing_soap',
                         'zato.cli.enmasse.importers.pubsub_topic', 'zato.cli.enmasse.importers.pubsub_permission',
@@ -163,6 +165,7 @@ class EnmasseYAMLImporter:
         self.sap_defs = {}
         self.sftp_defs = {}
         self.smb_defs = {}
+        self.ftp_defs = {}
         self.microsoft_cloud_defs = {}
         self.microsoft_fabric_defs = {}
         self.microsoft_power_automate_defs = {}
@@ -223,6 +226,7 @@ class EnmasseYAMLImporter:
         self.sap_importer = ODataImporter(self, 'sap')
         self.sftp_importer = SFTPImporter(self)
         self.smb_importer = SMBImporter(self)
+        self.ftp_importer = FTPImporter(self)
         self.microsoft_cloud_importer = MicrosoftCloudImporter(self)
         self.microsoft_fabric_importer = MicrosoftFabricImporter(self)
         self.microsoft_power_automate_importer = MicrosoftPowerAutomateImporter(self)
@@ -984,6 +988,35 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_ftp(self, ftp_list:'anylist', session:'SASession') -> 'anytuple':
+        """ Synchronizes FTP connection definitions from a YAML configuration with the database.
+        """
+
+        # Our response to produce
+        out = ([], [])
+
+        if not ftp_list:
+            return out
+
+        count = len(ftp_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} FTP connection {noun}')
+
+        # Examine each FTP connection item.
+        for idx, item in enumerate(ftp_list):
+            logger.info('FTP connection item %d: %s', idx, item)
+
+        ftp_created, ftp_updated = self.ftp_importer.sync_definitions(ftp_list, session)
+
+        # Get FTP definitions from the FTP importer.
+        self.ftp_defs = self.ftp_importer.connection_defs
+        logger.info('Processed FTP connection definitions: created=%d updated=%d', len(ftp_created), len(ftp_updated))
+
+        out = (ftp_created, ftp_updated)
+        return out
+
+# ################################################################################################################################
+
     def sync_mongodb(self, mongodb_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes MongoDB connection definitions from a YAML configuration with the database.
         """
@@ -1709,6 +1742,18 @@ class EnmasseYAMLImporter:
             self.created_objects['smb'] = smb_created
         if smb_updated:
             self.updated_objects['smb'] = smb_updated
+
+        # Process FTP connection definitions.
+        ftp_list = yaml_config.get('ftp')
+        if not ftp_list:
+            ftp_list = yaml_config.get('outgoing_ftp')
+        if not ftp_list:
+            ftp_list = []
+        ftp_created, ftp_updated = self.sync_ftp(ftp_list, session)
+        if ftp_created:
+            self.created_objects['ftp'] = ftp_created
+        if ftp_updated:
+            self.updated_objects['ftp'] = ftp_updated
 
         # Process MongoDB connection definitions
         mongodb_list = yaml_config.get('mongodb') or yaml_config.get('outgoing_mongodb', [])
