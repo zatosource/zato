@@ -40,6 +40,7 @@ from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
 from zato.admin.web.views.channel import ibm_mq as channel_ibm_mq
 from zato.admin.web.views.channel import kafka as channel_kafka
 from zato.admin.web.views.gateway import mcp as gateway_mcp
+from zato.admin.web.views.gateway import mcp_connection_lists as gateway_mcp_connection_lists
 from zato.admin.web.views.gateway import rule_engine as gateway_rule_engine
 from zato.admin.web.views.outgoing import graphql as out_graphql
 from zato.admin.web.views.outgoing import grpc as out_grpc
@@ -657,6 +658,39 @@ urlpatterns += [
         login_required(gateway_mcp.Delete()), name=gateway_mcp.Delete.url_name),
     url(r'^zato/gateway/mcp/get-service-list/$',
         login_required(gateway_mcp.get_service_list), name='gateway-mcp-get-service-list'),
+
+    url(r'^zato/gateway/mcp/get-rest-list/$',
+        login_required(gateway_mcp_connection_lists.get_rest_list), name='gateway-mcp-get-rest-list'),
+
+    url(r'^zato/gateway/mcp/get-soap-list/$',
+        login_required(gateway_mcp_connection_lists.get_soap_list), name='gateway-mcp-get-soap-list'),
+
+    url(r'^zato/gateway/mcp/get-sql-list/$',
+        login_required(gateway_mcp_connection_lists.get_sql_list), name='gateway-mcp-get-sql-list'),
+
+    url(r'^zato/gateway/mcp/get-odoo-list/$',
+        login_required(gateway_mcp_connection_lists.get_odoo_list), name='gateway-mcp-get-odoo-list'),
+
+    url(r'^zato/gateway/mcp/get-sap-list/$',
+        login_required(gateway_mcp_connection_lists.get_sap_list), name='gateway-mcp-get-sap-list'),
+
+    url(r'^zato/gateway/mcp/get-confluence-list/$',
+        login_required(gateway_mcp_connection_lists.get_confluence_list), name='gateway-mcp-get-confluence-list'),
+
+    url(r'^zato/gateway/mcp/get-microsoft-365-list/$',
+        login_required(gateway_mcp_connection_lists.get_microsoft_365_list), name='gateway-mcp-get-microsoft-365-list'),
+
+    url(r'^zato/gateway/mcp/get-microsoft-fabric-list/$',
+        login_required(gateway_mcp_connection_lists.get_microsoft_fabric_list), name='gateway-mcp-get-microsoft-fabric-list'),
+
+    url(r'^zato/gateway/mcp/get-microsoft-power-automate-list/$',
+        login_required(gateway_mcp_connection_lists.get_microsoft_power_automate_list), name='gateway-mcp-get-microsoft-power-automate-list'),
+
+    url(r'^zato/gateway/mcp/get-microsoft-teams-list/$',
+        login_required(gateway_mcp_connection_lists.get_microsoft_teams_list), name='gateway-mcp-get-microsoft-teams-list'),
+
+    url(r'^zato/gateway/mcp/get-es-list/$',
+        login_required(gateway_mcp_connection_lists.get_es_list), name='gateway-mcp-get-es-list'),
 
     url(r'^zato/gateway/mcp/get-security-list/$',
         login_required(gateway_mcp.get_security_list), name='gateway-mcp-get-security-list'),

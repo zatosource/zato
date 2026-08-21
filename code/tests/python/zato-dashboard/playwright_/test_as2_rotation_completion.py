@@ -187,8 +187,7 @@ class TestAS2RotationCompletion:
 
         job_exists = AS2.Default.Rotation_Job_Name in job_names
         assert job_exists is _as2_as4_jobs_enabled, \
-            f'Expected the job\'s presence ({job_exists}) to match the startup toggle ({_as2_as4_jobs_enabled}), ' \
-            f'jobs: {job_names}'
+            f'Expected the job\'s presence ({job_exists}) to match the startup toggle ({_as2_as4_jobs_enabled}), jobs: {job_names}'
 
 # ################################################################################################################################
 # ################################################################################################################################

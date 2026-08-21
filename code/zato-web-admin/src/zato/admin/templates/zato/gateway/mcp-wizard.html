@@ -7,11 +7,12 @@ advanced opens in small popover micro-forms or folds away behind the
 More options line. The generic machinery and look come from the wizard
 kit. The view provides:
 
-* cluster_id - the current cluster
-* form       - CreateForm with the defaults on create, EditForm carrying
-               the edit- prefix and the stored values on edit
-* is_edit    - whether the wizard opened on an existing gateway
-* item_id    - the id of the gateway being edited, empty on create
+* cluster_id   - the current cluster
+* form         - CreateForm with the defaults on create, EditForm carrying
+                 the edit- prefix and the stored values on edit
+* is_edit      - whether the wizard opened on an existing gateway
+* item_id      - the id of the gateway being edited, empty on create
+* tool_sources - the tool sources of the Tools card, each with its items
 {% endcomment %}
 
 {% block html_title %}MCP gateway - {% if is_edit %}Edit a gateway{% else %}Create a new gateway{% endif %}{% endblock %}
@@ -29,6 +30,7 @@ a failed one opens when its details are asked for {% endcomment %}
 <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
 <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/tree.css">
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp.css">
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard.css">
 {% endblock %}
@@ -47,6 +49,7 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-size-caps.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/core.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/tool-sources.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/review.js"></script>
 
 <script nonce="{{ CSP_NONCE }}">
@@ -67,6 +70,8 @@ $(document).ready(function() {
 {% block dashboard_refresh_options %}{% endblock %}
 
 {% block dashboard_grid %}
+
+        {{ tool_sources|json_script:"mcp-wizard-tool-sources" }}
 
         <div class="dashboard-card wizard-card" id="mcp-wizard">
 
@@ -115,26 +120,31 @@ $(document).ready(function() {
                         {{ form.url_path }}
                     </div>
 
-                    <div class="wizard-option-card mcp-wizard-picker" id="mcp-wizard-picker-services">
-                        <div class="wizard-option-header" id="mcp-wizard-services-header">
-                            <svg class="wizard-chevron" id="mcp-wizard-services-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                            <span class="wizard-option-label"><label for="badge-filter-text-wizard">Services</label></span>
-                            <span class="wizard-option-summary" id="mcp-wizard-summary-services"></span>
+                    <div class="wizard-option-card mcp-wizard-picker" id="mcp-wizard-picker-tools">
+                        <div class="wizard-option-header" id="mcp-wizard-tools-header">
+                            <svg class="wizard-chevron" id="mcp-wizard-tools-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            <span class="wizard-option-label"><label for="badge-filter-text-wizard">Tools</label></span>
+                            <span class="wizard-option-summary" id="mcp-wizard-summary-tools"></span>
                         </div>
-                        <div class="wizard-option-body" id="mcp-wizard-services-body">
-                        <div class="badge-picker-filter" id="badge-filter-wizard">
-                            <input type="text" id="badge-filter-text-wizard" placeholder="Filter services..." />
-                            <button type="button" class="badge-filter-clear" id="badge-filter-clear-wizard">Clear</button>
-                        </div>
-                        <div class="badge-picker" id="badge-picker-wizard">
-                            <div class="badge-zone" id="badge-zone-available-wizard">
-                                <div class="badge-zone-header">Available (<span class="badge-zone-count">0</span>)</div>
-                                <div class="badge-zone-body"></div>
-                            </div>
-                            <div class="badge-picker-resizer"></div>
-                            <div class="badge-zone" id="badge-zone-assigned-wizard">
-                                <div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>
-                                <div class="badge-zone-body"></div>
+                        <div class="wizard-option-body" id="mcp-wizard-tools-body">
+                        <div class="mcp-tool-sources">
+                            <div class="mcp-tool-source-list kit-tree" id="mcp-wizard-tool-source-list"></div>
+                            <div class="mcp-tool-picker-pane">
+                                <div class="badge-picker-filter" id="badge-filter-wizard">
+                                    <input type="text" id="badge-filter-text-wizard" placeholder="Filter..." />
+                                    <button type="button" class="badge-filter-clear" id="badge-filter-clear-wizard">Clear</button>
+                                </div>
+                                <div class="badge-picker" id="badge-picker-wizard">
+                                    <div class="badge-zone" id="badge-zone-available-wizard">
+                                        <div class="badge-zone-header">Available (<span class="badge-zone-count">0</span>)</div>
+                                        <div class="badge-zone-body"></div>
+                                    </div>
+                                    <div class="badge-picker-resizer"></div>
+                                    <div class="badge-zone" id="badge-zone-assigned-wizard">
+                                        <div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>
+                                        <div class="badge-zone-body"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         </div>

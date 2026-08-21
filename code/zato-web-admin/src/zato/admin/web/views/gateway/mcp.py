@@ -20,6 +20,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms import populate_form_initial
 from zato.admin.web.forms.gateway.mcp import CreateForm, EditForm
+from zato.admin.web.views.gateway.mcp_tool_sources import build_tool_sources, Connection_Source_List, Tool_Source_List
 from zato.admin.web.util import get_server_directory
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.api import API_Key, GENERIC, Groups, MCP, SEC_DEF_TYPE, Sec_Def_Type_Name
@@ -400,6 +401,19 @@ class _CreateEdit(CreateEdit):
         # .. and store them so they end up in opaque data.
         input_dict['services'] = service_names
 
+        # Collect each connection group's picks the same way - one allow list per group,
+        # stored in the opaque config under the group's own key.
+        for source in Connection_Source_List:
+
+            input_prefix = f'mcp_{source.key}_'
+            connection_names:'strlist' = []
+
+            for post_key in self.req.POST:
+                if post_key.startswith(input_prefix):
+                    connection_names.append(self.req.POST[post_key])
+
+            input_dict[source.config_key] = connection_names
+
         # Collect the skills the gateway serves as MCP prompts ..
         skill_names:'strlist' = []
 
@@ -744,9 +758,19 @@ def export(req:'any_', id:'str') -> 'HttpResponse':
             })
 
     # .. the tools the gateway exposes, each with its description and both schemas,
-    # built server-side the same way the runtime tools/list builds them ..
+    # built server-side the same way the runtime tools/list builds them -
+    # the request carries the services and every connection allow list the gateway has ..
     services = gateway.get('services') or []
-    tool_response = req.zato.client.invoke('zato.gateway.mcp.get-tool-list', {'services': services})
+    tool_list_request = {'services': services}
+
+    for source in Connection_Source_List:
+
+        if (allow_list := gateway.get(source.config_key)) is None:
+            allow_list = []
+
+        tool_list_request[source.config_key] = allow_list
+
+    tool_response = req.zato.client.invoke('zato.gateway.mcp.get-tool-list', tool_list_request)
     tools = tool_response.data
 
     # .. build the remote endpoint description, naming the protocol revisions the gateway speaks ..
@@ -796,6 +820,7 @@ def wizard_create(req:'any_') -> 'TemplateResponse':
         'form': CreateForm(),
         'is_edit': False,
         'item_id': '',
+        'tool_sources': build_tool_sources(req, {}),
     }
 
     out = TemplateResponse(req, _wizard_template, return_data)
@@ -845,11 +870,22 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     form = EditForm(prefix='edit')
     populate_form_initial(form, item_dict)
 
+    # What the gateway already exposes, per source - the Tools card opens on these picks
+    assigned_by_key:'strdict' = {}
+
+    for source in Tool_Source_List:
+
+        if (assigned := item_dict.get(source.config_key)) is None:
+            assigned = []
+
+        assigned_by_key[source.key] = assigned
+
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'form': form,
         'is_edit': True,
         'item_id': item_dict['id'],
+        'tool_sources': build_tool_sources(req, assigned_by_key),
     }
 
     out = TemplateResponse(req, _wizard_template, return_data)

@@ -17,6 +17,7 @@ from traceback import format_exc
 from zato.common.json_internal import dumps
 from zato.server.connection.mcp.audit import build_audit_event, Method_Auth_Rejected, Method_Session_Delete
 from zato.server.connection.mcp.common import MCPResponse, printable
+from zato.server.connection.mcp.connection_tools.api import build_tool_name, group_registry
 from zato.server.connection.mcp.schema import io_to_json_schema, io_to_output_json_schema
 from zato.server.service.internal import AdminService
 
@@ -72,6 +73,9 @@ _ms_per_second = 1000
 
 # What the tool list says about a service that is on a gateway's list but not deployed
 _not_deployed_note = 'Not deployed'
+
+# What the tool list says about a connection that is on an allow list but does not exist
+_not_found_note = 'Not found'
 
 # Internal service namespace - never exposed as MCP tools, the same rule the tool registry follows
 _internal_prefix = 'zato.'
@@ -135,6 +139,43 @@ class GetToolList(AdminService):
                 'inputSchema': io_to_json_schema(service_class),
                 'outputSchema': io_to_output_json_schema(service_class),
             })
+
+        # Connection tools follow - each group's allow list arrives under its own
+        # config key and each listed connection becomes one tool definition.
+        payload = self.request.payload
+        config_manager = self.server.config_manager
+
+        for definition in group_registry.values():
+
+            if not (connection_names := payload.get(definition.config_key)):
+                continue
+
+            config_dict = definition.get_config_dict(config_manager)
+
+            for connection_name in connection_names:
+
+                tool_name = build_tool_name(definition.tool_prefix, connection_name)
+
+                # A connection that is on the list but gone is still reported,
+                # with a note in place of its description.
+                if connection_name not in config_dict:
+                    tools.append({
+                        'name': tool_name,
+                        'description': _not_found_note,
+                        'inputSchema': None,
+                        'outputSchema': None,
+                    })
+                    continue
+
+                item = config_dict[connection_name]
+                description = definition.build_description(connection_name, item)
+
+                tools.append({
+                    'name': tool_name,
+                    'description': description,
+                    'inputSchema': definition.input_schema,
+                    'outputSchema': None,
+                })
 
         self.response.payload = dumps(tools)
 

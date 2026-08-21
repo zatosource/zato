@@ -15,6 +15,9 @@ from zato.common.ext.bunch import Bunch
 from zato.common.api import GENERIC as COMMON_GENERIC
 from zato.server.generic.api.gateway_mcp import GatewayMCPWrapper, GatewayMCPWrapper as Imported
 
+# Zato - test helpers
+from connection_stubs import StubConfigManager
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -67,7 +70,7 @@ class GatewayMCPWrapperInit(TestCase):
 
         service_store = Bunch(services={}, name_to_impl_name={})
         config = Bunch(name='test-mcp-gateway')
-        server = Bunch(service_store=service_store, repo_location='')
+        server = Bunch(service_store=service_store, repo_location='', config_manager=StubConfigManager())
 
         wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()

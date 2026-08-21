@@ -20,6 +20,9 @@ from zato.server.generic.api.gateway_mcp import GatewayMCPWrapper
 from zato.server.service.internal.gateway import mcp as mcp_endpoint_module
 from zato.server.service.internal.gateway.mcp import MCPEndpoint
 
+# Zato - test helpers
+from connection_stubs import StubConfigManager
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -53,6 +56,9 @@ class _MockServer:
     def __init__(self) -> 'None':
         self.service_store = _MockServiceStore()
         self._invoke_responses = {}
+
+        # Where the connection tool groups would resolve their names - empty in these tests
+        self.config_manager = StubConfigManager()
 
         # Where the skill prompts would read the user skills from - no skills in these tests
         self.repo_location = ''

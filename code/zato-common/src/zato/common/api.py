@@ -523,7 +523,7 @@ class Attrs(type):
     attrs = NotGiven
 
     @classmethod
-    def has(cls, attr):
+    def has(cls, attr:'any_') -> 'bool':
         if cls.attrs is NotGiven:
             cls.attrs = []
             for cls_attr in dir(cls):
@@ -665,7 +665,6 @@ class CHANNEL(Attrs):
     SERVICE = 'service'
     STARTUP_SERVICE = 'startup-service'
     URL_DATA = 'url-data'
-    INVOKE = 'invoke'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -979,10 +978,6 @@ class URL_PARAMS_PRIORITY:
     QS_OVER_PATH = 'qs-over-path'
     DEFAULT = QS_OVER_PATH
 
-    class __metaclass__(type):
-        def __iter__(self):
-            return iter((self.PATH_OVER_QS, self.QS_OVER_PATH, self.DEFAULT))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1260,6 +1255,22 @@ class MCP:
     # How many seconds one tools/call invocation may run for before it times out -
     # each gateway may override it through its invoke_timeout option.
     Default_Invoke_Timeout = 90
+
+    # The opaque-config keys under which a gateway lists the connections
+    # it exposes as tools, one key per connection group.
+    Connection_List_Keys = [
+        'rest_connections',
+        'soap_connections',
+        'sql_connections',
+        'microsoft_365_connections',
+        'microsoft_teams_connections',
+        'microsoft_fabric_connections',
+        'microsoft_power_automate_connections',
+        'sap_connections',
+        'confluence_connections',
+        'odoo_connections',
+        'es_connections',
+    ]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1717,7 +1728,7 @@ class SFTP:
         def __iter__(self):
             return iter((self.LEVEL0, self.LEVEL1, self.LEVEL2, self.LEVEL3, self.LEVEL4))
 
-        def is_valid(self, value):
+        def is_valid(self, value:'any_') -> 'bool':
             return value in (elem.id for elem in self)
 
 # ################################################################################################################################
@@ -1882,10 +1893,10 @@ class SourceCodeInfo:
         self.source = b''       # type: bytes
         self.source_html = ''   # type: str
         self.len_source = 0     # type: int
-        self.path = None        # type: str
-        self.hash = None        # type: str
-        self.hash_method = None # type: str
-        self.server_name = None # type: str
+        self.path = None        # type: strnone
+        self.hash = None        # type: strnone
+        self.hash_method = None # type: strnone
+        self.server_name = None # type: strnone
         self.line_number = 0    # type: int
 
 # ################################################################################################################################
@@ -1911,8 +1922,9 @@ class SMTPMessage:
     charset: 'any_'
     is_rfc2231: 'any_'
 
-    def __init__(self, from_=None, to=None, subject='', body='', attachments=None, cc=None, bcc=None, is_html=False, headers=None,
-            charset='utf8', is_rfc2231=True):
+    def __init__(self, from_:'any_'=None, to:'any_'=None, subject:'str'='', body:'str'='', attachments:'any_'=None,
+            cc:'any_'=None, bcc:'any_'=None, is_html:'bool'=False, headers:'any_'=None,
+            charset:'str'='utf8', is_rfc2231:'bool'=True) -> 'None':
         self.from_ = from_
         self.to = to
         self.subject = subject
@@ -1925,16 +1937,16 @@ class SMTPMessage:
         self.charset = charset
         self.is_rfc2231 = is_rfc2231
 
-    def attach(self, name, contents):
+    def attach(self, name:'str', contents:'any_') -> 'None':
         self.attachments.append({'name':name, 'contents':contents})
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class IMAPMessage:
-    def __init__(self, uid, conn, data):
-        self.uid = uid   # type: str
-        self.conn = conn # type: Imbox
+    def __init__(self, uid:'str', conn:'Imbox', data:'any_') -> 'None':
+        self.uid = uid
+        self.conn = conn
         self.data = data
 
     def __repr__(self):

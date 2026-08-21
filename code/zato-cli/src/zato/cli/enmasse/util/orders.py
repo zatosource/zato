@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli.enmasse.util.invocation import Invocation_Order_Fields_REST, Invocation_Order_Fields_SOAP, Retry_Fields
+from zato.common.api import MCP
 from zato.common.hl7.fhir.fields import Outgoing_Enmasse_Names as Outgoing_FHIR_Enmasse_Names
 from zato.common.hl7.mllp.fields import Channel_Enmasse_Names, Outgoing_Names
 
@@ -176,7 +177,11 @@ _object_order['channel_azure_service_bus']  = _object_order['channel_amqp']
 _object_order['outgoing_azure_service_bus'] = _object_order['outgoing_amqp']
 
 _object_order['channel_kafka'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service',
-_object_order['mcp_gateway']   = 'name', 'is_active', 'url_path', 'services:list', 'security_groups:list', \
+
+# The connections a gateway exposes as tools - each allow list is a YAML list.
+_mcp_connection_list_fields = tuple(f'{key}:list' for key in MCP.Connection_List_Keys)
+
+_object_order['mcp_gateway']   = ('name', 'is_active', 'url_path', 'services:list', 'security_groups:list', \
     'is_audit_log_active', 'skills:list', 'session_ttl', 'invoke_timeout', 'validate_input', 'allow_agent_filters', \
     'max_response_size', 'size_cap_mode', 'min_size_threshold', 'characters_per_token', \
     'safeguards_strip_nulls', 'safeguards_collapse_whitespace', 'safeguards_strip_base64', \
@@ -185,7 +190,7 @@ _object_order['mcp_gateway']   = 'name', 'is_active', 'url_path', 'services:list
     'safeguards_secrets_enabled', \
     'safeguards_normalize_unicode', 'safeguards_unicode_mode', 'safeguards_sanitize_markup', \
     'safeguards_markup_mode', 'safeguards_url_policy_enabled', 'safeguards_url_allow_list:list', \
-    'safeguards_url_mode',
+    'safeguards_url_mode') + _mcp_connection_list_fields
 _object_order['rule_engine_api']  = 'name', 'is_active', 'url_path', 'rulesets:list', 'security_groups:list',
 _object_order['outgoing_graphql'] = 'name', 'is_active', 'address', 'security', 'default_query_timeout',
 _object_order['outgoing_grpc']    = 'name', 'is_active', 'address', 'security', 'is_tls', 'tls_ca_certs_file', \

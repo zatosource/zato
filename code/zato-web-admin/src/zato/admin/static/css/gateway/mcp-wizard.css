@@ -105,6 +105,107 @@
 }
 
 /* ------------------------------------------------------------ */
+/* MCP wizard - the Tools card's source tree                     */
+/* ------------------------------------------------------------ */
+
+/* The height the Tools card's row keeps no matter how many sources there
+   are, and the width of the tree's own scrollbar - 40% thinner than the
+   usual 15px one */
+:root {
+    --mcp-tool-sources-height: 21em;
+    --mcp-tool-scrollbar-width: 9px;
+    --mcp-tool-text-color: #000000;
+}
+
+/* The source tree and the picker share the card's row - the tree keeps
+   its content width, the picker takes the rest and both stay within the
+   row's fixed height */
+.mcp-tool-sources {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+    height: var(--mcp-tool-sources-height);
+}
+
+/* The tree wears the dashboard kit's connectors, its geometry set to the
+   rows drawn here - the stub crosses a leaf row at its vertical centre.
+   The scrollbar is always there, inactive when everything fits */
+.mcp-tool-source-list {
+    flex: 0 0 auto;
+    min-width: 190px;
+    overflow-y: scroll;
+    scrollbar-width: thin;
+    scrollbar-color: var(--wizard-border) transparent;
+    --kit-tree-guide: var(--wizard-border);
+    --kit-tree-inset: 8px;
+    --kit-tree-child-indent: 10px;
+    --kit-tree-stub-width: 10px;
+    --kit-tree-stub-top: 11px;
+}
+
+.mcp-tool-source-list::-webkit-scrollbar {
+    width: var(--mcp-tool-scrollbar-width);
+}
+
+.mcp-tool-source-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.mcp-tool-source-list::-webkit-scrollbar-thumb {
+    background: var(--wizard-border);
+    border-radius: var(--mcp-tool-scrollbar-width);
+}
+
+/* The pane is a column whose picker takes all the room under the filter,
+   so the two zones run as tall as the tree beside them */
+.mcp-tool-picker-pane {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.mcp-tool-picker-pane .badge-picker {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* A group node's own label, above the children nested under it */
+.mcp-tool-group-label {
+    padding: 3px 0;
+    font-size: 12px;
+    color: var(--mcp-tool-text-color);
+}
+
+/* One row per leaf - its label and, at the row's end, how many of its
+   items are assigned */
+.mcp-tool-source {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: var(--mcp-tool-text-color);
+    cursor: pointer;
+}
+
+.mcp-tool-source:hover {
+    background: rgba(0, 0, 0, 0.025);
+}
+
+/* The source the picker currently shows - the same wash the badge picker
+   beside this list marks its selected badges with (.security-badge.selected) */
+.mcp-tool-source-active {
+    background: rgba(41, 128, 185, 0.08);
+}
+
+.mcp-tool-source-count {
+    font-size: 11px;
+    color: var(--mcp-tool-text-color);
+}
+
+/* ------------------------------------------------------------ */
 /* MCP wizard - field grids inside the folded cards              */
 /* ------------------------------------------------------------ */
 

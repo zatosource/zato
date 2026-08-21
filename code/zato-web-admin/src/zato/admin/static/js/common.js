@@ -132,6 +132,7 @@ $.namespace('zato.gateway.mcp.data_table');
 $.namespace('zato.gateway.mcp.wizard');
 $.namespace('zato.gateway.mcp.wizard.forms');
 $.namespace('zato.gateway.mcp.wizard.review');
+$.namespace('zato.gateway.mcp.wizard.toolSources');
 $.namespace('zato.gateway.rule_engine');
 $.namespace('zato.gateway.rule_engine.data_table');
 $.namespace('zato.groups');

@@ -14,14 +14,19 @@ from secrets import token_hex
 # Zato
 from zato.common.util.logging_ import count_text
 from zato.server.connection.mcp.common import InvalidCursor
+from zato.server.connection.mcp.connection_tools.api import build_tool_name, group_registry
 from zato.server.connection.mcp.schema import io_to_json_schema
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, stranydict, strdictlist, strnone, strlist
+    from zato.common.typing_ import any_, stranydict, strdictlist, strnone, strlist, strlistdict
+    from zato.server.base.config_manager import ConfigManager
     from zato.server.service.store import ServiceStore
+
+    # The group and connection name a connection tool stands for, keyed by tool name
+    tool_target_dict = dict[str, tuple[str, str]]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,9 +55,26 @@ class ToolRegistry:
     """ Builds and caches the MCP tools/list response for a given set of allowed services.
     Each MCP gateway has its own ToolRegistry instance with its own allow list.
     """
-    def __init__(self, service_store:'ServiceStore', allowed_services:'strlist') -> 'None':
+    def __init__(
+        self,
+        service_store:'ServiceStore',
+        allowed_services:'strlist',
+        connection_lists:'strlistdict | None' = None,
+        config_manager:'ConfigManager | None' = None,
+        ) -> 'None':
         self.service_store = service_store
         self.allowed_services = allowed_services
+
+        # The connection allow lists, keyed by group - a registry built for services only has none.
+        if connection_lists is None:
+            connection_lists = {}
+
+        self.connection_lists = connection_lists
+        self.config_manager = config_manager
+
+        # What each connection tool stands for - the group and the connection name
+        self.tool_targets:'tool_target_dict' = {}
+
         self._cached_tools:'strdictlist' = []
         self._schema_by_name:'stranydict' = {}
 
@@ -118,12 +140,48 @@ class ToolRegistry:
             tools.append(tool)
             schema_by_name[service_name] = input_schema
 
+        # .. connection tools come after service tools - each allow-listed connection
+        # of each group becomes one tool named after the group and the connection ..
+        tool_targets:'tool_target_dict' = {}
+
+        for definition in group_registry.values():
+
+            if not (connection_names := self.connection_lists.get(definition.group)):
+                continue
+
+            # .. the group's connection names resolve in its own config dict ..
+            config_dict = definition.get_config_dict(self.config_manager)
+
+            for connection_name in connection_names:
+
+                # .. a name that does not resolve is reported and skipped ..
+                if connection_name not in config_dict:
+                    raise Exception(
+                        f'MCP allow list references {definition.group} connection `{connection_name}` which does not exist')
+
+                item = config_dict[connection_name]
+
+                tool_name = build_tool_name(definition.tool_prefix, connection_name)
+                description = definition.build_description(connection_name, item)
+
+                connection_tool:'stranydict' = {
+                    'name': tool_name,
+                    'description': description,
+                    'inputSchema': definition.input_schema,
+                }
+
+                tools.append(connection_tool)
+                schema_by_name[tool_name] = definition.input_schema
+                tool_targets[tool_name] = (definition.group, connection_name)
+
         # .. tools are listed in a deterministic order so clients can cache the list ..
         tools.sort(key=itemgetter('name'))
 
-        # .. replace the cached tools list and the schema lookup with the newly built ones.
+        # .. replace the cached tools list, the schema lookup and the tool targets
+        # with the newly built ones.
         self._cached_tools = tools
         self._schema_by_name = schema_by_name
+        self.tool_targets = tool_targets
 
         tool_count_text = count_text(len(tools), 'tool', 'tools')
         logger.info('MCP tool registry built with %s', tool_count_text)
@@ -208,10 +266,15 @@ class ToolRegistry:
 # ################################################################################################################################
 
     def is_tool_allowed(self, service_name:'str') -> 'bool':
-        """ Checks whether a service name is in the allow list and is not internal.
+        """ Checks whether a tool name is a connection tool the last rebuild recorded
+        or a service name that is in the allow list and is not internal.
         """
 
-        # Internal services are never exposed as MCP tools ..
+        # Connection tools are recognized by the targets the last rebuild recorded ..
+        if service_name in self.tool_targets:
+            return True
+
+        # .. internal services are never exposed as MCP tools ..
         if service_name.startswith(_internal_prefix):
             return False
 

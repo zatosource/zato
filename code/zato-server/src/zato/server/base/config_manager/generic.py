@@ -67,6 +67,18 @@ _no_value_marker = '<no-value-given-'
 _fhir_auth_type_basic = HL7.Const.FHIR_Auth_Type.Basic_Auth.id
 _fhir_auth_type_oauth = HL7.Const.FHIR_Auth_Type.OAuth.id
 
+# Which MCP connection group each generic connection type belongs to - a change
+# to a connection of these types rebuilds the registries of the gateways exposing it.
+_mcp_group_by_generic_type = {
+    COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: 'microsoft_365',
+    COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS: 'microsoft_teams',
+    COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC: 'microsoft_fabric',
+    COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE: 'microsoft_power_automate',
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP: 'sap',
+    COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: 'confluence',
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: 'es',
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -360,6 +372,10 @@ class Generic(ConfigManagerImpl):
         func = self._get_generic_impl_func(msg)
         if func:
             func(msg)
+
+        # An MCP gateway that exposes this connection as a tool rebuilds its registry now
+        if mcp_group := _mcp_group_by_generic_type.get(msg['type_']):
+            self.rebuild_mcp_registries_for_connection(mcp_group, msg['name'])
 
 # ################################################################################################################################
 
