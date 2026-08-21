@@ -161,9 +161,15 @@ class SessionWrapper:
         if self.audit_log:
             self.sql_audit_level = pool.sql_audit_level
 
-            # An SQLite connection is a file, everything else is a network address
+            # An SQLite connection is a file, everything else is a network address.
+            # The file path arrives in sqlite_path from configs built directly for the pool store
+            # and in db_name from connections created through the server's create and edit services,
+            # the same duality that get_engine_url normalizes when it builds the engine URL.
             if config['engine'] == 'sqlite':
-                self.sql_audit_endpoint = config['sqlite_path']
+                if 'sqlite_path' in config:
+                    self.sql_audit_endpoint = config['sqlite_path']
+                else:
+                    self.sql_audit_endpoint = config['db_name']
             else:
                 self.sql_audit_endpoint = '{}:{}/{}'.format(config['host'], config['port'], config['db_name'])
 
