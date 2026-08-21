@@ -332,7 +332,10 @@ class TestCloudMicrosoftFabricPing:
 
         assert ping_response['is_success'] is False, f'Expected a failed ping, got: {ping_result}'
         assert 'Fabric token error' in ping_response['message'], f'Expected a token error in the response, got: {ping_result}'
-        assert 'invalid_client' in ping_response['message'], \
+
+        # The message is a display-ready summary that may be cut short,
+        # while the details always carry the error in full.
+        assert 'invalid_client' in ping_response['details'], \
             f'Expected the token error details in the response, got: {ping_result}'
 
 # ################################################################################################################################

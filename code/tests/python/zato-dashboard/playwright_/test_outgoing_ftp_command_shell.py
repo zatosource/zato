@@ -266,7 +266,8 @@ class TestOutgoingFTPCommandShell:
 # ################################################################################################################################
 
     def test_multi_line_commands(self, ftp_shell:'anydict') -> 'None':
-        """ Several commands given on their own lines all run, and each run gets its own command number.
+        """ Several commands given on their own lines all run, and the timing pill counts
+        how many commands the run carried.
         """
 
         page = ftp_shell['page']
@@ -288,14 +289,17 @@ class TestOutgoingFTPCommandShell:
         # .. the exists output is in stdout too ..
         assert 'True' in first_result['stdout'], f'Expected the exists output in stdout, got: "{first_result["stdout"]}"'
 
-        # .. and a second run must be numbered after the first one.
+        # .. both lines ran, which is what the run's command count says ..
+        first_command_count = _command_number_of(first_result['timing'])
+        assert first_command_count == 2, \
+            f'Expected 2 commands in the first run, got {first_command_count}'
+
+        # .. and a run of a single command counts that one command alone.
         second_result = _run_command(page, 'ls .')
 
-        first_command_number = _command_number_of(first_result['timing'])
-        second_command_number = _command_number_of(second_result['timing'])
-
-        assert second_command_number > first_command_number, \
-            f'Expected the command number to advance, got {first_command_number} then {second_command_number}'
+        second_command_count = _command_number_of(second_result['timing'])
+        assert second_command_count == 1, \
+            f'Expected 1 command in the second run, got {second_command_count}'
 
 # ################################################################################################################################
 
