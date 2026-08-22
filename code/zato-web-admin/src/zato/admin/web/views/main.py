@@ -70,6 +70,15 @@ def login(req):
 
     logger.info('Login request received')
 
+    if req.user.is_authenticated:
+
+        redirect_to = req.POST.get('next', '') or req.GET.get('next', '')
+        if not is_safe_url(url=redirect_to, allowed_hosts=req.get_host()):
+            redirect_to = resolve_url(LOGIN_REDIRECT_URL)
+
+        logger.info('User `%s` is already logged in, redirecting to `%s`', req.user.username, redirect_to)
+        return HttpResponseRedirect(redirect_to)
+
     # By default, assume the credentials are invalid unless proved otherwise
     has_errors = True
 
