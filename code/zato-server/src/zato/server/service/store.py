@@ -579,7 +579,6 @@ class ServiceStore:
                 class_.llm.conn_dict = service_store.server.config_manager.outconn_llm
                 class_.cloud.confluence = service_store.server.config_manager.cloud_confluence
                 class_.cloud.jira = service_store.server.config_manager.cloud_jira
-                class_.cloud.salesforce = service_store.server.config_manager.cloud_salesforce
                 class_.microsoft.cloud.conn_dict = service_store.server.config_manager.cloud_microsoft_365
 
                 # The old self.cloud.ms365 API is a thin shim that translates into self.microsoft.cloud.

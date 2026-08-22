@@ -51,6 +51,7 @@ _top_level_order = [
     'slack',
     'confluence',
     'jira',
+    'salesforce',
     'channel_ibm_mq',
     'outgoing_ibm_mq',
     'channel_amqp',
@@ -162,6 +163,7 @@ _object_order['microsoft_teams'] = _object_order['microsoft_cloud']
 _object_order['slack']      = 'name', 'is_active',
 _object_order['confluence'] = 'name', 'is_active', 'address', 'username',
 _object_order['jira']       = 'name', 'is_active', 'address', 'username',
+_object_order['salesforce'] = 'name', 'is_active', 'address', 'username', 'api_version',
 
 _object_order['channel_ibm_mq'] = 'name', 'is_active', 'address', 'queue_manager', 'mq_channel_name', 'queue', 'service', \
     'username', 'remove_jms_headers', 'ssl', 'cipher_spec', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file',

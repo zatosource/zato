@@ -807,6 +807,23 @@ jira:
     username: enmasse@example.com
     password: Zato_Enmasse_Env.JiraAPIToken
 
+salesforce:
+
+  - name: enmasse.salesforce.1
+    address: https://example.my.salesforce.com
+    username: enmasse.salesforce@example.com
+    password: Zato_Enmasse_Env.SalesforcePassword
+    consumer_key: enmasse-salesforce-consumer-key-1
+    consumer_secret: Zato_Enmasse_Env.SalesforceConsumerSecret
+
+  - name: enmasse.salesforce.2
+    address: https://example2.my.salesforce.com
+    username: enmasse.salesforce2@example.com
+    password: Zato_Enmasse_Env.SalesforcePassword
+    consumer_key: enmasse-salesforce-consumer-key-2
+    consumer_secret: Zato_Enmasse_Env.SalesforceConsumerSecret
+    api_version: '60.0'
+
 odoo:
 
   - name: enmasse.odoo.1

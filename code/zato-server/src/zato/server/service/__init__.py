@@ -47,8 +47,8 @@ from zato.common.util.xml_.message import XMLMessage
 from zato.server.commands import CommandsFacade
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import AS2Facade, AS4Facade, ESFacade, FHIRFacade, FTPFacade, IBMMQFacade, KafkaFacade, \
-    GraphQLFacade, KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SchedulerFacade, SFTPFacade, \
-    SMBFacade, SOAPFacade
+    GraphQLFacade, KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SalesforceFacade, SchedulerFacade, \
+    SFTPFacade, SMBFacade, SOAPFacade
 from zato.server.connection.grpc_ import GRPCFacade
 from zato.server.destination.facade import DestinationFacade
 from zato.server.destination.hook import run_for_service as run_destinations_for_service
@@ -515,6 +515,9 @@ class Service:
         # SAP facade for outgoing connections - runs on the OData implementation
         self.sap = ODataFacade()
 
+        # Salesforce facade for cloud connections
+        self.salesforce = SalesforceFacade()
+
         # SFTP facade for outgoing connections
         self.sftp = SFTPFacade()
 
@@ -683,6 +686,9 @@ class Service:
 
         # SAP facade - runs on the OData implementation
         self.sap.init(self._config_manager.outconn_sap)
+
+        # Salesforce facade
+        self.salesforce.init(self._config_manager.cloud_salesforce)
 
         # SFTP facade
         self.sftp.init(self.cid, self._config_manager)

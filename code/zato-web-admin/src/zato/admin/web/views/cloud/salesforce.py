@@ -6,15 +6,17 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Django
-from django.template.response import TemplateResponse
-
 # Zato
 from zato.admin.web.forms.cloud.salesforce import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed, \
-    ping_connection
-from zato.common.api import GENERIC, generic_attrs
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection
+from zato.common.api import GENERIC, generic_attrs, SALESFORCE
 from zato.common.model.salesforce import SalesforceConfigObject
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,7 +37,7 @@ class Index(_Index):
 
 # ################################################################################################################################
 
-    def handle(self):
+    def handle(self) -> 'anydict':
         return {
             'show_search_form': True,
             'create_form': CreateForm(),
@@ -55,19 +57,20 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def populate_initial_input_dict(self, initial_input_dict):
+    def populate_initial_input_dict(self, initial_input_dict:'anydict') -> 'None':
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outgoing'] = True
         initial_input_dict['is_outconn'] = False
-        initial_input_dict['recv_timeout'] = 250
-        initial_input_dict['pool_size'] = 20
+        initial_input_dict['recv_timeout'] = SALESFORCE.Default.Recv_Timeout
+        initial_input_dict['pool_size'] = SALESFORCE.Default.Pool_Size
 
 # ################################################################################################################################
 
-    def success_message(self, item):
-        return 'Successfully {} Salesforce cloud connection `{}`'.format(self.verb, item.name)
+    def success_message(self, item:'any_') -> 'str':
+        out = f'Successfully {self.verb} Salesforce cloud connection `{item.name}`'
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,30 +98,9 @@ class Delete(_Delete):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('GET')
-def invoke(req, conn_id, max_wait_time, conn_name, conn_slug):
-
-    return_data = {
-        'conn_id': conn_id,
-        'conn_name': conn_name,
-        'conn_slug': conn_slug,
-        'conn_type': GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE,
-        'timeout': max_wait_time,
-        'cluster_id': req.zato.cluster_id,
-    }
-
-    return TemplateResponse(req, 'zato/cloud/salesforce/invoke.html', return_data)
-
-# ################################################################################################################################
-
 @method_allowed('POST')
-def invoke_action(req, conn_name):
-    return invoke_action_handler(req, 'zato.generic.connection.invoke', ('conn_name', 'conn_type', 'request_data', 'timeout'))
-
-# ################################################################################################################################
-
-@method_allowed('POST')
-def ping(req, id, cluster_id):
-    return ping_connection(req, 'zato.generic.connection.ping', id, 'Salesforce connection')
+def ping(req:'any_', id:'any_', cluster_id:'any_') -> 'any_':
+    out = ping_connection(req, 'zato.generic.connection.ping', id, 'Salesforce connection')
+    return out
 
 # ################################################################################################################################

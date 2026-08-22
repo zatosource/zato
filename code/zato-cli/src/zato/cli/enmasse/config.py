@@ -6,6 +6,9 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Zato
+from zato.common.api import SALESFORCE
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -46,6 +49,7 @@ class _object_type:
     FTP = 'ftp'                                   #
     Confluence = 'confluence'                     #
     Jira = 'jira'                                 #
+    Salesforce = 'salesforce'                     #
     Microsoft_Cloud = 'microsoft_cloud'           #
     Microsoft_Fabric = 'cloud_microsoft_fabric'   #
     Microsoft_Power_Automate = 'cloud_microsoft_power_automate' #
@@ -71,6 +75,7 @@ _object_alias = {}
 _object_alias[_object_type.Channel_REST] = 'channel_plain_http'
 _object_alias[_object_type.Confluence] = 'zato_generic_connection:cloud-confluence'
 _object_alias[_object_type.Jira] = 'zato_generic_connection:cloud-jira'
+_object_alias[_object_type.Salesforce] = 'zato_generic_connection:cloud-salesforce'
 _object_alias[_object_type.LDAP] = 'outgoing_ldap'
 _object_alias[_object_type.MongoDB] = 'outgoing_mongodb'
 _object_alias[_object_type.OData] = 'outgoing_odata'
@@ -128,6 +133,11 @@ _attr_default[_object_type.Jira] = {
     'is_active': True,
     'is_cloud': True,
     'api_version': 'v2'
+}
+
+_attr_default[_object_type.Salesforce] = {
+    'is_active': True,
+    'api_version': SALESFORCE.Default.API_Version
 }
 
 _attr_default[_object_type.MongoDB] = {

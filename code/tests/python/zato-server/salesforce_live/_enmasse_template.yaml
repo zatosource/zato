@@ -1,0 +1,15 @@
+salesforce:
+
+  - name: test.salesforce.main
+    address: http://127.0.0.1:{{salesforce_port}}
+    username: {{username}}
+    password: {{password}}
+    consumer_key: {{consumer_key}}
+    consumer_secret: {{consumer_secret}}
+
+  - name: test.salesforce.bad-credentials
+    address: http://127.0.0.1:{{salesforce_port}}
+    username: {{username}}
+    password: {{invalid_password}}
+    consumer_key: {{consumer_key}}
+    consumer_secret: {{consumer_secret}}

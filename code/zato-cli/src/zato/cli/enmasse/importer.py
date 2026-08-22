@@ -35,6 +35,7 @@ from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
 from zato.cli.enmasse.importers.confluence import ConfluenceImporter
 from zato.cli.enmasse.importers.jira import JiraImporter
+from zato.cli.enmasse.importers.salesforce import SalesforceImporter
 from zato.cli.enmasse.importers.channel_mllp import ChannelMLLPImporter
 from zato.cli.enmasse.importers.outgoing_mllp import OutgoingMLLPImporter
 from zato.cli.enmasse.importers.outgoing_fhir import OutgoingFHIRImporter
@@ -94,6 +95,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.es', 'zato.cli.enmasse.importers.odoo',
                         'zato.cli.enmasse.importers.scheduler', 'zato.cli.enmasse.importers.sql',
                         'zato.cli.enmasse.importers.confluence', 'zato.cli.enmasse.importers.jira',
+                        'zato.cli.enmasse.importers.salesforce',
                         'zato.cli.enmasse.importers.channel_mllp',
                         'zato.cli.enmasse.importers.outgoing_mllp',
                         'zato.cli.enmasse.importers.outgoing_fhir',
@@ -147,6 +149,7 @@ class EnmasseYAMLImporter:
         self.job_defs = {}
         self.confluence_defs = {}
         self.jira_defs = {}
+        self.salesforce_defs = {}
         self.channel_mllp_defs = {}
         self.outgoing_mllp_defs = {}
         self.outgoing_fhir_defs = {}
@@ -204,6 +207,7 @@ class EnmasseYAMLImporter:
         self.scheduler_importer = SchedulerImporter(self)
         self.confluence_importer = ConfluenceImporter(self)
         self.jira_importer = JiraImporter(self)
+        self.salesforce_importer = SalesforceImporter(self)
         self.channel_mllp_importer = ChannelMLLPImporter(self)
         self.outgoing_mllp_importer = OutgoingMLLPImporter(self)
         self.outgoing_fhir_importer = OutgoingFHIRImporter(self)
@@ -759,6 +763,31 @@ class EnmasseYAMLImporter:
         logger.info('Processed Jira connection definitions: created=%d updated=%d', len(jira_created), len(jira_updated))
 
         return jira_created, jira_updated
+
+# ################################################################################################################################
+
+    def sync_salesforce(self, salesforce_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes Salesforce connection definitions from a YAML configuration with the database.
+        """
+        if not salesforce_list:
+            return [], []
+
+        count = len(salesforce_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Salesforce connection {noun}')
+
+        # Examine each Salesforce connection item
+        for idx, item in enumerate(salesforce_list):
+            logger.info('Salesforce connection item %d: %s', idx, item)
+
+        salesforce_created, salesforce_updated = self.salesforce_importer.sync_definitions(salesforce_list, session)
+
+        # Get Salesforce definitions from the Salesforce importer
+        self.salesforce_defs = self.salesforce_importer.connection_defs
+        logger.info('Processed Salesforce connection definitions: created=%d updated=%d',
+            len(salesforce_created), len(salesforce_updated))
+
+        return salesforce_created, salesforce_updated
 
 # ################################################################################################################################
 
@@ -1694,6 +1723,19 @@ class EnmasseYAMLImporter:
             self.created_objects['jira'] = jira_created
         if jira_updated:
             self.updated_objects['jira'] = jira_updated
+
+        # Process Salesforce connection definitions
+        salesforce_list = yaml_config.get('salesforce', [])
+        if generic_list:
+            for item in generic_list:
+                item_type = item.get('type_')
+                if item_type == 'cloud-salesforce':
+                    salesforce_list.append(item)
+        salesforce_created, salesforce_updated = self.sync_salesforce(salesforce_list, session)
+        if salesforce_created:
+            self.created_objects['salesforce'] = salesforce_created
+        if salesforce_updated:
+            self.updated_objects['salesforce'] = salesforce_updated
 
         # Process LDAP connection definitions
         ldap_list = yaml_config.get('ldap') or yaml_config.get('outgoing_ldap', [])

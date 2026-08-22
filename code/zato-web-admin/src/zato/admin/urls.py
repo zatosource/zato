@@ -1482,13 +1482,7 @@ urlpatterns += [
     url(r'^zato/cloud/salesforce/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cloud_salesforce.Delete()), name=cloud_salesforce.Delete.url_name),
     url(r'^zato/cloud/salesforce/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cloud_salesforce.ping), name='cloud-dropbox-ping'),
-
-    url(r'^zato/cloud/salesforce/invoke/action/(?P<conn_name>.*)/$',
-        login_required(cloud_salesforce.invoke_action), name='cloud-salesforce-invoke-action'),
-
-    url(r'^zato/cloud/salesforce/invoke/(?P<conn_id>.*)/(?P<max_wait_time>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
-        login_required(cloud_salesforce.invoke), name='cloud-salesforce-invoke'),
+        login_required(cloud_salesforce.ping), name='cloud-salesforce-ping'),
 
     ]
 

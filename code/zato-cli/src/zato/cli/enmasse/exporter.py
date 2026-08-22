@@ -28,6 +28,7 @@ from zato.cli.enmasse.exporters.channel_soap import ChannelSOAPExporter
 from zato.cli.enmasse.exporters.channel_openapi import ChannelOpenAPIExporter
 from zato.cli.enmasse.exporters.ftp import FTPExporter
 from zato.cli.enmasse.exporters.jira import JiraExporter
+from zato.cli.enmasse.exporters.salesforce import SalesforceExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
 from zato.cli.enmasse.exporters.llm import LLMExporter
 from zato.cli.enmasse.exporters.microsoft_cloud import MicrosoftCloudExporter
@@ -116,6 +117,7 @@ class EnmasseYAMLExporter:
         self.rule_engine_api_exporter = RuleEngineAPIExporter(self)
         self.outgoing_kafka_exporter = OutgoingKafkaExporter(self)
         self.jira_exporter = JiraExporter(self)
+        self.salesforce_exporter = SalesforceExporter(self)
         self.ldap_exporter = LDAPExporter(self)
         self.llm_exporter = LLMExporter(self)
         self.mongodb_exporter = MongoDBExporter(self)
@@ -465,6 +467,15 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session) # Ensure cluster info is loaded
         jira_list = self.jira_exporter.export(session, self.cluster_id)
         return jira_list
+
+# ################################################################################################################################
+
+    def export_salesforce(self, session:'SASession') -> 'list':
+        """ Exports Salesforce connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        out = self.salesforce_exporter.export(session, self.cluster_id)
+        return out
 
 # ################################################################################################################################
 
@@ -831,6 +842,11 @@ class EnmasseYAMLExporter:
         jira_defs = self.export_jira(session)
         if jira_defs:
             output_dict['jira'] = jira_defs
+
+        # Export Salesforce connection definitions
+        salesforce_defs = self.export_salesforce(session)
+        if salesforce_defs:
+            output_dict['salesforce'] = salesforce_defs
 
         # Export LDAP connection definitions
         ldap_defs = self.export_ldap(session)

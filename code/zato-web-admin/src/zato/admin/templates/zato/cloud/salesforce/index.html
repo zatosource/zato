@@ -39,7 +39,6 @@
 
             {% comment %} 2 {% endcomment %}
             'username',
-            // '_invoke',
 
             {% comment %} 3 {% endcomment %}
             '_edit',
@@ -68,7 +67,7 @@
         <div id="markup">
 <h2 class="zato">{% include "zato/include/header-brand.html" with logo="salesforce" %}Salesforce connections</h2>
 
-{% with has_generic="1" generic_type="outconn-saleforce" %}
+{% with has_generic="1" generic_type="cloud-salesforce" %}
     {% include "zato/search-form.html" with page_prompt="Show connections"%}
 {% endwith %}
 
@@ -90,7 +89,6 @@
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Username</a></th>
-                        <!-- <th></th> -->
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -118,12 +116,6 @@
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.username }}</td>
-
-                        <!--
-                        <td>
-                            <a href="{% url "cloud-salesforce-invoke" item.id item.max_wait_time item.name item.name|slugify %}?cluster={{ cluster_id }}">Invoke</a>
-                        </td>
-                        -->
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.cloud.salesforce.edit('{{ item.id }}')">Edit</a></td>

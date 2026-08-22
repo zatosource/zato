@@ -79,6 +79,10 @@ _fhir_block_timeout = 30
 # while the connection queue is still being built at startup.
 _odata_block_timeout = 30
 
+# How many seconds to wait for a pooled Salesforce client, which covers the window
+# while the connection queue is still being built at startup.
+_salesforce_block_timeout = 30
+
 ################################################################################################################################
 ################################################################################################################################
 
@@ -1328,6 +1332,94 @@ class ODataFacade:
         self._outconn_config[name]
 
         out = ODataConnection(name, self._outconn_config)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SalesforceConnection:
+    """ Exposes the Salesforce client API for one connection - each call borrows
+    a pooled client, invokes it and returns it to the pool, so user code never handles
+    the pool itself.
+    """
+    _conn_name: 'str'
+    _conn_config: 'anydict'
+
+    def __init__(self, conn_name:'str', conn_config:'anydict') -> 'None':
+        self._conn_name = conn_name
+        self._conn_config = conn_config
+
+# ################################################################################################################################
+
+    def __repr__(self) -> 'str':
+        out = f'SalesforceConnection({self._conn_name} at {hex(id(self))})'
+        return out
+
+# ################################################################################################################################
+
+    def _borrow(self) -> 'any_':
+        """ Returns a context manager that yields a pooled client, blocking to cover
+        the window while the connection queue is still being built at startup.
+        """
+        wrapper = self._conn_config[self._conn_name].conn
+
+        out = wrapper.client(should_block=True, block_timeout=_salesforce_block_timeout)
+        return out
+
+# ################################################################################################################################
+
+    def get(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.get(*args, **kwargs)
+        return out
+
+# ################################################################################################################################
+
+    def post(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.post(*args, **kwargs)
+        return out
+
+# ################################################################################################################################
+
+    def patch(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.patch(*args, **kwargs)
+        return out
+
+# ################################################################################################################################
+
+    def delete(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.delete(*args, **kwargs)
+        return out
+
+# ################################################################################################################################
+
+    def ping(self) -> 'any_':
+        with self._borrow() as client:
+            out = client.ping()
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SalesforceFacade:
+    """ Provides dict-like access to Salesforce connections from services via self.salesforce.
+    """
+    _conn_config: 'anydict'
+
+    def init(self, conn_config:'anydict') -> 'None':
+        self._conn_config = conn_config
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'SalesforceConnection':
+
+        # This will raise a KeyError if there is no such connection
+        self._conn_config[name]
+
+        out = SalesforceConnection(name, self._conn_config)
         return out
 
 # ################################################################################################################################

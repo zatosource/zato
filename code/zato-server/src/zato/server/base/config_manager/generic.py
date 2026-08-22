@@ -22,6 +22,7 @@ from zato.common.util.config import replace_query_string_items_in_dict
 from zato.server.base.config_manager.common import ConfigManagerImpl
 from zato.server.generic.api.channel_hl7_mllp import channel_config_defaults, channel_int_config_keys
 from zato.server.generic.api.cloud_aws import cloud_aws_config_defaults, cloud_aws_int_config_keys
+from zato.server.generic.api.cloud_salesforce import cloud_salesforce_config_defaults
 from zato.server.generic.api.outconn_as2 import outconn_as2_bool_config_keys, outconn_as2_config_defaults, \
     outconn_as2_int_config_keys
 from zato.server.generic.api.outconn_es import outconn_es_bool_config_keys, outconn_es_config_defaults, \
@@ -443,6 +444,18 @@ class Generic(ConfigManagerImpl):
             value = config[key]
             if isinstance(value, str):
                 config[key] = int(value)
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_cloud_salesforce(self, config:'stranydict') -> 'None':
+        """ Fills in defaults for fields that the create path did not supply,
+        e.g. when a connection is created directly through zato.generic.connection.create.
+        """
+
+        # Apply a default for every field that is missing or None.
+        for key, default in cloud_salesforce_config_defaults.items():
+            if config.get(key) is None:
+                config[key] = default
 
 # ################################################################################################################################
 

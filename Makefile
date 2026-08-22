@@ -12,7 +12,7 @@
 	test-pubsub-backend-perf test-pubsub-backend-amqp-perf test-pubsub-backend-perf-mass test-pubsub-system-perf \
 	test-mcp _test-mcp test-mcp-local-docker test-bearer _test-bearer test-graphql test-grpc \
 	test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm _test-llm test-llm-local-docker \
-	test-sql-cloud test-sql-cloud-live test-aws test-sdk test-microsoft-cloud \
+	test-sql-cloud test-sql-cloud-live test-aws test-sdk test-microsoft-cloud test-salesforce _test-salesforce \
 	test-hl7 test-hl7-fhir test-hl7-mllp-channels test-hl7-mllp-outconns test-hl7-languages test-hl7-volume \
 	test-ui _test-ui test-ui-pubsub test-ui-openapi test-ui-analytics test-ui-audit-log test-ui-webapp test-ui-rule-engine-dashboard \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
@@ -955,6 +955,33 @@ test-microsoft-cloud: ## Microsoft 365 connection tests through a live Zato serv
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_microsoft_cloud_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-salesforce: ## Salesforce connection tests - enmasse, a live Zato server against a simulated instance, and the Dashboard lifecycle.
+	$(MAKE) _test-salesforce 2>&1 | tee /tmp/logs-test-salesforce.txt
+
+_test-salesforce:
+	ruff check \
+		$(CURDIR)/code/tests/python/zato-server/salesforce_live/ \
+		2>&1 | $(TS)
+	pyright \
+		$(CURDIR)/code/tests/python/zato-server/salesforce_live/ \
+		2>&1 | $(TS)
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/importers/test_importer_enmasse_salesforce.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/exporters/test_exporter_enmasse_salesforce.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_salesforce_enmasse -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/salesforce_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_salesforce_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_cloud_salesforce_lifecycle.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
+
 test-hl7: ## HL7v2 parsing and MLLP tests.
 	$(MAKE) test-hl7-mllp-channels
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1362,7 +1389,7 @@ Zato_Test_Toolchain := \
 # Suites needing a live server or an external service
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub-backend test-mongodb test-es \
-	test-sql-cloud-live test-microsoft-cloud test-bearer test-pubsub-backend-amqp test-as2-live \
+	test-sql-cloud-live test-microsoft-cloud test-salesforce test-bearer test-pubsub-backend-amqp test-as2-live \
 	test-as2-interop test-ibm-mq test-sdk test-hl7-languages test-pubsub-outgoing \
 	test-hl7-mllp-outconns test-pubsub-core test-hl7
 
