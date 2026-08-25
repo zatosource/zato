@@ -121,11 +121,17 @@ common-core-build:
 
 mq-client:
 	@if [ ! -f $(MQ_CLIENT_LIB) ]; then \
-		echo ">>> Downloading IBM MQ client to $(MQ_CLIENT_DIR)"; \
-		mkdir -p $(MQ_CLIENT_DIR) && \
-		curl -fL --http1.1 --retry 5 --retry-delay 5 --retry-all-errors $(MQ_CLIENT_URL) -o $(MQ_CLIENT_DIR)/mqclient.tar.gz && \
-		tar -xzf $(MQ_CLIENT_DIR)/mqclient.tar.gz -C $(MQ_CLIENT_DIR) && \
-		rm $(MQ_CLIENT_DIR)/mqclient.tar.gz; \
+		echo ">>> Downloading IBM MQ client from $(MQ_CLIENT_URL) to $(MQ_CLIENT_DIR)"; \
+		if ! ( \
+			mkdir -p $(MQ_CLIENT_DIR) && \
+			retry_all_errors="$$(curl --help all 2>/dev/null | awk '/--retry-all-errors/{print $$1; exit}')" && \
+			curl -fL --http1.1 --retry 2 --retry-delay 1 $$retry_all_errors $(MQ_CLIENT_URL) -o $(MQ_CLIENT_DIR)/mqclient.tar.gz && \
+			tar -xzf $(MQ_CLIENT_DIR)/mqclient.tar.gz -C $(MQ_CLIENT_DIR) && \
+			rm $(MQ_CLIENT_DIR)/mqclient.tar.gz \
+		); then \
+			rm -f $(MQ_CLIENT_DIR)/mqclient.tar.gz; \
+			echo ">>> WARNING: IBM MQ client download failed"; \
+		fi; \
 	fi
 
 queue-bridge-build: mq-client
