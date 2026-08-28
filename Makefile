@@ -20,7 +20,7 @@
 	test-ibm-mq test-mongodb test-es test-ftp \
 	test-rule-engine test-rule-engine-perf test-rule-engine-jobs \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
-	test-all test test-all-reset test-perf \
+	test-all test test-all-reset test-clean-test-all test-perf \
 	health-ruff health-clippy \
 	format format-zato \
 	clippy clippy-zato \
@@ -1442,6 +1442,9 @@ test-all: ## Everything, resuming from the target that last failed. RESTART=1 to
 
 test-all-reset: ## Forget where the last test-all stopped.
 	rm -f $(Zato_Test_Resume_File)
+
+test-clean-test-all: ## Run test-all from a clean state instead of resuming a previous run.
+	$(MAKE) RESTART=1 test-all
 
 test-perf: $(Zato_Test_Perf) ## Every performance suite - not part of test-all.
 
