@@ -399,13 +399,13 @@ class OutgoingPublisherTestCase(unittest.TestCase):
     def test_data_that_is_not_text_is_serialized(self) -> 'None':
         """ A document published as a dict reaches the handler as the JSON that document is.
         """
-        _ = self.publisher.publish({'order_id': 1234, 'customer': 'Maria Kowalska'})
+        _ = self.publisher.publish({'order_id': 1234, 'customer': 'Maria Johnson'})
 
         envelope = self._get_published_envelope()
         data = loads(envelope['data'])
 
         self.assertEqual(data['order_id'], 1234)
-        self.assertEqual(data['customer'], 'Maria Kowalska')
+        self.assertEqual(data['customer'], 'Maria Johnson')
 
 # ################################################################################################################################
 

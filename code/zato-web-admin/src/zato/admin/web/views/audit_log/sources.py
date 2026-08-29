@@ -11,17 +11,16 @@ can be resubmitted and by what, and the columns and parsed views it renders out 
 
 # stdlib
 import json
-from dataclasses import dataclass
 
 # SQLAlchemy
 from sqlalchemy import select
 
 # Zato
 from zato.admin.web.views.audit_log.columns import _source_event_label
-from zato.common.api import SCHEDULER
 from zato.common.as2.mdn import describe_disposition
-from zato.common.audit_log.api import event_table, AuditEvent
+from zato.common.audit_log.api import event_table
 from zato.common.audit_log.common import event_attr_table, event_body_table
+from zato.common.audit_log.query import source_outstanding
 from zato.common.audit_log.resubmit import source_resubmit_actions
 from zato.common.audit_log.scheduler import format_duration_ms, Attr_Current_Run, Attr_Delay_Ms, Log_Kinds
 from zato.common.hl7.display import parse_and_render
@@ -40,49 +39,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
-class OutstandingFilter:
-    """ The outstanding filter of one source - the event that opens an exchange, the acknowledgment
-    that closes it, and whether the close matches on the partner pair too. AS2 MDNs answer
-    the Message-ID alone while X12 acknowledgments echo both the pair and the control number.
-    A source whose events are single rows updated in place has no exchange to pair - what is
-    open there is an event still carrying its in-progress outcome, which open_outcome names.
-    """
-    open_event: str = ''
-    close_event: str = ''
-    needs_object_name_match: bool = False
-    open_outcome: str = ''
-
-# ################################################################################################################################
-
-def _new_outstanding_filter(open_event:'str', close_event:'str', needs_object_name_match:'bool') -> 'OutstandingFilter':
-    out = OutstandingFilter()
-    out.open_event = open_event
-    out.close_event = close_event
-    out.needs_object_name_match = needs_object_name_match
-
-    return out
-
-# ################################################################################################################################
-
-def _new_outcome_filter(open_outcome:'str') -> 'OutstandingFilter':
-    out = OutstandingFilter()
-    out.open_outcome = open_outcome
-
-    return out
-
-# ################################################################################################################################
-
 # The sources whose pages carry the outstanding filter pill
-_source_outstanding = {
-    'as2': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.MDN_Received, False),
-    'as4': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Receipt_Received, True),
-    'x12': _new_outstanding_filter(AuditEvent.Interchange_Sent, AuditEvent.Ack_Received, True),
-    'mllp-outgoing': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Ack_Received, True),
-
-    # A scheduler run is one row updated in place - outstanding means it is still running
-    'scheduler': _new_outcome_filter(SCHEDULER.OUTCOME.RUNNING),
-}
+_source_outstanding = source_outstanding
 
 # ################################################################################################################################
 # ################################################################################################################################

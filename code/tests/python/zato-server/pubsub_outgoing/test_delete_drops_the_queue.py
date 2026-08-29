@@ -39,7 +39,7 @@ class DeleteDropsTheQueueTestCase(unittest.TestCase):
     def test_a_deleted_connection_takes_its_queue_with_it(self) -> 'None':
 
         receiver = TestConfig.delete_receiver
-        payload = {'order_id': 'order-9876', 'customer': 'Maria Kowalska'}
+        payload = {'order_id': 'order-9876', 'customer': 'Maria Johnson'}
 
         conn_name = TestConfig.delete_connection
 

@@ -427,7 +427,7 @@ class TestChannelHL7MLLPDestinations:
             for resource in fhir_receiver.resources[fhir_count_before:]:
                 assert resource.is_valid, f'Expected a specification-valid resource, got: {resource.error}'
                 assert resource.document['resourceType'] == 'Patient', f'Unexpected resource: {resource.document}'
-                assert resource.document['name'][0]['family'] == 'Kowalska', f'Unexpected resource: {resource.document}'
+                assert resource.document['name'][0]['family'] == 'Johnson', f'Unexpected resource: {resource.document}'
 
             # .. and the MLLP receiver, whose destination the service dropped, got nothing
             # of these messages at all.

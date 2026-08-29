@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import SCHEDULER
-from zato.common.audit_log.common import AuditOutcome
+from zato.common.audit_log.common import source_attr_names, AuditOutcome, Status_Outstanding
+from zato.common.audit_log.search import search_columns
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,11 +45,10 @@ _flow_columns = _row_columns + ('cid_sequence',)
 _row_numeric_columns = ('id', 'size', 'duration_ms', 'cid_sequence')
 
 # The columns the free-text search covers.
-_search_columns = ('data', 'event_type', 'msg_id', 'correl_id', 'endpoint', 'ext_client_id',
-    'status', 'classification', 'sub_key')
+_search_columns = search_columns
 
 # The status query parameter value narrowing the page down to open exchanges.
-_status_outstanding = 'outstanding'
+_status_outstanding = Status_Outstanding
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -365,19 +365,7 @@ _source_columns = {
 
 # Per-source attr columns - these render as columns of their own, read out of the event_attr
 # table in one query per page, and the free-text search covers them through the attr-to-cid shape.
-_source_attr_columns = {
-    'mllp-channel': ('msg_type', 'mrn', 'facility', 'ack_status'),
-    'mllp-outgoing': ('msg_type', 'mrn', 'facility', 'ack_status'),
-    'fhir': ('resource_type', 'method'),
-    'scheduler': ('current_run', 'delay_ms', 'job_id'),
-    'file-outgoing': ('operation', 'schedule', 'file_name'),
-
-    # How many days the checked certificate had left at check time.
-    'certificate': ('days_left',),
-
-    # Who viewed what - a view record is named by these two rather than by an event id.
-    'config': ('actor', 'viewed_object_name'),
-}
+_source_attr_columns = source_attr_names
 
 # The sources whose payloads live in the event_body table rather than the data column.
 _source_body_preview = {'mllp-channel', 'mllp-outgoing'}

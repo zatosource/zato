@@ -32,6 +32,7 @@ from zato.common.py23_ import maxint
 from zato.common.ext.bunch import Bunch
 from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIORITY, PubSub, \
      RESTAdapterResponse, zato_no_op_marker
+from zato.common.audit_log.facade import AuditFacade
 from zato.common.audit_log.scheduler import append_job_log_entry
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import PubSubFacade, SecurityFacade
@@ -380,6 +381,7 @@ class Service:
     handles_auth_rejection:'bool' = False
 
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
+    audit = AuditFacade()
     aws = AWSFacade()
     cloud = Cloud()
     llm = LLMFacade()

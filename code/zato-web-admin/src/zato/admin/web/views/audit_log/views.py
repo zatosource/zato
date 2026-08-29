@@ -29,7 +29,7 @@ from zato.admin.web.views.audit_log.columns import _all_sources_columns, _all_so
     _data_preview_length, _default_page, _endpoint_page_url, _event_type_label, _flow_columns, _get_outcomes, _object_page_url, \
     _poll_url, _preview_length, _row_columns, _run_page_url, _source_columns, _source_endpoint_label, _source_event_label, \
     _source_except_label, _source_label, _source_object_label, _source_page_url, _source_title, _status_outstanding
-from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
+from zato.admin.web.views.audit_log.query import _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import get_resubmit_labels, _source_outstanding, _source_parse, \
     _source_resubmit, render_scheduler_record, render_view_record
 from zato.admin.web.views.audit_log.trace import attach_trace_lines
@@ -38,6 +38,7 @@ from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.audit_log.body import resolve_body
 from zato.common.audit_log.config_audit import record_view_event
 from zato.common.audit_log.flow import get_flow_ids, resolve_seed, Relation_Seed
+from zato.common.audit_log.search import build_search_conditions
 from zato.common.defaults import default_cluster_id
 from zato.x12.render import render_document
 
@@ -245,7 +246,7 @@ def poll(req:'any_') -> 'HttpResponse':
     if page < _default_page:
         page = _default_page
 
-    where_conditions = _build_where(
+    where_conditions = build_search_conditions(
         sources, object_names, outcomes, query, status, time_from, time_to, event_types,
         sources_excluded=sources_excluded, object_names_excluded=object_names_excluded)
 
@@ -380,7 +381,7 @@ def strip(req:'any_') -> 'HttpResponse':
     if bucket_count < _strip_min_buckets:
         bucket_count = _strip_min_buckets
 
-    where_conditions = _build_where(
+    where_conditions = build_search_conditions(
         sources, object_names, outcomes, query, status, time_from, time_to, event_types,
         sources_excluded=sources_excluded, object_names_excluded=object_names_excluded)
 

@@ -37,11 +37,11 @@ class SurvivesServerRestartTestCase(unittest.TestCase):
         rest_receiver = TestConfig.orders_receiver
         fhir_receiver = TestConfig.fhir_receiver
 
-        payload = {'order_id': 'order-6789', 'customer': 'Maria Kowalska'}
+        payload = {'order_id': 'order-6789', 'customer': 'Maria Johnson'}
 
         document = {
             'resourceType': 'Patient',
-            'name': [{'family': 'Kowalska', 'given': ['Maria']}],
+            'name': [{'family': 'Johnson', 'given': ['Maria']}],
         }
 
         # Both targets are down, so nothing can be delivered to either of them ..

@@ -35,7 +35,7 @@ class FHIRConnectionConfigIsUsedTestCase(unittest.TestCase):
 
         self.document = {
             'resourceType': 'Patient',
-            'name': [{'family': 'Kowalska', 'given': ['Maria']}],
+            'name': [{'family': 'Johnson', 'given': ['Maria']}],
         }
 
         _ = publish_fhir(self.client, TestConfig.fhir_secured_connection, self.document)

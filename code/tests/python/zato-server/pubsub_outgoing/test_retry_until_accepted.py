@@ -44,7 +44,7 @@ class RetryUntilAcceptedTestCase(unittest.TestCase):
         receiver = TestConfig.orders_receiver
         receiver.refuse_next(_refusal_count)
 
-        payload = {'order_id': 'order-5678', 'customer': 'Maria Kowalska'}
+        payload = {'order_id': 'order-5678', 'customer': 'Maria Johnson'}
 
         _ = publish(self.client, TestConfig.orders_connection, payload)
 

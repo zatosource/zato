@@ -23,7 +23,7 @@ from zato.common.audit_log.buffer import Env_Flush_Max_Size, Env_Flush_Max_Wait_
 from zato.common.audit_log.common import Attr_Value_Max_Len, Audit_DB_File_Name, AuditBody, AuditClassification, \
     AuditEvent, AuditLink, AuditOutcome, AuditSource, derive_classification, Env_Retention_Days, \
     Env_Retention_Days_Prefix, event_attr_table, event_body_table, event_link_table, event_table, get_retention_days, \
-    get_source_env_suffix, metadata
+    get_source_env_suffix, metadata, Status_Outstanding
 from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days, \
     Env_Content_Retention_Days_Prefix, get_content_retention_days, register_prunability, run_retention
 from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
@@ -61,7 +61,7 @@ __all__ = [
     'event_table', 'get_audit_db_path', 'get_audit_engine', 'get_content_retention_days', 'get_retention_days',
     'get_source_env_suffix', 'is_audit_log_enabled', 'metadata', 'register_prunability', 'AuditBody',
     'AuditClassification', 'AuditEvent', 'AuditLink', 'AuditLog', 'AuditOutcome', 'AuditSource', 'ModuleCtx',
-    'Retention_Days',
+    'Retention_Days', 'Status_Outstanding',
 ]
 
 # ################################################################################################################################

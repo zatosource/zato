@@ -106,7 +106,7 @@ rest_note_segment = 'NTE|1||For the care team alone'
 # The resource the populate service gives the FHIR destination
 fhir_patient_resource = {
     'resourceType': 'Patient',
-    'name': [{'family': 'Kowalska', 'given': ['Maria']}],
+    'name': [{'family': 'Johnson', 'given': ['Maria']}],
 }
 
 # ################################################################################################################################

@@ -137,6 +137,24 @@ def get_source_label(source:'str') -> 'str':
 
 # ################################################################################################################################
 
+# The searchable attributes each source's events carry in the event_attr table -
+# the free-text search covers them and the Dashboard renders them as columns of their own.
+source_attr_names = {
+    AuditSource.MLLP_Channel: ('msg_type', 'mrn', 'facility', 'ack_status'),
+    AuditSource.MLLP_Outgoing: ('msg_type', 'mrn', 'facility', 'ack_status'),
+    AuditSource.FHIR: ('resource_type', 'method'),
+    AuditSource.Scheduler: ('current_run', 'delay_ms', 'job_id'),
+    AuditSource.File_Outgoing: ('operation', 'schedule', 'file_name'),
+
+    # How many days the checked certificate had left at check time.
+    AuditSource.Certificate: ('days_left',),
+
+    # Who viewed what - a view record is named by these two rather than by an event id.
+    AuditSource.Config: ('actor', 'viewed_object_name'),
+}
+
+# ################################################################################################################################
+
 # The sources kept for something other than the usual span, with how long each is kept for.
 _source_retention_days = {
     AuditSource.AS2: _default_evidence_retention_days,
@@ -249,6 +267,12 @@ class AuditOutcome:
     OK      = 'ok'
     Error   = 'error'
     Expired = 'expired'
+
+# ################################################################################################################################
+
+# The status value narrowing a search down to open exchanges -
+# the sent messages whose acknowledgment has not arrived.
+Status_Outstanding = 'outstanding'
 
 # ################################################################################################################################
 

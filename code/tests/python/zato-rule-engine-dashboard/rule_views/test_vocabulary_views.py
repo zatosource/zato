@@ -109,7 +109,7 @@ def test_rename_previews_then_applies(client:'any_', backend:'any_') -> 'None':
 def test_bootstrap_builds_a_vocabulary_from_one_payload(client:'any_') -> 'None':
     """ Paste-a-payload turns one JSON example into terms with inferred types.
     """
-    payload = {'customer': {'creditScore': 720, 'name': 'Jan Kowalski'}, 'amount': 50000}
+    payload = {'customer': {'creditScore': 720, 'name': 'John Smith'}, 'amount': 50000}
 
     response = post_json(client, '/rules/vocabulary/bootstrap/', {'payload': payload})
     assert response.status_code == OK
