@@ -22,6 +22,7 @@ from zato.common.api import SMTPMessage
 from zato.common.destination.constants import Default_Method, Default_Path, Default_Subject, Default_To, \
     DestinationOption, DestinationType
 from zato.common.destination.model import get_option, DestinationException
+from zato.hl7v2 import parse_hl7
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,6 +59,10 @@ _rest_invoker_method = {
 
 # The methods that carry what is being delivered in their request body
 _rest_methods_with_body = ('POST', 'PUT', 'PATCH')
+
+# What every HL7 v2 message opens with - the mark by which the FHIR adapter
+# recognizes a message that is to convert to a FHIR bundle on its way out.
+_er7_prefix = 'MSH'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,7 +105,9 @@ def _send_mllp(connections:'DestinationConnections', entry:'DestinationEntry', p
 # ################################################################################################################################
 
 def _send_fhir(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'any_':
-    """ Delivers to an outgoing HL7 FHIR connection, with the method and the path the destination names.
+    """ Delivers to an outgoing HL7 FHIR connection, with the method and the path the destination
+    names. An HL7 v2 message converts to a FHIR bundle on its way out, which is what lets a channel
+    fan out to FHIR destinations with no service of its own.
     """
     method = get_option(entry, DestinationOption.Method, Default_Method)
     path = get_option(entry, DestinationOption.Path, Default_Path)
@@ -108,9 +115,21 @@ def _send_fhir(connections:'DestinationConnections', entry:'DestinationEntry', p
     if not path:
         raise DestinationException(f'Destination `{entry.name}` has no path to deliver to')
 
-    # A FHIR resource goes out as a document, so what arrives here as text is that document in its JSON form
+    # A channel with no service hands over the message as it arrived over the wire,
+    # which may still be bytes.
+    if isinstance(payload, bytes):
+        payload = payload.decode('utf-8')
+
     if isinstance(payload, str):
-        payload = loads(payload)
+
+        # An HL7 v2 message converts to the FHIR bundle the destination receives ..
+        if payload.startswith(_er7_prefix):
+            message = parse_hl7(payload)
+            payload = message.to_fhir_dict()
+
+        # .. and any other text is already a FHIR resource in its JSON form.
+        else:
+            payload = loads(payload)
 
     client = connections.fhir[entry.connection]
 
