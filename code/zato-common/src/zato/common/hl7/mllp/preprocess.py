@@ -54,19 +54,20 @@ _MSH_Whole_Length = 12
 # Batch/File header prefixes - used as a tuple for startswith matching
 _Batch_Prefixes = ('BHS|', 'FHS|')
 
-# Encoding map from MSH-18 values to Python codec names
+# Encoding map from MSH-18 values to Python codec names - an empty or
+# unrecognized MSH-18 maps to the channel's default encoding instead.
 _encoding_map:'dict[str, str]' = {
-    '':          'utf-8',
-    'ASCII':     'ascii',
-    'UNICODE':   'utf-8',
-    'UTF-8':     'utf-8',
-    '8859/1':    'iso-8859-1',
-    'ISO IR6':   'ascii',
-    'ISO IR100': 'iso-8859-1',
-    'ISO IR101': 'iso-8859-2',
-    'ISO IR144': 'iso-8859-5',
-    'ISO IR127': 'iso-8859-6',
-    'ISO IR126': 'iso-8859-7',
+    'ASCII':         'ascii',
+    'UNICODE':       'utf-8',
+    'UTF-8':         'utf-8',
+    'UNICODE UTF-8': 'utf-8',
+    '8859/1':        'iso-8859-1',
+    'ISO IR6':       'ascii',
+    'ISO IR100':     'iso-8859-1',
+    'ISO IR101':     'iso-8859-2',
+    'ISO IR144':     'iso-8859-5',
+    'ISO IR127':     'iso-8859-6',
+    'ISO IR126':     'iso-8859-7',
 }
 
 # ################################################################################################################################

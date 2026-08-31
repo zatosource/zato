@@ -17,7 +17,7 @@ from zato.fhir import validate
 from zato.hl7v2 import parse_hl7
 
 # Local
-from conftest import Real_World_Dir, Samples_Dir, Test_Conversions_Dir, list_messages, load_message
+from conftest import Reports_Dir, Samples_Dir, Test_Conversions_Dir, list_messages, load_message
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,7 +36,7 @@ def _all_fixture_paths():
 
     out.extend(list_messages(Test_Conversions_Dir))
     out.extend(list_messages(Samples_Dir))
-    out.extend(list_messages(Real_World_Dir))
+    out.extend(list_messages(Reports_Dir))
 
     return out
 
@@ -150,11 +150,11 @@ def test_fixture_tree_is_complete():
     """
     conversions = list_messages(Test_Conversions_Dir)
     samples = list_messages(Samples_Dir)
-    real_world = list_messages(Real_World_Dir)
+    reports = list_messages(Reports_Dir)
 
     assert len(conversions) >= 6
     assert len(samples) >= 100
-    assert len(real_world) >= 30
+    assert len(reports) >= 30
 
 # ################################################################################################################################
 # ################################################################################################################################

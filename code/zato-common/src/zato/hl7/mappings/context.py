@@ -17,15 +17,18 @@ from zato.fhir.bundle import BatchBuilder, TransactionBuilder
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, stranydict, strlist, strstrdict
+    from zato.common.typing_ import any_, anylist, intstrdict, stranydict, strintdict, strlist, strstrdict
     from zato.hl7.mappings.config import FHIRMappingConfig
     FHIRMappingConfig = FHIRMappingConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# All the deterministic resource UUIDs derive from this namespace
+# All the deterministic resource UUIDs derive from this namespace.
 _uuid_namespace = uuid5(NAMESPACE_URL, 'urn:zato:hl7v2:to-fhir')
+
+# Only resources that are never mutated after being added may deduplicate by content.
+_immutable_resource_types = frozenset({'Practitioner', 'Location', 'Organization', 'Device'})
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,11 +44,15 @@ class ConversionContext:
         # Every resource that will enter the bundle, in the order it was added
         self.resources:'anylist' = []
 
-        # Maps each added resource's id() to its urn:uuid full URL
-        self._full_urls:'dict[int, str]' = {}
+        # Maps each added resource's id() to its urn:uuid full URL.
+        self._full_urls:'intstrdict' = {}
 
-        # Maps content keys to full URLs so identical resources collapse into one
+        # Maps content keys to full URLs so identical resources collapse into one.
         self._dedup:'strstrdict' = {}
+
+        # Counts how many times each content key was added, so non-deduplicated
+        # resources with identical initial content still get distinct full URLs.
+        self._content_counts:'strintdict' = {}
 
         # Everything the conversion could not map, one entry per field or segment
         self.warnings:'strlist' = []
@@ -56,47 +63,42 @@ class ConversionContext:
 
 # ################################################################################################################################
 
-    def warn(self, text:'str') -> 'None':
-        """ Records one thing the conversion could not map.
-        """
-        self.warnings.append(text)
-
-# ################################################################################################################################
-
     def add(self, resource:'any_') -> 'stranydict':
         """ Adds a resource to the bundle and returns a reference to it.
-        Resources whose content is identical to one already added are deduplicated -
-        the reference points at the resource added first.
+        Immutable resources whose content is identical to one already added are deduplicated -
+        the reference points at the resource added first. Everything else may still be mutated
+        after this call, so each occurrence stays a resource of its own, with a distinct URL.
         """
 
         # The content key is the resource serialized in a stable order ..
         content = resource.to_dict()
         resource_type = content['resourceType']
-        content_key = resource_type + '|' + json.dumps(content, sort_keys=True)
+        content_json = json.dumps(content, sort_keys=True)
+        content_key = resource_type + '|' + content_json
 
-        # .. identical content means this entity is already in the bundle ..
-        if content_key in self._dedup:
+        # .. identical content of an immutable resource means this entity is already in the bundle ..
+        if resource_type in _immutable_resource_types:
+            if existing_url := self._dedup.get(content_key):
 
-            out = {'reference': self._dedup[content_key]}
-            return out
+                out = {'reference': existing_url}
+                return out
 
-        # .. otherwise the key derives the resource's stable bundle-internal URL ..
-        content_uuid = uuid5(_uuid_namespace, content_key)
+        # .. otherwise the key and its occurrence counter derive the resource's stable bundle-internal URL,
+        # .. the counter keeping initially identical mutable resources apart.
+        occurrence = self._content_counts.get(content_key, 0)
+        self._content_counts[content_key] = occurrence + 1
+
+        occurrence_key = f'{content_key}|{occurrence}'
+        content_uuid = uuid5(_uuid_namespace, occurrence_key)
         full_url = f'urn:uuid:{content_uuid}'
 
+        resource_id = id(resource)
+
         self.resources.append(resource)
-        self._full_urls[id(resource)] = full_url
-        self._dedup[content_key] = full_url
+        self._full_urls[resource_id] = full_url
 
-        out = {'reference': full_url}
-        return out
-
-# ################################################################################################################################
-
-    def reference(self, resource:'any_') -> 'stranydict':
-        """ Returns a reference to a resource that was already added.
-        """
-        full_url = self._full_urls[id(resource)]
+        if resource_type in _immutable_resource_types:
+            self._dedup[content_key] = full_url
 
         out = {'reference': full_url}
         return out
@@ -115,14 +117,15 @@ class ConversionContext:
             builder = TransactionBuilder()
 
         for resource in self.resources:
-            full_url = self._full_urls[id(resource)]
+            resource_id = id(resource)
+            full_url = self._full_urls[resource_id]
             _ = builder.create(resource, full_url=full_url)
 
         out = builder.build()
 
-        # .. while a collection bundle carries the resources as-is, without any requests.
-        if bundle_type == 'collection':
-            out.type_ = 'collection'
+        # .. while collection and message bundles carry the resources as-is, without any requests.
+        if bundle_type in ('collection', 'message'):
+            out.type_ = bundle_type
 
             for entry in out.entry:
                 entry.request = None

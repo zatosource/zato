@@ -10,12 +10,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.hl7.mappings import get_conversion_warnings
 
 # Local
-from conftest import convert, one_resource, resources_of_type
+from conftest import convert, one_resource, organization_named, resources_of_type
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# A minimal envelope every segment test builds on
+# A minimal envelope every segment test builds on.
 MSH = 'MSH|^~\\&|SENDAPP|SENDFAC|RECVAPP|RECVFAC|20240517143055||ADT^A01|MSG00001|P|2.5'
 PID = 'PID|1||12345^^^MYHOSP^MR||Smith^John^Q|||M'
 PV1 = 'PV1|1|I|WARD1^101^A^GENHOSP|||||||MED|||||||||VN123^^^MYHOSP'
@@ -23,17 +23,74 @@ PV1 = 'PV1|1|I|WARD1^101^A^GENHOSP|||||||MED|||||||||VN123^^^MYHOSP'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestMSH:
+class TestROL:
+    """ ROL segments become Encounter participants.
+    """
 
-    def test_message_header(self):
+    def test_rol_before_pv1(self) -> 'None':
+        # IHE PAM places ROL between PID and PV1 - it still becomes an Encounter participant.
+        rol = 'ROL||AD|FHCP|7777^Morris^Philip'
+
+        bundle = convert(MSH, PID, rol, PV1)
+
+        encounter = one_resource(bundle, 'Encounter')
+        practitioner = one_resource(bundle, 'Practitioner')
+
+        practitioner_names = practitioner['name']
+        practitioner_name = practitioner_names[0]
+
+        assert practitioner_name['family'] == 'Morris'
+
+        participants = encounter['participant']
+        participant = participants[0]
+
+        participant_types = participant['type']
+        participant_type = participant_types[0]
+        type_codings = participant_type['coding']
+        type_coding = type_codings[0]
+
+        assert type_coding['code'] == 'FHCP'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestMSH:
+    """ MSH segments become MessageHeader resources.
+    """
+
+    def test_message_header(self) -> 'None':
         bundle = convert(MSH, PID)
         header = one_resource(bundle, 'MessageHeader')
 
         assert header['eventCoding'] == {'system': 'http://terminology.hl7.org/CodeSystem/v2-0003', 'code': 'A01'}
         assert header['source'] == {'name': 'SENDAPP', 'endpoint': 'urn:zato:hl7v2:authority:SENDAPP'}
-        assert header['destination'] == [{'name': 'RECVAPP', 'endpoint': 'urn:zato:hl7v2:authority:RECVAPP'}]
 
-    def test_header_points_at_patient(self):
+        destinations = header['destination']
+        destination = destinations[0]
+
+        assert destination['name'] == 'RECVAPP'
+        assert destination['endpoint'] == 'urn:zato:hl7v2:authority:RECVAPP'
+
+        # The facilities became the sender and receiver Organizations.
+        sender = organization_named(bundle, 'SENDFAC')
+        receiver = organization_named(bundle, 'RECVFAC')
+
+        assert sender['name'] == 'SENDFAC'
+        assert receiver['name'] == 'RECVFAC'
+
+        sender_reference = header['sender']
+        sender_url = sender_reference['reference']
+
+        assert sender_url.startswith('urn:uuid:')
+
+        receiver_reference = destination['receiver']
+        receiver_url = receiver_reference['reference']
+
+        assert receiver_url.startswith('urn:uuid:')
+
+# ################################################################################################################################
+
+    def test_header_points_at_patient(self) -> 'None':
         bundle = convert(MSH, PID)
         bundle_dict = bundle.to_dict()
 
@@ -47,19 +104,27 @@ class TestMSH:
 
         assert header['focus'] == [{'reference': patient_url}]
 
-    def test_bundle_control_id_and_timestamp(self):
+# ################################################################################################################################
+
+    def test_bundle_control_id_and_timestamp(self) -> 'None':
         bundle = convert(MSH, PID)
         bundle_dict = bundle.to_dict()
 
-        assert bundle_dict['identifier'] == {'value': 'MSG00001'}
+        assert bundle_dict['identifier'] == {'system': 'urn:zato:hl7v2:message-control-id', 'value': 'MSG00001'}
         assert bundle_dict['timestamp'] == '2024-05-17T14:30:55+00:00'
+
+        # MSH-11 rides along as the processing-mode tag.
+        meta = bundle_dict['meta']
+        assert meta['tag'] == [{'system': 'http://terminology.hl7.org/CodeSystem/v2-0103', 'code': 'P'}]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestPID:
+    """ PID segments become Patient resources.
+    """
 
-    def test_patient_core_fields(self):
+    def test_patient_core_fields(self) -> 'None':
         pid = 'PID|1||12345^^^MYHOSP^MR||Smith^John^Q||19800115|M|||123 Main St^^Springfield^IL^62701^USA^H' + \
             '||(555)555-1234^PRN^PH|||M|||987-65-4320'
 
@@ -97,17 +162,21 @@ class TestPID:
 
         assert marital_coding['code'] == 'M'
 
-    def test_deceased_patient(self):
+# ################################################################################################################################
+
+    def test_deceased_patient(self) -> 'None':
         pid = 'PID|1||12345||Smith^John|||M|||||||||||||||||||||20240101120000|Y'
 
         bundle = convert(MSH, pid)
         patient = one_resource(bundle, 'Patient')
 
-        # The timestamp wins over the yes/no indicator
+        # The timestamp wins over the yes/no indicator.
         assert patient['deceasedDateTime'] == '2024-01-01T12:00:00+00:00'
         assert 'deceasedBoolean' not in patient
 
-    def test_multiple_birth_order(self):
+# ################################################################################################################################
+
+    def test_multiple_birth_order(self) -> 'None':
         pid = 'PID|1||12345||Smith^Baby|||F||||||||||||||||Y|2'
 
         bundle = convert(MSH, pid)
@@ -115,23 +184,30 @@ class TestPID:
 
         assert patient['multipleBirthInteger'] == 2
 
-    def test_unknown_gender_code_warns(self):
+# ################################################################################################################################
+
+    def test_unknown_gender_code_is_preserved(self) -> 'None':
         pid = 'PID|1||12345||Smith^John|||X9'
 
         bundle = convert(MSH, pid)
         patient = one_resource(bundle, 'Patient')
 
-        warnings = get_conversion_warnings(bundle)
-
+        # The unknown code never becomes a gender but survives as an extension.
         assert 'gender' not in patient
-        assert 'PID-8 code `X9` not mapped' in warnings
+
+        extensions = patient['extension']
+        preserved = extensions[0]
+
+        assert preserved == {'url': 'urn:zato:hl7v2:extension/unmapped/PID-8', 'valueString': 'X9'}
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestNK1:
+    """ NK1 segments become RelatedPerson resources.
+    """
 
-    def test_related_person(self):
+    def test_related_person(self) -> 'None':
         nk1 = 'NK1|1|Smith^Jane|SPO^Spouse^HL70063|456 Oak St^^Springfield^IL^62701|(555)555-9999'
 
         bundle = convert(MSH, PID, nk1)
@@ -156,7 +232,7 @@ class TestNK1:
 
         assert telecom['value'] == '(555)555-9999'
 
-        # The related person points back at the patient
+        # The related person points back at the patient.
         patient_reference = related['patient']
         reference_url = patient_reference['reference']
 
@@ -166,12 +242,14 @@ class TestNK1:
 # ################################################################################################################################
 
 class TestPV1:
+    """ PV1 segments become Encounter resources.
+    """
 
-    def test_encounter_core_fields(self):
+    def test_encounter_core_fields(self) -> 'None':
         bundle = convert(MSH, PID, PV1)
         encounter = one_resource(bundle, 'Encounter')
 
-        # Patient class I is inpatient, mapping to IMP and in-progress
+        # Patient class I is inpatient, mapping to IMP and in-progress.
         encounter_class = encounter['class']
 
         assert encounter_class['code'] == 'IMP'
@@ -187,7 +265,9 @@ class TestPV1:
 
         assert subject_url.startswith('urn:uuid:')
 
-    def test_location_resource(self):
+# ################################################################################################################################
+
+    def test_location_resource(self) -> 'None':
         bundle = convert(MSH, PID, PV1)
 
         location = one_resource(bundle, 'Location')
@@ -202,7 +282,32 @@ class TestPV1:
 
         assert location_url.startswith('urn:uuid:')
 
-    def test_attending_doctor_becomes_practitioner(self):
+# ################################################################################################################################
+
+    def test_location_facility_universal_id(self) -> 'None':
+        # A spelled-out facility name can arrive in the HD universal ID subcomponent.
+        pv1 = 'PV1|1|O|^^^0105&North Clinic'
+
+        bundle = convert(MSH, PID, pv1)
+        location = one_resource(bundle, 'Location')
+
+        assert location['name'] == '0105-North Clinic'
+
+# ################################################################################################################################
+
+    def test_location_description(self) -> 'None':
+        # PL-9 spells out what the location is.
+        pv1 = 'PV1|1|O|^12^^^^^^^West Wing Clinic'
+
+        bundle = convert(MSH, PID, pv1)
+        location = one_resource(bundle, 'Location')
+
+        assert location['name'] == '12'
+        assert location['description'] == 'West Wing Clinic'
+
+# ################################################################################################################################
+
+    def test_attending_doctor_becomes_practitioner(self) -> 'None':
         pv1 = 'PV1|1|O|||||1234^Welby^Marcus^^^Dr'
 
         bundle = convert(MSH, PID, pv1)
@@ -229,7 +334,9 @@ class TestPV1:
 
         assert type_coding['code'] == 'ATND'
 
-    def test_discharge_makes_encounter_finished(self):
+# ################################################################################################################################
+
+    def test_discharge_makes_encounter_finished(self) -> 'None':
         pv1 = 'PV1|1|I|||||||||||||||||VN1|||||||||||||||||||||||||20240501100000|20240503150000'
 
         bundle = convert(MSH, PID, pv1)
@@ -238,7 +345,9 @@ class TestPV1:
         assert encounter['status'] == 'finished'
         assert encounter['period'] == {'start': '2024-05-01T10:00:00+00:00', 'end': '2024-05-03T15:00:00+00:00'}
 
-    def test_pv2_admit_reason(self):
+# ################################################################################################################################
+
+    def test_pv2_admit_reason(self) -> 'None':
         pv2 = 'PV2|||Routine checkup'
 
         bundle = convert(MSH, PID, PV1, pv2)
@@ -253,8 +362,10 @@ class TestPV1:
 # ################################################################################################################################
 
 class TestOBX:
+    """ OBX segments become Observation resources.
+    """
 
-    def test_numeric_observation(self):
+    def test_numeric_observation(self) -> 'None':
         obx = 'OBX|1|NM|8302-2^Body Height^LN||175|cm^^UCUM|150-200|N|||F|||20240517'
 
         bundle = convert(MSH, PID, obx)
@@ -284,7 +395,9 @@ class TestOBX:
         assert interpretation_coding['code'] == 'N'
         assert observation['effectiveDateTime'] == '2024-05-17'
 
-    def test_text_observation(self):
+# ################################################################################################################################
+
+    def test_text_observation(self) -> 'None':
         obx = 'OBX|1|ST|GDT^Description||All results in good shape||||||F'
 
         bundle = convert(MSH, PID, obx)
@@ -292,7 +405,9 @@ class TestOBX:
 
         assert observation['valueString'] == 'All results in good shape'
 
-    def test_coded_observation(self):
+# ################################################################################################################################
+
+    def test_coded_observation(self) -> 'None':
         obx = 'OBX|1|CWE|11331-6^Fitness status^LN||excellent^Excellent^L||||||F'
 
         bundle = convert(MSH, PID, obx)
@@ -304,7 +419,27 @@ class TestOBX:
 
         assert concept_coding['code'] == 'excellent'
 
-    def test_structured_numeric_observation(self):
+# ################################################################################################################################
+
+    def test_repeating_coded_observation(self) -> 'None':
+        # Every repetition of the coded value contributes its coding to the one concept.
+        obx = 'OBX|1|CE|CHOICES^Multiple choices^L||first^First^L~second^Second^L||||||F'
+
+        bundle = convert(MSH, PID, obx)
+        observation = one_resource(bundle, 'Observation')
+
+        concept = observation['valueCodeableConcept']
+        concept_codings = concept['coding']
+
+        first_coding = concept_codings[0]
+        second_coding = concept_codings[1]
+
+        assert first_coding == {'code': 'first', 'display': 'First'}
+        assert second_coding == {'code': 'second', 'display': 'Second'}
+
+# ################################################################################################################################
+
+    def test_structured_numeric_observation(self) -> 'None':
         obx = 'OBX|1|SN|TITER^Titer||^1^:^128||||||F'
 
         bundle = convert(MSH, PID, obx)
@@ -312,7 +447,9 @@ class TestOBX:
 
         assert observation['valueRatio'] == {'numerator': {'value': 1.0}, 'denominator': {'value': 128.0}}
 
-    def test_datetime_observation(self):
+# ################################################################################################################################
+
+    def test_datetime_observation(self) -> 'None':
         obx = 'OBX|1|DTM|COLLECT^Collection time||20240517143000||||||F'
 
         bundle = convert(MSH, PID, obx)
@@ -320,7 +457,9 @@ class TestOBX:
 
         assert observation['valueDateTime'] == '2024-05-17T14:30:00+00:00'
 
-    def test_time_observation(self):
+# ################################################################################################################################
+
+    def test_time_observation(self) -> 'None':
         obx = 'OBX|1|TM|WAKE^Wake time||063000||||||F'
 
         bundle = convert(MSH, PID, obx)
@@ -328,7 +467,9 @@ class TestOBX:
 
         assert observation['valueTime'] == '06:30:00'
 
-    def test_status_defaults_to_unknown(self):
+# ################################################################################################################################
+
+    def test_status_defaults_to_unknown(self) -> 'None':
         obx = 'OBX|1|ST|GDT^Description||Feeling great'
 
         bundle = convert(MSH, PID, obx)
@@ -337,11 +478,29 @@ class TestOBX:
         assert observation['status'] == 'unknown'
 
 # ################################################################################################################################
+
+    def test_encapsulated_data_with_spelled_out_media_type(self) -> 'None':
+        # ED-2 carries the literal media type word instead of the HL7 table code.
+        obx = 'OBX|1|ED|DOC^Document||^application^pdf^Base64^JVBERi0xLjQK||||||F'
+
+        bundle = convert(MSH, PID, obx)
+        observation = one_resource(bundle, 'Observation')
+
+        extensions = observation['extension']
+        attachment_extension = extensions[0]
+        attachment = attachment_extension['valueAttachment']
+
+        assert attachment['contentType'] == 'application/pdf'
+        assert attachment['data'] == 'JVBERi0xLjQK'
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestAL1:
+    """ AL1 segments become AllergyIntolerance resources.
+    """
 
-    def test_allergy(self):
+    def test_allergy(self) -> 'None':
         al1 = 'AL1|1|LA|1543^Pollen^RXNORM|MI|Sneezing'
 
         bundle = convert(MSH, PID, al1)
@@ -353,10 +512,10 @@ class TestAL1:
 
         assert code_coding['code'] == '1543'
 
-        # LA is a pollen allergy, an environmental category
+        # LA is a pollen allergy, an environmental category.
         assert allergy['category'] == ['environment']
 
-        # MI is mild, mapping to both criticality and reaction severity
+        # MI is mild, mapping to both criticality and reaction severity.
         assert allergy['criticality'] == 'low'
         assert allergy['reaction'] == [{'manifestation': [{'text': 'Sneezing'}], 'severity': 'mild'}]
 
@@ -369,8 +528,10 @@ class TestAL1:
 # ################################################################################################################################
 
 class TestDG1:
+    """ DG1 segments become Condition resources.
+    """
 
-    def test_condition_and_encounter_diagnosis(self):
+    def test_condition_and_encounter_diagnosis(self) -> 'None':
         dg1 = 'DG1|1||Z00.0^Routine health check^I10||20240101|A'
 
         bundle = convert(MSH, PID, PV1, dg1)
@@ -383,7 +544,7 @@ class TestDG1:
         assert code_coding['code'] == 'Z00.0'
         assert condition['onsetDateTime'] == '2024-01-01'
 
-        # The encounter records the diagnosis with its role
+        # The encounter records the diagnosis with its role.
         encounter = one_resource(bundle, 'Encounter')
 
         diagnoses = encounter['diagnosis']
@@ -404,9 +565,11 @@ class TestDG1:
 # ################################################################################################################################
 
 class TestPR1:
+    """ PR1 segments become Procedure resources.
+    """
 
-    def test_procedure(self):
-        pr1 = 'PR1|1||410620009^Wellness visit^SCT||20240502093000||||||5678^Carer^Jane'
+    def test_procedure(self) -> 'None':
+        pr1 = 'PR1|1||410620009^Wellness visit^SCT||20240502093000||||||5678^Carter^Jane'
 
         bundle = convert(MSH, PID, PV1, pr1)
         procedure = one_resource(bundle, 'Procedure')
@@ -431,14 +594,16 @@ class TestPR1:
 # ################################################################################################################################
 
 class TestPD1:
+    """ PD1 segments enrich the Patient with a general practitioner.
+    """
 
-    def test_general_practitioner(self):
+    def test_general_practitioner(self) -> 'None':
         pd1 = 'PD1|||Family Practice Clinic|1234^Welby^Marcus'
 
         bundle = convert(MSH, PID, pd1)
         patient = one_resource(bundle, 'Patient')
 
-        organization = one_resource(bundle, 'Organization')
+        organization = organization_named(bundle, 'Family Practice Clinic')
         assert organization['name'] == 'Family Practice Clinic'
 
         practitioner = one_resource(bundle, 'Practitioner')
@@ -455,9 +620,11 @@ class TestPD1:
 # ################################################################################################################################
 
 class TestDeduplication:
+    """ Identical resources are stored once and shared by reference.
+    """
 
-    def test_same_practitioner_dedupes(self):
-        # The same doctor is the attending, the referring and the admitting one
+    def test_same_practitioner_dedupes(self) -> 'None':
+        # The same doctor is the attending, the referring and the admitting one.
         pv1 = 'PV1|1|O|||||1234^Welby^Marcus|1234^Welby^Marcus|||||||||1234^Welby^Marcus'
 
         bundle = convert(MSH, PID, pv1)
@@ -465,7 +632,7 @@ class TestDeduplication:
         practitioners = resources_of_type(bundle, 'Practitioner')
         assert len(practitioners) == 1
 
-        # All three participants point at the same resource
+        # All three participants point at the same resource.
         encounter = one_resource(bundle, 'Encounter')
         participants = encounter['participant']
 
@@ -482,17 +649,28 @@ class TestDeduplication:
 # ################################################################################################################################
 
 class TestUnmappedFields:
+    """ Populated fields the mapper does not consume become extensions.
+    """
 
-    def test_populated_unhandled_field_warns(self):
-        # PID-22, ethnic group, is not a field the mapper consumes
+    def test_populated_unhandled_field_is_preserved(self) -> 'None':
+        # PID-22, ethnic group, is not a field the mapper consumes.
         pid = 'PID|1||12345||Smith^John|||M||||||||||||||2186-5'
 
         bundle = convert(MSH, pid)
+        patient = one_resource(bundle, 'Patient')
+
+        # The value survives as an extension instead of raising a warning.
+        extensions = patient['extension']
+        preserved = extensions[0]
+
+        assert preserved == {'url': 'urn:zato:hl7v2:extension/unmapped/PID-22', 'valueString': '2186-5'}
+
         warnings = get_conversion_warnings(bundle)
+        assert warnings == []
 
-        assert 'PID-22 not mapped' in warnings
+# ################################################################################################################################
 
-    def test_clean_message_has_no_warnings(self):
+    def test_clean_message_has_no_warnings(self) -> 'None':
         bundle = convert(MSH, PID)
         warnings = get_conversion_warnings(bundle)
 

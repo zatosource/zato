@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
 from __future__ import annotations
 
+# stdlib
 import os
 import re
 from dataclasses import dataclass
@@ -10,26 +17,37 @@ from pathlib import Path
 # ################################################################################################################################
 # ################################################################################################################################
 
-_test_data_dir = Path(os.environ['Zato_Health_Messages_Root']) / 'hl7v2' / 'live'
+if 0:
+    from zato.common.typing_ import strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Headers come in two forms - "## 1. ORM^O01 - wellness checkup order" and a bare "## 1".
+_messages_root = os.environ['Zato_Health_Messages_Root']
+_test_data_dir = Path(_messages_root) / 'hl7v2' / 'live'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Markdown headers come in three forms - "## 1. ORM^O01 - wellness checkup order",
+# "## 1. ORM^O01 with no dash in the title" and a bare "## 1".
 # The message type part may contain spaces (e.g. "ORU R01"), so it is matched
 # non-greedily up to the first dash.
-_header_pattern = re.compile(r'^## (\d+)\.\s+(.+?)\s*-\s*(.+)$')
-_bare_header_pattern = re.compile(r'^## (\d+)\s*$')
+_header_pattern         = re.compile(r'^## (\d+)\.\s+(.+?)\s*-\s*(.+)$')
+_no_dash_header_pattern = re.compile(r'^## (\d+)\.\s+(.+)$')
+_bare_header_pattern    = re.compile(r'^## (\d+)\s*$')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=False)
 class LiveMessage:
+    """ One numbered HL7 message extracted from a markdown file.
+    """
     number: 'int'
     message_type: 'str'
     description: 'str'
-    raw_er7: 'str'
+    er7: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,8 +58,7 @@ live_message_list = list[LiveMessage]
 # ################################################################################################################################
 
 def extract_messages(md_path:'Path') -> 'live_message_list':
-    """ Parse a .md file and return a list of LiveMessage instances,
-    one per numbered example found in the file.
+    """ Parses a markdown file and returns a list of LiveMessage instances, one per numbered header found.
     """
 
     # Our response to produce
@@ -51,56 +68,75 @@ def extract_messages(md_path:'Path') -> 'live_message_list':
     lines = text.split('\n')
 
     line_count = len(lines)
-    line_idx = 0
+    line_index = 0
 
-    while line_idx < line_count:
-        line = lines[line_idx]
+    while line_index < line_count:
+        line = lines[line_index]
         match = _header_pattern.match(line)
+        no_dash_match = _no_dash_header_pattern.match(line)
         bare_match = _bare_header_pattern.match(line)
 
         if match:
 
             # We found a header like "## 1. ORM^O01 - wellness checkup order" ..
+            number_text = match.group(1)
+            description_text = match.group(3)
+
             message = LiveMessage()
-            message.number = int(match.group(1))
+            message.number = int(number_text)
             message.message_type = match.group(2)
-            message.description = match.group(3).strip()
+            message.description = description_text.strip()
+
+        elif no_dash_match:
+
+            # .. or one with no dash, like "## 1. ORM^O01 with no dash in the title" ..
+            number_text = no_dash_match.group(1)
+            message_type_text = no_dash_match.group(2)
+
+            message = LiveMessage()
+            message.number = int(number_text)
+            message.message_type = message_type_text.strip()
+            message.description = ''
 
         elif bare_match:
 
             # .. or a bare header like "## 1" with no message type or description ..
+            number_text = bare_match.group(1)
+
             message = LiveMessage()
-            message.number = int(bare_match.group(1))
+            message.number = int(number_text)
             message.message_type = ''
             message.description = ''
 
         else:
-            line_idx += 1
+            line_index += 1
             continue
 
         # .. now find the next fenced code block ..
-        line_idx += 1
+        line_index += 1
 
-        while line_idx < line_count:
-            if lines[line_idx].startswith('```'):
-                line_idx += 1
+        while line_index < line_count:
+            if lines[line_index].startswith('```'):
+                line_index += 1
                 break
-            line_idx += 1
+            line_index += 1
 
         # .. collect the ER7 lines until the closing fence ..
-        er7_lines:'list[str]' = []
+        er7_lines:'strlist' = []
 
-        while line_idx < line_count:
-            if lines[line_idx].startswith('```'):
+        while line_index < line_count:
+            if lines[line_index].startswith('```'):
                 break
-            er7_lines.append(lines[line_idx])
-            line_idx += 1
+            er7_lines.append(lines[line_index])
+            line_index += 1
 
-        raw = '\n'.join(er7_lines).strip().replace('\n', '\r')
-        message.raw_er7 = raw
+        # .. and join them into a single wire-format message with carriage returns.
+        joined = '\n'.join(er7_lines)
+        stripped = joined.strip()
+        message.er7 = stripped.replace('\n', '\r')
 
         out.append(message)
-        line_idx += 1
+        line_index += 1
 
     return out
 
@@ -108,27 +144,29 @@ def extract_messages(md_path:'Path') -> 'live_message_list':
 # ################################################################################################################################
 
 def load_message(md_path:'Path', number:'int') -> 'str':
-    """ Extract a single example by its number from a .md file.
+    """ Extracts a single message by its number from a markdown file.
     """
-
     messages = extract_messages(md_path)
 
     for message in messages:
+
+        # This is the message we are looking for.
         if message.number == number:
+            break
 
-            out = message.raw_er7
-            return out
+    else:
+        raise Exception(f'Message {number} not found in {md_path}.')
 
-    raise ValueError(f'Example {number} not found in {md_path}')
+    out = message.er7
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def md_path_for(land:'str', filename:'str') -> 'Path':
-    """ Return the full path to a .md file under the live test data directory.
+def md_path_for(country:'str', filename:'str') -> 'Path':
+    """ Returns the full path to a markdown file under the test data directory.
     """
-
-    out = _test_data_dir / land / filename
+    out = _test_data_dir / country / filename
     return out
 
 # ################################################################################################################################

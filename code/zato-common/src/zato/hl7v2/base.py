@@ -1419,9 +1419,18 @@ class HL7Message:
         """ Convert this message to a typed FHIR bundle.
         The config argument names an .ini file with site-specific overrides, or is a path to one.
         """
+        message = self
+
+        # A message built from scratch has no raw parse tree yet,
+        # so it takes a round trip through the parser first.
+        if message._raw_message is None:
+            v2_9 = _get_v2_9_module()
+            serialized = message.serialize()
+            message = v2_9.parse_hl7(serialized, validate=False)
+
         mappings = _get_mappings_module()
 
-        out = mappings.convert_to_fhir(self, config)
+        out = mappings.convert_to_fhir(message, config)
         return out
 
 # ################################################################################################################################

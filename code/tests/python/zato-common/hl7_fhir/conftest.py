@@ -10,20 +10,22 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import sys
 
-# Make this directory importable so that test modules can import helpers from conftest
-sys.path.insert(0, os.path.dirname(__file__))
+# Make this directory importable so that test modules can import helpers from conftest.
+_conftest_dir = os.path.dirname(__file__)
+sys.path.insert(0, _conftest_dir)
 
 # pytest
 import pytest
 
 # Zato
 from zato.hl7.mappings.config import load_mapping_config
+from zato.hl7v2 import parse_hl7
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anylist, strnone
     from zato.hl7.mappings.config import FHIRMappingConfig
     any_ = any_
     FHIRMappingConfig = FHIRMappingConfig
@@ -33,20 +35,20 @@ if 0:
 
 _here = os.path.dirname(__file__)
 
-# Where all the downloaded proof material lives
+# The base directory for all test fixtures.
 Fixtures_Dir = os.path.join(_here, 'fixtures')
 
-# The IG's ConceptMap and CodeSystem JSON files
+# The IG's ConceptMap and CodeSystem JSON files.
 V2_Mappings_Dir = os.path.join(Fixtures_Dir, 'v2mappings')
 
-# The IG's agreed message-to-Bundle test conversion pairs
+# The IG's agreed message-to-Bundle test conversion pairs.
 Test_Conversions_Dir = os.path.join(Fixtures_Dir, 'test_conversions')
 
-# Sample HL7 v2 messages from the Microsoft FHIR-Converter project
+# Published sample HL7 v2 messages.
 Samples_Dir = os.path.join(Fixtures_Dir, 'messages', 'samples')
 
-# Messages taken from real-world integration reports
-Real_World_Dir = os.path.join(Fixtures_Dir, 'messages', 'real_world')
+# Messages taken from integration reports.
+Reports_Dir = os.path.join(Fixtures_Dir, 'messages', 'reports')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,10 +59,10 @@ def load_message(file_path:'str') -> 'str':
     with open(file_path, newline='') as file_object:
         out = file_object.read()
 
-    # Some fixture files carry a byte order mark, which is not part of the message
+    # Some fixture files carry a byte order mark, which is not part of the message.
     out = out.lstrip('\ufeff')
 
-    # Some fixtures use LF or CRLF between segments, the parser expects CR
+    # Some fixtures use LF or CRLF between segments, the parser expects CR.
     out = out.replace('\r\n', '\r')
     out = out.replace('\n', '\r')
 
@@ -75,7 +77,8 @@ def list_messages(dir_path:'str') -> 'anylist':
 
     for file_name in sorted(os.listdir(dir_path)):
         if file_name.endswith('.hl7'):
-            out.append(os.path.join(dir_path, file_name))
+            full_path = os.path.join(dir_path, file_name)
+            out.append(full_path)
 
     return out
 
@@ -94,12 +97,11 @@ def rep(text:'str') -> 'anylist':
 
 # ################################################################################################################################
 
-def convert(*segments:'str', config:'str | None'=None) -> 'any_':
+def convert(*segments:'str', config:'strnone'=None) -> 'any_':
     """ Parses ER7 segments into a message and converts it to a typed FHIR bundle.
     """
-    from zato.hl7v2 import parse_hl7
-
-    raw = '\r'.join(segments) + '\r'
+    joined = '\r'.join(segments)
+    raw = joined + '\r'
     msg = parse_hl7(raw, validate=False)
 
     out = msg.to_fhir(config=config)
@@ -130,6 +132,22 @@ def one_resource(bundle:'any_', resource_type:'str') -> 'any_':
     assert len(resources) == 1, f'Expected one {resource_type}, found {len(resources)}'
 
     out = resources[0]
+    return out
+
+# ################################################################################################################################
+
+def organization_named(bundle:'any_', name:'str') -> 'any_':
+    """ Returns the only Organization with a given name from a bundle, asserting there is exactly one.
+    """
+    matches = []
+
+    for organization in resources_of_type(bundle, 'Organization'):
+        if organization['name'] == name:
+            matches.append(organization)
+
+    assert len(matches) == 1, f'Expected one Organization named {name}, found {len(matches)}'
+
+    out = matches[0]
     return out
 
 # ################################################################################################################################

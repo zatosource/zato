@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 import pytest
 
 # Zato
-from zato.common.test.fhir_ import FHIRTestServer
+from zato.common.test.fhir import FHIRTestServer
 
 # Local
 from conftest import convert

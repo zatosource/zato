@@ -14,25 +14,25 @@ import os
 import pytest
 
 # Zato
+from zato.common.typing_ import cast_
 from zato.hl7v2 import parse_hl7
 
 # Local
 from conftest import Samples_Dir, Test_Conversions_Dir, list_messages, load_message, one_resource, resources_of_type
-from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anylist, strintdict, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _count_types(bundle_dict:'dict') -> 'dict':
+def _count_types(bundle_dict:'stranydict') -> 'strintdict':
     """ Counts how many resources of each type a bundle dict carries.
     """
-    out = {}
+    out:'strintdict' = {}
 
     for entry in bundle_dict['entry']:
         resource = entry['resource']
@@ -47,7 +47,7 @@ def _count_types(bundle_dict:'dict') -> 'dict':
 
 # ################################################################################################################################
 
-def _convert_fixture(file_path:'str'):
+def _convert_fixture(file_path:'str') -> 'any_':
     """ Parses one fixture message and converts it to a bundle.
     """
     raw = load_message(file_path)
@@ -63,14 +63,14 @@ class TestIGTestConversion:
     """ The IG's agreed ADT_A01 message-to-Bundle pair, compared structurally.
     """
 
-    def test_resource_types(self):
+    def test_resource_types(self) -> 'None':
         fixture_path = os.path.join(Test_Conversions_Dir, 'ADT_A01.hl7')
         bundle = _convert_fixture(fixture_path)
 
         bundle_dict = bundle.to_dict()
         counts = _count_types(bundle_dict)
 
-        # The core resources the agreed bundle carries come out of the conversion too
+        # The core resources the agreed bundle carries come out of the conversion too.
         assert counts['MessageHeader'] == 1
         assert counts['Patient'] == 1
         assert counts['Encounter'] == 1
@@ -81,13 +81,15 @@ class TestIGTestConversion:
 
         assert bundle_dict['type'] == 'transaction'
 
-    def test_patient_matches_agreed_bundle(self):
+# ################################################################################################################################
+
+    def test_patient_matches_agreed_bundle(self) -> 'None':
         fixture_path = os.path.join(Test_Conversions_Dir, 'ADT_A01.hl7')
         bundle = _convert_fixture(fixture_path)
 
         our_patient = one_resource(bundle, 'Patient')
 
-        # The agreed bundle the IG publishes for the same message
+        # The agreed bundle the IG publishes for the same message.
         agreed_path = os.path.join(Test_Conversions_Dir, 'FHIR_bundle.hl7_ADT_A01.json')
 
         with open(agreed_path) as agreed_file:
@@ -100,15 +102,17 @@ class TestIGTestConversion:
             if resource['resourceType'] == 'Patient':
                 agreed_patient = resource
 
-        # The demographics agree with the published conversion
-        assert our_patient['gender'] == cast_('any_', agreed_patient)['gender']
+        agreed = cast_('any_', agreed_patient)
 
-        # The agreed birthDate carries a time part, ours is the date FHIR asks for
-        agreed_birth = cast_('any_', agreed_patient)['birthDate']
+        # The demographics agree with the published conversion.
+        assert our_patient['gender'] == agreed['gender']
+
+        # The agreed birthDate carries a time part, ours is the date FHIR asks for.
+        agreed_birth = agreed['birthDate']
         assert agreed_birth.startswith(our_patient['birthDate'])
 
         our_names = our_patient['name']
-        agreed_names = cast_('any_', agreed_patient)['name']
+        agreed_names = agreed['name']
 
         our_first_name = our_names[0]
         agreed_first_name = agreed_names[0]
@@ -123,17 +127,19 @@ class TestIGTestConversion:
         assert our_maiden_name['family'] == agreed_maiden_name['family']
         assert our_maiden_name['use'] == agreed_maiden_name['use']
 
-    def test_encounter_matches_agreed_bundle(self):
+# ################################################################################################################################
+
+    def test_encounter_matches_agreed_bundle(self) -> 'None':
         fixture_path = os.path.join(Test_Conversions_Dir, 'ADT_A01.hl7')
         bundle = _convert_fixture(fixture_path)
 
         encounter = one_resource(bundle, 'Encounter')
 
-        # PV1-2 is E, an emergency encounter
+        # PV1-2 is E, an emergency encounter.
         encounter_class = encounter['class']
         assert encounter_class['code'] == 'EMER'
 
-        # The encounter belongs to the patient from the same bundle
+        # The encounter belongs to the patient from the same bundle.
         subject = encounter['subject']
         subject_url = subject['reference']
 
@@ -142,7 +148,7 @@ class TestIGTestConversion:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _adt_sample_paths():
+def _adt_sample_paths() -> 'anylist':
     """ All the ADT messages from the samples fixture tree.
     """
     out = []
@@ -156,16 +162,16 @@ def _adt_sample_paths():
 
 # ################################################################################################################################
 
-@pytest.mark.parametrize('file_path', _adt_sample_paths(), ids=os.path.basename)
-def test_adt_samples_end_to_end(file_path:'any_'):
+_adt_paths = _adt_sample_paths()
+
+# ################################################################################################################################
+
+@pytest.mark.parametrize('file_path', _adt_paths, ids=os.path.basename)
+def test_adt_samples_end_to_end(file_path:'any_') -> 'None':
     """ Every ADT sample converts to a bundle with a message header and a patient.
     """
     raw = load_message(file_path)
-
-    try:
-        msg = parse_hl7(raw, validate=False)
-    except ValueError as e:
-        pytest.skip(f'parser rejected the message: {e}')
+    msg = parse_hl7(raw, validate=False)
 
     bundle = msg.to_fhir()
     bundle_dict = bundle.to_dict()
@@ -175,25 +181,34 @@ def test_adt_samples_end_to_end(file_path:'any_'):
     counts = _count_types(bundle_dict)
     assert counts['MessageHeader'] == 1
 
-    # Swap and merge messages carry two PID segments, everything else has one patient
-    assert counts['Patient'] in (1, 2)
+    # Swap and merge messages carry two PID segments, everything else has one patient.
+    # MRG segments add inactive Patients of their own, so only the active ones count here.
+    active_patients = 0
 
-    # Every entry has a stable bundle-internal URL
+    for entry in bundle_dict['entry']:
+        resource = entry['resource']
+        if resource['resourceType'] == 'Patient':
+            if 'active' not in resource:
+                active_patients += 1
+
+    assert active_patients in (1, 2)
+
+    # Every entry has a stable bundle-internal URL.
     for entry in bundle_dict['entry']:
         full_url = entry['fullUrl']
         assert full_url.startswith('urn:uuid:')
 
 # ################################################################################################################################
 
-def test_adt_samples_exist():
-    """ The fixture tree holds a meaningful number of ADT samples to prove against.
+def test_adt_samples_exist() -> 'None':
+    """ The fixture tree holds at least 50 ADT samples.
     """
     sample_paths = _adt_sample_paths()
     assert len(sample_paths) >= 50
 
 # ################################################################################################################################
 
-def test_repeating_al1_makes_multiple_allergies():
+def test_repeating_al1_makes_multiple_allergies() -> 'None':
     """ Repeating AL1 segments each become their own AllergyIntolerance.
     """
     msh = 'MSH|^~\\&|SENDAPP|SENDFAC|RECVAPP|RECVFAC|20240517143055||ADT^A01|MSG00001|P|2.5'
@@ -201,7 +216,8 @@ def test_repeating_al1_makes_multiple_allergies():
     al1_first = 'AL1|1|LA|1543^Pollen^RXNORM|MI|Sneezing'
     al1_second = 'AL1|2|FA|1191^Peanut^RXNORM|MO|Rash'
 
-    raw = '\r'.join((msh, pid, al1_first, al1_second)) + '\r'
+    joined = '\r'.join((msh, pid, al1_first, al1_second))
+    raw = joined + '\r'
     msg = parse_hl7(raw, validate=False)
 
     bundle = msg.to_fhir()
