@@ -10,9 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.hl7.mappings.config import load_mapping_config
 from zato.hl7.mappings.context import ConversionContext
 from zato.hl7.mappings.fields import SegmentAccessor
-from zato.hl7.mappings.segments import apply_evn, set_document_text
-from zato.hl7.mappings.walk import WalkState, add_basic, apply_pending_rol, flush_pending_orc, new_walk_state, \
-    segment_handlers
+from zato.hl7.mappings.segments import append_to_list_field, apply_evn, set_document_text
+from zato.hl7.mappings.walk import WalkState, add_basic, apply_pending_rol, flush_pending_orc, new_walk_state
+from zato.hl7.mappings.walk_handlers import segment_handlers
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,6 +32,13 @@ _processing_id_system = 'http://terminology.hl7.org/CodeSystem/v2-0103'
 
 # The coding system that marks a QPD-1 query profile as a CDC immunization registry query
 _immunization_query_system = 'CDCPHINVS'
+
+# The structure whose two patients link to each other - ADT^A24 carries no merge,
+# just the statement that the two records concern related persons
+_link_structure = 'ADT_A24'
+
+# The type of the link the two patients get
+_link_type = 'seealso'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,7 +86,7 @@ def _family_for_structure(structure_id:'strnone', raw_segments:'anylist') -> 'st
     if structure_id.startswith(('ORU', 'OUL')):
         return 'results'
 
-    if structure_id.startswith(('ORM', 'OML', 'OMG')):
+    if structure_id.startswith(('ORM', 'OML', 'OMG', 'OMI', 'OMB', 'ORL', 'ORR')):
         return 'orders'
 
     if structure_id.startswith(('SIU', 'SRM', 'SRR')):
@@ -103,6 +110,12 @@ def _family_for_structure(structure_id:'strnone', raw_segments:'anylist') -> 'st
 
     if structure_id.startswith('MDM'):
         return 'documents'
+
+    if structure_id.startswith(('REF', 'RRI')):
+        return 'referral'
+
+    if structure_id.startswith('MFN'):
+        return 'master-file'
 
     return 'generic'
 
@@ -137,9 +150,21 @@ def _walk(raw_segments:'anylist', context:'ConversionContext', family:'str') -> 
 
 # ################################################################################################################################
 
-def _finish(state:'WalkState', context:'ConversionContext') -> 'None':
+def _finish(state:'WalkState', context:'ConversionContext', structure_id:'strnone') -> 'None':
     """ Ties up everything that could only be resolved once the whole message was walked.
     """
+
+    # A link message ties its two patients to each other.
+    if structure_id == _link_structure:
+        if len(state.patients) >= 2:
+            first_patient = state.patients[0]
+            second_patient = state.patients[1]
+
+            first_reference = state.patient_references[0]
+            second_reference = state.patient_references[1]
+
+            append_to_list_field(first_patient, 'link', {'other': second_reference, 'type': _link_type})
+            append_to_list_field(second_patient, 'link', {'other': first_reference, 'type': _link_type})
 
     # An ORC with no order or pharmacy segment after it still becomes a ServiceRequest.
     flush_pending_orc(state, context)
@@ -150,6 +175,15 @@ def _finish(state:'WalkState', context:'ConversionContext') -> 'None':
     # EVN backs the Encounter period up and preserves whatever else it carries.
     if state.evn_accessor:
         apply_evn(state.evn_accessor, context, state.encounter, state.message_header)
+
+    # A referral's RF1 precedes the PID and PV1, so the subject
+    # and the encounter can only be filled in now.
+    if state.referral_request:
+        if context.patient_reference:
+            state.referral_request.subject = context.patient_reference
+
+        if context.encounter_reference:
+            state.referral_request.encounter = context.encounter_reference
 
     # The message header points at the patient and the encounter the message is about.
     if state.message_header:
@@ -204,7 +238,7 @@ def convert_to_fhir(msg:'any_', config:'strnone' = None) -> 'any_':
 
     # Convert every segment, then resolve what had to wait for the end of the walk.
     state = _walk(raw_segments, context, family)
-    _finish(state, context)
+    _finish(state, context, msg._structure_id)
 
     # Wrap everything in the configured bundle type ..
     out = context.build_bundle()

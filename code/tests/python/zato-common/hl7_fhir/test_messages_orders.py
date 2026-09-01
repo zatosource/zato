@@ -13,6 +13,7 @@ import os
 import pytest
 
 # Zato
+from zato.hl7.mappings import get_conversion_warnings
 from zato.hl7v2 import parse_hl7
 
 # Local
@@ -420,6 +421,145 @@ class TestORMOrders:
 
         assert service_request['subject'] == {
             'extension': [{'url': 'http://hl7.org/fhir/StructureDefinition/data-absent-reason', 'valueCode': 'unknown'}]}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestOMIImaging:
+    """ OMI imaging orders and the IPC and ZDS segments that detail them.
+    """
+
+    def test_ipc_details_the_imaging_order(self) -> 'None':
+        msh = 'MSH|^~\\&|RIS|RADFAC|PACS|PACSFAC|20240517143055||OMI^O23^OMI_O23|MSG00040|P|2.8.1'
+        orc = 'ORC|NW|IMG-1^RIS'
+        obr = 'OBR|1|IMG-1^RIS||74178^CT Abdomen with contrast^C4'
+        ipc = 'IPC|ACC-2024-001^RIS|RP-1^RIS|1.2.40.0.34.1.1.99^RIS||CT^Computed Tomography^DCM|' + \
+            'CTABD^CT Abdomen Protocol^L'
+
+        bundle = convert(msh, PID, orc, obr, ipc)
+        service_request = one_resource(bundle, 'ServiceRequest')
+
+        # An OMI is an order, not a result - there is no report.
+        assert resources_of_type(bundle, 'DiagnosticReport') == []
+
+        identifiers = service_request['identifier']
+
+        # The accession number identifies the imaging order ..
+        accession = {
+            'value': 'ACC-2024-001',
+            'system': 'urn:zato:hl7v2:authority:RIS',
+            'type': {'coding': [{'system': 'http://terminology.hl7.org/CodeSystem/v2-0203', 'code': 'ACSN'}]},
+        }
+        assert accession in identifiers
+
+        # .. the requested procedure ID follows it ..
+        assert {'value': 'RP-1', 'system': 'urn:zato:hl7v2:authority:RIS'} in identifiers
+
+        # .. and the study instance UID identifies the DICOM study.
+        assert {'system': 'urn:dicom:uid', 'value': 'urn:oid:1.2.40.0.34.1.1.99'} in identifiers
+
+        # The modality and the protocol detail what is ordered.
+        order_details = service_request['orderDetail']
+
+        assert order_details[0]['coding'][0]['code'] == 'CT'
+        assert order_details[0]['text'] == 'Computed Tomography'
+        assert order_details[1]['text'] == 'CT Abdomen Protocol'
+
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
+
+    def test_zds_adds_the_study_uid_to_the_order(self) -> 'None':
+        # The quasi-standard ZDS carries the DICOM study instance UID in imaging feeds.
+        orc = 'ORC|NW|IMG-2^RIS'
+        obr = 'OBR|1|IMG-2^RIS||70450^CT Head without contrast^C4'
+        zds = 'ZDS|1.2.40.0.34.1.1.99.20250401.100000.001^RIS^APPLICATION^DICOM'
+
+        bundle = convert(MSH_ORM, PID, orc, obr, zds)
+        service_request = one_resource(bundle, 'ServiceRequest')
+
+        identifiers = service_request['identifier']
+
+        assert {
+            'system': 'urn:dicom:uid',
+            'value': 'urn:oid:1.2.40.0.34.1.1.99.20250401.100000.001',
+        } in identifiers
+
+        # No Basic resource was made - the ZDS attached to the order.
+        assert resources_of_type(bundle, 'Basic') == []
+
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
+
+    def test_ipc_without_an_order_stays_whole(self) -> 'None':
+        msh = 'MSH|^~\\&|RIS|RADFAC|PACS|PACSFAC|20240517143055||OMI^O23^OMI_O23|MSG00041|P|2.8.1'
+        ipc = 'IPC|ACC-2024-002^RIS|RP-2^RIS|1.2.40.0.34.1.1.100^RIS||MR^Magnetic Resonance^DCM'
+
+        bundle = convert(msh, PID, ipc)
+        basic = one_resource(bundle, 'Basic')
+
+        assert basic['code']['coding'][0]['code'] == 'IPC'
+
+        extensions = basic['extension']
+        assert {'url': 'urn:zato:hl7v2:extension/IPC/1', 'valueString': 'ACC-2024-002^RIS'} in extensions
+
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestPRTParticipation:
+    """ PRT participations attach their person to the nearest resource above them.
+    """
+
+    def test_prt_person_performs_the_report(self) -> 'None':
+        obr = 'OBR|1|ORD-9^EHR||24331-1^Lipid panel^LN||||||||||||||||||||F'
+        prt = 'PRT|1|UC||PRF^Performer^HL70912|1234^Welby^Marcus'
+
+        bundle = convert(MSH_ORU, PID, obr, prt)
+
+        report = one_resource(bundle, 'DiagnosticReport')
+        practitioner = one_resource(bundle, 'Practitioner')
+
+        assert practitioner['name'] == [{'family': 'Welby', 'given': ['Marcus']}]
+        assert practitioner['identifier'] == [{'value': '1234'}]
+
+        bundle_dict = bundle.to_dict()
+        practitioner_url = None
+
+        for entry in bundle_dict['entry']:
+            resource = entry['resource']
+            if resource['resourceType'] == 'Practitioner':
+                practitioner_url = entry['fullUrl']
+
+        assert report['performer'] == [{'reference': practitioner_url}]
+
+        # The participation fields the person mapping did not consume are preserved.
+        extensions = report['extension']
+        assert {'url': 'urn:zato:hl7v2:extension/unmapped/PRT-4', 'valueString': 'PRF^Performer^HL70912'} \
+            in extensions
+
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
+
+    def test_prt_without_a_person_stays_whole(self) -> 'None':
+        # French senders route result copies with person-less PRT segments
+        # that carry only a telecommunication address.
+        obr = 'OBR|1|ORD-10^EHR||24331-1^Lipid panel^LN'
+        prt = 'PRT||UC||RCT^Results Copies To^participation|||||||||||^^X.400^copies@example.org'
+
+        bundle = convert(MSH_ORU, PID, obr, prt)
+        basic = one_resource(bundle, 'Basic')
+
+        assert basic['code']['coding'][0]['code'] == 'PRT'
+
+        extensions = basic['extension']
+        assert {'url': 'urn:zato:hl7v2:extension/PRT/15', 'valueString': '^^X.400^copies@example.org'} \
+            in extensions
+
+        assert get_conversion_warnings(bundle) == []
 
 # ################################################################################################################################
 # ################################################################################################################################

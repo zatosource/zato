@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from base64 import b64decode
 
+# Zato
+from zato.hl7.mappings import get_conversion_warnings
+
 # Local
 from conftest import convert, convert_fixture, one_resource, organization_named, resources_of_type
 
@@ -248,6 +251,113 @@ class TestRDEPharmacyOrder:
         assert dose['doseRange'] == {
             'high': {'value': 1000, 'unit': 'milligram', 'code': 'mg', 'system': 'http://unitsofmeasure.org'},
         }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestRXOPharmacyOrder:
+    """ RXO - the prescriber's original order - becomes a MedicationRequest of its own.
+    """
+
+    def test_rxo_becomes_a_medication_request(self) -> 'None':
+        msh = 'MSH|^~\\&|CPOE|HOSP|RX|PHARMACY|20240517143055||OMP^O09|MSG00020|P|2.5'
+        orc = 'ORC|NW|RX010^CPOE'
+        rxo = 'RXO|314076^Lisinopril 10 mg PO^RXNORM|10||mg^milligram^UCUM||TAKE WITH FOOD^^L|' + \
+            'ONE TABLET DAILY^^L||||30|TAB^tablet^L|2'
+
+        bundle = convert(msh, PID, orc, rxo)
+        medication_request = one_resource(bundle, 'MedicationRequest')
+
+        # An RXO is the original order, not the encoded one.
+        assert medication_request['intent'] == 'original-order'
+        assert medication_request['status'] == 'active'
+
+        # The requested give code is the medication.
+        medication = medication_request['medicationCodeableConcept']
+        assert medication['text'] == 'Lisinopril 10 mg PO'
+
+        coding = medication['coding'][0]
+        assert coding['code'] == '314076'
+        assert coding['system'] == 'http://www.nlm.nih.gov/research/umls/rxnorm'
+
+        # The give amount and units make the dose.
+        dosage = medication_request['dosageInstruction'][0]
+        dose = dosage['doseAndRate'][0]
+
+        assert dose['doseQuantity'] == {
+            'value': 10, 'unit': 'milligram', 'code': 'mg', 'system': 'http://unitsofmeasure.org',
+        }
+
+        # The administration instructions spell the dosage out in words ..
+        assert dosage['text'] == 'ONE TABLET DAILY'
+
+        # .. and the pharmacy instructions became a note.
+        assert medication_request['note'] == [{'text': 'TAKE WITH FOOD'}]
+
+        # The dispense amount, units and refills make the dispense request.
+        dispense_request = medication_request['dispenseRequest']
+
+        assert dispense_request['quantity'] == {'value': 30, 'unit': 'tablet', 'code': 'TAB'}
+        assert dispense_request['numberOfRepeatsAllowed'] == 2
+
+        # The order number identifies the request.
+        identifiers = medication_request['identifier']
+        assert {'value': 'RX010', 'system': 'urn:zato:hl7v2:authority:CPOE'} in identifiers
+
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
+
+    def test_rxo_shares_its_orc_with_the_rxe_that_follows(self) -> 'None':
+        # In an RDE message the RXO and the RXE belong to one order group,
+        # so both resources carry the group's order number.
+        msh = 'MSH|^~\\&|CPOE|HOSP|RX|PHARMACY|20240517143055||RDE^O11|MSG00021|P|2.5'
+        orc = 'ORC|NW|RX011^CPOE'
+        rxo = 'RXO|314076^Lisinopril 10 mg PO^RXNORM|10||mg^milligram^UCUM'
+        rxe = 'RXE|1^QD|314076^Lisinopril 10 mg PO^RXNORM|10||mg^milligram^UCUM'
+
+        bundle = convert(msh, PID, orc, rxo, rxe)
+        medication_requests = resources_of_type(bundle, 'MedicationRequest')
+
+        assert len(medication_requests) == 2
+
+        original_order = medication_requests[0]
+        encoded_order = medication_requests[1]
+
+        assert original_order['intent'] == 'original-order'
+        assert encoded_order['intent'] == 'order'
+
+        expected_identifier = {'value': 'RX011', 'system': 'urn:zato:hl7v2:authority:CPOE'}
+
+        assert expected_identifier in original_order['identifier']
+        assert expected_identifier in encoded_order['identifier']
+
+        # No leftover ServiceRequest was made from the shared ORC.
+        assert resources_of_type(bundle, 'ServiceRequest') == []
+
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
+
+    def test_units_without_an_amount_are_preserved(self) -> 'None':
+        # Senders shift other values into the units slots - without an amount
+        # to pair them with they are preserved instead of being dropped.
+        msh = 'MSH|^~\\&|CPOE|HOSP|RX|PHARMACY|20240517143055||OMP^O09|MSG00022|P|2.5'
+        rxo = 'RXO|314076^Lisinopril 10 mg PO^RXNORM|||mg^milligram^UCUM'
+
+        bundle = convert(msh, PID, rxo)
+        medication_request = one_resource(bundle, 'MedicationRequest')
+
+        assert 'dosageInstruction' not in medication_request
+
+        extensions = medication_request['extension']
+
+        assert {
+            'url': 'urn:zato:hl7v2:extension/unmapped/RXO-4',
+            'valueString': 'mg^milligram^UCUM',
+        } in extensions
+
+        assert get_conversion_warnings(bundle) == []
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -15,16 +15,22 @@ import pytest
 
 # Zato
 from zato.common.typing_ import cast_
+from zato.hl7.mappings import get_conversion_warnings
 from zato.hl7v2 import parse_hl7
 
 # Local
-from conftest import Samples_Dir, Test_Conversions_Dir, list_messages, load_message, one_resource, resources_of_type
+from conftest import Samples_Dir, Test_Conversions_Dir, convert, list_messages, load_message, one_resource, \
+    resources_of_type
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.typing_ import any_, anylist, strintdict, stranydict
+    any_ = any_
+    anylist = anylist
+    strintdict = strintdict
+    stranydict = stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,7 +76,6 @@ class TestIGTestConversion:
         bundle_dict = bundle.to_dict()
         counts = _count_types(bundle_dict)
 
-        # The core resources the agreed bundle carries come out of the conversion too.
         assert counts['MessageHeader'] == 1
         assert counts['Patient'] == 1
         assert counts['Encounter'] == 1
@@ -104,7 +109,6 @@ class TestIGTestConversion:
 
         agreed = cast_('any_', agreed_patient)
 
-        # The demographics agree with the published conversion.
         assert our_patient['gender'] == agreed['gender']
 
         # The agreed birthDate carries a time part, ours is the date FHIR asks for.
@@ -139,7 +143,6 @@ class TestIGTestConversion:
         encounter_class = encounter['class']
         assert encounter_class['code'] == 'EMER'
 
-        # The encounter belongs to the patient from the same bundle.
         subject = encounter['subject']
         subject_url = subject['reference']
 
@@ -181,8 +184,7 @@ def test_adt_samples_end_to_end(file_path:'any_') -> 'None':
     counts = _count_types(bundle_dict)
     assert counts['MessageHeader'] == 1
 
-    # Swap and merge messages carry two PID segments, everything else has one patient.
-    # MRG segments add inactive Patients of their own, so only the active ones count here.
+    # Swap and merge messages carry two patients.
     active_patients = 0
 
     for entry in bundle_dict['entry']:
@@ -193,7 +195,6 @@ def test_adt_samples_end_to_end(file_path:'any_') -> 'None':
 
     assert active_patients in (1, 2)
 
-    # Every entry has a stable bundle-internal URL.
     for entry in bundle_dict['entry']:
         full_url = entry['fullUrl']
         assert full_url.startswith('urn:uuid:')
@@ -230,6 +231,246 @@ def test_repeating_al1_makes_multiple_allergies() -> 'None':
 
     assert first_allergy['category'] == ['environment']
     assert second_allergy['category'] == ['food']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestMultiPatientMessages:
+    """ Messages that carry more than one patient - each PID group keeps its own context.
+    """
+
+    def test_a17_swaps_two_patients_with_their_own_encounters(self) -> 'None':
+        msh = 'MSH|^~\\&|ADT|HOSPFAC|EHR|EHRFAC|20240517143055||ADT^A17|MSG00070|P|2.5'
+        pid_first = 'PID|1||111^^^MYHOSP^MR||Smith^John|||M'
+        pv1_first = 'PV1|1|I|WARD1^101^A'
+        pid_second = 'PID|2||222^^^MYHOSP^MR||Smith^Jane|||F'
+        pv1_second = 'PV1|2|I|WARD2^202^B'
+
+        bundle = convert(msh, pid_first, pv1_first, pid_second, pv1_second)
+
+        patients = resources_of_type(bundle, 'Patient')
+        encounters = resources_of_type(bundle, 'Encounter')
+
+        assert len(patients) == 2
+        assert len(encounters) == 2
+
+        bundle_dict = bundle.to_dict()
+        patient_urls = []
+
+        for entry in bundle_dict['entry']:
+            resource = entry['resource']
+            if resource['resourceType'] == 'Patient':
+                patient_urls.append(entry['fullUrl'])
+
+        assert encounters[0]['subject'] == {'reference': patient_urls[0]}
+        assert encounters[1]['subject'] == {'reference': patient_urls[1]}
+
+# ################################################################################################################################
+
+    def test_a24_links_the_two_patients(self) -> 'None':
+        msh = 'MSH|^~\\&|ADT|HOSPFAC|EHR|EHRFAC|20240517143055||ADT^A24|MSG00071|P|2.5'
+        pid_first = 'PID|1||111^^^MYHOSP^MR||Smith^John|||M'
+        pid_second = 'PID|2||222^^^MYHOSP^MR||Smith^Jane|||F'
+
+        bundle = convert(msh, pid_first, pid_second)
+
+        patients = resources_of_type(bundle, 'Patient')
+        assert len(patients) == 2
+
+        bundle_dict = bundle.to_dict()
+        patient_urls = []
+
+        for entry in bundle_dict['entry']:
+            resource = entry['resource']
+            if resource['resourceType'] == 'Patient':
+                patient_urls.append(entry['fullUrl'])
+
+        assert patients[0]['link'] == [{'other': {'reference': patient_urls[1]}, 'type': 'seealso'}]
+        assert patients[1]['link'] == [{'other': {'reference': patient_urls[0]}, 'type': 'seealso'}]
+
+# ################################################################################################################################
+
+    def test_rsp_k22_keeps_each_patient_group_apart(self) -> 'None':
+        msh = 'MSH|^~\\&|MPI|HIEFAC|EHR|EHRFAC|20240517143055||RSP^K22^RSP_K22|MSG00072|P|2.5'
+        msa = 'MSA|AA|QRY00001'
+        qak = 'QAK|QRY00001|OK'
+        qpd = 'QPD|IHE PDQ Query|QRY00001|@PID.5.1.1^SMITH'
+        pid_first = 'PID|1||111^^^MYHOSP^MR||Smith^Anna|||F'
+        qri_first = 'QRI|95|MATCHWARE'
+        pid_second = 'PID|2||222^^^MYHOSP^MR||Smith^Bruno|||M'
+        qri_second = 'QRI|80|MATCHWARE'
+
+        bundle = convert(msh, msa, qak, qpd, pid_first, qri_first, pid_second, qri_second)
+
+        patients = resources_of_type(bundle, 'Patient')
+        assert len(patients) == 2
+
+        assert patients[0]['name'] == [{'family': 'Smith', 'given': ['Anna']}]
+        assert patients[1]['name'] == [{'family': 'Smith', 'given': ['Bruno']}]
+
+        assert 'link' not in patients[0]
+        assert 'link' not in patients[1]
+
+        # The query frames are preserved whole.
+        basics = resources_of_type(bundle, 'Basic')
+
+        preserved_segments = []
+        for basic in basics:
+            preserved_segments.append(basic['code']['coding'][0]['code'])
+
+        assert preserved_segments == ['QAK', 'QPD', 'QRI', 'QRI']
+
+# ################################################################################################################################
+
+    def test_rcp_is_preserved_whole(self) -> 'None':
+        msh = 'MSH|^~\\&|EHR|EHRFAC|MPI|HIEFAC|20240517143055||QBP^Q22^QBP_Q21|MSG00073|P|2.5'
+        qpd = 'QPD|IHE PDQ Query|QRY00002|@PID.5.1.1^SMITH'
+        rcp = 'RCP|I|10^RD'
+
+        bundle = convert(msh, qpd, rcp)
+
+        basics = resources_of_type(bundle, 'Basic')
+
+        preserved_segments = []
+        for basic in basics:
+            preserved_segments.append(basic['code']['coding'][0]['code'])
+
+        assert preserved_segments == ['QPD', 'RCP']
+
+        rcp_basic = basics[1]
+        extensions = rcp_basic['extension']
+
+        assert {'url': 'urn:zato:hl7v2:extension/RCP/1', 'valueString': 'I'} in extensions
+        assert {'url': 'urn:zato:hl7v2:extension/RCP/2', 'valueString': '10^RD'} in extensions
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestVisitMoves:
+    """ A45 and A50 move visits between records - the MRG keeps the prior numbers.
+    """
+
+    def test_a45_keeps_the_prior_visit_number(self) -> 'None':
+        msh = 'MSH|^~\\&|ADT|HOSPFAC|EHR|EHRFAC|20240517143055||ADT^A45|MSG00076|P|2.5'
+        pid = 'PID|1||12345^^^MYHOSP^MR||Smith^John|||M'
+        mrg = 'MRG|999^^^MYHOSP^MR||||VN-OLD-1^^^MYHOSP'
+        pv1 = 'PV1|1|I|WARD1^101^A||||||||||||||||VN-NEW-1^^^MYHOSP'
+
+        bundle = convert(msh, pid, mrg, pv1)
+
+        patients = resources_of_type(bundle, 'Patient')
+        assert len(patients) == 2
+
+        # The surviving patient replaces the prior record ..
+        surviving = patients[0]
+        prior = patients[1]
+
+        assert surviving['link'][0]['type'] == 'replaces'
+        assert prior['active'] is False
+
+        # .. and the prior visit number is preserved on that record.
+        extensions = prior['extension']
+        assert {'url': 'urn:zato:hl7v2:extension/unmapped/MRG-5', 'valueString': 'VN-OLD-1^^^MYHOSP'} \
+            in extensions
+
+        encounter = one_resource(bundle, 'Encounter')
+        identifiers = encounter['identifier']
+
+        assert identifiers[0]['value'] == 'VN-NEW-1'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestPDADeathAdvice:
+    """ PDA marks the patient as deceased and keeps everything it carries.
+    """
+
+    def test_pda_marks_the_patient_deceased(self) -> 'None':
+        msh = 'MSH|^~\\&|ADT|HOSPFAC|EHR|EHRFAC|20240517143055||ADT^A03|MSG00074|P|2.5'
+        pid = 'PID|1||12345^^^MYHOSP^MR||Smith^John|||M'
+        pda = 'PDA|I46.9^Cardiac arrest^I10|CUH^WARD8||20240517080000'
+
+        bundle = convert(msh, pid, pda)
+        patient = one_resource(bundle, 'Patient')
+
+        assert patient['deceasedBoolean'] is True
+
+        extensions = patient['extension']
+
+        assert {'url': 'urn:zato:hl7v2:extension/unmapped/PDA-1', 'valueString': 'I46.9^Cardiac arrest^I10'} \
+            in extensions
+        assert {'url': 'urn:zato:hl7v2:extension/unmapped/PDA-2', 'valueString': 'CUH^WARD8'} in extensions
+        assert {'url': 'urn:zato:hl7v2:extension/unmapped/PDA-4', 'valueString': '20240517080000'} in extensions
+
+# ################################################################################################################################
+
+    def test_pid_death_time_takes_precedence(self) -> 'None':
+        msh = 'MSH|^~\\&|ADT|HOSPFAC|EHR|EHRFAC|20240517143055||ADT^A03|MSG00075|P|2.5'
+        pid = 'PID|1||12345^^^MYHOSP^MR||Smith^John|||M|||||||||||||||||||||20240517080000|Y'
+        pda = 'PDA|I46.9^Cardiac arrest^I10'
+
+        bundle = convert(msh, pid, pda)
+        patient = one_resource(bundle, 'Patient')
+
+        assert patient['deceasedDateTime'] == '2024-05-17T08:00:00+00:00'
+        assert 'deceasedBoolean' not in patient
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestUnknownStructures:
+    """ ORR, OMI_Z01 and ADT_A18 convert from their raw segments.
+    """
+
+    def test_orr_o02_is_an_order_response(self) -> 'None':
+        msh = 'MSH|^~\\&|LAB|LABFAC|EHR|EHRFAC|20240517143055||ORR^O02|MSG00080|P|2.5'
+        msa = 'MSA|AA|MSG00003'
+        orc = 'ORC|OK|ORD-1^EHR|FIL-1^LAB'
+        obr = 'OBR|1|ORD-1^EHR|FIL-1^LAB|24331-1^Lipid panel^LN'
+
+        bundle = convert(msh, msa, orc, obr)
+        service_request = one_resource(bundle, 'ServiceRequest')
+
+        assert service_request['code']['text'] == 'Lipid panel'
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
+
+    def test_omi_z01_is_an_imaging_order(self) -> 'None':
+        msh = 'MSH|^~\\&|PACS|HOSPFAC|RIS|RADFAC|20240517143055||OMI^Z01^OMI_Z01|MSG00081|P|2.5'
+        orc = 'ORC|NW|IMG-Z1^RIS'
+        obr = 'OBR|1|IMG-Z1^RIS||74178^CT Abdomen^C4'
+        ipc = 'IPC|ACC-Z1^RIS|RP-Z1^RIS|1.2.40.0.34.1.1.201^RIS||CT^Computed Tomography^DCM'
+
+        pid = 'PID|1||12345^^^MYHOSP^MR||Smith^John|||M'
+
+        bundle = convert(msh, pid, orc, obr, ipc)
+        service_request = one_resource(bundle, 'ServiceRequest')
+
+        identifiers = service_request['identifier']
+        assert {'system': 'urn:dicom:uid', 'value': 'urn:oid:1.2.40.0.34.1.1.201'} in identifiers
+
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
+
+    def test_a18_merges_the_prior_patient(self) -> 'None':
+        msh = 'MSH|^~\\&|ADT|HOSPFAC|EHR|EHRFAC|20240517143055||ADT^A18^ADT_A18|MSG00082|P|2.5'
+        pid = 'PID|1||12345^^^MYHOSP^MR||Smith^John|||M'
+        mrg = 'MRG|999^^^MYHOSP^MR'
+
+        bundle = convert(msh, pid, mrg)
+
+        patients = resources_of_type(bundle, 'Patient')
+        assert len(patients) == 2
+
+        surviving = patients[0]
+        prior = patients[1]
+
+        assert surviving['link'][0]['type'] == 'replaces'
+        assert prior['active'] is False
+
+        assert get_conversion_warnings(bundle) == []
 
 # ################################################################################################################################
 # ################################################################################################################################
