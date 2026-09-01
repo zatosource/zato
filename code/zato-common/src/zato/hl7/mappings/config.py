@@ -66,6 +66,20 @@ Land_Identifier_Systems = {
 
     # United States
     'NPI': 'http://hl7.org/fhir/sid/us-npi',
+
+    # France
+    'INS':                'urn:oid:1.2.250.1.213.1.4.8',
+    'INS-NIR':            'urn:oid:1.2.250.1.213.1.4.8',
+    'INS-NIA':            'urn:oid:1.2.250.1.213.1.4.9',
+    'INS-C':              'urn:oid:1.2.250.1.213.1.4.2',
+    'ASIP-SANTE-INS-NIR': 'urn:oid:1.2.250.1.213.1.4.8',
+    'ASIP-SANTE-INS-NIA': 'urn:oid:1.2.250.1.213.1.4.9',
+    'ASIP-SANTE-INS-C':   'urn:oid:1.2.250.1.213.1.4.2',
+    'ASIP-SANTE-PS':      'urn:oid:1.2.250.1.71.4.2.1',
+    'ASIP-SANTE-ST':      'urn:oid:1.2.250.1.71.4.2.2',
+    'RPPS':               'https://rpps.esante.gouv.fr',
+    'ADELI':              'https://adeli.esante.gouv.fr',
+    'FINESS':             'https://finess.esante.gouv.fr',
 }
 
 # Authorities whose registry depends on who holds the identifier

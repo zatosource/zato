@@ -109,6 +109,19 @@ def convert(*segments:'str', config:'strnone'=None) -> 'any_':
 
 # ################################################################################################################################
 
+def convert_fixture(file_name:'str') -> 'any_':
+    """ Parses one test conversion fixture and converts it to a bundle.
+    """
+    file_path = os.path.join(Test_Conversions_Dir, file_name)
+
+    raw = load_message(file_path)
+    msg = parse_hl7(raw, validate=False)
+
+    out = msg.to_fhir()
+    return out
+
+# ################################################################################################################################
+
 def resources_of_type(bundle:'any_', resource_type:'str') -> 'anylist':
     """ Returns the resource dicts of one type from a bundle, in entry order.
     """

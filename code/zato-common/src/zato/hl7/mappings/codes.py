@@ -33,6 +33,7 @@ Coding_Systems = {
     'UCUM':    'http://unitsofmeasure.org',
     'CVX':     'http://hl7.org/fhir/sid/cvx',
     'NDC':     'http://hl7.org/fhir/sid/ndc',
+    'RXNORM':  'http://www.nlm.nih.gov/research/umls/rxnorm',
     'CPT':     'http://www.ama-assn.org/go/cpt',
     'CPT4':    'http://www.ama-assn.org/go/cpt',
     'C4':      'http://www.ama-assn.org/go/cpt',

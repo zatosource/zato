@@ -2,17 +2,6 @@
 
 import zato.fhir_r4_0_1_core
 from zato.fhir.r4_0_1.resources import TestReport
-from zato.common.typing_ import cast_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import any_
-    any_ = any_
-
-# ################################################################################################################################
-# ################################################################################################################################
 
 
 class TestToDictTestReport:
@@ -116,7 +105,7 @@ class TestToDictTestReport:
         assert 'result' in result
 
     def test_to_dict_score(self):
-        resource = cast_('any_', TestReport())
+        resource = TestReport()
         resource.score = 3.14
         result = zato.fhir_r4_0_1_core.to_dict(resource)
         assert 'score' in result
@@ -364,7 +353,7 @@ class TestGetPathTestReport:
         assert result is not None
 
     def test_get_path_score(self):
-        resource = cast_('any_', TestReport())
+        resource = TestReport()
         resource.score = 3.14
         result = zato.fhir_r4_0_1_core.get_path(resource, 'score')
         assert result is not None

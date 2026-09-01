@@ -311,6 +311,25 @@ class TestORMOrders:
 
 # ################################################################################################################################
 
+    def test_non_datetime_transaction_time_is_preserved(self) -> 'None':
+        # Other values can arrive in the ORC-9 transaction-time slot -
+        # those cannot become the authored time but they are not dropped either.
+        orc = 'ORC|NW|ORD-1^EHR|||IP||||RNSMITH^Smith^John'
+
+        bundle = convert(MSH_ORM, PID, orc)
+        service_request = one_resource(bundle, 'ServiceRequest')
+
+        assert 'authoredOn' not in service_request
+
+        extensions = service_request['extension']
+
+        assert {
+            'url': 'urn:zato:hl7v2:extension/unmapped/ORC-9',
+            'valueString': 'RNSMITH^Smith^John',
+        } in extensions
+
+# ################################################################################################################################
+
     def test_tq1_between_orc_and_obr(self) -> 'None':
         # In OML-style messages the TQ1 timing comes before the OBR it belongs to.
         orc = 'ORC|NW|ORD-1^EHR'
@@ -384,6 +403,23 @@ class TestORMOrders:
         assert first['status'] == 'active'
         assert second['status'] == 'unknown'
         assert 'requester' not in second
+
+# ################################################################################################################################
+
+    def test_order_response_without_patient_states_absent_subject(self) -> 'None':
+
+        # An ORL order response carries no PID, yet FHIR requires ServiceRequest.subject,
+        # so the subject states the absence of the patient explicitly.
+        msh = 'MSH|^~\\&|LAB|LABFAC|EHR|EHRFAC|20240517143055||ORL^O22^ORL_O22|MSG00017|P|2.5'
+        msa = 'MSA|AA|MSG00016|Order received'
+        orc = 'ORC|OK|ORD-1^EHR|FIL-1^LAB'
+        obr = 'OBR|1|ORD-1^EHR|FIL-1^LAB|24331-1^Lipid panel^LN'
+
+        bundle = convert(msh, msa, orc, obr)
+        service_request = one_resource(bundle, 'ServiceRequest')
+
+        assert service_request['subject'] == {
+            'extension': [{'url': 'http://hl7.org/fhir/StructureDefinition/data-absent-reason', 'valueCode': 'unknown'}]}
 
 # ################################################################################################################################
 # ################################################################################################################################

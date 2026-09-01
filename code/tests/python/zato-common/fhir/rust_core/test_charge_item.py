@@ -2,17 +2,6 @@
 
 import zato.fhir_r4_0_1_core
 from zato.fhir.r4_0_1.resources import ChargeItem
-from zato.common.typing_ import cast_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import any_
-    any_ = any_
-
-# ################################################################################################################################
-# ################################################################################################################################
 
 
 class TestToDictChargeItem:
@@ -170,7 +159,7 @@ class TestToDictChargeItem:
         assert 'bodysite' in result
 
     def test_to_dict_factor_override(self):
-        resource = cast_('any_', ChargeItem())
+        resource = ChargeItem()
         resource.factorOverride = 3.14
         result = zato.fhir_r4_0_1_core.to_dict(resource)
         assert 'factorOverride' in result
@@ -555,7 +544,7 @@ class TestGetPathChargeItem:
         assert result is not None
 
     def test_get_path_factor_override(self):
-        resource = cast_('any_', ChargeItem())
+        resource = ChargeItem()
         resource.factorOverride = 3.14
         result = zato.fhir_r4_0_1_core.get_path(resource, 'factorOverride')
         assert result is not None

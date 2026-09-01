@@ -7,42 +7,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from base64 import b64decode
 
-# Zato
-from zato.hl7v2 import parse_hl7
-
 # Local
-from conftest import Test_Conversions_Dir, convert, load_message, one_resource, organization_named, resources_of_type
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import any_
+from conftest import convert, convert_fixture, one_resource, organization_named, resources_of_type
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 MSH_ADT = 'MSH|^~\\&|SENDAPP|SENDFAC|RECVAPP|RECVFAC|20240517143055||ADT^A01|MSG00001|P|2.5'
 MSH_SIU = 'MSH|^~\\&|SCHED|SCHEDFAC|EHR|EHRFAC|20240517143055||SIU^S12|MSG00004|P|2.5'
-MSH_VXU = 'MSH|^~\\&|EHR|EHRFAC|REGISTRY|REGFAC|20240517143055||VXU^V04|MSG00005|P|2.5'
 PID = 'PID|1||12345^^^MYHOSP^MR||Smith^John|||M'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _convert_fixture(file_name:'str') -> 'any_':
-    """ Parses one test conversion fixture and converts it to a bundle.
-    """
-    file_path = os.path.join(Test_Conversions_Dir, file_name)
-
-    raw = load_message(file_path)
-    msg = parse_hl7(raw, validate=False)
-
-    out = msg.to_fhir()
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -195,7 +170,7 @@ class TestSIUAppointment:
 # ################################################################################################################################
 
     def test_ig_siu_s12(self) -> 'None':
-        bundle = _convert_fixture('SIU_S12.hl7')
+        bundle = convert_fixture('SIU_S12.hl7')
         appointment = one_resource(bundle, 'Appointment')
 
         assert appointment['status'] == 'booked'
@@ -203,90 +178,34 @@ class TestSIUAppointment:
         identifiers = appointment['identifier']
         assert len(identifiers) == 2
 
-# ################################################################################################################################
-# ################################################################################################################################
+    def test_unparseable_duration_and_timing_stay_preserved(self) -> 'None':
 
-class TestVXUImmunization:
-    """ VXU messages become Immunization resources.
-    """
+        # A duration slot with no number in it makes no minutes - the value,
+        # its units and the unusable timing quantity all stay preserved.
+        sch = 'SCH|APT001|||||OFFICE^Office Visit|||MIN|^^30^20260418140000^20260418143000|TBD'
 
-    def test_immunization_core_fields(self) -> 'None':
-        orc = 'ORC|RE||IMM-1^REGISTRY'
-        rxa = 'RXA|0|1|20240517103000||08^Hepatitis B vaccine^CVX|0.5|mL^^UCUM|||1234^Welby^Marcus|||||LOT-9|20250101|GHC^Good Health Vaccines^MVX|||CP'
-        rxr = 'RXR|IM^Intramuscular^HL70162|LD^Left deltoid^HL70163'
+        bundle = convert(MSH_SIU, PID, sch)
+        appointment = one_resource(bundle, 'Appointment')
 
-        bundle = convert(MSH_VXU, PID, orc, rxa, rxr)
-        immunization = one_resource(bundle, 'Immunization')
+        assert 'minutesDuration' not in appointment
+        assert 'start' not in appointment
 
-        # CP means the immunization is complete.
-        assert immunization['status'] == 'completed'
+        extensions = appointment['extension']
 
-        vaccine_code = immunization['vaccineCode']
-        vaccine_codings = vaccine_code['coding']
-        vaccine_coding = vaccine_codings[0]
+        assert {
+            'url': 'urn:zato:hl7v2:extension/unmapped/SCH-9',
+            'valueString': 'MIN',
+        } in extensions
 
-        assert vaccine_coding == {
-            'code': '08',
-            'display': 'Hepatitis B vaccine',
-            'system': 'http://hl7.org/fhir/sid/cvx',
-        }
+        assert {
+            'url': 'urn:zato:hl7v2:extension/unmapped/SCH-10',
+            'valueString': '^^30^20260418140000^20260418143000',
+        } in extensions
 
-        assert immunization['occurrenceDateTime'] == '2024-05-17T10:30:00+00:00'
-
-        assert immunization['doseQuantity'] == {
-            'value': 0.5,
-            'code': 'mL',
-            'system': 'http://unitsofmeasure.org',
-            'unit': 'mL',
-        }
-
-        assert immunization['lotNumber'] == 'LOT-9'
-        assert immunization['expirationDate'] == '2025-01-01'
-
-        # The ORC filler number identifies the immunization.
-        identifiers = immunization['identifier']
-        identifier = identifiers[0]
-
-        assert identifier['value'] == 'IMM-1'
-
-        # The manufacturer became an Organization.
-        organization = organization_named(bundle, 'Good Health Vaccines')
-        assert organization['name'] == 'Good Health Vaccines'
-
-        # The RXR route and site joined the immunization.
-        route = immunization['route']
-        route_codings = route['coding']
-        route_coding = route_codings[0]
-
-        assert route_coding['code'] == 'IM'
-
-        site = immunization['site']
-        site_codings = site['coding']
-        site_coding = site_codings[0]
-
-        assert site_coding['code'] == 'LD'
-
-# ################################################################################################################################
-
-    def test_ig_vxu_v04(self) -> 'None':
-        bundle = _convert_fixture('VXU_V04.hl7')
-
-        # The message carries three RXA groups.
-        immunizations = resources_of_type(bundle, 'Immunization')
-        assert len(immunizations) == 3
-
-        # Each immunization belongs to the patient from the same bundle.
-        bundle_dict = bundle.to_dict()
-        patient_url = None
-
-        for entry in bundle_dict['entry']:
-            resource = entry['resource']
-            if resource['resourceType'] == 'Patient':
-                patient_url = entry['fullUrl']
-
-        for immunization in immunizations:
-            patient_reference = immunization['patient']
-            assert patient_reference == {'reference': patient_url}
+        assert {
+            'url': 'urn:zato:hl7v2:extension/unmapped/SCH-11',
+            'valueString': 'TBD',
+        } in extensions
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -311,6 +230,127 @@ class TestRDEPharmacyOrder:
             'url': 'urn:zato:hl7v2:extension/unmapped/RXE-3',
             'valueString': '5111-1^Amoxicillin 500mg^NDC',
         } in extensions
+
+# ################################################################################################################################
+
+    def test_maximum_only_dose_becomes_a_high_range(self) -> 'None':
+
+        # A give amount that arrives only in the RXE-4 maximum slot makes
+        # a dose range with just the high bound.
+        msh = 'MSH|^~\\&|CPOE|HOSP|RX|PHARMACY|20240517143055||RDE^O01|MSG00010|P|2.5'
+        rxe = 'RXE|1^BID|316672^Vancomycin 1000 mg IV^RXNORM||1000|mg^milligram^UCUM'
+
+        bundle = convert(msh, PID, rxe)
+        medication_request = one_resource(bundle, 'MedicationRequest')
+
+        dose = medication_request['dosageInstruction'][0]['doseAndRate'][0]
+
+        assert dose['doseRange'] == {
+            'high': {'value': 1000, 'unit': 'milligram', 'code': 'mg', 'system': 'http://unitsofmeasure.org'},
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestFT1Charge:
+    """ FT1 segments become ChargeItem resources.
+    """
+
+    def test_non_date_transaction_date_is_preserved(self) -> 'None':
+
+        # A transaction date slot carrying something other than a date keeps its value.
+        msh = 'MSH|^~\\&|BILLING|HOSP|EHR|HOSPFAC|20240517143055||DFT^P03|MSG00011|P|2.5'
+        ft1 = 'FT1|1|TXN001||CG|D'
+
+        bundle = convert(msh, PID, ft1)
+        charge = one_resource(bundle, 'ChargeItem')
+
+        extensions = charge['extension']
+
+        assert {
+            'url': 'urn:zato:hl7v2:extension/unmapped/FT1-4',
+            'valueString': 'CG',
+        } in extensions
+
+# ################################################################################################################################
+
+    def test_coded_transaction_type_is_preserved_whole(self) -> 'None':
+
+        # A transaction type slot carrying a full coded value keeps all its components.
+        msh = 'MSH|^~\\&|BILLING|HOSP|EHR|HOSPFAC|20240517143055||DFT^P03|MSG00012|P|2.5'
+        ft1 = 'FT1|1|TXN001||20240517143000||J0190^HEPARIN SODIUM INJECTION^HCPCS|HEPARIN DRIP'
+
+        bundle = convert(msh, PID, ft1)
+        charge = one_resource(bundle, 'ChargeItem')
+
+        extensions = charge['extension']
+
+        assert {
+            'url': 'urn:zato:hl7v2:extension/unmapped/FT1-6',
+            'valueString': 'J0190^HEPARIN SODIUM INJECTION^HCPCS',
+        } in extensions
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestRDSPharmacyDispense:
+    """ RDS messages become MedicationDispense resources.
+    """
+
+    def test_dispense_core_fields(self) -> 'None':
+        msh = 'MSH|^~\\&|PHARM|HOSP|EHR|HOSPFAC|20240517143055||RDS^O13|MSG00008|P|2.5'
+        orc = 'ORC|RE|RX001|DISP001||CM'
+        rxe = 'RXE|1^BID^D2|314076^Lisinopril 10 mg PO^RXNORM||10|mg^milligram^UCUM'
+        rxd = 'RXD|1|314076^Lisinopril 10 mg PO^RXNORM|20240517143000|1|TAB^Tablet^HL70505||RX001'
+        rxr = 'RXR|PO^Oral^HL70162'
+
+        bundle = convert(msh, PID, orc, rxe, rxd, rxr)
+        dispense = one_resource(bundle, 'MedicationDispense')
+
+        # The dispense is always a completed one - RDS reports what already happened.
+        assert dispense['status'] == 'completed'
+
+        # RXD-2 is the dispensed medication ..
+        assert dispense['medicationCodeableConcept'] == {
+            'coding': [{
+                'system': 'http://www.nlm.nih.gov/research/umls/rxnorm',
+                'code': '314076',
+                'display': 'Lisinopril 10 mg PO',
+            }],
+            'text': 'Lisinopril 10 mg PO',
+        }
+
+        # .. RXD-3 is the handover time ..
+        assert dispense['whenHandedOver'] == '2024-05-17T14:30:00+00:00'
+
+        # .. RXD-4 and RXD-5 make the quantity ..
+        quantity = dispense['quantity']
+        assert quantity['value'] == 1
+        assert quantity['unit'] == 'Tablet'
+
+        # .. RXD-7 is the prescription number - the ORC order numbers went
+        # .. to the MedicationRequest the preceding RXE became ..
+        assert dispense['identifier'] == [{'value': 'RX001'}]
+
+        medication_request = one_resource(bundle, 'MedicationRequest')
+        assert medication_request['identifier'] == [{'value': 'RX001'}, {'value': 'DISP001'}]
+
+        # .. and the trailing RXR routes the dispense.
+        instruction = dispense['dosageInstruction'][0]
+        assert instruction['route']['coding'][0]['code'] == 'PO'
+
+# ################################################################################################################################
+
+    def test_dispense_without_medication_code(self) -> 'None':
+
+        # A dispense with an empty RXD-2 still carries the required medication element.
+        msh = 'MSH|^~\\&|PHARM|HOSP|EHR|HOSPFAC|20240517143055||RDS^O13|MSG00009|P|2.5'
+        rxd = 'RXD|1||20240517143000|1|TAB^Tablet^HL70505'
+
+        bundle = convert(msh, PID, rxd)
+        dispense = one_resource(bundle, 'MedicationDispense')
+
+        assert dispense['medicationCodeableConcept']['text'] == 'unknown'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -355,6 +395,27 @@ class TestMDMDocument:
         # The text OBX segments carried the document, not observations.
         observations = resources_of_type(bundle, 'Observation')
         assert observations == []
+
+# ################################################################################################################################
+
+    def test_document_text_decodes_escapes(self) -> 'None':
+        # Formatting escapes in the document body become the characters they stand for.
+        msh = 'MSH|^~\\&|TRANS|TRANSFAC|EHR|EHRFAC|20240517143055||MDM^T02|MSG00016|P|2.5'
+        evn = 'EVN|T02|20240517143055'
+        txa = 'TXA|1|CN^Consultation note^HL70270||||||||||DOC-9^TRANS'
+        obx = r'OBX|1|FT|BODY^Document body||First paragraph.\.br\\.br\Second paragraph.||||||F'
+
+        bundle = convert(msh, PID, evn, txa, obx)
+        document = one_resource(bundle, 'DocumentReference')
+
+        contents = document['content']
+        content = contents[0]
+        attachment = content['attachment']
+
+        decoded_bytes = b64decode(attachment['data'])
+        decoded = decoded_bytes.decode('utf8')
+
+        assert decoded == 'First paragraph.\n\nSecond paragraph.'
 
 # ################################################################################################################################
 
@@ -426,7 +487,7 @@ class TestMDMDocument:
 # ################################################################################################################################
 
     def test_ig_mdm_t02(self) -> 'None':
-        bundle = _convert_fixture('MDM_T02.hl7')
+        bundle = convert_fixture('MDM_T02.hl7')
         document = one_resource(bundle, 'DocumentReference')
 
         contents = document['content']

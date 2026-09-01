@@ -4,17 +4,6 @@ from xml.etree import ElementTree
 
 from zato.fhir.r4_0_1 import QuestionnaireResponse
 from zato.fhir.narrative import generate_narrative, NarrativeTemplate
-from zato.common.typing_ import cast_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import any_
-    any_ = any_
-
-# ################################################################################################################################
-# ################################################################################################################################
 
 
 XHTML_NS = '{http://www.w3.org/1999/xhtml}'
@@ -112,7 +101,7 @@ class TestNarrativeQuestionnaireResponse:
         assert found_field, "Field 'Part Of' not found in narrative"
 
     def test_narrative_questionnaire_response_questionnaire(self):
-        r = cast_('any_', QuestionnaireResponse())
+        r = QuestionnaireResponse()
         r.id = 'test-1'
         r.questionnaire = {'value': 'test'}
         narrative = generate_narrative(r)

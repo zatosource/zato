@@ -89,7 +89,7 @@ def test_references_resolve_inside_bundle(file_path:'any_'):
 
     bundle_dict = bundle.to_dict()
 
-    # All the URLs the bundle's entries live under ..
+    # All the URLs the bundle's entries sit under ..
     full_urls = set()
 
     for entry in bundle_dict['entry']:

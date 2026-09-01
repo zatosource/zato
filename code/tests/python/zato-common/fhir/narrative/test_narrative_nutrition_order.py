@@ -4,17 +4,6 @@ from xml.etree import ElementTree
 
 from zato.fhir.r4_0_1 import NutritionOrder
 from zato.fhir.narrative import generate_narrative, NarrativeTemplate
-from zato.common.typing_ import cast_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import any_
-    any_ = any_
-
-# ################################################################################################################################
-# ################################################################################################################################
 
 
 XHTML_NS = '{http://www.w3.org/1999/xhtml}'
@@ -36,7 +25,7 @@ class TestNarrativeNutritionOrder:
         assert root.tag == XHTML_NS + 'div'
 
     def test_narrative_nutrition_order_basic(self):
-        r = cast_('any_', NutritionOrder())
+        r = NutritionOrder()
         r.id = 'test-1'
         r.instantiatesCanonical = {'value': 'test'}
         narrative = generate_narrative(r)
@@ -55,7 +44,7 @@ class TestNarrativeNutritionOrder:
         assert found_field, "Field 'Instantiates Canonical' not found in narrative"
 
     def test_narrative_nutrition_order_instantiatesCanonical(self):
-        r = cast_('any_', NutritionOrder())
+        r = NutritionOrder()
         r.id = 'test-1'
         r.instantiatesCanonical = {'value': 'test'}
         narrative = generate_narrative(r)
@@ -150,7 +139,7 @@ class TestNarrativeNutritionOrder:
         assert found_field, "Field 'Patient' not found in narrative"
 
     def test_narrative_nutrition_order_custom_template(self):
-        r = cast_('any_', NutritionOrder())
+        r = NutritionOrder()
         r.id = 'test-1'
         r.instantiatesCanonical = {'value': 'test'}
         template = NarrativeTemplate(

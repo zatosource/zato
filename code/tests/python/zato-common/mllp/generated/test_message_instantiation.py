@@ -219,6 +219,8 @@ from zato.hl7v2.v2_9.messages import (
     STC_S33,
     TCU_U10,
     UDM_Q05,
+    VXQ_V01,
+    VXR_V03,
     VXU_V04,
 )
 
@@ -1097,6 +1099,14 @@ class TestMessageInstantiation:
     def test_instantiate_udm_q05(self):
         msg = UDM_Q05()
         assert msg._structure_id == "UDM_Q05"
+
+    def test_instantiate_vxq_v01(self):
+        msg = VXQ_V01()
+        assert msg._structure_id == "VXQ_V01"
+
+    def test_instantiate_vxr_v03(self):
+        msg = VXR_V03()
+        assert msg._structure_id == "VXR_V03"
 
     def test_instantiate_vxu_v04(self):
         msg = VXU_V04()

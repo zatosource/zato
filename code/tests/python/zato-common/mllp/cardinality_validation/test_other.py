@@ -1498,3 +1498,83 @@ class TestUDMQ05Cardinality:
         result = validate_cardinality("UDM_Q05", segment_counts, group_counts, choice_children, "TEST")
         assert not result.is_valid
         assert any("CARDINALITY_MAX" in e.code for e in result.errors)
+
+class TestVXQV01Cardinality:
+
+    def test_vxq_v01_valid_all_required_present(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["MSH"] = 1
+        segment_counts["QRD"] = 1
+        result = validate_cardinality("VXQ_V01", segment_counts, group_counts, choice_children, "TEST")
+        assert result.is_valid
+
+    def test_vxq_v01_invalid_missing_msh(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["QRD"] = 1
+        result = validate_cardinality("VXQ_V01", segment_counts, group_counts, choice_children, "TEST")
+        assert not result.is_valid
+        assert any("CARDINALITY_MIN" in e.code for e in result.errors)
+
+    def test_vxq_v01_invalid_exceeds_msh(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["MSH"] = 1
+        segment_counts["QRD"] = 1
+        segment_counts["MSH"] = 2
+        result = validate_cardinality("VXQ_V01", segment_counts, group_counts, choice_children, "TEST")
+        assert not result.is_valid
+        assert any("CARDINALITY_MAX" in e.code for e in result.errors)
+
+class TestVXRV03Cardinality:
+
+    def test_vxr_v03_valid_all_required_present(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["MSH"] = 1
+        segment_counts["MSA"] = 1
+        segment_counts["QRD"] = 1
+        segment_counts["PID"] = 1
+        segment_counts["PV1"] = 1
+        segment_counts["IN1"] = 1
+        segment_counts["RXA"] = 1
+        segment_counts["OBX"] = 1
+        result = validate_cardinality("VXR_V03", segment_counts, group_counts, choice_children, "TEST")
+        assert result.is_valid
+
+    def test_vxr_v03_invalid_missing_msh(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["MSA"] = 1
+        segment_counts["QRD"] = 1
+        segment_counts["PID"] = 1
+        segment_counts["PV1"] = 1
+        segment_counts["IN1"] = 1
+        segment_counts["RXA"] = 1
+        segment_counts["OBX"] = 1
+        result = validate_cardinality("VXR_V03", segment_counts, group_counts, choice_children, "TEST")
+        assert not result.is_valid
+        assert any("CARDINALITY_MIN" in e.code for e in result.errors)
+
+    def test_vxr_v03_invalid_exceeds_msh(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["MSH"] = 1
+        segment_counts["MSA"] = 1
+        segment_counts["QRD"] = 1
+        segment_counts["PID"] = 1
+        segment_counts["PV1"] = 1
+        segment_counts["IN1"] = 1
+        segment_counts["RXA"] = 1
+        segment_counts["OBX"] = 1
+        segment_counts["MSH"] = 2
+        result = validate_cardinality("VXR_V03", segment_counts, group_counts, choice_children, "TEST")
+        assert not result.is_valid
+        assert any("CARDINALITY_MAX" in e.code for e in result.errors)

@@ -1385,6 +1385,10 @@ from zato.hl7v2.v2_9.groups import (
     SsuU03SpecimenContainer,
     SsuU03Specimen,
     TcuU10TestConfiguration,
+    VxrV03PatientVisit,
+    VxrV03Insurance,
+    VxrV03Order,
+    VxrV03Observation,
     VxuV04PatientVisit,
     VxuV04Insurance,
     VxuV04PersonObservation,
@@ -1612,6 +1616,8 @@ from zato.hl7v2.v2_9.messages import (
     STC_S33,
     TCU_U10,
     UDM_Q05,
+    VXQ_V01,
+    VXR_V03,
     VXU_V04,
 )
 
@@ -3002,6 +3008,10 @@ __all__ = [
     "SsuU03SpecimenContainer",
     "SsuU03Specimen",
     "TcuU10TestConfiguration",
+    "VxrV03PatientVisit",
+    "VxrV03Insurance",
+    "VxrV03Order",
+    "VxrV03Observation",
     "VxuV04PatientVisit",
     "VxuV04Insurance",
     "VxuV04PersonObservation",
@@ -3227,6 +3237,8 @@ __all__ = [
     "STC_S33",
     "TCU_U10",
     "UDM_Q05",
+    "VXQ_V01",
+    "VXR_V03",
     "VXU_V04",
 ]
 

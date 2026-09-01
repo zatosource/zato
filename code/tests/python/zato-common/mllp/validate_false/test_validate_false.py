@@ -218,6 +218,8 @@ from zato.hl7v2.tests.fakers.msg_ssu import fake_ssuu03
 from zato.hl7v2.tests.fakers.msg_stc import fake_stcs33
 from zato.hl7v2.tests.fakers.msg_tcu import fake_tcuu10
 from zato.hl7v2.tests.fakers.msg_udm import fake_udmq05
+from zato.hl7v2.tests.fakers.msg_vxq import fake_vxqv01
+from zato.hl7v2.tests.fakers.msg_vxr import fake_vxrv03
 from zato.hl7v2.tests.fakers.msg_vxu import fake_vxuv04
 
 from zato.hl7v2.v2_9 import parse_hl7
@@ -1530,6 +1532,18 @@ class TestParseMessageValidateFalse:
 
     def test_parse_udmq05_validate_false(self):
         raw = fake_udmq05()
+        msg = parse_hl7(raw, validate=False)
+        assert msg is not None
+        assert hasattr(msg, "_raw_message")
+
+    def test_parse_vxqv01_validate_false(self):
+        raw = fake_vxqv01()
+        msg = parse_hl7(raw, validate=False)
+        assert msg is not None
+        assert hasattr(msg, "_raw_message")
+
+    def test_parse_vxrv03_validate_false(self):
+        raw = fake_vxrv03()
         msg = parse_hl7(raw, validate=False)
         assert msg is not None
         assert hasattr(msg, "_raw_message")

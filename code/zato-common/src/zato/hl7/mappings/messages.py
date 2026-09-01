@@ -30,6 +30,9 @@ _grouping_segments = ('RGS',)
 # The system of the bundle's processing-mode tag from MSH-11
 _processing_id_system = 'http://terminology.hl7.org/CodeSystem/v2-0103'
 
+# The coding system that marks a QPD-1 query profile as a CDC immunization registry query
+_immunization_query_system = 'CDCPHINVS'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -46,7 +49,28 @@ def _collect_segments(items:'any_', out:'anylist') -> 'anylist':
 
 # ################################################################################################################################
 
-def _family_for_structure(structure_id:'strnone') -> 'str':
+def _is_immunization_response(raw_segments:'anylist') -> 'bool':
+    """ Recognizes a query response that carries immunization history -
+    its QPD echoes a CDC immunization registry query profile.
+    """
+    for raw_segment in raw_segments:
+
+        # The first QPD settles it - its profile's coding system either is the CDC one or is not ..
+        if raw_segment.segment_id == 'QPD':
+            accessor = SegmentAccessor(raw_segment)
+            profile_system = accessor.component(1, 3)
+            out = profile_system == _immunization_query_system
+            break
+
+    # .. a response with no QPD at all is not an immunization one.
+    else:
+        out = False
+
+    return out
+
+# ################################################################################################################################
+
+def _family_for_structure(structure_id:'strnone', raw_segments:'anylist') -> 'str':
     """ Decides which conversion family a message structure belongs to.
     """
     if not structure_id:
@@ -61,8 +85,18 @@ def _family_for_structure(structure_id:'strnone') -> 'str':
     if structure_id.startswith(('SIU', 'SRM', 'SRR')):
         return 'scheduling'
 
-    if structure_id.startswith('VXU'):
+    # VXU submissions and VXR responses carry vaccinations outright, an RSP
+    # does so only when it answers a CDC immunization registry query.
+    if structure_id.startswith(('VXU', 'VXR')):
         return 'immunization'
+
+    if structure_id.startswith('RSP'):
+        if _is_immunization_response(raw_segments):
+            return 'immunization'
+
+        # Any other RSP maps no resources of its own.
+        else:
+            return 'generic'
 
     if structure_id.startswith(('RAS', 'RGV', 'RDE', 'RDS', 'OMP')):
         return 'medication'
@@ -166,7 +200,7 @@ def convert_to_fhir(msg:'any_', config:'strnone' = None) -> 'any_':
     raw_segments = _collect_segments(raw_message.items, [])
     raw_segments.extend(raw_message.extra_segments)
 
-    family = _family_for_structure(msg._structure_id)
+    family = _family_for_structure(msg._structure_id, raw_segments)
 
     # Convert every segment, then resolve what had to wait for the end of the walk.
     state = _walk(raw_segments, context, family)

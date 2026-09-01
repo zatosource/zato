@@ -876,6 +876,14 @@ class TestMessageClassImports:
         from zato.hl7v2.v2_9.messages import UDM_Q05
         assert UDM_Q05._structure_id == "UDM_Q05"
 
+    def test_import_vxq_v01(self):
+        from zato.hl7v2.v2_9.messages import VXQ_V01
+        assert VXQ_V01._structure_id == "VXQ_V01"
+
+    def test_import_vxr_v03(self):
+        from zato.hl7v2.v2_9.messages import VXR_V03
+        assert VXR_V03._structure_id == "VXR_V03"
+
     def test_import_vxu_v04(self):
         from zato.hl7v2.v2_9.messages import VXU_V04
         assert VXU_V04._structure_id == "VXU_V04"
