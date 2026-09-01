@@ -145,6 +145,7 @@ class TestCodingSystemToURI:
         assert coding_system_to_uri('SCT') == 'http://snomed.info/sct'
         assert coding_system_to_uri('UCUM') == 'http://unitsofmeasure.org'
         assert coding_system_to_uri('I10') == 'http://hl7.org/fhir/sid/icd-10'
+        assert coding_system_to_uri('CPT4') == 'http://www.ama-assn.org/go/cpt'
 
     def test_hl7_table_names(self):
         assert coding_system_to_uri('HL70001') == 'http://terminology.hl7.org/CodeSystem/v2-0001'

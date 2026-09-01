@@ -138,8 +138,11 @@ class TestPID:
         assert mrn_identifier['value'] == '12345'
         assert mrn_identifier['system'] == 'urn:zato:hl7v2:authority:MYHOSP'
 
+        # The field carries a bare value with no authority, so the identifier
+        # has the SS type code and no system of its own.
         assert ssn_identifier['value'] == '987-65-4320'
-        assert ssn_identifier['system'] == 'http://hl7.org/fhir/sid/us-ssn'
+        assert 'system' not in ssn_identifier
+        assert ssn_identifier['type'] == {'coding': [{'system': 'http://terminology.hl7.org/CodeSystem/v2-0203', 'code': 'SS'}]}
 
         assert patient['name'] == [{'family': 'Smith', 'given': ['John', 'Q']}]
         assert patient['birthDate'] == '1980-01-15'
@@ -615,6 +618,18 @@ class TestPD1:
 
         general_practitioners = patient['generalPractitioner']
         assert len(general_practitioners) == 2
+
+# ################################################################################################################################
+
+    def test_facility_identifier(self) -> 'None':
+
+        # XON-3 is the identifier of the primary facility.
+        pd1 = 'PD1|||Riverside Medical Centre^^Y99901'
+
+        bundle = convert(MSH, PID, pd1)
+
+        organization = organization_named(bundle, 'Riverside Medical Centre')
+        assert organization['identifier'] == [{'value': 'Y99901'}]
 
 # ################################################################################################################################
 # ################################################################################################################################

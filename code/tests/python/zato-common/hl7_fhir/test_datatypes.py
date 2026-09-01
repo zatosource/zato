@@ -10,10 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from zato.hl7.mappings.config import _new_config
-from zato.hl7.mappings.datatypes import cwe_to_codeable_concept, cx_to_identifier, dtm_to_date, dtm_to_datetime, \
-    ei_to_identifier, sn_to_observation_value, xad_to_address, xcn_to_name_and_identifier, xpn_to_human_name, \
-    xtn_to_contact_points
+from zato.hl7.mappings.config import Insurer_Authority_Systems, _new_config
+from zato.hl7.mappings.datatypes import cwe_to_codeable_concept, cwe_to_language_concept, cx_to_identifier, dtm_to_date, \
+    dtm_to_datetime, ei_to_identifier, sn_to_observation_value, tag_coding_systems, xad_to_address, \
+    xcn_to_name_and_identifier, xpn_to_human_name, xtn_to_contact_points
 
 # Local
 from conftest import rep
@@ -73,6 +73,78 @@ class TestCX:
     def test_value_only(self, default_config:'any_') -> 'None':
         out = cx_to_identifier(rep('12345'), default_config)
         assert out == {'value': '12345'}
+
+# ################################################################################################################################
+
+    def test_land_authority_nhs(self, default_config:'any_') -> 'None':
+
+        # A land authority maps to its official identifier system URI.
+        out = cx_to_identifier(rep('9434765919^^^NHS^NH'), default_config)
+
+        assert out['value'] == '9434765919'
+        assert out['system'] == 'https://fhir.nhs.uk/Id/nhs-number'
+
+# ################################################################################################################################
+
+    def test_land_authority_bsn(self, default_config:'any_') -> 'None':
+        out = cx_to_identifier(rep('999911120^^^NLMINBIZA^NNNLD'), default_config)
+
+        assert out['value'] == '999911120'
+        assert out['system'] == 'http://fhir.nl/fhir/NamingSystem/bsn'
+
+# ################################################################################################################################
+
+    def test_land_authority_gmc(self, default_config:'any_') -> 'None':
+        out = cx_to_identifier(rep('7512345^^^GMC'), default_config)
+
+        assert out['value'] == '7512345'
+        assert out['system'] == 'https://fhir.hl7.org.uk/Id/gmc-number'
+
+# ################################################################################################################################
+
+    def test_config_overrides_land_authority(self) -> 'None':
+
+        # A per-config identifier system wins over the built-in land entry.
+        config = _new_config()
+        config.identifier_systems['NHS'] = 'https://example.com/nhs'
+
+        out = cx_to_identifier(rep('9434765919^^^NHS^NH'), config)
+
+        assert out['system'] == 'https://example.com/nhs'
+
+# ################################################################################################################################
+
+    def test_land_authority_registries(self, default_config:'any_') -> 'None':
+
+        # Practitioner and provider registries map to their official URIs too.
+        big = cx_to_identifier(rep('19012345601^^^BIG'), default_config)
+        npi = cx_to_identifier(rep('1234567893^^^NPI'), default_config)
+
+        assert big['system'] == 'http://fhir.nl/fhir/NamingSystem/big'
+        assert npi['system'] == 'http://hl7.org/fhir/sid/us-npi'
+
+# ################################################################################################################################
+
+    def test_holder_specific_authority(self, default_config:'any_') -> 'None':
+
+        # Vektis runs both the UZOVI insurer register and the AGB care provider register,
+        # so the same authority resolves by who holds the identifier.
+        insurer = cx_to_identifier(rep('3311^^^VEKTIS'), default_config, Insurer_Authority_Systems)
+        practitioner = xcn_to_name_and_identifier(rep('01004567^Smith^A^^^^^^VEKTIS'), default_config)
+
+        assert insurer['system'] == 'http://fhir.nl/fhir/NamingSystem/uzovi'
+
+        practitioner_identifier = practitioner['identifier']
+        assert practitioner_identifier['system'] == 'http://fhir.nl/fhir/NamingSystem/agb-z'
+
+# ################################################################################################################################
+
+    def test_holderless_authority_stays_a_urn(self, default_config:'any_') -> 'None':
+
+        # Without a holder-specific map the authority derives a URN as any other does.
+        out = cx_to_identifier(rep('3311^^^VEKTIS'), default_config)
+
+        assert out['system'] == 'urn:zato:hl7v2:authority:VEKTIS'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -375,6 +447,119 @@ class TestCWE:
 
     def test_empty_cwe(self, default_config:'any_') -> 'None':
         assert cwe_to_codeable_concept(rep(''), default_config) is None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestLanguageCWE:
+    """ CWE fields holding spoken languages become BCP-47 codeable concepts.
+    """
+
+    def test_bare_two_letter_code(self, default_config:'any_') -> 'None':
+
+        # A bare ISO 639-1 code becomes a lowercase BCP-47 coding.
+        out = cwe_to_language_concept(rep('EN'), default_config)
+
+        assert out == {
+            'coding': [{'system': 'urn:ietf:bcp:47', 'code': 'en'}],
+            'text': 'EN',
+        }
+
+# ################################################################################################################################
+
+    def test_bare_three_letter_code(self, default_config:'any_') -> 'None':
+
+        # A bare ISO 639-2 code becomes a lowercase BCP-47 coding too.
+        out = cwe_to_language_concept(rep('ENG^English'), default_config)
+
+        assert out == {
+            'coding': [{'system': 'urn:ietf:bcp:47', 'code': 'eng', 'display': 'English'}],
+            'text': 'English',
+        }
+
+# ################################################################################################################################
+
+    def test_coded_system_stays(self, default_config:'any_') -> 'None':
+
+        # A coding that already names its system arrived fully specified and stays as it is.
+        out = cwe_to_language_concept(rep('en^English^ISO639'), default_config)
+
+        codings = out['coding']
+        coding = codings[0]
+
+        assert coding == {'system': 'urn:ietf:bcp:47', 'code': 'en', 'display': 'English'}
+
+# ################################################################################################################################
+
+    def test_non_language_shape_stays(self, default_config:'any_') -> 'None':
+
+        # A code that is not shaped like ISO 639 stays exactly as it arrived.
+        out = cwe_to_language_concept(rep('en-GB'), default_config)
+
+        codings = out['coding']
+        coding = codings[0]
+
+        assert coding == {'code': 'en-GB'}
+
+# ################################################################################################################################
+
+    def test_empty_language(self, default_config:'any_') -> 'None':
+        assert cwe_to_language_concept(rep(''), default_config) is None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestTagCodingSystems:
+    """ System-less codings gain the system of the vocabulary map that covers their code.
+    """
+
+    def test_covered_code_gains_the_system(self, default_config:'any_') -> 'None':
+        concept = cwe_to_codeable_concept(rep('SPO^Spouse'), default_config)
+        tag_coding_systems(concept, 'personal_relationship', default_config)
+
+        assert concept == {
+            'coding': [{'system': 'http://terminology.hl7.org/CodeSystem/v2-0063', 'code': 'SPO', 'display': 'Spouse'}],
+            'text': 'Spouse',
+        }
+
+# ################################################################################################################################
+
+    def test_translating_map_changes_the_code(self, default_config:'any_') -> 'None':
+
+        # The subscriber-relationship map translates table 0063 codes rather than keeping them.
+        concept = cwe_to_codeable_concept(rep('SPO^Spouse'), default_config)
+        tag_coding_systems(concept, 'subscriber_relationship', default_config)
+
+        codings = concept['coding']
+        coding = codings[0]
+
+        assert coding['code'] == 'spouse'
+        assert coding['system'] == 'http://terminology.hl7.org/CodeSystem/subscriber-relationship'
+
+# ################################################################################################################################
+
+    def test_coded_system_stays(self, default_config:'any_') -> 'None':
+
+        # A coding that already names its system arrived fully specified and stays as it is.
+        concept = cwe_to_codeable_concept(rep('SPO^Spouse^HL70063'), default_config)
+        tag_coding_systems(concept, 'subscriber_relationship', default_config)
+
+        codings = concept['coding']
+        coding = codings[0]
+
+        assert coding['code'] == 'SPO'
+        assert coding['system'] == 'http://terminology.hl7.org/CodeSystem/v2-0063'
+
+# ################################################################################################################################
+
+    def test_unknown_code_stays(self, default_config:'any_') -> 'None':
+        concept = cwe_to_codeable_concept(rep('NK^Next of kin'), default_config)
+        tag_coding_systems(concept, 'personal_relationship', default_config)
+
+        assert concept == {
+            'coding': [{'code': 'NK', 'display': 'Next of kin'}],
+            'text': 'Next of kin',
+        }
 
 # ################################################################################################################################
 # ################################################################################################################################

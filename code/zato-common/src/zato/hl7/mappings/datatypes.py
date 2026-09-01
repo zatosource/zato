@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.hl7.mappings.codes import coding_system_to_uri, lookup
-from zato.hl7.mappings.config import Authority_URN_Prefix
+from zato.hl7.mappings.config import Authority_URN_Prefix, Land_Identifier_Systems, Practitioner_Authority_Systems
 from zato.hl7.mappings.datetimes import dtm_to_date, dtm_to_datetime
 from zato.hl7.mappings.fields import component_value, subcomponent_value
 
@@ -20,7 +20,7 @@ dtm_to_datetime = dtm_to_datetime
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist, stranydict, strlist, strnone
+    from zato.common.typing_ import anylist, stranydict, strlist, strnone, strstrdict
     from zato.hl7.mappings.config import FHIRMappingConfig
     FHIRMappingConfig = FHIRMappingConfig
 
@@ -44,6 +44,12 @@ _Default_Contact_System = 'phone'
 # is a whole telephone number that arrived in that slot.
 _Max_Extension_Length = 5
 
+# The system spoken-language codes belong to
+Language_Coding_System = 'urn:ietf:bcp:47'
+
+# The lengths ISO 639 language codes come in - two-letter 639-1 and three-letter 639-2 codes.
+_ISO_639_Lengths = (2, 3)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -52,10 +58,9 @@ def hd_to_system(
     universal_id:'strnone',
     universal_id_type:'strnone',
     config:'FHIRMappingConfig',
+    authority_systems:'strstrdict | None' = None,
     ) -> 'strnone':
     """ Derives an identifier system URI from an HD - assigning authority - value.
-    ISO universal IDs become urn:oid:, UUID ones become urn:uuid:, otherwise the namespace
-    resolves through the config's identifier systems or becomes a derived URN.
     """
     if universal_id:
         if universal_id_type == 'ISO':
@@ -81,13 +86,31 @@ def hd_to_system(
         out = configured_system
         return out
 
+    # .. an authority whose registry depends on who holds the identifier
+    # .. resolves through the caller's holder-specific map ..
+    if authority_systems:
+        if holder_system := authority_systems.get(namespace):
+
+            out = holder_system
+            return out
+
+    # .. a land authority maps to its official system URI ..
+    if land_system := Land_Identifier_Systems.get(namespace):
+
+        out = land_system
+        return out
+
     # .. otherwise the authority name becomes a stable URN.
     out = Authority_URN_Prefix + namespace
     return out
 
 # ################################################################################################################################
 
-def cx_to_identifier(repetition:'anylist', config:'FHIRMappingConfig') -> 'dictnone':
+def cx_to_identifier(
+    repetition:'anylist',
+    config:'FHIRMappingConfig',
+    authority_systems:'strstrdict | None' = None,
+    ) -> 'dictnone':
     """ Converts a CX - extended composite ID - repetition to a FHIR Identifier.
     """
     value = component_value(repetition, 1)
@@ -102,7 +125,7 @@ def cx_to_identifier(repetition:'anylist', config:'FHIRMappingConfig') -> 'dictn
     universal_id = subcomponent_value(repetition, 4, 2)
     universal_id_type = subcomponent_value(repetition, 4, 3)
 
-    system = hd_to_system(namespace, universal_id, universal_id_type, config)
+    system = hd_to_system(namespace, universal_id, universal_id_type, config, authority_systems)
     if system:
         out['system'] = system
 
@@ -486,6 +509,60 @@ def cwe_to_codeable_concept(repetition:'anylist', config:'FHIRMappingConfig') ->
 
 # ################################################################################################################################
 
+def tag_coding_systems(concept:'stranydict', map_name:'str', config:'FHIRMappingConfig') -> 'None':
+    """ Fills in the coding system of each system-less coding whose code the named vocabulary map covers.
+    Codes outside the map stay exactly as they arrived.
+    """
+    if codings := concept.get('coding'):
+
+        for coding in codings:
+
+            # A coding that already names its system arrived fully specified.
+            if 'system' in coding:
+                continue
+
+            # A display-only coding has no code to resolve.
+            if not (code := coding.get('code')):
+                continue
+
+            if entry := lookup(map_name, code, config):
+                coding['code'] = entry['code']
+                coding['system'] = entry['system']
+
+# ################################################################################################################################
+
+def cwe_to_language_concept(repetition:'anylist', config:'FHIRMappingConfig') -> 'dictnone':
+    """ Converts a CWE holding a spoken language to a FHIR CodeableConcept.
+    Bare ISO 639 codes become BCP-47 codings - lowercase, under the urn:ietf:bcp:47 system.
+    """
+    out = cwe_to_codeable_concept(repetition, config)
+    if not out:
+        return None
+
+    if codings := out.get('coding'):
+
+        for coding in codings:
+
+            # A coding that already names its system arrived fully specified.
+            if 'system' in coding:
+                continue
+
+            # A display-only alternate coding has no code to upgrade.
+            if not (code := coding.get('code')):
+                continue
+
+            # Only codes shaped like ISO 639 become BCP-47 - anything else stays as it arrived.
+            code_length = len(code)
+
+            if code_length in _ISO_639_Lengths:
+                if code.isalpha():
+                    coding['code'] = code.lower()
+                    coding['system'] = Language_Coding_System
+
+    return out
+
+# ################################################################################################################################
+
 def xcn_to_name_and_identifier(repetition:'anylist', config:'FHIRMappingConfig') -> 'dictnone':
     """ Converts an XCN - extended composite name and ID - repetition to the parts a Practitioner is built from.
     Returns a dict with optional 'identifier' and 'name' keys or None when the repetition is empty.
@@ -504,7 +581,8 @@ def xcn_to_name_and_identifier(repetition:'anylist', config:'FHIRMappingConfig')
         universal_id = subcomponent_value(repetition, 9, 2)
         universal_id_type = subcomponent_value(repetition, 9, 3)
 
-        system = hd_to_system(namespace, universal_id, universal_id_type, config)
+        # An XCN always identifies a person, so person-registry authorities apply.
+        system = hd_to_system(namespace, universal_id, universal_id_type, config, Practitioner_Authority_Systems)
         if system:
             identifier['system'] = system
 

@@ -49,6 +49,34 @@ Default_Extension_Base_URL = 'urn:zato:hl7v2:extension'
 # The prefix identifier systems are derived from when an assigning authority has no configured URI
 Authority_URN_Prefix = 'urn:zato:hl7v2:authority:'
 
+# Official identifier system URIs of each land's assigning authorities
+Land_Identifier_Systems = {
+
+    # United Kingdom
+    'GMC':     'https://fhir.hl7.org.uk/Id/gmc-number',
+    'NHS':     'https://fhir.nhs.uk/Id/nhs-number',
+    'NHSNBR':  'https://fhir.nhs.uk/Id/nhs-number',
+    'NHSNMBR': 'https://fhir.nhs.uk/Id/nhs-number',
+    'ODS':     'https://fhir.nhs.uk/Id/ods-organization-code',
+
+    # The Netherlands
+    'BSN':       'http://fhir.nl/fhir/NamingSystem/bsn',
+    'NLMINBIZA': 'http://fhir.nl/fhir/NamingSystem/bsn',
+    'BIG':       'http://fhir.nl/fhir/NamingSystem/big',
+
+    # United States
+    'NPI': 'http://hl7.org/fhir/sid/us-npi',
+}
+
+# Authorities whose registry depends on who holds the identifier
+Practitioner_Authority_Systems = {
+    'VEKTIS': 'http://fhir.nl/fhir/NamingSystem/agb-z',
+}
+
+Insurer_Authority_Systems = {
+    'VEKTIS': 'http://fhir.nl/fhir/NamingSystem/uzovi',
+}
+
 # The default system of the bundle's identifier - the MSH-10 message control ID
 Default_Bundle_Identifier_System = 'urn:zato:hl7v2:message-control-id'
 

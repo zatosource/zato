@@ -163,10 +163,10 @@ def load_message(md_path:'Path', number:'int') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def md_path_for(country:'str', filename:'str') -> 'Path':
+def md_path_for(land:'str', filename:'str') -> 'Path':
     """ Returns the full path to a markdown file under the test data directory.
     """
-    out = _test_data_dir / country / filename
+    out = _test_data_dir / land / filename
     return out
 
 # ################################################################################################################################

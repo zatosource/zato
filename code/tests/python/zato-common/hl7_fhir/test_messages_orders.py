@@ -346,6 +346,46 @@ class TestORMOrders:
         assert len(service_requests) == 2
 
 # ################################################################################################################################
+
+    def test_shared_orc_covers_further_obrs(self) -> 'None':
+
+        # Two OBRs with the ORC's order number belong to the one group that ORC opened,
+        # so both ServiceRequests get the ORC's status and requester.
+        orc = 'ORC|NW|ORD-1^EHR|||SC|||||||1234^Welby^Marcus'
+        obr_first = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN'
+        obr_second = 'OBR|2|ORD-1^EHR||58410-2^CBC panel^LN'
+
+        bundle = convert(MSH_ORM, PID, orc, obr_first, obr_second)
+
+        service_requests = resources_of_type(bundle, 'ServiceRequest')
+        assert len(service_requests) == 2
+
+        first, second = service_requests
+
+        assert first['status'] == 'active'
+        assert second['status'] == 'active'
+
+        assert first['requester'] == second['requester']
+
+# ################################################################################################################################
+
+    def test_unrelated_obr_stays_outside_the_group(self) -> 'None':
+
+        # An OBR with a different order number does not inherit the previous ORC.
+        orc = 'ORC|NW|ORD-1^EHR|||SC|||||||1234^Welby^Marcus'
+        obr_first = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN'
+        obr_second = 'OBR|2|ORD-9^EHR||58410-2^CBC panel^LN'
+
+        bundle = convert(MSH_ORM, PID, orc, obr_first, obr_second)
+
+        service_requests = resources_of_type(bundle, 'ServiceRequest')
+        first, second = service_requests
+
+        assert first['status'] == 'active'
+        assert second['status'] == 'unknown'
+        assert 'requester' not in second
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestIGOrderConversions:
