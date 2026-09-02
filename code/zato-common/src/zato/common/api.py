@@ -1820,11 +1820,32 @@ class MicrosoftFabric:
 
     class Default:
         Address = 'https://api.fabric.microsoft.com/v1'
+        Livy_API_Version = '2023-12-01'
         Login_URL = 'https://login.microsoftonline.com'
         OneLake_Address = 'https://onelake.dfs.fabric.microsoft.com'
         OneLake_Scope = 'https://storage.azure.com/.default'
+        Operation_Poll_Interval = 2.0
+        Operation_Timeout = 600
         Pool_Size = 20
         Scope = 'https://api.fabric.microsoft.com/.default'
+        Spark_Session_Timeout = 600
+        Table_Chunk_Rows = 100000
+        Table_Files_Prefix = 'Files/zato'
+
+    class Operation_Status:
+        Failed = 'Failed'
+        Succeeded = 'Succeeded'
+
+    class Spark_State:
+        Available = 'available'
+        Cancelled = 'cancelled'
+        Dead = 'dead'
+        Error = 'error'
+        Idle = 'idle'
+        Killed = 'killed'
+
+    class Spark_Output_Status:
+        Error = 'error'
 
 # ################################################################################################################################
 # ################################################################################################################################

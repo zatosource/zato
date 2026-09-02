@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json
 import logging
 import os
 import sys
@@ -16,6 +15,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 # PyPI
 import pytest
+
+# Zato - test helpers
+from _admin_client import AdminClient
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,50 +42,11 @@ _workspace_id = 'workspace-sales-analytics'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _AdminClient:
-    """ Minimal admin client for invoking Zato services.
-    """
-
-    def __init__(self, base_url:'str', password:'str') -> 'None':
-        self.base_url = base_url
-        self.password = password
-
-    def invoke(self, service_name:'str', payload:'anydict') -> 'anydict':
-        from base64 import b64encode
-        from urllib.error import HTTPError
-        from urllib.request import Request, urlopen
-
-        url = f'{self.base_url}/zato/api/invoke/{service_name}'
-        body = json.dumps(payload).encode()
-
-        credentials = f'admin.invoke:{self.password}'
-        auth = b64encode(credentials.encode()).decode()
-
-        request = Request(url, data=body, method='POST')
-        request.add_header('Authorization', f'Basic {auth}')
-        request.add_header('Content-Type', 'application/json')
-
-        try:
-            with urlopen(request) as response:
-                raw = response.read()
-        except HTTPError as error:
-            raw = error.read()
-            error_text = raw.decode('utf-8', errors='replace')
-            raise Exception(f'{service_name} returned HTTP {error.code}: {error_text}')
-
-        if not raw:
-            return {}
-
-        out = json.loads(raw)
-        return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class TestFabricWorkspaces:
 
-    def _get_client(self, zato_server:'anydict') -> '_AdminClient':
-        return _AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+    def _get_client(self, zato_server:'anydict') -> 'AdminClient':
+        out = AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+        return out
 
 # ################################################################################################################################
 
@@ -178,8 +141,9 @@ class TestFabricWorkspaces:
 
 class TestFabricItems:
 
-    def _get_client(self, zato_server:'anydict') -> '_AdminClient':
-        return _AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+    def _get_client(self, zato_server:'anydict') -> 'AdminClient':
+        out = AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+        return out
 
 # ################################################################################################################################
 
@@ -289,8 +253,9 @@ class TestFabricItems:
 
 class TestFabricJobs:
 
-    def _get_client(self, zato_server:'anydict') -> '_AdminClient':
-        return _AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+    def _get_client(self, zato_server:'anydict') -> 'AdminClient':
+        out = AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+        return out
 
 # ################################################################################################################################
 
@@ -307,9 +272,7 @@ class TestFabricJobs:
             'job_type': 'RunNotebook',
         })
 
-        job_id = result['id']
-        assert result['status'] == 'InProgress'
-        assert result['jobType'] == 'RunNotebook'
+        job_id = result['job_id']
 
         # .. and read it back.
         result = client.invoke('test.fabric.get-job', {
@@ -321,6 +284,7 @@ class TestFabricJobs:
 
         assert result['id'] == job_id
         assert result['status'] == 'InProgress'
+        assert result['jobType'] == 'RunNotebook'
 
 # ################################################################################################################################
 
@@ -352,7 +316,7 @@ class TestFabricJobs:
             'item_id': 'item-sales-pipeline',
             'job_type': 'Pipeline',
         })
-        job_id = result['id']
+        job_id = result['job_id']
 
         # .. cancel it ..
         result = client.invoke('test.fabric.cancel-job', {
@@ -377,8 +341,9 @@ class TestFabricJobs:
 
 class TestFabricShortcuts:
 
-    def _get_client(self, zato_server:'anydict') -> '_AdminClient':
-        return _AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+    def _get_client(self, zato_server:'anydict') -> 'AdminClient':
+        out = AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+        return out
 
 # ################################################################################################################################
 
@@ -457,8 +422,9 @@ class TestFabricShortcuts:
 
 class TestFabricCapacities:
 
-    def _get_client(self, zato_server:'anydict') -> '_AdminClient':
-        return _AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+    def _get_client(self, zato_server:'anydict') -> 'AdminClient':
+        out = AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+        return out
 
 # ################################################################################################################################
 
@@ -480,8 +446,9 @@ class TestFabricCapacities:
 
 class TestFabricOneLake:
 
-    def _get_client(self, zato_server:'anydict') -> '_AdminClient':
-        return _AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+    def _get_client(self, zato_server:'anydict') -> 'AdminClient':
+        out = AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+        return out
 
 # ################################################################################################################################
 
@@ -571,8 +538,9 @@ class TestFabricOneLake:
 
 class TestFabricInvoke:
 
-    def _get_client(self, zato_server:'anydict') -> '_AdminClient':
-        return _AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+    def _get_client(self, zato_server:'anydict') -> 'AdminClient':
+        out = AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+        return out
 
 # ################################################################################################################################
 
@@ -596,8 +564,9 @@ class TestFabricInvoke:
 
 class TestFabricPing:
 
-    def _get_client(self, zato_server:'anydict') -> '_AdminClient':
-        return _AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+    def _get_client(self, zato_server:'anydict') -> 'AdminClient':
+        out = AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+        return out
 
 # ################################################################################################################################
 
@@ -616,8 +585,9 @@ class TestFabricPing:
 
 class TestFabricSecurity:
 
-    def _get_client(self, zato_server:'anydict') -> '_AdminClient':
-        return _AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+    def _get_client(self, zato_server:'anydict') -> 'AdminClient':
+        out = AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+        return out
 
 # ################################################################################################################################
 
