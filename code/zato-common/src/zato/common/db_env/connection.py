@@ -32,7 +32,7 @@ if 0:
 _dialects = {
     Type_MySQL:      'mysql+pymysql',
     Type_PostgreSQL: 'postgresql+pg8000',
-    Type_Oracle:     'oracle+oracledb',
+    Type_Oracle:     'oracle',
 }
 
 # Default ports for each database type
@@ -149,7 +149,13 @@ def build_engine_url_from_values(values:'stranydict', db_type:'str') -> 'str':
     else:
         port = _default_ports[db_type]
 
-    out = f'{dialect}://{username}:{password}@{host}:{port}/{db_name}'
+    # The Oracle dialect reads the URL's path as a SID, so the database name,
+    # which is a service name, moves into a query parameter instead.
+    if db_type == Type_Oracle:
+        out = f'{dialect}://{username}:{password}@{host}:{port}/?service_name={db_name}'
+    else:
+        out = f'{dialect}://{username}:{password}@{host}:{port}/{db_name}'
+
     return out
 
 # ################################################################################################################################

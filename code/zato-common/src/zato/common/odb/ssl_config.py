@@ -69,8 +69,9 @@ def get_ssl_values_from_config(config:'any_') -> 'stranydict':
 
 def get_ssl_connect_args(config:'any_', engine_name:'str') -> 'stranydict':
     """ Returns the driver-level SSL connect arguments for a connection configuration,
-    an empty dict when SSL is not enabled. Both PyMySQL and pg8000 accept
-    an ssl.SSLContext instance under the same `ssl` keyword.
+    an empty dict when SSL is not enabled. PyMySQL and pg8000 accept an ssl.SSLContext
+    instance under the same `ssl` keyword, while oracledb takes it under `ssl_context`
+    next to the TCPS protocol.
     """
 
     # Our response to produce
@@ -83,16 +84,23 @@ def get_ssl_connect_args(config:'any_', engine_name:'str') -> 'stranydict':
     if not values['ssl']:
         return out
 
-    # .. only MySQL and PostgreSQL connections are configured through these keys -
+    # .. only MySQL, PostgreSQL and Oracle connections are configured through these keys -
     # .. other engines pass their SSL options through their own extra options ..
     is_mysql      = engine_name.startswith('mysql')
+    is_oracle     = engine_name.startswith('oracle')
     is_postgresql = engine_name.startswith('postgres')
+
+    # .. Oracle needs the TCPS protocol next to its SSL context ..
+    if is_oracle:
+        out['protocol'] = 'tcps'
+        out['ssl_context'] = build_ssl_context_from_values(values)
+        return out
 
     if not is_mysql:
         if not is_postgresql:
             return out
 
-    # .. and both of their drivers accept the same SSL context under the same keyword.
+    # .. and the MySQL and PostgreSQL drivers accept the same SSL context under the same keyword.
     out['ssl'] = build_ssl_context_from_values(values)
 
     return out

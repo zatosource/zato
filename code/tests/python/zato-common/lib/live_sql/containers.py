@@ -18,6 +18,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
 # Zato
+from zato.common.odb import oracle as oracle
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -37,11 +38,16 @@ class ModuleCtx:
 
     # Docker images the databases run from
     MySQL_Image      = 'mysql:8.4'
+    Oracle_Image     = 'gvenzl/oracle-free:23-slim'
     PostgreSQL_Image = 'postgres:16'
 
     # Database types the servers report in their connection details
     Type_MySQL      = 'mysql'
+    Type_Oracle     = 'oracle'
     Type_PostgreSQL = 'postgresql'
+
+    # The service name the Oracle image serves its pluggable database under
+    Oracle_Service_Name = 'FREEPDB1'
 
     # How long to wait for a database to accept connections
     Ready_Timeout = 300
@@ -51,6 +57,10 @@ class ModuleCtx:
 
     # After how many connection attempts the wait reports its progress
     Ready_Report_Every = 10
+
+    # The queries the readiness checks run
+    Ping_Query        = 'select 1'
+    Ping_Query_Oracle = 'SELECT 1 FROM dual'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,7 +86,7 @@ def stop_container(name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _wait_until_ready(engine_url:'str', connect_args:'stranydict') -> 'None':
+def _wait_until_ready(engine_url:'str', connect_args:'stranydict', ping_query:'str'=ModuleCtx.Ping_Query) -> 'None':
     """ Retries connecting until the database accepts connections or the timeout is reached.
     """
     deadline = time() + ModuleCtx.Ready_Timeout
@@ -87,7 +97,7 @@ def _wait_until_ready(engine_url:'str', connect_args:'stranydict') -> 'None':
         engine = create_engine(engine_url, connect_args=connect_args, poolclass=NullPool)
         try:
             with engine.connect() as connection:
-                _ = connection.execute(text('select 1'))
+                _ = connection.execute(text(ping_query))
             engine.dispose()
             return
         except Exception as e:
@@ -277,6 +287,50 @@ def start_postgresql(
 
     if needs_ssl:
         details.update(_ssl_details(ssl_certificates))
+
+    out = DatabaseServer(container_name=container_name, details=details)
+    return out
+
+# ################################################################################################################################
+
+def start_oracle(
+    *,
+    container_name:'str',
+    port:'int',
+    username:'str',
+    password:'str',
+    ) -> 'DatabaseServer':
+    """ Starts an Oracle Database container. The application user is created inside
+    the pluggable database and connects to it through its service name.
+    """
+
+    # Starting a container is silent and can take a while, e.g. when the image needs to be pulled first,
+    # which is why each phase reports itself.
+    print(f'Starting Oracle container {container_name} on port {port}', flush=True)
+
+    _remove_stale_container(container_name)
+
+    command:'strlist' = [
+        'docker', 'run', '-d', '--rm',
+        '--name', container_name,
+        '-e', 'ORACLE_PASSWORD=' + password,
+        '-e', 'APP_USER=' + username,
+        '-e', 'APP_USER_PASSWORD=' + password,
+        '-p', f'{port}:1521',
+        ModuleCtx.Oracle_Image,
+    ]
+
+    _ = subprocess.run(command, check=True, capture_output=True)
+
+    # Wait until the database accepts connections from the host
+    service_name = ModuleCtx.Oracle_Service_Name
+    engine_url = f'oracle://{username}:{password}@localhost:{port}/?service_name={service_name}'
+
+    print(f'Waiting for Oracle container {container_name} to accept connections', flush=True)
+    _wait_until_ready(engine_url, {}, ModuleCtx.Ping_Query_Oracle)
+    print(f'Oracle container {container_name} is ready', flush=True)
+
+    details = _base_details(ModuleCtx.Type_Oracle, port, username, password, service_name)
 
     out = DatabaseServer(container_name=container_name, details=details)
     return out

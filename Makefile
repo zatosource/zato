@@ -12,7 +12,7 @@
 	test-pubsub-backend-perf test-pubsub-backend-amqp-perf test-pubsub-backend-perf-mass test-pubsub-system-perf \
 	test-mcp _test-mcp test-mcp-local-docker test-bearer _test-bearer test-graphql test-grpc \
 	test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm _test-llm test-llm-local-docker \
-	test-sql-cloud test-sql-cloud-live test-aws test-sdk test-microsoft-cloud test-salesforce _test-salesforce \
+	test-sql-cloud test-sql-cloud-live test-oracle-db test-aws test-sdk test-microsoft-cloud test-salesforce _test-salesforce \
 	test-hl7 test-hl7-fhir test-hl7-mllp-channels test-hl7-mllp-outconns test-hl7-languages test-hl7-volume \
 	test-ui _test-ui test-ui-pubsub test-ui-openapi test-ui-analytics test-ui-audit-log test-ui-webapp test-ui-rule-engine-dashboard \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
@@ -955,6 +955,12 @@ test-sql-cloud-live: ## Snowflake and Redshift tests through a live Zato server 
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sql_cloud_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-oracle-db: ## Outgoing Oracle DB connection tests against a live Oracle container, including a live Zato server and concurrent queries from greenlets.
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/oracle_db_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_oracle_db_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-microsoft-cloud: ## Microsoft 365 connection tests through a live Zato server against a simulated Microsoft cloud.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/microsoft_cloud_live/ \
@@ -1410,7 +1416,7 @@ Zato_Test_Toolchain := \
 # Suites needing a live server or an external service
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub-backend test-mongodb test-es \
-	test-sql-cloud-live test-microsoft-cloud test-salesforce test-bearer test-pubsub-backend-amqp test-as2-live \
+	test-sql-cloud-live test-oracle-db test-microsoft-cloud test-salesforce test-bearer test-pubsub-backend-amqp test-as2-live \
 	test-as2-interop test-ibm-mq test-kafka test-sdk test-hl7-languages test-pubsub-outgoing \
 	test-hl7-mllp-outconns test-pubsub-core test-hl7
 

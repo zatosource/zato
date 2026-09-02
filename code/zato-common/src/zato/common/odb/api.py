@@ -31,6 +31,7 @@ from sqlalchemy.sql.expression import true
 from sqlalchemy.sql.type_api import TypeEngine
 
 # Zato
+from zato.common.odb import oracle as oracle
 from zato.common.api import DEPLOYMENT_STATUS, HTTP_SOAP, MS_SQL, NotGiven, SEC_DEF_TYPE, SECRET_SHADOW, \
      SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditLog, AuditOutcome, AuditSource
@@ -297,24 +298,33 @@ class SessionWrapper:
 
         return out
 
-    def one(self, *args:'any_', **kwargs:'any_') -> 'any_':
+    def _get_one(self, needs_one:'bool', *args:'any_', **kwargs:'any_') -> 'any_':
         result = self.execute(*args, **kwargs)
 
+        # No rows means either an error or an explicit None, depending on the caller ..
         if not result:
-            needs_one = kwargs.get('zato_needs_one') or False
             if needs_one:
                 raise Exception('Query returned no rows')
             else:
-                return None # Explicitly return None
-        else:
-            len_result = len(result)
-            if len_result > 1:
-                raise Exception(f'Query returned multiple rows (len={len_result})')
-            else:
-                return result[0]
+                return None
+
+        # .. more than one row is always an error ..
+        len_result = len(result)
+
+        if len_result > 1:
+            raise Exception(f'Query returned multiple rows (len={len_result})')
+
+        # .. and exactly one row is what both callers expect.
+        out = result[0]
+        return out
+
+    def one(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        out = self._get_one(True, *args, **kwargs)
+        return out
 
     def one_or_none(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self.one(*args, zato_needs_one=True, **kwargs)
+        out = self._get_one(False, *args, **kwargs)
+        return out
 
     def callproc(self, proc_name:'str', params:'anylistnone'=None) -> 'any_':
 
@@ -415,10 +425,6 @@ class SQLConnectionPool:
         elif self.engine_name.startswith('postgres'):
             _extra['connect_args'] = {'application_name': get_component_name()} # type: ignore
 
-        # Oracle DB-only
-        elif self.engine_name.startswith('oracle'):
-            self.engine_name = 'oracle+oracledb'
-
         extra = self.config.get('extra') # Optional, hence .get
 
         if extra and isinstance(extra, str) and extra.startswith('\\x'):
@@ -448,6 +454,10 @@ class SQLConnectionPool:
         # so everything from the connection's extra goes onto the URL, not into create_engine.
         snowflake_url_params = {}
 
+        # Oracle connects to a service name unless the connection's extra says the database
+        # name is a SID - either way, the flag itself is not a create_engine argument.
+        oracle_use_sid = False
+
         if self.engine_name == 'snowflake':
 
             # The dialect rejects these keys on the URL - they go through connect_args instead.
@@ -475,6 +485,11 @@ class SQLConnectionPool:
 
             _extra.update(extra_parsed)
 
+        # Oracle keeps use_sid out of create_engine - it only decides the shape of the URL below.
+        elif self.engine_name.startswith('oracle'):
+            oracle_use_sid = extra_parsed.pop('use_sid', False)
+            _extra.update(extra_parsed)
+
         # Any other engine passes its extra options to create_engine as they are.
         else:
             _extra.update(extra_parsed)
@@ -496,8 +511,12 @@ class SQLConnectionPool:
         if snowflake_url_params:
             engine_url = engine_url + '?' + urlencode(snowflake_url_params)
 
-        if engine_url.startswith('oracle://'):
-            engine_url = engine_url.replace('oracle://', 'oracle+oracledb://')
+        # The Oracle dialect reads the URL's path as a SID, so a service name - the default -
+        # moves into a query parameter instead.
+        if self.engine_name.startswith('oracle'):
+            if not oracle_use_sid:
+                base_url, oracle_db_name = engine_url.rsplit('/', 1)
+                engine_url = f'{base_url}/?service_name={oracle_db_name}'
 
         try:
             self.engine = self._create_engine(engine_url, self.config, _extra)
@@ -527,11 +546,6 @@ class SQLConnectionPool:
 
 # ################################################################################################################################
 
-    def _is_oracle_engine(self, engine_url:'str') -> 'bool':
-        return engine_url.startswith('oracle')
-
-# ################################################################################################################################
-
     def _is_sa_engine(self, engine_url:'str') -> 'bool':
         return 'zato+mssql1' not in engine_url
 
@@ -547,28 +561,10 @@ class SQLConnectionPool:
 
 # ################################################################################################################################
 
-    def _create_oracle_engine(self, engine_url, config):
-
-        return create_engine(
-            'oracle://:@',
-            connect_args={
-                'user': 'system',
-                'password': 'new_password',
-                'host': 'localhost',
-                'port': '1521',
-                'service_name': 'FREEPDB1',
-            }
-        )
-
-# ################################################################################################################################
-
     def _create_engine(self, engine_url, config, extra):
 
         if self._is_unittest_engine(engine_url):
             return self._create_unittest_engine(engine_url, config)
-
-        elif self._is_oracle_engine(engine_url):
-            return self._create_oracle_engine(engine_url, config)
 
         elif self._is_sa_engine(engine_url):
             return create_engine(engine_url, **extra)
