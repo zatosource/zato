@@ -4,14 +4,14 @@
 
 {% block dashboard_extra_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
-<link rel="stylesheet" type="text/css" href="/static/css/outgoing/sftp-command-shell.css">
+<link rel="stylesheet" type="text/css" href="/static/css/outgoing/file-command-shell.css">
 {% endblock %}
 
 {% block dashboard_domain_js %}
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/sftp-command-shell.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/file-command-shell.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
-    $.fn.zato.outgoing.sftp.command_shell.init();
+    $.fn.zato.outgoing.fileCommandShell.init();
 });
 </script>
 {% endblock %}
@@ -24,68 +24,63 @@ $(document).ready(function() {
 
 {% block dashboard_grid %}
 
-        <div class="dashboard-card sftp-shell-card" id="sftp-shell-card">
+        <div class="dashboard-card file-shell-card" id="file-shell-card">
 
             <div class="dashboard-card-header">
                 <span class="dashboard-pill">SFTP command shell</span>
-                <select id="sftp-shell-conn-select" class="sftp-shell-conn-select">
+                <select id="file-shell-connection-select" class="file-shell-connection-select">
                     {% for item in connection_list %}
                     <option value="{{ item.url }}"{% if item.name == conn_name %} selected{% endif %}>{{ item.name }}</option>
                     {% endfor %}
                 </select>
-                <span class="dashboard-pill sftp-shell-timing" id="sftp-shell-timing" hidden></span>
+                <span class="dashboard-pill file-shell-timing" id="file-shell-timing" hidden></span>
             </div>
 
-            <form novalidate id="sftp-shell-form"
+            <form novalidate id="file-shell-form"
                   action="{% url "out-sftp-command-shell-action" conn_id cluster_id name_slug %}" method="post">
                 {% csrf_token %}
 
                 <input type="hidden" name="id" value="{{ conn_id }}" />
                 <input type="hidden" name="cluster_id" value="{{ cluster_id }}" />
 
-                <div class="sftp-shell-editor">
+                <div class="file-shell-editor">
                     {{ form.data }}
-                    <div class="sftp-shell-hint">
-                        One command per line, e.g. <code>ls /tmp</code>,
-                        <code>get /tmp/remote.txt /tmp/local.txt</code> or
-                        <code>put /tmp/local.txt /tmp/remote.txt</code>.
-                    </div>
                 </div>
 
-                <div class="sftp-shell-actions">
-                    <span class="sftp-shell-status" id="sftp-shell-status"></span>
-                    <label class="sftp-shell-log-level-label" for="id_log_level">Log level</label>
+                <div class="file-shell-actions">
+                    <span class="file-shell-status" id="file-shell-status"></span>
+                    <label class="file-shell-log-level-label" for="id_log_level">Log level</label>
                     {{ form.log_level }}
-                    <button type="button" class="secondary-button" id="sftp-shell-clear">Clear</button>
-                    <button type="submit" class="action-button" id="sftp-shell-run">Run</button>
+                    <button type="button" class="secondary-button" id="file-shell-clear">Clear</button>
+                    <button type="submit" class="action-button" id="file-shell-run">Run</button>
                 </div>
 
             </form>
 
-            <div class="dashboard-card-header dashboard-card-header-tabs sftp-shell-output-header">
+            <div class="dashboard-card-header dashboard-card-header-tabs file-shell-output-header">
                 <div class="dashboard-tabs" role="tablist" aria-label="Command output">
 
                     <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="stdout"
                             role="tab" aria-selected="true">
                         <span class="dashboard-tab-label">Stdout</span>
-                        <span class="dashboard-pill" id="sftp-shell-stdout-lines">0</span>
+                        <span class="dashboard-pill" id="file-shell-stdout-lines">0</span>
                     </button>
 
                     <button type="button" class="dashboard-tab" data-tab="stderr"
                             role="tab" aria-selected="false">
                         <span class="dashboard-tab-label">Stderr</span>
-                        <span class="dashboard-pill" id="sftp-shell-stderr-lines">0</span>
+                        <span class="dashboard-pill" id="file-shell-stderr-lines">0</span>
                     </button>
 
                 </div>
             </div>
 
-            <div class="dashboard-tab-panel" id="sftp-shell-tab-panel-stdout" role="tabpanel">
-                <pre class="sftp-shell-output" id="sftp-shell-stdout"></pre>
+            <div class="dashboard-tab-panel" id="file-shell-tab-panel-stdout" role="tabpanel">
+                <pre class="file-shell-output" id="file-shell-stdout"></pre>
             </div>
 
-            <div class="dashboard-tab-panel" id="sftp-shell-tab-panel-stderr" role="tabpanel" hidden>
-                <pre class="sftp-shell-output" id="sftp-shell-stderr"></pre>
+            <div class="dashboard-tab-panel" id="file-shell-tab-panel-stderr" role="tabpanel" hidden>
+                <pre class="file-shell-output" id="file-shell-stderr"></pre>
             </div>
 
         </div>

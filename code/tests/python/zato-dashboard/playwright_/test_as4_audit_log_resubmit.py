@@ -11,8 +11,7 @@ import pytest
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from as4_exchange import delete_exchange, new_exchange, send_with_retry, wait_for_invoker_service, \
-    Event_Message_Received, Event_Message_Sent, Receiver_Service
+from as4_exchange import delete_exchange, new_exchange, send_with_retry, wait_for_invoker_service, Receiver_Service
 from audit_resubmit import get_resubmit_label, is_report_ok, resubmit_until, row_selector_of_event, wait_for_marker
 from audit_toggle import goto_audit_log
 
@@ -29,6 +28,10 @@ if 0:
 _Test_Name_Prefix = 'test.as4.resubmit.' + CryptoManager.generate_hex_string(32) + '.'
 
 _Audit_Source = 'as4'
+
+# What the exchange's two resubmittable events show as, by the labels their role tags carry
+_Event_Message_Sent     = 'Message sent'
+_Event_Message_Received = 'Message received'
 
 # What the two row actions of an AS4 exchange are labelled - one word for both,
 # the service behind each row is what tells a resend from a reprocess
@@ -86,7 +89,7 @@ class TestAS4AuditLogResubmit:
             goto_audit_log(page, base_url, _Audit_Source, pair)
 
             # The row of the sent message carries the resend action ..
-            sent_row = row_selector_of_event(Event_Message_Sent)
+            sent_row = row_selector_of_event(_Event_Message_Sent)
 
             label = get_resubmit_label(page, sent_row)
             assert label == _Label_Resend, f'Expected a Resubmit link, got: "{label}"'
@@ -136,7 +139,7 @@ class TestAS4AuditLogResubmit:
             goto_audit_log(page, base_url, _Audit_Source, pair)
 
             # The row of the received message carries the reprocess action ..
-            received_row = row_selector_of_event(Event_Message_Received)
+            received_row = row_selector_of_event(_Event_Message_Received)
 
             label = get_resubmit_label(page, received_row)
             assert label == _Label_Reprocess, f'Expected a Resubmit link, got: "{label}"'

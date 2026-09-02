@@ -17,7 +17,7 @@
 // The live-outcomes loop runs server-side in this product, so its budget
 // lives with the Python suite against the outcomes endpoint.
 //
-// Run with: node check_scale.js <webapp js dir> <dashboard js dir>
+// Run with: node check_scale.js <webapp js dir> <dashboard js dir> <shared rule-engine js dir>
 
 const fs = require('fs');
 const path = require('path');
@@ -61,12 +61,16 @@ window.location = {hash: '', search: ''};
 const webappJsDir = process.argv[2];
 const dashboardJsDir = process.argv[3];
 
+// The editor core ships with the shared UI kit in zato-common while the
+// dashboard keeps its own screens, so the scripts load from both places
+const sharedRuleEngineJsDir = process.argv[4];
+
 [path.join(webappJsDir, 'shared.js'),
- path.join(dashboardJsDir, 'vocabulary.js'),
- path.join(dashboardJsDir, 'editor-model.js'),
- path.join(dashboardJsDir, 'editor-checks.js'),
- path.join(dashboardJsDir, 'editor-render.js'),
- path.join(dashboardJsDir, 'editor-views.js'),
+ path.join(sharedRuleEngineJsDir, 'vocabulary.js'),
+ path.join(sharedRuleEngineJsDir, 'editor-model.js'),
+ path.join(sharedRuleEngineJsDir, 'editor-checks.js'),
+ path.join(sharedRuleEngineJsDir, 'editor-render.js'),
+ path.join(sharedRuleEngineJsDir, 'editor-views.js'),
  path.join(dashboardJsDir, 'table-model.js'),
  path.join(dashboardJsDir, 'table-checks.js'),
  path.join(dashboardJsDir, 'table-render.js'),

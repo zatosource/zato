@@ -460,7 +460,7 @@ Sec_Def_Type = SEC_DEF_TYPE
 # ################################################################################################################################
 # ################################################################################################################################
 
-SEC_DEF_TYPE_NAME = {
+Sec_Def_Type_Name = {
     SEC_DEF_TYPE.APIKEY: 'API key',
     SEC_DEF_TYPE.BASIC_AUTH: 'Basic Auth',
     SEC_DEF_TYPE.MTLS: 'mTLS',
@@ -470,7 +470,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.WSS: 'WS-Security',
 }
 
-All_Sec_Def_Types = sorted(SEC_DEF_TYPE_NAME)
+All_Sec_Def_Types = sorted(Sec_Def_Type_Name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -523,7 +523,7 @@ class Attrs(type):
     attrs = NotGiven
 
     @classmethod
-    def has(cls, attr):
+    def has(cls, attr:'any_') -> 'bool':
         if cls.attrs is NotGiven:
             cls.attrs = []
             for cls_attr in dir(cls):
@@ -604,23 +604,6 @@ class SCHEDULER:
     Default_API_Client_For_Server_Auth_Required = True
     Default_API_Client_For_Server_Username = 'server_api_client1'
 
-    TLS_Enabled = False
-    TLS_Verify = True
-    TLS_Client_Certs = 'optional'
-
-    TLS_Private_Key_Location  = 'zato-scheduler-priv-key.pem'
-    TLS_Public_Key_Location   = 'zato-scheduler-pub-key.pem'
-    TLS_Cert_Location         = 'zato-scheduler-cert.pem'
-    TLS_CA_Certs_Key_Location = 'zato-scheduler-ca-certs.pem'
-
-    TLS_Version_Default_Linux   = 'TLSv1_3'
-    TLS_Version_Default_Windows = 'TLSv1_2'
-
-    TLS_Ciphers_13 = 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256'
-    TLS_Ciphers_12 = 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:' + \
-                     'ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:'  + \
-                     'DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305'
-
     class Status:
         Active = 'Active'
         Paused = 'Paused'
@@ -636,17 +619,6 @@ class SCHEDULER:
 
         Bind_Host = 'Zato_Scheduler_scheduler_conf_bind_host'
         Bind_Port = 'Zato_Scheduler_Bind_Port'
-        Use_TLS = 'Zato_Scheduler_Use_TLS'
-        TLS_Verify = 'Zato_Scheduler_TLS_Verify'
-        TLS_Client_Certs = 'Zato_Scheduler_TLS_Client_Certs'
-
-        TLS_Private_Key_Location  = 'Zato_Scheduler_TLS_Private_Key_Location'
-        TLS_Public_Key_Location   = 'Zato_Scheduler_TLS_Public_Key_Location'
-        TLS_Cert_Location         = 'Zato_Scheduler_TLS_Cert_Location'
-        TLS_CA_Certs_Key_Location = 'Zato_Scheduler_TLS_CA_Certs_Key_Location'
-
-        TLS_Version = 'Zato_Scheduler_TLS_Version'
-        TLS_Ciphers = 'Zato_Scheduler_TLS_Ciphers'
         Path_Action_Prefix = 'Zato_Scheduler_Path_Action_'
 
         # These are used by servers to invoke the scheduler
@@ -693,7 +665,6 @@ class CHANNEL(Attrs):
     SERVICE = 'service'
     STARTUP_SERVICE = 'startup-service'
     URL_DATA = 'url-data'
-    INVOKE = 'invoke'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1007,10 +978,6 @@ class URL_PARAMS_PRIORITY:
     QS_OVER_PATH = 'qs-over-path'
     DEFAULT = QS_OVER_PATH
 
-    class __metaclass__(type):
-        def __iter__(self):
-            return iter((self.PATH_OVER_QS, self.QS_OVER_PATH, self.DEFAULT))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1251,6 +1218,7 @@ class GENERIC:
             GATEWAY_RULE_ENGINE = 'gateway-rule-engine'
             OUTCONN_AS2 = 'outconn-as2'
             OUTCONN_ES = 'outconn-es'
+            OUTCONN_FTP = 'outconn-ftp'
             OUTCONN_LDAP = 'outconn-ldap'
             OUTCONN_LLM = 'outconn-llm'
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
@@ -1288,19 +1256,43 @@ class MCP:
     # each gateway may override it through its invoke_timeout option.
     Default_Invoke_Timeout = 90
 
+    # The opaque-config keys under which a gateway lists the connections
+    # it exposes as tools, one key per connection group.
+    Connection_List_Keys = [
+        'rest_connections',
+        'soap_connections',
+        'sql_connections',
+        'microsoft_365_connections',
+        'microsoft_teams_connections',
+        'microsoft_fabric_connections',
+        'microsoft_power_automate_connections',
+        'sap_connections',
+        'confluence_connections',
+        'odoo_connections',
+        'es_connections',
+    ]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class FileTransfer:
-    """ File transfer schedules - each one polls a remote directory of an SFTP or SMB connection
+    """ File transfer schedules - each one polls a remote directory of an SFTP, SMB or FTP connection
     and invokes a target service once per each file received.
     """
 
     class ConnType:
         SFTP = GENERIC.CONNECTION.TYPE.OUTCONN_SFTP
         SMB = GENERIC.CONNECTION.TYPE.OUTCONN_SMB
+        FTP = GENERIC.CONNECTION.TYPE.OUTCONN_FTP
 
-    ConnTypeList = (ConnType.SFTP, ConnType.SMB)
+    ConnTypeList = (ConnType.SFTP, ConnType.SMB, ConnType.FTP)
+
+    # Which attribute of a service holds the facade of each connection type, e.g. self.sftp or self.smb
+    Facade_Attr = {
+        ConnType.SFTP: 'sftp',
+        ConnType.SMB: 'smb',
+        ConnType.FTP: 'ftp',
+    }
 
     class Scheduler:
 
@@ -1344,12 +1336,14 @@ class FileTransfer:
         Job_Prefix = {
             GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: 'sftp.',
             GENERIC.CONNECTION.TYPE.OUTCONN_SMB: 'smb.',
+            GENERIC.CONNECTION.TYPE.OUTCONN_FTP: 'ftp.',
         }
 
         # Names of the internal services that the auto-created jobs invoke to poll a directory
         Dispatch_Service = {
             GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: 'zato.outgoing.sftp.process-files',
             GENERIC.CONNECTION.TYPE.OUTCONN_SMB: 'zato.outgoing.smb.process-files',
+            GENERIC.CONNECTION.TYPE.OUTCONN_FTP: 'zato.outgoing.ftp.process-files',
         }
 
         # Names of the keys in the extra data that an auto-created job carries - the schedule itself
@@ -1708,6 +1702,14 @@ class SMB:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class FTP:
+
+    class DEFAULT:
+        PORT = 21
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SFTP:
 
     class DEFAULT:
@@ -1726,7 +1728,7 @@ class SFTP:
         def __iter__(self):
             return iter((self.LEVEL0, self.LEVEL1, self.LEVEL2, self.LEVEL3, self.LEVEL4))
 
-        def is_valid(self, value):
+        def is_valid(self, value:'any_') -> 'bool':
             return value in (elem.id for elem in self)
 
 # ################################################################################################################################
@@ -1753,6 +1755,8 @@ class SALESFORCE:
     class Default:
         Address = 'https://example.my.salesforce.com'
         API_Version = '54.0'
+        Pool_Size = 20
+        Recv_Timeout = 250
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1891,10 +1895,10 @@ class SourceCodeInfo:
         self.source = b''       # type: bytes
         self.source_html = ''   # type: str
         self.len_source = 0     # type: int
-        self.path = None        # type: str
-        self.hash = None        # type: str
-        self.hash_method = None # type: str
-        self.server_name = None # type: str
+        self.path = None        # type: strnone
+        self.hash = None        # type: strnone
+        self.hash_method = None # type: strnone
+        self.server_name = None # type: strnone
         self.line_number = 0    # type: int
 
 # ################################################################################################################################
@@ -1920,8 +1924,9 @@ class SMTPMessage:
     charset: 'any_'
     is_rfc2231: 'any_'
 
-    def __init__(self, from_=None, to=None, subject='', body='', attachments=None, cc=None, bcc=None, is_html=False, headers=None,
-            charset='utf8', is_rfc2231=True):
+    def __init__(self, from_:'any_'=None, to:'any_'=None, subject:'str'='', body:'str'='', attachments:'any_'=None,
+            cc:'any_'=None, bcc:'any_'=None, is_html:'bool'=False, headers:'any_'=None,
+            charset:'str'='utf8', is_rfc2231:'bool'=True) -> 'None':
         self.from_ = from_
         self.to = to
         self.subject = subject
@@ -1934,16 +1939,16 @@ class SMTPMessage:
         self.charset = charset
         self.is_rfc2231 = is_rfc2231
 
-    def attach(self, name, contents):
+    def attach(self, name:'str', contents:'any_') -> 'None':
         self.attachments.append({'name':name, 'contents':contents})
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class IMAPMessage:
-    def __init__(self, uid, conn, data):
-        self.uid = uid   # type: str
-        self.conn = conn # type: Imbox
+    def __init__(self, uid:'str', conn:'Imbox', data:'any_') -> 'None':
+        self.uid = uid
+        self.conn = conn
         self.data = data
 
     def __repr__(self):

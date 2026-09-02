@@ -8,164 +8,33 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timezone
-from hashlib import sha256
-from logging import getLogger
 from stat import S_ISDIR, S_ISLNK
-from time import monotonic
-from traceback import format_exc
-
-# gevent
-from gevent.fileobject import FileObjectThread
-
-# humanize
-from humanize import naturalsize
 
 # Zato
-from zato.common.audit_log.api import AuditOutcome
-from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Move, Operation_Read, \
-    Operation_Store
-from zato.common.typing_ import cast_
+from zato.server.connection.file_transfer_base import EntryType, FileInfo, FileTransferConnection
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, stranydict
-    from zato.server.generic.api.outconn_smb import OutconnSMBWrapper, SMBClient
-    SMBClient = SMBClient
+    from zato.common.typing_ import any_
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger(__name__)
-
-# How many seconds to wait for a client from the connection's pool. Waiting rather than giving up at once
-# means that two runs over one connection take turns instead of one of them failing, and it also covers
-# the window while the pool is still being filled in after the server starts.
-_pool_block_timeout = 60
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class EntryType:
-    file = 'file'
-    directory = 'directory'
-    symlink = 'symlink'
-
-# ################################################################################################################################
-
-smb_info_list = list['SMBInfo']
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SMBInfo:
-    __slots__ = 'type', 'name', 'size', 'last_modified'
-
-    def __init__(self) -> 'None':
-        self.type = '' # type: str
-        self.name = '' # type: str
-
-        self.size = 0 # type: int
-
-        self.last_modified = None # type: any_
-
-# ################################################################################################################################
-
-    def to_dict(self, skip_last_modified:'bool'=True) -> 'stranydict':
-
-        out = {
-            'type': self.type,
-            'name': self.name,
-            'size': self.size,
-            'size_human': self.size_human,
-            'is_file': self.is_file,
-            'is_directory': self.is_directory,
-            'is_symlink': self.is_symlink,
-
-            'last_modified_iso': self.last_modified_iso,
-        }
-
-        # We do not return it by default so as not to make JSON serializers wonder what to do with a Python object
-        if not skip_last_modified:
-            out['last_modified'] = self.last_modified
-
-        return out
-
-# ################################################################################################################################
-
-    @property
-    def is_file(self) -> 'bool':
-        return self.type == EntryType.file
-
-# ################################################################################################################################
-
-    @property
-    def is_directory(self) -> 'bool':
-        return self.type == EntryType.directory
-
-# ################################################################################################################################
-
-    @property
-    def is_symlink(self) -> 'bool':
-        return self.type == EntryType.symlink
-
-# ################################################################################################################################
-
-    @property
-    def last_modified_iso(self) -> 'str':
-        return self.last_modified.isoformat()
-
-# ################################################################################################################################
-
-    @property
-    def size_human(self) -> 'str':
-        return naturalsize(self.size)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SMBConnection:
+class SMBConnection(FileTransferConnection):
     """ The public API of a single outgoing SMB connection, obtained via self.smb['My Connection'] in services.
 
     Remote paths always include the share name and use forward slashes, e.g. MyShare/documents/invoice.pdf.
     """
-    def __init__(self, cid:'str', wrapper:'OutconnSMBWrapper') -> 'None':
-        self.cid = cid
-        self.wrapper = wrapper
 
 # ################################################################################################################################
 
-    def ping(self) -> 'None':
-        self.wrapper.ping()
-
-# ################################################################################################################################
-
-    def _record_transfer(
-        self,
-        operation:'str',
-        remote_path:'str',
-        *,
-        outcome:'str',
-        size:'int' = 0,
-        duration_ms:'int' = 0,
-        error:'str' = '',
-        to_path:'str' = '',
-        checksum:'str' = '',
-        content:'any_' = None,
-        ) -> 'None':
-        """ Records one file operation of this connection in the audit log.
-        """
-        _ = record_file_transfer(self.wrapper.audit_log, self.wrapper.config.name, operation, remote_path,
-            cid=self.cid, outcome=outcome, size=size, duration_ms=duration_ms, error=error,
-            to_path=to_path, checksum=checksum, content=content)
-
-# ################################################################################################################################
-
-    def _build_info_from_stat(self, name:'str', stat_result:'any_') -> 'SMBInfo':
+    def _build_info(self, name:'str', stat_result:'any_') -> 'FileInfo':
 
         # Our response to produce
-        out = SMBInfo()
+        out = FileInfo()
 
         # Map the mode bits to one of our entry types ..
         if S_ISLNK(stat_result.st_mode):
@@ -188,55 +57,10 @@ class SMBConnection:
 
 # ################################################################################################################################
 
-    def get_info(self, remote_path:'str') -> 'SMBInfo':
-
-        # Ask the remote server about the path ..
-        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-            client = cast_('SMBClient', client)
-            stat_result = client.stat(remote_path)
-
-        # .. the entry's name is the last part of the input path ..
-        name = remote_path.rstrip('/').split('/')[-1]
-
-        # .. and now we can build the full response.
-        out = self._build_info_from_stat(name, stat_result)
-
-        return out
-
-# ################################################################################################################################
-
-    def exists(self, remote_path:'str') -> 'bool':
-
-        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-            client = cast_('SMBClient', client)
-            out = client.exists(remote_path)
-
-        return out
-
-# ################################################################################################################################
-
-    def is_file(self, remote_path:'str') -> 'bool':
-
-        info = self.get_info(remote_path)
-
-        out = info.is_file
-        return out
-
-# ################################################################################################################################
-
-    def is_directory(self, remote_path:'str') -> 'bool':
-
-        info = self.get_info(remote_path)
-
-        out = info.is_directory
-        return out
-
-# ################################################################################################################################
-
-    def _build_info_from_dir_entry(self, entry:'any_') -> 'SMBInfo':
+    def _build_info_from_dir_entry(self, entry:'any_') -> 'FileInfo':
 
         # Our response to produce
-        out = SMBInfo()
+        out = FileInfo()
 
         # Map the entry's attributes to one of our entry types ..
         if entry.is_symlink():
@@ -246,8 +70,7 @@ class SMBConnection:
         else:
             entry_type = EntryType.file
 
-        # .. the size and modification time are already in the listing itself,
-        # .. which means that no further network calls are needed ..
+        # .. the size and modification time are already in the listing itself ..
         smb_info = entry.smb_info
 
         # .. and populate everything before returning.
@@ -256,211 +79,6 @@ class SMBConnection:
         out.size = smb_info.end_of_file
         out.last_modified = smb_info.last_write_time
 
-        return out
-
-# ################################################################################################################################
-
-    def list(self, remote_path:'str') -> 'smb_info_list':
-
-        # Our response to produce
-        out:'smb_info_list' = []
-
-        # List the remote directory ..
-        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-            client = cast_('SMBClient', client)
-            entries = client.scandir(remote_path)
-
-        # .. and turn each entry into our common info object.
-        for entry in entries:
-            info = self._build_info_from_dir_entry(entry)
-            out.append(info)
-
-        return out
-
-# ################################################################################################################################
-
-    def delete_file(self, remote_path:'str') -> 'None':
-
-        start = monotonic()
-
-        # A failed deletion is recorded too, before the caller learns about it
-        try:
-            with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-                client = cast_('SMBClient', client)
-                client.remove(remote_path)
-        except Exception:
-            duration_ms = int((monotonic() - start) * 1000)
-            self._record_transfer(Operation_Delete, remote_path,
-                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
-            raise
-
-        duration_ms = int((monotonic() - start) * 1000)
-        self._record_transfer(Operation_Delete, remote_path, outcome=AuditOutcome.OK, duration_ms=duration_ms)
-
-# ################################################################################################################################
-
-    def delete_directory(self, remote_path:'str') -> 'None':
-
-        start = monotonic()
-
-        # A failed deletion is recorded too, before the caller learns about it
-        try:
-            with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-                client = cast_('SMBClient', client)
-                client.rmdir(remote_path)
-        except Exception:
-            duration_ms = int((monotonic() - start) * 1000)
-            self._record_transfer(Operation_Delete, remote_path,
-                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
-            raise
-
-        duration_ms = int((monotonic() - start) * 1000)
-        self._record_transfer(Operation_Delete, remote_path, outcome=AuditOutcome.OK, duration_ms=duration_ms)
-
-# ################################################################################################################################
-
-    def create_directory(self, remote_path:'str', exist_ok:'bool'=False) -> 'None':
-
-        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-            client = cast_('SMBClient', client)
-            client.makedirs(remote_path, exist_ok)
-
-# ################################################################################################################################
-
-    def move(self, from_path:'str', to_path:'str') -> 'None':
-
-        start = monotonic()
-
-        # A failed move is recorded too, before the caller learns about it
-        try:
-            with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-                client = cast_('SMBClient', client)
-                client.rename(from_path, to_path)
-        except Exception:
-            duration_ms = int((monotonic() - start) * 1000)
-            self._record_transfer(Operation_Move, from_path,
-                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc(), to_path=to_path)
-            raise
-
-        duration_ms = int((monotonic() - start) * 1000)
-        self._record_transfer(Operation_Move, from_path, outcome=AuditOutcome.OK, duration_ms=duration_ms, to_path=to_path)
-
-    rename = move
-
-# ################################################################################################################################
-
-    def read(self, remote_path:'str') -> 'bytes':
-
-        start = monotonic()
-
-        # A failed read is recorded too, before the caller learns about it
-        try:
-            with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-                client = cast_('SMBClient', client)
-                out = client.read(remote_path)
-        except Exception:
-            duration_ms = int((monotonic() - start) * 1000)
-            self._record_transfer(Operation_Read, remote_path,
-                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
-            raise
-
-        # The bytes themselves are kept only when the connection asked for that
-        if self.wrapper.should_store_content:
-            content = out
-        else:
-            content = None
-
-        checksum = sha256(out).hexdigest()
-
-        duration_ms = int((monotonic() - start) * 1000)
-        self._record_transfer(Operation_Read, remote_path,
-            outcome=AuditOutcome.OK, size=len(out), duration_ms=duration_ms, checksum=checksum, content=content)
-
-        return out
-
-# ################################################################################################################################
-
-    def write(self, data:'any_', remote_path:'str', encoding:'str'='utf8') -> 'None':
-
-        # Data to be written out must be always bytes
-        if not isinstance(data, bytes):
-            data = data.encode(encoding)
-
-        size = len(data)
-        start = monotonic()
-
-        # A failed store is recorded too, before the caller learns about it
-        try:
-            with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-                client = cast_('SMBClient', client)
-                client.write(remote_path, data)
-        except Exception:
-            duration_ms = int((monotonic() - start) * 1000)
-            self._record_transfer(Operation_Store, remote_path,
-                outcome=AuditOutcome.Error, size=size, duration_ms=duration_ms, error=format_exc())
-            raise
-
-        # The bytes themselves are kept only when the connection asked for that
-        if self.wrapper.should_store_content:
-            content = data
-        else:
-            content = None
-
-        checksum = sha256(data).hexdigest()
-
-        duration_ms = int((monotonic() - start) * 1000)
-        self._record_transfer(Operation_Store, remote_path,
-            outcome=AuditOutcome.OK, size=size, duration_ms=duration_ms, checksum=checksum, content=content)
-
-# ################################################################################################################################
-
-    def upload(self, local_path:'str', remote_path:'str') -> 'None':
-
-        # Read the local file in using a separate thread so as not to block the event loop ..
-        thread_file = FileObjectThread(local_path, 'rb')
-        data = thread_file.read()
-        thread_file.close()
-
-        # .. and write it out to the remote location.
-        self.write(data, remote_path)
-
-# ################################################################################################################################
-
-    def download_file(self, remote_path:'str', local_path:'str') -> 'None':
-
-        # Read the remote file in first ..
-        data = self.read(remote_path)
-
-        # .. and write it out locally using a separate thread so as not to block the event loop.
-        thread_file = FileObjectThread(local_path, 'wb')
-        _ = thread_file.write(data)
-        thread_file.close()
-
-    download = download_file
-
-# ################################################################################################################################
-
-    def publish(self, data:'any_', remote_path:'str', encoding:'str'='utf8') -> 'any_':
-        """ Queues one file for guaranteed delivery to the remote path, returning as soon as it is stored.
-        The bytes go to a local spool file and only its path travels through the queue, so a file
-        of any size is delivered with retries, backoff and an audit event per attempt.
-        """
-
-        # Imported here to avoid circular imports
-        from zato.server.connection.outgoing_delivery import spool_file_payload, Key_Remote_Path, Key_Spool_Path
-
-        # Data to be written out must be always bytes
-        if not isinstance(data, bytes):
-            data = data.encode(encoding)
-
-        spool_path = spool_file_payload(data)
-
-        envelope = {
-            Key_Spool_Path: spool_path,
-            Key_Remote_Path: remote_path,
-        }
-
-        out = self.wrapper.publisher.publish(envelope)
         return out
 
 # ################################################################################################################################

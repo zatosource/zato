@@ -13,6 +13,7 @@ import os
 import pytest
 
 # Zato
+from zato.hl7.mappings import get_conversion_warnings
 from zato.hl7v2 import parse_hl7
 
 # Local
@@ -22,7 +23,7 @@ from conftest import Samples_Dir, Test_Conversions_Dir, convert, load_message, o
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,7 +35,7 @@ PID = 'PID|1||12345^^^MYHOSP^MR||Smith^John|||M'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _convert_fixture(file_path:'str'):
+def _convert_fixture(file_path:'str') -> 'any_':
     """ Parses one fixture message and converts it to a bundle.
     """
     raw = load_message(file_path)
@@ -50,7 +51,7 @@ class TestORUGrouping:
     """ ORC/OBR/OBX/SPM/NTE grouping in result messages.
     """
 
-    def test_obr_opens_report_and_service_request(self):
+    def test_obr_opens_report_and_service_request(self) -> 'None':
         orc = 'ORC|RE|ORD-1^EHR|FIL-1^LAB|||||||||1234^Welby^Marcus'
         obr = 'OBR|1|ORD-1^EHR|FIL-1^LAB|24331-1^Lipid panel^LN||||||||||||||||||20240517150000|||F'
         obx = 'OBX|1|NM|2093-3^Cholesterol^LN||180|mg/dL^^UCUM||N|||F'
@@ -59,13 +60,15 @@ class TestORUGrouping:
 
         service_request = one_resource(bundle, 'ServiceRequest')
         report = one_resource(bundle, 'DiagnosticReport')
-        observation = one_resource(bundle, 'Observation')
 
-        # The order code carried over
+        # There is exactly one observation in the bundle.
+        one_resource(bundle, 'Observation')
+
+        # The order code carried over.
         request_code = service_request['code']
         assert request_code['text'] == 'Lipid panel'
 
-        # The report is based on the service request
+        # The report is based on the service request.
         bundle_dict = bundle.to_dict()
         request_url = None
 
@@ -76,7 +79,7 @@ class TestORUGrouping:
 
         assert report['basedOn'] == [{'reference': request_url}]
 
-        # The report collects the observation as its result
+        # The report collects the observation as its result.
         observation_url = None
 
         for entry in bundle_dict['entry']:
@@ -86,11 +89,28 @@ class TestORUGrouping:
 
         assert report['result'] == [{'reference': observation_url}]
 
-        # F means the report is final
+        # F means the report is final.
         assert report['status'] == 'final'
-        _ = observation
 
-    def test_multiple_obr_groups(self):
+# ################################################################################################################################
+
+    def test_non_datetime_results_reported_value_is_preserved(self) -> 'None':
+        # Other values can arrive in the OBR-22 results-reported slot -
+        # those cannot become the issued time but they are not dropped either.
+        obr = 'OBR|1|ORD-1^EHR|FIL-1^LAB|24331-1^Lipid panel^LN||||||||||||||||||LAB'
+
+        bundle = convert(MSH_ORU, PID, obr)
+        report = one_resource(bundle, 'DiagnosticReport')
+
+        assert 'issued' not in report
+
+        extensions = report['extension']
+
+        assert {'url': 'urn:zato:hl7v2:extension/unmapped/OBR-22', 'valueString': 'LAB'} in extensions
+
+# ################################################################################################################################
+
+    def test_multiple_obr_groups(self) -> 'None':
         obr_first = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN'
         obx_first = 'OBX|1|NM|2093-3^Cholesterol^LN||180|mg/dL^^UCUM||N|||F'
         obr_second = 'OBR|2|ORD-2^EHR||58410-2^CBC panel^LN'
@@ -104,7 +124,7 @@ class TestORUGrouping:
         assert len(reports) == 2
         assert len(observations) == 2
 
-        # Each report holds exactly the observation from its own group
+        # Each report holds exactly the observation from its own group.
         first_report = reports[0]
         second_report = reports[1]
 
@@ -115,7 +135,25 @@ class TestORUGrouping:
         assert len(second_results) == 1
         assert first_results != second_results
 
-    def test_nte_attaches_to_observation(self):
+# ################################################################################################################################
+
+    def test_orc_after_obr_enriches_the_same_order(self) -> 'None':
+        # In OUL-style result messages the ORC follows the OBR of its own order group.
+        obr = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN'
+        orc = 'ORC|RE|ORD-1^EHR|||||||20240517150000'
+        obx = 'OBX|1|NM|2093-3^Cholesterol^LN||180|mg/dL^^UCUM||N|||F'
+
+        bundle = convert(MSH_ORU, PID, obr, orc, obx)
+
+        # The trailing ORC never became a second order of its own.
+        service_request = one_resource(bundle, 'ServiceRequest')
+
+        # Its transaction time reached the one request the OBR made.
+        assert service_request['authoredOn'] == '2024-05-17T15:00:00+00:00'
+
+# ################################################################################################################################
+
+    def test_nte_attaches_to_observation(self) -> 'None':
         obr = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN'
         obx = 'OBX|1|NM|2093-3^Cholesterol^LN||180|mg/dL^^UCUM||N|||F'
         nte = 'NTE|1||Great result, keep it up'
@@ -125,7 +163,58 @@ class TestORUGrouping:
 
         assert observation['note'] == [{'text': 'Great result, keep it up'}]
 
-    def test_nte_attaches_to_service_request_without_observation(self):
+# ################################################################################################################################
+
+    def test_priority_word_in_the_interval_component(self) -> 'None':
+        # The spelled-out priority can arrive in the TQ interval component.
+        obr = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN|||||||||||||||||||||||^STAT'
+
+        bundle = convert(MSH_ORM, PID, obr)
+        service_request = one_resource(bundle, 'ServiceRequest')
+
+        assert service_request['priority'] == 'stat'
+
+# ################################################################################################################################
+
+    def test_nte_keeps_unescaped_separators(self) -> 'None':
+        # Comment text can carry raw carets without escaping them.
+        obr = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN'
+        obx = 'OBX|1|NM|2093-3^Cholesterol^LN||180|mg/dL^^UCUM||N|||F'
+        nte = 'NTE|1||Culture >10^5 CFU/mL, monomicrobial'
+
+        bundle = convert(MSH_ORU, PID, obr, obx, nte)
+        observation = one_resource(bundle, 'Observation')
+
+        assert observation['note'] == [{'text': 'Culture >10^5 CFU/mL, monomicrobial'}]
+
+# ################################################################################################################################
+
+    def test_text_observation_keeps_unescaped_separators(self) -> 'None':
+        obr = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN'
+        obx = 'OBX|1|TX|48767-8^Comment^LN||Ratio 1^2 confirmed||||||F'
+
+        bundle = convert(MSH_ORU, PID, obr, obx)
+        observation = one_resource(bundle, 'Observation')
+
+        assert observation['valueString'] == 'Ratio 1^2 confirmed'
+
+# ################################################################################################################################
+
+    def test_reference_pointer_keeps_all_repetitions(self) -> 'None':
+        # When the encoding characters make backslash the repetition separator,
+        # a URL with escape sequences splits into several repetitions - all of them
+        # stay in the value.
+        obr = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN'
+        obx = 'OBX|34|RP|PDFLINK^^EHR|34|https://example.com/a?b=1~T~c=2~T~d=3||||||F'
+
+        bundle = convert(MSH_ORU, PID, obr, obx)
+        observation = one_resource(bundle, 'Observation')
+
+        assert observation['valueString'] == 'https://example.com/a?b=1~T~c=2~T~d=3'
+
+# ################################################################################################################################
+
+    def test_nte_attaches_to_service_request_without_observation(self) -> 'None':
         orc = 'ORC|NW|ORD-1^EHR'
         nte = 'NTE|1||Patient prefers morning appointments'
 
@@ -134,7 +223,9 @@ class TestORUGrouping:
 
         assert service_request['note'] == [{'text': 'Patient prefers morning appointments'}]
 
-    def test_spm_attaches_to_report(self):
+# ################################################################################################################################
+
+    def test_spm_attaches_to_report(self) -> 'None':
         obr = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN'
         spm = 'SPM|1|SPEC-1||119361006^Plasma^SCT|||||||||||||20240517120000'
 
@@ -155,7 +246,7 @@ class TestORUGrouping:
         assert type_coding['code'] == '119361006'
         assert specimen['collection'] == {'collectedDateTime': '2024-05-17T12:00:00+00:00'}
 
-        # The report points at the specimen from its group
+        # The report points at the specimen from its group.
         bundle_dict = bundle.to_dict()
         specimen_url = None
 
@@ -173,7 +264,7 @@ class TestORMOrders:
     """ Order messages produce ServiceRequests without DiagnosticReports.
     """
 
-    def test_orc_obr_pair(self):
+    def test_orc_obr_pair(self) -> 'None':
         orc = 'ORC|NW|ORD-1^EHR|FIL-1^LAB||IP||||20240517100000|||1234^Welby^Marcus'
         obr = 'OBR|1|ORD-1^EHR|FIL-1^LAB|24331-1^Lipid panel^LN'
 
@@ -182,12 +273,12 @@ class TestORMOrders:
 
         assert service_request['intent'] == 'order'
 
-        # IP maps through the order status table
+        # IP maps through the order status table.
         assert service_request['status'] == 'active'
 
         assert service_request['authoredOn'] == '2024-05-17T10:00:00+00:00'
 
-        # Both order numbers made it into the identifiers
+        # Both order numbers made it into the identifiers.
         identifiers = service_request['identifier']
         identifier_values = set()
 
@@ -196,17 +287,19 @@ class TestORMOrders:
 
         assert identifier_values == {'ORD-1', 'FIL-1'}
 
-        # The ordering provider is the requester
+        # The ordering provider is the requester.
         requester = service_request['requester']
         requester_url = requester['reference']
 
         assert requester_url.startswith('urn:uuid:')
 
-        # An order message produces no report
+        # An order message produces no report.
         reports = resources_of_type(bundle, 'DiagnosticReport')
         assert reports == []
 
-    def test_orc_without_obr(self):
+# ################################################################################################################################
+
+    def test_orc_without_obr(self) -> 'None':
         orc = 'ORC|NW|ORD-1^EHR'
 
         bundle = convert(MSH_ORM, PID, orc)
@@ -217,7 +310,51 @@ class TestORMOrders:
 
         assert identifier['value'] == 'ORD-1'
 
-    def test_two_orders_in_one_message(self):
+# ################################################################################################################################
+
+    def test_non_datetime_transaction_time_is_preserved(self) -> 'None':
+        # Other values can arrive in the ORC-9 transaction-time slot -
+        # those cannot become the authored time but they are not dropped either.
+        orc = 'ORC|NW|ORD-1^EHR|||IP||||RNSMITH^Smith^John'
+
+        bundle = convert(MSH_ORM, PID, orc)
+        service_request = one_resource(bundle, 'ServiceRequest')
+
+        assert 'authoredOn' not in service_request
+
+        extensions = service_request['extension']
+
+        assert {
+            'url': 'urn:zato:hl7v2:extension/unmapped/ORC-9',
+            'valueString': 'RNSMITH^Smith^John',
+        } in extensions
+
+# ################################################################################################################################
+
+    def test_tq1_between_orc_and_obr(self) -> 'None':
+        # In OML-style messages the TQ1 timing comes before the OBR it belongs to.
+        orc = 'ORC|NW|ORD-1^EHR'
+        tq1 = 'TQ1|1||||||20240601090000|20240601100000|R'
+        obr = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN'
+
+        bundle = convert(MSH_ORM, PID, orc, tq1, obr)
+        service_request = one_resource(bundle, 'ServiceRequest')
+
+        # The held-back TQ1 applied to the order once the OBR arrived.
+        assert service_request['occurrencePeriod'] == {
+            'start': '2024-06-01T09:00:00+00:00',
+            'end': '2024-06-01T10:00:00+00:00',
+        }
+
+        assert service_request['priority'] == 'routine'
+
+        # The TQ1 never became a standalone preserved segment.
+        basics = resources_of_type(bundle, 'Basic')
+        assert basics == []
+
+# ################################################################################################################################
+
+    def test_two_orders_in_one_message(self) -> 'None':
         orc_first = 'ORC|NW|ORD-1^EHR'
         obr_first = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN'
         orc_second = 'ORC|NW|ORD-2^EHR'
@@ -229,30 +366,229 @@ class TestORMOrders:
         assert len(service_requests) == 2
 
 # ################################################################################################################################
+
+    def test_shared_orc_covers_further_obrs(self) -> 'None':
+
+        # Two OBRs with the ORC's order number belong to the one group that ORC opened,
+        # so both ServiceRequests get the ORC's status and requester.
+        orc = 'ORC|NW|ORD-1^EHR|||SC|||||||1234^Welby^Marcus'
+        obr_first = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN'
+        obr_second = 'OBR|2|ORD-1^EHR||58410-2^CBC panel^LN'
+
+        bundle = convert(MSH_ORM, PID, orc, obr_first, obr_second)
+
+        service_requests = resources_of_type(bundle, 'ServiceRequest')
+        assert len(service_requests) == 2
+
+        first, second = service_requests
+
+        assert first['status'] == 'active'
+        assert second['status'] == 'active'
+
+        assert first['requester'] == second['requester']
+
+# ################################################################################################################################
+
+    def test_unrelated_obr_stays_outside_the_group(self) -> 'None':
+
+        # An OBR with a different order number does not inherit the previous ORC.
+        orc = 'ORC|NW|ORD-1^EHR|||SC|||||||1234^Welby^Marcus'
+        obr_first = 'OBR|1|ORD-1^EHR||24331-1^Lipid panel^LN'
+        obr_second = 'OBR|2|ORD-9^EHR||58410-2^CBC panel^LN'
+
+        bundle = convert(MSH_ORM, PID, orc, obr_first, obr_second)
+
+        service_requests = resources_of_type(bundle, 'ServiceRequest')
+        first, second = service_requests
+
+        assert first['status'] == 'active'
+        assert second['status'] == 'unknown'
+        assert 'requester' not in second
+
+# ################################################################################################################################
+
+    def test_order_response_without_patient_states_absent_subject(self) -> 'None':
+
+        # An ORL order response carries no PID, yet FHIR requires ServiceRequest.subject,
+        # so the subject states the absence of the patient explicitly.
+        msh = 'MSH|^~\\&|LAB|LABFAC|EHR|EHRFAC|20240517143055||ORL^O22^ORL_O22|MSG00017|P|2.5'
+        msa = 'MSA|AA|MSG00016|Order received'
+        orc = 'ORC|OK|ORD-1^EHR|FIL-1^LAB'
+        obr = 'OBR|1|ORD-1^EHR|FIL-1^LAB|24331-1^Lipid panel^LN'
+
+        bundle = convert(msh, msa, orc, obr)
+        service_request = one_resource(bundle, 'ServiceRequest')
+
+        assert service_request['subject'] == {
+            'extension': [{'url': 'http://hl7.org/fhir/StructureDefinition/data-absent-reason', 'valueCode': 'unknown'}]}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestOMIImaging:
+    """ OMI imaging orders and the IPC and ZDS segments that detail them.
+    """
+
+    def test_ipc_details_the_imaging_order(self) -> 'None':
+        msh = 'MSH|^~\\&|RIS|RADFAC|PACS|PACSFAC|20240517143055||OMI^O23^OMI_O23|MSG00040|P|2.8.1'
+        orc = 'ORC|NW|IMG-1^RIS'
+        obr = 'OBR|1|IMG-1^RIS||74178^CT Abdomen with contrast^C4'
+        ipc = 'IPC|ACC-2024-001^RIS|RP-1^RIS|1.2.40.0.34.1.1.99^RIS||CT^Computed Tomography^DCM|' + \
+            'CTABD^CT Abdomen Protocol^L'
+
+        bundle = convert(msh, PID, orc, obr, ipc)
+        service_request = one_resource(bundle, 'ServiceRequest')
+
+        # An OMI is an order, not a result - there is no report.
+        assert resources_of_type(bundle, 'DiagnosticReport') == []
+
+        identifiers = service_request['identifier']
+
+        # The accession number identifies the imaging order ..
+        accession = {
+            'value': 'ACC-2024-001',
+            'system': 'urn:zato:hl7v2:authority:RIS',
+            'type': {'coding': [{'system': 'http://terminology.hl7.org/CodeSystem/v2-0203', 'code': 'ACSN'}]},
+        }
+        assert accession in identifiers
+
+        # .. the requested procedure ID follows it ..
+        assert {'value': 'RP-1', 'system': 'urn:zato:hl7v2:authority:RIS'} in identifiers
+
+        # .. and the study instance UID identifies the DICOM study.
+        assert {'system': 'urn:dicom:uid', 'value': 'urn:oid:1.2.40.0.34.1.1.99'} in identifiers
+
+        # The modality and the protocol detail what is ordered.
+        order_details = service_request['orderDetail']
+
+        assert order_details[0]['coding'][0]['code'] == 'CT'
+        assert order_details[0]['text'] == 'Computed Tomography'
+        assert order_details[1]['text'] == 'CT Abdomen Protocol'
+
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
+
+    def test_zds_adds_the_study_uid_to_the_order(self) -> 'None':
+        # The quasi-standard ZDS carries the DICOM study instance UID in imaging feeds.
+        orc = 'ORC|NW|IMG-2^RIS'
+        obr = 'OBR|1|IMG-2^RIS||70450^CT Head without contrast^C4'
+        zds = 'ZDS|1.2.40.0.34.1.1.99.20250401.100000.001^RIS^APPLICATION^DICOM'
+
+        bundle = convert(MSH_ORM, PID, orc, obr, zds)
+        service_request = one_resource(bundle, 'ServiceRequest')
+
+        identifiers = service_request['identifier']
+
+        assert {
+            'system': 'urn:dicom:uid',
+            'value': 'urn:oid:1.2.40.0.34.1.1.99.20250401.100000.001',
+        } in identifiers
+
+        # No Basic resource was made - the ZDS attached to the order.
+        assert resources_of_type(bundle, 'Basic') == []
+
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
+
+    def test_ipc_without_an_order_stays_whole(self) -> 'None':
+        msh = 'MSH|^~\\&|RIS|RADFAC|PACS|PACSFAC|20240517143055||OMI^O23^OMI_O23|MSG00041|P|2.8.1'
+        ipc = 'IPC|ACC-2024-002^RIS|RP-2^RIS|1.2.40.0.34.1.1.100^RIS||MR^Magnetic Resonance^DCM'
+
+        bundle = convert(msh, PID, ipc)
+        basic = one_resource(bundle, 'Basic')
+
+        assert basic['code']['coding'][0]['code'] == 'IPC'
+
+        extensions = basic['extension']
+        assert {'url': 'urn:zato:hl7v2:extension/IPC/1', 'valueString': 'ACC-2024-002^RIS'} in extensions
+
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestPRTParticipation:
+    """ PRT participations attach their person to the nearest resource above them.
+    """
+
+    def test_prt_person_performs_the_report(self) -> 'None':
+        obr = 'OBR|1|ORD-9^EHR||24331-1^Lipid panel^LN||||||||||||||||||||F'
+        prt = 'PRT|1|UC||PRF^Performer^HL70912|1234^Welby^Marcus'
+
+        bundle = convert(MSH_ORU, PID, obr, prt)
+
+        report = one_resource(bundle, 'DiagnosticReport')
+        practitioner = one_resource(bundle, 'Practitioner')
+
+        assert practitioner['name'] == [{'family': 'Welby', 'given': ['Marcus']}]
+        assert practitioner['identifier'] == [{'value': '1234'}]
+
+        bundle_dict = bundle.to_dict()
+        practitioner_url = None
+
+        for entry in bundle_dict['entry']:
+            resource = entry['resource']
+            if resource['resourceType'] == 'Practitioner':
+                practitioner_url = entry['fullUrl']
+
+        assert report['performer'] == [{'reference': practitioner_url}]
+
+        # The participation fields the person mapping did not consume are preserved.
+        extensions = report['extension']
+        assert {'url': 'urn:zato:hl7v2:extension/unmapped/PRT-4', 'valueString': 'PRF^Performer^HL70912'} \
+            in extensions
+
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
+
+    def test_prt_without_a_person_stays_whole(self) -> 'None':
+        # French senders route result copies with person-less PRT segments
+        # that carry only a telecommunication address.
+        obr = 'OBR|1|ORD-10^EHR||24331-1^Lipid panel^LN'
+        prt = 'PRT||UC||RCT^Results Copies To^participation|||||||||||^^X.400^copies@example.org'
+
+        bundle = convert(MSH_ORU, PID, obr, prt)
+        basic = one_resource(bundle, 'Basic')
+
+        assert basic['code']['coding'][0]['code'] == 'PRT'
+
+        extensions = basic['extension']
+        assert {'url': 'urn:zato:hl7v2:extension/PRT/15', 'valueString': '^^X.400^copies@example.org'} \
+            in extensions
+
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestIGOrderConversions:
     """ The IG's agreed order and result test conversion messages.
     """
 
-    def test_oru_r01(self):
+    def test_oru_r01(self) -> 'None':
         fixture_path = os.path.join(Test_Conversions_Dir, 'ORU_R01.hl7')
         bundle = _convert_fixture(fixture_path)
 
         report = one_resource(bundle, 'DiagnosticReport')
         observations = resources_of_type(bundle, 'Observation')
-        service_request = one_resource(bundle, 'ServiceRequest')
 
-        # The message carries three OBX segments and the report collects them all
+        # There is exactly one service request in the bundle.
+        one_resource(bundle, 'ServiceRequest')
+
+        # The message carries three OBX segments and the report collects them all.
         assert len(observations) == 3
 
         results = report['result']
         assert len(results) == 3
 
         assert report['status'] == 'final'
-        _ = service_request
 
-    def test_orm_o01(self):
+# ################################################################################################################################
+
+    def test_orm_o01(self) -> 'None':
         fixture_path = os.path.join(Test_Conversions_Dir, 'ORM_O01.hl7')
         bundle = _convert_fixture(fixture_path)
 
@@ -262,49 +598,46 @@ class TestIGOrderConversions:
         reports = resources_of_type(bundle, 'DiagnosticReport')
         assert reports == []
 
-    def test_oml_o21(self):
+# ################################################################################################################################
+
+    def test_oml_o21(self) -> 'None':
         fixture_path = os.path.join(Test_Conversions_Dir, 'OML_O21.hl7')
         bundle = _convert_fixture(fixture_path)
 
         service_request = one_resource(bundle, 'ServiceRequest')
-        specimen = one_resource(bundle, 'Specimen')
-
         assert service_request['intent'] == 'order'
-        _ = specimen
+
+        # There is exactly one specimen in the bundle.
+        one_resource(bundle, 'Specimen')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _order_sample_paths():
+def _order_sample_paths() -> 'anylist':
     """ All the ORU, ORM and OML messages from the samples fixture tree.
     """
     out = []
 
-    for file_path in list(_iter_samples()):
-        out.append(file_path)
+    for file_name in sorted(os.listdir(Samples_Dir)):
+        if file_name.startswith(('ORU', 'ORM', 'OML')):
+            if file_name.endswith('.hl7'):
+                full_path = os.path.join(Samples_Dir, file_name)
+                out.append(full_path)
 
     return out
 
 # ################################################################################################################################
 
-def _iter_samples():
-    for file_name in sorted(os.listdir(Samples_Dir)):
-        if file_name.startswith(('ORU', 'ORM', 'OML')):
-            if file_name.endswith('.hl7'):
-                yield os.path.join(Samples_Dir, file_name)
+_order_paths = _order_sample_paths()
 
 # ################################################################################################################################
 
-@pytest.mark.parametrize('file_path', _order_sample_paths(), ids=os.path.basename)
-def test_order_samples_end_to_end(file_path:'any_'):
+@pytest.mark.parametrize('file_path', _order_paths, ids=os.path.basename)
+def test_order_samples_end_to_end(file_path:'any_') -> 'None':
     """ Every order and result sample converts to a bundle with a patient.
     """
     raw = load_message(file_path)
-
-    try:
-        msg = parse_hl7(raw, validate=False)
-    except ValueError as e:
-        pytest.skip(f'parser rejected the message: {e}')
+    msg = parse_hl7(raw, validate=False)
 
     bundle = msg.to_fhir()
     bundle_dict = bundle.to_dict()
@@ -314,7 +647,7 @@ def test_order_samples_end_to_end(file_path:'any_'):
     patients = resources_of_type(bundle, 'Patient')
     assert len(patients) == 1
 
-    # Result messages carry at least one report with its results attached
+    # Result messages carry at least one report with its results attached.
     file_name = os.path.basename(file_path)
 
     if file_name.startswith('ORU'):

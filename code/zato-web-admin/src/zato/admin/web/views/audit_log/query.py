@@ -5,19 +5,18 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
-Reading one page of events out of the audit log database - what the filters narrow it down to and
-what a page of rows is enriched with before it reaches the browser.
+Reading one page of events out of the audit log database - what a page of rows
+is enriched with before it reaches the browser.
 """
 
 # SQLAlchemy
 from sqlalchemy import and_, func, or_, select
 
 # Zato
-from zato.admin.web.views.audit_log.columns import _data_preview_len, _row_numeric_columns, _search_columns, \
-    _source_attr_columns, _source_body_preview, _status_outstanding
-from zato.admin.web.views.audit_log.sources import _source_outstanding, _source_resubmit, _source_row_enrich
+from zato.admin.web.views.audit_log.columns import _data_preview_length, _row_numeric_columns, \
+    _source_attr_columns, _source_body_preview
+from zato.admin.web.views.audit_log.sources import _source_resubmit, _source_row_enrich
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table
-from zato.common.audit_log.query import outstanding_conditions
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,140 +31,6 @@ if 0:
 # ################################################################################################################################
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _escape_like(query:'str') -> 'str':
-    """ Escapes LIKE wildcards in a user query so they match literally.
-    """
-    out = query.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
-    return out
-
-# ################################################################################################################################
-
-def _build_where(
-    sources:'anylist',
-    object_names:'anylist',
-    outcomes:'anylist',
-    query:'str',
-    status:'str',
-    time_from:'str' = '',
-    time_to:'str' = '',
-    event_types:'anylist' = [],
-    sources_excluded:'anylist' = [],
-    object_names_excluded:'anylist' = [],
-    ) -> 'anylist':
-    """ Builds the WHERE conditions for the poll query. A per-source page names its one
-    source, the all-events page names whichever ones its reader picked - none at all
-    reads everything. The same goes for the objects - any number can be picked at once.
-    A source or an object can also be picked out rather than in, which is how the page
-    reads everything except the picked-out ones.
-    """
-
-    # Our response to produce
-    out:'anylist' = []
-
-    # No sources is the whole log - every source, every object - and no
-    # object names reads the whole of whatever sources are given
-    if sources:
-        out.append(event_table.c.source.in_(sources))
-
-    if object_names:
-        out.append(event_table.c.object_name.in_(object_names))
-
-    # The excluded picks cut into whatever the included ones cover - all of it
-    # when nothing is included - which is how "all except these" reads
-    if sources_excluded:
-        out.append(event_table.c.source.notin_(sources_excluded))
-
-    if object_names_excluded:
-        out.append(event_table.c.object_name.notin_(object_names_excluded))
-
-    # The outcome legend switches outcomes off - naming some means show these alone,
-    # naming none means the legend stands whole and filters nothing
-    if outcomes:
-        out.append(event_table.c.outcome.in_(outcomes))
-
-    # An event word clicked on the page filters the log down to events of that kind alone -
-    # none picked reads every kind, the same way the sources do
-    if event_types:
-        out.append(event_table.c.event_type.in_(event_types))
-
-    # The page can be scoped down to a time window, e.g. one clicked on an analytics chart -
-    # event times are ISO timestamps, so string prefixes compare correctly.
-    if time_from:
-        out.append(event_table.c.event_time_iso >= time_from)
-
-    if time_to:
-        out.append(event_table.c.event_time_iso < time_to)
-
-    # The free-text search covers several columns, matching wildcards literally
-    if query:
-        escaped = _escape_like(query)
-        pattern = f'%{escaped}%'
-
-        like_parts:'anylist' = []
-
-        for column_name in _search_columns:
-            column = event_table.c[column_name]
-            is_like_pattern = column.like(pattern, escape='\\')
-
-            like_parts.append(is_like_pattern)
-
-        # Sources with attr columns also search through them, with the attr-to-cid shape -
-        # the cids of the events whose attr matches, then every event on those cids,
-        # so a search by an MRN returns the whole trace the MRN appears in. With several
-        # sources picked, their attrs are searched together.
-        attr_names:'anylist' = []
-
-        for source in sources:
-            if source_attr_names := _source_attr_columns.get(source):
-                attr_names.extend(source_attr_names)
-
-        if attr_names:
-
-            is_wanted_attr = event_attr_table.c.name.in_(attr_names)
-            is_matching_attr = event_attr_table.c.value.like(pattern, escape='\\')
-
-            attr_event_ids = select(event_attr_table.c.event_id)
-            attr_event_ids = attr_event_ids.where(is_wanted_attr)
-            attr_event_ids = attr_event_ids.where(is_matching_attr)
-
-            is_matching_event = event_table.c.id.in_(attr_event_ids)
-            matching_cids = select(event_table.c.cid).where(is_matching_event)
-
-            is_matching_cid = event_table.c.cid.in_(matching_cids)
-            like_parts.append(is_matching_cid)
-
-        any_like_part = or_(*like_parts)
-        out.append(any_like_part)
-
-    # The outstanding filter narrows the page down to the open exchanges of one source -
-    # the sent messages or interchanges whose acknowledgment has not arrived. What counts
-    # as open is each source's own affair, so the filter takes one source alone, which is
-    # what a per-source page sends.
-    if status == _status_outstanding and len(sources) == 1:
-        one_source = sources[0]
-
-        if outstanding := _source_outstanding.get(one_source):
-
-            # A source whose events are single rows updated in place has no exchange
-            # to pair - open there means the row still carries its in-progress outcome ..
-            if outstanding.open_outcome:
-                out.append(event_table.c.outcome == outstanding.open_outcome)
-
-            # .. everywhere else an open exchange is a sent message whose acknowledgment
-            # has not arrived.
-            else:
-                conditions = outstanding_conditions(
-                    one_source,
-                    outstanding.open_event,
-                    outstanding.close_event,
-                    outstanding.needs_object_name_match,
-                )
-                out.extend(conditions)
-
-    return out
-
 # ################################################################################################################################
 
 def _normalize_row(row:'anydict') -> 'None':
@@ -395,7 +260,7 @@ def _attach_body_previews(connection:'any_', source:'str', rows:'anylist') -> 'N
     if not row_by_event_id:
         return
 
-    data_preview = func.substr(event_body_table.c.data, 1, _data_preview_len)
+    data_preview = func.substr(event_body_table.c.data, 1, _data_preview_length)
     is_wanted_event = event_body_table.c.event_id.in_(row_by_event_id)
 
     statement = select(event_body_table.c.event_id, data_preview)

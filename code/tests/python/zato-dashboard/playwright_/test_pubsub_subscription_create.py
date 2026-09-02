@@ -58,7 +58,9 @@ class TestPubSubSubscriptionCreate:
         # .. verify the page heading ..
         heading = cast_('any_', page.query_selector('h2.zato'))
         heading_text = heading.inner_text()
-        assert 'Pub/sub subscriptions' in heading_text, f'Expected "Pub/sub subscriptions" in heading, got: {heading_text}'
+        heading_lower = heading_text.lower()
+        assert 'pub/sub' in heading_lower and 'subscriptions' in heading_lower, \
+            f'Expected the pub/sub subscriptions heading, got: {heading_text}'
 
         # .. verify the create link is present ..
         create_link = cast_('any_', page.query_selector('#markup .page_prompt a'))

@@ -45,24 +45,16 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 _deleted_file_patterns = [
     'zato-server/src/zato/server/service/internal/pubsub/client.py',
     'zato-server/src/zato/server/service/internal/pubsub/__pycache__/client.*.pyc',
-    'zato-server/src/zato/server/service/internal/outgoing/ftp.py',
-    'zato-server/src/zato/server/service/internal/outgoing/__pycache__/ftp.*.pyc',
     'zato-server/src/zato/server/service/internal/outgoing/sap.py',
     'zato-server/src/zato/server/service/internal/outgoing/__pycache__/sap.*.pyc',
     'zato-server/src/zato/server/service/internal/search/*.py',
     'zato-server/src/zato/server/service/internal/search/__pycache__/*.pyc',
-    'zato-server/src/zato/server/connection/ftp.py',
-    'zato-server/src/zato/server/connection/__pycache__/ftp.*.pyc',
     'zato-server/src/zato/server/connection/file_client/*.py',
     'zato-server/src/zato/server/connection/file_client/__pycache__/*.pyc',
     'zato-common/src/zato/common/test/ftp.py',
     'zato-common/src/zato/common/test/__pycache__/ftp.*.pyc',
-    'zato-web-admin/src/zato/admin/web/views/outgoing/ftp.py',
-    'zato-web-admin/src/zato/admin/web/views/outgoing/__pycache__/ftp.*.pyc',
-    'zato-web-admin/src/zato/admin/web/forms/outgoing/ftp.py',
-    'zato-web-admin/src/zato/admin/web/forms/outgoing/__pycache__/ftp.*.pyc',
-    'zato-web-admin/src/zato/admin/templates/zato/outgoing/ftp.html',
-    'zato-web-admin/src/zato/admin/static/js/outgoing/ftp.js',
+    'zato-web-admin/src/zato/admin/static/js/outgoing/sftp-command-shell.js',
+    'zato-web-admin/src/zato/admin/static/css/outgoing/sftp-command-shell.css',
 ]
 
 # ################################################################################################################################
@@ -404,44 +396,10 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def _should_install_requirements(self) -> 'bool':
-        """ Check if requirements.txt needs to be installed by comparing its mtime with site-packages. """
-        if not os.path.exists(self.zato_reqs_path):
-            return False
-
-        reqs_mtime = os.path.getmtime(self.zato_reqs_path)
-
-        # Check if site-packages has any newer packages than requirements.txt
-        # If site-packages dir doesn't exist, we need to install
-        if not os.path.exists(self.site_packages_dir):
-            return True
-
-        # Find a marker file to check if requirements were installed
-        marker_file = os.path.join(self.site_packages_dir, '.zato_reqs_installed')
-        if not os.path.exists(marker_file):
-            return True
-
-        marker_mtime = os.path.getmtime(marker_file)
-        return reqs_mtime > marker_mtime
-
-    def _mark_requirements_installed(self) -> 'None':
-        """ Create a marker file to track when requirements were last installed. """
-        marker_file = os.path.join(self.site_packages_dir, '.zato_reqs_installed')
-        with open(marker_file, 'w') as f:
-            f.write('')
-
-# ################################################################################################################################
-
     def pip_install_zato_requirements(self) -> 'None':
-
-        # Skip if requirements already installed and unchanged
-        if not self._should_install_requirements():
-            logger.info('requirements.txt unchanged, skipping')
-            return
-
-        # Install our own requirements
-        self.pip_install_requirements_by_path(self.zato_reqs_path, exit_on_error=False)
-        self._mark_requirements_installed()
+        # Let the package installer determine what is already present. An mtime marker
+        # cannot detect packages removed from an existing virtual environment.
+        self.pip_install_requirements_by_path(self.zato_reqs_path, exit_on_error=True)
 
 # ################################################################################################################################
 

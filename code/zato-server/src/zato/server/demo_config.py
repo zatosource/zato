@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The registry of the demo config sets - what each one is called, how it is imported,
 # how its presence is checked and how its objects are removed. The Demo config screen
-# saves through it and the first start of an empty environment imports through it.
+# saves through it and the first start of a fresh environment - one with no user
+# services to deploy - imports the sets from First_Start_Set_Names through it.
 
 # stdlib
 import os
@@ -29,6 +30,7 @@ from zato.common.odb.model import GenericConn, HTTPSOAP, Job, PubSubPermission, 
     SecurityBase, SQLConnectionPool
 from zato.common.odb.query.generic import GenericObjectWrapper
 from zato.common.typing_ import cast_
+from zato.common.util.file_system import get_python_files
 from zato.server.demo import _archive_intake_channel, _archive_outconn
 
 # ################################################################################################################################
@@ -62,6 +64,9 @@ Set_Kafka     = 'kafka'
 Set_PubSub    = 'pubsub'
 
 Set_Names = [Set_Scheduler, Set_Tutorial, Set_HL7, Set_IBM_MQ, Set_Kafka, Set_PubSub]
+
+# The demo config sets a fresh environment receives on its first start
+First_Start_Set_Names = [Set_Tutorial, Set_HL7]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -809,6 +814,29 @@ def is_cluster_empty(server:'ParallelServer') -> 'bool':
 
 # ################################################################################################################################
 
+def has_user_services(server:'ParallelServer') -> 'bool':
+    """ Whether the server has any user services to deploy - a hot-deployment source
+    configured, an auto-deployment directory given on startup or files already waiting
+    in the pickup directory.
+    """
+
+    # Project roots, hot-deployment directories and pickup stanzas all end up here
+    if server.service_sources:
+        return True
+
+    # The zato start --deploy option points to user code as well
+    if server.deploy_auto_from:
+        return True
+
+    # Anything already waiting in the pickup directory counts too
+    pickup_files = get_python_files(server.hot_deploy_config.pickup_dir)
+    pickup_file_count = len(pickup_files)
+
+    out = pickup_file_count > 0
+    return out
+
+# ################################################################################################################################
+
 def _claim_startup_marker(server:'ParallelServer') -> 'bool':
     """ Records that the first-start pass ran in this cluster. Returns whether this very server
     made the record - the unique index means only one server in a cluster ever does.
@@ -839,22 +867,28 @@ def _claim_startup_marker(server:'ParallelServer') -> 'bool':
 # ################################################################################################################################
 
 def import_demo_config_on_first_start(server:'ParallelServer') -> 'None':
-    """ Imports all the demo config sets when a new environment starts for the first time,
-    as long as it holds no user-defined objects yet. The pass runs once per cluster - a marker
-    records that it ran, so removed demo config never comes back on a restart.
+    """ Imports the demo config sets from First_Start_Set_Names when a fresh environment starts
+    for the first time - one with no user services to deploy and no user-defined objects yet.
+    The pass runs once per cluster - a marker records that it ran, so removed demo config never
+    comes back on a restart.
     """
 
     # Only the server that makes the record runs the pass ..
     if not _claim_startup_marker(server):
         return
 
-    # .. an environment that already holds anything user-defined is never touched ..
-    if not is_cluster_empty(server):
-        logger.debug('Demo config: the cluster is not empty, skipping the first-start import')
+    # .. an environment that deploys its own user services is never touched ..
+    if has_user_services(server):
+        logger.debug('Demo config: user services found, skipping the first-start import')
         return
 
-    # .. and an empty one receives all the demo config sets.
-    for set_name in Set_Names:
+    # .. neither is one that already holds anything user-defined ..
+    if not is_cluster_empty(server):
+        logger.debug('Demo config: skipping the first-start import')
+        return
+
+    # .. and a fresh one receives the configured demo config sets.
+    for set_name in First_Start_Set_Names:
 
         import_func = _import_funcs[set_name]
 

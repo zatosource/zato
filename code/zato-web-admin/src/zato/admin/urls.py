@@ -40,6 +40,7 @@ from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
 from zato.admin.web.views.channel import ibm_mq as channel_ibm_mq
 from zato.admin.web.views.channel import kafka as channel_kafka
 from zato.admin.web.views.gateway import mcp as gateway_mcp
+from zato.admin.web.views.gateway import mcp_connection_lists as gateway_mcp_connection_lists
 from zato.admin.web.views.gateway import rule_engine as gateway_rule_engine
 from zato.admin.web.views.outgoing import graphql as out_graphql
 from zato.admin.web.views.outgoing import grpc as out_grpc
@@ -48,12 +49,13 @@ from zato.admin.web.views.outgoing import kafka as out_kafka
 from zato.admin.web.views.outgoing import as2 as out_as2
 from zato.admin.web.views.outgoing import as4 as out_as4
 from zato.admin.web.views.outgoing import es as out_es
+from zato.admin.web.views.outgoing import file_transfer_schedule as out_file_transfer_schedule
+from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import llm as out_llm
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odata as out_odata
 from zato.admin.web.views.outgoing import odoo as out_odoo
-from zato.admin.web.views.outgoing import file_transfer_schedule as out_file_transfer_schedule
 from zato.admin.web.views.outgoing import sftp as out_sftp
 from zato.admin.web.views.outgoing import smb as out_smb
 from zato.admin.web.views.outgoing import soap as out_soap
@@ -657,6 +659,39 @@ urlpatterns += [
     url(r'^zato/gateway/mcp/get-service-list/$',
         login_required(gateway_mcp.get_service_list), name='gateway-mcp-get-service-list'),
 
+    url(r'^zato/gateway/mcp/get-rest-list/$',
+        login_required(gateway_mcp_connection_lists.get_rest_list), name='gateway-mcp-get-rest-list'),
+
+    url(r'^zato/gateway/mcp/get-soap-list/$',
+        login_required(gateway_mcp_connection_lists.get_soap_list), name='gateway-mcp-get-soap-list'),
+
+    url(r'^zato/gateway/mcp/get-sql-list/$',
+        login_required(gateway_mcp_connection_lists.get_sql_list), name='gateway-mcp-get-sql-list'),
+
+    url(r'^zato/gateway/mcp/get-odoo-list/$',
+        login_required(gateway_mcp_connection_lists.get_odoo_list), name='gateway-mcp-get-odoo-list'),
+
+    url(r'^zato/gateway/mcp/get-sap-list/$',
+        login_required(gateway_mcp_connection_lists.get_sap_list), name='gateway-mcp-get-sap-list'),
+
+    url(r'^zato/gateway/mcp/get-confluence-list/$',
+        login_required(gateway_mcp_connection_lists.get_confluence_list), name='gateway-mcp-get-confluence-list'),
+
+    url(r'^zato/gateway/mcp/get-microsoft-365-list/$',
+        login_required(gateway_mcp_connection_lists.get_microsoft_365_list), name='gateway-mcp-get-microsoft-365-list'),
+
+    url(r'^zato/gateway/mcp/get-microsoft-fabric-list/$',
+        login_required(gateway_mcp_connection_lists.get_microsoft_fabric_list), name='gateway-mcp-get-microsoft-fabric-list'),
+
+    url(r'^zato/gateway/mcp/get-microsoft-power-automate-list/$',
+        login_required(gateway_mcp_connection_lists.get_microsoft_power_automate_list), name='gateway-mcp-get-microsoft-power-automate-list'),
+
+    url(r'^zato/gateway/mcp/get-microsoft-teams-list/$',
+        login_required(gateway_mcp_connection_lists.get_microsoft_teams_list), name='gateway-mcp-get-microsoft-teams-list'),
+
+    url(r'^zato/gateway/mcp/get-es-list/$',
+        login_required(gateway_mcp_connection_lists.get_es_list), name='gateway-mcp-get-es-list'),
+
     url(r'^zato/gateway/mcp/get-security-list/$',
         login_required(gateway_mcp.get_security_list), name='gateway-mcp-get-security-list'),
 
@@ -812,6 +847,28 @@ urlpatterns += [
         login_required(out_smb.Delete()), name=out_smb.Delete.url_name),
     url(r'^zato/outgoing/smb/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_smb.ping), name='out-smb-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. FTP
+
+    url(r'^zato/outgoing/ftp/$',
+        login_required(out_ftp.Index()), name=out_ftp.Index.url_name),
+    url(r'^zato/outgoing/ftp/create/$',
+        login_required(out_ftp.Create()), name=out_ftp.Create.url_name),
+    url(r'^zato/outgoing/ftp/edit/$',
+        login_required(out_ftp.Edit()), name=out_ftp.Edit.url_name),
+    url(r'^zato/outgoing/ftp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_ftp.Delete()), name=out_ftp.Delete.url_name),
+    url(r'^zato/outgoing/ftp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_ftp.ping), name='out-ftp-ping'),
+    url(r'^zato/outgoing/ftp/command-shell/(?P<id>.*)/cluster/(?P<cluster_id>.*)/(?P<name_slug>.*)/$',
+        login_required(out_ftp.command_shell), name='out-ftp-command-shell'),
+    url(r'^zato/outgoing/ftp/command-shell-action/(?P<id>.*)/cluster/(?P<cluster_id>.*)/(?P<name_slug>.*)/$',
+        login_required(out_ftp.command_shell_action), name='out-ftp-command-shell-action'),
     ]
 
 # ################################################################################################################################
@@ -1425,13 +1482,7 @@ urlpatterns += [
     url(r'^zato/cloud/salesforce/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cloud_salesforce.Delete()), name=cloud_salesforce.Delete.url_name),
     url(r'^zato/cloud/salesforce/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cloud_salesforce.ping), name='cloud-dropbox-ping'),
-
-    url(r'^zato/cloud/salesforce/invoke/action/(?P<conn_name>.*)/$',
-        login_required(cloud_salesforce.invoke_action), name='cloud-salesforce-invoke-action'),
-
-    url(r'^zato/cloud/salesforce/invoke/(?P<conn_id>.*)/(?P<max_wait_time>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
-        login_required(cloud_salesforce.invoke), name='cloud-salesforce-invoke'),
+        login_required(cloud_salesforce.ping), name='cloud-salesforce-ping'),
 
     ]
 

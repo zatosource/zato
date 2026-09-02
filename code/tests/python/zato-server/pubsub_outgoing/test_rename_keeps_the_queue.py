@@ -40,7 +40,7 @@ class RenameKeepsTheQueueTestCase(unittest.TestCase):
     def test_a_queued_message_outlives_a_rename(self) -> 'None':
 
         receiver = TestConfig.rename_receiver
-        payload = {'order_id': 'order-4321', 'customer': 'Maria Kowalska'}
+        payload = {'order_id': 'order-4321', 'customer': 'Maria Johnson'}
 
         conn_name = TestConfig.rename_connection
         new_name = TestConfig.rename_connection_new_name
@@ -84,7 +84,7 @@ class RenameKeepsTheQueueTestCase(unittest.TestCase):
         self.assertEqual(queue['topic_name_list'], [new_topic])
 
         # .. which is also the queue that what is published from now on goes through.
-        second_payload = {'order_id': 'order-5432', 'customer': 'Anna Nowak'}
+        second_payload = {'order_id': 'order-5432', 'customer': 'Anna Miller'}
         _ = publish(self.client, new_name, second_payload)
 
         requests = receiver.wait_for_requests(2)

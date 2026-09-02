@@ -7,7 +7,15 @@ sql:
     db_name: testdb
     username: test_user
     password: "{{snowflake_password}}"
-    extra: protocol=http;host=127.0.0.1;port={{snowflake_port}};warehouse=COMPUTE_WH;role=ANALYST;schema=PUBLIC;login_timeout=10;network_timeout=10
+    extra:
+      - protocol=http
+      - host=127.0.0.1
+      - port={{snowflake_port}}
+      - warehouse=COMPUTE_WH
+      - role=ANALYST
+      - schema=PUBLIC
+      - login_timeout=10
+      - network_timeout=10
 
   - name: test.sql.redshift
     type: redshift
@@ -16,4 +24,5 @@ sql:
     db_name: testdb
     username: test_user
     password: "{{redshift_password}}"
-    extra: ssl=False
+    extra:
+      - ssl=False

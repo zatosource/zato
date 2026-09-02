@@ -8,8 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import GENERIC
-from zato.common.hl7.fhir.fields import Outconn_Column_Defaults, Outconn_Opaque_Defaults, Outconn_Security_Id_Key, \
-    Outconn_Security_Name_Key
+from zato.common.hl7.fhir.fields import Outgoing_Column_Defaults, Outgoing_Opaque_Defaults, Outgoing_Security_Id_Key, \
+    Outgoing_Security_Name_Key
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 
 # ################################################################################################################################
@@ -28,14 +28,14 @@ class OutgoingFHIRImporter(GenericConnectionImporter):
     connection_type = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR
 
     # What makes a row an outgoing FHIR connection rather than any other generic connection
-    connection_defaults = dict(Outconn_Column_Defaults, **{
+    connection_defaults = dict(Outgoing_Column_Defaults, **{
         'type_': GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR,
         'is_internal': False,
         'is_channel': False,
         'is_outconn': True,
     })
 
-    connection_extra_field_defaults = Outconn_Opaque_Defaults
+    connection_extra_field_defaults = Outgoing_Opaque_Defaults
 
     connection_secret_keys:'list' = []
     connection_required_attrs = ['name', 'address']
@@ -55,7 +55,7 @@ class OutgoingFHIRImporter(GenericConnectionImporter):
         that definition's id, so the name is looked up and then dropped - it is not a field of the
         connection and must not reach the opaque attributes.
         """
-        security_name = connection_def.pop(Outconn_Security_Name_Key, '')
+        security_name = connection_def.pop(Outgoing_Security_Name_Key, '')
 
         # A connection without one sends its requests unauthenticated
         if not security_name:
@@ -67,7 +67,7 @@ class OutgoingFHIRImporter(GenericConnectionImporter):
             name = connection_def['name']
             raise Exception(f'Security definition `{security_name}` not found for outgoing FHIR connection `{name}`')
 
-        connection_def[Outconn_Security_Id_Key] = sec_def['id']
+        connection_def[Outgoing_Security_Id_Key] = sec_def['id']
 
 # ################################################################################################################################
 # ################################################################################################################################

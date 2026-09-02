@@ -29,11 +29,13 @@ from zato.cli.enmasse.importers.audit_extraction import AuditExtractionImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
 from zato.cli.enmasse.importers.email_imap import IMAPImporter
 from zato.cli.enmasse.importers.es import ElasticSearchImporter
+from zato.cli.enmasse.importers.ftp import FTPImporter
 from zato.cli.enmasse.importers.odoo import OdooImporter
 from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
 from zato.cli.enmasse.importers.confluence import ConfluenceImporter
 from zato.cli.enmasse.importers.jira import JiraImporter
+from zato.cli.enmasse.importers.salesforce import SalesforceImporter
 from zato.cli.enmasse.importers.channel_mllp import ChannelMLLPImporter
 from zato.cli.enmasse.importers.outgoing_mllp import OutgoingMLLPImporter
 from zato.cli.enmasse.importers.outgoing_fhir import OutgoingFHIRImporter
@@ -72,7 +74,7 @@ from zato.common.odb.model import Cluster
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, anylist, anytuple, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,6 +95,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.es', 'zato.cli.enmasse.importers.odoo',
                         'zato.cli.enmasse.importers.scheduler', 'zato.cli.enmasse.importers.sql',
                         'zato.cli.enmasse.importers.confluence', 'zato.cli.enmasse.importers.jira',
+                        'zato.cli.enmasse.importers.salesforce',
                         'zato.cli.enmasse.importers.channel_mllp',
                         'zato.cli.enmasse.importers.outgoing_mllp',
                         'zato.cli.enmasse.importers.outgoing_fhir',
@@ -110,6 +113,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.slack',
                         'zato.cli.enmasse.importers.mongodb',
                         'zato.cli.enmasse.importers.odata',
+                        'zato.cli.enmasse.importers.ftp',
                         'zato.cli.enmasse.importers.sftp', 'zato.cli.enmasse.importers.smb',
                         'zato.cli.enmasse.importers.outgoing_rest', 'zato.cli.enmasse.importers.outgoing_soap',
                         'zato.cli.enmasse.importers.pubsub_topic', 'zato.cli.enmasse.importers.pubsub_permission',
@@ -145,6 +149,7 @@ class EnmasseYAMLImporter:
         self.job_defs = {}
         self.confluence_defs = {}
         self.jira_defs = {}
+        self.salesforce_defs = {}
         self.channel_mllp_defs = {}
         self.outgoing_mllp_defs = {}
         self.outgoing_fhir_defs = {}
@@ -163,6 +168,7 @@ class EnmasseYAMLImporter:
         self.sap_defs = {}
         self.sftp_defs = {}
         self.smb_defs = {}
+        self.ftp_defs = {}
         self.microsoft_cloud_defs = {}
         self.microsoft_fabric_defs = {}
         self.microsoft_power_automate_defs = {}
@@ -201,6 +207,7 @@ class EnmasseYAMLImporter:
         self.scheduler_importer = SchedulerImporter(self)
         self.confluence_importer = ConfluenceImporter(self)
         self.jira_importer = JiraImporter(self)
+        self.salesforce_importer = SalesforceImporter(self)
         self.channel_mllp_importer = ChannelMLLPImporter(self)
         self.outgoing_mllp_importer = OutgoingMLLPImporter(self)
         self.outgoing_fhir_importer = OutgoingFHIRImporter(self)
@@ -223,6 +230,7 @@ class EnmasseYAMLImporter:
         self.sap_importer = ODataImporter(self, 'sap')
         self.sftp_importer = SFTPImporter(self)
         self.smb_importer = SMBImporter(self)
+        self.ftp_importer = FTPImporter(self)
         self.microsoft_cloud_importer = MicrosoftCloudImporter(self)
         self.microsoft_fabric_importer = MicrosoftFabricImporter(self)
         self.microsoft_power_automate_importer = MicrosoftPowerAutomateImporter(self)
@@ -679,7 +687,7 @@ class EnmasseYAMLImporter:
         sql_created, sql_updated = self.sql_importer.sync_sql_definitions(sql_list, session)
 
         # Get SQL definitions from the SQL importer
-        self.sql_defs = self.sql_importer.sql_defs
+        self.sql_defs = self.sql_importer.sql_definitions
         logger.info('Processed SQL connection pool definitions: created=%d updated=%d', len(sql_created), len(sql_updated))
 
         return sql_created, sql_updated
@@ -755,6 +763,31 @@ class EnmasseYAMLImporter:
         logger.info('Processed Jira connection definitions: created=%d updated=%d', len(jira_created), len(jira_updated))
 
         return jira_created, jira_updated
+
+# ################################################################################################################################
+
+    def sync_salesforce(self, salesforce_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes Salesforce connection definitions from a YAML configuration with the database.
+        """
+        if not salesforce_list:
+            return [], []
+
+        count = len(salesforce_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Salesforce connection {noun}')
+
+        # Examine each Salesforce connection item
+        for idx, item in enumerate(salesforce_list):
+            logger.info('Salesforce connection item %d: %s', idx, item)
+
+        salesforce_created, salesforce_updated = self.salesforce_importer.sync_definitions(salesforce_list, session)
+
+        # Get Salesforce definitions from the Salesforce importer
+        self.salesforce_defs = self.salesforce_importer.connection_defs
+        logger.info('Processed Salesforce connection definitions: created=%d updated=%d',
+            len(salesforce_created), len(salesforce_updated))
+
+        return salesforce_created, salesforce_updated
 
 # ################################################################################################################################
 
@@ -981,6 +1014,35 @@ class EnmasseYAMLImporter:
         logger.info('Processed SMB connection definitions: created=%d updated=%d', len(smb_created), len(smb_updated))
 
         return smb_created, smb_updated
+
+# ################################################################################################################################
+
+    def sync_ftp(self, ftp_list:'anylist', session:'SASession') -> 'anytuple':
+        """ Synchronizes FTP connection definitions from a YAML configuration with the database.
+        """
+
+        # Our response to produce
+        out = ([], [])
+
+        if not ftp_list:
+            return out
+
+        count = len(ftp_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} FTP connection {noun}')
+
+        # Examine each FTP connection item.
+        for idx, item in enumerate(ftp_list):
+            logger.info('FTP connection item %d: %s', idx, item)
+
+        ftp_created, ftp_updated = self.ftp_importer.sync_definitions(ftp_list, session)
+
+        # Get FTP definitions from the FTP importer.
+        self.ftp_defs = self.ftp_importer.connection_defs
+        logger.info('Processed FTP connection definitions: created=%d updated=%d', len(ftp_created), len(ftp_updated))
+
+        out = (ftp_created, ftp_updated)
+        return out
 
 # ################################################################################################################################
 
@@ -1662,6 +1724,19 @@ class EnmasseYAMLImporter:
         if jira_updated:
             self.updated_objects['jira'] = jira_updated
 
+        # Process Salesforce connection definitions
+        salesforce_list = yaml_config.get('salesforce', [])
+        if generic_list:
+            for item in generic_list:
+                item_type = item.get('type_')
+                if item_type == 'cloud-salesforce':
+                    salesforce_list.append(item)
+        salesforce_created, salesforce_updated = self.sync_salesforce(salesforce_list, session)
+        if salesforce_created:
+            self.created_objects['salesforce'] = salesforce_created
+        if salesforce_updated:
+            self.updated_objects['salesforce'] = salesforce_updated
+
         # Process LDAP connection definitions
         ldap_list = yaml_config.get('ldap') or yaml_config.get('outgoing_ldap', [])
         ldap_created, ldap_updated = self.sync_ldap(ldap_list, session)
@@ -1709,6 +1784,18 @@ class EnmasseYAMLImporter:
             self.created_objects['smb'] = smb_created
         if smb_updated:
             self.updated_objects['smb'] = smb_updated
+
+        # Process FTP connection definitions.
+        ftp_list = yaml_config.get('ftp')
+        if not ftp_list:
+            ftp_list = yaml_config.get('outgoing_ftp')
+        if not ftp_list:
+            ftp_list = []
+        ftp_created, ftp_updated = self.sync_ftp(ftp_list, session)
+        if ftp_created:
+            self.created_objects['ftp'] = ftp_created
+        if ftp_updated:
+            self.updated_objects['ftp'] = ftp_updated
 
         # Process MongoDB connection definitions
         mongodb_list = yaml_config.get('mongodb') or yaml_config.get('outgoing_mongodb', [])

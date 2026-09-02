@@ -19,7 +19,7 @@ $.fn.zato.outgoing.hl7.mllp.field_descriptions = {
     // Framing and timing
     'id_start_seq': 'MLLP frame start bytes, in hex, e.g. 0b.<br>Sent before each message. The default<br>matches the MLLP standard.',
     'id_end_seq': 'MLLP frame end bytes, in hex, e.g. 1c 0d.<br>Sent after each message. The default<br>matches the MLLP standard.',
-    'id_max_msg_size': 'The biggest acknowledgment accepted, in bytes.<br>Larger replies are rejected.<br>Default is 2000000.',
+    'id_max_msg_size': 'The biggest acknowledgment accepted, in bytes.<br>Larger replies are rejected.',
     'id_read_buffer_size': 'Size of the socket read buffer, in bytes.<br>The default of 32768 rarely needs changing.',
     'id_recv_timeout': 'How long to wait for the acknowledgment,<br>in milliseconds. Default is 250.',
     'id_max_wait_time': 'Default timeout in seconds for test messages<br>sent from the dashboard\'s Invoke screen.<br>Default is 5.',

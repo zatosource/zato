@@ -35,7 +35,7 @@ if 0:
 
 _scheduler = FileTransfer.Scheduler
 
-# What a single file's handling ended with - the run summary counts each kind separately
+# What a single file's handling ended with - the run summary counts each kind separately.
 _status_processed = 'processed'
 _status_failed    = 'failed'
 _status_skipped   = 'skipped'
@@ -51,9 +51,11 @@ _no_directory_note = 'Directory does not exist'
 
 def _get_file_name(entry:'any_') -> 'str':
     """ Returns the base file name of a listing entry - SFTP listings return full paths
-    while SMB ones return base names, and everything downstream needs the base name.
+    while SMB and FTP ones return base names, and everything downstream needs the base name.
     """
-    out = entry.name.rsplit('/', 1)[-1]
+    name = entry.name
+    parts = name.rsplit('/', 1)
+    out = parts[-1]
     return out
 
 # ################################################################################################################################
@@ -118,20 +120,18 @@ def _keep_stable_entries(conn:'any_', directory:'str', candidates:'anylist', sta
     # Our response to produce
     out:'anylist' = []
 
-    # One wait covers all the candidates - each one is then compared with its listing baseline
+    # One wait covers all the candidates - each one is then compared with its listing baseline.
     sleep(stability_delay)
 
     for entry in candidates:
 
-        full_path = f'{directory}/{_get_file_name(entry)}'
+        file_name = _get_file_name(entry)
+        full_path = f'{directory}/{file_name}'
 
         # The file may be gone by now, e.g. another consumer took it
         try:
             info = conn.get_info(full_path)
         except Exception:
-            continue
-
-        if not info:
             continue
 
         # A change in size means the upload is still in progress ..
@@ -161,7 +161,8 @@ def _get_move_destination(conn:'any_', move_directory:'str', file_name:'str') ->
 
     # .. otherwise it is given a name that says when it turned up, so that a feed sending
     # .. one name every day leaves every day's file behind rather than only the last one.
-    stamp = datetime.now(timezone.utc).strftime(_scheduler.Collision_Suffix_Format)
+    now = datetime.now(timezone.utc)
+    stamp = now.strftime(_scheduler.Collision_Suffix_Format)
 
     out = f'{move_directory}/{file_name}.{stamp}'
     return out
@@ -186,9 +187,10 @@ def _ack_one_file(
 
     if schedule['on_success'] == _scheduler.OnSuccess.Move:
 
-        move_directory = f'{directory}/{schedule["move_directory"]}'
+        move_subdirectory = schedule['move_directory']
+        move_directory = f'{directory}/{move_subdirectory}'
 
-        # The destination directory is created on first use
+        # The destination directory is created on first use.
         if not conn.exists(move_directory):
             _ = conn.create_directory(move_directory)
 
@@ -200,7 +202,7 @@ def _ack_one_file(
     else:
         _ = conn.delete_file(current_path)
 
-    # In marker mode, the marker goes away together with its data file
+    # In marker mode, the marker goes away together with its data file.
     if schedule['ready_how'] == _scheduler.ReadyHow.Marker:
         marker_path = full_path + schedule['marker_suffix']
         _ = conn.delete_file(marker_path)
@@ -223,10 +225,10 @@ def _process_one_file(
     """
 
     # Local aliases
-    conn_name = context[_scheduler.Extra_Conn_Name]
-    conn_type = context[_scheduler.Extra_Conn_Type]
+    conn_name     = context[_scheduler.Extra_Conn_Name]
+    conn_type     = context[_scheduler.Extra_Conn_Type]
     schedule_name = schedule['name']
-    service_name = schedule['service']
+    service_name  = schedule['service']
 
     # The run's own cid ties every event of this run together ..
     run_cid = service.cid
@@ -241,7 +243,7 @@ def _process_one_file(
     file_name = _get_file_name(entry)
     full_path = f'{directory}/{file_name}'
 
-    # The path the file is read from - it changes if the file is claimed first
+    # The path the file is read from - it changes if the file is claimed first.
     current_path = full_path
 
     # What a reprocess needs to rebuild the item the target service received
@@ -279,8 +281,7 @@ def _process_one_file(
 
         error = format_exc()
 
-        # The file is rejected by leaving it in place - it will be picked up anew
-        # on the next run, which means that files are never lost.
+        # The file is rejected by leaving it in place - it will be picked up anew on the next run.
         service.logger.warning('Could not invoke `%s` with file `%s` from `%s` -> `%s`',
             service_name, full_path, conn_name, error)
 
@@ -298,7 +299,7 @@ def _process_one_file(
 
         return _status_failed
 
-    # The target service took the file, which is recorded before the file is moved or deleted
+    # The target service took the file, which is recorded before the file is moved or deleted.
     _ = record_schedule_event(audit_log, conn_name, AuditEvent.Delivered, full_path,
         cid=file_cid, correl_id=run_cid, schedule=schedule_name, outcome=AuditOutcome.OK,
         file_name=file_name, service=service_name, size=entry.size, extra=event_extra)
@@ -368,22 +369,21 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
     """
 
     # Local aliases
-    conn_name = context[_scheduler.Extra_Conn_Name]
-    conn_type = context[_scheduler.Extra_Conn_Type]
-    schedule = context[_scheduler.Extra_Schedule]
+    conn_name     = context[_scheduler.Extra_Conn_Name]
+    conn_type     = context[_scheduler.Extra_Conn_Type]
+    schedule      = context[_scheduler.Extra_Schedule]
     schedule_name = schedule['name']
 
     # The run's own cid, which every event of this run carries in its correlation id
     run_cid = service.cid
 
-    # The trailing slash, if any, would only get in the way of the path arithmetic below
+    # The trailing slash, if any, would only get in the way of the path arithmetic below.
     directory = schedule['directory'].rstrip('/')
 
-    # Each connection type has its own facade on the service
-    if conn_type == FileTransfer.ConnType.SFTP:
-        conn = service.sftp[conn_name]
-    else:
-        conn = service.smb[conn_name]
+    # Each connection type has its own facade on the service.
+    facade_attr = FileTransfer.Facade_Attr[conn_type]
+    facade = getattr(service, facade_attr)
+    conn = facade[conn_name]
 
     audit_log:'AuditLog' = conn.wrapper.audit_log
 
@@ -394,6 +394,10 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
         _record_run_completed(audit_log, conn_name, directory, run_cid, schedule_name,
             entry_count=0, candidate_count=0, processed_count=0, failed_count=0, note=_no_directory_note)
         return
+
+    # How the run went, file by file
+    processed_count = 0
+    failed_count    = 0
 
     # Look into the directory ..
     entries = conn.list(directory)
@@ -411,10 +415,6 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
     if schedule['ready_how'] == _scheduler.ReadyHow.Stability:
         candidates = _keep_stable_entries(conn, directory, candidates, schedule['stability_delay'])
 
-    # How the run went, file by file
-    processed_count = 0
-    failed_count = 0
-
     # .. and now each ready file can be handled on its own. One file that cannot be handled never ends
     # the run for the files behind it - the run is over only once every file has had its turn.
     for entry in candidates:
@@ -430,8 +430,8 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
             elif status == _status_failed:
                 failed_count += 1
 
-    # The run is over, which is what its one summary event says
-    entry_count = len(entries)
+    # The run is over, which is what its one summary event says.
+    entry_count     = len(entries)
     candidate_count = len(candidates)
 
     _record_run_completed(audit_log, conn_name, directory, run_cid, schedule_name,

@@ -44,11 +44,11 @@ fn setup_shared(is_active: bool) -> (std::sync::Arc<SchedulerShared>, std::sync:
     (shared, receiver)
 }
 
-/// Unpacks the fire batch out of the outgoing event a forced execution sends.
-fn expect_fire(event: OutgoingEvent) -> FireBatch {
+/// Unpacks the fire batch out of the outgoing event a forced execution sends - a timeout event yields `None`.
+fn expect_fire(event: OutgoingEvent) -> Option<FireBatch> {
     match event {
-        OutgoingEvent::Fire(batch) => batch,
-        OutgoingEvent::Timeout(_) => panic!("expected a fire event, got a timeout event"),
+        OutgoingEvent::Fire(batch) => Some(batch),
+        OutgoingEvent::Timeout(_) => None,
     }
 }
 
@@ -61,7 +61,8 @@ proptest! {
 
         handle_execute_job(&shared, r#"{"job_id": 1}"#);
 
-        let batch = expect_fire(receiver.try_recv().unwrap());
+        let event = receiver.try_recv().unwrap();
+        let batch = expect_fire(event).unwrap();
         prop_assert_eq!(batch.job_id.0, 1);
         prop_assert_eq!(batch.service.0, "svc");
 
@@ -81,7 +82,8 @@ proptest! {
 
         handle_execute_job(&shared, r#"{"job_id": 1}"#);
 
-        let batch = expect_fire(receiver.try_recv().unwrap());
+        let event = receiver.try_recv().unwrap();
+        let batch = expect_fire(event).unwrap();
         prop_assert_eq!(batch.job_id.0, 1);
 
         let state = shared.state.lock();
@@ -122,7 +124,8 @@ proptest! {
         // must still find it through the name.
         handle_execute_job(&shared, r#"{"job_id": 999, "name": "test"}"#);
 
-        let batch = expect_fire(receiver.try_recv().unwrap());
+        let event = receiver.try_recv().unwrap();
+        let batch = expect_fire(event).unwrap();
         prop_assert_eq!(batch.job_id.0, 1);
         prop_assert_eq!(batch.service.0, "svc");
 

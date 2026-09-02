@@ -17,18 +17,20 @@ import os
 
 # Zato
 from zato.common.json_internal import dumps
-from zato.server.demo_config import get_demo_config_details, is_cluster_empty, save_demo_config, Set_Names, \
-    _delete_generic_connections, _delete_http_soap, _delete_jobs, _existing_names_funcs, _import_funcs, _manifests, \
-    _remove_funcs
+from zato.server.demo_config import First_Start_Set_Names, get_demo_config_details, has_user_services, is_cluster_empty, \
+    save_demo_config, Set_Names, _delete_generic_connections, _delete_http_soap, _delete_jobs, _existing_names_funcs, \
+    _import_funcs, _manifests, _remove_funcs
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from pathlib import Path
     from zato.common.typing_ import any_, anylist, strdict, strlist
 
     any_ = any_
     anylist = anylist
+    Path = Path
     strdict = strdict
     strlist = strlist
 
@@ -132,6 +134,9 @@ class _FakeServer:
         self.odb = _FakeODB(rows_by_model)
         self.hot_deploy_config = _FakeHotDeployConfig()
 
+        self.service_sources:'anylist' = []
+        self.deploy_auto_from = ''
+
         self.invoked:'anylist' = []
         self.imported:'strlist' = []
 
@@ -198,6 +203,12 @@ class TestRegistryIsComplete:
                 kind = manifest_group['kind']
                 assert kind in _existing_names_funcs, f'No lookup func for: {kind} (set: {set_name})'
                 assert manifest_group['names'], f'No names for: {kind} (set: {set_name})'
+
+    def test_every_first_start_set_is_registered(self):
+
+        for set_name in First_Start_Set_Names:
+            assert set_name in Set_Names, f'Not a known set: {set_name}'
+            assert set_name in _import_funcs, f'No import func for: {set_name}'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -419,6 +430,42 @@ class TestIsClusterEmpty:
 
         server = _FakeServer(rows_by_model)
         assert is_cluster_empty(server) is False # type: ignore[arg-type]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestHasUserServices:
+
+    def test_a_fresh_server_has_none(self):
+
+        server = _FakeServer()
+        assert has_user_services(server) is False # type: ignore[arg-type]
+
+    def test_a_hot_deployment_source_counts(self):
+
+        server = _FakeServer()
+        server.service_sources = [os.path.join('/opt', 'my-project', 'src')]
+
+        assert has_user_services(server) is True # type: ignore[arg-type]
+
+    def test_an_auto_deployment_directory_counts(self):
+
+        server = _FakeServer()
+        server.deploy_auto_from = os.path.join('/opt', 'my-project')
+
+        assert has_user_services(server) is True # type: ignore[arg-type]
+
+    def test_a_file_in_the_pickup_directory_counts(self, tmp_path:'Path'):
+
+        # A service file is already waiting in the pickup directory ..
+        pickup_file = tmp_path / 'my_service.py'
+        _ = pickup_file.write_text('class MyService: pass')
+
+        # .. so the server has user services to deploy.
+        server = _FakeServer()
+        server.hot_deploy_config.pickup_dir = str(tmp_path)
+
+        assert has_user_services(server) is True # type: ignore[arg-type]
 
 # ################################################################################################################################
 # ################################################################################################################################

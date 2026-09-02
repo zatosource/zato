@@ -94,6 +94,13 @@ class HeadersEnrichedException(Exception):
 class Client(ZatoClient):
     def __init__(self, req, *args, **kwargs):
         self.forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR') or req.META.get('REMOTE_ADDR')
+
+        # The person signed in to the Dashboard, so config audit can record who changed what
+        if req.user.is_authenticated:
+            self.zato_user = req.user.username
+        else:
+            self.zato_user = ''
+
         super(Client, self).__init__(*args, **kwargs)
 
 # ################################################################################################################################
@@ -101,6 +108,7 @@ class Client(ZatoClient):
     def invoke(self, *args, **kwargs):
         headers = kwargs.pop('headers', {})
         headers['X-Zato-Forwarded-For'] = self.forwarded_for
+        headers['X-Zato-User'] = self.zato_user
 
         logger.info('WebAdmin Client.invoke args=%r, kwargs_keys=%r', args, list(kwargs.keys()))
 
@@ -137,6 +145,7 @@ class Client(ZatoClient):
     def invoke_async(self, *args, **kwargs):
         headers = kwargs.pop('headers', {})
         headers['X-Zato-Forwarded-For'] = self.forwarded_for
+        headers['X-Zato-User'] = self.zato_user
         response = super(Client, self).invoke_async(*args, headers=headers, **kwargs)
         return response
 

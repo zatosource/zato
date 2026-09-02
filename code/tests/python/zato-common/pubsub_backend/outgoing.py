@@ -127,6 +127,7 @@ class _StubConfigManager:
     """
 
     get_outgoing_publish_lock = ConfigManager.get_outgoing_publish_lock
+    _set_outgoing_topic_audit_flag = ConfigManager._set_outgoing_topic_audit_flag
     ensure_outgoing_subscription = ConfigManager.ensure_outgoing_subscription
     rename_outgoing_subscription = ConfigManager.rename_outgoing_subscription
     delete_outgoing_subscription = ConfigManager.delete_outgoing_subscription

@@ -38,7 +38,7 @@ class PublishDeliversToOutgoingConnectionTestCase(unittest.TestCase):
 
     def test_publish_reaches_the_connection(self) -> 'None':
 
-        payload = {'order_id': 'order-1234', 'customer': 'Maria Kowalska'}
+        payload = {'order_id': 'order-1234', 'customer': 'Maria Johnson'}
 
         _ = publish(self.client, TestConfig.orders_connection, payload)
 
@@ -57,7 +57,7 @@ class PublishDeliversToOutgoingConnectionTestCase(unittest.TestCase):
 
     def test_publish_returns_the_id_of_the_queued_message(self) -> 'None':
 
-        payload = {'order_id': 'order-2345', 'customer': 'Maria Kowalska'}
+        payload = {'order_id': 'order-2345', 'customer': 'Maria Johnson'}
 
         msg_id = publish(self.client, TestConfig.orders_connection, payload)
 
@@ -73,7 +73,7 @@ class PublishDeliversToOutgoingConnectionTestCase(unittest.TestCase):
     def test_publish_through_the_facade_reaches_the_same_connection(self) -> 'None':
         """ self.rest['Name'].publish and self.out.rest['Name'].publish are the same publication.
         """
-        payload = {'order_id': 'order-3456', 'customer': 'Maria Kowalska'}
+        payload = {'order_id': 'order-3456', 'customer': 'Maria Johnson'}
 
         _ = publish_through_facade(self.client, TestConfig.orders_connection, payload)
 
@@ -94,7 +94,7 @@ class PublishDeliversToOutgoingConnectionTestCase(unittest.TestCase):
         expected = []
 
         for index in range(3):
-            payload = {'order_id': f'order-{index}', 'customer': 'Maria Kowalska'}
+            payload = {'order_id': f'order-{index}', 'customer': 'Maria Johnson'}
             expected.append(payload)
             _ = publish(self.client, TestConfig.orders_connection, payload)
 
@@ -119,7 +119,7 @@ class PublishDeliversToOutgoingConnectionTestCase(unittest.TestCase):
 
     def test_publishing_to_one_connection_leaves_the_other_alone(self) -> 'None':
 
-        payload = {'order_id': 'order-4567', 'customer': 'Maria Kowalska'}
+        payload = {'order_id': 'order-4567', 'customer': 'Maria Johnson'}
 
         _ = publish(self.client, TestConfig.orders_connection, payload)
 

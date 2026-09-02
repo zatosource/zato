@@ -39,7 +39,7 @@ class FHIRRegistrySelectsTheHandlerTestCase(unittest.TestCase):
 
     def test_a_rest_publication_reaches_only_the_rest_target(self) -> 'None':
 
-        payload = {'order_id': 'order-shared-1', 'customer': 'Maria Kowalska'}
+        payload = {'order_id': 'order-shared-1', 'customer': 'Maria Johnson'}
 
         _ = publish(self.client, TestConfig.shared_connection, payload)
 
@@ -62,7 +62,7 @@ class FHIRRegistrySelectsTheHandlerTestCase(unittest.TestCase):
 
         document = {
             'resourceType': 'Patient',
-            'name': [{'family': 'Kowalska', 'given': ['Maria']}],
+            'name': [{'family': 'Johnson', 'given': ['Maria']}],
         }
 
         _ = publish_fhir(self.client, TestConfig.shared_connection, document)

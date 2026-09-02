@@ -16,7 +16,7 @@ import os
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Where the ConceptMap fixtures live, relative to this file
+# Where the ConceptMap fixtures are stored, relative to this file
 _fixtures_dir = os.path.join(os.path.dirname(__file__), 'fixtures', 'v2mappings')
 
 # Where the generated module goes, relative to this file

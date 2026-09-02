@@ -32,6 +32,7 @@ from zato.common.py23_ import maxint
 from zato.common.ext.bunch import Bunch
 from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIORITY, PubSub, \
      RESTAdapterResponse, zato_no_op_marker
+from zato.common.audit_log.facade import AuditFacade
 from zato.common.audit_log.scheduler import append_job_log_entry
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import PubSubFacade, SecurityFacade
@@ -46,8 +47,9 @@ from zato.common.util.time_ import utcnow
 from zato.common.util.xml_.message import XMLMessage
 from zato.server.commands import CommandsFacade
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import AS2Facade, AS4Facade, ESFacade, FHIRFacade, IBMMQFacade, KafkaFacade, GraphQLFacade, \
-    KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SchedulerFacade, SFTPFacade, SMBFacade, SOAPFacade
+from zato.server.connection.facade import AS2Facade, AS4Facade, ESFacade, FHIRFacade, FTPFacade, IBMMQFacade, KafkaFacade, \
+    GraphQLFacade, KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SalesforceFacade, SchedulerFacade, \
+    SFTPFacade, SMBFacade, SOAPFacade
 from zato.server.connection.grpc_ import GRPCFacade
 from zato.server.destination.facade import DestinationFacade
 from zato.server.destination.hook import run_for_service as run_destinations_for_service
@@ -379,6 +381,7 @@ class Service:
     handles_auth_rejection:'bool' = False
 
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
+    audit = AuditFacade()
     aws = AWSFacade()
     cloud = Cloud()
     llm = LLMFacade()
@@ -514,11 +517,17 @@ class Service:
         # SAP facade for outgoing connections - runs on the OData implementation
         self.sap = ODataFacade()
 
+        # Salesforce facade for cloud connections
+        self.salesforce = SalesforceFacade()
+
         # SFTP facade for outgoing connections
         self.sftp = SFTPFacade()
 
         # SMB facade for outgoing connections
         self.smb = SMBFacade()
+
+        # FTP facade for outgoing connections
+        self.ftp = FTPFacade()
 
         # MongoDB facade for outgoing connections
         self.mongodb = MongoDBFacade()
@@ -680,11 +689,17 @@ class Service:
         # SAP facade - runs on the OData implementation
         self.sap.init(self._config_manager.outconn_sap)
 
+        # Salesforce facade
+        self.salesforce.init(self._config_manager.cloud_salesforce)
+
         # SFTP facade
         self.sftp.init(self.cid, self._config_manager)
 
         # SMB facade
         self.smb.init(self.cid, self._config_manager)
+
+        # FTP facade
+        self.ftp.init(self.cid, self._config_manager)
 
         # MongoDB facade
         self.mongodb.init(self.cid, self._config_manager)

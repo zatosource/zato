@@ -26,7 +26,9 @@ from zato.cli.enmasse.exporters.channel_as4 import ChannelAS4Exporter
 from zato.cli.enmasse.exporters.channel_rest import ChannelExporter
 from zato.cli.enmasse.exporters.channel_soap import ChannelSOAPExporter
 from zato.cli.enmasse.exporters.channel_openapi import ChannelOpenAPIExporter
+from zato.cli.enmasse.exporters.ftp import FTPExporter
 from zato.cli.enmasse.exporters.jira import JiraExporter
+from zato.cli.enmasse.exporters.salesforce import SalesforceExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
 from zato.cli.enmasse.exporters.llm import LLMExporter
 from zato.cli.enmasse.exporters.microsoft_cloud import MicrosoftCloudExporter
@@ -65,7 +67,7 @@ from zato.common.odb.model import Cluster
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, dictlist, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -115,6 +117,7 @@ class EnmasseYAMLExporter:
         self.rule_engine_api_exporter = RuleEngineAPIExporter(self)
         self.outgoing_kafka_exporter = OutgoingKafkaExporter(self)
         self.jira_exporter = JiraExporter(self)
+        self.salesforce_exporter = SalesforceExporter(self)
         self.ldap_exporter = LDAPExporter(self)
         self.llm_exporter = LLMExporter(self)
         self.mongodb_exporter = MongoDBExporter(self)
@@ -122,6 +125,7 @@ class EnmasseYAMLExporter:
         self.sap_exporter = ODataExporter(self, 'sap')
         self.sftp_exporter = SFTPExporter(self)
         self.smb_exporter = SMBExporter(self)
+        self.ftp_exporter = FTPExporter(self)
         self.microsoft_cloud_exporter = MicrosoftCloudExporter(self)
         self.microsoft_fabric_exporter = MicrosoftFabricExporter(self)
         self.microsoft_power_automate_exporter = MicrosoftPowerAutomateExporter(self)
@@ -466,6 +470,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_salesforce(self, session:'SASession') -> 'list':
+        """ Exports Salesforce connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        out = self.salesforce_exporter.export(session, self.cluster_id)
+        return out
+
+# ################################################################################################################################
+
     def export_ldap(self, session:'SASession') -> 'list':
         """ Exports LDAP connection definitions.
         """
@@ -517,6 +530,16 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session) # Ensure cluster info is loaded
         smb_list = self.smb_exporter.export(session, self.cluster_id)
         return smb_list
+
+# ################################################################################################################################
+
+    def export_ftp(self, session:'SASession') -> 'dictlist':
+        """ Exports FTP connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded.
+
+        out = self.ftp_exporter.export(session, self.cluster_id)
+        return out
 
 # ################################################################################################################################
 
@@ -820,6 +843,11 @@ class EnmasseYAMLExporter:
         if jira_defs:
             output_dict['jira'] = jira_defs
 
+        # Export Salesforce connection definitions
+        salesforce_defs = self.export_salesforce(session)
+        if salesforce_defs:
+            output_dict['salesforce'] = salesforce_defs
+
         # Export LDAP connection definitions
         ldap_defs = self.export_ldap(session)
         if ldap_defs:
@@ -849,6 +877,11 @@ class EnmasseYAMLExporter:
         smb_defs = self.export_smb(session)
         if smb_defs:
             output_dict['smb'] = smb_defs
+
+        # Export FTP connection definitions.
+        ftp_defs = self.export_ftp(session)
+        if ftp_defs:
+            output_dict['ftp'] = ftp_defs
 
         # Export MongoDB connection definitions
         mongodb_defs = self.export_mongodb(session)

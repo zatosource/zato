@@ -4,17 +4,6 @@ from xml.etree import ElementTree
 
 from zato.fhir.r4_0_1 import Task
 from zato.fhir.narrative import generate_narrative, NarrativeTemplate
-from zato.common.typing_ import cast_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import any_
-    any_ = any_
-
-# ################################################################################################################################
-# ################################################################################################################################
 
 
 XHTML_NS = '{http://www.w3.org/1999/xhtml}'
@@ -36,7 +25,7 @@ class TestNarrativeTask:
         assert root.tag == XHTML_NS + 'div'
 
     def test_narrative_task_basic(self):
-        r = cast_('any_', Task())
+        r = Task()
         r.id = 'test-1'
         r.instantiatesCanonical = {'value': 'test'}
         narrative = generate_narrative(r)
@@ -55,7 +44,7 @@ class TestNarrativeTask:
         assert found_field, "Field 'Instantiates Canonical' not found in narrative"
 
     def test_narrative_task_instantiatesCanonical(self):
-        r = cast_('any_', Task())
+        r = Task()
         r.id = 'test-1'
         r.instantiatesCanonical = {'value': 'test'}
         narrative = generate_narrative(r)
@@ -150,7 +139,7 @@ class TestNarrativeTask:
         assert found_field, "Field 'Part Of' not found in narrative"
 
     def test_narrative_task_custom_template(self):
-        r = cast_('any_', Task())
+        r = Task()
         r.id = 'test-1'
         r.instantiatesCanonical = {'value': 'test'}
         template = NarrativeTemplate(

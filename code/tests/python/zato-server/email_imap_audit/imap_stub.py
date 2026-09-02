@@ -28,7 +28,7 @@ from zato.server.connection.email import GenericIMAPConnection
 
 if 0:
     from collections.abc import Iterator
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_
 
     envgen = Iterator[None]
 

@@ -6,14 +6,12 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from urllib.parse import quote
-
 # Zato
 from zato.common.as2.reconcile import MDNReconciler
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditSource
 from zato.common.crypto.api import CryptoManager
 from zato.common.json_internal import dumps
+from audit_log_ui import click_pane_cid, get_rows, goto_audit_log, open_details
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,7 +23,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Audit_Log_Url_Prefix = '/zato/audit-log/'
+_Audit_Source = 'as2'
 
 # The tab labels of the message overlay when the payload carries an EDI document
 _Raw_Tab_Label    = 'Raw'
@@ -56,32 +54,13 @@ _purchase_order_850 = 'ISA*00*          *00*          *ZZ*SENDERID       *ZZ*REC
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _goto_audit_log(page:'Page', base_url:'str', object_name:'str') -> 'None':
-    """ Navigates to the AS2 audit log page of one identity pair and waits
-    for the first page of events to load.
-    """
-    encoded_name = quote(object_name)
-    url = f'{base_url}{_Audit_Log_Url_Prefix}?source=as2&object_name={encoded_name}&cluster=1'
-
-    _ = page.goto(url)
-
-    _ = page.wait_for_function(
-        '''() => {
-            let body = document.querySelector('#audit-log-table-body');
-            if (!body) return false;
-            let rows = body.querySelectorAll('tr');
-            if (!rows.length) return false;
-            return !body.querySelector('tr.detail-loading-row');
-        }''',
-        timeout=10000)
-
-# ################################################################################################################################
-
 def _open_message_overlay(page:'Page') -> 'None':
-    """ Clicks the CID link of the newest event and waits for the message overlay to show.
+    """ Opens the message overlay of the newest event - the row is selected, its Details tab
+    opened and the CID link in the pane clicked.
     """
-    page.click('#audit-log-table-body tr:first-child .audit-log-cid-link')
-    _ = page.wait_for_selector(f'{_Overlay_Selector}:not(.hidden)', timeout=10000)
+    rows = get_rows(page)
+    open_details(page, rows[0])
+    click_pane_cid(page)
 
     # The overlay is only usable once its editor holds the payload.
     _ = page.wait_for_function(
@@ -132,7 +111,7 @@ class TestAuditLogParsedView:
             size=len(_purchase_order_850), data=_purchase_order_850)
 
         # .. open the page pre-filtered to that pair and open the message overlay.
-        _goto_audit_log(page, base_url, pair)
+        goto_audit_log(page, base_url, _Audit_Source, pair)
         _open_message_overlay(page)
 
         # The overlay shows the raw and parsed tabs ..
@@ -194,7 +173,7 @@ class TestAuditLogParsedView:
         reconciler.record_mdn_received(message_id, cid='cid-mdn-' + suffix, data=mdn_data)
 
         # Open the page pre-filtered to that pair and open the overlay of the newest event.
-        _goto_audit_log(page, base_url, pair)
+        goto_audit_log(page, base_url, _Audit_Source, pair)
         _open_message_overlay(page)
 
         # A payload without an EDI document has no tab bar at all ..

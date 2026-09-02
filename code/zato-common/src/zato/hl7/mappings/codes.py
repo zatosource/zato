@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.hl7.mappings import vocabulary
+from zato.hl7.mappings import vocabulary, vocabulary_supplement
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -20,11 +20,11 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The base all HL7 v2 table code systems live under
+# The base URI of all HL7 v2 table code systems
 V2_Code_System_Prefix = 'http://terminology.hl7.org/CodeSystem/v2-'
 
 # Well-known HL7 v2 coding system names and the URIs they stand for
-coding_systems = {
+Coding_Systems = {
     'LN':      'http://loinc.org',
     'LOINC':   'http://loinc.org',
     'SCT':     'http://snomed.info/sct',
@@ -33,7 +33,9 @@ coding_systems = {
     'UCUM':    'http://unitsofmeasure.org',
     'CVX':     'http://hl7.org/fhir/sid/cvx',
     'NDC':     'http://hl7.org/fhir/sid/ndc',
+    'RXNORM':  'http://www.nlm.nih.gov/research/umls/rxnorm',
     'CPT':     'http://www.ama-assn.org/go/cpt',
+    'CPT4':    'http://www.ama-assn.org/go/cpt',
     'C4':      'http://www.ama-assn.org/go/cpt',
     'I10':     'http://hl7.org/fhir/sid/icd-10',
     'ICD10':   'http://hl7.org/fhir/sid/icd-10',
@@ -59,14 +61,10 @@ def coding_system_to_uri(name:'strnone') -> 'strnone':
         return None
 
     # Already a URI - use it as-is ..
-    if name.startswith('http://'):
-        return name
+    if name.startswith(('http://', 'https://', 'urn:')):
 
-    if name.startswith('https://'):
-        return name
-
-    if name.startswith('urn:'):
-        return name
+        out = name
+        return out
 
     # .. an HL7 v2 table reference like HL70005 ..
     name_upper = name.upper()
@@ -79,12 +77,41 @@ def coding_system_to_uri(name:'strnone') -> 'strnone':
             return out
 
     # .. or one of the well-known coding system names.
-    if name_upper in coding_systems:
+    if uri := Coding_Systems.get(name_upper):
 
-        out = coding_systems[name_upper]
+        out = uri
         return out
 
     return None
+
+# ################################################################################################################################
+
+def _build_vocabulary_maps() -> 'stranydict':
+    """ Merges the generated vocabulary with its supplement into the maps lookup reads.
+    """
+
+    # Our response to produce
+    out = {}
+
+    # The generated maps come first ..
+    for map_name in vocabulary.table_sources:
+        generated_map = getattr(vocabulary, map_name)
+        out[map_name] = dict(generated_map)
+
+    # .. the supplement's additions layer on top of them ..
+    for map_name, additions in vocabulary_supplement.Supplement.items():
+        out[map_name].update(additions)
+
+    # .. and the supplement-only maps complete the picture.
+    for map_name, standalone_map in vocabulary_supplement.Standalone_Maps.items():
+        out[map_name] = dict(standalone_map)
+
+    return out
+
+# ################################################################################################################################
+
+# All the vocabulary maps, generated and supplemental, merged once at import time
+_vocabulary_maps = _build_vocabulary_maps()
 
 # ################################################################################################################################
 
@@ -95,27 +122,28 @@ def lookup(map_name:'str', code:'strnone', config:'FHIRMappingConfig') -> 'stran
     if not code:
         return None
 
-    vocabulary_map = getattr(vocabulary, map_name)
+    vocabulary_map = _vocabulary_maps[map_name]
 
     # Config overrides take precedence over the generated map ..
     if overrides := config.code_mappings.get(map_name):
-        if code in overrides:
+        if override_code := overrides.get(code):
 
             # .. an override carries only the target code, so the system comes from the map itself -
             # .. from the entry the code replaces or, for new codes, from the map's first entry.
-            if code in vocabulary_map:
-                system = vocabulary_map[code]['system']
+            if replaced_entry := vocabulary_map.get(code):
+                system = replaced_entry['system']
             else:
-                first_entry = next(iter(vocabulary_map.values()))
+                entry_iterator = iter(vocabulary_map.values())
+                first_entry = next(entry_iterator)
                 system = first_entry['system']
 
-            out = {'code': overrides[code], 'system': system}
+            out = {'code': override_code, 'system': system}
             return out
 
     # .. otherwise the generated map decides.
-    if code in vocabulary_map:
+    if entry := vocabulary_map.get(code):
 
-        out = vocabulary_map[code]
+        out = entry
         return out
 
     return None

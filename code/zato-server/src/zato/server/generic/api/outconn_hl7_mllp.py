@@ -17,7 +17,7 @@ from zato.common.hl7.audit import audit_ack_received, audit_message_sent, get_wi
 from zato.common.hl7.mllp.ack import AckResult
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.dedup import extract_control_id
-from zato.common.hl7.mllp.fields import Outconn_Defaults, Outconn_Int_Names
+from zato.common.hl7.mllp.fields import Outgoing_Defaults, Outgoing_Int_Names
 from zato.common.hl7.mllp.tls import build_client_ssl_context
 from zato.common.util.api import asbool, hex_sequence_to_bytes, new_cid_server
 from zato.common.util.tcp import parse_address
@@ -51,10 +51,10 @@ logger = getLogger(__name__)
 
 # Defaults applied by the config manager when the create path does not supply a field,
 # e.g. when an outconn is created directly through zato.generic.connection.create.
-outconn_config_defaults = Outconn_Defaults
+outconn_config_defaults = Outgoing_Defaults
 
 # Config keys that must be integers but may arrive as strings from opaque storage
-outconn_int_config_keys = Outconn_Int_Names
+outconn_int_config_keys = Outgoing_Int_Names
 
 # ################################################################################################################################
 # ################################################################################################################################

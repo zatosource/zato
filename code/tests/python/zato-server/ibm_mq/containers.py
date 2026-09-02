@@ -19,7 +19,7 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from certificates import CertificatePaths
+    from mq_certificates import CertificatePaths
     from zato.common.typing_ import optional, strlist
 
     CertificatePaths = CertificatePaths

@@ -3277,6 +3277,18 @@ class SsuU03Specimen(HL7Group):
 class TcuU10TestConfiguration(HL7Group):
     _group_name = "TEST_CONFIGURATION"
 
+class VxrV03PatientVisit(HL7Group):
+    _group_name = "PATIENT_VISIT"
+
+class VxrV03Insurance(HL7Group):
+    _group_name = "INSURANCE"
+
+class VxrV03Order(HL7Group):
+    _group_name = "ORDER"
+
+class VxrV03Observation(HL7Group):
+    _group_name = "OBSERVATION"
+
 class VxuV04PatientVisit(HL7Group):
     _group_name = "PATIENT_VISIT"
 

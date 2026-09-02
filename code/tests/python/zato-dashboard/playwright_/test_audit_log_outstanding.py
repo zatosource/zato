@@ -6,102 +6,25 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from urllib.parse import quote
-
 # Zato
 from zato.common.as2.reconcile import MDNReconciler
 from zato.common.crypto.api import CryptoManager
 from zato.edi.reconcile import Reconciler
+from audit_log_ui import get_details_value, get_row_event_types, get_row_msg_ids, get_rows, goto_audit_log, open_details
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-_Audit_Log_Url_Prefix = '/zato/audit-log/'
-
-# AS2 column indexes: Time, CID, Event, Partner, Message id, Disposition, MIC, Size, Data preview, Actions
-_AS2_Column_Event  = 2
-_AS2_Column_Msg_ID = 4
-
-# X12 column indexes: Time, CID, Event, Partner, Control number, Outcome, Size, Data preview
-_X12_Column_Event          = 2
-_X12_Column_Control_Number = 4
 
 # What the seeded events carry
 _Event_Message_Sent     = 'message-sent'
-_Event_MDN_Received     = 'mdn-received'
 _Event_Interchange_Sent = 'interchange-sent'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _goto_audit_log(page:'Page', base_url:'str', source:'str', object_name:'str', status:'str'='') -> 'None':
-    """ Navigates to the audit log page of one object of one source and waits
-    for the first page of events to load.
-    """
-    encoded_name = quote(object_name)
-    url = f'{base_url}{_Audit_Log_Url_Prefix}?source={source}&object_name={encoded_name}&cluster=1'
-
-    if status:
-        url += f'&status={status}'
-
-    _ = page.goto(url)
-    _wait_for_table(page)
-
-# ################################################################################################################################
-
-def _wait_for_table(page:'Page') -> 'None':
-    """ Waits until the audit log table has finished loading its current page of events.
-    """
-    _ = page.wait_for_function(
-        '''() => {
-            let body = document.querySelector('#audit-log-table-body');
-            if (!body) return false;
-            let rows = body.querySelectorAll('tr');
-            if (!rows.length) return false;
-            return !body.querySelector('tr.detail-loading-row');
-        }''',
-        timeout=10000)
-
-# ################################################################################################################################
-
-def _get_rows(page:'Page') -> 'anylist':
-    """ Returns all rows currently shown in the audit log table.
-    """
-    out = page.query_selector_all('#audit-log-table-body tr')
-    return out
-
-# ################################################################################################################################
-
-def _get_row_cells(row:'any_') -> 'anylist':
-    """ Returns the text of each cell in one audit log row.
-    """
-    out = [] # type: anylist
-
-    for cell in row.query_selector_all('td'):
-        out.append(cell.inner_text().strip())
-
-    return out
-
-# ################################################################################################################################
-
-def _get_column_values(page:'Page', column_idx:'int') -> 'anylist':
-    """ Returns the given column of every row currently shown, top to bottom.
-    """
-    out = [] # type: anylist
-
-    for row in _get_rows(page):
-        cells = _get_row_cells(row)
-        out.append(cells[column_idx])
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,19 +63,19 @@ class TestAS2Outstanding:
 
         # The page of the pair shows the complete exchange - three sends plus the MDN,
         # newest first ..
-        _goto_audit_log(page, base_url, 'as2', pair)
+        goto_audit_log(page, base_url, 'as2', pair)
 
-        message_ids = _get_column_values(page, _AS2_Column_Msg_ID)
+        message_ids = get_row_msg_ids(page)
         assert message_ids == [second_id, third_id, second_id, first_id], f'Unexpected rows: {message_ids}'
 
         # .. and the same page asked for with the filter shows the open exchanges only,
         # oldest first.
-        _goto_audit_log(page, base_url, 'as2', pair, status='outstanding')
+        goto_audit_log(page, base_url, 'as2', pair, status='outstanding')
 
-        message_ids = _get_column_values(page, _AS2_Column_Msg_ID)
+        message_ids = get_row_msg_ids(page)
         assert message_ids == [first_id, third_id], f'Unexpected outstanding rows: {message_ids}'
 
-        events = _get_column_values(page, _AS2_Column_Event)
+        events = get_row_event_types(page)
         assert events == [_Event_Message_Sent, _Event_Message_Sent], f'Unexpected outstanding events: {events}'
 
 # ################################################################################################################################
@@ -181,9 +104,9 @@ class TestAS2Outstanding:
 
         # A link with the filter opens the page already narrowed down,
         # with only the open exchange shown.
-        _goto_audit_log(page, base_url, 'as2', pair, status='outstanding')
+        goto_audit_log(page, base_url, 'as2', pair, status='outstanding')
 
-        message_ids = _get_column_values(page, _AS2_Column_Msg_ID)
+        message_ids = get_row_msg_ids(page)
         assert message_ids == [open_id], f'Unexpected outstanding rows: {message_ids}'
 
 # ################################################################################################################################
@@ -215,27 +138,32 @@ class TestX12Outstanding:
 
         reconciler.record_ack_received(sender, receiver, '000000001', cid='cid-ack-' + suffix)
 
-        # The X12 page renders its own columns ..
-        _goto_audit_log(page, base_url, 'x12', pair)
+        # The X12 page shows the complete exchange - two sends plus the acknowledgment ..
+        goto_audit_log(page, base_url, 'x12', pair)
 
-        header_text = page.inner_text('#audit-log-table thead')
-        header_text = header_text.lower()
-        assert 'control number' in header_text, f'Expected a Control number column, got: "{header_text}"'
-
-        # .. showing the complete exchange - two sends plus the acknowledgment ..
-        events = _get_column_values(page, _X12_Column_Event)
+        events = get_row_event_types(page)
         row_count = len(events)
         assert row_count == 3, f'Expected 3 rows, got: {events}'
 
+        # .. an X12 event names its interchange by its control number, said in the pane ..
+        rows = get_rows(page)
+        open_details(page, rows[0])
+
+        control_number = get_details_value(page, 'Control number')
+        assert control_number != '', 'Expected a control number in the pane of an X12 event'
+
         # .. and the filter narrows it down to the unacknowledged interchange -
         # .. control numbers are normalized, so the zero-padded ISA13 shows without its padding.
-        _goto_audit_log(page, base_url, 'x12', pair, status='outstanding')
+        goto_audit_log(page, base_url, 'x12', pair, status='outstanding')
 
-        events = _get_column_values(page, _X12_Column_Event)
+        events = get_row_event_types(page)
         assert events == [_Event_Interchange_Sent], f'Unexpected outstanding events: {events}'
 
-        control_numbers = _get_column_values(page, _X12_Column_Control_Number)
-        assert control_numbers == ['2'], f'Unexpected outstanding control numbers: {control_numbers}'
+        rows = get_rows(page)
+        open_details(page, rows[0])
+
+        control_number = get_details_value(page, 'Control number')
+        assert control_number == '2', f'Unexpected outstanding control number: {control_number}'
 
 # ################################################################################################################################
 # ################################################################################################################################

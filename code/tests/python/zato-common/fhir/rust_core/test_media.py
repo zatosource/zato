@@ -2,17 +2,6 @@
 
 import zato.fhir_r4_0_1_core
 from zato.fhir.r4_0_1.resources import Media
-from zato.common.typing_ import cast_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import any_
-    any_ = any_
-
-# ################################################################################################################################
-# ################################################################################################################################
 
 
 class TestToDictMedia:
@@ -194,7 +183,7 @@ class TestToDictMedia:
         assert 'frames' in result
 
     def test_to_dict_duration(self):
-        resource = cast_('any_', Media())
+        resource = Media()
         resource.duration = 3.14
         result = zato.fhir_r4_0_1_core.to_dict(resource)
         assert 'duration' in result
@@ -547,7 +536,7 @@ class TestGetPathMedia:
         assert result is not None
 
     def test_get_path_duration(self):
-        resource = cast_('any_', Media())
+        resource = Media()
         resource.duration = 3.14
         result = zato.fhir_r4_0_1_core.get_path(resource, 'duration')
         assert result is not None

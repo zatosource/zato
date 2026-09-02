@@ -146,6 +146,13 @@ def _make_dispatcher(
     server = MagicMock()
     server.rest_log_ignore = rest_log_ignore if rest_log_ignore is not None else set()
 
+    # The channel's service is deployed and, like every ordinary service, it does not
+    # accept requests whose credentials did not authenticate.
+    service_class = MagicMock()
+    service_class.handles_auth_rejection = False
+    server.service_store.name_to_impl_name = {channel_item['service_name']: channel_item['service_impl_name']}
+    server.service_store.services = {channel_item['service_impl_name']: {'service_class': service_class}}
+
     url_data = MagicMock()
     url_data.match.return_value = (url_match, channel_item)
     url_data.url_sec = {channel_item['match_target']: sec}

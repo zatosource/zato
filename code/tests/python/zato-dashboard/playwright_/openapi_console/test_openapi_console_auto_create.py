@@ -37,7 +37,7 @@ _Cell_Service   = 5
 _Cell_Security  = 6
 
 # What the security cell shows for a channel with no security definition
-_No_Security = '---'
+_No_Security = 'Click to add'
 
 # Every auto channel the server must have created at boot, with its expected activity flag -
 # the names double as service names and the URL paths follow from them by convention.

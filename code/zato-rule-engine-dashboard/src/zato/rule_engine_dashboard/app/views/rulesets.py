@@ -13,14 +13,13 @@ from django.http import JsonResponse
 from zato.common.rule_engine import webapi
 from zato.common.rule_engine.loading import publish_and_reload
 from zato.common.rule_engine.references import apply_ruleset_rename, preview_ruleset_rename
-from zato.common.rule_engine.render import render_documents
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
 from zato.common.rule_engine.sql.data import DecisionFilter
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.common.rule_engine.tokens import ruleset_name_pattern
 from zato.common.util.logging_ import count_text
 from zato.rule_engine_dashboard.app.storage import get_backend, get_manager
-from zato.rule_engine_dashboard.app.views.api import BadRequestError, definition_row, event_row, follow_row, json_api, \
+from zato.rule_engine_dashboard.app.views.api import BadRequestError, event_row, follow_row, json_api, \
     json_items, note_answer, read_int, read_json, required, serialize_all, view_row
 
 # ################################################################################################################################

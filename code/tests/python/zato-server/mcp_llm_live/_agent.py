@@ -15,7 +15,7 @@ import requests
 
 # local
 import _diag
-from containers import Model_Name, Ollama_OpenAI_URL
+from ollama_containers import Model_Name, Ollama_OpenAI_URL
 
 # ################################################################################################################################
 # ################################################################################################################################

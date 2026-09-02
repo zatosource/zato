@@ -502,6 +502,20 @@ class AlertingTestTransfer(AdminService):
             _ = run_test_transfer_probe(audit_log, conn_name, transfer_sftp, now, cid=self.cid)
             checked += 1
 
+        # FTP connections - the same round trip as with SMB
+        for conn_name in sorted(self.server.config_manager.outconn_ftp):
+
+            def transfer_ftp(conn_name:'str'=conn_name) -> 'None':
+                conn = self.ftp[conn_name]
+                conn.write(_test_transfer_contents, remote_path)
+                data = conn.read(remote_path)
+                conn.delete_file(remote_path)
+                if data != _test_transfer_contents:
+                    raise Exception(f'The test transfer file came back different -> {data!r}')
+
+            _ = run_test_transfer_probe(audit_log, conn_name, transfer_ftp, now, cid=self.cid)
+            checked += 1
+
         connection_label = pluralize(checked, 'connection')
         self.logger.info('Test transfer probe checked %s', connection_label)
 

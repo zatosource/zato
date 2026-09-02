@@ -88,10 +88,28 @@ review.pickerCards = function() {
     var ownConfig = wizard.config_own;
 
     var out = [
-        {name: 'services', action: ownConfig.pickerAction},
+        {name: 'tools',    action: ownConfig.pickerAction},
         {name: 'skills',   action: ownConfig.skillsPickerAction},
         {name: 'security', action: ownConfig.securityPickerAction}
     ];
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What one picker card's summary says - the Tools card counts its picks
+// per source, the other two count their assigned badges.
+review._cardSummary = function(card) {
+
+    var out;
+
+    if(card.name === 'tools') {
+        wizard.toolSources.syncCounts();
+        out = wizard.toolSources.summary();
+    } else {
+        out = review._pickerSummary(card.action);
+    }
 
     return out;
 };
@@ -115,7 +133,7 @@ review.initOptionCards = function() {
         var assignedZone = document.querySelector('#badge-zone-assigned-' + card.action + ' .badge-zone-body');
 
         var observer = new MutationObserver(function() {
-            review.setSummary('mcp-wizard-summary-' + card.name, review._pickerSummary(card.action));
+            review.setSummary('mcp-wizard-summary-' + card.name, review._cardSummary(card));
         });
 
         observer.observe(assignedZone, {childList: true});
@@ -336,7 +354,7 @@ review._optionsSummary = function() {
 review.refreshSummaries = function() {
 
     review.pickerCards().forEach(function(card) {
-        review.setSummary('mcp-wizard-summary-' + card.name, review._pickerSummary(card.action));
+        review.setSummary('mcp-wizard-summary-' + card.name, review._cardSummary(card));
     });
 
     review.setSummary('mcp-wizard-summary-size-caps', review._sizeCapsSummary());
@@ -463,8 +481,8 @@ review._openPickerCard = function(name) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-review._editServices = function() {
-    review._openPickerCard('services');
+review._editTools = function() {
+    review._openPickerCard('tools');
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -550,13 +568,21 @@ review.render = function() {
         ['URL path', wizard.field('url_path').val().trim()]
     ];
 
-    // Services and security - each pick is a row of its own, so a long list
-    // scrolls, and a picker left empty says so in a row the reader can check
-    var serviceListRows = review._badgeListRows(ownConfig.pickerAction, 'Service');
-    var serviceRows = [];
+    // Tools and security - each pick is a row of its own, so a long list
+    // scrolls, and a picker left empty says so in a row the reader can check.
+    // A tool pick's row is keyed by the source it came from.
+    var toolPicks = wizard.toolSources.allAssigned();
+    var toolListRows = [];
 
-    if(!serviceListRows.length) {
-        serviceRows.push(['Assigned', config.noneLabel]);
+    for(var pickIndex = 0; pickIndex < toolPicks.length; pickIndex++) {
+        var pick = toolPicks[pickIndex];
+        toolListRows.push([pick.label, pick.name]);
+    }
+
+    var toolRows = [];
+
+    if(!toolListRows.length) {
+        toolRows.push(['Assigned', config.noneLabel]);
     }
 
     var skillListRows = review._badgeListRows(ownConfig.skillsPickerAction, 'Skill');
@@ -605,8 +631,8 @@ review.render = function() {
 
     review.renderGroups([
         {label: groups.basics,         step: 0, rows: basicsRows},
-        {label: groups.services,       step: 0, listRows: serviceListRows, rows: serviceRows,
-            edit: review._editServices},
+        {label: groups.tools,          step: 0, listRows: toolListRows, rows: toolRows,
+            edit: review._editTools},
         {label: groups.skills,         step: 0, listRows: skillListRows, rows: skillRows,
             edit: review._editSkills},
         {label: groups.security,       step: 0, listRows: securityListRows, rows: securityRows,

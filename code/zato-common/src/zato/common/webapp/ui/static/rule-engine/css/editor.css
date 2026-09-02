@@ -342,10 +342,12 @@
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: radial-gradient(circle at 32% 28%,
+    background: radial-gradient(
+        circle at 32% 28%,
         var(--editor-nudge-bead-light),
         var(--editor-hint-green) 55%,
-        var(--editor-nudge-bead-deep));
+        var(--editor-nudge-bead-deep)
+    );
     box-shadow: 0 0 12px 2px color-mix(in srgb, var(--editor-hint-green) 55%, transparent);
     offset-rotate: 0deg;
     opacity: 0;

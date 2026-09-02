@@ -47,7 +47,7 @@ class ModuleCtx:
     Outcome_Marker_Stored    = 'marker_stored'
     Outcome_Coalesced        = 'coalesced'
     Outcome_Coalesce_Timeout = 'coalesce_timeout'
-    Outcome_Bypass           = 'bypass'
+    Outcome_Not_Cached       = 'not_cached'
     Outcome_Not_Modified     = 'not_modified'
 
     # The Cookie request header - its WSGI key and its HTTP name

@@ -1385,6 +1385,10 @@ from zato.hl7v2.v2_9.groups import (
     SsuU03SpecimenContainer,
     SsuU03Specimen,
     TcuU10TestConfiguration,
+    VxrV03PatientVisit,
+    VxrV03Insurance,
+    VxrV03Order,
+    VxrV03Observation,
     VxuV04PatientVisit,
     VxuV04Insurance,
     VxuV04PersonObservation,
@@ -1612,10 +1616,13 @@ from zato.hl7v2.v2_9.messages import (
     STC_S33,
     TCU_U10,
     UDM_Q05,
+    VXQ_V01,
+    VXR_V03,
     VXU_V04,
 )
 
 from zato.hl7v2.base import HL7Message, HL7ValidationError
+from zato.hl7v2.generic_parse import parse_generic
 from zato.hl7v2_rs import parse_hl7 as _rust_parse, validate as _rust_validate, serialize as _rust_serialize, ValidationResult, ValidationError
 from zato.hl7v2_rs import apply_tolerance as _apply_tolerance, validate_parsed as _rust_validate_parsed, ToleranceConfig
 from zato.hl7v2.batch import parse_batch, parse_file, parse_batch_or_file
@@ -3002,6 +3009,10 @@ __all__ = [
     "SsuU03SpecimenContainer",
     "SsuU03Specimen",
     "TcuU10TestConfiguration",
+    "VxrV03PatientVisit",
+    "VxrV03Insurance",
+    "VxrV03Order",
+    "VxrV03Observation",
     "VxuV04PatientVisit",
     "VxuV04Insurance",
     "VxuV04PersonObservation",
@@ -3227,6 +3238,8 @@ __all__ = [
     "STC_S33",
     "TCU_U10",
     "UDM_Q05",
+    "VXQ_V01",
+    "VXR_V03",
     "VXU_V04",
 ]
 
@@ -3234,12 +3247,36 @@ __all__ = [
 def parse_hl7(raw: str, validate: bool = True, tolerance: 'ToleranceConfig | None' = None) -> HL7Message:
     if tolerance is not None:
         raw = _apply_tolerance(raw, tolerance)
-    raw_message = _rust_parse(raw)
-    message_class = HL7Message._registry.get(raw_message.structure_id)
+
+    # Parse with rust ..
+    try:
+        raw_message = _rust_parse(raw)
+
+    # .. on an unknown structure without validation use the generic tokenizer.
+    except ValueError as e:
+        error_text = str(e)
+        if 'Unknown message structure' not in error_text:
+            raise
+        if validate:
+            raise
+        else:
+            raw_message = parse_generic(raw)
+
+    structure_id = raw_message.structure_id
+    message_class = HL7Message._registry.get(structure_id)
+
+    # An unknown structure still walks as raw segments.
     if message_class is None:
-        raise ValueError(f"Unknown structure: {raw_message.structure_id}")
+        if validate:
+            raise ValueError(f"Unknown structure: {structure_id}")
+        message_class = HL7Message
+
     msg = message_class.__new__(message_class)
     msg._raw_message = raw_message
+
+    # The generic parse has no class-level structure.
+    if structure_id not in HL7Message._registry:
+        msg._structure_id = structure_id
 
     # Field-level validation (required fields, datatype formats) runs on the parsed
     # message, while the structural required-segment check always runs at parse time.

@@ -14,7 +14,7 @@ from traceback import format_exc
 # Zato
 from zato.common.api import CHANNEL
 from zato.common.audit_log.api import AuditLog
-from zato.common.hl7.mllp.fields import Channel_Defaults, Channel_Int_Names, resolve_max_msg_size, Tolerance_Names
+from zato.common.hl7.mllp.fields import Channel_Defaults, Channel_Int_Names, resolve_max_message_size, Tolerance_Names
 from zato.common.hl7.mllp.haproxy import resolve_internal_port
 from zato.common.hl7.mllp.preprocess import build_tolerance_config
 from zato.common.hl7.mllp.router import HL7MessageRouter
@@ -265,7 +265,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
     def _resolve_max_msg_size(self) -> 'int':
         """ Converts max_msg_size and max_msg_size_unit from config into bytes.
         """
-        out = resolve_max_msg_size(self.config.max_msg_size, self.config.max_msg_size_unit)
+        out = resolve_max_message_size(self.config.max_msg_size, self.config.max_msg_size_unit)
         return out
 
 # ################################################################################################################################

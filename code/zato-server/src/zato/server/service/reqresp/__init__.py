@@ -355,12 +355,11 @@ class Outgoing:
 class Cloud:
     """ A container for cloud-related connections a service can establish.
     """
-    __slots__ = 'confluence', 'jira', 'ms365', 'salesforce'
+    __slots__ = 'confluence', 'jira', 'ms365'
 
     confluence: 'stranydict'
     jira: 'stranydict'
     ms365: 'MS365Shim'
-    salesforce: 'stranydict'
 
     def __init__(self) -> 'None':
         self.ms365 = MS365Shim()

@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.common.alerting.names import get_notification_conn_name
 from zato.common.api import GENERIC
 from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
@@ -52,7 +53,14 @@ class SlackExporter:
 
         exported_slack = []
 
+        # The default alert notification connection is a built-in placeholder
+        # seeded with every environment, so it never travels.
+        excluded_name = get_notification_conn_name()
+
         for row in slack_connections:
+
+            if row['name'] == excluded_name:
+                continue
 
             if GENERIC.ATTR_NAME in row:
                 opaque = parse_instance_opaque_attr(row)

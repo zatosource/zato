@@ -144,6 +144,10 @@ class FHIRResource:
     def __setattr__(self, name: str, value: Any) -> None:
         _fhir_setattr(self, name, value)
 
+    @property
+    def resource_type(self) -> str:
+        return self._resource_type
+
     def to_dict(self) -> dict[str, Any]:
         from zato.fhir.json_ import to_dict
         return to_dict(self)

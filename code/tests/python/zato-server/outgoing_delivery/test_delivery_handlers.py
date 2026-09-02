@@ -38,7 +38,7 @@ _conn_name_renamed = 'Order Intake EU'
 
 # The document a FHIR connection is published to with.
 _fhir_resource_type = 'Patient'
-_fhir_document = {'resourceType': _fhir_resource_type, 'name': [{'family': 'Kowalska'}]}
+_fhir_document = {'resourceType': _fhir_resource_type, 'name': [{'family': 'Johnson'}]}
 
 # ################################################################################################################################
 # ################################################################################################################################

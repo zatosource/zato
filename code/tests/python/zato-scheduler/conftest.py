@@ -106,13 +106,13 @@ def _find_scheduler_binary():
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _wait_for_scheduler_api(timeout:'any_' = 30):
+def _wait_for_scheduler_api(port:'any_', timeout:'any_' = 30):
     """ Polls the scheduler's HTTP query API until it answers, proving the scheduler
     completed its initial job reload handshake with the server.
     """
     from urllib.request import urlopen
 
-    url = 'http://127.0.0.1:35100/metrics'
+    url = f'http://127.0.0.1:{port}/metrics'
     deadline = time.monotonic() + timeout
 
     while time.monotonic() < deadline:
@@ -290,6 +290,10 @@ def zato_server(request:'any_'):
 
     broker_port = _find_free_port()
 
+    # A per-session port for the scheduler's HTTP query API so this session never binds to
+    # or answers through the port of any other scheduler running on the same host.
+    scheduler_http_port = _find_free_port()
+
     # A fresh audit database per session, with the audit log explicitly enabled -
     # job execution history lives there and the history tests read it back through
     # the server's own services.
@@ -299,6 +303,7 @@ def zato_server(request:'any_'):
     env['Zato_Config_Bind_Port'] = str(port)
     env['Zato_Broker_HTTP_Port'] = str(broker_port)
     env['Zato_Scheduler_Stream_Prefix'] = _STREAM_PREFIX
+    env['Zato_Scheduler_HTTP_Port'] = str(scheduler_http_port)
     env[AuditLogCtx.Env_Enabled] = 'True'
     env[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
     env[AuditLogCtx.Env_Name] = audit_db_path
@@ -348,6 +353,7 @@ def zato_server(request:'any_'):
     scheduler_dir = os.path.join(_tmpdir, 'scheduler')
     scheduler_env = os.environ.copy()
     scheduler_env['Zato_Scheduler_Stream_Prefix'] = _STREAM_PREFIX
+    scheduler_env['Zato_Scheduler_HTTP_Port'] = str(scheduler_http_port)
     _ = scheduler_env.pop('COVERAGE_PROCESS_START', None)
 
     _scheduler_proc = subprocess.Popen(
@@ -369,7 +375,7 @@ def zato_server(request:'any_'):
     _scheduler_stdout_thread.start()
 
     try:
-        _wait_for_scheduler_api()
+        _wait_for_scheduler_api(scheduler_http_port)
     except Exception:
         print('\n--- Scheduler did not become ready, captured output: ---')
         for line in _scheduler_output_lines:

@@ -377,7 +377,7 @@ class TestMCPWizard:
             assert gateway_name in basics_text, f'Expected the name on the review, got: {basics_text}'
             assert url_path in basics_text, f'Expected the URL path on the review, got: {basics_text}'
 
-            services_text = _get_review_group_text(page, 'Services')
+            services_text = _get_review_group_text(page, 'Tools')
             assert _Echo_Service in services_text, f'Expected {_Echo_Service} on the review, got: {services_text}'
 
             skills_text = _get_review_group_text(page, 'Skills')
@@ -518,7 +518,7 @@ class TestMCPWizard:
 
     def test_picker_cards(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ The step 1 picker cards - collapsed on open, their summaries walking from None assigned
-        to 2 assigned as badges move, and the review's Edit links opening the right card.
+        to the per-source counts as badges move, and the review's Edit links opening the right card.
         """
 
         page = logged_in_page
@@ -527,7 +527,7 @@ class TestMCPWizard:
         wizard_page.open_wizard_create(page, base_url)
 
         # Every picker card is collapsed on open ..
-        for card_name in ('services', 'skills', 'security'):
+        for card_name in ('tools', 'skills', 'security'):
             is_open = page.evaluate(
                 f'document.getElementById("mcp-wizard-{card_name}-body").classList.contains("wizard-option-body-open")')
             assert not is_open, f'Expected the {card_name} card collapsed on open'
@@ -536,7 +536,7 @@ class TestMCPWizard:
         summary = wizard_page.get_picker_summary(page, 'services')
         assert summary == 'None assigned', f'Expected "None assigned", got: {summary}'
 
-        # Assigning walks the summary to the count ..
+        # Assigning walks the summary to the per-source count ..
         wizard_page.open_picker_card(page, 'services')
         wizard_page.wait_for_available_badges(page, 'services', 2)
 
@@ -547,28 +547,28 @@ class TestMCPWizard:
         wizard_page.assign_badge(page, 'services', service_name_1)
 
         summary = wizard_page.get_picker_summary(page, 'services')
-        assert summary == '1 assigned', f'Expected "1 assigned", got: {summary}'
+        assert summary == '1 Services', f'Expected "1 Services", got: {summary}'
 
         wizard_page.assign_badge(page, 'services', service_name_2)
 
         summary = wizard_page.get_picker_summary(page, 'services')
-        assert summary == '2 assigned', f'Expected "2 assigned", got: {summary}'
+        assert summary == '2 Services', f'Expected "2 Services", got: {summary}'
 
         # .. and removing walks it back.
         wizard_page.remove_assigned_badge(page, 'services', service_name_1)
 
         summary = wizard_page.get_picker_summary(page, 'services')
-        assert summary == '1 assigned', f'Expected "1 assigned" after removal, got: {summary}'
+        assert summary == '1 Services', f'Expected "1 Services" after removal, got: {summary}'
 
-        # The review's Edit link on the Services group goes back to step 1 with the card open ..
+        # The review's Edit link on the Tools group goes back to step 1 with the card open ..
         wizard_page.go_to_step(page, wizard_page.Review_Step)
-        _click_review_edit(page, 'Services')
+        _click_review_edit(page, 'Tools')
 
         _ = page.wait_for_selector('#mcp-wizard-step-body-0', state='visible', timeout=_UI_Timeout)
 
         is_open = page.evaluate(
-            'document.getElementById("mcp-wizard-services-body").classList.contains("wizard-option-body-open")')
-        assert is_open, 'Expected the services card open after the review edit link'
+            'document.getElementById("mcp-wizard-tools-body").classList.contains("wizard-option-body-open")')
+        assert is_open, 'Expected the tools card open after the review edit link'
 
         # .. and the PII group's link goes to step 2 with the options unfolded and the PII card open.
         wizard_page.go_to_step(page, wizard_page.Review_Step)

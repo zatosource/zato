@@ -6,6 +6,9 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Zato
+from zato.common.api import SALESFORCE
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -43,8 +46,10 @@ class _object_type:
     SAP = 'sap'                                   #
     SFTP = 'sftp'                                 #
     SMB = 'smb'                                   #
+    FTP = 'ftp'                                   #
     Confluence = 'confluence'                     #
     Jira = 'jira'                                 #
+    Salesforce = 'salesforce'                     #
     Microsoft_Cloud = 'microsoft_cloud'           #
     Microsoft_Fabric = 'cloud_microsoft_fabric'   #
     Microsoft_Power_Automate = 'cloud_microsoft_power_automate' #
@@ -70,6 +75,7 @@ _object_alias = {}
 _object_alias[_object_type.Channel_REST] = 'channel_plain_http'
 _object_alias[_object_type.Confluence] = 'zato_generic_connection:cloud-confluence'
 _object_alias[_object_type.Jira] = 'zato_generic_connection:cloud-jira'
+_object_alias[_object_type.Salesforce] = 'zato_generic_connection:cloud-salesforce'
 _object_alias[_object_type.LDAP] = 'outgoing_ldap'
 _object_alias[_object_type.MongoDB] = 'outgoing_mongodb'
 _object_alias[_object_type.OData] = 'outgoing_odata'
@@ -84,6 +90,7 @@ _object_alias[_object_type.Search_ElasticSearch] = 'outgoing_elastic_search'
 _object_alias[_object_type.Security] = ['def_sec', 'security_name']
 _object_alias[_object_type.SFTP] = 'outgoing_sftp'
 _object_alias[_object_type.SMB] = 'outgoing_smb'
+_object_alias[_object_type.FTP] = 'outgoing_ftp'
 _object_alias[_object_type.SQL] = 'outconn_sql'
 
 # ################################################################################################################################
@@ -128,6 +135,11 @@ _attr_default[_object_type.Jira] = {
     'api_version': 'v2'
 }
 
+_attr_default[_object_type.Salesforce] = {
+    'is_active': True,
+    'api_version': SALESFORCE.Default.API_Version
+}
+
 _attr_default[_object_type.MongoDB] = {
     'is_active': True,
     'server_list': 'localhost:27017',
@@ -170,7 +182,6 @@ class ModuleCtx:
     Cluster_ID = 1
     Initial_Wait_Time = 10
     Missing_Wait_Time = 1
-    ignore_missing_includes = False
 
     ObjectType  = _object_type
     ObjectAlias = _object_alias

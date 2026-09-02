@@ -12,9 +12,12 @@ from logging import getLogger
 # Zato
 from zato.common.api import MCP
 from zato.common.audit_log.api import AuditLog
+from zato.common.typing_ import cast_
+from zato.common.util.api import new_cid
 from zato.common.util.logging_ import count_text
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
+from zato.server.connection.mcp.connection_tools.api import group_registry
 from zato.server.connection.mcp.handler import MCPHandler
 from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.registry import ToolRegistry
@@ -25,7 +28,7 @@ from zato.server.connection.mcp.session import MCPSessionManager
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import any_, strlist
+    from zato.common.typing_ import any_, stranydict, strlist, strlistdict
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -43,6 +46,7 @@ class GatewayMCPWrapper:
         self.config = config
         self.server = server
         self.handler:'MCPHandler | None' = None
+        self.tool_registry:'ToolRegistry | None' = None
         self._audit_log:'AuditLog | None' = None
 
 # ################################################################################################################################
@@ -68,10 +72,22 @@ class GatewayMCPWrapper:
         # extracted from opaque1 by GenericConnection.to_dict during startup.
         allowed_services:'strlist' = self.config.get('services', [])
 
+        # .. the connection allow lists live under one config key per group -
+        # configs predating a group lack its key, which means an empty list ..
+        connection_lists:'strlistdict' = {}
+
+        for definition in group_registry.values():
+
+            if (connection_names := self.config.get(definition.config_key)) is None:
+                connection_names = []
+
+            connection_lists[definition.group] = connection_names
+
         # .. build the tool registry and populate it. This is safe because MCP gateways
         # are only created after all services are deployed ..
-        tool_registry = ToolRegistry(self.server.service_store, allowed_services)
+        tool_registry = ToolRegistry(self.server.service_store, allowed_services, connection_lists, self.server.config_manager)
         tool_registry.rebuild()
+        self.tool_registry = tool_registry
 
         # .. build the session manager - a per-gateway idle TTL overrides the default,
         # configs predating the field lack the key and zero means the default too ..
@@ -127,10 +143,39 @@ class GatewayMCPWrapper:
 # ################################################################################################################################
 
     def _invoke_service(self, service_name:'str', payload:'any_') -> 'any_':
-        """ Invokes a Zato service by name and returns its response.
+        """ Invokes what stands behind a tool - for connection tools, the connection
+        the registry mapped the tool to, for everything else, a Zato service by name.
         """
 
-        out = self.server.invoke(service_name, payload)
+        tool_registry = cast_('ToolRegistry', self.tool_registry)
+
+        if service_name in tool_registry.tool_targets:
+            out = self.invoke_tool(service_name, payload)
+        else:
+            out = self.server.invoke(service_name, payload)
+
+        return out
+
+# ################################################################################################################################
+
+    def invoke_tool(self, tool_name:'str', arguments:'stranydict') -> 'any_':
+        """ Invokes the connection behind a connection tool, routing through
+        the group's own invoke function.
+        """
+
+        # What the tool stands for - recorded by the registry's last rebuild ..
+        tool_registry = cast_('ToolRegistry', self.tool_registry)
+        group, connection_name = tool_registry.tool_targets[tool_name]
+        definition = group_registry[group]
+
+        # .. the connection is resolved anew on each call ..
+        config_dict = definition.get_config_dict(self.server.config_manager)
+        item = config_dict[connection_name]
+
+        # .. and the group's invoke function does the actual call.
+        cid = new_cid()
+
+        out = definition.invoke(cid, item, arguments)
         return out
 
 # ################################################################################################################################
@@ -139,6 +184,7 @@ class GatewayMCPWrapper:
         """ Cleans up when the gateway is being removed.
         """
         self.handler = None
+        self.tool_registry = None
         logger.info('MCP gateway `%s` deleted', self.config.name)
 
 # ################################################################################################################################

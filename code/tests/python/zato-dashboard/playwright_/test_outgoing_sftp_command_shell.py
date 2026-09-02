@@ -38,10 +38,10 @@ _Test_Name_Prefix = 'test.sftp.shell.' + CryptoManager.generate_hex_string(32) +
 _Empty_Output = '(None)'
 
 # The class the page puts on its status line once a command has succeeded
-_Status_Ok_Class = 'sftp-shell-status-ok'
+_Status_Ok_Class = 'file-shell-status-ok'
 
 # The class the page puts on its status line once a command has failed
-_Status_Error_Class = 'sftp-shell-status-error'
+_Status_Error_Class = 'file-shell-status-error'
 
 # How long to wait for the command shell page to render, in milliseconds
 _Page_Timeout = 15000
@@ -91,7 +91,7 @@ def _open_command_shell(page:'Page', base_url:'str', name:'str') -> 'None':
     page.click(row_selector(name) + ' a:has-text("Command shell")')
 
     # .. and the card is only there once the page's own JS has revealed it.
-    _ = page.wait_for_selector('#sftp-shell-card', state='visible', timeout=_Page_Timeout)
+    _ = page.wait_for_selector('#file-shell-card', state='visible', timeout=_Page_Timeout)
 
 # ################################################################################################################################
 
@@ -107,28 +107,28 @@ def _run_command(page:'Page', command:'str') -> 'anydict':
 
     # Run and wait for the dashboard's own response ..
     with page.expect_response(_is_action_response, timeout=_Command_Timeout) as response_info:
-        page.click('#sftp-shell-run')
+        page.click('#file-shell-run')
 
     response = response_info.value
 
     # .. the timing pill is hidden while a command runs, so it coming back means the panes are filled ..
-    _ = page.wait_for_selector('#sftp-shell-timing:not([hidden])', timeout=_Command_Timeout)
+    _ = page.wait_for_selector('#file-shell-timing:not([hidden])', timeout=_Command_Timeout)
 
     # .. the outcome is read off the status line rather than off stderr, because ssh writes
     # .. its "permanently added to the list of known hosts" notice there on a first, successful connection ..
-    status_class = page.get_attribute('#sftp-shell-status', 'class')
+    status_class = page.get_attribute('#file-shell-status', 'class')
     assert status_class is not None, 'The status line must always carry a class'
 
     # .. and text_content is what reads a pane whose tab is not the active one.
     out = {
         'status_code': response.status,
-        'stdout': page.text_content('#sftp-shell-stdout'),
-        'stderr': page.text_content('#sftp-shell-stderr'),
-        'status': page.text_content('#sftp-shell-status'),
+        'stdout': page.text_content('#file-shell-stdout'),
+        'stderr': page.text_content('#file-shell-stderr'),
+        'status': page.text_content('#file-shell-status'),
         'status_class': status_class,
         'is_ok': _Status_Ok_Class in status_class,
-        'timing': page.text_content('#sftp-shell-timing'),
-        'active_tab': page.get_attribute('.sftp-shell-card .dashboard-tab-active', 'data-tab'),
+        'timing': page.text_content('#file-shell-timing'),
+        'active_tab': page.get_attribute('.file-shell-card .dashboard-tab-active', 'data-tab'),
     } # type: anydict
 
     return out
@@ -375,7 +375,7 @@ class TestOutgoingSFTPCommandShell:
             '.dashboard-tab[data-tab="stderr"]',
             '.action-button',
             '.secondary-button',
-            '#sftp-shell-timing',
+            '#file-shell-timing',
         ]:
             assert page.query_selector(selector) is not None, f'Expected "{selector}" on the command shell page'
 
@@ -384,7 +384,7 @@ class TestOutgoingSFTPCommandShell:
         assert opacity == '1', f'Expected the page to be revealed, got opacity "{opacity}"'
 
         # .. the connection's name is what the card's select has selected ..
-        conn_name = page.eval_on_selector('#sftp-shell-conn-select', 'select => select.selectedOptions[0].textContent')
+        conn_name = page.eval_on_selector('#file-shell-connection-select', 'select => select.selectedOptions[0].textContent')
         assert conn_name == sftp_shell['name'], f'Expected "{sftp_shell["name"]}" on the card, got: "{conn_name}"'
 
         # .. and none of the markup the page used to be built from is left.
@@ -420,7 +420,7 @@ class TestOutgoingSFTPCommandShell:
         _ = _run_command(page, f'ls {remote_dir}')
         _ = _run_command(page, 'ls /zato/does/not/exist/' + CryptoManager.generate_hex_string(16))
 
-        page.click('#sftp-shell-clear')
+        page.click('#file-shell-clear')
 
         # .. filter the console noise every dashboard page makes ..
         real_errors = [] # type: list

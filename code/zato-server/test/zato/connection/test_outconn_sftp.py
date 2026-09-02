@@ -8,14 +8,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from tempfile import NamedTemporaryFile
+from tempfile import mkdtemp, NamedTemporaryFile
 from unittest import main, TestCase
-from uuid import uuid4
 
 # Bunch
-from zato.common.ext.bunch import bunchify
+from zato.common.ext.bunch import Bunch, bunchify
 
 # Zato
+from zato.common.audit_log.api import AuditLog, ModuleCtx as AuditLogCtx
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.sftp_ import SFTPTestServer
 from zato.common.typing_ import cast_
 from zato.common.util.tcp import get_free_port
@@ -26,11 +27,8 @@ from zato.server.generic.api.outconn_sftp import SFTPClient
 # ################################################################################################################################
 
 if 0:
-    from zato.common.ext.bunch import Bunch
-    from zato.common.sftp import SFTPOutput
     from zato.common.typing_ import any_
     any_ = any_
-    SFTPOutput = SFTPOutput
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,8 +36,7 @@ if 0:
 class ModuleCtx:
     Env_Key_Should_Test = 'Zato_Test_SFTP'
 
-    # The name of a key file that is never created, which is what a connection
-    # pointing at a private key that is not on disk is built out of
+    # A key file that is never created.
     Missing_Key_Name = 'missing_key'
 
 # ################################################################################################################################
@@ -51,8 +48,12 @@ class _TestWrapperClient:
     def __init__(self, client:'SFTPClient') -> 'None':
         self.client_object = client
 
+# ################################################################################################################################
+
     def __enter__(self) -> 'SFTPClient':
         return self.client_object
+
+# ################################################################################################################################
 
     def __exit__(self, _type:'object', _value:'object', _traceback:'object') -> 'None':
         pass
@@ -61,17 +62,24 @@ class _TestWrapperClient:
 # ################################################################################################################################
 
 class _TestWrapper:
-    """ A minimal stand-in for OutconnSFTPWrapper - it exposes the same .client and .ping API
-    but holds a single client object directly instead of a queue.
+    """ Exposes a .client and .ping API over a single client object,
+    along with an audit writer and a content storage flag.
     """
     def __init__(self, client:'SFTPClient') -> 'None':
-        self.client_object = client
+        self.client_object        = client
+        self.should_store_content = False
+        self.audit_log            = AuditLog('test-outconn-sftp')
 
-    def client(self, should_block:'bool'=False, block_timeout:'int'=0) -> '_TestWrapperClient':
+        self.config = Bunch()
+        self.config.name = 'test-outconn-sftp'
 
-        # Blocking has no meaning here, there is one client and it is always free,
-        # but the caller is the real connection object and it passes these along regardless.
-        return _TestWrapperClient(self.client_object)
+# ################################################################################################################################
+
+    def client(self, **kwargs:'any_') -> '_TestWrapperClient':
+        out = _TestWrapperClient(self.client_object)
+        return out
+
+# ################################################################################################################################
 
     def ping(self) -> 'None':
         out = self.client_object.ping()
@@ -82,6 +90,8 @@ class _TestWrapper:
 # ################################################################################################################################
 
 class OutconnSFTPTestCase(TestCase):
+    """ Tests the outgoing SFTP connection API against a real SFTP server.
+    """
 
     server: 'SFTPTestServer'
 
@@ -89,6 +99,11 @@ class OutconnSFTPTestCase(TestCase):
     def setUpClass(class_) -> 'None':
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
+
+        # The audit log is pointed at a throwaway SQLite database for the duration of the suite.
+        audit_db_dir = mkdtemp(prefix='zato-test-sftp-audit-')
+        os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
+        os.environ[AuditLogCtx.Env_Name] = os.path.join(audit_db_dir, 'audit.db')
 
         class_.server = SFTPTestServer()
         class_.server.start()
@@ -102,9 +117,13 @@ class OutconnSFTPTestCase(TestCase):
 
         class_.server.stop()
 
+        # The audit log is no longer pointed at this suite's database.
+        del os.environ[AuditLogCtx.Env_Type]
+        del os.environ[AuditLogCtx.Env_Name]
+
 # ################################################################################################################################
 
-    def get_config(self, conn_name:'str', *, use_password:'bool'=False) -> 'Bunch':
+    def get_config(self, conn_name:'str', *, use_password:'bool' = False) -> 'Bunch':
 
         # With a password in use, we authenticate with the encrypted key whose passphrase
         # is the connection's password, going through the askpass helper.
@@ -115,56 +134,66 @@ class OutconnSFTPTestCase(TestCase):
             private_key = self.server.client_key_path
             secret = ''
 
+        host = self.server.host
+        port = self.server.port
+        address = f'{host}:{port}'
+
         config = bunchify({
             'id': 1,
             'name': conn_name,
             'is_active': True,
-            'address': '{}:{}'.format(self.server.host, self.server.port),
+            'address': address,
             'username': self.server.username,
             'secret': secret,
             'private_key': private_key,
 
             'strict_host_key_checking': False,
 
-            # The test server's host key is freshly generated on each run, so it is neither
-            # in known_hosts nor the same one as the last run left there under this address
+            # The test server's host key is freshly generated on each run.
             'ignore_host_key_changes': True,
         })
 
-        return config
+        out = cast_('Bunch', config)
+        return out
 
 # ################################################################################################################################
 
     def make_client(self, config:'Bunch') -> 'SFTPClient':
 
-        client = SFTPClient(config, cast_('any_', None))
-        return client
+        server = cast_('any_', None)
+        out = SFTPClient(config, server)
+
+        return out
 
 # ################################################################################################################################
 
-    def get_client(self, conn_name:'str', *, use_password:'bool'=False) -> 'SFTPClient':
+    def get_client(self, conn_name:'str', *, use_password:'bool' = False) -> 'SFTPClient':
 
         config = self.get_config(conn_name, use_password=use_password)
-        client = self.make_client(config)
+        out = self.make_client(config)
 
-        return client
+        return out
 
 # ################################################################################################################################
 
-    def get_conn(self, conn_name:'str', *, use_password:'bool'=False) -> 'SFTPConnection':
+    def get_conn(self, conn_name:'str', *, use_password:'bool' = False) -> 'SFTPConnection':
 
         client = self.get_client(conn_name, use_password=use_password)
         wrapper = _TestWrapper(client)
+        wrapper_typed = cast_('any_', wrapper)
 
-        conn = SFTPConnection('test-cid', cast_('any_', wrapper))
+        out = SFTPConnection('test-cid', wrapper_typed)
 
-        return conn
+        return out
 
 # ################################################################################################################################
 
     def get_remote_path(self, suffix:'str') -> 'str':
 
-        out = os.path.join(self.server.files_dir, 'test-{}-{}'.format(uuid4().hex, suffix))
+        hex_string = CryptoManager.generate_hex_string()
+        file_name = f'test-{hex_string}-{suffix}'
+
+        out = os.path.join(self.server.files_dir, file_name)
 
         return out
 
@@ -197,7 +226,10 @@ class OutconnSFTPTestCase(TestCase):
             return
 
         conn = self.get_conn('test_execute_with_key')
-        out = conn.execute('ls {}'.format(self.server.files_dir))
+
+        files_dir = self.server.files_dir
+        command = f'ls {files_dir}'
+        out = conn.execute(command)
 
         self.assertTrue(out.is_ok, out.stderr)
 
@@ -208,7 +240,10 @@ class OutconnSFTPTestCase(TestCase):
             return
 
         conn = self.get_conn('test_execute_with_password', use_password=True)
-        out = conn.execute('ls {}'.format(self.server.files_dir))
+
+        files_dir = self.server.files_dir
+        command = f'ls {files_dir}'
+        out = conn.execute(command)
 
         self.assertTrue(out.is_ok, out.stderr)
 
@@ -221,7 +256,8 @@ class OutconnSFTPTestCase(TestCase):
         conn = self.get_conn('test_execute_error_is_reported')
         missing_path = self.get_remote_path('missing-dir')
 
-        out = conn.execute('ls {}'.format(missing_path), raise_on_error=False)
+        command = f'ls {missing_path}'
+        out = conn.execute(command, raise_on_error=False)
 
         self.assertFalse(out.is_ok)
 
@@ -231,7 +267,7 @@ class OutconnSFTPTestCase(TestCase):
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
 
-        # Generate a key that the server does not know about
+        # Generate a key that the server does not know about.
         rejected_key_path = os.path.join(self.server.base_dir, 'rejected_key')
         self.server.generate_key(rejected_key_path)
 
@@ -249,7 +285,7 @@ class OutconnSFTPTestCase(TestCase):
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
 
-        # Nothing ever creates this file, which is what makes the test meaningful
+        # Nothing ever creates this file.
         missing_key_path = os.path.join(self.server.base_dir, ModuleCtx.Missing_Key_Name)
 
         config = self.get_config('test_missing_key_file_is_reported')
@@ -258,9 +294,12 @@ class OutconnSFTPTestCase(TestCase):
         client = self.make_client(config)
         out = client.ping()
 
-        # The ping must fail with a clear error naming the key file
+        # The ping must fail with a clear error naming the key file.
         self.assertFalse(out.is_ok)
-        self.assertIn(missing_key_path, out.details)
+
+        details = out.details
+        details = cast_('str', details)
+        self.assertIn(missing_key_path, details)
 
 # ################################################################################################################################
 
@@ -289,7 +328,8 @@ class OutconnSFTPTestCase(TestCase):
 
             # .. and confirm the round trip did not change the contents.
             with open(download_file.name, encoding='utf8') as downloaded:
-                self.assertEqual(downloaded.read(), data)
+                downloaded_data = downloaded.read()
+                self.assertEqual(downloaded_data, data)
 
 # ################################################################################################################################
 
@@ -312,7 +352,8 @@ class OutconnSFTPTestCase(TestCase):
             with self.assertRaises(Exception) as ctx:
                 _ = conn.upload(local_file.name, remote_path, overwrite=False)
 
-        self.assertIn('already exists', str(ctx.exception))
+        error_message = str(ctx.exception)
+        self.assertIn('already exists', error_message)
 
 # ################################################################################################################################
 
@@ -370,7 +411,7 @@ class OutconnSFTPTestCase(TestCase):
         self.assertTrue(conn.exists(remote_path))
         self.assertTrue(conn.is_directory(remote_path))
 
-        # A file created in that directory is a file, not a directory
+        # A file created in that directory is a file, not a directory.
         file_path = os.path.join(remote_path, 'file.txt')
         conn.write('Test data', file_path)
 
@@ -390,10 +431,12 @@ class OutconnSFTPTestCase(TestCase):
         conn.write(data, remote_path)
 
         info = conn.get_info(remote_path)
+        info = cast_('any_', info)
 
-        self.assertIsNotNone(info)
+        expected_size = len(data)
+
         self.assertTrue(info.is_file)
-        self.assertEqual(info.size, len(data))
+        self.assertEqual(info.size, expected_size)
         self.assertEqual(info.name, remote_path)
 
 # ################################################################################################################################
@@ -407,19 +450,23 @@ class OutconnSFTPTestCase(TestCase):
 
         # Create a directory with two files inside ..
         _ = conn.create_directory(remote_path)
-        conn.write('First file', os.path.join(remote_path, 'first.txt'))
-        conn.write('Second file', os.path.join(remote_path, 'second.txt'))
+
+        first_path = os.path.join(remote_path, 'first.txt')
+        second_path = os.path.join(remote_path, 'second.txt')
+
+        conn.write('First file', first_path)
+        conn.write('Second file', second_path)
 
         # .. list the directory ..
         result = conn.list(remote_path)
+        result = cast_('any_', result)
 
-        # .. and make sure both files were returned - the server may report them
-        # .. under their full paths, which is why only the base names are compared.
-        self.assertIsNotNone(result)
-
+        # .. and make sure both files were returned - only base names are compared,
+        # .. the server reports full paths.
         names = []
         for item in result:
-            names.append(os.path.basename(item.name))
+            base_name = os.path.basename(item.name)
+            names.append(base_name)
 
         self.assertIn('first.txt', names)
         self.assertIn('second.txt', names)
@@ -475,8 +522,10 @@ class OutconnSFTPTestCase(TestCase):
 
         config = self.get_config('test_bad_host_is_reported')
 
-        # Nothing listens on this port, so the connection attempt must fail
-        config.address = '{}:{}'.format(self.server.host, get_free_port())
+        # Nothing listens on this port.
+        host = self.server.host
+        free_port = get_free_port()
+        config.address = f'{host}:{free_port}'
 
         client = self.make_client(config)
         out = client.ping()

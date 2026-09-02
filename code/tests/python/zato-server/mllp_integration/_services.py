@@ -158,7 +158,7 @@ class TestHL7FHIRSave(Service):
         _ = client.execute(
             path='Patient',
             method='post',
-            data={'resourceType': 'Patient', 'name': [{'family': 'Kowalska', 'given': ['Maria']}]},
+            data={'resourceType': 'Patient', 'name': [{'family': 'Johnson', 'given': ['Maria']}]},
         )
 
 # ################################################################################################################################

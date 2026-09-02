@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 sys.path.insert(0, os.path.dirname(__file__))
 
 # local
-import containers
+import ollama_containers as containers
 from _local_docker import Container_Name
 
 # ################################################################################################################################

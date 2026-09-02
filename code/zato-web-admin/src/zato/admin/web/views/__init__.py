@@ -31,7 +31,7 @@ from pytz import UTC
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.util import get_template_response
-from zato.common.api import CONNECTION, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
+from zato.common.api import CONNECTION, SEC_DEF_TYPE, Sec_Def_Type_Name, URL_TYPE, ZATO_NONE
 from zato.common.content_type import format_content, get_content_type
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
@@ -50,7 +50,10 @@ slugify = slugify
 
 if 0:
     from zato.client import _APIResponse
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anylist, strlistnone
+
+    # Add dummy assignments to satisfy type checkers
+    strlistnone = strlistnone
 
 # ################################################################################################################################
 
@@ -200,7 +203,7 @@ def get_security_groups_from_checkbox_list(params, prefix, field_name_prefix='ht
 
 def build_sec_def_link(cluster_id, sec_type, sec_name):
 
-    sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
+    sec_type_name = Sec_Def_Type_Name[sec_type]
     sec_type = sec_type.replace('_', '-')
     url_path = django_url_reverse('security-{}'.format(sec_type))
 
@@ -282,9 +285,9 @@ class BaseView:
         """ May be overridden by subclasses if needed.
         """
 
-    def get_sec_def_list(self, sec_type):
+    def get_sec_def_list(self, security_type_list):
         if self.req.zato.get('client'):
-            return SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, sec_type)
+            return SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, security_type_list)
         else:
             return []
 
@@ -687,33 +690,61 @@ class Delete(BaseCallView):
 # ################################################################################################################################
 
 class SecurityList:
-    def __init__(self, needs_def_type_name_label=True):
-        self.needs_def_type_name_label = needs_def_type_name_label
-        self.def_items = []
+    """ A list of security definitions to populate a select field with.
+    """
 
-    def __iter__(self):
-        return iter(self.def_items)
+    def __init__(self, needs_definition_type_name_label:'bool'=True) -> 'None':
+        self.needs_definition_type_name_label = needs_definition_type_name_label
+        self.definition_items:'anylist' = []
 
-    def append(self, def_item):
-        value = '{}/{}'.format(def_item.sec_type, def_item.id)
-        if self.needs_def_type_name_label:
-            label = '{}/{}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
+# ################################################################################################################################
+
+    def __iter__(self) -> 'any_':
+
+        out = iter(self.definition_items)
+        return out
+
+# ################################################################################################################################
+
+    def append(self, definition_item:'any_') -> 'None':
+
+        value = f'{definition_item.sec_type}/{definition_item.id}'
+
+        if self.needs_definition_type_name_label:
+            type_name = Sec_Def_Type_Name[definition_item.sec_type]
+            label = f'{type_name}/{definition_item.name}'
         else:
-            label = def_item.name
-        self.def_items.append((value, label))
+            label = definition_item.name
+
+        self.definition_items.append((value, label))
+
+# ################################################################################################################################
 
     @staticmethod
-    def from_service(client, cluster_id, sec_type=None, needs_def_type_name_label=True):
+    def from_service(
+        client:'any_',
+        cluster_id:'any_',
+        security_type_list:'strlistnone'=None,
+        needs_definition_type_name_label:'bool'=True,
+    ) -> 'SecurityList':
 
-        out = SecurityList(needs_def_type_name_label=needs_def_type_name_label)
-        sec_type = sec_type if isinstance(sec_type, list) else [sec_type]
+        # Our response to produce
+        out = SecurityList(needs_definition_type_name_label=needs_definition_type_name_label)
 
-        result = client.invoke('zato.security.get-list', {
+        request = {
             'cluster_id': cluster_id,
-        })
+        }
 
-        for def_item in result:
-            out.append(def_item)
+        result = client.invoke('zato.security.get-list', request)
+
+        for definition_item in result:
+
+            # Only the definition types the caller asked for are offered, if it named any.
+            if security_type_list:
+                if definition_item.sec_type not in security_type_list:
+                    continue
+
+            out.append(definition_item)
 
         return out
 
@@ -1019,7 +1050,7 @@ def invoke_action_handler(req, service_name:'str', send_attrs:'any_'=None, extra
 
 def get_security_name_link(req, sec_type, sec_name, *, needs_type=True):
 
-    sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
+    sec_type_name = Sec_Def_Type_Name[sec_type]
     sec_type_as_link = sec_type.replace('_', '-')
 
     # Bearer token definitions live under their own subpath

@@ -77,6 +77,7 @@ pyasn1==0.6.4
 pycparser==2.21
 pycryptodome==3.19.1
 pydantic==2.12.5
+pyftpdlib==2.2.0
 pygments==2.20.0
 PyJWT==2.13.0
 pymongo==4.17.0

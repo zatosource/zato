@@ -124,7 +124,7 @@ class TestRESTChannelCRUD:
         assert cells[_Cell_Url_Path] == url_path, f'Expected url_path "{url_path}", got: "{cells[_Cell_Url_Path]}"'
         assert cells[_Cell_Service] == _Echo_Service, f'Expected service "{_Echo_Service}", got: "{cells[_Cell_Service]}"'
         # The security cell shows the definition, the security groups info, or a placeholder for neither
-        assert cells[_Cell_Security] == '---', f'Expected no security definition, got: "{cells[_Cell_Security]}"'
+        assert cells[_Cell_Security] == 'Click to add', f'Expected no security definition, got: "{cells[_Cell_Security]}"'
         assert cells[_Cell_Rate_Limiting] == 'Rate limiting', \
             f'Expected the rate limiting link, got: "{cells[_Cell_Rate_Limiting]}"'
 

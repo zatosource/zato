@@ -20,14 +20,18 @@ _db_path = os.path.join(_work_dir, 'web-admin.db')
 
 # Zato
 import zato.admin.zato_settings as zato_settings
+from zato.common.typing_ import any_, cast_
 
-zato_settings.db_type = 'sqlite'
-zato_settings.DATABASES = {'default': {'NAME': _db_path, 'USER': '', 'PASSWORD': '', 'HOST': '', 'PORT': ''}}
-zato_settings.config_dir = _work_dir
-zato_settings.log_config = ''
-zato_settings.ADMIN_INVOKE_NAME = 'admin.invoke'
-zato_settings.ADMIN_INVOKE_PASSWORD = 'test-password'
-zato_settings.SECRET_KEY = 'test-secret-key'
+# The settings module receives these values dynamically, the way update_globals injects them.
+_settings:'any_' = cast_('any_', zato_settings)
+
+_settings.db_type = 'sqlite'
+_settings.DATABASES = {'default': {'NAME': _db_path, 'USER': '', 'PASSWORD': '', 'HOST': '', 'PORT': ''}}
+_settings.config_dir = _work_dir
+_settings.log_config = ''
+_settings.ADMIN_INVOKE_NAME = 'admin.invoke'
+_settings.ADMIN_INVOKE_PASSWORD = 'test-password'
+_settings.SECRET_KEY = 'test-secret-key'
 
 # Django
 from django.conf import settings

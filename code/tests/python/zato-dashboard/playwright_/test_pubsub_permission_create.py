@@ -49,7 +49,9 @@ class TestPubSubPermissionCreate:
         # .. verify the page heading ..
         heading = cast_('any_', page.query_selector('h2.zato'))
         heading_text = heading.inner_text()
-        assert 'Pub/sub permissions' in heading_text, f'Expected "Pub/sub permissions" in heading, got: {heading_text}'
+        heading_lower = heading_text.lower()
+        assert 'pub/sub' in heading_lower and 'permissions' in heading_lower, \
+            f'Expected the pub/sub permissions heading, got: {heading_text}'
 
         # .. verify the create link is present ..
         create_link = cast_('any_', page.query_selector('#markup .page_prompt a'))

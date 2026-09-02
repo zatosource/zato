@@ -861,7 +861,7 @@ class SFTPConnection:
         """
 
         # Imported here to avoid circular imports
-        from zato.server.connection.outgoing_delivery import spool_file_payload, Key_Remote_Path, Key_Spool_Path
+        from zato.server.connection.file_transfer_base import spool_file_payload, Key_Remote_Path, Key_Spool_Path
 
         # Data to be written out must be always bytes
         if not isinstance(data, bytes):

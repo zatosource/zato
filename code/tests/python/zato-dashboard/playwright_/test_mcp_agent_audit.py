@@ -20,6 +20,7 @@ from yaml import safe_load
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import cast_
 
 # Zato - test helpers - the page helpers, the shared echo service and the group
 # propagation patterns come from the response controls suite.
@@ -43,7 +44,7 @@ from _client import MCPClient
 
 import _agent
 import _mcp_wizard as wizard_page
-import containers
+import ollama_containers
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -138,8 +139,8 @@ def _run_agent_conversation(mcp_url:'str', auth:'any_') -> 'any_':
     with the model deciding the echo tool call itself.
     """
 
-    containers.ensure_ollama()
-    containers.ensure_model()
+    ollama_containers.ensure_ollama()
+    ollama_containers.ensure_model()
 
     client = MCPClient(mcp_url, auth=auth)
 
@@ -248,7 +249,7 @@ class TestMCPAgentAudit:
 
             # What kind of event this row is - the text is read through text_content
             # because a narrow list hides the label with CSS while the pane is open
-            event_element = row.query_selector(_Row_Event_Selector)
+            event_element = cast_('any_', row.query_selector(_Row_Event_Selector))
             event_label = event_element.text_content().strip()
 
             row.click()

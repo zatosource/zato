@@ -22,6 +22,7 @@ from zato.common.util.config import replace_query_string_items_in_dict
 from zato.server.base.config_manager.common import ConfigManagerImpl
 from zato.server.generic.api.channel_hl7_mllp import channel_config_defaults, channel_int_config_keys
 from zato.server.generic.api.cloud_aws import cloud_aws_config_defaults, cloud_aws_int_config_keys
+from zato.server.generic.api.cloud_salesforce import cloud_salesforce_config_defaults
 from zato.server.generic.api.outconn_as2 import outconn_as2_bool_config_keys, outconn_as2_config_defaults, \
     outconn_as2_int_config_keys
 from zato.server.generic.api.outconn_es import outconn_es_bool_config_keys, outconn_es_config_defaults, \
@@ -33,6 +34,8 @@ from zato.server.generic.api.outconn_hl7_mllp import outconn_config_defaults, ou
 from zato.server.generic.api.outconn_llm import llm_config_defaults, llm_int_config_keys
 from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys, outconn_odata_config_defaults, \
     outconn_odata_int_config_keys, outconn_sap_config_defaults
+from zato.server.generic.api.outconn_ftp import Outconn_FTP_Bool_Config_Keys, Outconn_FTP_Config_Defaults, \
+    Outconn_FTP_Int_Config_Keys, Outconn_FTP_String_Config_Keys
 from zato.server.generic.api.outconn_sdk import normalize_connector_config
 from zato.server.generic.api.outconn_sftp import outconn_sftp_bool_config_keys, outconn_sftp_config_defaults, \
     outconn_sftp_int_config_keys, outconn_sftp_string_config_keys
@@ -64,6 +67,18 @@ _no_value_marker = '<no-value-given-'
 # The auth types a FHIR outgoing connection's security definition can resolve to
 _fhir_auth_type_basic = HL7.Const.FHIR_Auth_Type.Basic_Auth.id
 _fhir_auth_type_oauth = HL7.Const.FHIR_Auth_Type.OAuth.id
+
+# Which MCP connection group each generic connection type belongs to - a change
+# to a connection of these types rebuilds the registries of the gateways exposing it.
+_mcp_group_by_generic_type = {
+    COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: 'microsoft_365',
+    COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS: 'microsoft_teams',
+    COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC: 'microsoft_fabric',
+    COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE: 'microsoft_power_automate',
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP: 'sap',
+    COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: 'confluence',
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: 'es',
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -359,6 +374,10 @@ class Generic(ConfigManagerImpl):
         if func:
             func(msg)
 
+        # An MCP gateway that exposes this connection as a tool rebuilds its registry now
+        if mcp_group := _mcp_group_by_generic_type.get(msg['type_']):
+            self.rebuild_mcp_registries_for_connection(mcp_group, msg['name'])
+
 # ################################################################################################################################
 
     def on_config_event_GENERIC_CONNECTION_CREATE(self, *args:'any_', **kwargs:'any_') -> 'any_':
@@ -425,6 +444,18 @@ class Generic(ConfigManagerImpl):
             value = config[key]
             if isinstance(value, str):
                 config[key] = int(value)
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_cloud_salesforce(self, config:'stranydict') -> 'None':
+        """ Fills in defaults for fields that the create path did not supply,
+        e.g. when a connection is created directly through zato.generic.connection.create.
+        """
+
+        # Apply a default for every field that is missing or None.
+        for key, default in cloud_salesforce_config_defaults.items():
+            if config.get(key) is None:
+                config[key] = default
 
 # ################################################################################################################################
 
@@ -677,6 +708,36 @@ class Generic(ConfigManagerImpl):
             value = config[key]
             if isinstance(value, str):
                 config[key] = as_bool(value)
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_outconn_ftp(self, config:'stranydict') -> 'None':
+        """ Fills in defaults for fields that the create path did not supply and coerces
+        numeric and boolean fields that may arrive as strings from opaque storage.
+        """
+
+        # Apply a default for every field that is missing or None ..
+        for key, default in Outconn_FTP_Config_Defaults.items():
+            if config.get(key) is None:
+                config[key] = default
+
+        # .. make sure numeric fields are integers ..
+        for key in Outconn_FTP_Int_Config_Keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = int(value)
+
+        # .. make sure boolean fields are booleans ..
+        for key in Outconn_FTP_Bool_Config_Keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = as_bool(value)
+
+        # .. and make sure string fields are strings.
+        for key in Outconn_FTP_String_Config_Keys:
+            value = config[key]
+            if isinstance(value, int):
+                config[key] = str(value)
 
 # ################################################################################################################################
 

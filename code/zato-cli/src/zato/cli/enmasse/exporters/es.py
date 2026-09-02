@@ -83,8 +83,17 @@ class ElasticSearchExporter:
                 'name': row['name'],
             }
 
+            # The addresses are stored as one newline-separated string - a single address
+            # travels as a string and multiple ones as a list.
             if address_list := row.get('address_list'):
-                item['address_list'] = address_list
+                addresses = address_list.splitlines()
+                address_count = len(addresses)
+                has_single_address = address_count == 1
+
+                if has_single_address:
+                    item['address_list'] = addresses[0]
+                else:
+                    item['address_list'] = addresses
 
             if username := row.get('username'):
                 item['username'] = username

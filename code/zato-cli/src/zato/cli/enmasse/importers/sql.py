@@ -8,10 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from uuid import uuid4
 
 # Zato
-from zato.cli.enmasse.util import get_engine_from_type, preprocess_item
+from zato.cli.enmasse.util import get_engine_from_type, preprocess_item, SQL_Default_Pool_Size
+from zato.common.crypto.api import CryptoManager
 from zato.common.odb.model import SQLConnectionPool, to_json
 from zato.common.odb.query import out_sql_list
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -24,10 +24,24 @@ if 0:
     from zato.cli.enmasse.importer import EnmasseYAMLImporter
     from zato.common.typing_ import any_, anydict, anylist, listtuple
 
+    # Add dummy assignments to satisfy type checkers
+    SASession = SASession
+    EnmasseYAMLImporter = EnmasseYAMLImporter
+    anydict = anydict
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# What a new connection is unless its definition says otherwise.
+_default_is_active = True
+
+# What the extra column stores when a definition carries no extra options.
+_empty_extra = b''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,23 +51,26 @@ class SQLImporter:
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
 
         self.importer = importer
-        self.sql_defs = {}
+        self.sql_definitions:'anydict' = {}
 
 # ################################################################################################################################
 
-    def _process_sql_defs(self, query_result:'any_', out:'dict') -> 'None':
+    def _process_sql_defs(self, query_result:'any_', definitions_by_name:'anydict') -> 'None':
+
         definitions = to_json(query_result, return_as_dict=True)
-        logger.info('Processing %d SQL connection pool definitions', len(definitions))
+        logger.info('Processing %d SQL connection pool definition(s)', len(definitions))
 
         for item in definitions:
             name = item['name']
-            logger.info('Processing SQL connection pool definition: %s (id=%s)', name, item.get('id'))
-            out[name] = item
+            logger.info('Processing SQL connection pool definition: %s (id=%s)', name, item['id'])
+            definitions_by_name[name] = item
 
 # ################################################################################################################################
 
     def get_sql_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
-        out = {}
+
+        # Our response to produce
+        out:'anydict' = {}
 
         logger.info('Retrieving SQL connection pool definitions from database for cluster_id=%s', cluster_id)
         sql_connections = out_sql_list(session, cluster_id)
@@ -94,102 +111,111 @@ class SQLImporter:
 
 # ################################################################################################################################
 
-    def create_sql_definition(self, sql_def:'anydict', session:'SASession') -> 'any_':
+    def create_sql_definition(self, sql_definition:'anydict', session:'SASession') -> 'SQLConnectionPool':
 
-        # Get the cluster instance from the importer
+        # The connection belongs to the one cluster there is ..
         cluster = self.importer.get_cluster(session)
 
-        # Create a new SQL connection pool instance
-        sql_conn = SQLConnectionPool()
+        out = SQLConnectionPool()
+        out.cluster = cluster
 
-        # Set cluster_id explicitly
-        sql_conn.cluster = cluster
+        # .. the user-friendly type maps to the engine name the column stores ..
+        connection_type = sql_definition['type']
+        engine = get_engine_from_type(connection_type)
 
-        # Set the basic attributes
-        name = sql_def['name']
-        is_active = sql_def.get('is_active', True)
+        # .. the basic fields every definition carries ..
+        out.name      = sql_definition['name']
+        out.is_active = sql_definition.get('is_active', _default_is_active)
+        out.engine    = engine
+        out.host      = sql_definition['host']
+        out.port      = sql_definition['port']
+        out.db_name   = sql_definition['db_name']
+        out.username  = sql_definition['username']
+        out.pool_size = sql_definition.get('pool_size', SQL_Default_Pool_Size)
 
-        # Accept either 'type' or 'engine' field
-        has_type = 'type' in sql_def
-        raw_type = sql_def['type'] if has_type else sql_def['engine']
-
-        # Convert type to engine using the utility function
-        engine = get_engine_from_type(raw_type)
-
-        host = sql_def['host']
-        port = sql_def['port']
-        db_name = sql_def['db_name']
-        username = sql_def['username']
-        pool_size = sql_def.get('pool_size', 5)
-
-        sql_conn.name = name
-        sql_conn.is_active = is_active
-        sql_conn.engine = engine
-        sql_conn.host = host
-        sql_conn.port = port
-        sql_conn.db_name = db_name
-        sql_conn.username = username
-        sql_conn.pool_size = pool_size
-
-        # Convert extra to bytes if provided
-        if 'extra' in sql_def:
-            sql_conn.extra = sql_def['extra'].encode('utf8') if sql_def['extra'] else b''
+        # .. the 'extra' options are a YAML list, joined into the newline-separated string the column stores ..
+        if extra := sql_definition.get('extra'):
+            extra = '\n'.join(extra)
+            out.extra = extra.encode('utf8')
         else:
-            sql_conn.extra = b''
+            out.extra = _empty_extra
 
-        # Set password if provided, otherwise generate one
-        if 'password' in sql_def:
-            sql_conn.password = sql_def['password']
+        # .. a definition without a password gets a generated one ..
+        if password := sql_definition.get('password'):
+            out.password = password
         else:
-            sql_conn.password = uuid4().hex
+            out.password = CryptoManager.generate_password(to_str=True)
 
-        # Set any opaque attributes from the configuration
-        set_instance_opaque_attrs(sql_conn, sql_def)
+        # .. whatever else the definition carries goes to the opaque attributes ..
+        set_instance_opaque_attrs(out, sql_definition)
 
-        # Add to session and flush to get ID
-        session.add(sql_conn)
+        # .. and the flush gives the new connection its ID.
+        session.add(out)
         session.flush()
 
-        return sql_conn
+        return out
 
 # ################################################################################################################################
 
-    def update_sql_definition(self, sql_def:'anydict', session:'SASession') -> 'any_':
+    def update_sql_definition(self, sql_definition:'anydict', session:'SASession') -> 'SQLConnectionPool':
 
-        sql_id = sql_def['id']
-        def_name = sql_def['name']
+        sql_id = sql_definition['id']
+        name = sql_definition['name']
 
-        logger.info('Updating SQL connection pool definition: name=%s id=%s', def_name, sql_id)
+        logger.info('Updating SQL connection pool definition: name=%s id=%s', name, sql_id)
 
-        sql_conn = session.query(SQLConnectionPool).filter_by(id=sql_id).one()
+        query = session.query(SQLConnectionPool)
+        query = query.filter_by(id=sql_id)
+        out = query.one()
 
-        # Update all attributes provided in YAML
-        for key, value in sql_def.items():
+        # The plain columns are assigned directly, one by one, if the definition carries them ..
+        if 'name' in sql_definition:
+            out.name = sql_definition['name']
 
-            # Skip special fields that shouldn't be directly updated
-            if key not in ['id', 'type']:
+        if 'is_active' in sql_definition:
+            out.is_active = sql_definition['is_active']
 
-                # Special handling for password - only update if provided
-                if key == 'password' and not value:
-                    continue
+        if 'host' in sql_definition:
+            out.host = sql_definition['host']
 
-                # Special handling for extra field
-                if key == 'extra':
-                    value = value.encode('utf8') if value else b''
+        if 'port' in sql_definition:
+            out.port = sql_definition['port']
 
-                # Set the attribute on the SQL connection object
-                setattr(sql_conn, key, value)
+        if 'db_name' in sql_definition:
+            out.db_name = sql_definition['db_name']
 
-        # Set any opaque attributes
-        set_instance_opaque_attrs(sql_conn, sql_def)
+        if 'username' in sql_definition:
+            out.username = sql_definition['username']
 
-        session.add(sql_conn)
-        return sql_conn
+        if 'pool_size' in sql_definition:
+            out.pool_size = sql_definition['pool_size']
+
+        # .. the user-friendly type maps to the engine name the column stores ..
+        if 'type' in sql_definition:
+            connection_type = sql_definition['type']
+            out.engine = get_engine_from_type(connection_type)
+
+        # .. a password is updated only if one was actually given ..
+        if password := sql_definition.get('password'):
+            out.password = password
+
+        # .. the 'extra' options are a YAML list, joined into the newline-separated string the column stores ..
+        if 'extra' in sql_definition:
+            extra = '\n'.join(sql_definition['extra'])
+            out.extra = extra.encode('utf8')
+
+        # .. and whatever else the definition carries goes to the opaque attributes.
+        set_instance_opaque_attrs(out, sql_definition)
+
+        session.add(out)
+
+        return out
 
 # ################################################################################################################################
 
     def sync_sql_definitions(self, sql_list:'anylist', session:'SASession') -> 'listtuple':
-        logger.info('Processing %d SQL connection pool definitions from YAML', len(sql_list))
+
+        logger.info('Processing %d SQL connection pool definition(s) from YAML', len(sql_list))
 
         db_defs = self.get_sql_defs_from_db(session, self.importer.cluster_id)
         to_create, to_update = self.compare_sql_defs(sql_list, db_defs)
@@ -198,13 +224,14 @@ class SQLImporter:
         out_updated = []
 
         try:
-            logger.info('Creating %d new SQL connection pool definitions', len(to_create))
+            logger.info('Creating %d new SQL connection pool definition(s)', len(to_create))
             for item in to_create:
 
                 # Keep track of things that already exist
-                existing_sql = session.query(SQLConnectionPool).filter(SQLConnectionPool.name == item.get('name')).first() # type: ignore
+                name = item['name']
+                existing_sql = session.query(SQLConnectionPool).filter(SQLConnectionPool.name == name).first()
                 if existing_sql:
-                    logger.info('SQL connection pool with name %s already exists, skipping', item.get('name'))
+                    logger.info('SQL connection pool with name %s already exists, skipping', name)
                     continue
 
                 instance = self.create_sql_definition(item, session)
@@ -212,12 +239,12 @@ class SQLImporter:
                 out_created.append(instance)
 
                 # Store the mapping for future reference
-                self.sql_defs[instance.name] = {
+                self.sql_definitions[instance.name] = {
                     'id': instance.id,
                     'name': instance.name,
                 }
 
-            logger.info('Updating %d existing SQL connection pool definitions', len(to_update))
+            logger.info('Updating %d existing SQL connection pool definition(s)', len(to_update))
             for item in to_update:
                 instance = self.update_sql_definition(item, session)
                 logger.info('Updated SQL connection pool definition: name=%s id=%s', instance.name, instance.id)

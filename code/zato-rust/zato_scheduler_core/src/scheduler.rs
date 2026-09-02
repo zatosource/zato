@@ -205,7 +205,9 @@ pub fn scheduler_loop(
         }
 
         for item in &fire_batch {
-            crate::metrics::EXECUTIONS_TOTAL.with_label_values(&[&item.name, "fired"]).inc();
+            crate::metrics::EXECUTIONS_TOTAL
+                .with_label_values(&[item.name.as_str(), "fired"])
+                .inc();
         }
 
         for item in fire_batch {
@@ -347,7 +349,7 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState, deferred: &mut Defer
                 job_id,
             );
             crate::metrics::EXECUTIONS_TOTAL
-                .with_label_values(&[&running_job.name, outcome::TIMEOUT])
+                .with_label_values(&[running_job.name.as_str(), outcome::TIMEOUT])
                 .inc();
 
             // Durations here are wall-clock milliseconds of a single job run, far below the

@@ -26,10 +26,10 @@ from django.template.response import TemplateResponse
 from zato.admin.web.views import action_json_response, invoke_action_handler, method_allowed, \
     Action_Message_Max_Length, _traceback_marker
 from zato.admin.web.views.audit_log.columns import _all_sources_columns, _all_sources_section_title, _all_sources_title, \
-    _data_preview_len, _default_page, _endpoint_page_url, _event_type_label, _flow_columns, _get_outcomes, _object_page_url, \
-    _poll_url, _preview_len, _row_columns, _run_page_url, _source_columns, _source_endpoint_label, _source_event_label, \
+    _data_preview_length, _default_page, _endpoint_page_url, _event_type_label, _flow_columns, _get_outcomes, _object_page_url, \
+    _poll_url, _preview_length, _row_columns, _run_page_url, _source_columns, _source_endpoint_label, _source_event_label, \
     _source_except_label, _source_label, _source_object_label, _source_page_url, _source_title, _status_outstanding
-from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
+from zato.admin.web.views.audit_log.query import _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import get_resubmit_labels, _source_outstanding, _source_parse, \
     _source_resubmit, render_scheduler_record, render_view_record
 from zato.admin.web.views.audit_log.trace import attach_trace_lines
@@ -38,6 +38,7 @@ from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.audit_log.body import resolve_body
 from zato.common.audit_log.config_audit import record_view_event
 from zato.common.audit_log.flow import get_flow_ids, resolve_seed, Relation_Seed
+from zato.common.audit_log.search import build_search_conditions
 from zato.common.defaults import default_cluster_id
 from zato.x12.render import render_document
 
@@ -245,7 +246,7 @@ def poll(req:'any_') -> 'HttpResponse':
     if page < _default_page:
         page = _default_page
 
-    where_conditions = _build_where(
+    where_conditions = build_search_conditions(
         sources, object_names, outcomes, query, status, time_from, time_to, event_types,
         sources_excluded=sources_excluded, object_names_excluded=object_names_excluded)
 
@@ -308,16 +309,18 @@ def poll(req:'any_') -> 'HttpResponse':
                 if data:
                     attach_trace_lines(row, data)
 
-            # .. and only a preview of the payload goes into the table.
-            row['data'] = data[:_data_preview_len]
-
             rows.append(row)
 
         # Everything else the frontend reads off a row - this source's own extra columns, its
         # attrs, a preview of a payload kept elsewhere, the lineage, the message bodies there
         # are to read and the resubmitted marker - is merged in here, a query per set of rows
-        # rather than one per row.
+        # rather than one per row. The rows still carry their full data documents because
+        # the per-source enrichment reads columns out of them, e.g. an AS4 conversation id.
         _hydrate_rows(connection, rows)
+
+        # Only a preview of each payload goes into the table.
+        for row in rows:
+            row['data'] = row['data'][:_data_preview_length]
 
     response_json = json.dumps({'rows': rows, 'total': total, 'page': page})
     response_bytes = response_json.encode('utf-8')
@@ -378,7 +381,7 @@ def strip(req:'any_') -> 'HttpResponse':
     if bucket_count < _strip_min_buckets:
         bucket_count = _strip_min_buckets
 
-    where_conditions = _build_where(
+    where_conditions = build_search_conditions(
         sources, object_names, outcomes, query, status, time_from, time_to, event_types,
         sources_excluded=sources_excluded, object_names_excluded=object_names_excluded)
 
@@ -516,7 +519,7 @@ def _read_flow_rows(connection:'any_', seed_id:'int') -> 'anylist':
 
         # Only a preview of the payload travels with a line - the whole of it is fetched
         # by the line that is opened, and only then.
-        row['data'] = data[:_data_preview_len]
+        row['data'] = data[:_data_preview_length]
 
         # Why this event is in the flow, and whether it is the one the flow was read from
         relation = relation_by_id[row['id']]
@@ -662,7 +665,7 @@ def details(req:'any_') -> 'HttpResponse':
 
     # A preview is the top of the message and nothing else ..
     if is_preview:
-        data = data[:_preview_len]
+        data = data[:_preview_length]
         parsed = ''
 
     # .. and the whole message additionally gets its parsed view, from the source's own renderer

@@ -9,9 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 
+# SQLAlchemy
+from sqlalchemy import and_, select
+
 # Zato
-from zato.common.api import CONNECTION, GENERIC
-from zato.common.odb.model import GenericConn, HTTPSOAP
+from zato.common.api import CONNECTION, GENERIC, Groups, MCP
+from zato.common.odb.model import GenericConn, GenericObject, HTTPSOAP
 from zato.common.util.gateway import ensure_mcp_rest_channel
 from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
 from zato.common.util.truncate.tokens import Default_Characters_Per_Token, Size_Cap_Mode_Truncate
@@ -28,6 +31,16 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The connections a gateway exposes as tools - one allow list per connection group,
+# each defaulting to an empty list.
+_connection_list_defaults:'anydict' = {}
+
+for _connection_list_key in MCP.Connection_List_Keys:
+    _connection_list_defaults[_connection_list_key] = []
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,6 +112,9 @@ class GatewayMCPImporter(GenericConnectionImporter):
         'safeguards_url_policy_enabled': False,
         'safeguards_url_allow_list': [],
         'safeguards_url_mode': Url_Mode_Remove,
+
+        # The connections the gateway exposes as tools
+        **_connection_list_defaults,
     }
 
     connection_secret_keys = []
@@ -125,16 +141,44 @@ class GatewayMCPImporter(GenericConnectionImporter):
 
 # ################################################################################################################################
 
-    def _resolve_security_groups(self, connection_def:'anydict') -> 'list':
-        """ Converts security group names from YAML to their database IDs.
+    def _get_group_id_from_db(self, group_name:'str', session:'SASession') -> 'any_':
+        """ The ID of one security group that already exists in the database,
+        or None if there is no such group.
+        """
+        query = select([
+            GenericObject.id,
+        ]).where(and_(
+            GenericObject.name == group_name,
+            GenericObject.type_ == Groups.Type.Group_Parent,
+            GenericObject.subtype == Groups.Type.API_Clients,
+            GenericObject.cluster_id == self.importer.cluster_id,
+        ))
+
+        row = session.execute(query).fetchone()
+
+        out = row['id'] if row is not None else None
+        return out
+
+# ################################################################################################################################
+
+    def _resolve_security_groups(self, connection_def:'anydict', session:'SASession') -> 'list':
+        """ Converts security group names from YAML to their database IDs -
+        a group absent from the YAML input may still exist in the database,
+        e.g. when a gateway travels in a YAML file of its own.
         """
         out:'list' = []
 
         if group_names := connection_def.get('security_groups'):
             for group_name in group_names:
-                if group_name not in self.importer.group_defs:
+
+                if group_name in self.importer.group_defs:
+                    group_id = self.importer.group_defs[group_name]['id']
+                else:
+                    group_id = self._get_group_id_from_db(group_name, session)
+
+                if group_id is None:
                     raise Exception(f'Security group "{group_name}" not found for MCP gateway "{connection_def["name"]}"')
-                group_id = self.importer.group_defs[group_name]['id']
+
                 out.append(group_id)
 
         return out
@@ -144,7 +188,7 @@ class GatewayMCPImporter(GenericConnectionImporter):
     def _ensure_rest_channel(self, connection_def:'anydict', session:'SASession') -> 'None':
 
         channel_name = connection_def['name']
-        security_groups = self._resolve_security_groups(connection_def)
+        security_groups = self._resolve_security_groups(connection_def, session)
 
         ensure_mcp_rest_channel(
             session=session,

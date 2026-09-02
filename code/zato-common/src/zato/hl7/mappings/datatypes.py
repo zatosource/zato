@@ -7,15 +7,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.hl7.mappings.codes import coding_system_to_uri, lookup
-from zato.hl7.mappings.config import Authority_URN_Prefix
+from zato.hl7.mappings.codes import lookup
+from zato.hl7.mappings.config import Authority_URN_Prefix, Land_Identifier_Systems, Practitioner_Authority_Systems
+from zato.hl7.mappings.datetimes import dtm_to_date, dtm_to_datetime
 from zato.hl7.mappings.fields import component_value, subcomponent_value
+
+# For flake8
+dtm_to_date = dtm_to_date
+dtm_to_datetime = dtm_to_datetime
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist, stranydict, strnone
+    from zato.common.typing_ import anylist, stranydict, strlist, strnone, strstrdict
     from zato.hl7.mappings.config import FHIRMappingConfig
     FHIRMappingConfig = FHIRMappingConfig
 
@@ -25,24 +30,30 @@ if 0:
 # Type aliases
 dictnone = 'stranydict | None'
 
-# The identifier type code system all CX-5 and XCN-13 values live in
+# The identifier type code system of all CX-5 and XCN-13 values
 Identifier_Type_System = 'http://terminology.hl7.org/CodeSystem/v2-0203'
 
-# How many digits each DTM precision level has
-_DTM_Year_Length   = 4
-_DTM_Month_Length  = 6
-_DTM_Day_Length    = 8
-_DTM_Hour_Length   = 10
-_DTM_Minute_Length = 12
-_DTM_Second_Length = 14
+# The system that marks an equipment type as mapping to ContactPoint.use rather than .system
+_Contact_Point_Use_System = 'http://hl7.org/fhir/contact-point-use'
+
+# The system a telephone-carrying contact point gets when nothing else decides one
+_Default_Contact_System = 'phone'
+
+# The longest value XTN-8 can hold and still be an extension - anything longer
+# is a whole telephone number that arrived in that slot.
+_Max_Extension_Length = 5
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def hd_to_system(namespace:'strnone', universal_id:'strnone', universal_id_type:'strnone', config:'FHIRMappingConfig') -> 'strnone':
+def hd_to_system(
+    namespace:'strnone',
+    universal_id:'strnone',
+    universal_id_type:'strnone',
+    config:'FHIRMappingConfig',
+    authority_systems:'strstrdict | None' = None,
+    ) -> 'strnone':
     """ Derives an identifier system URI from an HD - assigning authority - value.
-    ISO universal IDs become urn:oid:, UUID ones become urn:uuid:, otherwise the namespace
-    resolves through the config's identifier systems or falls back to a derived URN.
     """
     if universal_id:
         if universal_id_type == 'ISO':
@@ -51,8 +62,9 @@ def hd_to_system(namespace:'strnone', universal_id:'strnone', universal_id_type:
             return out
 
         if universal_id_type == 'UUID':
+            universal_id_lower = universal_id.lower()
 
-            out = f'urn:uuid:{universal_id.lower()}'
+            out = f'urn:uuid:{universal_id_lower}'
             return out
 
     if namespace:
@@ -62,9 +74,23 @@ def hd_to_system(namespace:'strnone', universal_id:'strnone', universal_id_type:
         return None
 
     # A configured system URI for this authority wins ..
-    if namespace in config.identifier_systems:
+    if configured_system := config.identifier_systems.get(namespace):
 
-        out = config.identifier_systems[namespace]
+        out = configured_system
+        return out
+
+    # .. an authority whose registry depends on who holds the identifier
+    # .. resolves through the caller's holder-specific map ..
+    if authority_systems:
+        if holder_system := authority_systems.get(namespace):
+
+            out = holder_system
+            return out
+
+    # .. a land authority maps to its official system URI ..
+    if land_system := Land_Identifier_Systems.get(namespace):
+
+        out = land_system
         return out
 
     # .. otherwise the authority name becomes a stable URN.
@@ -73,7 +99,11 @@ def hd_to_system(namespace:'strnone', universal_id:'strnone', universal_id_type:
 
 # ################################################################################################################################
 
-def cx_to_identifier(repetition:'anylist', config:'FHIRMappingConfig') -> 'dictnone':
+def cx_to_identifier(
+    repetition:'anylist',
+    config:'FHIRMappingConfig',
+    authority_systems:'strstrdict | None' = None,
+    ) -> 'dictnone':
     """ Converts a CX - extended composite ID - repetition to a FHIR Identifier.
     """
     value = component_value(repetition, 1)
@@ -88,7 +118,7 @@ def cx_to_identifier(repetition:'anylist', config:'FHIRMappingConfig') -> 'dictn
     universal_id = subcomponent_value(repetition, 4, 2)
     universal_id_type = subcomponent_value(repetition, 4, 3)
 
-    system = hd_to_system(namespace, universal_id, universal_id_type, config)
+    system = hd_to_system(namespace, universal_id, universal_id_type, config, authority_systems)
     if system:
         out['system'] = system
 
@@ -123,6 +153,34 @@ def ei_to_identifier(repetition:'anylist', config:'FHIRMappingConfig') -> 'dictn
 
 # ################################################################################################################################
 
+def fn_to_family_name(repetition:'anylist', component:'int') -> 'strnone':
+    """ Builds the family name of an FN - family name - component. The full surname
+    subcomponent wins when present, otherwise the name is composed from the own-surname
+    and partner-surname subcomponents the FN type defines.
+    """
+    surname = subcomponent_value(repetition, component, 1)
+    if surname:
+
+        out = surname
+        return out
+
+    parts:'strlist' = []
+
+    # FN.2 to FN.5 - own surname prefix, own surname, partner surname prefix, partner surname.
+    for subcomponent in (2, 3, 4, 5):
+        part = subcomponent_value(repetition, component, subcomponent)
+        if part:
+            parts.append(part)
+
+    if parts:
+
+        out = ' '.join(parts)
+        return out
+
+    return None
+
+# ################################################################################################################################
+
 def xpn_to_human_name(repetition:'anylist', config:'FHIRMappingConfig') -> 'dictnone':
     """ Converts an XPN - extended person name - repetition to a FHIR HumanName.
     """
@@ -130,8 +188,8 @@ def xpn_to_human_name(repetition:'anylist', config:'FHIRMappingConfig') -> 'dict
     # Our response to produce
     out:'stranydict' = {}
 
-    # The family name is the first subcomponent of the first component
-    family = subcomponent_value(repetition, 1, 1)
+    # The family name is an FN component.
+    family = fn_to_family_name(repetition, 1)
     if family:
         out['family'] = family
 
@@ -163,11 +221,12 @@ def xpn_to_human_name(repetition:'anylist', config:'FHIRMappingConfig') -> 'dict
     if suffix:
         out['suffix'] = suffix
 
+    # .. and the prefix stays a prefix.
     prefix = component_value(repetition, 5)
     if prefix:
         out['prefix'] = [prefix]
 
-    # The name type code maps to HumanName.use
+    # The name type code maps to HumanName.use.
     name_type_code = component_value(repetition, 7)
     if use := lookup('name_type', name_type_code, config):
         out['use'] = use['code']
@@ -229,124 +288,152 @@ def xad_to_address(repetition:'anylist', config:'FHIRMappingConfig') -> 'dictnon
 
 # ################################################################################################################################
 
-def xtn_to_contact_point(repetition:'anylist', config:'FHIRMappingConfig', default_use:'strnone' = None) -> 'dictnone':
-    """ Converts an XTN - extended telecommunication number - repetition to a FHIR ContactPoint.
+def xtn_to_contact_points(repetition:'anylist', config:'FHIRMappingConfig', default_use:'strnone' = None) -> 'anylist':
+    """ Converts an XTN - extended telecommunication number - repetition to a list of FHIR ContactPoints.
+    One repetition can carry both a telephone number and an email address, each becomes its own point.
     """
 
     # Our response to produce
-    out:'stranydict' = {}
+    out:'anylist' = []
 
-    # The value is the email address when there is one, otherwise the full
-    # telephone number from XTN-1, otherwise a number built from the area code,
-    # local number and extension components.
+    # The equipment type decides the system - and for a cellular phone the use -
+    # ahead of any guessing from where the value sits.
+    equipment_type = component_value(repetition, 3)
+    equipment = lookup('telecom_equipment_type', equipment_type, config)
+
+    equipment_system = None
+    equipment_use = None
+
+    if equipment:
+        if equipment['system'] == _Contact_Point_Use_System:
+            equipment_use = equipment['code']
+            equipment_system = _Default_Contact_System
+        else:
+            equipment_system = equipment['code']
+
     email = component_value(repetition, 4)
     telephone = component_value(repetition, 1)
 
+    # Equipment codes can arrive in the email and number components -
+    # those refine the system or the use instead of becoming values or number parts.
+    def _as_equipment(value:'str') -> 'bool':
+        nonlocal equipment_system, equipment_use
+
+        shifted_equipment = lookup('telecom_equipment_type', value, config)
+        if not shifted_equipment:
+            return False
+
+        if shifted_equipment['system'] == _Contact_Point_Use_System:
+            equipment_use = shifted_equipment['code']
+            if not equipment_system:
+                equipment_system = _Default_Contact_System
+        else:
+            equipment_system = shifted_equipment['code']
+
+        return True
+
     if email:
-        out['value'] = email
-        out['system'] = 'email'
-    elif telephone:
-        out['value'] = telephone
-    else:
+        if _as_equipment(email):
+            email = None
+
+    # The telephone number is XTN-1 when populated, otherwise it is built
+    # from the country code, area code, local number and extension components.
+    phone_value = telephone
+
+    if not phone_value:
         parts:'anylist' = []
 
         country_code = component_value(repetition, 5)
         if country_code:
-            parts.append(f'+{country_code}')
+            if not _as_equipment(country_code):
+                prefixed_country_code = f'+{country_code}'
+                parts.append(prefixed_country_code)
 
         area_code = component_value(repetition, 6)
         if area_code:
-            parts.append(area_code)
+            if not _as_equipment(area_code):
+                parts.append(area_code)
 
         local_number = component_value(repetition, 7)
         if local_number:
-            parts.append(local_number)
+            if not _as_equipment(local_number):
+                parts.append(local_number)
 
+        # An extension only makes sense after a number and is short - anything longer
+        # is a whole telephone number that arrived in this slot, and stays a number.
         extension = component_value(repetition, 8)
         if extension:
-            parts.append(f'x{extension}')
+            extension_length = len(extension)
+            if parts:
+                if extension_length <= _Max_Extension_Length:
+                    marked_extension = f'x{extension}'
+                    parts.append(marked_extension)
+                else:
+                    parts.append(extension)
+            else:
+                parts.append(extension)
 
         if parts:
-            out['value'] = ' '.join(parts)
+            phone_value = ' '.join(parts)
 
-    if not out:
-        return None
+    # XTN-12 carries the unformatted number - it is used when no other component produced one.
+    if not phone_value:
+        phone_value = component_value(repetition, 12)
 
-    # The telecommunication use code maps to ContactPoint.use ..
+    # The telecommunication use code from XTN-2 applies to every point of the repetition.
+    use = None
+
     use_code = component_value(repetition, 2)
-    if use := lookup('telecom_use', use_code, config):
-        out['use'] = use['code']
+    if use_entry := lookup('telecom_use', use_code, config):
+        use = use_entry['code']
     elif default_use:
-        out['use'] = default_use
+        use = default_use
 
-    # .. and the equipment type maps to ContactPoint.system, unless the value already is an email.
-    if 'system' not in out:
-        equipment_type = component_value(repetition, 3)
-        if system := lookup('telecom_equipment_type', equipment_type, config):
-            out['system'] = system['code']
+    if phone_value:
+        phone_point:'stranydict' = {'value': phone_value}
+
+        if use:
+            phone_point['use'] = use
+
+        # A cellular phone's equipment type overrides the generic use code.
+        if equipment_use:
+            phone_point['use'] = equipment_use
+
+        # With an email alongside, an internet equipment type describes the email,
+        # not the telephone number.
+        phone_system = equipment_system
+
+        if email:
+            if phone_system == 'email':
+                phone_system = _Default_Contact_System
+
+        if not phone_system:
+            phone_system = _Default_Contact_System
+
+        phone_point['system'] = phone_system
+
+        out.append(phone_point)
+
+    if email:
+        email_point:'stranydict' = {'value': email}
+
+        if use:
+            email_point['use'] = use
+
+        # Alongside a telephone number XTN-4 is a real email - on its own it takes
+        # the equipment type as-is, since plain telephone numbers arrive there too.
+        if phone_value:
+            email_point['system'] = 'email'
         else:
-            out['system'] = 'phone'
+            if equipment_use:
+                email_point['use'] = equipment_use
 
-    return out
+            if equipment_system:
+                email_point['system'] = equipment_system
+            else:
+                email_point['system'] = 'email'
 
-# ################################################################################################################################
-
-def cwe_to_codeable_concept(repetition:'anylist', config:'FHIRMappingConfig') -> 'dictnone':
-    """ Converts a CWE/CE - coded element - repetition to a FHIR CodeableConcept.
-    """
-
-    # Our response to produce
-    out:'stranydict' = {}
-
-    codings:'anylist' = []
-
-    # The primary triplet is code, display text and coding system ..
-    code = component_value(repetition, 1)
-    text = component_value(repetition, 2)
-    system_name = component_value(repetition, 3)
-
-    if code:
-        coding:'stranydict' = {'code': code}
-
-        if text:
-            coding['display'] = text
-
-        if system := coding_system_to_uri(system_name):
-            coding['system'] = system
-
-        codings.append(coding)
-
-    # .. the alternate triplet is a second coding when present ..
-    alternate_code = component_value(repetition, 4)
-    alternate_text = component_value(repetition, 5)
-    alternate_system_name = component_value(repetition, 6)
-
-    if alternate_code:
-        alternate_coding:'stranydict' = {'code': alternate_code}
-
-        if alternate_text:
-            alternate_coding['display'] = alternate_text
-
-        if alternate_system := coding_system_to_uri(alternate_system_name):
-            alternate_coding['system'] = alternate_system
-
-        codings.append(alternate_coding)
-
-    if codings:
-        out['coding'] = codings
-
-    # .. and the display or original text becomes CodeableConcept.text.
-    original_text = component_value(repetition, 9)
-
-    if original_text:
-        out['text'] = original_text
-    elif text:
-        out['text'] = text
-    elif code:
-        out['text'] = code
-
-    if not out:
-        return None
+        out.append(email_point)
 
     return out
 
@@ -370,7 +457,8 @@ def xcn_to_name_and_identifier(repetition:'anylist', config:'FHIRMappingConfig')
         universal_id = subcomponent_value(repetition, 9, 2)
         universal_id_type = subcomponent_value(repetition, 9, 3)
 
-        system = hd_to_system(namespace, universal_id, universal_id_type, config)
+        # An XCN always identifies a person, so person-registry authorities apply.
+        system = hd_to_system(namespace, universal_id, universal_id_type, config, Practitioner_Authority_Systems)
         if system:
             identifier['system'] = system
 
@@ -383,7 +471,7 @@ def xcn_to_name_and_identifier(repetition:'anylist', config:'FHIRMappingConfig')
     # .. and the name components build a HumanName the same way an XPN does.
     name:'stranydict' = {}
 
-    family = subcomponent_value(repetition, 2, 1)
+    family = fn_to_family_name(repetition, 2)
     if family:
         name['family'] = family
 
@@ -424,205 +512,6 @@ def xcn_to_name_and_identifier(repetition:'anylist', config:'FHIRMappingConfig')
         return None
 
     return out
-
-# ################################################################################################################################
-
-def dtm_to_datetime(value:'strnone', config:'FHIRMappingConfig') -> 'strnone':
-    """ Converts an HL7 DTM value of any precision to a FHIR dateTime string.
-    Values without their own timezone offset receive the config's default one.
-    """
-    if not value:
-        return None
-
-    value = value.strip()
-    if not value:
-        return None
-
-    # Split off the timezone offset if the value carries one ..
-    offset = ''
-
-    for sign in ('+', '-'):
-        sign_index = value.find(sign)
-        if sign_index > 0:
-            raw_offset = value[sign_index:]
-            value = value[:sign_index]
-
-            # An HL7 offset is +HHMM, a FHIR one is +HH:MM
-            offset_digits = raw_offset[1:]
-            if len(offset_digits) == 4:
-                offset = f'{raw_offset[0]}{offset_digits[:2]}:{offset_digits[2:]}'
-            break
-
-    # .. split off fractional seconds, FHIR keeps them after the seconds part ..
-    fraction = ''
-    dot_index = value.find('.')
-
-    if dot_index > 0:
-        fraction = value[dot_index:]
-        value = value[:dot_index]
-
-    length = len(value)
-
-    # .. a bare year, year-month or full date has no time part and no offset ..
-    if length == _DTM_Year_Length:
-        out = value
-        return out
-
-    if length == _DTM_Month_Length:
-        out = f'{value[:4]}-{value[4:6]}'
-        return out
-
-    if length == _DTM_Day_Length:
-        out = f'{value[:4]}-{value[4:6]}-{value[6:8]}'
-        return out
-
-    # .. anything longer carries a time and needs an offset, defaulting to the configured one ..
-    if not offset:
-        offset = config.default_timezone
-
-    date_part = f'{value[:4]}-{value[4:6]}-{value[6:8]}'
-
-    if length == _DTM_Hour_Length:
-        time_part = f'{value[8:10]}:00:00'
-    elif length == _DTM_Minute_Length:
-        time_part = f'{value[8:10]}:{value[10:12]}:00'
-    elif length >= _DTM_Second_Length:
-        time_part = f'{value[8:10]}:{value[10:12]}:{value[12:14]}{fraction}'
-
-    # .. anything else is not a value we can make sense of.
-    else:
-        return None
-
-    out = f'{date_part}T{time_part}{offset}'
-    return out
-
-# ################################################################################################################################
-
-def dtm_to_date(value:'strnone') -> 'strnone':
-    """ Converts an HL7 DTM value to a FHIR date string, dropping any time part.
-    """
-    if not value:
-        return None
-
-    value = value.strip()
-    if not value:
-        return None
-
-    length = len(value)
-
-    if length >= _DTM_Day_Length:
-        out = f'{value[:4]}-{value[4:6]}-{value[6:8]}'
-        return out
-
-    if length == _DTM_Month_Length:
-        out = f'{value[:4]}-{value[4:6]}'
-        return out
-
-    if length == _DTM_Year_Length:
-        out = value
-        return out
-
-    return None
-
-# ################################################################################################################################
-
-def _quantity(value:'float', units:'dictnone') -> 'stranydict':
-    """ Builds a FHIR Quantity from a number and an optional units concept.
-    """
-
-    # Our response to produce
-    out:'stranydict' = {'value': value}
-
-    if units:
-        coding_list = units.get('coding')
-        if coding_list:
-            first_coding = coding_list[0]
-
-            out['code'] = first_coding['code']
-            if 'system' in first_coding:
-                out['system'] = first_coding['system']
-
-        if 'text' in units:
-            out['unit'] = units['text']
-
-    return out
-
-# ################################################################################################################################
-
-def _parse_number(value:'strnone') -> 'float | None':
-    """ Parses a string as a float, returning None when it is not a number.
-    """
-    if not value:
-        return None
-
-    try:
-        out = float(value)
-    except ValueError:
-        return None
-
-    return out
-
-# ################################################################################################################################
-
-def sn_to_observation_value(repetition:'anylist', config:'FHIRMappingConfig', units:'dictnone') -> 'tuple[str, stranydict | str] | None':
-    """ Converts an SN - structured numeric - repetition to a FHIR observation value.
-    Returns the value field name and its content, following the six-way branch the
-    comparator, number, separator and second number combinations call for.
-    """
-    comparator = component_value(repetition, 1)
-    first_number = component_value(repetition, 2)
-    separator = component_value(repetition, 3)
-    second_number = component_value(repetition, 4)
-
-    first_value = _parse_number(first_number)
-    second_value = _parse_number(second_number)
-
-    # A plain number, with or without a comparator, becomes a Quantity ..
-    if first_value is not None:
-        if not separator:
-            quantity = _quantity(first_value, units)
-
-            if comparator:
-                quantity['comparator'] = comparator
-
-            out = ('valueQuantity', quantity)
-            return out
-
-        # .. a range like 3 - 5 becomes a Range ..
-        if separator == '-':
-            if second_value is not None:
-                low = _quantity(first_value, units)
-                high = _quantity(second_value, units)
-
-                out = ('valueRange', {'low': low, 'high': high})
-                return out
-
-        # .. a ratio like 1 : 128 or 1 / 128 becomes a Ratio ..
-        if separator in (':', '/'):
-            if second_value is not None:
-                numerator = _quantity(first_value, units)
-                denominator = _quantity(second_value, units)
-
-                out = ('valueRatio', {'numerator': numerator, 'denominator': denominator})
-                return out
-
-        # .. a plus after the number, like 2 +, marks categorical results and stays a string.
-        if separator == '+':
-            out = ('valueString', f'{first_number}+')
-            return out
-
-    # Anything else is preserved as the string the components spell out
-    parts:'anylist' = []
-
-    for component in (comparator, first_number, separator, second_number):
-        if component:
-            parts.append(component)
-
-    if parts:
-        out = ('valueString', ''.join(parts))
-        return out
-
-    return None
 
 # ################################################################################################################################
 # ################################################################################################################################

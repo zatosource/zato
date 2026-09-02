@@ -14,7 +14,7 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
-from zato.common.api import GENERIC, Groups
+from zato.common.api import GENERIC, Groups, MCP
 from zato.common.odb.model import GenericObject, to_json
 from zato.common.odb.query.generic import connection_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -69,6 +69,9 @@ GATEWAY_OPTIONAL_FIELDS = [
     # Content safety
     'safeguards_normalize_unicode', 'safeguards_unicode_mode', 'safeguards_sanitize_markup', 'safeguards_markup_mode',
     'safeguards_url_policy_enabled', 'safeguards_url_allow_list', 'safeguards_url_mode',
+
+    # The connections the gateway exposes as tools
+    *MCP.Connection_List_Keys,
 ]
 
 GATEWAY_OPAQUE_FIELDS = list(GATEWAY_OPTIONAL_FIELDS)

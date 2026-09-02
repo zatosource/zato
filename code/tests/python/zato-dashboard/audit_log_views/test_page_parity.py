@@ -23,6 +23,7 @@ from zato.admin.web.views.audit_log import object_index
 from zato.admin.web.views.audit_log.sources import get_resubmit_labels, _source_resubmit
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, ModuleCtx as AuditLogCtx
 from zato.common.ext.bunch import Bunch
+from zato.common.typing_ import cast_
 
 # Test support
 from live_sql.env import database_env
@@ -96,7 +97,8 @@ def _get_context(tmp_path:'any_', source:'str', object_name:'str') -> 'dict':
     with _one_mllp_event(tmp_path):
         response = object_index(_new_request(source, object_name))
 
-    return response.context_data
+    out = cast_('dict', response.context_data)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

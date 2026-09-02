@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import pytest
 
 # Zato
-from certificates import generate_certificates
+from mq_certificates import generate_certificates
 from containers import start_ibm_mq, stop_container
 
 # ################################################################################################################################
@@ -26,7 +26,7 @@ from containers import start_ibm_mq, stop_container
 
 if 0:
     from collections.abc import Iterator
-    from certificates import CertificatePaths
+    from mq_certificates import CertificatePaths
     from containers import MQServer
 
     certificatesgen = Iterator[CertificatePaths]

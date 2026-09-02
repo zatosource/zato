@@ -52,8 +52,11 @@ Screens = [
 _here = os.path.dirname(os.path.abspath(__file__))
 _node_dir = os.path.abspath(os.path.join(_here, '..', '..', '..', 'js', 'zato-rule-engine-dashboard'))
 
-# The static roots jsdom serves scripts and stylesheets from.
+# The static roots jsdom serves scripts and stylesheets from. The rule-engine scripts
+# live in two places - the editor core ships with the shared UI kit in zato-common while
+# the dashboard keeps its own screens - and Django's app finders merge both at runtime.
 _webapp_static = os.path.join(os.path.dirname(os.path.abspath(webapp_ui.__file__)), 'static', 'webapp')
+_shared_rule_engine_static = os.path.join(os.path.dirname(os.path.abspath(webapp_ui.__file__)), 'static', 'rule-engine')
 _dashboard_static = os.path.join(os.path.dirname(os.path.abspath(dashboard_app.__file__)), 'static', 'rule-engine')
 
 # ################################################################################################################################
@@ -155,6 +158,7 @@ def test_screens_boot_in_jsdom(client:'any_', live_server:'any_', tmp_path:'any_
         cookies,
         _webapp_static,
         _dashboard_static,
+        _shared_rule_engine_static,
     ])
 
 # ################################################################################################################################
@@ -168,6 +172,7 @@ def test_editor_scale_budgets() -> 'None':
         os.path.join(_node_dir, 'check_scale.js'),
         os.path.join(_webapp_static, 'js'),
         os.path.join(_dashboard_static, 'js'),
+        os.path.join(_shared_rule_engine_static, 'js'),
     ])
 
 # ################################################################################################################################

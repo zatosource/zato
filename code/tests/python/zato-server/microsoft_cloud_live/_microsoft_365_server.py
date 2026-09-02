@@ -15,7 +15,7 @@ import tempfile
 import threading
 import time
 from datetime import datetime, timedelta, timezone
-from http.client import ACCEPTED, BAD_REQUEST, NOT_FOUND, OK, UNAUTHORIZED
+from http.client import ACCEPTED, BAD_REQUEST, CREATED, NOT_FOUND, OK, UNAUTHORIZED
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -32,7 +32,7 @@ from zato.common.crypto.api import CryptoManager
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, strnone
+    from zato.common.typing_ import any_, anydict, anylist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -191,6 +191,9 @@ class Microsoft365TestHandler(BaseHTTPRequestHandler):
     # Payloads that the sendMail endpoint received
     sent_messages:'list' = []
 
+    # Payloads that the Teams chat messages endpoint received
+    chat_messages:'anylist' = []
+
     def log_message(self, format:'any_', *args:'any_') -> 'None':
         pass
 
@@ -340,6 +343,29 @@ class Microsoft365TestHandler(BaseHTTPRequestHandler):
                     self._send_json(OK, {'value': self.users})
                     return
 
+        # POST /chats/{chat_id}/messages - a Teams message to a chat, recorded and echoed back
+        if segment_count == 3:
+            if segments[0] == 'chats':
+                if segments[2] == 'messages':
+                    if method == 'POST':
+                        body = self._read_body()
+                        payload = json.loads(body)
+
+                        Microsoft365TestHandler.chat_messages.append({
+                            'chat_id': segments[1],
+                            'payload': payload,
+                        })
+
+                        message_count = len(Microsoft365TestHandler.chat_messages)
+                        message_id = f'chat-message-{message_count}'
+
+                        self._send_json(CREATED, {
+                            'id': message_id,
+                            'chatId': segments[1],
+                            'body': payload['body'],
+                        })
+                        return
+
         # Anything below this point is scoped to a single user
         if segment_count >= 3:
             if segments[0] == 'users':
@@ -449,6 +475,7 @@ def start_microsoft_365_server(
     Microsoft365TestHandler.users = _build_initial_users()
     Microsoft365TestHandler.events = _build_initial_events()
     Microsoft365TestHandler.sent_messages = []
+    Microsoft365TestHandler.chat_messages = []
 
     server = ThreadingHTTPServer(('127.0.0.1', port), Microsoft365TestHandler)
 

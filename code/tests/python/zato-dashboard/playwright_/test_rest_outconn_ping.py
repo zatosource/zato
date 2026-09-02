@@ -212,7 +212,7 @@ class TestRESTOutconnPing:
         logger.info('[test_ping_failure] ping_result=%s', ping_result)
 
         assert not ping_result['is_success'], f'Expected a failed ping, got: {ping_result}'
-        assert ping_result['info'], f'Expected failure details in the ping response, got: {ping_result}'
+        assert ping_result['details'], f'Expected failure details in the ping response, got: {ping_result}'
 
 # ################################################################################################################################
 

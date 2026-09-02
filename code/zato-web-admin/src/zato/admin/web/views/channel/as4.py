@@ -11,7 +11,7 @@ from zato.admin.web.forms.channel.as4 import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, extract_security_id, Index as _Index
 from zato.admin.web.views.audit_log.as4 import get_audit_log_object_name
 from zato.admin.web.views.outgoing.as4 import get_cert_expiry
-from zato.common.api import AS4, CONNECTION, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
+from zato.common.api import AS4, CONNECTION, Sec_Def_Type_Name, URL_TYPE, ZATO_NONE
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,7 +72,7 @@ class Index(_Index):
 
         if security_id:
             if security_id != ZATO_NONE:
-                item.sec_type_name = SEC_DEF_TYPE_NAME[item.sec_type]
+                item.sec_type_name = Sec_Def_Type_Name[item.sec_type]
 
         # The edit form's routing field is called service.
         if hasattr(item, 'service_name'):

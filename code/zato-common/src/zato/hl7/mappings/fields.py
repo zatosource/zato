@@ -10,8 +10,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, intset, strnone
+    from zato.common.typing_ import any_, anylist, intset, strlist, strnone
     anylist = anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# HL7 v2 marks a value as explicitly deleted with two double quotes - such a value carries no data.
+Explicit_Null = '""'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,10 +28,11 @@ class SegmentAccessor:
     The underlying data is the Rust parser's structure: each field is a list
     of repetitions, each repetition a list of components, each component a list
     of subcomponents (plain strings). Positions are the 1-based HL7 field numbers,
-    including the MSH offset - MSH-2 lives at raw index 0.
+    including the MSH offset - MSH-2 is at raw index 0.
     """
 
     def __init__(self, raw_segment:'any_') -> 'None':
+        self.raw_segment = raw_segment
         self.segment_id:'str' = raw_segment.segment_id
         self._fields = raw_segment.fields
         self._index_offset = 2 if self.segment_id == 'MSH' else 1
@@ -43,7 +50,7 @@ class SegmentAccessor:
         if index >= field_count:
             return []
 
-        # Repetitions that carry no data at all are of no interest to any mapper
+        # Repetitions that carry no data at all are of no interest to any mapper.
         out:'anylist' = []
 
         for repetition in self._fields[index]:
@@ -101,17 +108,71 @@ class SegmentAccessor:
         return out
 
 # ################################################################################################################################
+
+    def serialize(self, position:'int') -> 'str':
+        """ Serializes one field back to its wire form, with all its separators.
+        """
+        index = position - self._index_offset
+
+        out = serialize_field(self._fields[index])
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def serialize_field(field_data:'any_') -> 'str':
+    """ Serializes one raw field back to its wire form, with all its separators.
+    """
+    repetition_strings:'strlist' = []
+
+    for repetition in field_data:
+        component_strings:'strlist' = []
+
+        for component in repetition:
+            joined_subcomponents = '&'.join(component)
+            component_strings.append(joined_subcomponents)
+
+        joined_components = '^'.join(component_strings)
+        repetition_strings.append(joined_components)
+
+    out = '~'.join(repetition_strings)
+    return out
+
+# ################################################################################################################################
+
+def serialize_repetition(repetition:'anylist') -> 'str':
+    """ Serializes one repetition back to its wire form, with all its separators.
+    """
+    component_strings:'strlist' = []
+
+    for component in repetition:
+        joined_subcomponents = '&'.join(component)
+        component_strings.append(joined_subcomponents)
+
+    out = '^'.join(component_strings)
+    return out
+
 # ################################################################################################################################
 
 def _repetition_has_data(repetition:'anylist') -> 'bool':
     """ Tells whether any component of a repetition carries a non-empty subcomponent.
+    An explicit null - two double quotes - is a deletion marker, not data.
     """
+    # Our response to produce
+    out = False
+
     for component in repetition:
         for subcomponent in component:
             if subcomponent:
-                return True
+                if subcomponent != Explicit_Null:
+                    out = True
+                    break
 
-    return False
+        # A component with data means the whole repetition has data.
+        if out:
+            break
+
+    return out
 
 # ################################################################################################################################
 
@@ -131,6 +192,10 @@ def component_value(repetition:'anylist', position:'int') -> 'strnone':
     first_subcomponent = component[0]
     if first_subcomponent:
 
+        # An explicit null is a deletion marker, not data.
+        if first_subcomponent == Explicit_Null:
+            return None
+
         out = first_subcomponent
         return out
 
@@ -138,7 +203,7 @@ def component_value(repetition:'anylist', position:'int') -> 'strnone':
 
 # ################################################################################################################################
 
-def subcomponent_value(repetition:'anylist', position:'int', sub_position:'int') -> 'strnone':
+def subcomponent_value(repetition:'anylist', position:'int', subcomponent_position:'int') -> 'strnone':
     """ Returns one subcomponent of the component at a 1-based position, or None when empty or absent.
     """
     index = position - 1
@@ -148,14 +213,18 @@ def subcomponent_value(repetition:'anylist', position:'int', sub_position:'int')
         return None
 
     component = repetition[index]
-    sub_index = sub_position - 1
+    subcomponent_index = subcomponent_position - 1
     subcomponent_count = len(component)
 
-    if sub_index >= subcomponent_count:
+    if subcomponent_index >= subcomponent_count:
         return None
 
-    subcomponent = component[sub_index]
+    subcomponent = component[subcomponent_index]
     if subcomponent:
+
+        # An explicit null is a deletion marker, not data.
+        if subcomponent == Explicit_Null:
+            return None
 
         out = subcomponent
         return out

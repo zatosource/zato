@@ -220,6 +220,8 @@ from zato.hl7v2.v2_9.messages import (
     STC_S33,
     TCU_U10,
     UDM_Q05,
+    VXQ_V01,
+    VXR_V03,
     VXU_V04,
 )
 
@@ -3060,6 +3062,32 @@ class TestMessageSerialization:
         assert isinstance(j, str)
         parsed = json.loads(j)
         assert parsed.get("_structure_id") == "UDM_Q05"
+
+    def test_vxq_v01_to_dict(self):
+        msg = VXQ_V01()
+        d = msg.to_dict()
+        assert isinstance(d, dict)
+        assert d.get("_structure_id") == "VXQ_V01"
+
+    def test_vxq_v01_to_json(self):
+        msg = VXQ_V01()
+        j = msg.to_json()
+        assert isinstance(j, str)
+        parsed = json.loads(j)
+        assert parsed.get("_structure_id") == "VXQ_V01"
+
+    def test_vxr_v03_to_dict(self):
+        msg = VXR_V03()
+        d = msg.to_dict()
+        assert isinstance(d, dict)
+        assert d.get("_structure_id") == "VXR_V03"
+
+    def test_vxr_v03_to_json(self):
+        msg = VXR_V03()
+        j = msg.to_json()
+        assert isinstance(j, str)
+        parsed = json.loads(j)
+        assert parsed.get("_structure_id") == "VXR_V03"
 
     def test_vxu_v04_to_dict(self):
         msg = VXU_V04()

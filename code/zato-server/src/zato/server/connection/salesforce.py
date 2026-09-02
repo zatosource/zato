@@ -10,13 +10,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from json import dumps
 
 # requests
-from requests import get as request_get, post as requests_post
+from requests import delete as requests_delete, get as requests_get, patch as requests_patch, post as requests_post
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, dictnone, stranydict, strnone
+    from zato.common.typing_ import any_, dictnone, stranydict, strnone
 
     dictnone = dictnone
     strnone = strnone
@@ -28,16 +28,21 @@ class ModuleCtx:
 
     PathLogin = '/services/oauth2/token'
     PathBase = '/services/data/v{api_version}'
+    PathDataRoot = '/services/data/'
 
     MethodGet = 'get'
     MethodPost = 'post'
+    MethodPatch = 'patch'
+    MethodDelete = 'delete'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-method_map = {
-    ModuleCtx.MethodGet: request_get,
+_method_map = {
+    ModuleCtx.MethodGet: requests_get,
     ModuleCtx.MethodPost: requests_post,
+    ModuleCtx.MethodPatch: requests_patch,
+    ModuleCtx.MethodDelete: requests_delete,
 }
 
 # ################################################################################################################################
@@ -57,12 +62,12 @@ class SalesforceClient:
     def __init__(
         self,
         *,
-        api_version, # type: str
-        address, # type: str
-        username, # type: str
-        password, # type: str
-        consumer_key, # type: str
-        consumer_secret, # type: str
+        api_version:'str',
+        address:'str',
+        username:'str',
+        password:'str',
+        consumer_key:'str',
+        consumer_secret:'str',
     ) -> 'None':
 
         self.api_version = api_version
@@ -76,7 +81,7 @@ class SalesforceClient:
 
     @staticmethod
     def from_config(config:'stranydict') -> 'SalesforceClient':
-        return SalesforceClient(
+        out = SalesforceClient(
             api_version = config['api_version'],
             address = config['address'],
             username = config['username'],
@@ -84,41 +89,51 @@ class SalesforceClient:
             consumer_key = config['consumer_key'],
             consumer_secret = config['consumer_secret'],
         )
+        return out
 
 # ################################################################################################################################
 
     def _invoke_http(
         self,
         *,
-        path,    # type: str
-        data,    # type: strnone
-        headers, # type: dictnone
-        params,  # type: dictnone
-        method=ModuleCtx.MethodGet,  # type: str
-    ) -> 'anydict':
+        path:'str',
+        data:'strnone',
+        headers:'dictnone',
+        params:'dictnone',
+        method:'str'=ModuleCtx.MethodGet,
+    ) -> 'any_':
 
-        # Build a full URL now for the incoming request.
-        if path != ModuleCtx.PathLogin:
-            path_prefix = ModuleCtx.PathBase.format(api_version=self.api_version)
-        else:
+        # Build a full URL now for the incoming request - the login path and paths
+        # that already carry the API prefix, such as nextRecordsUrl values
+        # from query responses, are used as they are.
+        if path == ModuleCtx.PathLogin:
             path_prefix = ''
+        elif path.startswith(ModuleCtx.PathDataRoot):
+            path_prefix = ''
+        else:
+            path_prefix = ModuleCtx.PathBase.format(api_version=self.api_version)
 
         url = self.address + path_prefix + path
 
         # Invoke Salesforce now ..
-        func = method_map[method]
+        func = _method_map[method]
 
         response = func(url, data=data, headers=headers, params=params)
 
-        # .. convert the response to JSON ..
-        response_json = response.json()
+        # .. a 204 No Content answer to PATCH or DELETE carries no JSON to parse ..
+        if not response.text:
+            out = {}
 
-        # .. and return it to our caller.
-        return response_json
+        # .. any other response is converted to JSON ..
+        else:
+            out = response.json()
+
+        # .. and returned to our caller.
+        return out
 
 # ################################################################################################################################
 
-    def ensure_access_token_is_assigned(self):
+    def ensure_access_token_is_assigned(self) -> 'None':
 
         # This information is sent in headers ..
         headers = {
@@ -145,22 +160,21 @@ class SalesforceClient:
         )
 
         # .. and try extract the access token now for later use.
-        access_token = response_json.get('access_token')
-        if not access_token:
-            raise Exception('No Salesforce access token found in response `{}`)'.format(response_json))
-        else:
-            self.access_token = access_token
-            self.http_bearer = 'Bearer ' + self.access_token
+        if not (access_token := response_json.get('access_token')):
+            raise Exception(f'No Salesforce access token found in response `{response_json}`')
+
+        self.access_token = access_token
+        self.http_bearer = 'Bearer ' + self.access_token
 
 # ################################################################################################################################
 
     def _send_request(
         self,
         *,
-        path,   # type: str
-        method, # type: str
-        data=None, # type: strnone
-        headers=None, # type: dictnone
+        path:'str',
+        method:'str',
+        data:'strnone'=None,
+        headers:'dictnone'=None,
     ) -> 'any_':
 
         # Before sending the request, make sure we have an access token to authenticate with.
@@ -176,51 +190,85 @@ class SalesforceClient:
         if headers:
             _headers.update(headers)
 
-        return self._invoke_http(
+        out = self._invoke_http(
             path=path,
             data=data,
             headers=_headers,
             params=None,
             method=method
         )
+        return out
 
 # ################################################################################################################################
 
     def get(
         self,
-        path, # type: str
+        path:'str',
     ) -> 'any_':
 
-        return self._send_request(
+        out = self._send_request(
             path=path,
             method=ModuleCtx.MethodGet,
         )
+        return out
 
 # ################################################################################################################################
 
     def post(
         self,
-        path,      # type: str
-        data=None, # type: dictnone
+        path:'str',
+        data:'dictnone'=None,
     ) -> 'any_':
 
         _data = dumps(data)
 
-        return self._send_request(
+        out = self._send_request(
             path=path,
             data=_data,
             method=ModuleCtx.MethodPost
         )
+        return out
 
 # ################################################################################################################################
 
-    def ping(self):
-        """ Sends a ping-like request to Salesforce.
+    def patch(
+        self,
+        path:'str',
+        data:'dictnone'=None,
+    ) -> 'any_':
+
+        _data = dumps(data)
+
+        out = self._send_request(
+            path=path,
+            data=_data,
+            method=ModuleCtx.MethodPatch
+        )
+        return out
+
+# ################################################################################################################################
+
+    def delete(
+        self,
+        path:'str',
+    ) -> 'any_':
+
+        out = self._send_request(
+            path=path,
+            method=ModuleCtx.MethodDelete
+        )
+        return out
+
+# ################################################################################################################################
+
+    def ping(self) -> 'any_':
+        """ Sends a ping-like request to Salesforce - the base path alone lists the API's resources.
         """
-        return self._send_request(
-            path=ModuleCtx.PathBase.format(api_version=self.api_version),
+        out = self._send_request(
+            path='/',
             method=ModuleCtx.MethodGet
         )
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

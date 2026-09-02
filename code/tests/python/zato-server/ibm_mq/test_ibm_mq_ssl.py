@@ -15,7 +15,7 @@ from harness import QueueBridgeHarness
 # ################################################################################################################################
 
 if 0:
-    from certificates import CertificatePaths
+    from mq_certificates import CertificatePaths
     from containers import MQServer
 
     CertificatePaths = CertificatePaths

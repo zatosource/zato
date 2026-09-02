@@ -52,7 +52,7 @@ class FHIRPublishDeliversTestCase(unittest.TestCase):
 
     def test_the_document_is_created_under_the_path_its_type_names(self) -> 'None':
 
-        document = _new_patient('Kowalska')
+        document = _new_patient('Johnson')
 
         _ = publish_fhir(self.client, TestConfig.fhir_connection, document)
 
@@ -72,7 +72,7 @@ class FHIRPublishDeliversTestCase(unittest.TestCase):
 
     def test_the_body_is_the_document_that_was_published(self) -> 'None':
 
-        document = _new_patient('Nowak')
+        document = _new_patient('Miller')
 
         _ = publish_fhir(self.client, TestConfig.fhir_connection, document)
 
@@ -87,7 +87,7 @@ class FHIRPublishDeliversTestCase(unittest.TestCase):
 
     def test_publish_returns_the_id_of_the_queued_document(self) -> 'None':
 
-        document = _new_patient('Lewandowska')
+        document = _new_patient('Davis')
 
         msg_id = publish_fhir(self.client, TestConfig.fhir_connection, document)
 
@@ -132,7 +132,7 @@ class FHIRPublishDeliversTestCase(unittest.TestCase):
         """ Such a document has no path to be created under, so it is refused when it is published
         rather than left retrying in a queue forever.
         """
-        document = {'name': [{'family': 'Kowalska'}]}
+        document = {'name': [{'family': 'Johnson'}]}
 
         with self.assertRaises(Exception):
             _ = publish_fhir(self.client, TestConfig.fhir_connection, document)

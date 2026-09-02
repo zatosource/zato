@@ -45,22 +45,25 @@ _schedules_template = 'zato/outgoing/file-transfer-schedules.html'
 # .. and the multi-step wizard that creates or edits one.
 _wizard_template = 'zato/outgoing/file-transfer-schedule-wizard.html'
 
-# How each connection type reads on screen
+# How each connection type reads on screen.
 _transfer_labels = {
     'sftp': 'SFTP',
     'smb': 'SMB',
+    'ftp': 'FTP',
 }
 
-# Where the back-to-the-connections link of each type points to
+# Where the back-to-the-connections link of each type points to.
 _back_links = {
     'sftp': ('out-sftp', 'outconn-sftp'),
     'smb': ('out-smb', 'outconn-smb'),
+    'ftp': ('out-ftp', 'outconn-ftp'),
 }
 
-# Which generic connection type each transfer type stands for
+# Which generic connection type each transfer type stands for.
 _connection_types = {
     'sftp': GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
     'smb': GENERIC.CONNECTION.TYPE.OUTCONN_SMB,
+    'ftp': GENERIC.CONNECTION.TYPE.OUTCONN_FTP,
 }
 
 # ################################################################################################################################
@@ -141,7 +144,7 @@ def _run_every_human(schedule:'stranydict') -> 'str':
 
 @method_allowed('GET')
 def schedules(req:'any_', transfer_type:'str', conn_id:'str', cluster_id:'str', name_slug:'str') -> 'TemplateResponse':
-    """ The list of file transfer schedules of one SFTP or SMB connection.
+    """ The list of file transfer schedules of one SFTP, SMB or FTP connection.
     """
     items = []
 
@@ -251,7 +254,7 @@ def _wizard_response(
 @method_allowed('GET')
 def schedule_wizard_create(req:'any_', transfer_type:'str', conn_id:'str', cluster_id:'str',
     name_slug:'str') -> 'TemplateResponse':
-    """ A multi-step wizard for a new file transfer schedule of one SFTP or SMB connection.
+    """ A multi-step wizard for a new file transfer schedule of one SFTP, SMB or FTP connection.
     """
     form = CreateForm(req=req)
 
@@ -266,7 +269,7 @@ def schedule_wizard_create(req:'any_', transfer_type:'str', conn_id:'str', clust
 @method_allowed('GET')
 def schedule_wizard_edit(req:'any_', transfer_type:'str', conn_id:'str', cluster_id:'str', name_slug:'str',
     schedule_id:'str') -> 'TemplateResponse':
-    """ The schedule wizard prefilled with one existing schedule of an SFTP or SMB connection.
+    """ The schedule wizard prefilled with one existing schedule of an SFTP, SMB or FTP connection.
     """
 
     # Find the schedule being edited ..

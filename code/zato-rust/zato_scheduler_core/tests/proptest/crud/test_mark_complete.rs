@@ -31,7 +31,7 @@ fn make_job() -> SchedulerJob {
 
 /// Mirrors what `handle_mark_complete` does to a job's runtime state -
 /// the run's historical record lives in the server's audit log now.
-fn mark_complete(running_job: &mut RunningJob) {
+const fn mark_complete(running_job: &mut RunningJob) {
     running_job.in_flight = false;
     running_job.in_flight_since = None;
     running_job.in_flight_run = None;

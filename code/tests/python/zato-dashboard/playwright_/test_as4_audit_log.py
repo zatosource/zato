@@ -16,11 +16,12 @@ import pytest
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery, open_create_dialog
 from as4_channel import edit_as4_channel, open_as4_channel_page
-from as4_exchange import delete_exchange, new_exchange, send_with_retry, wait_for_invoker_service, \
-    Event_Message_Received, Event_Message_Sent, Event_Receipt_Received, Event_Receipt_Sent, Events_Per_Exchange
+from as4_exchange import delete_exchange, new_exchange, send_with_retry, wait_for_invoker_service, Events_Per_Exchange
 from as4_keys import new_test_parties
 from as4_outconn import create_as4_outconn, delete_as4_outconn, edit_as4_outconn, open_as4_outconn_page, \
     open_edit_dialog, wait_for_as4_outconn_row
+from audit_log_ui import get_details_value, get_pane_cid, get_row_event, get_row_outcome, get_row_time_text, get_rows, \
+    open_details
 from audit_toggle import assert_checkbox_exists, get_audit_row_count, get_checkbox_state, wait_for_table
 
 # ################################################################################################################################
@@ -28,7 +29,7 @@ from audit_toggle import assert_checkbox_exists, get_audit_row_count, get_checkb
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,14 +43,11 @@ _Audit_Log_Url_Prefix = '/zato/audit-log/'
 # The section title for the AS4 source, compared lowercase because the heading is styled with CSS
 _AS4_Title = 'as4 audit log'
 
-# Column indexes: Time, CID, Event, Partner, Message id, Conversation id, Outcome, Size, Data preview
-_Column_Time            = 0
-_Column_CID             = 1
-_Column_Event           = 2
-_Column_Partner         = 3
-_Column_Msg_ID          = 4
-_Column_Conversation_ID = 5
-_Column_Outcome         = 6
+# What the four events of one exchange show as, by the labels their role tags carry
+_Event_Message_Sent     = 'Message sent'
+_Event_Receipt_Received = 'Receipt received'
+_Event_Message_Received = 'Message received'
+_Event_Receipt_Sent     = 'Receipt sent'
 
 # What an event that went through says
 _Outcome_Ok = 'ok'
@@ -63,36 +61,15 @@ _AS4_Log_Patterns = ('AS4 request rejected',)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_rows(page:'Page') -> 'anylist':
-    """ Returns all rows currently shown in the audit log table.
-    """
-    out = page.query_selector_all('#audit-log-table-body tr')
-    return out
-
-# ################################################################################################################################
-
-def _get_row_cells(row:'any_') -> 'anylist':
-    """ Returns the text of each cell in one audit log row.
-    """
-    out = [] # type: anylist
-
-    for cell in row.query_selector_all('td'):
-        out.append(cell.inner_text().strip())
-
-    return out
-
-# ################################################################################################################################
-
 def _get_events_by_type(page:'Page') -> 'anydict':
-    """ Returns the cells of every row currently shown, keyed by the event type of the row.
+    """ Returns every row currently shown, keyed by the on-screen event label of the row.
     """
 
     # Our response to produce
     out:'anydict' = {}
 
-    for row in _get_rows(page):
-        cells = _get_row_cells(row)
-        out[cells[_Column_Event]] = cells
+    for row in get_rows(page):
+        out[get_row_event(row)] = row
 
     return out
 
@@ -145,55 +122,57 @@ class TestAS4AuditLog:
             assert title_text.startswith(_AS4_Title), \
                 f'Expected the title to start with "{_AS4_Title}", got: "{title_text}"'
 
-            # .. with the party pair in the title pill ..
+            # .. with the party pair in the title pill.
             pill_text = page.inner_text('#detail-section-title .detail-component-pill')
             pill_text = pill_text.lower()
             assert pill_text == pair.lower(), f'Expected pair "{pair}" in the pill, got: "{pill_text}"'
 
-            # .. and the AS4 columns in the header, compared case-insensitively
-            # .. because the headers are uppercased with CSS.
-            header_text = page.inner_text('#audit-log-table thead')
-            header_text = header_text.lower()
-            assert 'partner' in header_text, f'Expected a Partner column, got: "{header_text}"'
-            assert 'message id' in header_text, f'Expected a Message id column, got: "{header_text}"'
-            assert 'conversation id' in header_text, f'Expected a Conversation id column, got: "{header_text}"'
-
             events = _get_events_by_type(page)
 
             expected_events = {
-                Event_Message_Sent,
-                Event_Receipt_Received,
-                Event_Message_Received,
-                Event_Receipt_Sent,
+                _Event_Message_Sent,
+                _Event_Receipt_Received,
+                _Event_Message_Received,
+                _Event_Receipt_Sent,
             }
 
             assert set(events) == expected_events, f'Expected the four events of one exchange, got: {sorted(events)}'
 
-            # Every event is filed under the pair and names the message it belongs to ..
-            for event_type, cells in events.items():
+            # Every event is filed under the pair and names the message it belongs to,
+            # all of which the pane's Details tab says ..
+            conversation_ids = {} # type: anydict
 
-                assert cells[_Column_Partner] == pair, \
-                    f'Expected partner "{pair}" on {event_type}, got: "{cells[_Column_Partner]}"'
-
-                assert cells[_Column_Msg_ID] == result['message_id'], \
-                    f'Expected message id "{result["message_id"]}" on {event_type}, got: "{cells[_Column_Msg_ID]}"'
-
-                assert cells[_Column_Outcome] == _Outcome_Ok, \
-                    f'Expected outcome "{_Outcome_Ok}" on {event_type}, got: "{cells[_Column_Outcome]}"'
-
-                assert cells[_Column_CID] != '', f'Expected a correlation id on {event_type}'
+            for event_label, row in events.items():
 
                 # The times are shown in the browser's locale format, not as raw ISO strings.
-                assert cells[_Column_Time] != '', f'Expected a non-empty event time on {event_type}'
-                assert '+00:00' not in cells[_Column_Time], \
-                    f'Expected a locale-formatted time on {event_type}, got: "{cells[_Column_Time]}"'
+                time_text = get_row_time_text(row)
+                assert time_text != '', f'Expected a non-empty event time on {event_label}'
+                assert '+00:00' not in time_text, \
+                    f'Expected a locale-formatted time on {event_label}, got: "{time_text}"'
+
+                outcome = get_row_outcome(page, row)
+                assert outcome == _Outcome_Ok, f'Expected outcome "{_Outcome_Ok}" on {event_label}, got: "{outcome}"'
+
+                open_details(page, row)
+
+                partner = get_details_value(page, 'Partner')
+                assert partner == pair, f'Expected partner "{pair}" on {event_label}, got: "{partner}"'
+
+                msg_id = get_details_value(page, 'Message id')
+                assert msg_id == result['message_id'], \
+                    f'Expected message id "{result["message_id"]}" on {event_label}, got: "{msg_id}"'
+
+                cid = get_pane_cid(page)
+                assert cid != '', f'Expected a correlation id on {event_label}'
+
+                conversation_ids[event_label] = get_details_value(page, 'Conversation id')
 
             # .. and the user message events carry the conversation their exchange belongs to.
-            sent_cells = events[Event_Message_Sent]
-            received_cells = events[Event_Message_Received]
+            sent_conversation_id = conversation_ids[_Event_Message_Sent]
+            received_conversation_id = conversation_ids[_Event_Message_Received]
 
-            assert sent_cells[_Column_Conversation_ID] != '', 'Expected a conversation id on the sent message'
-            assert sent_cells[_Column_Conversation_ID] == received_cells[_Column_Conversation_ID], \
+            assert sent_conversation_id != '', 'Expected a conversation id on the sent message'
+            assert sent_conversation_id == received_conversation_id, \
                 'Expected both sides of the exchange to record the same conversation id'
 
         finally:
@@ -244,11 +223,13 @@ class TestAS4AuditLog:
 
             # .. and the events of the exchange are shown.
             events = _get_events_by_type(page)
-            assert Event_Message_Sent in events, f'Expected a sent message, got: {sorted(events)}'
+            assert _Event_Message_Sent in events, f'Expected a sent message, got: {sorted(events)}'
 
-            cells = events[Event_Message_Sent]
-            assert cells[_Column_Msg_ID] == result['message_id'], \
-                f'Expected message id "{result["message_id"]}", got: "{cells[_Column_Msg_ID]}"'
+            open_details(page, events[_Event_Message_Sent])
+
+            msg_id = get_details_value(page, 'Message id')
+            assert msg_id == result['message_id'], \
+                f'Expected message id "{result["message_id"]}", got: "{msg_id}"'
 
         finally:
             delete_exchange(page, exchange)

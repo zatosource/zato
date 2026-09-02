@@ -35,6 +35,10 @@ models_file_name = 'default-models.yaml'
 default_models_yaml = """models:
 
   - provider: claude
+    id: claude-fable-5-1
+    name: Fable 5.1
+
+  - provider: claude
     id: claude-fable-5
     name: Fable 5
 

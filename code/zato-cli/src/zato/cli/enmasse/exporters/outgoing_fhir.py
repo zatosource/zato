@@ -11,7 +11,7 @@ import logging
 
 # Zato
 from zato.common.api import GENERIC
-from zato.common.hl7.fhir.fields import Outconn_Fields, Outconn_Security_Id_Key, Outconn_Security_Name_Key
+from zato.common.hl7.fhir.fields import Outgoing_Fields, Outgoing_Security_Id_Key, Outgoing_Security_Name_Key
 from zato.common.odb.model import SecurityBase, to_json
 from zato.common.odb.query.generic import connection_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -91,7 +91,7 @@ class OutgoingFHIRExporter:
                 'address': row['address'],
             }
 
-            for field in Outconn_Fields:
+            for field in Outgoing_Fields:
 
                 value = row.get(field.name, field.default)
 
@@ -99,10 +99,10 @@ class OutgoingFHIRExporter:
                     continue
 
                 # .. the security definition travels by name rather than by the id that is stored ..
-                if field.name == Outconn_Security_Id_Key:
+                if field.name == Outgoing_Security_Id_Key:
                     security_name = self._get_security_name(session, value)
                     if security_name:
-                        item[Outconn_Security_Name_Key] = security_name
+                        item[Outgoing_Security_Name_Key] = security_name
                     continue
 
                 item[field.name] = value

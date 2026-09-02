@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.common.alerting.names import get_notification_conn_name
 from zato.common.api import GENERIC
 from zato.common.odb.model import to_json
 from zato.common.odb.query import email_smtp_list
@@ -59,8 +60,9 @@ class SMTPExporter:
         """
         logger.info('Exporting SMTP connection definitions with exclusions')
 
-        # Names to exclude completely
-        excluded_names = set()
+        # Names to exclude completely - the default alert notification connection
+        # is a built-in placeholder seeded with every environment, so it never travels.
+        excluded_names = {get_notification_conn_name()}
 
         # Prefixes to exclude
         excluded_prefixes = ['zato', 'pub.zato', 'demo']

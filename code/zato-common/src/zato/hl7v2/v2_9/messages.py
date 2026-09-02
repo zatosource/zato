@@ -419,6 +419,9 @@ from zato.hl7v2.v2_9.groups import (
     SsrU04SpecimenContainer,
     SsuU03SpecimenContainer,
     TcuU10TestConfiguration,
+    VxrV03Insurance,
+    VxrV03Order,
+    VxrV03PatientVisit,
     VxuV04Insurance,
     VxuV04Order,
     VxuV04PatientVisit,
@@ -3538,6 +3541,33 @@ class UDM_Q05(HL7Message):
     urs = HL7SegmentAttr[URS](segment_id="URS", optional=True, repeatable=False)
     dsp = HL7SegmentAttr[DSP](segment_id="DSP", optional=False, repeatable=True)
     dsc = HL7SegmentAttr[DSC](segment_id="DSC", optional=True, repeatable=False)
+
+class VXQ_V01(HL7Message):
+    _structure_id = "VXQ_V01"
+
+    msh = HL7SegmentAttr[MSH](segment_id="MSH", optional=False, repeatable=False)
+    sft = HL7SegmentAttr[SFT](segment_id="SFT", optional=True, repeatable=True)
+    qrd = HL7SegmentAttr[QRD](segment_id="QRD", optional=False, repeatable=False)
+    qrf = HL7SegmentAttr[QRF](segment_id="QRF", optional=True, repeatable=False)
+
+class VXR_V03(HL7Message):
+    _structure_id = "VXR_V03"
+
+    msh = HL7SegmentAttr[MSH](segment_id="MSH", optional=False, repeatable=False)
+    sft = HL7SegmentAttr[SFT](segment_id="SFT", optional=True, repeatable=True)
+    msa = HL7SegmentAttr[MSA](segment_id="MSA", optional=False, repeatable=False)
+    qrd = HL7SegmentAttr[QRD](segment_id="QRD", optional=False, repeatable=False)
+    qrf = HL7SegmentAttr[QRF](segment_id="QRF", optional=True, repeatable=False)
+    pid = HL7SegmentAttr[PID](segment_id="PID", optional=False, repeatable=False)
+    pd1 = HL7SegmentAttr[PD1](segment_id="PD1", optional=True, repeatable=False)
+    nk1 = HL7SegmentAttr[NK1](segment_id="NK1", optional=True, repeatable=True)
+    patient_visit = \
+        HL7GroupAttr[VxrV03PatientVisit](name="PATIENT_VISIT", optional=True, repeatable=False)
+    gt1 = HL7SegmentAttr[GT1](segment_id="GT1", optional=True, repeatable=True)
+    insurance = \
+        HL7GroupAttr[VxrV03Insurance](name="INSURANCE", optional=True, repeatable=True)
+    order = \
+        HL7GroupAttr[VxrV03Order](name="ORDER", optional=True, repeatable=True)
 
 class VXU_V04(HL7Message):
     _structure_id = "VXU_V04"

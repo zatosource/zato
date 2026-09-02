@@ -40,11 +40,11 @@ from zato.common.dispatch import dispatcher
 from zato.common.facade import _service_name_to_topic, _service_sub_key_prefix
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
-from zato.common.typing_ import cast_
 from zato.common.pubsub.outgoing import audit_disabled_conn_types, find_outgoing_conn, get_outgoing_sub_config, \
     get_outgoing_sub_key, get_outgoing_topic_name, locate_outgoing_conn, OutgoingPublisher, OutgoingType, \
     parse_outgoing_sub_key
 from zato.common.pubsub.sql.backend import PublishResult
+from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, new_msg_id, parse_datetime, \
     update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.common.util.retry import get_remaining_time, get_sleep_time
@@ -76,6 +76,7 @@ from zato.server.generic.api.channel_ibm_mq import ChannelIBMMQWrapper
 from zato.server.generic.api.channel_kafka import ChannelKafkaWrapper
 from zato.server.generic.api.outconn_as2 import OutconnAS2Wrapper
 from zato.server.generic.api.outconn_es import OutconnESWrapper
+from zato.server.generic.api.outconn_ftp import OutconnFTPWrapper
 from zato.server.generic.api.outconn_graphql import OutconnGraphQLWrapper
 from zato.server.generic.api.outconn_grpc import OutconnGRPCWrapper
 from zato.server.generic.api.outconn_hl7_fhir import OutconnHL7FHIRWrapper
@@ -177,7 +178,7 @@ class ConfigManager(_ConfigManagerBase):
 
     # Assigned in init() - the declaration exists so that a config reload can check
     # whether a previous instance needs to be unregistered from the dispatcher.
-    request_dispatcher: 'RequestDispatcher | None' = None
+    request_dispatcher: 'RequestDispatcher' = cast_('RequestDispatcher', None)
 
     def __init__(self, config_store:'ConfigStore', server:'ParallelServer') -> 'None':
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -287,6 +288,9 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - SMB outconns
         self.outconn_smb = {}
 
+        # Generic connections - FTP outconns
+        self.outconn_ftp = {}
+
         # Generic connections - connector types registered from hot-deployed SDK modules,
         # mapping full type names, e.g. outconn-crm, to their Connector subclasses.
         self.sdk_connector_types = {}
@@ -364,6 +368,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA: self.outconn_odata,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP: self.outconn_sap,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_FTP: self.outconn_ftp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.outconn_sftp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB: self.outconn_smb,
         }
@@ -397,6 +402,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA: OutconnODataWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP: OutconnODataWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_FTP: OutconnFTPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: OutconnSFTPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB: OutconnSMBWrapper,
         }
@@ -1068,6 +1074,7 @@ class ConfigManager(_ConfigManagerBase):
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
         outconn_odata_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA, {})
         outconn_sap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP, {})
+        outconn_ftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_FTP, {})
         outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
         outconn_smb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB, {})
 
@@ -1099,6 +1106,7 @@ class ConfigManager(_ConfigManagerBase):
             outconn_ldap_map,
             outconn_llm_map,
             outconn_mongodb_map,
+            outconn_ftp_map,
             outconn_odata_map,
             outconn_sap_map,
             outconn_sftp_map,
@@ -1118,6 +1126,7 @@ class ConfigManager(_ConfigManagerBase):
             outconn_ldap_map,
             outconn_llm_map,
             outconn_mongodb_map,
+            outconn_ftp_map,
             outconn_odata_map,
             outconn_sap_map,
             outconn_sftp_map,
@@ -2255,6 +2264,9 @@ class ConfigManager(_ConfigManagerBase):
         msg['fs_sql_config'] = self.server.fs_sql_config
         self.sql_pool_store[msg['name']] = msg
 
+        # An MCP gateway that exposes this pool as a tool rebuilds its registry now
+        self.rebuild_mcp_registries_for_connection('sql', msg['name'])
+
     def on_config_event_OUTGOING_SQL_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an outgoing SQL connection pool and recreates it using the
         new password.
@@ -2278,6 +2290,9 @@ class ConfigManager(_ConfigManagerBase):
         """ Deletes an outgoing SQL connection pool.
         """
         del self.sql_pool_store[msg['name']]
+
+        # An MCP gateway that exposed this pool as a tool rebuilds its registry now
+        self.rebuild_mcp_registries_for_connection('sql', msg['name'])
 
 # ################################################################################################################################
 
@@ -2470,6 +2485,10 @@ class ConfigManager(_ConfigManagerBase):
             if is_plain_http and is_rename:
                 self.rename_outgoing_subscription(OutgoingType.REST, msg['id'], del_name, msg['name'])
 
+        # An MCP gateway that exposes this connection as a tool rebuilds its registry now
+        mcp_group = 'rest' if is_plain_http else 'soap'
+        self.rebuild_mcp_registries_for_connection(mcp_group, msg['name'])
+
     def on_config_event_OUTGOING_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an outgoing HTTP/SOAP connection (actually delegates the
         task to self._delete_config_close_wrapper_http_soap.
@@ -2479,6 +2498,10 @@ class ConfigManager(_ConfigManagerBase):
         # A deleted connection takes its queue with it, along with whatever that queue still held
         if msg['transport'] == URL_TYPE.PLAIN_HTTP:
             self.delete_outgoing_subscription(OutgoingType.REST, msg['id'], msg['name'])
+
+        # An MCP gateway that exposed this connection as a tool rebuilds its registry now
+        mcp_group = 'rest' if msg['transport'] == URL_TYPE.PLAIN_HTTP else 'soap'
+        self.rebuild_mcp_registries_for_connection(mcp_group, msg['name'])
 
 # ################################################################################################################################
 
@@ -2680,6 +2703,7 @@ class ConfigManager(_ConfigManagerBase):
         """ Creates or updates an Odoo connection.
         """
         _ = self._on_config_event_cloud_create_edit(msg, 'Odoo', self.config_store.out_odoo, OdooWrapper)
+        self.rebuild_mcp_registries_for_connection('odoo', msg['name'])
 
     on_config_event_OUTGOING_ODOO_CHANGE_PASSWORD = on_config_event_OUTGOING_ODOO_EDIT = on_config_event_OUTGOING_ODOO_CREATE
 
@@ -2687,6 +2711,41 @@ class ConfigManager(_ConfigManagerBase):
         """ Closes and deletes an Odoo connection.
         """
         self._delete_config_close_wrapper(msg['name'], self.config_store.out_odoo, 'Odoo', logger.debug)
+        self.rebuild_mcp_registries_for_connection('odoo', msg['name'])
+
+# ################################################################################################################################
+
+    def rebuild_mcp_registries_for_connection(self, group:'str', connection_name:'str') -> 'None':
+        """ Rebuilds the tool registry of every MCP gateway whose allow list of the given
+        group contains the connection that has just changed, so the next tools/list
+        already advertises what the change made of the connection.
+        """
+
+        for gateway_name, gateway_config in self.gateway_mcp.items():
+
+            wrapper = gateway_config.conn
+            registry = wrapper.tool_registry
+
+            # A gateway whose wrapper is not built yet has nothing to rebuild
+            if registry is None:
+                continue
+
+            if not (connection_names := registry.connection_lists.get(group)):
+                continue
+
+            if connection_name not in connection_names:
+                continue
+
+            # A rebuild that cannot resolve a name, e.g. right after a deletion,
+            # is reported here and the registry keeps its previous tools.
+            try:
+                registry.rebuild()
+            except Exception:
+                logger.warning('MCP gateway `%s` could not rebuild after a change to %s connection `%s`:\n%s',
+                    gateway_name, group, connection_name, format_exc())
+            else:
+                logger.info('MCP gateway `%s` rebuilt after a change to %s connection `%s`',
+                    gateway_name, group, connection_name)
 
 # ################################################################################################################################
 
@@ -3061,7 +3120,8 @@ class ConfigManager(_ConfigManagerBase):
 
         # .. clean up each subscription's in-memory and Redis state ..
         for sub in subscriptions:
-            self.cleanup_subscription(sub.sub_key, username)
+            sub_key = cast_('str', sub.sub_key)
+            self.cleanup_subscription(sub_key, username)
 
         # .. remove the client from the pattern matcher ..
         self.server.pubsub_pattern_matcher.remove_client(username)
@@ -3086,7 +3146,8 @@ class ConfigManager(_ConfigManagerBase):
                 filter(SecurityBase.id == sub.sec_base_id).\
                 one()
 
-            self.cleanup_subscription(sub.sub_key, sec_def.username)
+            sub_key = cast_('str', sub.sub_key)
+            self.cleanup_subscription(sub_key, sec_def.username)
 
 # ################################################################################################################################
 

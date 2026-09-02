@@ -13,12 +13,16 @@ from json import dumps
 from zato.common.test.playwright_pubsub import navigate_to_page
 from zato.common.typing_ import cast_
 
+# Zato - test helpers
+from _mcp_tool_sources import _picker_action, assigned_badge_selector, available_badge_selector, select_tool_source, \
+    Tool_Source_Keys, Tools_Card
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anylistnone, boolnone, strlist, strnone
+    from zato.common.typing_ import any_, anydictnone, anylistnone, boolnone, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,13 +32,6 @@ MCP_List_URL = '/zato/gateway/mcp/?cluster=1'
 
 # What the tooltip beside the button says once a wizard save went through
 Saved_Label = 'OK, saved'
-
-# The action each step 1 picker card registers its badge picker under - the zone element ids derive from it
-Picker_Actions = {
-    'services': 'wizard',
-    'skills': 'skills-wizard',
-    'security': 'sec-wizard',
-}
 
 # The step a create ends on - the review, where Next says Save
 Review_Step = 2
@@ -73,28 +70,6 @@ def row_selector(gateway_name:'str') -> 'str':
     """ Where the gateway's row on the list page is - the name cell holds the name as an inline-edit link.
     """
     out = f'#data-table tbody tr:has(td a:text-is("{gateway_name}"))'
-    return out
-
-# ################################################################################################################################
-
-def available_badge_selector(card_name:'str', badge_name:'str') -> 'str':
-    """ Where one badge sits while it is still available - the picker lowercases each badge's data-name.
-    """
-    action = Picker_Actions[card_name]
-    badge_name = badge_name.lower()
-
-    out = f'#badge-zone-available-{action} .badge-zone-body .security-badge[data-name="{badge_name}"]'
-    return out
-
-# ################################################################################################################################
-
-def assigned_badge_selector(card_name:'str', badge_name:'str') -> 'str':
-    """ Where one badge sits once it is assigned.
-    """
-    action = Picker_Actions[card_name]
-    badge_name = badge_name.lower()
-
-    out = f'#badge-zone-assigned-{action} .badge-zone-body .security-badge[data-name="{badge_name}"]'
     return out
 
 # ################################################################################################################################
@@ -251,8 +226,17 @@ def get_gateway_id(page:'Page', gateway_name:'str') -> 'str':
 
 def open_picker_card(page:'Page', card_name:'str') -> 'None':
     """ Expands one of the step 1 picker cards, unless it is already open - the zones
-    inside a collapsed card cannot be clicked.
+    inside a collapsed card cannot be clicked. A tool source opens the Tools card
+    and selects the source's row in the card's tree.
     """
+
+    # A tool source lives inside the Tools card - opening it means opening
+    # the card and putting the source's items on the picker ..
+    if card_name in Tool_Source_Keys:
+        select_tool_source(page, card_name)
+        return
+
+    # .. any other card opens through its own header.
     is_open = page.evaluate(
         f'document.getElementById("mcp-wizard-{card_name}-body").classList.contains("wizard-option-body-open")')
 
@@ -265,7 +249,7 @@ def open_picker_card(page:'Page', card_name:'str') -> 'None':
 def wait_for_available_badges(page:'Page', card_name:'str', minimum:'int') -> 'None':
     """ Waits until the card's available zone holds at least this many badges.
     """
-    action = Picker_Actions[card_name]
+    action = _picker_action(card_name)
 
     _ = page.wait_for_function(
         f'document.querySelectorAll("#badge-zone-available-{action} .badge-zone-body .security-badge").length >= {minimum}',
@@ -307,7 +291,7 @@ def remove_assigned_badge(page:'Page', card_name:'str', badge_name:'str') -> 'No
 def _get_badge_names(page:'Page', zone_kind:'str', card_name:'str') -> 'strlist':
     """ The names of every badge one of the card's zones holds.
     """
-    action = Picker_Actions[card_name]
+    action = _picker_action(card_name)
     badges = page.query_selector_all(f'#badge-zone-{zone_kind}-{action} .badge-zone-body .security-badge')
 
     out:'strlist' = []
@@ -339,7 +323,11 @@ def get_available_badge_names(page:'Page', card_name:'str') -> 'strlist':
 
 def get_picker_summary(page:'Page', card_name:'str') -> 'str':
     """ What the card's header summary currently says, e.g. None assigned or 2 assigned.
+    Every tool source reads the Tools card's summary, which spans all the sources.
     """
+    if card_name in Tool_Source_Keys:
+        card_name = Tools_Card
+
     out = page.inner_text(f'#mcp-wizard-summary-{card_name}')
     return out
 
@@ -648,10 +636,12 @@ def create_gateway(
     services:'anylistnone'=None,
     security:'anylistnone'=None,
     skills:'anylistnone'=None,
+    tools:'anydictnone'=None,
     ) -> 'str':
     """ Creates a gateway through the wizard - name and URL path on step 1, the given badges
     assigned through their cards, the save made from the review step - and returns the new
-    gateway's id read off the list page.
+    gateway's id read off the list page. Connection tools go in through the tools dict,
+    keyed by source, e.g. {'rest': ['billing'], 'sql': ['reporting']}.
     """
 
     # Open the wizard and answer step 1 ..
@@ -667,6 +657,11 @@ def create_gateway(
     if services:
         for service_name in services:
             assign_badge(page, 'services', service_name)
+
+    if tools:
+        for source_key, connection_names in tools.items():
+            for connection_name in connection_names:
+                assign_badge(page, source_key, connection_name)
 
     if skills:
         for skill_name in skills:

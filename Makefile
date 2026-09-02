@@ -12,15 +12,15 @@
 	test-pubsub-backend-perf test-pubsub-backend-amqp-perf test-pubsub-backend-perf-mass test-pubsub-system-perf \
 	test-mcp _test-mcp test-mcp-local-docker test-bearer _test-bearer test-graphql test-grpc \
 	test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm _test-llm test-llm-local-docker \
-	test-sql-cloud test-sql-cloud-live test-aws test-sdk test-microsoft-cloud \
+	test-sql-cloud test-sql-cloud-live test-aws test-sdk test-microsoft-cloud test-salesforce _test-salesforce \
 	test-hl7 test-hl7-fhir test-hl7-mllp-channels test-hl7-mllp-outconns test-hl7-languages test-hl7-volume \
 	test-ui _test-ui test-ui-pubsub test-ui-openapi test-ui-analytics test-ui-audit-log test-ui-webapp test-ui-rule-engine-dashboard \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-rest-outgoing-audit test-alerting test-destinations test-analytics test-demo-seed test-logging \
-	test-ibm-mq test-kafka _test-kafka test-mongodb test-es \
+	test-ibm-mq test-kafka _test-kafka test-mongodb test-es test-ftp \
 	test-rule-engine test-rule-engine-perf test-rule-engine-jobs \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
-	test-all test test-all-reset test-perf \
+	test-all test test-all-reset test-clean-test-all test-perf \
 	health-ruff health-clippy \
 	format format-zato \
 	clippy clippy-zato \
@@ -121,11 +121,17 @@ common-core-build:
 
 mq-client:
 	@if [ ! -f $(MQ_CLIENT_LIB) ]; then \
-		echo ">>> Downloading IBM MQ client to $(MQ_CLIENT_DIR)"; \
-		mkdir -p $(MQ_CLIENT_DIR) && \
-		curl -fL --http1.1 --retry 5 --retry-delay 5 --retry-all-errors $(MQ_CLIENT_URL) -o $(MQ_CLIENT_DIR)/mqclient.tar.gz && \
-		tar -xzf $(MQ_CLIENT_DIR)/mqclient.tar.gz -C $(MQ_CLIENT_DIR) && \
-		rm $(MQ_CLIENT_DIR)/mqclient.tar.gz; \
+		echo ">>> Downloading IBM MQ client from $(MQ_CLIENT_URL) to $(MQ_CLIENT_DIR)"; \
+		if ! ( \
+			mkdir -p $(MQ_CLIENT_DIR) && \
+			retry_all_errors="$$(curl --help all 2>/dev/null | awk '/--retry-all-errors/{print $$1; exit}')" && \
+			curl -fL --http1.1 --retry 2 --retry-delay 1 $$retry_all_errors $(MQ_CLIENT_URL) -o $(MQ_CLIENT_DIR)/mqclient.tar.gz && \
+			tar -xzf $(MQ_CLIENT_DIR)/mqclient.tar.gz -C $(MQ_CLIENT_DIR) && \
+			rm $(MQ_CLIENT_DIR)/mqclient.tar.gz \
+		); then \
+			rm -f $(MQ_CLIENT_DIR)/mqclient.tar.gz; \
+			echo ">>> WARNING: IBM MQ client download failed"; \
+		fi; \
 	fi
 
 queue-bridge-build: mq-client
@@ -955,6 +961,33 @@ test-microsoft-cloud: ## Microsoft 365 connection tests through a live Zato serv
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_microsoft_cloud_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-salesforce: ## Salesforce connection tests - enmasse, a live Zato server against a simulated instance, and the Dashboard lifecycle.
+	$(MAKE) _test-salesforce 2>&1 | tee /tmp/logs-test-salesforce.txt
+
+_test-salesforce:
+	ruff check \
+		$(CURDIR)/code/tests/python/zato-server/salesforce_live/ \
+		2>&1 | $(TS)
+	pyright \
+		$(CURDIR)/code/tests/python/zato-server/salesforce_live/ \
+		2>&1 | $(TS)
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/importers/test_importer_enmasse_salesforce.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/exporters/test_exporter_enmasse_salesforce.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_salesforce_enmasse -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/salesforce_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_salesforce_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_cloud_salesforce_lifecycle.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
+
 test-hl7: ## HL7v2 parsing and MLLP tests.
 	$(MAKE) test-hl7-mllp-channels
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1126,6 +1159,37 @@ test-alerting: ## Alerting engine tests - rules, actions, dedup, lifecycle and c
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/alerting/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_alerting -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-ftp: ## FTP and FTPS tests - the outconn, enmasse and scheduler suites against live FTP servers, plus the audit and delivery suites against stubs.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/zato-common/src/zato/common/test/ftp_.py \
+		$(CURDIR)/code/zato-common/src/zato/common/test/file_transfer_harness/ftp_adapter.py \
+		$(CURDIR)/code/zato-server/src/zato/server/connection/ftp.py \
+		$(CURDIR)/code/zato-server/src/zato/server/generic/api/outconn_ftp.py \
+		$(CURDIR)/code/zato-server/test/zato/connection/test_outconn_ftp.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/ftp_stub.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_ftp_audit.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_scheduler/test_ftp_only.py \
+		$(CURDIR)/code/zato-cli/src/zato/cli/enmasse/importers/ftp.py \
+		$(CURDIR)/code/zato-cli/src/zato/cli/enmasse/exporters/ftp.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/importers/test_importer_enmasse_ftp.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/exporters/test_exporter_enmasse_ftp.py
+	Zato_Test_FTP=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/zato-server/test/zato/connection/test_outconn_ftp.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/importers/test_importer_enmasse_ftp.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/exporters/test_exporter_enmasse_ftp.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ftp -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_ftp_audit.py \
+		$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/test_file_delivery_handlers.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ftp_audit -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_scheduler/ \
+		-k "FTP and not SFTP" \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ftp_scheduler -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-destinations: ## Channel destination tests - the destination list, payload overrides, delivery order, retries, the dispatchers, the per-hop trail and the Dashboard views, fully offline.
@@ -1346,7 +1410,7 @@ Zato_Test_Toolchain := \
 # Suites needing a live server or an external service
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub-backend test-mongodb test-es \
-	test-sql-cloud-live test-microsoft-cloud test-bearer test-pubsub-backend-amqp test-as2-live \
+	test-sql-cloud-live test-microsoft-cloud test-salesforce test-bearer test-pubsub-backend-amqp test-as2-live \
 	test-as2-interop test-ibm-mq test-kafka test-sdk test-hl7-languages test-pubsub-outgoing \
 	test-hl7-mllp-outconns test-pubsub-core test-hl7
 
@@ -1393,6 +1457,9 @@ test-all: ## Everything, resuming from the target that last failed. RESTART=1 to
 
 test-all-reset: ## Forget where the last test-all stopped.
 	rm -f $(Zato_Test_Resume_File)
+
+test-clean-test-all: ## Run test-all from a clean state instead of resuming a previous run.
+	$(MAKE) RESTART=1 test-all
 
 test-perf: $(Zato_Test_Perf) ## Every performance suite - not part of test-all.
 

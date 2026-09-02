@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 # Zato
 from zato.common.as2.common import MDNMode
@@ -81,27 +81,33 @@ class TestConfigBridging:
         current_certificate = parties.receiver.signing_certificate_chain[0]
         next_certificate = parties.sender.signing_certificate_chain[0]
 
+        # The rotation activates ten days from now - the fixture certificates are valid from yesterday
+        # for a year, so both probes below fall inside the certificates' own dates.
+        now = datetime.now(timezone.utc)
+        activation_day = now + timedelta(days=10)
+        activation_date = activation_day.date()
+
         config = partnership_config()
         config['as2_partner_cert'] = certificate_to_pem(current_certificate)
         config['as2_partner_next_cert'] = certificate_to_pem(next_certificate)
-        config['as2_partner_next_cert_from'] = '2026-09-01'
+        config['as2_partner_next_cert_from'] = activation_date.isoformat()
 
         partnership = build_partnership(config)
 
         assert len(partnership.verification_certificates) == 2
 
         next_entry = partnership.verification_certificates[1]
-        expected_activation = datetime(2026, 9, 1, tzinfo=timezone.utc)
+        expected_activation = datetime(activation_date.year, activation_date.month, activation_date.day, tzinfo=timezone.utc)
 
         assert next_entry.certificate == next_certificate
         assert next_entry.valid_from == expected_activation
 
         # Before the activation date the current certificate is the one to encrypt to ..
-        before = datetime(2026, 8, 15, tzinfo=timezone.utc)
+        before = now
         assert select_encryption_certificate(partnership, before) == current_certificate
 
         # .. after it, the next one - while verification accepts both throughout the overlap.
-        after = datetime(2026, 9, 15, tzinfo=timezone.utc)
+        after = now + timedelta(days=20)
         assert select_encryption_certificate(partnership, after) == next_certificate
         assert active_verification_certificates(partnership, after) == [current_certificate, next_certificate]
 

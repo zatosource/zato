@@ -750,6 +750,10 @@ _Log_Noise_Patterns = [
     'listener loop exception',
     'queue bridge recv listener',
     'scheduler request listener',
+
+    # The tools card tests create an Odoo connection with no Odoo behind it,
+    # and its wrapper keeps retrying the ping in the background.
+    'Could not ping Odoo (test.mcp.tools.',
 ]
 
 @pytest.fixture(autouse=True)

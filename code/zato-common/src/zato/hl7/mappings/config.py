@@ -15,7 +15,7 @@ from threading import Lock
 from zato.common.ext.configobj_ import ConfigObj
 from zato.hl7.common import add_config_location, get_config_locations
 
-# Re-exported so that callers can register directories through this module as well
+# Re-exported so that callers can register directories through this module as well.
 add_config_location = add_config_location
 
 # ################################################################################################################################
@@ -31,7 +31,8 @@ if 0:
 # ################################################################################################################################
 
 # Type aliases
-code_map_dict = dict[str, 'strstrdict']
+code_map_dict  = dict[str, 'strstrdict']
+strconfigdict  = dict[str, 'FHIRMappingConfig']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,8 +49,53 @@ Default_Extension_Base_URL = 'urn:zato:hl7v2:extension'
 # The prefix identifier systems are derived from when an assigning authority has no configured URI
 Authority_URN_Prefix = 'urn:zato:hl7v2:authority:'
 
+# Official identifier system URIs of each land's assigning authorities
+Land_Identifier_Systems = {
+
+    # United Kingdom
+    'GMC':     'https://fhir.hl7.org.uk/Id/gmc-number',
+    'NHS':     'https://fhir.nhs.uk/Id/nhs-number',
+    'NHSNBR':  'https://fhir.nhs.uk/Id/nhs-number',
+    'NHSNMBR': 'https://fhir.nhs.uk/Id/nhs-number',
+    'ODS':     'https://fhir.nhs.uk/Id/ods-organization-code',
+
+    # The Netherlands
+    'BSN':       'http://fhir.nl/fhir/NamingSystem/bsn',
+    'NLMINBIZA': 'http://fhir.nl/fhir/NamingSystem/bsn',
+    'BIG':       'http://fhir.nl/fhir/NamingSystem/big',
+
+    # United States
+    'NPI': 'http://hl7.org/fhir/sid/us-npi',
+
+    # France
+    'INS':                'urn:oid:1.2.250.1.213.1.4.8',
+    'INS-NIR':            'urn:oid:1.2.250.1.213.1.4.8',
+    'INS-NIA':            'urn:oid:1.2.250.1.213.1.4.9',
+    'INS-C':              'urn:oid:1.2.250.1.213.1.4.2',
+    'ASIP-SANTE-INS-NIR': 'urn:oid:1.2.250.1.213.1.4.8',
+    'ASIP-SANTE-INS-NIA': 'urn:oid:1.2.250.1.213.1.4.9',
+    'ASIP-SANTE-INS-C':   'urn:oid:1.2.250.1.213.1.4.2',
+    'ASIP-SANTE-PS':      'urn:oid:1.2.250.1.71.4.2.1',
+    'ASIP-SANTE-ST':      'urn:oid:1.2.250.1.71.4.2.2',
+    'RPPS':               'https://rpps.esante.gouv.fr',
+    'ADELI':              'https://adeli.esante.gouv.fr',
+    'FINESS':             'https://finess.esante.gouv.fr',
+}
+
+# Authorities whose registry depends on who holds the identifier
+Practitioner_Authority_Systems = {
+    'VEKTIS': 'http://fhir.nl/fhir/NamingSystem/agb-z',
+}
+
+Insurer_Authority_Systems = {
+    'VEKTIS': 'http://fhir.nl/fhir/NamingSystem/uzovi',
+}
+
+# The default system of the bundle's identifier - the MSH-10 message control ID
+Default_Bundle_Identifier_System = 'urn:zato:hl7v2:message-control-id'
+
 # The bundle types a config file may request
-Bundle_Types = ('transaction', 'batch', 'collection')
+Bundle_Types = ('transaction', 'batch', 'collection', 'message')
 
 # The file name suffixes a config name is resolved against in the user-conf directories
 _config_file_suffixes = ('.ini', '.conf')
@@ -57,7 +103,7 @@ _config_file_suffixes = ('.ini', '.conf')
 # The sections a config file may contain, along with the keys each section allows.
 # Sections whose keys are None accept subsections instead of keys.
 _allowed_sections = {
-    'bundle': ('type',),
+    'bundle': ('type', 'identifier_system'),
     'datetime': ('default_timezone',),
     'identifiers': None,
     'codes': None,
@@ -76,8 +122,11 @@ class FHIRMappingConfig:
     Built from an .ini file, never constructed by user code directly.
     """
 
-    # What kind of bundle to produce - transaction, batch or collection
+    # What kind of bundle to produce - transaction, batch, collection or message
     bundle_type: 'str'
+
+    # The system the bundle's identifier - the message control ID - is published under
+    bundle_identifier_system: 'str'
 
     # The offset applied to date/time values that have none of their own, e.g. +02:00
     default_timezone: 'str'
@@ -97,11 +146,12 @@ def _new_config() -> 'FHIRMappingConfig':
     """ Builds a mapping config populated with the constant defaults.
     """
     out = FHIRMappingConfig()
-    out.bundle_type = Default_Bundle_Type
-    out.default_timezone = Default_Timezone
-    out.identifier_systems = {}
-    out.code_mappings = {}
-    out.extension_base_url = Default_Extension_Base_URL
+    out.bundle_type              = Default_Bundle_Type
+    out.bundle_identifier_system = Default_Bundle_Identifier_System
+    out.default_timezone         = Default_Timezone
+    out.identifier_systems       = {}
+    out.code_mappings            = {}
+    out.extension_base_url       = Default_Extension_Base_URL
 
     return out
 
@@ -109,7 +159,7 @@ def _new_config() -> 'FHIRMappingConfig':
 # ################################################################################################################################
 
 # Parsed configs, keyed by the name or path they were loaded from
-_config_cache:'dict[str, FHIRMappingConfig]' = {}
+_config_cache:'strconfigdict' = {}
 
 # Serializes access to the cache
 _config_lock = Lock()
@@ -124,21 +174,31 @@ def _resolve_name_to_path(name:'str') -> 'str':
     """
     directories = get_config_locations()
 
-    for dir_name in directories:
-        for suffix in _config_file_suffixes:
-            full_path = os.path.join(dir_name, name + suffix)
-            if os.path.isfile(full_path):
-                out = full_path
-                return out
+    # All the paths the name may resolve to, in search order ..
+    candidates = []
 
-    # If we are here, the name did not match any file in any directory
-    raise Exception(f'HL7-FHIR mapping config `{name}` not found in any of {directories}')
+    for directory in directories:
+        for suffix in _config_file_suffixes:
+            file_name = name + suffix
+            full_path = os.path.join(directory, file_name)
+            candidates.append(full_path)
+
+    # .. and the first one that exists wins.
+    for candidate in candidates:
+        if os.path.isfile(candidate):
+            out = candidate
+            break
+
+    # The name did not match any file in any directory.
+    else:
+        raise Exception(f'HL7-FHIR mapping config `{name}` not found in any of {directories}')
+
+    return out
 
 # ################################################################################################################################
 
 def _reject_keys_outside_sections(file_path:'str') -> 'None':
-    """ Rejects files whose first real line is a key rather than a section
-    - ConfigObj itself cannot parse such files and its error would be opaque.
+    """ Rejects files whose first real line is a key rather than a section.
     """
     with open(file_path) as file_object:
         for line in file_object:
@@ -148,19 +208,21 @@ def _reject_keys_outside_sections(file_path:'str') -> 'None':
             if not line:
                 continue
 
-            if line.startswith('#') or line.startswith(';'):
+            if line.startswith(('#', ';')):
                 continue
 
-            # .. the first line with content must open a section.
-            if not line.startswith('['):
-                raise Exception(f'Key `{line}` in `{file_path}` is outside any section')
+            # .. the first line with content must open a section ..
+            if line.startswith('['):
+                break
 
-            return
+            # .. and anything else is a key outside any section.
+            else:
+                raise Exception(f'Key `{line}` in `{file_path}` is outside any section')
 
 # ################################################################################################################################
 
 def _validate_sections(parsed:'any_', file_path:'str') -> 'None':
-    """ Rejects unknown sections and keys so that typos never pass silently.
+    """ Rejects unknown sections and unknown keys.
     """
     for section_name in parsed.sections:
 
@@ -173,7 +235,7 @@ def _validate_sections(parsed:'any_', file_path:'str') -> 'None':
         allowed_keys = _allowed_sections[section_name]
 
         # .. sections with a fixed key list may not contain anything else ..
-        if allowed_keys is not None:
+        if allowed_keys:
 
             if section.sections:
                 first_subsection = section.sections[0]
@@ -182,7 +244,8 @@ def _validate_sections(parsed:'any_', file_path:'str') -> 'None':
 
             for key in section.scalars:
                 if key not in allowed_keys:
-                    raise Exception(f'Unknown key `{key}` in `[{section_name}]` in `{file_path}`, allowed: {list(allowed_keys)}')
+                    allowed = list(allowed_keys)
+                    raise Exception(f'Unknown key `{key}` in `[{section_name}]` in `{file_path}`, allowed: {allowed}')
 
         # .. sections built of subsections may not carry loose keys of their own.
         else:
@@ -191,7 +254,7 @@ def _validate_sections(parsed:'any_', file_path:'str') -> 'None':
                 raise Exception(f'Section `[{section_name}]` in `{file_path}` only allows subsections' + \
                     f', found key `{first_key}`')
 
-    # Keys outside any section are never valid
+    # Keys outside any section are never valid.
     if parsed.scalars:
         first_key = parsed.scalars[0]
         raise Exception(f'Key `{first_key}` in `{file_path}` is outside any section')
@@ -206,31 +269,33 @@ def _build_config(parsed:'any_', file_path:'str') -> 'FHIRMappingConfig':
     out = _new_config()
 
     # The bundle type must be one of the recognized ones ..
-    if 'bundle' in parsed:
-        bundle_section = parsed['bundle']
-        if 'type' in bundle_section:
-            bundle_type = bundle_section['type']
+    if bundle_section := parsed.get('bundle'):
+
+        if bundle_type := bundle_section.get('type'):
             if bundle_type not in Bundle_Types:
-                raise Exception(f'Unknown bundle type `{bundle_type}` in `{file_path}`, allowed: {list(Bundle_Types)}')
+                allowed = list(Bundle_Types)
+                raise Exception(f'Unknown bundle type `{bundle_type}` in `{file_path}`, allowed: {allowed}')
             out.bundle_type = bundle_type
 
+        if identifier_system := bundle_section.get('identifier_system'):
+            out.bundle_identifier_system = identifier_system
+
     # .. the default timezone is taken as-is ..
-    if 'datetime' in parsed:
-        datetime_section = parsed['datetime']
-        if 'default_timezone' in datetime_section:
-            out.default_timezone = datetime_section['default_timezone']
+    if datetime_section := parsed.get('datetime'):
+        if default_timezone := datetime_section.get('default_timezone'):
+            out.default_timezone = default_timezone
 
     # .. each identifiers subsection maps an assigning authority to a system URI ..
-    if 'identifiers' in parsed:
-        identifiers_section = parsed['identifiers']
+    if identifiers_section := parsed.get('identifiers'):
 
         for subsection_name in identifiers_section.sections:
             subsection = identifiers_section[subsection_name]
 
             for key in subsection.scalars:
                 if key not in _identifier_keys:
+                    allowed = list(_identifier_keys)
                     raise Exception(f'Unknown key `{key}` in `[[{subsection_name}]]` in `{file_path}`' + \
-                        f', allowed: {list(_identifier_keys)}')
+                        f', allowed: {allowed}')
 
             if 'authority' not in subsection:
                 raise Exception(f'Missing key `authority` in `[[{subsection_name}]]` in `{file_path}`')
@@ -243,8 +308,7 @@ def _build_config(parsed:'any_', file_path:'str') -> 'FHIRMappingConfig':
             out.identifier_systems[authority] = system
 
     # .. each codes subsection carries per-code overrides for one vocabulary map ..
-    if 'codes' in parsed:
-        codes_section = parsed['codes']
+    if codes_section := parsed.get('codes'):
 
         for subsection_name in codes_section.sections:
             subsection = codes_section[subsection_name]
@@ -256,10 +320,9 @@ def _build_config(parsed:'any_', file_path:'str') -> 'FHIRMappingConfig':
             out.code_mappings[subsection_name] = overrides
 
     # .. and the extension base URL is taken as-is.
-    if 'extensions' in parsed:
-        extensions_section = parsed['extensions']
-        if 'base_url' in extensions_section:
-            out.extension_base_url = extensions_section['base_url']
+    if extensions_section := parsed.get('extensions'):
+        if base_url := extensions_section.get('base_url'):
+            out.extension_base_url = base_url
 
     return out
 
@@ -270,8 +333,9 @@ def load_mapping_config(name_or_path:'strnone') -> 'FHIRMappingConfig':
     A name resolves through the registered user-conf directories, a path loads directly.
     """
 
-    # No config given means the constant defaults apply
+    # No config given means the constant defaults apply.
     if not name_or_path:
+
         out = _default_config
         return out
 

@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import logging
 import os
 import subprocess
@@ -17,9 +18,6 @@ from urllib.parse import quote
 # pytest
 import pytest
 
-# Playwright
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-
 # Zato
 from zato.common.test import rand_string
 
@@ -29,10 +27,14 @@ from zato.common.test import rand_string
 if 0:
     from playwright.sync_api import Page
     from client import ZatoClient
-    from zato.common.typing_ import any_, anydict, anydictnone, anylist, strlist
+    from zato.common.typing_ import any_, anydict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+from audit_log_ui import No_Events_Text, attach_diagnostics, format_diagnostics, get_row_cid, get_row_event, \
+    get_row_main_text, get_row_outcome, get_row_time_text, get_rows, goto_audit_log, close_cid_overlay, \
+    open_cid_overlay, open_data, search, wait_for_empty, wait_for_payload_text, wait_for_row_count, wait_for_table
 
 from http_test_server import HTTPTestServer
 from rest_channel import deploy_service_file
@@ -47,28 +49,19 @@ logger = logging.getLogger(__name__)
 
 _Test_Name_Prefix = 'test.rest.outconn.audit.' + rand_string() + '.'
 
-_Audit_Log_Url_Prefix = '/zato/audit-log/'
-_Poll_Url_Path        = '/zato/audit-log/poll/'
+_Audit_Log_URL_Prefix = '/zato/audit-log/'
 
-_Event_Request_Sent      = 'request-sent'
-_Event_Response_Received = 'response-received'
+_Source = 'rest-outgoing'
+
+# How the events of one invocation read on their rows
+_Event_Request_Sent_Label      = 'Request sent'
+_Event_Response_Received_Label = 'Response received'
 
 _Outcome_OK    = 'ok'
 _Outcome_Error = 'error'
 
-_No_Events_Text = 'No events found'
-
 # The section title for the outgoing REST source, compared lowercase because the heading is styled with CSS
-_Rest_Outgoing_Title = 'outgoing rest audit log'
-
-# Column indexes: Time, CID, Event, Endpoint, Outcome, Size, Data preview
-_Column_Time     = 0
-_Column_CID      = 1
-_Column_Event    = 2
-_Column_Endpoint = 3
-_Column_Outcome  = 4
-_Column_Size     = 5
-_Column_Data     = 6
+_REST_Outgoing_Title = 'outgoing rest audit log'
 
 # A TCP port that nothing listens on, for connections that must fail
 _Dead_Port = 1
@@ -124,156 +117,6 @@ def invoker_service(zato_dashboard:'anydict', api_client:'ZatoClient') -> 'any_'
     os.remove(file_path)
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _goto_audit_log(page:'Page', base_url:'str', outconn_name:'str') -> 'None':
-    """ Navigates to the audit log page of one outgoing REST connection and waits for the first page of events to load.
-    """
-
-    # Build the per-object URL ..
-    encoded_name = quote(outconn_name)
-    url = f'{base_url}{_Audit_Log_Url_Prefix}?source=rest-outgoing&object_name={encoded_name}&cluster=1'
-
-    # .. go there ..
-    _ = page.goto(url)
-
-    # .. and wait for the initial poll to replace the loading row.
-    _wait_for_table(page)
-
-# ################################################################################################################################
-
-def _wait_for_table(page:'Page') -> 'None':
-    """ Waits until the audit log table has finished loading its current page of events,
-    i.e. until the table body exists, has rows and none of them is the loading placeholder.
-    """
-    _ = page.wait_for_function(
-        '''() => {
-            let body = document.querySelector('#audit-log-table-body');
-            if (!body) return false;
-            let rows = body.querySelectorAll('tr');
-            if (!rows.length) return false;
-            return !body.querySelector('tr.detail-loading-row');
-        }''',
-        timeout=10000)
-
-# ################################################################################################################################
-
-def _get_rows(page:'Page') -> 'anylist':
-    """ Returns all rows currently shown in the audit log table.
-    """
-    out = page.query_selector_all('#audit-log-table-body tr')
-    return out
-
-# ################################################################################################################################
-
-def _get_row_cells(row:'any_') -> 'anylist':
-    """ Returns the text of each cell in one audit log row.
-    """
-    out = [] # type: anylist
-
-    for cell in row.query_selector_all('td'):
-        out.append(cell.inner_text().strip())
-
-    return out
-
-# ################################################################################################################################
-
-def _attach_diagnostics(page:'Page') -> 'anydict':
-    """ Captures everything the browser and Django report while a test runs - console messages,
-    uncaught page errors, failed requests and the full body of each poll response.
-    """
-
-    # All the captured facts go here ..
-    out = {
-        'console': [],
-        'page_errors': [],
-        'failed_requests': [],
-        'poll_responses': [],
-    } # type: anydict
-
-    # .. every console message is recorded with its severity ..
-    def _on_console(message:'any_') -> 'None':
-        out['console'].append(f'[console.{message.type}] {message.text}')
-
-    # .. uncaught JavaScript exceptions are recorded in full ..
-    def _on_page_error(error:'any_') -> 'None':
-        out['page_errors'].append(f'[pageerror] {error}')
-
-    # .. requests that never completed are recorded with their failure reason, except for
-    # .. requests aborted by navigation, e.g. the session keepalive ping, which are not errors ..
-    def _on_request_failed(request:'any_') -> 'None':
-        if request.failure != 'net::ERR_ABORTED':
-            out['failed_requests'].append(f'[requestfailed] {request.method} {request.url} -> {request.failure}')
-
-    # .. and each poll response is recorded with its status and body, which is what Django returned.
-    def _on_response(response:'any_') -> 'None':
-        if _Poll_Url_Path in response.url:
-            body = response.text()
-            out['poll_responses'].append(f'[poll] {response.status} {response.url} -> {body}')
-
-    page.on('console', _on_console)
-    page.on('pageerror', _on_page_error)
-    page.on('requestfailed', _on_request_failed)
-    page.on('response', _on_response)
-
-    return out
-
-# ################################################################################################################################
-
-def _format_diagnostics(diagnostics:'anydict') -> 'str':
-    """ Turns the captured diagnostics into one readable block for assertion messages.
-    """
-
-    lines = [] # type: anylist
-
-    for key in ('page_errors', 'failed_requests', 'console', 'poll_responses'):
-        for entry in diagnostics[key]:
-            lines.append(entry)
-
-    out = '\n'.join(lines)
-    return out
-
-# ################################################################################################################################
-
-def _search(page:'Page', query:'str') -> 'None':
-    """ Types a query into the audit log search form and submits it with the search button.
-    """
-
-    # Fill in the query ..
-    page.fill('#audit-log-search-input', query)
-
-    # .. and submit the form.
-    page.click('#audit-log-search-form button[type="submit"]')
-
-# ################################################################################################################################
-
-def _wait_for_body_text(page:'Page', text:'str', diagnostics:'anydictnone' = None) -> 'None':
-    """ Waits until the audit log table body contains the given text.
-    On timeout, the assertion message includes everything the browser and Django reported.
-    """
-    try:
-        _ = page.wait_for_function(
-            f'document.querySelector("#audit-log-table-body").innerText.includes(\'{text}\')', timeout=10000)
-    except PlaywrightTimeoutError:
-        body_text = page.inner_text('#audit-log-table-body')
-        details = _format_diagnostics(diagnostics) if diagnostics else '(no diagnostics attached)'
-        pytest.fail(f'Timed out waiting for "{text}" in the table, the table shows:\n{body_text}\n\nDiagnostics:\n{details}')
-
-# ################################################################################################################################
-
-def _wait_for_body_without_text(page:'Page', text:'str', diagnostics:'anydictnone' = None) -> 'None':
-    """ Waits until the audit log table body no longer contains the given text.
-    On timeout, the assertion message includes everything the browser and Django reported.
-    """
-    try:
-        _ = page.wait_for_function(
-            f'!document.querySelector("#audit-log-table-body").innerText.includes(\'{text}\')', timeout=10000)
-    except PlaywrightTimeoutError:
-        body_text = page.inner_text('#audit-log-table-body')
-        details = _format_diagnostics(diagnostics) if diagnostics else '(no diagnostics attached)'
-        pytest.fail(
-            f'Timed out waiting for "{text}" to disappear, the table shows:\n{body_text}\n\nDiagnostics:\n{details}')
-
 # ################################################################################################################################
 
 def _create_ready_outconn(
@@ -363,13 +206,13 @@ class TestRESTOutconnAuditLog:
         assert 'single-invocation-response' in result['response'], f'Expected the server response, got: {result}'
 
         # .. open the audit log page for that connection ..
-        _goto_audit_log(page, base_url, outconn['name'])
+        goto_audit_log(page, base_url, _Source, outconn['name'])
 
         # .. the section title names the source, compared case-insensitively because of CSS styling ..
         title_text = page.inner_text('#detail-section-title')
         title_text = title_text.lower()
-        assert title_text.startswith(_Rest_Outgoing_Title), \
-            f'Expected the title to start with "{_Rest_Outgoing_Title}", got: "{title_text}"'
+        assert title_text.startswith(_REST_Outgoing_Title), \
+            f'Expected the title to start with "{_REST_Outgoing_Title}", got: "{title_text}"'
 
         # .. the section title pill shows the connection name, compared case-insensitively
         # .. because the pill is uppercased with CSS ..
@@ -377,56 +220,42 @@ class TestRESTOutconnAuditLog:
         pill_text = pill_text.lower()
         assert pill_text == outconn['name'], f'Expected connection name "{outconn["name"]}" in the pill, got: "{pill_text}"'
 
-        # .. the table shows the outgoing REST columns - there are Endpoint and Outcome columns
-        # .. and no pub/sub Message id column, compared case-insensitively
-        # .. because the headers are uppercased with CSS ..
-        header_text = page.inner_text('#audit-log-table thead')
-        header_text = header_text.lower()
-        assert 'endpoint' in header_text, f'Expected an Endpoint column, got: "{header_text}"'
-        assert 'outcome' in header_text, f'Expected an Outcome column, got: "{header_text}"'
-        assert 'message id' not in header_text, f'Expected no Message id column, got: "{header_text}"'
-
         # .. one invocation produces exactly two events ..
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 2, f'Expected 2 audit log rows, got {row_count}'
 
         # .. the newest event is the response, the older one is the request ..
-        response_cells = _get_row_cells(rows[0])
-        request_cells = _get_row_cells(rows[1])
+        event_label = get_row_event(rows[0])
+        assert event_label == _Event_Response_Received_Label, \
+            f'Expected event "{_Event_Response_Received_Label}", got: "{event_label}"'
 
-        assert response_cells[_Column_Event] == _Event_Response_Received, \
-            f'Expected event type "{_Event_Response_Received}", got: "{response_cells[_Column_Event]}"'
-        assert request_cells[_Column_Event] == _Event_Request_Sent, \
-            f'Expected event type "{_Event_Request_Sent}", got: "{request_cells[_Column_Event]}"'
+        event_label = get_row_event(rows[1])
+        assert event_label == _Event_Request_Sent_Label, \
+            f'Expected event "{_Event_Request_Sent_Label}", got: "{event_label}"'
 
-        # .. both events carry the method and the address invoked and completed fine ..
-        expected_endpoint = f'POST {outconn["address"]}'
+        # .. both events carry the address invoked and completed fine ..
+        for row in rows:
 
-        for cells in (response_cells, request_cells):
-
-            assert cells[_Column_Endpoint] == expected_endpoint, \
-                f'Expected the endpoint "{expected_endpoint}", got: "{cells[_Column_Endpoint]}"'
-            assert cells[_Column_Outcome] == _Outcome_OK, \
-                f'Expected outcome "{_Outcome_OK}", got: "{cells[_Column_Outcome]}"'
+            main_text = get_row_main_text(row)
+            assert outconn['address'] in main_text, \
+                f'Expected the address "{outconn["address"]}" on the row, got: "{main_text}"'
 
             # .. the time is shown in the browser's locale format, not as a raw ISO string ..
-            assert cells[_Column_Time] != '', 'Expected a non-empty event time'
-            assert '+00:00' not in cells[_Column_Time], \
-                f'Expected a locale-formatted time, got a raw ISO string: "{cells[_Column_Time]}"'
+            time_text = get_row_time_text(row)
+            assert time_text != '', 'Expected a non-empty event time'
+            assert '+00:00' not in time_text, f'Expected a locale-formatted time, got a raw ISO string: "{time_text}"'
 
-            size = int(cells[_Column_Size])
-            assert size > 0, f'Expected a positive size, got {size}'
+            outcome = get_row_outcome(page, row)
+            assert outcome == _Outcome_OK, f'Expected outcome "{_Outcome_OK}", got: "{outcome}"'
 
-        # .. the request event holds what was sent, the response event holds what came back ..
-        assert 'single-invocation' in request_cells[_Column_Data], \
-            f'Expected the payload in the request data preview, got: "{request_cells[_Column_Data]}"'
-        assert 'single-invocation-response' in response_cells[_Column_Data], \
-            f'Expected the server response in the response data preview, got: "{response_cells[_Column_Data]}"'
+        # .. the request event holds what was sent, read in the pane's Data tab ..
+        open_data(page, rows[1])
+        wait_for_payload_text(page, 'single-invocation')
 
-        # .. and each row's CID is a link that opens the complete message.
-        cid_link = rows[0].query_selector('a.audit-log-cid-link')
-        assert cid_link is not None, 'Expected the CID cell to be a link'
+        # .. and the response event holds what came back.
+        open_data(page, rows[0])
+        wait_for_payload_text(page, 'single-invocation-response')
 
 # ################################################################################################################################
 
@@ -448,22 +277,21 @@ class TestRESTOutconnAuditLog:
         page.click(f'{row_selector} a:text-is("Audit log")')
 
         # .. wait for the audit log page to load ..
-        page.wait_for_url(f'**{_Audit_Log_Url_Prefix}**')
-        _wait_for_table(page)
+        page.wait_for_url(f'**{_Audit_Log_URL_Prefix}**')
+        wait_for_table(page)
 
         # .. the URL points to the audit log page for this connection ..
-        assert _Audit_Log_Url_Prefix in page.url, f'Expected an audit log URL, got: "{page.url}"'
+        assert _Audit_Log_URL_Prefix in page.url, f'Expected an audit log URL, got: "{page.url}"'
         assert 'source=rest-outgoing' in page.url, f'Expected source=rest-outgoing in the URL, got: "{page.url}"'
         assert quote(outconn['name']) in page.url, f'Expected the connection name in the URL, got: "{page.url}"'
 
-        # .. and the invocation's events are shown.
-        rows = _get_rows(page)
+        # .. and the invocation's events are shown, with the request payload in the Data tab.
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 2, f'Expected 2 audit log rows, got {row_count}'
 
-        cells = _get_row_cells(rows[1])
-        assert 'from-connection-list' in cells[_Column_Data], \
-            f'Expected the payload in the data preview, got: "{cells[_Column_Data]}"'
+        open_data(page, rows[1])
+        wait_for_payload_text(page, 'from-connection-list')
 
 # ################################################################################################################################
 
@@ -479,36 +307,39 @@ class TestRESTOutconnAuditLog:
         _ = invoke_outconn_via_overlay(page, outconn['id'], request_body='{"order": "second-invocation"}')
 
         # .. open the audit log page ..
-        _goto_audit_log(page, base_url, outconn['name'])
+        goto_audit_log(page, base_url, _Source, outconn['name'])
 
         # .. both invocations are shown, two events each ..
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 4, f'Expected 4 audit log rows, got {row_count}'
 
-        # .. the newest invocation comes first - its request is the second row from the top ..
-        first_row_cells = _get_row_cells(rows[0])
-        second_row_cells = _get_row_cells(rows[1])
-        last_row_cells = _get_row_cells(rows[3])
+        # .. the newest invocation comes first - its request is the second row from the top,
+        # .. which the payloads in the Data tab confirm ..
+        open_data(page, rows[1])
+        wait_for_payload_text(page, 'second-invocation')
 
-        assert 'second-invocation' in second_row_cells[_Column_Data], \
-            f'Expected the newest payload first, got: "{second_row_cells[_Column_Data]}"'
-        assert 'first-invocation' in last_row_cells[_Column_Data], \
-            f'Expected the oldest payload last, got: "{last_row_cells[_Column_Data]}"'
+        open_data(page, rows[3])
+        wait_for_payload_text(page, 'first-invocation')
 
         # .. within one invocation the response comes before the request ..
-        assert first_row_cells[_Column_Event] == _Event_Response_Received, \
-            f'Expected event type "{_Event_Response_Received}", got: "{first_row_cells[_Column_Event]}"'
-        assert second_row_cells[_Column_Event] == _Event_Request_Sent, \
-            f'Expected event type "{_Event_Request_Sent}", got: "{second_row_cells[_Column_Event]}"'
+        event_label = get_row_event(rows[0])
+        assert event_label == _Event_Response_Received_Label, \
+            f'Expected event "{_Event_Response_Received_Label}", got: "{event_label}"'
+
+        event_label = get_row_event(rows[1])
+        assert event_label == _Event_Request_Sent_Label, \
+            f'Expected event "{_Event_Request_Sent_Label}", got: "{event_label}"'
 
         # .. the request and response of one invocation share the same CID ..
-        assert first_row_cells[_Column_CID] == second_row_cells[_Column_CID], \
-            f'Expected one shared CID, got: "{first_row_cells[_Column_CID]}" and "{second_row_cells[_Column_CID]}"'
+        response_cid = get_row_cid(page, rows[0])
+        request_cid = get_row_cid(page, rows[1])
+        assert response_cid == request_cid, \
+            f'Expected one shared CID, got: "{response_cid}" and "{request_cid}"'
 
         # .. and separate invocations carry separate CIDs.
-        assert first_row_cells[_Column_CID] != last_row_cells[_Column_CID], \
-            f'Expected distinct CIDs across invocations, got: "{first_row_cells[_Column_CID]}" twice'
+        oldest_cid = get_row_cid(page, rows[3])
+        assert response_cid != oldest_cid, f'Expected distinct CIDs across invocations, got: "{response_cid}" twice'
 
 # ################################################################################################################################
 
@@ -537,27 +368,30 @@ class TestRESTOutconnAuditLog:
         logger.info('[test_service_call_creates_events] result=%s', result)
 
         # .. open the audit log page ..
-        _goto_audit_log(page, base_url, outconn['name'])
+        goto_audit_log(page, base_url, _Source, outconn['name'])
 
         # .. the call produced its two events ..
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 2, f'Expected 2 audit log rows, got {row_count}'
 
-        response_cells = _get_row_cells(rows[0])
-        request_cells = _get_row_cells(rows[1])
+        # .. the newest event is the response, the older one is the request ..
+        event_label = get_row_event(rows[0])
+        assert event_label == _Event_Response_Received_Label, \
+            f'Expected event "{_Event_Response_Received_Label}", got: "{event_label}"'
 
-        assert response_cells[_Column_Event] == _Event_Response_Received, \
-            f'Expected event type "{_Event_Response_Received}", got: "{response_cells[_Column_Event]}"'
-        assert request_cells[_Column_Event] == _Event_Request_Sent, \
-            f'Expected event type "{_Event_Request_Sent}", got: "{request_cells[_Column_Event]}"'
+        event_label = get_row_event(rows[1])
+        assert event_label == _Event_Request_Sent_Label, \
+            f'Expected event "{_Event_Request_Sent_Label}", got: "{event_label}"'
 
-        for cells in (response_cells, request_cells):
-            assert cells[_Column_Outcome] == _Outcome_OK, \
-                f'Expected outcome "{_Outcome_OK}", got: "{cells[_Column_Outcome]}"'
+        # .. both completed fine ..
+        for row in rows:
+            outcome = get_row_outcome(page, row)
+            assert outcome == _Outcome_OK, f'Expected outcome "{_Outcome_OK}", got: "{outcome}"'
 
-        assert 'from-inside-a-service' in request_cells[_Column_Data], \
-            f'Expected the payload in the request data preview, got: "{request_cells[_Column_Data]}"'
+        # .. and the request event holds the payload the service sent.
+        open_data(page, rows[1])
+        wait_for_payload_text(page, 'from-inside-a-service')
 
 # ################################################################################################################################
 
@@ -568,7 +402,7 @@ class TestRESTOutconnAuditLog:
         base_url = zato_dashboard['dashboard_url']
 
         # Record everything the browser and Django report during this test ..
-        diagnostics = _attach_diagnostics(page)
+        diagnostics = attach_diagnostics(page)
 
         # .. create a connection and invoke it with three distinct payloads, changing
         # .. the server's response each time so both events of one call carry its marker ..
@@ -579,41 +413,33 @@ class TestRESTOutconnAuditLog:
             _ = invoke_outconn_via_overlay(page, outconn['id'], request_body=f'{{"event": "{marker}"}}')
 
         # .. open the audit log page and confirm all six events are there ..
-        _goto_audit_log(page, base_url, outconn['name'])
+        goto_audit_log(page, base_url, _Source, outconn['name'])
 
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 6, f'Expected 6 audit log rows, got {row_count}'
 
-        # .. search for one marker and wait for the others to disappear ..
-        _search(page, 'invoice-paid')
-        _wait_for_body_without_text(page, 'invoice-created', diagnostics)
+        # .. the search runs over the stored payloads, so one marker keeps one invocation's
+        # .. request and response ..
+        search(page, 'invoice-paid')
+        wait_for_row_count(page, 2, diagnostics)
 
-        # .. the request and the response of the matching invocation remain ..
-        rows = _get_rows(page)
-        row_count = len(rows)
-        assert row_count == 2, f'Expected 2 filtered rows, got {row_count}'
+        rows = get_rows(page)
 
-        cells = _get_row_cells(rows[1])
-        assert 'invoice-paid' in cells[_Column_Data], \
-            f'Expected the matching payload, got: "{cells[_Column_Data]}"'
+        open_data(page, rows[1])
+        wait_for_payload_text(page, 'invoice-paid', diagnostics)
 
         # .. a query matching nothing shows the empty placeholder ..
-        _search(page, 'no-such-payload-anywhere')
-        _wait_for_body_text(page, _No_Events_Text, diagnostics)
+        search(page, 'no-such-payload-anywhere')
+        wait_for_empty(page, diagnostics)
 
         # .. clearing the query brings all six events back ..
-        _search(page, '')
-        _wait_for_body_text(page, 'invoice-created', diagnostics)
-        _wait_for_body_text(page, 'invoice-cancelled', diagnostics)
-
-        rows = _get_rows(page)
-        row_count = len(rows)
-        assert row_count == 6, f'Expected 6 rows after clearing the search, got {row_count}'
+        search(page, '')
+        wait_for_row_count(page, 6, diagnostics)
 
         # .. and no JavaScript errors or failed requests happened along the way.
-        assert not diagnostics['page_errors'], f'Unexpected page errors:\n{_format_diagnostics(diagnostics)}'
-        assert not diagnostics['failed_requests'], f'Unexpected failed requests:\n{_format_diagnostics(diagnostics)}'
+        assert not diagnostics['page_errors'], f'Unexpected page errors:\n{format_diagnostics(diagnostics)}'
+        assert not diagnostics['failed_requests'], f'Unexpected failed requests:\n{format_diagnostics(diagnostics)}'
 
 # ################################################################################################################################
 
@@ -624,9 +450,9 @@ class TestRESTOutconnAuditLog:
         base_url = zato_dashboard['dashboard_url']
 
         # Record everything the browser and Django report during this test ..
-        diagnostics = _attach_diagnostics(page)
+        diagnostics = attach_diagnostics(page)
 
-        # .. build a payload much longer than the 200-character preview shown in the table ..
+        # .. build a payload long enough that no row could ever show it whole ..
         line_items:'strlist' = []
 
         for item_index in range(20):
@@ -640,38 +466,32 @@ class TestRESTOutconnAuditLog:
         _ = invoke_outconn_via_overlay(page, outconn['id'], request_body=long_payload)
 
         # .. open the audit log page ..
-        _goto_audit_log(page, base_url, outconn['name'])
+        goto_audit_log(page, base_url, _Source, outconn['name'])
 
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 2, f'Expected 2 audit log rows, got {row_count}'
 
-        # .. the table shows only a truncated preview of the request payload ..
+        # .. the row itself carries no payload - the message is read in the pane ..
         request_row = rows[1]
-        cells = _get_row_cells(request_row)
-        preview = cells[_Column_Data]
-        assert len(preview) < len(long_payload), \
-            f'Expected a truncated preview, got {len(preview)} characters for a {len(long_payload)}-character payload'
+        main_text = get_row_main_text(request_row)
+        assert 'test-order-1' not in main_text, f'Expected no payload on the row, got: "{main_text}"'
 
-        # .. clicking the request's CID opens the overlay with the complete message ..
-        cid_link = request_row.query_selector('a.audit-log-cid-link')
-        cid_link.click()
-        _ = page.wait_for_selector('#zato-highlight-pane-overlay:not(.hidden)', state='visible', timeout=10000)
+        # .. while the overlay behind the request's CID holds the complete invocation
+        # request - the payload in full, wrapped in the invoke form's own envelope.
+        editor_value = open_cid_overlay(page, request_row)
+        overlay_message = json.loads(editor_value)
 
-        # .. the overlay editor holds the payload in full, read through the Ace API
-        # .. because Ace renders only the visible part of the text into the DOM ..
-        editor_value = page.evaluate(
-            '''() => {
-                let element = document.querySelector('#zato-highlight-pane-overlay .zato-highlight-pane-editor');
-                return ace.edit(element).getValue();
-            }''')
-
-        assert editor_value == long_payload, \
+        assert overlay_message['payload'] == long_payload, \
             f'Expected the complete payload in the overlay, got: "{editor_value}"'
+        assert overlay_message['method'] == 'POST', \
+            f'Expected the POST method in the overlay, got: "{editor_value}"'
+
+        close_cid_overlay(page)
 
         # .. and no JavaScript errors or failed requests happened along the way.
-        assert not diagnostics['page_errors'], f'Unexpected page errors:\n{_format_diagnostics(diagnostics)}'
-        assert not diagnostics['failed_requests'], f'Unexpected failed requests:\n{_format_diagnostics(diagnostics)}'
+        assert not diagnostics['page_errors'], f'Unexpected page errors:\n{format_diagnostics(diagnostics)}'
+        assert not diagnostics['failed_requests'], f'Unexpected failed requests:\n{format_diagnostics(diagnostics)}'
 
 # ################################################################################################################################
 
@@ -702,33 +522,37 @@ class TestRESTOutconnAuditLog:
         assert 'Connection error' in result['response'], f'Expected a connection error, got: {result}'
 
         # .. open the audit log page ..
-        _goto_audit_log(page, base_url, outconn_name)
+        goto_audit_log(page, base_url, _Source, outconn_name)
 
         # .. at least one invocation reached the wrapper, producing its two events ..
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count >= 2, f'Expected at least 2 audit log rows, got {row_count}'
 
-        response_cells = _get_row_cells(rows[0])
-        request_cells = _get_row_cells(rows[1])
-
         # .. the request itself was sent out fine ..
-        assert request_cells[_Column_Event] == _Event_Request_Sent, \
-            f'Expected event type "{_Event_Request_Sent}", got: "{request_cells[_Column_Event]}"'
-        assert request_cells[_Column_Outcome] == _Outcome_OK, \
-            f'Expected outcome "{_Outcome_OK}", got: "{request_cells[_Column_Outcome]}"'
+        event_label = get_row_event(rows[1])
+        assert event_label == _Event_Request_Sent_Label, \
+            f'Expected event "{_Event_Request_Sent_Label}", got: "{event_label}"'
+
+        outcome = get_row_outcome(page, rows[1])
+        assert outcome == _Outcome_OK, f'Expected outcome "{_Outcome_OK}", got: "{outcome}"'
 
         # .. while the response carries the error outcome with the connection error's details ..
-        assert response_cells[_Column_Event] == _Event_Response_Received, \
-            f'Expected event type "{_Event_Response_Received}", got: "{response_cells[_Column_Event]}"'
-        assert response_cells[_Column_Outcome] == _Outcome_Error, \
-            f'Expected outcome "{_Outcome_Error}", got: "{response_cells[_Column_Outcome]}"'
-        assert 'Connection' in response_cells[_Column_Data], \
-            f'Expected the connection error in the data preview, got: "{response_cells[_Column_Data]}"'
+        event_label = get_row_event(rows[0])
+        assert event_label == _Event_Response_Received_Label, \
+            f'Expected event "{_Event_Response_Received_Label}", got: "{event_label}"'
+
+        outcome = get_row_outcome(page, rows[0])
+        assert outcome == _Outcome_Error, f'Expected outcome "{_Outcome_Error}", got: "{outcome}"'
+
+        open_data(page, rows[0])
+        wait_for_payload_text(page, 'Connection')
 
         # .. and both events share their invocation's CID.
-        assert response_cells[_Column_CID] == request_cells[_Column_CID], \
-            f'Expected one shared CID, got: "{response_cells[_Column_CID]}" and "{request_cells[_Column_CID]}"'
+        response_cid = get_row_cid(page, rows[0])
+        request_cid = get_row_cid(page, rows[1])
+        assert response_cid == request_cid, \
+            f'Expected one shared CID, got: "{response_cid}" and "{request_cid}"'
 
 # ################################################################################################################################
 
@@ -745,19 +569,19 @@ class TestRESTOutconnAuditLog:
         outconn = _create_ready_outconn(page, base_url, 'ping', http_test_server)
 
         # .. yet the audit log page shows no events at all ..
-        _goto_audit_log(page, base_url, outconn['name'])
+        goto_audit_log(page, base_url, _Source, outconn['name'])
 
         body_text = page.inner_text('#audit-log-table-body')
-        assert _No_Events_Text in body_text, f'Expected "{_No_Events_Text}" after pings only, got: "{body_text}"'
+        assert No_Events_Text in body_text, f'Expected "{No_Events_Text}" after pings only, got: "{body_text}"'
 
         # .. while one actual invocation produces its two events - the overlay only exists
         # .. on the connections page, so that page must be opened again first.
         open_outconn_page(page, base_url)
         _ = invoke_outconn_via_overlay(page, outconn['id'], request_body='{"audit": "after-ping"}')
 
-        _goto_audit_log(page, base_url, outconn['name'])
+        goto_audit_log(page, base_url, _Source, outconn['name'])
 
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 2, f'Expected 2 audit log rows after one invocation, got {row_count}'
 
@@ -821,22 +645,22 @@ outgoing_rest:
         result = invoke_outconn_via_overlay(page, outconn_id, request_body=payload)
 
         # .. and its audit events appear exactly like for UI-created connections.
-        _goto_audit_log(page, base_url, outconn_name)
+        goto_audit_log(page, base_url, _Source, outconn_name)
 
-        rows = _get_rows(page)
+        rows = get_rows(page)
         row_count = len(rows)
         assert row_count == 2, f'Expected 2 audit log rows, got {row_count}'
 
-        response_cells = _get_row_cells(rows[0])
-        request_cells = _get_row_cells(rows[1])
+        event_label = get_row_event(rows[0])
+        assert event_label == _Event_Response_Received_Label, \
+            f'Expected event "{_Event_Response_Received_Label}", got: "{event_label}"'
 
-        assert response_cells[_Column_Event] == _Event_Response_Received, \
-            f'Expected event type "{_Event_Response_Received}", got: "{response_cells[_Column_Event]}"'
-        assert request_cells[_Column_Event] == _Event_Request_Sent, \
-            f'Expected event type "{_Event_Request_Sent}", got: "{request_cells[_Column_Event]}"'
+        event_label = get_row_event(rows[1])
+        assert event_label == _Event_Request_Sent_Label, \
+            f'Expected event "{_Event_Request_Sent_Label}", got: "{event_label}"'
 
-        assert 'created-through-enmasse' in request_cells[_Column_Data], \
-            f'Expected the payload in the request data preview, got: "{request_cells[_Column_Data]}"'
+        open_data(page, rows[1])
+        wait_for_payload_text(page, 'created-through-enmasse')
 
 # ################################################################################################################################
 # ################################################################################################################################

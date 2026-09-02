@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import logging
 import os
 import socket
@@ -324,10 +325,18 @@ class TestCloudMicrosoftFabricPing:
 
         logger.info('[test_ping_wrong_secret] ping_result=%s', ping_result)
 
-        # .. the ping reports a failure with the token error from the simulated server.
-        assert ping_result['status'] == 500, f'Expected a failed ping, got: {ping_result}'
-        assert 'Fabric token error' in ping_result['text'], f'Expected a token error in the response, got: {ping_result}'
-        assert 'invalid_client' in ping_result['text'], f'Expected the token error details in the response, got: {ping_result}'
+        # .. the ping responds with OK but reports a failure with the token error from the simulated server.
+        assert ping_result['status'] == 200, f'Expected an OK response, got: {ping_result}'
+
+        ping_response = json.loads(ping_result['text'])
+
+        assert ping_response['is_success'] is False, f'Expected a failed ping, got: {ping_result}'
+        assert 'Fabric token error' in ping_response['message'], f'Expected a token error in the response, got: {ping_result}'
+
+        # The message is a display-ready summary that may be cut short,
+        # while the details always carry the error in full.
+        assert 'invalid_client' in ping_response['details'], \
+            f'Expected the token error details in the response, got: {ping_result}'
 
 # ################################################################################################################################
 # ################################################################################################################################

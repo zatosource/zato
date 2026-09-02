@@ -25,7 +25,7 @@ wizard.config_own = {
     // than in the review module, loaded after this one
     groups: {
         basics: 'Basics',
-        services: 'Services',
+        tools: 'Tools',
         skills: 'Skills',
         security: 'Security',
         shaping: 'Response shaping',
@@ -136,10 +136,11 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         $.fn.zato.gateway.mcp._init_host_list(action);
         $.fn.zato.gateway.mcp._init_safeguard_toggles(action);
 
-        // .. the services and the security definitions the gateway exposes
-        // and authenticates with, plus the skills it serves as prompts,
-        // each in a badge picker of its own ..
-        $.fn.zato.gateway.mcp.badge_picker.load(ownConfig.pickerAction, itemId);
+        // .. the tools the gateway exposes - the services and the outgoing
+        // connections, each source of the one Tools card holding its own
+        // picks - plus the security definitions it authenticates with and
+        // the skills it serves as prompts ..
+        wizard.toolSources.init();
         $.fn.zato.gateway.mcp.security_badge_picker.load(ownConfig.pickerAction, itemId);
         $.fn.zato.gateway.mcp.skills_badge_picker.load(ownConfig.pickerAction, itemId);
 
@@ -206,18 +207,35 @@ wizard.assignedBadges = function(pickerAction) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Every badge assigned in either picker becomes one hidden input, in the
-// very shape the create endpoint reads - mcp_service_* for the services
-// and mcp_security_* for the security definitions.
+// Every pick becomes one hidden input, in the very shape the create
+// endpoint reads - mcp_service_* for the services, mcp_<source>_* for the
+// connection sources and mcp_security_* for the security definitions.
 wizard._writeBadgeInputs = function(form) {
 
     var ownConfig = wizard.config_own;
 
     form.find('input.badge-member-input').remove();
 
-    wizard.assignedBadges(ownConfig.pickerAction).each(function() {
-        $.fn.zato.gateway.mcp.badge_picker_config.inject_hidden_input(form, $(this));
-    });
+    var toolPicks = wizard.toolSources.allAssigned();
+
+    for(var pickIndex = 0; pickIndex < toolPicks.length; pickIndex++) {
+
+        var pick = toolPicks[pickIndex];
+        var inputName;
+
+        if(pick.key === 'services') {
+            inputName = 'mcp_service_' + pick.name;
+        } else {
+            inputName = 'mcp_' + pick.key + '_' + pick.name;
+        }
+
+        form.append($('<input/>', {
+            type: 'hidden',
+            name: inputName,
+            value: pick.name,
+            'class': 'badge-member-input'
+        }));
+    }
 
     wizard.assignedBadges(ownConfig.securityPickerAction).each(function() {
         $.fn.zato.gateway.mcp.security_badge_picker_config.inject_hidden_input(form, $(this));
@@ -245,8 +263,9 @@ wizard.helpDescriptions = function() {
     out['mcp-wizard-title'] = wizard.titleHelp();
 
     // The badge pickers of step 1 ..
-    out['badge-filter-text-wizard'] = 'The services this gateway exposes as MCP tools. ' +
-        'Each assigned service becomes one tool an agent can discover and invoke. ' +
+    out['badge-filter-text-wizard'] = 'What this gateway exposes as MCP tools - services and outgoing connections, ' +
+        'each source on the list holding its own picks. Every assigned item becomes one tool ' +
+        'an agent can discover and invoke. ' +
         'Click a badge to move it between the two zones, or drag a whole selection.';
     out['badge-filter-text-skills-wizard'] = 'The skills this gateway serves as MCP prompts. ' +
         'Each assigned skill becomes one prompt an agent can discover and read. ' +

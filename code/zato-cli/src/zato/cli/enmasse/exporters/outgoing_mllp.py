@@ -11,7 +11,7 @@ import logging
 
 # Zato
 from zato.common.api import GENERIC
-from zato.common.hl7.mllp.fields import Outconn_Fields
+from zato.common.hl7.mllp.fields import Outgoing_Fields
 from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -75,7 +75,7 @@ class OutgoingMLLPExporter:
                 'address': row['address'],
             }
 
-            for field in Outconn_Fields:
+            for field in Outgoing_Fields:
                 value = row.get(field.name, field.default)
                 if value != field.default:
                     item[field.name] = value

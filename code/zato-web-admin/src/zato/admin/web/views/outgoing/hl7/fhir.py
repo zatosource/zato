@@ -40,8 +40,8 @@ class Index(_Index):
         security_list = SecurityList.from_service(
             self.req.zato.client,
             self.cluster_id,
-            sec_type = [SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.OAUTH],
-            needs_def_type_name_label=True
+            security_type_list = [SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.OAUTH],
+            needs_definition_type_name_label=True
         )
 
         return {

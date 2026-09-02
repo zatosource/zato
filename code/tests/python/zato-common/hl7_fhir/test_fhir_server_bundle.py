@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 import pytest
 
 # Zato
-from zato.common.test.fhir_ import FHIRTestServer
+from zato.common.test.fhir import FHIRTestServer
 
 # Local
 from conftest import convert
@@ -39,7 +39,7 @@ PV1 = 'PV1|1|I|WARD1^101^A^GENHOSP|||||||MED|||||||||VN123^^^MYHOSP'
 
 @pytest.fixture(scope='module')
 def fhir_server():
-    """ A live FHIR test server shared by all the tests of this module.
+    """ A FHIR test server shared by all the tests of this module.
     """
     server = FHIRTestServer()
     server.start()
@@ -105,7 +105,7 @@ class TestTransactionBundle:
 
         response = _post_bundle(fhir_server, bundle_dict)
 
-        # Find where the Patient and the Encounter now live
+        # Find where the Patient and the Encounter are now stored
         patient_location = None
         encounter_location = None
 

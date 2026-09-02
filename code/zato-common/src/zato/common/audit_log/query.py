@@ -11,11 +11,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # that closes it, so one query lists everything still waiting for its receipt -
 # an AS2 message without its MDN or an X12 interchange without its 997/999.
 
+# stdlib
+from dataclasses import dataclass
+
 # SQLAlchemy
 from sqlalchemy import and_, exists, select
 
 # Zato
-from zato.common.audit_log.api import event_table
+from zato.common.api import SCHEDULER
+from zato.common.audit_log.api import event_table, AuditEvent
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,6 +27,54 @@ from zato.common.audit_log.api import event_table
 if 0:
     from zato.common.typing_ import anylist
     anylist = anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class OutstandingFilter:
+    """ The outstanding filter of one source - the event that opens an exchange, the acknowledgment
+    that closes it, and whether the close matches on the partner pair too. AS2 MDNs answer
+    the Message-ID alone while X12 acknowledgments echo both the pair and the control number.
+    A source whose events are single rows updated in place has no exchange to pair - what is
+    open there is an event still carrying its in-progress outcome, which open_outcome names.
+    """
+    open_event: str = ''
+    close_event: str = ''
+    needs_object_name_match: bool = False
+    open_outcome: str = ''
+
+# ################################################################################################################################
+
+def _new_outstanding_filter(open_event:'str', close_event:'str', needs_object_name_match:'bool') -> 'OutstandingFilter':
+    out = OutstandingFilter()
+    out.open_event = open_event
+    out.close_event = close_event
+    out.needs_object_name_match = needs_object_name_match
+
+    return out
+
+# ################################################################################################################################
+
+def _new_outcome_filter(open_outcome:'str') -> 'OutstandingFilter':
+    out = OutstandingFilter()
+    out.open_outcome = open_outcome
+
+    return out
+
+# ################################################################################################################################
+
+# The sources whose events can be outstanding at all - what opens and what closes
+# each one's exchanges.
+source_outstanding = {
+    'as2': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.MDN_Received, False),
+    'as4': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Receipt_Received, True),
+    'x12': _new_outstanding_filter(AuditEvent.Interchange_Sent, AuditEvent.Ack_Received, True),
+    'mllp-outgoing': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Ack_Received, True),
+
+    # A scheduler run is one row updated in place - outstanding means it is still running
+    'scheduler': _new_outcome_filter(SCHEDULER.OUTCOME.RUNNING),
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
