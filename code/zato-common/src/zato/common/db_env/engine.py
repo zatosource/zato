@@ -19,6 +19,7 @@ from sqlalchemy import event as sa_event
 from sqlalchemy.pool import QueuePool
 
 # Zato
+from zato.common.odb import oracle as oracle
 from zato.common.db_env.common import get_env_values, Type_SQLite
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, set_sqlite_pragmas
 from zato.common.db_env.schema import ensure_column_types, ensure_columns, ensure_indexes
