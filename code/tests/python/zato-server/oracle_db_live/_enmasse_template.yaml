@@ -1,0 +1,9 @@
+sql:
+
+  - name: test.oracle.db
+    type: oracle
+    host: {{oracle_host}}
+    port: {{oracle_port}}
+    db_name: {{oracle_db_name}}
+    username: {{oracle_username}}
+    password: "{{oracle_password}}"
