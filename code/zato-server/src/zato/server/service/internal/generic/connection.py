@@ -445,6 +445,10 @@ class _CreateEdit(_BaseService):
                     secret = cast_('str', secret)
                 conn.secret = secret
 
+                # The config event published below carries the secret the same way an edit's event does,
+                # otherwise the connection wrapper would be built without one until the first edit.
+                data['secret'] = secret
+
             conn_dict = conn.to_sql_dict()
 
             self.logger.info('GenericConn _CreateEdit step 4: conn_dict keys=%s', sorted(conn_dict.keys()))

@@ -1134,7 +1134,7 @@ class ConfigManager(_ConfigManagerBase):
         ]
 
         for regular_item in regular_maps:
-            regular_item[_generic_msg.create] = self._create_generic_connection
+            regular_item[_generic_msg.create] = self._create_generic_connection_from_event
             regular_item[_generic_msg.edit]   = self._edit_generic_connection
             regular_item[_generic_msg.delete] = self._delete_generic_connection
 

@@ -10,8 +10,8 @@
     --file-shell-text: #1a1a2e;
     --file-shell-text-muted: #71717a;
     --file-shell-output-bg: #fbfbfc;
-    --file-shell-output-height: 260px;
-    --file-shell-editor-height: 96px;
+    --file-shell-output-height: 208px;
+    --file-shell-editor-height: 48px;
     --file-shell-control-height: 26px;
     --file-shell-font-family: monospace;
     --file-shell-font-size: 12px;
@@ -85,7 +85,8 @@
 /* File transfer command shell - action bar                      */
 /* ------------------------------------------------------------ */
 
-.file-shell-actions {
+.file-shell-actions,
+.file-shell-output-footer {
     display: flex;
     align-items: center;
     justify-content: flex-end;

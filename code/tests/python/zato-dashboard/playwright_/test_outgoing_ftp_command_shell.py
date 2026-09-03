@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from http.client import INTERNAL_SERVER_ERROR, OK
+from socket import AF_INET, SOCK_STREAM, socket
 
 # pytest
 import pytest
@@ -70,6 +71,20 @@ def _write_remote_file(ftp_server:'any_', name:'str', content:'str') -> 'str':
         _ = file_handle.write(content)
 
     out = name
+    return out
+
+# ################################################################################################################################
+
+def _find_closed_port() -> 'int':
+    """ Returns a port that nothing listens on - it was bound for a moment and released.
+    """
+    sock = socket(AF_INET, SOCK_STREAM)
+    sock.bind(('127.0.0.1', 0))
+
+    address = sock.getsockname()
+    sock.close()
+
+    out = address[1]
     return out
 
 # ################################################################################################################################
@@ -352,6 +367,7 @@ class TestOutgoingFTPCommandShell:
             '.action-button',
             '.secondary-button',
             '#file-shell-timing',
+            '#file-shell-copy',
         ]:
             assert page.query_selector(selector) is not None, f'Expected "{selector}" on the command shell page'
 
@@ -417,6 +433,82 @@ class TestOutgoingFTPCommandShell:
         # .. and neither list may have anything in it.
         assert not real_errors, 'Console errors on the command shell page:\n' + '\n'.join(real_errors)
         assert not server_errors, 'HTTP 500+ responses on the command shell page:\n' + '\n'.join(server_errors)
+
+# ################################################################################################################################
+
+    def test_connection_error_shows_message_not_traceback(self, ftp_shell:'anydict') -> 'None':
+        """ A connection that cannot be established reports the error message alone, without a traceback.
+        """
+
+        page = ftp_shell['page']
+        base_url = ftp_shell['base_url']
+        server = ftp_shell['server']
+
+        # A port with nothing listening on it.
+        closed_port = _find_closed_port()
+
+        name = _Test_Name_Prefix + CryptoManager.generate_hex_string(8)
+        conn_id = ''
+
+        try:
+            open_ftp_page(page, base_url)
+            create_ftp_connection(page, name, server.host, closed_port, server.username, server.password)
+            conn_id = get_ftp_conn_id(page, name)
+
+            _open_command_shell(page, base_url, name)
+            result = _run_command(page, 'ls .')
+
+            # The command fails ..
+            assert not result['is_ok'], f'Expected the command to fail, stdout was: "{result["stdout"]}"'
+
+            # .. stderr carries the error message itself ..
+            assert result['stderr'] != _Empty_Output, 'Expected stderr to carry the failure'
+            assert 'refused' in result['stderr'].lower(), f'Expected a connection error in stderr, got: "{result["stderr"]}"'
+
+            # .. and no traceback comes with it.
+            assert 'Traceback' not in result['stderr'], f'Expected no traceback in stderr, got: "{result["stderr"]}"'
+
+        finally:
+            if conn_id:
+                open_ftp_page(page, base_url)
+                delete_ftp_connection(page, conn_id)
+
+# ################################################################################################################################
+
+    def test_numeric_name_works_right_after_create(self, ftp_shell:'anydict') -> 'None':
+        """ A connection whose name is all digits is usable in the command shell straight after it was created,
+        with no edit in between.
+        """
+
+        page = ftp_shell['page']
+        base_url = ftp_shell['base_url']
+        server = ftp_shell['server']
+
+        # A name that consists of digits alone.
+        hex_string = CryptoManager.generate_hex_string(8)
+        number = int(hex_string, 16)
+        name = str(number)
+
+        conn_id = ''
+
+        try:
+            open_ftp_page(page, base_url)
+            create_ftp_connection(page, name, server.host, server.port, server.username, server.password)
+            conn_id = get_ftp_conn_id(page, name)
+
+            # Straight to the shell, with no edit in between ..
+            _open_command_shell(page, base_url, name)
+            result = _run_command(page, 'ls .')
+
+            # .. the connection must be there under the very name it was created with.
+            assert 'No such outgoing FTP connection' not in result['stderr'], \
+                f'The connection was not registered under its name, stderr was: "{result["stderr"]}"'
+            assert result['is_ok'], f'Expected the command to succeed, stderr was: "{result["stderr"]}"'
+
+        finally:
+            if conn_id:
+                open_ftp_page(page, base_url)
+                delete_ftp_connection(page, conn_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
