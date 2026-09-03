@@ -8,15 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The alerting engine - findings are routed through the rules that match them,
 # deduplicated in the store and dispatched through each rule's action. The transports
-# are injected callables, so the engine stays pure and offline-testable - the service
-# layer provides the real SMTP, Slack and Microsoft Teams connections, the service
-# invoker, pub/sub and HTTP for plain webhooks. Email, Slack and Teams deliver through
-# the connections that share the default notification name, so the delivery targets
-# are the connections themselves - a rule only says where within them, e.g. which
-# Slack channel. What each notification says comes from the Jinja templates on disk.
-# Findings no rule matches go to the default sink - logged and offered as a catch-all
-# digest, never dropped - and critical findings are dispatched on every occurrence,
-# regardless of dedup and digest settings.
+# are injected callables - the service layer provides the real SMTP, Slack and Microsoft
+# Teams connections, the service invoker, pub/sub and HTTP for plain webhooks. Email,
+# Slack and Teams deliver through the connections that share the default notification
+# name, and a rule only says where within them, e.g. which Slack channel. What each
+# notification says comes from the Jinja templates on disk. Findings no rule matches
+# go to the default sink - logged and offered as a catch-all digest - and critical
+# findings are dispatched on every occurrence, regardless of dedup and digest settings.
 
 from __future__ import annotations
 
@@ -25,6 +23,7 @@ import json
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from traceback import format_exc
 
 # Zato
 from zato.common.alerting.model import rule_matches, AlertAction, AlertSeverity
@@ -35,6 +34,7 @@ from zato.common.api import Incidents
 from zato.common.audit_log.api import AuditEvent, get_audit_engine
 from zato.common.json_internal import dumps
 from zato.common.typing_ import list_field
+from zato.common.util.api import pluralize
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,8 +94,7 @@ class AlertTransports:
 @dataclass(init=False)
 class AlertDefaults:
     """ The deployment-level notification targets - read from the sweep job's extra,
-    they answer whenever a rule's own action config names no target, so a seeded
-    rule saying only which channel to use delivers without being edited.
+    they answer whenever a rule's own action config names no target.
     """
 
     # Where the catch-all digest and target-less email rules deliver
@@ -125,8 +124,8 @@ class ProcessResult:
 def build_template_context(rule:'AlertRule', finding:'Finding', alert_id:'int', count:'int') -> 'stranydict':
     """ The context every notification template renders with - the alert as one dict,
     the rendered message with its repetition prefix included. The diagnosis keys are
-    empty here because a diagnosis, when there is one, is attached by the diagnosis
-    service, which renders through the same templates with these keys filled in.
+    empty here - the diagnosis service fills them in when it renders through
+    the same templates.
     """
     message = render_alert_message(count, finding.message)
 
@@ -153,7 +152,7 @@ def build_template_context(rule:'AlertRule', finding:'Finding', alert_id:'int', 
 def build_alert_payload(rule:'AlertRule', finding:'Finding', alert_id:'int', count:'int') -> 'stranydict':
     """ Builds the structured payload the invoke-service and publish-to-topic actions
     carry - everything an automated remediation needs to act on the alert, the rule's
-    own action configuration included, so the target can read its settings from the rule.
+    own action configuration included.
     """
     out = {
         'alert_id': alert_id,
@@ -185,6 +184,167 @@ def _get_webhook_target(rule:'AlertRule', default_url:'str') -> 'str':
 
 # ################################################################################################################################
 
+def _dispatch_email(
+    rule:'AlertRule',
+    finding:'Finding',
+    context:'stranydict',
+    alert_id:'int',
+    count:'int',
+    transports:'AlertTransports',
+    defaults:'AlertDefaults',
+    template_dir:'str',
+    ) -> 'None':
+    """ Sends one alert as an email to the rule's own addresses, or to the sweep's
+    default ones when the rule names none.
+    """
+
+    # A rule without its own address list sends to the sweep's default address.
+    if not (addresses := rule.action_config.get('addresses')):
+        addresses = defaults.email_to
+
+    # With no addresses configured anywhere there is nowhere to send the email.
+    if not addresses:
+        logger.warning(
+            'Alert rule `%s` has no addresses and no default email is configured - skipping an email about `%s`',
+            rule.name, finding.object_name)
+        return
+
+    subject = render_alert_template(Template_Email_Subject, context, template_dir)
+    body = render_alert_template(Template_Email_Body, context, template_dir)
+
+    transports.send_email(addresses, subject, body)
+
+# ################################################################################################################################
+
+def _dispatch_invoke_service(
+    rule:'AlertRule',
+    finding:'Finding',
+    context:'stranydict',
+    alert_id:'int',
+    count:'int',
+    transports:'AlertTransports',
+    defaults:'AlertDefaults',
+    template_dir:'str',
+    ) -> 'None':
+    """ Invokes the service the rule names, handing it the alert's structured payload.
+    """
+    service_name = rule.action_config['service']
+    payload = build_alert_payload(rule, finding, alert_id, count)
+
+    transports.invoke_service(service_name, payload)
+
+# ################################################################################################################################
+
+def _dispatch_publish(
+    rule:'AlertRule',
+    finding:'Finding',
+    context:'stranydict',
+    alert_id:'int',
+    count:'int',
+    transports:'AlertTransports',
+    defaults:'AlertDefaults',
+    template_dir:'str',
+    ) -> 'None':
+    """ Publishes the alert's structured payload to the topic the rule names.
+    """
+    topic_name = rule.action_config['topic']
+    payload = build_alert_payload(rule, finding, alert_id, count)
+
+    transports.publish(topic_name, payload)
+
+# ################################################################################################################################
+
+def _dispatch_slack(
+    rule:'AlertRule',
+    finding:'Finding',
+    context:'stranydict',
+    alert_id:'int',
+    count:'int',
+    transports:'AlertTransports',
+    defaults:'AlertDefaults',
+    template_dir:'str',
+    ) -> 'None':
+    """ Posts one alert to the Slack channel the rule names.
+    """
+
+    # Without a channel in the rule's action config there is nowhere to post.
+    if not (channel := rule.action_config.get(Incidents.Config_Slack_Channel)):
+        logger.warning('Alert rule `%s` has no Slack channel - skipping `%s`', rule.name, finding.object_name)
+        return
+
+    text = render_alert_template(Template_Slack, context, template_dir)
+
+    transports.send_slack(channel, text)
+
+# ################################################################################################################################
+
+def _dispatch_teams(
+    rule:'AlertRule',
+    finding:'Finding',
+    context:'stranydict',
+    alert_id:'int',
+    count:'int',
+    transports:'AlertTransports',
+    defaults:'AlertDefaults',
+    template_dir:'str',
+    ) -> 'None':
+    """ Posts one alert to the Microsoft Teams target the rule names.
+    """
+
+    # Without a target in the rule's action config there is nowhere to post.
+    if not (to := rule.action_config.get(Incidents.Config_Teams_To)):
+        logger.warning('Alert rule `%s` has no Teams target - skipping `%s`', rule.name, finding.object_name)
+        return
+
+    # Teams messages are HTML.
+    text = render_alert_template(Template_Teams, context, template_dir)
+    html = text.replace('\n', '<br/>')
+
+    transports.send_teams(to, html)
+
+# ################################################################################################################################
+
+def _dispatch_webhook(
+    rule:'AlertRule',
+    finding:'Finding',
+    context:'stranydict',
+    alert_id:'int',
+    count:'int',
+    transports:'AlertTransports',
+    defaults:'AlertDefaults',
+    template_dir:'str',
+    ) -> 'None':
+    """ Posts one alert to the rule's webhook URL, or to the deployment-level one
+    when the rule names none.
+    """
+    webhook_url = _get_webhook_target(rule, defaults.webhook_url)
+
+    if not webhook_url:
+        logger.warning('Alert rule `%s` has no webhook URL and no default one is configured - skipping `%s`',
+            rule.name, finding.object_name)
+        return
+
+    # The webhook template renders the entire JSON body, so the payload a workflow
+    # backend expects is a matter of the template alone.
+    rendered = render_alert_template(Template_Webhook, context, template_dir)
+    payload = json.loads(rendered)
+
+    transports.http_post(webhook_url, payload)
+
+# ################################################################################################################################
+
+# Which function delivers each action.
+_dispatchers = {
+    AlertAction.Email_Digest:     _dispatch_email,
+    AlertAction.Invoke_Service:   _dispatch_invoke_service,
+    AlertAction.Publish_To_Topic: _dispatch_publish,
+    AlertAction.Slack:            _dispatch_slack,
+    AlertAction.Teams:            _dispatch_teams,
+    AlertAction.Webhook:          _dispatch_webhook,
+}
+
+# ################################################################################################################################
+
 def dispatch_action(
     rule:'AlertRule',
     finding:'Finding',
@@ -198,77 +358,20 @@ def dispatch_action(
     alert templates and delivered through whichever transport the rule chose.
     Email, Slack and Teams ride on the connections behind their transports,
     and a rule whose action config names no address list or webhook URL of its own
-    uses the deployment-level defaults, so a seeded rule delivers without being edited.
+    uses the deployment-level defaults.
     """
     if defaults is None:
         defaults = AlertDefaults()
 
     context = build_template_context(rule, finding, alert_id, count)
 
-    if rule.action == AlertAction.Email_Digest:
+    if dispatcher := _dispatchers.get(rule.action):
+        dispatcher(rule, finding, context, alert_id, count, transports, defaults, template_dir)
 
-        # A rule without its own address list sends to the sweep's default address
-        if not (addresses := rule.action_config.get('addresses')):
-            addresses = defaults.email_to
-
-        # With no addresses configured anywhere there is nowhere to send the email
-        if not addresses:
-            logger.warning(
-                'Alert rule `%s` has no addresses and no default email is configured - skipping an email about `%s`',
-                rule.name, finding.object_name)
-            return
-
-        subject = render_alert_template(Template_Email_Subject, context, template_dir)
-        body = render_alert_template(Template_Email_Body, context, template_dir)
-
-        transports.send_email(addresses, subject, body)
-
-    elif rule.action == AlertAction.Invoke_Service:
-        service_name = rule.action_config['service']
-        payload = build_alert_payload(rule, finding, alert_id, count)
-        transports.invoke_service(service_name, payload)
-
-    elif rule.action == AlertAction.Publish_To_Topic:
-        topic_name = rule.action_config['topic']
-        payload = build_alert_payload(rule, finding, alert_id, count)
-        transports.publish(topic_name, payload)
-
-    elif rule.action == AlertAction.Slack:
-
-        # Without a channel in the rule's action config there is nowhere to post
-        if not (channel := rule.action_config.get(Incidents.Config_Slack_Channel)):
-            logger.warning('Alert rule `%s` has no Slack channel - skipping `%s`', rule.name, finding.object_name)
-            return
-
-        text = render_alert_template(Template_Slack, context, template_dir)
-        transports.send_slack(channel, text)
-
-    elif rule.action == AlertAction.Teams:
-
-        # Without a target in the rule's action config there is nowhere to post
-        if not (to := rule.action_config.get(Incidents.Config_Teams_To)):
-            logger.warning('Alert rule `%s` has no Teams target - skipping `%s`', rule.name, finding.object_name)
-            return
-
-        # Teams messages are HTML
-        text = render_alert_template(Template_Teams, context, template_dir)
-        html = text.replace('\n', '<br/>')
-        transports.send_teams(to, html)
-
-    elif rule.action == AlertAction.Webhook:
-
-        webhook_url = _get_webhook_target(rule, defaults.webhook_url)
-
-        if not webhook_url:
-            logger.warning('Alert rule `%s` has no webhook URL and no default one is configured - skipping `%s`',
-                rule.name, finding.object_name)
-            return
-
-        # The webhook template renders the entire JSON body, so shaping the payload
-        # for a workflow backend is a template edit, not a code change.
-        rendered = render_alert_template(Template_Webhook, context, template_dir)
-        payload = json.loads(rendered)
-        transports.http_post(webhook_url, payload)
+    # .. anything else is an action no transport delivers.
+    else:
+        logger.warning('Alert rule `%s` names action `%s` that nothing delivers - skipping `%s`',
+            rule.name, rule.action, finding.object_name)
 
 # ################################################################################################################################
 
@@ -309,7 +412,9 @@ def record_alert_event(audit_log:'AuditLog', rule:'AlertRule', finding:'Finding'
         'count': count,
     }
 
-    _ = audit_log.insert(finding.source, AuditEvent.Alert_Raised, finding.object_name, cid=cid, data=dumps(details))
+    data = dumps(details)
+
+    _ = audit_log.insert(finding.source, AuditEvent.Alert_Raised, finding.object_name, cid=cid, data=data)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -332,7 +437,9 @@ def process_findings(
     unless the finding is critical - critical findings are dispatched on every
     occurrence and can never be suppressed. Findings no rule matches go to the
     default sink: logged, returned, and emailed as a catch-all digest
-    when a default address is configured.
+    when a default address is configured. A transport that raises costs its own
+    notification only - the alert is already raised and in the audit trail,
+    and the findings after it are dispatched as usual.
     """
     engine = get_audit_engine()
 
@@ -340,7 +447,7 @@ def process_findings(
         defaults = AlertDefaults()
 
     # Our response to produce - the fields are assigned here because init=False
-    # means the field factories never run
+    # means the field factories never run.
     out = ProcessResult()
     out.dispatched = []
     out.unmatched = []
@@ -353,7 +460,7 @@ def process_findings(
             if rule_matches(rule, finding):
                 matched_rules.append(rule)
 
-        # No rule matched - the finding goes to the default sink instead of being dropped
+        # No rule matched - the finding goes to the default sink instead of being dropped.
         if not matched_rules:
             logger.warning('No alert rule matched finding `%s` on `%s` - %s',
                 finding.kind, finding.object_name, finding.message)
@@ -369,19 +476,33 @@ def process_findings(
             else:
                 out.deduplicated_count += 1
 
-            # Every occurrence lands in the audit trail, deduplicated or not
+            # Every occurrence lands in the audit trail, deduplicated or not.
             record_alert_event(audit_log, rule, finding, raise_result.count, cid)
 
             # A repetition within the window is not dispatched again - unless
-            # the finding is critical, which is never suppressed
+            # the finding is critical, which is never suppressed.
             if raise_result.is_new or finding.severity == AlertSeverity.Critical:
-                dispatch_action(rule, finding, raise_result.alert_id, raise_result.count, transports, defaults, template_dir)
-                out.dispatched.append((rule.name, rule.action))
 
-    # The default sink emails its catch-all digest when an address is configured
+                # A transport that cannot deliver - an unreachable webhook, an SMTP server
+                # that is down - loses this one notification and nothing else.
+                try:
+                    dispatch_action(rule, finding, raise_result.alert_id, raise_result.count, transports, defaults,
+                        template_dir)
+                except Exception:
+                    logger.warning('Alert rule `%s` could not dispatch %s about `%s` -> %s',
+                        rule.name, rule.action, finding.object_name, format_exc())
+                else:
+                    out.dispatched.append((rule.name, rule.action))
+
+    # The default sink emails its catch-all digest when an address is configured.
     if out.unmatched and defaults.email_to:
         subject, body = build_digest(out.unmatched, dashboard_url=dashboard_url, template_dir=template_dir)
-        transports.send_email(defaults.email_to, subject, body)
+
+        try:
+            transports.send_email(defaults.email_to, subject, body)
+        except Exception:
+            finding_label = pluralize(len(out.unmatched), 'finding')
+            logger.warning('The alert digest of %s could not be sent -> %s', finding_label, format_exc())
 
     return out
 

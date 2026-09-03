@@ -20,6 +20,7 @@ import socket
 import ssl
 from datetime import datetime, timezone
 from logging import getLogger
+from traceback import format_exc
 
 # Zato
 from zato.common.alerting.collectors import Attr_Days_Left
@@ -30,9 +31,7 @@ from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 
 if 0:
     from zato.common.audit_log.api import AuditLog
-    from zato.common.typing_ import any_, anylist, callable_, dictlist
-    any_ = any_
-    anylist = anylist
+    from zato.common.typing_ import callable_, dictlist
     AuditLog = AuditLog
     callable_ = callable_
     dictlist = dictlist
@@ -54,9 +53,11 @@ Default_Handshake_Timeout = 10
 # How many seconds one day holds - the certificate measure is expressed in days.
 Seconds_Per_Day = 24 * 3600
 
-# What the provider-specific health states normalize into - the two the rules speak.
+# What the provider-specific health states normalize into - the two the rules speak,
+# next to the empty state a service in good health carries.
 Health_State_Degraded     = 'degraded'
 Health_State_Interruption = 'interruption'
+Health_State_Healthy      = ''
 
 # The provider spellings each normalized state covers. Anything unlisted is healthy,
 # so an unknown future state never raises a false alert - it shows up in the raw
@@ -103,7 +104,7 @@ def get_certificate_days_left(
     certificate = x509.load_der_x509_certificate(certificate_bytes)
     not_after = certificate.not_valid_after_utc
 
-    # The comparison needs both moments on the same clock
+    # The comparison needs both moments on the same clock.
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
 
@@ -143,8 +144,10 @@ def run_certificate_probe(
             days_left = check(host, port, now)
         except Exception as e:
 
-            # One target failing never stops the others from being measured
-            logger.info('Certificate check of `%s` (%s) failed -> %s', object_name, endpoint, e)
+            # One target failing never stops the others from being measured.
+            logger.warning('Certificate check of `%s` (%s) failed -> %s', object_name, endpoint, format_exc())
+
+            error = str(e)
 
             _ = audit_log.insert(
                 AuditSource.Certificate,
@@ -153,9 +156,12 @@ def run_certificate_probe(
                 cid=cid,
                 endpoint=endpoint,
                 outcome=AuditOutcome.Error,
-                status=str(e),
+                status=error,
             )
         else:
+            days_left_rounded = round(days_left, 2)
+            measures = {Attr_Days_Left: days_left_rounded}
+
             _ = audit_log.insert(
                 AuditSource.Certificate,
                 AuditEvent.Cert_Checked,
@@ -163,7 +169,7 @@ def run_certificate_probe(
                 cid=cid,
                 endpoint=endpoint,
                 outcome=AuditOutcome.OK,
-                attrs={Attr_Days_Left: round(days_left, 2)},
+                attrs=measures,
             )
 
         out += 1
@@ -178,7 +184,7 @@ def normalize_health_state(value:'str') -> 'str':
     degraded or interruption - with anything unlisted meaning healthy, i.e. an empty state.
     """
     key = value.strip().lower()
-    out = _health_state_map.get(key, '')
+    out = _health_state_map.get(key, Health_State_Healthy)
 
     return out
 
@@ -186,19 +192,43 @@ def normalize_health_state(value:'str') -> 'str':
 
 def run_health_probe(
     audit_log:'AuditLog',
-    states:'anylist',
+    object_name:'str',
+    fetch:'callable_',
     now:'datetime',
     *,
     cid:'str' = '',
     ) -> 'int':
-    """ Records the health state of every remote service - one (service name, raw state) pair
-    per service - writing one audit event each. The normalized state travels in the event's
-    status column, where the health collector reads it, and the raw provider state stays
-    in the event's data for a person to see. Returns how many services were recorded.
+    """ Records the health state of every remote service the fetch callable returns - one
+    (service name, raw state) pair per service - writing one audit event each. The normalized
+    state travels in the event's status column, where the health collector reads it, and the raw
+    provider state stays in the event's data for a person to see. A fetch that fails writes one
+    error event with no state, filed under the connection it went through, so the collector
+    reports nothing rather than a false healthy state. Returns how many services were recorded.
     """
 
     # Our response to produce
     out = 0
+
+    try:
+        states = fetch()
+    except Exception as e:
+
+        logger.warning('Health probe through `%s` failed -> %s', object_name, format_exc())
+
+        error = str(e)
+
+        # The event carries no status at all - the health collector reads that column
+        # and skips what has nothing in it, so no service is reported either way.
+        _ = audit_log.insert(
+            AuditSource.Microsoft_Health,
+            AuditEvent.Health_Checked,
+            object_name,
+            cid=cid,
+            outcome=AuditOutcome.Error,
+            data=error,
+        )
+
+        return out
 
     for service_name, raw_state in states:
 
@@ -237,7 +267,9 @@ def run_test_transfer_probe(
         transfer()
     except Exception as e:
 
-        logger.info('Test transfer of `%s` failed -> %s', object_name, e)
+        logger.warning('Test transfer of `%s` failed -> %s', object_name, format_exc())
+
+        error = str(e)
 
         _ = audit_log.insert(
             AuditSource.Test_Transfer,
@@ -245,7 +277,7 @@ def run_test_transfer_probe(
             object_name,
             cid=cid,
             outcome=AuditOutcome.Error,
-            status=str(e),
+            status=error,
         )
         return False
 

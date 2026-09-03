@@ -70,6 +70,11 @@ class _TransportRecorder:
         self.teams_messages:'anylist' = []
         self.posts:'anylist' = []
 
+        # When set, the Slack transport raises this many times before it starts recording.
+        self.slack_failures_left = 0
+
+# ################################################################################################################################
+
     def make(self) -> 'AlertTransports':
         out = AlertTransports()
 
@@ -83,6 +88,11 @@ class _TransportRecorder:
             self.publications.append((topic, payload))
 
         def send_slack(channel:'str', text:'str') -> 'None':
+
+            if self.slack_failures_left:
+                self.slack_failures_left -= 1
+                raise Exception('The Slack connection is not reachable')
+
             self.slack_messages.append((channel, text))
 
         def send_teams(to:'str', html:'str') -> 'None':
@@ -115,8 +125,9 @@ def _count_alert_events() -> 'int':
     query = select(event_table).where(event_table.c.event_type == AuditEvent.Alert_Raised)
 
     with engine.connect() as connection:
-        out = len(connection.execute(query).fetchall())
+        rows = connection.execute(query).fetchall()
 
+    out = len(rows)
     return out
 
 # ################################################################################################################################
@@ -449,7 +460,8 @@ class TestAuditTrail:
 
         assert len(rows) == 1
 
-        row = dict(rows[0]._mapping)
+        first_row = rows[0]
+        row = dict(first_row._mapping)
 
         assert row['source'] == AuditSource.MLLP_Channel
         assert row['object_name'] == _channel_name
@@ -479,6 +491,31 @@ class TestAuditTrail:
         assert result.raised_count == 2
         assert len(recorder.slack_messages) == 1
         assert len(recorder.teams_messages) == 1
+        assert _count_alert_events() == 2
+
+# ################################################################################################################################
+
+    def test_a_transport_that_raises_costs_only_its_own_notification(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        recorder = _TransportRecorder()
+
+        # The first delivery of the run fails, the next one goes out as usual
+        recorder.slack_failures_left = 1
+
+        first_rule = new_rule('slack-ops', FindingKind.Feed_Silent,
+            action=AlertAction.Slack, action_config={'slack_channel': _slack_channel})
+        second_rule = new_rule('slack-support', FindingKind.Feed_Silent,
+            action=AlertAction.Slack, action_config={'slack_channel': _slack_channel})
+
+        result = process_findings([first_rule, second_rule], [_new_finding()], recorder.make(),
+            audit_log, 'cid-transport-error', utcnow())
+
+        # Only the delivery that succeeded counts as dispatched ..
+        assert result.dispatched == [('slack-support', AlertAction.Slack)]
+        assert len(recorder.slack_messages) == 1
+
+        # .. while both alerts are raised and both are in the audit trail.
+        assert result.raised_count == 2
         assert _count_alert_events() == 2
 
 # ################################################################################################################################
