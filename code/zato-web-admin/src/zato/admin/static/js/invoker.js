@@ -212,11 +212,13 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
 
     const formattedResponse = $.fn.zato.invoker.format_error_traceback(responseData);
 
+    // .val() rather than .text() - the highlight overlay repaints only through the .val() hook,
+    // and .text() does not update a textarea whose value was already set programmatically
     if (typeof formattedResponse === 'string') {
-        $('#data-response').text(formattedResponse);
+        $('#data-response').val(formattedResponse);
     }
     else {
-        $('#data-response').text(JSON.stringify(formattedResponse));
+        $('#data-response').val(JSON.stringify(formattedResponse));
     }
 
     let requestText = $('#data-request').val();
