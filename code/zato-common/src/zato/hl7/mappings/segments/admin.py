@@ -11,7 +11,7 @@ from zato.fhir import Basic, Practitioner
 from zato.hl7.mappings.concepts import cwe_to_codeable_concept
 from zato.hl7.mappings.datatypes import cx_to_identifier, xad_to_address, xpn_to_human_name, xtn_to_contact_points
 from zato.hl7.mappings.fields import serialize_field
-from zato.hl7.mappings.segments.common import add_practitioner, append_to_list_field, preserve_unmapped, preserve_value
+from zato.hl7.mappings.segments.common import append_to_list_field, preserve_unmapped, preserve_value
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,10 +30,9 @@ if 0:
 # Which field positions each mapper consumes - anything else that carries data is preserved as an extension.
 _STF_Handled = frozenset({1, 2, 3, 7, 10, 11})
 _PRA_Handled = frozenset({1, 5, 6})
-_PRT_Handled = frozenset({5})
 
 # What STF-7 says about a staff member who is active or inactive
-_Staff_Active = 'A'
+_Staff_Active   = 'A'
 _Staff_Inactive = 'I'
 
 # ################################################################################################################################
@@ -43,6 +42,10 @@ def map_segment_to_basic(raw_segment:'any_', context:'ConversionContext') -> 'Ba
     """ Converts a segment without a FHIR mapping of its own - a Z-segment or an
     administrative one - to a Basic resource whose extensions carry every populated field.
     """
+
+    # Our response to produce
+    out = Basic()
+
     base_url = context.config.extension_base_url
     segment_id = raw_segment.segment_id
 
@@ -53,14 +56,15 @@ def map_segment_to_basic(raw_segment:'any_', context:'ConversionContext') -> 'Ba
         value = serialize_field(field_data)
         if value:
             field_position = field_index + 1
-            extensions.append({'url': f'{base_url}/{segment_id}/{field_position}', 'valueString': value})
+            url = f'{base_url}/{segment_id}/{field_position}'
+            extensions.append({'url': url, 'valueString': value})
 
     if not extensions:
         return None
 
     # .. and the resource itself says which segment it preserves.
-    out = Basic()
-    out.code = {'coding': [{'system': f'{base_url}/segment', 'code': segment_id}]}
+    coding = {'system': f'{base_url}/segment', 'code': segment_id}
+    out.code = {'coding': [coding]}
     out.extension = extensions
 
     if context.patient_reference:
@@ -156,43 +160,6 @@ def apply_pra(accessor:'SegmentAccessor', context:'ConversionContext', practitio
             append_to_list_field(practitioner, 'identifier', identifier)
 
     preserve_unmapped(accessor, _PRA_Handled, practitioner, context)
-
-# ################################################################################################################################
-
-def apply_prt(accessor:'SegmentAccessor', context:'ConversionContext', target:'any_') -> 'bool':
-    """ Applies PRT - a participation - to the resource the participation is about.
-    The participating person becomes a Practitioner the resource points at and every
-    other populated field is preserved on that resource. Tells the caller whether
-    the segment was consumed - a PRT with no person or no resource stays whole.
-    """
-    if target is None:
-        return False
-
-    provider_repetition = accessor.first(5)
-
-    reference = add_practitioner(provider_repetition, context)
-    if not reference:
-        return False
-
-    target_dict = target.to_dict()
-    resource_type = target_dict['resourceType']
-
-    # An Encounter records the person as a participant ..
-    if resource_type == 'Encounter':
-        participant = {'individual': reference}
-        append_to_list_field(target, 'participant', participant)
-
-    # .. a document records them as an author ..
-    elif resource_type == 'DocumentReference':
-        append_to_list_field(target, 'author', reference)
-
-    # .. and an order, a report or an observation records them as a performer.
-    else:
-        append_to_list_field(target, 'performer', reference)
-
-    preserve_unmapped(accessor, _PRT_Handled, target, context)
-
-    return True
 
 # ################################################################################################################################
 # ################################################################################################################################

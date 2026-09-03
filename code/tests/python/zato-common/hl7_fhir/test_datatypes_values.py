@@ -421,67 +421,91 @@ class TestSN:
 
     def test_plain_number(self, default_config:'any_') -> 'None':
         out = sn_to_observation_value(rep('^120'), default_config, self.units)
+        assert out is not None
 
-        assert out == ('valueQuantity', {
+        assert out.field_name == 'valueQuantity'
+        assert out.content == {
             'value': 120.0,
             'code': 'mg/dL',
             'system': 'http://unitsofmeasure.org',
             'unit': 'mg/dL',
-        })
+        }
+        assert out.is_exact
+
+# ################################################################################################################################
+
+    def test_units_without_system_carry_no_code(self, default_config:'any_') -> 'None':
+
+        # qty-3 - a Quantity code needs a system, so local units keep the unit text only.
+        units = {'coding': [{'code': 'TAB'}], 'text': 'tablet'}
+        out = sn_to_observation_value(rep('^2'), default_config, units)
+        assert out is not None
+
+        assert out.content == {'value': 2.0, 'unit': 'tablet'}
+
+# ################################################################################################################################
+
+    def test_inexact_number(self, default_config:'any_') -> 'None':
+
+        # Twenty digits do not survive a float, which the result says.
+        out = sn_to_observation_value(rep('^12345678901234567890'), default_config, None)
+        assert out is not None
+
+        assert out.field_name == 'valueQuantity'
+        assert not out.is_exact
 
 # ################################################################################################################################
 
     def test_comparator(self, default_config:'any_') -> 'None':
-        result = sn_to_observation_value(rep('>^120'), default_config, None)
-        assert result is not None
+        out = sn_to_observation_value(rep('>^120'), default_config, None)
+        assert out is not None
 
-        field, value = result
-
-        assert field == 'valueQuantity'
-        assert value == {'value': 120.0, 'comparator': '>'}
+        assert out.field_name == 'valueQuantity'
+        assert out.content == {'value': 120.0, 'comparator': '>'}
 
 # ################################################################################################################################
 
     def test_range(self, default_config:'any_') -> 'None':
-        result = sn_to_observation_value(rep('^3^-^5'), default_config, None)
-        assert result is not None
+        out = sn_to_observation_value(rep('^3^-^5'), default_config, None)
+        assert out is not None
 
-        field, value = result
-
-        assert field == 'valueRange'
-        assert value == {'low': {'value': 3.0}, 'high': {'value': 5.0}}
+        assert out.field_name == 'valueRange'
+        assert out.content == {'low': {'value': 3.0}, 'high': {'value': 5.0}}
 
 # ################################################################################################################################
 
     def test_ratio_colon(self, default_config:'any_') -> 'None':
-        result = sn_to_observation_value(rep('^1^:^128'), default_config, None)
-        assert result is not None
+        out = sn_to_observation_value(rep('^1^:^128'), default_config, None)
+        assert out is not None
 
-        field, value = result
-
-        assert field == 'valueRatio'
-        assert value == {'numerator': {'value': 1.0}, 'denominator': {'value': 128.0}}
+        assert out.field_name == 'valueRatio'
+        assert out.content == {'numerator': {'value': 1.0}, 'denominator': {'value': 128.0}}
 
 # ################################################################################################################################
 
     def test_ratio_slash(self, default_config:'any_') -> 'None':
-        result = sn_to_observation_value(rep('^1^/^128'), default_config, None)
-        assert result is not None
+        out = sn_to_observation_value(rep('^1^/^128'), default_config, None)
+        assert out is not None
 
-        field, _ = result
-        assert field == 'valueRatio'
+        assert out.field_name == 'valueRatio'
 
 # ################################################################################################################################
 
     def test_categorical_plus(self, default_config:'any_') -> 'None':
         out = sn_to_observation_value(rep('^2^+'), default_config, None)
-        assert out == ('valueString', '2+')
+        assert out is not None
+
+        assert out.field_name == 'valueString'
+        assert out.content == '2+'
 
 # ################################################################################################################################
 
     def test_string_when_not_numeric(self, default_config:'any_') -> 'None':
         out = sn_to_observation_value(rep('^abc'), default_config, None)
-        assert out == ('valueString', 'abc')
+        assert out is not None
+
+        assert out.field_name == 'valueString'
+        assert out.content == 'abc'
 
 # ################################################################################################################################
 

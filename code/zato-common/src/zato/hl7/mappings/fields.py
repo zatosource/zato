@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 if 0:
     from zato.common.typing_ import any_, anylist, intset, strlist, strnone
     anylist = anylist
+    intset = intset
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -154,6 +155,42 @@ def serialize_repetition(repetition:'anylist') -> 'str':
 
 # ################################################################################################################################
 
+def serialize_component(repetition:'anylist', position:'int') -> 'str':
+    """ Serializes the component at a 1-based position back to its wire form, with its subcomponent separators.
+    An absent component serializes to an empty string.
+    """
+    index = position - 1
+    component_count = len(repetition)
+
+    if index >= component_count:
+        return ''
+
+    component = repetition[index]
+
+    out = '&'.join(component)
+    return out
+
+# ################################################################################################################################
+
+def populated_components(repetition:'anylist') -> 'intset':
+    """ Returns the 1-based positions of all the components of a repetition that carry any data.
+    """
+
+    # Our response to produce
+    out:'intset' = set()
+
+    for index, component in enumerate(repetition):
+        for subcomponent in component:
+            if subcomponent:
+                if subcomponent != Explicit_Null:
+                    position = index + 1
+                    out.add(position)
+                    break
+
+    return out
+
+# ################################################################################################################################
+
 def _repetition_has_data(repetition:'anylist') -> 'bool':
     """ Tells whether any component of a repetition carries a non-empty subcomponent.
     An explicit null - two double quotes - is a deletion marker, not data.
@@ -230,6 +267,29 @@ def subcomponent_value(repetition:'anylist', position:'int', subcomponent_positi
         return out
 
     return None
+
+# ################################################################################################################################
+
+def component_as_repetition(repetition:'anylist', position:'int') -> 'anylist':
+    """ Returns the component at a 1-based position reshaped as a repetition of its own -
+    each subcomponent becomes a component. Empty list when the component is absent.
+    """
+
+    # Our response to produce
+    out:'anylist' = []
+
+    index = position - 1
+    component_count = len(repetition)
+
+    if index >= component_count:
+        return out
+
+    component = repetition[index]
+
+    for subcomponent in component:
+        out.append([subcomponent])
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

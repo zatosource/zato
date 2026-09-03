@@ -6,27 +6,32 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from typing import NamedTuple
+
 # Zato
 from zato.fhir import Location, Organization, Practitioner
-from zato.hl7.mappings.datatypes import xcn_to_name_and_identifier
-from zato.hl7.mappings.fields import component_value, subcomponent_value
+from zato.hl7.mappings.datatypes import Identifier_Type_System, hd_to_system, xcn_to_name_and_identifier
+from zato.hl7.mappings.fields import Explicit_Null, component_value, populated_components, serialize_component, \
+    subcomponent_value
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, stranydict, strlist, strnone
+    from zato.common.typing_ import any_, anylist, anylistnone, dictnone, stranydict, strnone
     from zato.hl7.mappings.context import ConversionContext
     from zato.hl7.mappings.fields import SegmentAccessor
     ConversionContext = ConversionContext
     SegmentAccessor = SegmentAccessor
+    anylistnone = anylistnone
+    dictnone = dictnone
     strnone = strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # Type aliases
-dictnone  = 'stranydict | None'
 intfrozen = frozenset[int]
 
 # The empty set of consumed fields, for segments that are preserved whole
@@ -37,12 +42,6 @@ Default_Encounter_Status = 'in-progress'
 
 # The class an Encounter gets when PV1-2 is empty or carries an unknown code - FHIR requires one
 Default_Encounter_Class = {'system': 'http://terminology.hl7.org/CodeSystem/v3-NullFlavor', 'code': 'UNK'}
-
-# The code an Observation or DiagnosticReport gets when the message carries none - FHIR requires one
-Unknown_Code = {'text': 'unknown'}
-
-# The name the payor Organization gets when IN1 does not identify the insurance company
-Unknown_Payor_Name = 'unknown'
 
 # The status an Encounter gets once a discharge time is present
 Finished_Encounter_Status = 'finished'
@@ -113,6 +112,12 @@ Message_Event_System = 'http://terminology.hl7.org/CodeSystem/v2-0003'
 # The system of Coverage class type codes
 Coverage_Class_System = 'http://terminology.hl7.org/CodeSystem/coverage-class'
 
+# The user-defined table PV1-20 financial classes come from
+Financial_Class_System = 'http://terminology.hl7.org/CodeSystem/v2-0064'
+
+# The extension a financial class becomes on a Coverage whose type is already taken, or on an Encounter with no Coverage
+Financial_Class_Extension = 'financial-class'
+
 # The extension all birth places go to
 Birth_Place_Extension_URL = 'http://hl7.org/fhir/StructureDefinition/patient-birthPlace'
 
@@ -157,14 +162,96 @@ Self_Relationship_Codes = ('SEL', 'SELF')
 # The extension that states a required field carries no value
 Data_Absent_Extension_URL = 'http://hl7.org/fhir/StructureDefinition/data-absent-reason'
 
+# The data-absent-reason code for a value the message never carried
+Data_Absent_Unknown = 'unknown'
+
+# The system of Location physical type codes
+Location_Physical_Type_System = 'http://terminology.hl7.org/CodeSystem/location-physical-type'
+
+# The mode of every Location built from a PL
+Location_Instance_Mode = 'instance'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-def absent_subject_reference() -> 'stranydict':
-    """ Returns a fresh subject reference stating there is no patient - FHIR requires
-    a subject on some resources even when the message carries no PID at all.
+class _PLLevel(NamedTuple):
+    """ One level of the PL location hierarchy - which component carries it and what kind of place it is.
     """
-    out = {'extension': [{'url': Data_Absent_Extension_URL, 'valueCode': 'unknown'}]}
+    position:'int'
+    physical_type:'strnone'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The PL components that make up the location hierarchy, least granular first -
+# facility, building, point of care, floor, room and bed. A point of care has no physical type.
+_PL_Levels = (
+    _PLLevel(4, 'si'),
+    _PLLevel(7, 'bu'),
+    _PLLevel(1, None),
+    _PLLevel(8, 'lvl'),
+    _PLLevel(2, 'ro'),
+    _PLLevel(3, 'bd'),
+)
+
+# The PL component that spells out what the location is
+_PL_Description_Position = 9
+
+# The PL component that carries the comprehensive location identifier
+_PL_Identifier_Position = 10
+
+# The PL components the hierarchy consumes - anything else is preserved on the most granular Location.
+_PL_Handled = frozenset({1, 2, 3, 4, 7, 8, 9, 10})
+
+# How many components a PL has
+_PL_Component_Count = 11
+
+# The XCN components a Practitioner's name and identifier consume - anything else is preserved on the Practitioner.
+_XCN_Consumed = frozenset({1, 2, 3, 4, 5, 6, 7, 9, 13})
+
+# The XON components an Organization consumes - the name, both identifier slots, the assigning
+# authority and the identifier type - anything else is preserved on the Organization.
+_XON_Name_Component               = 1
+_XON_Identifier_Component_Pre_2_5 = 3
+_XON_Authority_Component          = 6
+_XON_Type_Component               = 7
+_XON_Identifier_Component         = 10
+_XON_Consumed = frozenset({
+    _XON_Name_Component,
+    _XON_Identifier_Component_Pre_2_5,
+    _XON_Authority_Component,
+    _XON_Type_Component,
+    _XON_Identifier_Component,
+})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def absent_value() -> 'stranydict':
+    """ Returns a fresh element stating its value is unknown.
+    """
+    out = {'extension': [{'url': Data_Absent_Extension_URL, 'valueCode': Data_Absent_Unknown}]}
+    return out
+
+# ################################################################################################################################
+
+def absent_subject_reference() -> 'stranydict':
+    """ Returns a fresh subject reference stating there is no patient.
+    """
+    out = absent_value()
+    return out
+
+# ################################################################################################################################
+
+def patient_or_absent_reference(context:'ConversionContext') -> 'stranydict':
+    """ Returns the patient reference for a required element - the message's patient
+    when it has one, an absent reference otherwise.
+    """
+    if context.patient_reference:
+        out = context.patient_reference
+    else:
+        out = absent_subject_reference()
+
     return out
 
 # ################################################################################################################################
@@ -201,6 +288,32 @@ def preserve_value(
 
 # ################################################################################################################################
 
+def add_financial_class_extension(resource:'any_', context:'ConversionContext', financial_class:'stranydict') -> 'None':
+    """ Attaches the message's financial class to a resource as a coded extension.
+    """
+    base_url = context.config.extension_base_url
+    extension = {'url': f'{base_url}/{Financial_Class_Extension}', 'valueCodeableConcept': financial_class}
+
+    append_to_list_field(resource, 'extension', extension)
+
+# ################################################################################################################################
+
+def preserve_inexact_number(
+    resource:'any_',
+    context:'ConversionContext',
+    segment_id:'str',
+    position:'int',
+    value:'str',
+    ) -> 'None':
+    """ Preserves the digits of a number the float in the resource cannot carry exactly and records that it happened.
+    """
+    preserve_value(resource, context, segment_id, position, value)
+
+    text = f'`{value}` cannot be carried exactly as a number, its digits are preserved'
+    context.warn(segment_id, position, text)
+
+# ################################################################################################################################
+
 def preserve_unmapped(
     accessor:'SegmentAccessor',
     handled:'intfrozen',
@@ -218,8 +331,69 @@ def preserve_unmapped(
 
 # ################################################################################################################################
 
-def add_practitioner(repetition:'anylist', context:'ConversionContext') -> 'dictnone':
+def _preserve_unconsumed(
+    repetition:'anylist',
+    consumed:'intfrozen',
+    resource:'any_',
+    context:'ConversionContext',
+    segment_id:'str',
+    ) -> 'None':
+    """ Preserves every populated component of a repetition the mapper did not consume.
+    """
+    populated = populated_components(repetition)
+    unconsumed = populated - consumed
+
+    for position in sorted(unconsumed):
+        value = serialize_component(repetition, position)
+        preserve_value(resource, context, segment_id, position, value)
+
+# ################################################################################################################################
+
+def preserve_other_components(
+    accessor:'SegmentAccessor',
+    position:'int',
+    consumed:'intfrozen',
+    resource:'any_',
+    context:'ConversionContext',
+    ) -> 'None':
+    """ Preserves a whole field as an extension when it carries data outside the components a mapper consumed -
+    other populated components in its first repetition, or any further repetitions.
+    """
+
+    # An empty field carries nothing to preserve ..
+    repetitions = accessor.repetitions(position)
+    if not repetitions:
+        return
+
+    # .. a second repetition is data the mapper never looked at ..
+    repetition_count = len(repetitions)
+    needs_preserving = False
+
+    if repetition_count > 1:
+        needs_preserving = True
+
+    # .. and so is any component of the first one the mapper did not consume ..
+    first_repetition = repetitions[0]
+    populated = populated_components(first_repetition)
+    unconsumed = populated - consumed
+
+    if unconsumed:
+        needs_preserving = True
+
+    # .. either way the whole field goes in as it arrived.
+    if needs_preserving:
+        value = accessor.serialize(position)
+        preserve_value(resource, context, accessor.segment_id, position, value)
+
+# ################################################################################################################################
+
+def add_practitioner(
+    repetition:'anylist',
+    context:'ConversionContext',
+    telecoms:'anylistnone' = None,
+    ) -> 'dictnone':
     """ Builds a Practitioner from an XCN repetition, adds it to the bundle and returns a reference.
+    Contact points the caller took from a neighbouring field go on the Practitioner too.
     Identical practitioners referenced from different fields collapse into one resource.
     """
     parts = xcn_to_name_and_identifier(repetition, context.config)
@@ -234,56 +408,139 @@ def add_practitioner(repetition:'anylist', context:'ConversionContext') -> 'dict
     if name := parts.get('name'):
         practitioner.name = [name]
 
+    if telecoms:
+        practitioner.telecom = telecoms
+
+    # Whatever the name and identifier did not consume is preserved on the practitioner.
+    _preserve_unconsumed(repetition, _XCN_Consumed, practitioner, context, 'XCN')
+
     out = context.add(practitioner)
     return out
 
 # ################################################################################################################################
 
-def add_location(repetition:'anylist', context:'ConversionContext') -> 'dictnone':
-    """ Builds a Location from a PL repetition, adds it to the bundle and returns a reference.
-    The location's name spells out the point of care, room, bed and facility.
+def _pl_level_location(repetition:'anylist', level:'_PLLevel', context:'ConversionContext') -> 'Location | None':
+    """ Builds the Location one PL component stands for, or None when the component is empty.
+    The component is an HD - its namespace is the name, its universal ID an identifier.
     """
-    parts:'strlist' = []
 
-    point_of_care = component_value(repetition, 1)
-    if point_of_care:
-        parts.append(point_of_care)
+    # Our response to produce
+    out = Location()
 
-    room = component_value(repetition, 2)
-    if room:
-        parts.append(room)
+    config = context.config
 
-    bed = component_value(repetition, 3)
-    if bed:
-        parts.append(bed)
+    # A component with neither a namespace nor a universal ID names no place ..
+    name = subcomponent_value(repetition, level.position, 1)
+    universal_id = subcomponent_value(repetition, level.position, 2)
+    universal_id_type = subcomponent_value(repetition, level.position, 3)
 
-    facility = subcomponent_value(repetition, 4, 1)
-    if facility:
-        parts.append(facility)
+    if not name:
+        if not universal_id:
+            return None
 
-    # A spelled-out facility name can arrive in the universal ID subcomponent.
-    facility_universal_id = subcomponent_value(repetition, 4, 2)
-    if facility_universal_id:
-        parts.append(facility_universal_id)
+    out.mode = Location_Instance_Mode
 
-    # PL-9 spells out what the location is.
-    description = component_value(repetition, 9)
+    # .. the namespace is the name, with the universal ID standing in for it when there is none ..
+    if name:
+        out.name = name
+    else:
+        out.name = universal_id
 
-    if not parts:
+    # .. the universal ID is an identifier, under the system its type resolves to ..
+    if universal_id:
+        identifier:'stranydict' = {'value': universal_id}
+
+        if system := hd_to_system(name, universal_id, universal_id_type, config):
+            identifier['system'] = system
+
+        out.identifier = [identifier]
+
+    # .. and the level says what kind of place this is, where FHIR has a code for it.
+    if level.physical_type:
+        coding = {'system': Location_Physical_Type_System, 'code': level.physical_type}
+        out.physicalType = {'coding': [coding]}
+
+    return out
+
+# ################################################################################################################################
+
+def add_location(
+    repetition:'anylist',
+    context:'ConversionContext',
+    operational_status:'dictnone' = None,
+    ) -> 'dictnone':
+    """ Builds the Location hierarchy a PL repetition spells out - each of the facility, building,
+    point of care, floor, room and bed becomes a Location that is part of the one before it -
+    adds them to the bundle and returns a reference to the most granular one, which also
+    carries the operational status - a bed status coding - when one is given.
+    """
+    config = context.config
+
+    # The levels present in the PL, least granular first ..
+    levels:'anylist' = []
+
+    for level in _PL_Levels:
+        if location := _pl_level_location(repetition, level, context):
+            levels.append(location)
+
+    # .. a PL with no levels at all still yields a Location when it carries a description.
+    description = component_value(repetition, _PL_Description_Position)
+
+    if not levels:
         if not description:
             return None
 
-    location = Location()
-
-    if parts:
-        location.name = '-'.join(parts)
-    else:
+        location = Location()
+        location.mode = Location_Instance_Mode
         location.name = description
+        levels.append(location)
+
+    # The most granular Location carries the description, the comprehensive identifier
+    # and whatever the hierarchy did not consume ..
+    most_granular = levels[-1]
 
     if description:
-        location.description = description
+        most_granular.description = description
 
-    out = context.add(location)
+    if operational_status:
+        most_granular.operationalStatus = operational_status
+
+    identifier = subcomponent_value(repetition, _PL_Identifier_Position, 1)
+
+    if identifier:
+        identifier_entry:'stranydict' = {'value': identifier}
+
+        namespace = subcomponent_value(repetition, _PL_Identifier_Position, 2)
+        universal_id = subcomponent_value(repetition, _PL_Identifier_Position, 3)
+        universal_id_type = subcomponent_value(repetition, _PL_Identifier_Position, 4)
+
+        if system := hd_to_system(namespace, universal_id, universal_id_type, config):
+            identifier_entry['system'] = system
+
+        append_to_list_field(most_granular, 'identifier', identifier_entry)
+
+    last_position = _PL_Component_Count + 1
+
+    for position in range(1, last_position):
+        if position in _PL_Handled:
+            continue
+
+        if value := serialize_component(repetition, position):
+
+            # An explicit null is a deletion marker, not data.
+            if value != Explicit_Null:
+                preserve_value(most_granular, context, 'PL', position, value)
+
+    # .. and each level is part of the one before it, so they enter the bundle in that order.
+    parent_reference = None
+
+    for location in levels:
+        if parent_reference:
+            location.partOf = parent_reference
+
+        parent_reference = context.add(location)
+
+    out = parent_reference
     return out
 
 # ################################################################################################################################
@@ -312,8 +569,69 @@ def add_hd_organization(repetition:'anylist', context:'ConversionContext') -> 'd
 
 # ################################################################################################################################
 
-def add_named_organization(name:'str', context:'ConversionContext', identifier_value:'str' = '') -> 'stranydict':
-    """ Builds an Organization carrying a name and an optional identifier, adds it to the bundle and returns a reference.
+def add_xon_organization(
+    repetition:'anylist',
+    context:'ConversionContext',
+    telecoms:'anylistnone' = None,
+    ) -> 'dictnone':
+    """ Builds an Organization from an XON repetition, adds it to the bundle and returns a reference.
+    The name is XON-1, the identifier XON-10 - or XON-3 in older messages - with its assigning
+    authority as the system and its type code as the type. Anything else is preserved on the Organization.
+    """
+    config = context.config
+
+    # An XON with neither a name nor an identifier names no organization ..
+    name = component_value(repetition, _XON_Name_Component)
+    identifier = component_value(repetition, _XON_Identifier_Component)
+
+    if not identifier:
+        identifier = component_value(repetition, _XON_Identifier_Component_Pre_2_5)
+
+    if not name:
+        if not identifier:
+            return None
+
+    organization = Organization()
+
+    if name:
+        organization.name = name
+
+    # .. the identifier's system comes from the assigning authority and its type from XON-7 ..
+    if identifier:
+        identifier_entry:'stranydict' = {'value': identifier}
+
+        namespace = subcomponent_value(repetition, _XON_Authority_Component, 1)
+        universal_id = subcomponent_value(repetition, _XON_Authority_Component, 2)
+        universal_id_type = subcomponent_value(repetition, _XON_Authority_Component, 3)
+
+        if system := hd_to_system(namespace, universal_id, universal_id_type, config):
+            identifier_entry['system'] = system
+
+        if type_code := component_value(repetition, _XON_Type_Component):
+            coding = {'system': Identifier_Type_System, 'code': type_code}
+            identifier_entry['type'] = {'coding': [coding]}
+
+        organization.identifier = [identifier_entry]
+
+    # .. the caller's contact points belong to the organization too ..
+    if telecoms:
+        organization.telecom = telecoms
+
+    # .. and whatever the name and identifier did not consume is preserved on it.
+    _preserve_unconsumed(repetition, _XON_Consumed, organization, context, 'XON')
+
+    out = context.add(organization)
+    return out
+
+# ################################################################################################################################
+
+def add_named_organization(
+    name:'str',
+    context:'ConversionContext',
+    identifier_value:'str' = '',
+    ) -> 'stranydict':
+    """ Builds an Organization carrying a name and an optional identifier, adds it to the bundle
+    and returns a reference.
     """
     organization = Organization()
     organization.name = name

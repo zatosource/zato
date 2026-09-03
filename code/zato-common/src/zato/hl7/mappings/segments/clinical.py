@@ -10,10 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.fhir import AllergyIntolerance, Condition, Procedure
 from zato.hl7.mappings.codes import lookup
 from zato.hl7.mappings.concepts import cwe_to_codeable_concept
-from zato.hl7.mappings.datatypes import dtm_to_datetime, ei_to_identifier
+from zato.hl7.mappings.datatypes import ei_to_identifier
 from zato.hl7.mappings.fields import component_value
 from zato.hl7.mappings.segments.common import Procedure_Status, add_practitioner, append_to_list_field, \
-    preserve_unmapped, preserve_value
+    patient_or_absent_reference, preserve_unmapped, preserve_value
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,8 +60,8 @@ def map_al1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Allergy
     # Our response to produce
     out = AllergyIntolerance()
 
-    if context.patient_reference:
-        out.patient = context.patient_reference
+    # The patient who has the allergy, or the statement that none is known.
+    out.patient = patient_or_absent_reference(context)
 
     # The allergen code is the substance ..
     allergen_repetition = accessor.first(3)
@@ -103,6 +103,7 @@ def map_al1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Allergy
         if not criticality:
             if not severity:
                 preserve_value(out, context, 'AL1', 4, severity_code)
+
     reactions:'anylist' = []
 
     for repetition in accessor.repetitions(5):
@@ -120,7 +121,7 @@ def map_al1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Allergy
 
     # .. and the identification date is when the allergy was recorded.
     recorded_value = accessor.value(6)
-    recorded = dtm_to_datetime(recorded_value, config)
+    recorded = context.datetime(recorded_value, 'AL1', 6)
 
     if recorded:
         out.recordedDate = recorded
@@ -139,8 +140,8 @@ def map_iam(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Allergy
     # Our response to produce
     out = AllergyIntolerance()
 
-    if context.patient_reference:
-        out.patient = context.patient_reference
+    # The patient who has the allergy, or the statement that none is known.
+    out.patient = patient_or_absent_reference(context)
 
     # The allergen code is the substance ..
     allergen_repetition = accessor.first(3)
@@ -215,13 +216,13 @@ def map_iam(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Allergy
 
     # .. and the onset and reported times complete the picture.
     onset_value = accessor.value(11)
-    onset = dtm_to_datetime(onset_value, config)
+    onset = context.datetime(onset_value, 'IAM', 11)
 
     if onset:
         out.onsetDateTime = onset
 
     reported_value = accessor.value(13)
-    reported = dtm_to_datetime(reported_value, config)
+    reported = context.datetime(reported_value, 'IAM', 13)
 
     if reported:
         out.recordedDate = reported
@@ -241,8 +242,8 @@ def map_dg1(accessor:'SegmentAccessor', context:'ConversionContext', encounter:'
     # Our response to produce
     out = Condition()
 
-    if context.patient_reference:
-        out.subject = context.patient_reference
+    # The patient who has the condition, or the statement that none is known.
+    out.subject = patient_or_absent_reference(context)
 
     if context.encounter_reference:
         out.encounter = context.encounter_reference
@@ -257,7 +258,7 @@ def map_dg1(accessor:'SegmentAccessor', context:'ConversionContext', encounter:'
         out.code = {'text': description}
 
     onset_value = accessor.value(5)
-    onset_datetime = dtm_to_datetime(onset_value, config)
+    onset_datetime = context.datetime(onset_value, 'DG1', 5)
 
     if onset_datetime:
         out.onsetDateTime = onset_datetime
@@ -269,7 +270,7 @@ def map_dg1(accessor:'SegmentAccessor', context:'ConversionContext', encounter:'
         out.asserter = asserter
 
     recorded_value = accessor.value(19)
-    recorded_date = dtm_to_datetime(recorded_value, config)
+    recorded_date = context.datetime(recorded_value, 'DG1', 19)
 
     if recorded_date:
         out.recordedDate = recorded_date
@@ -294,10 +295,13 @@ def map_dg1(accessor:'SegmentAccessor', context:'ConversionContext', encounter:'
             coding = {'system': diagnosis_role['system'], 'code': diagnosis_role['code']}
             diagnosis['use'] = {'coding': [coding]}
 
+        # A numeric priority is the rank, anything else is preserved as-is.
         priority = accessor.value(15)
         if priority:
             if priority.isdigit():
                 diagnosis['rank'] = int(priority)
+            else:
+                preserve_value(out, context, 'DG1', 15, priority)
 
         append_to_list_field(encounter, 'diagnosis', diagnosis)
 
@@ -315,8 +319,8 @@ def map_pr1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Procedu
 
     out.status = Procedure_Status
 
-    if context.patient_reference:
-        out.subject = context.patient_reference
+    # The patient the procedure was performed on, or the statement that none is known.
+    out.subject = patient_or_absent_reference(context)
 
     if context.encounter_reference:
         out.encounter = context.encounter_reference
@@ -331,7 +335,7 @@ def map_pr1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Procedu
         out.code = {'text': description}
 
     performed_value = accessor.value(5)
-    performed = dtm_to_datetime(performed_value, config)
+    performed = context.datetime(performed_value, 'PR1', 5)
 
     if performed:
         out.performedDateTime = performed

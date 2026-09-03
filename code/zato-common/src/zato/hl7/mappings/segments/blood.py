@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.hl7.mappings.concepts import cwe_to_codeable_concept
-from zato.hl7.mappings.datatypes import dtm_to_datetime
 from zato.hl7.mappings.segments.common import append_to_list_field, preserve_unmapped
 
 # ################################################################################################################################
@@ -60,7 +59,7 @@ def apply_bpo(accessor:'SegmentAccessor', context:'ConversionContext', service_r
 
     # .. the intended use time is when the product is needed ..
     intended_value = accessor.value(7)
-    intended_time = dtm_to_datetime(intended_value, config)
+    intended_time = context.datetime(intended_value, 'BPO', 7)
 
     if intended_time:
         service_request.occurrenceDateTime = intended_time
@@ -77,7 +76,8 @@ def apply_bpo(accessor:'SegmentAccessor', context:'ConversionContext', service_r
         if not quantity.isdigit():
             handled.discard(4)
 
-    preserve_unmapped(accessor, frozenset(handled), service_request, context)
+    handled = frozenset(handled)
+    preserve_unmapped(accessor, handled, service_request, context)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -142,8 +142,9 @@ class TestAckCodesAndStructure:
 
 # ################################################################################################################################
 
-    def test_error_callback_returns_ae(self, make_client:'callable_') -> 'None':
-        """ A server in error mode must ACK with AE and is_accepted=False.
+    def test_error_callback_returns_ar(self, make_client:'callable_') -> 'None':
+        """ A service that fails for reasons unrelated to the message must ACK with AR,
+        which asks the sender to retry, and is_accepted=False.
         """
 
         # Start a dedicated server with the error callback ..
@@ -153,8 +154,30 @@ class TestAckCodesAndStructure:
             client = make_client(port)
             result = client.send(sample_adt_a01('ERR001'), control_id='ERR001')
 
+            assert result.ack_code == 'AR'
+            assert result.is_accepted is False
+            assert result.should_retry is True
+
+        finally:
+            stop_server(process)
+
+# ################################################################################################################################
+
+    def test_application_error_callback_returns_ae(self, make_client:'callable_') -> 'None':
+        """ A service that finds the message itself at fault must ACK with AE,
+        which tells the sender not to resend, and is_accepted=False.
+        """
+
+        # Start a dedicated server with the application error callback ..
+        process, port = start_server(callback_mode='application_error')
+
+        try:
+            client = make_client(port)
+            result = client.send(sample_adt_a01('ERR002'), control_id='ERR002')
+
             assert result.ack_code == 'AE'
             assert result.is_accepted is False
+            assert result.should_retry is False
 
         finally:
             stop_server(process)

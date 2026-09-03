@@ -7,18 +7,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.hl7.mappings.datetimes import dtm_to_datetime
-from zato.hl7.mappings.segments import Encapsulated_Value_Type, No_Consumed_Fields, OBR_Handled_Order_Only, \
-    OBR_Handled_With_Report, Text_Value_Types, add_document_attachment, aig_participant, ail_participant, \
-    aip_participant, append_to_list_field, apply_bpo, apply_in2, apply_ipc, apply_mrg, apply_msa, apply_pda, \
-    apply_pra, apply_prd, apply_prt, apply_rol, apply_sac, apply_tq1, apply_zbe, apply_zds, enrich_ais, enrich_pd1, \
-    enrich_pv2, enrich_rxr, enrich_service_request_with_orc, enrich_sft, gather_obx_text, map_al1, map_arq, map_dg1, \
-    map_err, map_ft1, map_gt1, map_iam, map_in1, map_msh, map_nk1, map_obr_to_diagnostic_report, map_obx, \
-    map_orc_obr_to_service_request, map_pid, map_pr1, map_pv1, map_rf1, map_sch, map_spm, map_stf, map_txa, nte_text, \
-    obr_matches_orc, obx_attachment, orc_matches_service_request, preserve_unmapped
-from zato.hl7.mappings.walk import add_basic, apply_pending_rol, apply_pending_tq1, attach_pending_notes, \
-    flush_pending_orc
-from zato.hl7.mappings.walk_pharmacy import handle_rxa, handle_rxd, handle_rxe, handle_rxg, handle_rxo
+from zato.hl7.mappings.segments import Encapsulated_Value_Type, Mother_Link_Type, OBR_Handled_Order_Only, \
+    OBR_Handled_Specimen, OBR_Handled_With_Report, Text_Value_Types, add_document_attachment, \
+    add_order_provenance, aig_participant, ail_participant, aip_participant, append_to_list_field, apply_bpo, \
+    apply_in2, apply_ipc, apply_mfi, apply_mrg, apply_msa, apply_pda, apply_pra, apply_prd, apply_prt, apply_rol, \
+    apply_sac, apply_tq1, apply_zbe, apply_zds, enrich_ais, enrich_pd1, enrich_pv2, enrich_rxr, \
+    enrich_service_request_with_orc, enrich_sft, gather_obx_text, map_al1, map_arq, map_dg1, map_err, map_ft1, \
+    map_gt1, map_iam, map_in1, map_msh, map_nk1, map_obr_to_diagnostic_report, map_obx, \
+    map_orc_obr_to_service_request, map_pid, map_pid_mother, map_pr1, map_pv1, map_rf1, map_sch, map_spm, map_stf, \
+    map_txa, nte_text, merge_obr_specimen, obr_matches_orc, obx_attachment, orc_matches_service_request, \
+    preserve_unmapped, preserve_value
+from zato.hl7.mappings.walk import add_basic, apply_pending_mfe, apply_pending_rol, apply_pending_tq1, \
+    apply_tq1_to_medication, attach_pending_notes, flush_pending_mfe, flush_pending_orc, flush_pending_specimen
+from zato.hl7.mappings.walk_pharmacy import handle_rxa, handle_rxc, handle_rxd, handle_rxe, handle_rxg, handle_rxo
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,15 +39,23 @@ if 0:
 
 def _handle_msh(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
 
+    # The MessageHeader opens the bundle, ahead of the Organizations built while mapping it.
     state.message_header = map_msh(accessor, context)
-    _ = context.add(state.message_header)
+    _ = context.add(state.message_header, first=True)
 
-    # The bundle itself will carry the message time, control ID and processing mode.
+    # The bundle itself will carry the message time, control ID and processing mode -
+    # a message time without a time part is not an instant and stays on the header as-is.
     message_time = accessor.value(7)
+    message_instant = context.instant(message_time, 'MSH', 7)
 
-    state.message_datetime = dtm_to_datetime(message_time, context.config)
-    state.control_id       = accessor.value(10)
-    state.processing_id    = accessor.component(11, 1)
+    if message_instant:
+        state.message_datetime = message_instant
+        context.message_instant = message_instant
+    elif message_time:
+        preserve_value(state.message_header, context, 'MSH', 7, message_time)
+
+    state.control_id    = accessor.value(10)
+    state.processing_id = accessor.component(11, 1)
 
 # ################################################################################################################################
 
@@ -81,6 +90,12 @@ def _handle_pid(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
 
     state.patients.append(state.patient)
     state.patient_references.append(context.patient_reference)
+
+    # The mother's identifiers make a RelatedPerson the patient links to.
+    if mother := map_pid_mother(accessor, context, state.patient):
+        mother_reference = context.add(mother)
+        link = {'other': mother_reference, 'type': Mother_Link_Type}
+        append_to_list_field(state.patient, 'link', link)
 
 # ################################################################################################################################
 
@@ -165,6 +180,7 @@ def _handle_orc(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
     if state.current_service_request:
         if orc_matches_service_request(accessor, state.current_service_request):
             enrich_service_request_with_orc(accessor, context, state.current_service_request)
+            add_order_provenance(accessor, state.current_service_request, context)
             return
 
     # .. otherwise the ORC waits for the segments that follow it - an OBR, an RXA,
@@ -181,6 +197,9 @@ def _handle_obr(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
 
     orc = state.pending_orc
 
+    # A new OBR closes the previous one's wait for an SPM.
+    flush_pending_specimen(state, context)
+
     # An OBR with no ORC of its own that carries the order numbers of the group's ORC
     # belongs to that group - senders put several OBRs under one shared ORC.
     if not orc:
@@ -188,9 +207,12 @@ def _handle_obr(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
             if obr_matches_orc(accessor, state.current_orc):
                 orc = state.current_orc
 
-    # The OBR and its order group's ORC make one ServiceRequest ..
+    # The OBR and its order group's ORC make one ServiceRequest, the ORC also attesting to who entered it ..
     service_request = map_orc_obr_to_service_request(orc, accessor, context)
     service_request_reference = context.add(service_request)
+
+    if orc:
+        add_order_provenance(orc, service_request, context)
 
     state.current_service_request = service_request
     state.current_orc             = orc
@@ -200,16 +222,40 @@ def _handle_obr(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
     attach_pending_notes(state, service_request)
     apply_pending_tq1(state, context, service_request)
 
-    # .. and in result messages the OBR also opens a DiagnosticReport
-    # .. that the observations which follow will attach to.
+    # .. an OBR that names its specimen source describes a Specimen ..
+    specimen_source = accessor.first(15)
+    has_specimen = bool(specimen_source)
+
+    # .. in result messages the OBR also opens a DiagnosticReport
+    # .. that the observations which follow will attach to ..
     if family == 'results':
         state.current_report = map_obr_to_diagnostic_report(accessor, context, service_request_reference)
         _ = context.add(state.current_report)
 
-        preserve_unmapped(accessor, OBR_Handled_With_Report, state.current_report, context)
+        handled = OBR_Handled_With_Report
+
+        if has_specimen:
+            handled = handled | OBR_Handled_Specimen
+
+        preserve_unmapped(accessor, handled, state.current_report, context)
 
     else:
-        preserve_unmapped(accessor, OBR_Handled_Order_Only, service_request, context)
+        handled = OBR_Handled_Order_Only
+
+        if has_specimen:
+            handled = handled | OBR_Handled_Specimen
+
+        preserve_unmapped(accessor, handled, service_request, context)
+
+    # .. and the group's SPM, when one follows, describes the same specimen better,
+    # .. so the OBR's description waits for it.
+    if has_specimen:
+        state.pending_specimen_obr = accessor
+
+        if family == 'results':
+            state.pending_specimen_owner = state.current_report
+        else:
+            state.pending_specimen_owner = service_request
 
 # ################################################################################################################################
 
@@ -227,7 +273,7 @@ def _handle_obx(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
                 return
 
             if value_type == Encapsulated_Value_Type:
-                attachment = obx_attachment(accessor, context, state.document)
+                attachment = obx_attachment(accessor, context, state.document, 'author')
                 add_document_attachment(state.document, attachment)
                 return
 
@@ -235,7 +281,7 @@ def _handle_obx(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
     if family == 'results':
         if state.current_report:
             if value_type == Encapsulated_Value_Type:
-                attachment = obx_attachment(accessor, context, state.current_report)
+                attachment = obx_attachment(accessor, context, state.current_report, 'performer')
                 append_to_list_field(state.current_report, 'presentedForm', attachment)
                 return
 
@@ -319,9 +365,9 @@ def _handle_tq1(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
     elif state.current_service_request:
         apply_tq1(accessor, context, state.current_service_request)
 
-    # .. after a pharmacy segment it is preserved on the medication resource ..
+    # .. after a pharmacy segment it is the dosage timing of the medication resource ..
     elif state.current_medication:
-        preserve_unmapped(accessor, No_Consumed_Fields, state.current_medication, context)
+        apply_tq1_to_medication(accessor, context, state.current_medication)
 
     # .. and with nothing to attach to it becomes a preserved segment of its own.
     else:
@@ -369,6 +415,14 @@ def _handle_nte(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
 def _handle_spm(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
 
     specimen = map_spm(accessor, context)
+
+    # The OBR's own description of the specimen fills in what the SPM left empty.
+    if state.pending_specimen_obr:
+        merge_obr_specimen(state.pending_specimen_obr, specimen, context)
+
+        state.pending_specimen_obr   = None
+        state.pending_specimen_owner = None
+
     specimen_reference = context.add(specimen)
 
     state.current_specimen = specimen
@@ -380,6 +434,9 @@ def _handle_spm(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
 # ################################################################################################################################
 
 def _handle_sac(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
+
+    # A container that follows an OBR with no SPM belongs to the OBR's specimen.
+    flush_pending_specimen(state, context)
 
     if state.current_specimen:
         apply_sac(accessor, context, state.current_specimen)
@@ -460,6 +517,9 @@ def _handle_bpo(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
 
     _ = context.add(service_request)
 
+    if orc:
+        add_order_provenance(orc, service_request, context)
+
     state.current_service_request = service_request
     state.pending_orc = None
 
@@ -511,10 +571,32 @@ def _handle_txa(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
 
 # ################################################################################################################################
 
+def _handle_mfi(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
+
+    # The master file frame belongs to the message itself - without a header it stays whole.
+    if state.message_header:
+        apply_mfi(accessor, context, state.message_header)
+    else:
+        add_basic(accessor, context)
+
+# ################################################################################################################################
+
+def _handle_mfe(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
+
+    # An entry whose group built nothing before the next one stays whole ..
+    flush_pending_mfe(state, context)
+
+    # .. and this one waits for the resource its own group builds.
+    state.pending_mfe = accessor
+
+# ################################################################################################################################
+
 def _handle_stf(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
 
     state.current_practitioner = map_stf(accessor, context)
     _ = context.add(state.current_practitioner)
+
+    apply_pending_mfe(state, context, state.current_practitioner)
 
 # ################################################################################################################################
 
@@ -596,6 +678,7 @@ segment_handlers = {
     'AIL': _handle_ail,
     'AIP': _handle_aip,
     'RXA': handle_rxa,
+    'RXC': handle_rxc,
     'RXD': handle_rxd,
     'RXE': handle_rxe,
     'RXG': handle_rxg,
@@ -607,6 +690,8 @@ segment_handlers = {
     'RF1': _handle_rf1,
     'PRD': _handle_prd,
     'TXA': _handle_txa,
+    'MFI': _handle_mfi,
+    'MFE': _handle_mfe,
     'STF': _handle_stf,
     'PRA': _handle_pra,
     'PRT': _handle_prt,

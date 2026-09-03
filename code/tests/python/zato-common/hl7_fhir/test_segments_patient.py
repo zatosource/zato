@@ -262,9 +262,10 @@ class TestPID:
 
 # ################################################################################################################################
 
-    def test_non_cdc_race_stays_preserved(self) -> 'None':
+    def test_non_cdc_race_becomes_text_extension(self) -> 'None':
 
-        # A race from any other vocabulary never becomes a US Core extension.
+        # A race from any other vocabulary becomes a text-only US Core extension,
+        # the local code travelling next to its display.
         pid = 'PID|1||12345||Smith^John|||M||W1^White^LOCAL'
 
         bundle = convert(MSH, pid)
@@ -272,10 +273,32 @@ class TestPID:
 
         extensions = patient['extension']
 
-        assert {
-            'url': 'urn:zato:hl7v2:extension/unmapped/PID-10',
-            'valueString': 'W1^White^LOCAL',
-        } in extensions
+        assert extensions == [{
+            'url': 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-race',
+            'extension': [{'url': 'text', 'valueString': 'White (W1)'}],
+        }]
+
+# ################################################################################################################################
+
+    def test_mother_identifier_becomes_related_person(self) -> 'None':
+
+        pid = 'PID|1||12345||Smith^John|||M|||||||||||||M-778^^^HOSP^MR'
+
+        bundle = convert(MSH, pid)
+        patient = one_resource(bundle, 'Patient')
+        mother = one_resource(bundle, 'RelatedPerson')
+
+        assert 'extension' not in patient
+
+        assert mother['identifier'] == [{
+            'value': 'M-778',
+            'system': 'urn:zato:hl7v2:authority:HOSP',
+            'type': {'coding': [{'system': 'http://terminology.hl7.org/CodeSystem/v2-0203', 'code': 'MR'}]},
+        }]
+
+        assert mother['relationship'] == [{
+            'coding': [{'system': 'http://terminology.hl7.org/CodeSystem/v2-0063', 'code': 'MTH'}],
+        }]
 
 # ################################################################################################################################
 # ################################################################################################################################

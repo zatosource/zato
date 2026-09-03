@@ -9,20 +9,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.fhir import Immunization, MedicationAdministration, MedicationDispense, MedicationRequest
 from zato.hl7.mappings.codes import lookup
-from zato.hl7.mappings.concepts import cwe_to_codeable_concept
-from zato.hl7.mappings.datatypes import dtm_to_date, dtm_to_datetime, ei_to_identifier
+from zato.hl7.mappings.concepts import CWE_Consumed, cwe_to_codeable_concept, parse_number, quantity
+from zato.hl7.mappings.datatypes import ei_to_identifier
 from zato.hl7.mappings.fields import component_value
-from zato.hl7.mappings.segments.common import Default_Administration_Status, Default_Immunization_Status, \
-    Medication_Dispense_Status, Medication_Give_Intent, Medication_Order_Intent, Medication_Original_Order_Intent, \
-    Medication_Request_Status, Unknown_Code, add_named_organization, add_practitioner, preserve_unmapped, preserve_value
-from zato.hl7.mappings.segments.observations import _quantity_from_units
-from zato.hl7.mappings.segments.orders import ORC_Handled_Immunization
+from zato.hl7.mappings.segments.common import Data_Absent_Unknown, Default_Administration_Status, \
+    Default_Immunization_Status, Medication_Dispense_Status, Medication_Give_Intent, Medication_Order_Intent, \
+    Medication_Original_Order_Intent, Medication_Request_Status, absent_value, add_named_organization, \
+    add_practitioner, patient_or_absent_reference, preserve_inexact_number, preserve_other_components, \
+    preserve_unmapped, preserve_value
+from zato.hl7.mappings.segments.pharmacy_orc import ORC_Handled_Pharmacy, apply_orc_to_request
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, stranydict, strnone
+    from zato.common.typing_ import any_, anylist, stranydict
     from zato.hl7.mappings.context import ConversionContext
     from zato.hl7.mappings.fields import SegmentAccessor
     ConversionContext = ConversionContext
@@ -33,7 +34,7 @@ if 0:
 # ################################################################################################################################
 
 # Which field positions each mapper consumes - anything else that carries data is preserved as an extension.
-_RXA_Immunization_Handled = frozenset({1, 2, 3, 5, 6, 7, 9, 10, 15, 16, 17, 20})
+_RXA_Immunization_Handled = frozenset({1, 2, 3, 4, 5, 6, 7, 9, 10, 15, 16, 17, 20})
 _RXA_Administration_Handled = frozenset({1, 2, 3, 4, 5, 6, 7, 9, 10, 20})
 _RXD_Handled = frozenset({1, 2, 3, 4, 5, 7})
 _RXE_Handled = frozenset({2, 3, 4, 5})
@@ -43,6 +44,11 @@ _RXR_Handled = frozenset({1, 2})
 
 # Which component of a TQ quantity/timing field carries the start time
 _TQ_Start_Component = 4
+_TQ_Consumed        = frozenset({_TQ_Start_Component})
+
+# The RXA-9 code of table NIP001 that says the sender administered the vaccine itself -
+# every other code marks a historical record reported from elsewhere.
+_New_Immunization_Record = '00'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,9 +61,11 @@ def _dose_quantity(
     target:'any_',
     ) -> 'stranydict | None':
     """ Builds a dose Quantity from an amount field and its units field.
-    Amounts that fail to parse as numbers are preserved on the target resource.
+    Amounts that are not numbers are preserved on the target resource, and so are
+    the digits of an amount the float cannot carry exactly.
     """
     config = context.config
+    segment_id = accessor.segment_id
 
     amount = accessor.value(amount_position)
     if not amount:
@@ -66,16 +74,18 @@ def _dose_quantity(
     units_repetition = accessor.first(units_position)
     units = cwe_to_codeable_concept(units_repetition, config)
 
-    try:
-        out = _quantity_from_units(amount, units)
-    except ValueError:
+    number = parse_number(amount)
 
-        # The whole field is preserved - medication codes can arrive in amount
-        # slots and those carry more components than the number alone.
+    # An amount that is not a number is preserved whole, with all its components.
+    if not number:
         serialized_amount = accessor.serialize(amount_position)
-        preserve_value(target, context, accessor.segment_id, amount_position, serialized_amount)
+        preserve_value(target, context, segment_id, amount_position, serialized_amount)
         return None
 
+    if not number.is_exact:
+        preserve_inexact_number(target, context, segment_id, amount_position, amount)
+
+    out = quantity(number.value, units)
     return out
 
 # ################################################################################################################################
@@ -111,8 +121,8 @@ def map_rxa(
     # Our response to produce
     out = Immunization()
 
-    if context.patient_reference:
-        out.patient = context.patient_reference
+    # The patient who received the vaccine, or the statement that none is known.
+    out.patient = patient_or_absent_reference(context)
 
     # The completion status is required, unknown codes map to the default
     # and are preserved as-is ..
@@ -126,36 +136,49 @@ def map_rxa(
         if status_code:
             preserve_value(out, context, 'RXA', 20, status_code)
 
-    # .. the administered code is the vaccine ..
+    # .. the administered code is the vaccine, or the statement that none is known ..
     vaccine_repetition = accessor.first(5)
 
     if vaccine_code := cwe_to_codeable_concept(vaccine_repetition, config):
         out.vaccineCode = vaccine_code
+    else:
+        out.vaccineCode = absent_value()
 
-    # .. the administration time is required by FHIR ..
+    # .. the administration time carries over, a message without one says so in words ..
     occurrence_value = accessor.value(3)
-    occurrence = dtm_to_datetime(occurrence_value, config)
+    occurrence = context.datetime(occurrence_value, 'RXA', 3)
 
     if occurrence:
         out.occurrenceDateTime = occurrence
+    else:
+        out.occurrenceString = Data_Absent_Unknown
+
+    # .. an end time that differs from the administration time is preserved as-is ..
+    end_value = accessor.value(4)
+
+    if end_value:
+        if end_value != occurrence_value:
+            preserve_value(out, context, 'RXA', 4, end_value)
 
     # .. the administered amount and units make the dose ..
     if dose := _dose_quantity(accessor, 6, 7, context, out):
         out.doseQuantity = dose
 
-    # .. the administration notes become notes ..
-    notes:'anylist' = []
+    # .. the information source says whether the sender administered the vaccine itself
+    # .. or reports a historical record, and where such a record came from ..
+    source_repetition = accessor.first(9)
+    source_code = component_value(source_repetition, 1)
 
-    for repetition in accessor.repetitions(9):
-        note_text = component_value(repetition, 2)
-        if not note_text:
-            note_text = component_value(repetition, 1)
+    if source_code:
+        if source_code == _New_Immunization_Record:
+            out.primarySource = True
+        else:
+            out.primarySource = False
 
-        if note_text:
-            notes.append({'text': note_text})
+            if report_origin := cwe_to_codeable_concept(source_repetition, config):
+                out.reportOrigin = report_origin
 
-    if notes:
-        out.note = notes
+    preserve_other_components(accessor, 9, CWE_Consumed, out, context)
 
     # .. the administering provider performs the immunization ..
     provider_repetition = accessor.first(10)
@@ -169,7 +192,7 @@ def map_rxa(
         out.lotNumber = lot_number
 
     expiration_value = accessor.value(16)
-    expiration_date = dtm_to_date(expiration_value)
+    expiration_date = context.date(expiration_value, 'RXA', 16)
 
     if expiration_date:
         out.expirationDate = expiration_date
@@ -187,7 +210,7 @@ def map_rxa(
         out.identifier = identifiers
 
     if orc_accessor:
-        preserve_unmapped(orc_accessor, ORC_Handled_Immunization, out, context)
+        preserve_unmapped(orc_accessor, ORC_Handled_Pharmacy, out, context)
 
     preserve_unmapped(accessor, _RXA_Immunization_Handled, out, context)
 
@@ -199,18 +222,16 @@ def map_rxa_to_administration(
     accessor:'SegmentAccessor',
     orc_accessor:'SegmentAccessor | None',
     context:'ConversionContext',
-    default_effective:'strnone',
     ) -> 'MedicationAdministration':
     """ Converts RXA - with its optional ORC - to a MedicationAdministration.
-    The message time backs the required effective time up when RXA-3 is empty.
     """
     config = context.config
 
     # Our response to produce
     out = MedicationAdministration()
 
-    if context.patient_reference:
-        out.subject = context.patient_reference
+    # The patient who received the medication, or the statement that none is known.
+    out.subject = patient_or_absent_reference(context)
 
     if context.encounter_reference:
         out.context = context.encounter_reference
@@ -227,28 +248,31 @@ def map_rxa_to_administration(
         if status_code:
             preserve_value(out, context, 'RXA', 20, status_code)
 
-    # .. the administered code is the medication, which FHIR requires ..
+    # .. the administered code is the medication, or the statement that none is known ..
     medication_repetition = accessor.first(5)
 
     if medication := cwe_to_codeable_concept(medication_repetition, config):
         out.medicationCodeableConcept = medication
     else:
-        out.medicationCodeableConcept = Unknown_Code
+        out.medicationCodeableConcept = absent_value()
 
-    # .. the administration start and end times make the required effective time or period ..
+    # .. the administration start and end times make the required effective time or period,
+    # .. a message without either says the period is unknown ..
     start_value = accessor.value(3)
-    start_time = dtm_to_datetime(start_value, config)
+    start_time = context.datetime(start_value, 'RXA', 3)
 
     end_value = accessor.value(4)
-    end_time = dtm_to_datetime(end_value, config)
+    end_time = context.datetime(end_value, 'RXA', 4)
 
     if start_time:
         if end_time:
             out.effectivePeriod = {'start': start_time, 'end': end_time}
         else:
             out.effectiveDateTime = start_time
+    elif end_time:
+        out.effectivePeriod = {'end': end_time}
     else:
-        out.effectiveDateTime = default_effective
+        out.effectivePeriod = absent_value()
 
     # .. the administered amount and units make the dose ..
     dosage:'stranydict' = {}
@@ -284,7 +308,7 @@ def map_rxa_to_administration(
         out.identifier = identifiers
 
     if orc_accessor:
-        preserve_unmapped(orc_accessor, ORC_Handled_Immunization, out, context)
+        preserve_unmapped(orc_accessor, ORC_Handled_Pharmacy, out, context)
 
     preserve_unmapped(accessor, _RXA_Administration_Handled, out, context)
 
@@ -306,30 +330,30 @@ def map_rxd(
 
     out.status = Medication_Dispense_Status
 
-    if context.patient_reference:
-        out.subject = context.patient_reference
+    # The patient the medication was dispensed for, or the statement that none is known.
+    out.subject = patient_or_absent_reference(context)
 
     if context.encounter_reference:
         out.context = context.encounter_reference
 
-    # The dispense code is the medication, which FHIR requires ..
+    # The dispense code is the medication, or the statement that none is known ..
     medication_repetition = accessor.first(2)
 
     if medication := cwe_to_codeable_concept(medication_repetition, config):
         out.medicationCodeableConcept = medication
     else:
-        out.medicationCodeableConcept = Unknown_Code
+        out.medicationCodeableConcept = absent_value()
 
     # .. the dispense time is when the medication was handed over ..
     handed_over_value = accessor.value(3)
-    handed_over = dtm_to_datetime(handed_over_value, config)
+    handed_over = context.datetime(handed_over_value, 'RXD', 3)
 
     if handed_over:
         out.whenHandedOver = handed_over
 
     # .. and the dispensed amount and units make the quantity.
-    if quantity := _dose_quantity(accessor, 4, 5, context, out):
-        out.quantity = quantity
+    if dispensed_quantity := _dose_quantity(accessor, 4, 5, context, out):
+        out.quantity = dispensed_quantity
 
     # The prescription number and the placer and filler order numbers identify the dispense.
     identifiers:'anylist' = []
@@ -344,7 +368,7 @@ def map_rxd(
             identifiers.append(identifier)
 
     if orc_accessor:
-        preserve_unmapped(orc_accessor, ORC_Handled_Immunization, out, context)
+        preserve_unmapped(orc_accessor, ORC_Handled_Pharmacy, out, context)
 
     if identifiers:
         out.identifier = identifiers
@@ -370,19 +394,19 @@ def map_rxe(
     out.status = Medication_Request_Status
     out.intent = Medication_Order_Intent
 
-    if context.patient_reference:
-        out.subject = context.patient_reference
+    # The patient the medication is for, or the statement that none is known.
+    out.subject = patient_or_absent_reference(context)
 
     if context.encounter_reference:
         out.encounter = context.encounter_reference
 
-    # The give code is the medication, which FHIR requires ..
+    # The give code is the medication, or the statement that none is known ..
     medication_repetition = accessor.first(2)
 
     if medication := cwe_to_codeable_concept(medication_repetition, config):
         out.medicationCodeableConcept = medication
     else:
-        out.medicationCodeableConcept = Unknown_Code
+        out.medicationCodeableConcept = absent_value()
 
     # .. the give amounts and units make the dose - a range when both bounds are present,
     # a plain quantity when only the minimum arrived and a high-only range when only
@@ -403,12 +427,12 @@ def map_rxe(
     if dose:
         out.dosageInstruction = [{'doseAndRate': [dose]}]
 
-    # The placer and filler order numbers identify the request.
+    # The placer and filler order numbers identify the request, the rest of the ORC fills it in.
     if identifiers := _order_identifiers(orc_accessor, context):
         out.identifier = identifiers
 
     if orc_accessor:
-        preserve_unmapped(orc_accessor, ORC_Handled_Immunization, out, context)
+        apply_orc_to_request(orc_accessor, context, out)
 
     preserve_unmapped(accessor, _RXE_Handled, out, context)
 
@@ -431,19 +455,19 @@ def map_rxo(
     out.status = Medication_Request_Status
     out.intent = Medication_Original_Order_Intent
 
-    if context.patient_reference:
-        out.subject = context.patient_reference
+    # The patient the medication is for, or the statement that none is known.
+    out.subject = patient_or_absent_reference(context)
 
     if context.encounter_reference:
         out.encounter = context.encounter_reference
 
-    # The requested give code is the medication, which FHIR requires ..
+    # The requested give code is the medication, or the statement that none is known ..
     medication_repetition = accessor.first(1)
 
     if medication := cwe_to_codeable_concept(medication_repetition, config):
         out.medicationCodeableConcept = medication
     else:
-        out.medicationCodeableConcept = Unknown_Code
+        out.medicationCodeableConcept = absent_value()
 
     # .. the requested give amounts and units make the dose - a range when both bounds
     # are present, a plain quantity when only the minimum arrived and a high-only range
@@ -500,10 +524,11 @@ def map_rxo(
     # .. and the requested dispense amount, units and refills make the dispense request.
     dispense_request:'stranydict' = {}
 
-    if quantity := _dose_quantity(accessor, 11, 12, context, out):
-        dispense_request['quantity'] = quantity
+    if requested_quantity := _dose_quantity(accessor, 11, 12, context, out):
+        dispense_request['quantity'] = requested_quantity
 
     refills = accessor.value(13)
+
     if refills:
         if refills.isdigit():
             dispense_request['numberOfRepeatsAllowed'] = int(refills)
@@ -513,12 +538,12 @@ def map_rxo(
     if dispense_request:
         out.dispenseRequest = dispense_request
 
-    # The placer and filler order numbers identify the request.
+    # The placer and filler order numbers identify the request, the rest of the ORC fills it in.
     if identifiers := _order_identifiers(orc_accessor, context):
         out.identifier = identifiers
 
     if orc_accessor:
-        preserve_unmapped(orc_accessor, ORC_Handled_Immunization, out, context)
+        apply_orc_to_request(orc_accessor, context, out)
 
     # The units fields only count as consumed when an amount arrived to pair them with -
     # senders shift other values into unit slots and those must not be lost.
@@ -552,31 +577,34 @@ def map_rxg(
     out.status = Medication_Request_Status
     out.intent = Medication_Give_Intent
 
-    if context.patient_reference:
-        out.subject = context.patient_reference
+    # The patient the medication is for, or the statement that none is known.
+    out.subject = patient_or_absent_reference(context)
 
     if context.encounter_reference:
         out.encounter = context.encounter_reference
 
-    # The give code is the medication, which FHIR requires ..
+    # The give code is the medication, or the statement that none is known ..
     medication_repetition = accessor.first(4)
 
     if medication := cwe_to_codeable_concept(medication_repetition, config):
         out.medicationCodeableConcept = medication
     else:
-        out.medicationCodeableConcept = Unknown_Code
+        out.medicationCodeableConcept = absent_value()
 
-    # .. the give amount and units make the dose, timed by the quantity/timing start.
+    # .. the give amount and units make the dose, timed by the quantity/timing start -
+    # .. whatever else the quantity/timing carries stays preserved whole.
     dosage:'stranydict' = {}
 
     if dose := _dose_quantity(accessor, 5, 7, context, out):
         dosage['doseAndRate'] = [{'doseQuantity': dose}]
 
     timing_value = accessor.component(3, _TQ_Start_Component)
-    timing_start = dtm_to_datetime(timing_value, config)
+    timing_start = context.datetime(timing_value, 'RXG', 3)
 
     if timing_start:
         dosage['timing'] = {'event': [timing_start]}
+
+    preserve_other_components(accessor, 3, _TQ_Consumed, out, context)
 
     if dosage:
         out.dosageInstruction = [dosage]
@@ -586,7 +614,7 @@ def map_rxg(
         out.identifier = identifiers
 
     if orc_accessor:
-        preserve_unmapped(orc_accessor, ORC_Handled_Immunization, out, context)
+        preserve_unmapped(orc_accessor, ORC_Handled_Pharmacy, out, context)
 
     preserve_unmapped(accessor, _RXG_Handled, out, context)
 

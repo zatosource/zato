@@ -7,10 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import socket
 from logging import getLogger
-from time import monotonic
 from traceback import format_exc
 
 # gevent
@@ -18,20 +16,19 @@ from gevent import spawn
 from gevent.lock import BoundedSemaphore
 
 # Zato
-from zato.common.hl7.audit import audit_ack_sent, audit_batch_received, audit_message_received, get_audit_attrs, \
-    get_control_id, get_wire_attrs
+from zato.common.hl7.audit import audit_ack_sent, get_wire_attrs
 from zato.common.hl7.exception import HL7Exception
-from zato.common.hl7.mllp.ack import build_ack, Condition_Data_Type_Error, Condition_Unsupported_Message, ErrorCondition
+from zato.common.hl7.mllp.ack import build_ack, Condition_Data_Type_Error, ErrorCondition
 from zato.common.hl7.mllp.codec import FrameReader, frame_encode
+from zato.common.hl7.mllp.connection import ConnectionContext
 from zato.common.hl7.mllp.dedup import extract_control_id
-from zato.common.hl7.mllp.preprocess import BatchPayload, preprocess_message
+from zato.common.hl7.mllp.message import handle_message
 from zato.common.hl7.mllp.proxy_protocol import read_optional_proxy_header
+from zato.common.hl7.mllp.reply import Application_Error_Ack_Code, Rejection_Ack_Code
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.settings import ListenerConfig, RouteSettings, is_address_allowed
 from zato.common.hl7.mllp.state import ChannelState
 from zato.common.util.api import new_cid_server
-
-from zato.hl7v2 import HL7ValidationError, parse_hl7
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,11 +36,9 @@ from zato.hl7v2 import HL7ValidationError, parse_hl7
 if 0:
     from zato.common.audit_log.api import AuditLog
     from zato.common.hl7.mllp.router import ChannelRoute
-    from zato.common.typing_ import any_
 
     AuditLog = AuditLog
     ChannelRoute = ChannelRoute
-    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,74 +48,11 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many milliseconds one second holds - used when converting callback durations
-_ms_per_second = 1000
-
-# Per-message trace diagnostics - opt-in through the environment because they log
-# multiple lines per message, which is noise everywhere except a diagnostic run.
-_is_trace_enabled = bool(os.environ.get('Zato_HL7_Trace'))
-
-def _trace(message:'str', *args:'object') -> 'None':
-    if _is_trace_enabled:
-        logger.info('TRACE ' + message, *args)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 # How long the accept loop waits before checking whether it has been told to stop
 _Accept_Poll_Interval = 1.0
 
-# What a sender is told when its connection is refused before any message was read
-_Rejection_Ack_Code = 'AR'
-
-# Where MSH-9, the message type, sits when the header is split on the field separator -
-# a header with nothing there cannot be identified as any message at all
-_MSH9_Field_Index = 8
-
-# What a channel's own answer has to begin with to be sent back in place of a locally built
-# acknowledgment. A channel that replies from one of its destinations answers with the
-# acknowledgment that destination gave it, and everything else is not an answer at all.
-_Reply_Segment_Prefix = 'MSH'
-
-# What a message that matched no channel is filed under in the audit log - there is no channel
-# whose name it could carry, yet a turned-away message is still worth finding afterwards
-Unmatched_Object_Name = 'unmatched'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _resolve_reply(callback_response:'any_', msh_line:'str', ack_code:'str', error_text:'str') -> 'str':
-    """ Returns what the sender is answered with - the message the channel itself produced when it
-    produced one, and otherwise an acknowledgment built here from the outcome of the delivery.
-    """
-    if isinstance(callback_response, str):
-        if callback_response.startswith(_Reply_Segment_Prefix):
-            return callback_response
-
-    out = build_ack(msh_line, ack_code, error_text=error_text)
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ConnectionContext:
-    """ Who is on one connection and what has come down it so far.
-    """
-    def __init__(self, client_ip:'str', client_port:'int', client_common_name:'str') -> 'None':
-
-        # The sender's own address, as reported by the load balancer that accepted the connection
-        self.client_ip = client_ip
-        self.client_port = client_port
-
-        # The common name of the client certificate that was verified, empty when there was none
-        self.client_common_name = client_common_name
-
-        self.total_messages_received = 0
-
-    @property
-    def endpoint(self) -> 'str':
-        out = f'{self.client_ip}:{self.client_port}'
-        return out
+# What the sender is told when its frame left the stream with no known boundary
+_Unreadable_Frame_Error_Text = 'Message could not be read'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -328,7 +260,7 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _send_framed(
+    def send_framed(
         self,
         active_socket:'socket.socket',
         text:'str',
@@ -426,8 +358,8 @@ class HL7MLLPServer:
                     # so the sender is answered and the connection ends rather than resynchronising
                     self.state.on_error()
                     logger.warning('Frame error from %s - %s', connection_context.endpoint, exception)
-                    self._reject_frame(client_socket, msh_line, settings, connection_context, 'AE',
-                        'Message could not be read', Condition_Data_Type_Error)
+                    self._reject_frame(client_socket, msh_line, settings, connection_context,
+                        Application_Error_Ack_Code, _Unreadable_Frame_Error_Text, Condition_Data_Type_Error)
                     break
 
                 except (ConnectionResetError, BrokenPipeError):
@@ -473,7 +405,7 @@ class HL7MLLPServer:
             error_text = ''
 
         ack_string = build_ack(msh_line, ack_code, error_text=error_text, error_condition=error_condition)
-        self._send_framed(active_socket, ack_string, settings, connection_context)
+        self.send_framed(active_socket, ack_string, settings, connection_context)
 
 # ################################################################################################################################
 
@@ -495,169 +427,22 @@ class HL7MLLPServer:
         logger.warning('Channel `%s` refused a message from %s', route.channel_name, connection_context.endpoint)
 
         settings = route.settings
-        ack_string = build_ack(msh_line, _Rejection_Ack_Code, error_text='')
+        ack_string = build_ack(msh_line, Rejection_Ack_Code, error_text='')
 
         self.state.on_nack_sent()
         channel_state.on_nack_sent()
 
         if self.audit_log and route.is_audit_log_active:
-            _ = audit_ack_sent(
-                self.audit_log, route.channel_name, _Rejection_Ack_Code, ack_string,
-                cid=new_cid_server(), msg_id=extract_control_id(msh_line),
-                facility=get_wire_attrs(msh_line)['facility'])
-
-        self._send_framed(active_socket, ack_string, settings, connection_context)
-
-# ################################################################################################################################
-
-    def _extract_first_msh_line(self, data:'str') -> 'str':
-        """ Finds the first MSH segment line inside a batch/file payload.
-        Used for routing and ACK building when the frame is a batch.
-        """
-
-        # .. scan through CR-delimited segments looking for the first MSH ..
-        for line in data.split('\r'):
-            if line.startswith('MSH|'):
-                return line
-
-        return ''
-
-# ################################################################################################################################
-
-    def _handle_batch_payload(
-        self,
-        active_socket:'socket.socket',
-        batch_payload:'BatchPayload',
-        connection_context:'ConnectionContext',
-        matched_route:'ChannelRoute | None',
-        settings:'RouteSettings',
-        ) -> 'None':
-        """ Processes a batch/file payload (BHS|... or FHS|...) as a single unit.
-        The whole batch belongs to the channel its frame matched, and the entire raw batch string
-        is passed to that channel's callback.
-        """
-
-        raw = batch_payload.raw
-
-        # .. the ACK is built from the first MSH inside the batch, the routing decision
-        # .. having already been made on the frame's own first line ..
-        msh_line = self._extract_first_msh_line(raw)
-
-        # .. if the batch contains no MSH at all, there is nothing to ACK ..
-        if not msh_line:
-            self.state.on_error()
-            logger.warning('Batch payload from %s contains no MSH segment', connection_context.endpoint)
-            return
-
-        if settings.should_log_messages:
-            logger.info('Processing batch payload (%d bytes) from %s', len(raw), connection_context.endpoint)
-
-        # .. a matched batch counts on its channel's own state too ..
-        if matched_route:
-            channel_state = self.get_channel_state(matched_route.channel_name)
-            channel_state.on_message_received()
-        else:
-            channel_state = None
-
-        # .. a batch is audited when its channel says so - with no route there is no channel to ask,
-        # .. and the channel it is filed under is what says afterwards whether it was audited ..
-        audit_log = self.audit_log
-        audit_channel_name = ''
-
-        # .. all the batch's audit events share one correlation id ..
-        if audit_log and matched_route and matched_route.is_audit_log_active:
 
             audit_cid = new_cid_server()
-            audit_channel_name = matched_route.channel_name
+            control_id = extract_control_id(msh_line)
+            wire_attrs = get_wire_attrs(msh_line)
 
-            # .. the parent row for the batch plus a child row per contained message ..
-            _ = audit_batch_received(
-                audit_log, audit_channel_name, raw,
-                cid=audit_cid, endpoint=connection_context.endpoint)
-        else:
-            audit_cid = ''
-
-        # .. no route found - reject the entire batch ..
-        if matched_route is None:
-            logger.warning('No matching MLLP channel for batch from %s (MSH: %s)',
-                connection_context.endpoint, msh_line)
-            callback_response = None
-            ack_code = 'AR'
-            error_text = 'No matching channel for this batch'
-
-        # .. route found - pass the entire raw batch to the service callback,
-        # .. the service is responsible for calling parse_batch_or_file on it ..
-        else:
-
-            if settings.should_log_messages:
-                logger.info('Routing batch to channel `%s` (%s)',
-                    matched_route.channel_name, matched_route.get_target())
-
-            # .. invoke the callback with the raw batch string, under the correlation id the
-            # .. batch's own rows were written with, so everything it leads to shares them ..
-            try:
-                callback_response = matched_route.callback(raw, audit_cid)
-                ack_code = 'AA'
-                error_text = ''
-            except Exception:
-                logger.warning('Service callback error for batch on channel `%s` from %s; e:`%s`',
-                    matched_route.channel_name, connection_context.endpoint, format_exc())
-                callback_response = None
-                ack_code = 'AE'
-                error_text = 'Internal processing error'
-
-        # .. suppress error details if the channel is configured to hide them ..
-        if not settings.should_return_errors:
-            error_text = ''
-
-        # .. the batch's acknowledgment outcome feeds the live state, the channel's own included ..
-        if ack_code == 'AA':
-            self.state.on_ack_sent()
-            if channel_state:
-                channel_state.on_ack_sent()
-        else:
-            self.state.on_nack_sent()
-            if channel_state:
-                channel_state.on_nack_sent()
-
-        # .. build the ACK using the first MSH from the batch, unless the channel already
-        # .. answered with a message of its own ..
-        ack_string = _resolve_reply(callback_response, msh_line, ack_code, error_text)
-
-        # .. one acknowledgment covers the entire batch, on the same cid as its rows ..
-        if audit_log and audit_channel_name:
             _ = audit_ack_sent(
-                audit_log, audit_channel_name, ack_code, ack_string,
-                cid=audit_cid, msg_id=extract_control_id(msh_line),
-                facility=get_wire_attrs(msh_line)['facility'])
+                self.audit_log, route.channel_name, Rejection_Ack_Code, ack_string,
+                cid=audit_cid, msg_id=control_id, facility=wire_attrs['facility'])
 
-        self._send_framed(active_socket, ack_string, settings, connection_context)
-
-# ################################################################################################################################
-
-    def _handle_duplicate(
-        self,
-        active_socket:'socket.socket',
-        msh_line:'str',
-        control_id:'str',
-        settings:'RouteSettings',
-        connection_context:'ConnectionContext',
-        channel_name:'str',
-        ) -> 'None':
-        """ Answers a message the matched channel has already seen within its own TTL window.
-        A duplicate is acknowledged positively and its callback is not invoked.
-        """
-        if settings.should_log_messages:
-            logger.info('Duplicate message (MSH-10: %s) from %s, skipping', control_id, connection_context.endpoint)
-
-        # A duplicate's acknowledgment feeds the live state, the channel's own included
-        self.state.on_ack_sent()
-
-        channel_state = self.get_channel_state(channel_name)
-        channel_state.on_ack_sent()
-
-        ack_string = build_ack(msh_line, 'AA')
-        self._send_framed(active_socket, ack_string, settings, connection_context)
+        self.send_framed(active_socket, ack_string, settings, connection_context)
 
 # ################################################################################################################################
 
@@ -669,303 +454,9 @@ class HL7MLLPServer:
         matched_route:'ChannelRoute | None',
         settings:'RouteSettings',
         ) -> 'None':
-        """ Processes a single unframed HL7 message under the settings of the channel it matched:
-        pre-process, deliver, send ACK.
+        """ Processes a single unframed HL7 message under the settings of the channel it matched.
         """
-
-        connection_context.total_messages_received += 1
-        self.state.on_message_received()
-
-        # Trace point 1: the message arrived and processing begins
-        message_start = monotonic()
-        _trace('message #%d in (%d bytes)', connection_context.total_messages_received, len(raw_message_bytes))
-
-        if settings.should_log_messages:
-            logger.info('Received message #%d (%d bytes) from %s',
-                connection_context.total_messages_received, len(raw_message_bytes), connection_context.endpoint)
-
-        # Run the pre-processing pipeline under the matched channel's own settings ..
-        preprocessed = preprocess_message(
-            raw_message_bytes,
-            should_normalize_line_endings=settings.should_normalize_line_endings,
-            should_restore_truncated_msh=settings.should_restore_truncated_msh,
-            should_split_concatenated_messages=settings.should_split_concatenated_messages,
-            should_force_standard_delimiters=settings.should_force_standard_delimiters,
-            should_use_msh18_encoding=settings.should_use_msh18_encoding,
-            default_character_encoding=settings.default_character_encoding,
-        )
-
-        # .. if the payload is a batch/file, handle it as a single unit ..
-        if isinstance(preprocessed, BatchPayload):
-            self._handle_batch_payload(active_socket, preprocessed, connection_context, matched_route, settings)
-            return
-
-        # .. process each message (usually just one, unless concatenated) ..
-        for message_text in preprocessed:
-
-            # .. extract the MSH line for ACK building ..
-            first_cr = message_text.find('\r')
-
-            if first_cr == -1:
-                msh_line = message_text
-            else:
-                msh_line = message_text[:first_cr]
-
-            # .. a channel with deduplication on answers a control id it has already seen
-            # .. without invoking anything - only a matched route carries a deduplicator ..
-            if matched_route:
-                if settings.deduplicator:
-
-                    control_id = extract_control_id(msh_line)
-
-                    # .. only deduplicate if the message actually has a control ID ..
-                    if control_id:
-                        if settings.deduplicator.is_duplicate(control_id):
-                            self._handle_duplicate(active_socket, msh_line, control_id, settings,
-                                connection_context, matched_route.channel_name)
-                            continue
-
-            # .. a matched message counts on its channel's own state too ..
-            if matched_route:
-                channel_state = self.get_channel_state(matched_route.channel_name)
-                channel_state.on_message_received()
-            else:
-                channel_state = None
-
-            # .. a matched message is audited when its channel says so, and one that matched
-            # .. nothing is always audited, filed under a reserved name of its own, since there
-            # .. is no channel whose audit setting could be consulted ..
-            audit_log = self.audit_log
-            audit_channel_name = ''
-
-            if audit_log:
-                if matched_route is None:
-                    audit_channel_name = Unmatched_Object_Name
-                elif matched_route.is_audit_log_active:
-                    audit_channel_name = matched_route.channel_name
-
-            # .. the received event and its acknowledgment share one correlation id,
-            # .. with the wire-level attributes as the fallback the parsed ones replace ..
-            if audit_channel_name:
-                audit_cid = new_cid_server()
-                audit_msg_id = extract_control_id(msh_line)
-                audit_attrs = get_wire_attrs(msh_line)
-                peer_endpoint = connection_context.endpoint
-            else:
-                audit_cid = ''
-                audit_msg_id = ''
-                audit_attrs = {}
-                peer_endpoint = ''
-
-            # .. how long the service callback ran, reported on the acknowledgment's row ..
-            callback_duration_ms = 0
-
-            # .. what the channel answered with itself, when it answered at all ..
-            callback_response = None
-
-            if matched_route is None:
-                logger.warning('No matching MLLP channel for message from %s (MSH: %s)',
-                    connection_context.endpoint, msh_line)
-                ack_code = 'AR'
-                error_text = 'No matching channel for this message'
-
-                # .. a turned-away message still leaves its receipt behind, the acknowledgment
-                # .. that answers it landing on the same correlation id further below ..
-                if audit_log and audit_channel_name:
-                    _ = audit_message_received(
-                        audit_log, audit_channel_name, message_text,
-                        cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
-
-            # .. invoke the matched route's callback ..
-            else:
-
-                if settings.should_log_messages:
-                    logger.info('Routing message to channel `%s` (%s)',
-                        matched_route.channel_name, matched_route.get_target())
-
-                # .. when should_parse_on_input is enabled, parse the raw ER7 text
-                # .. into a structured HL7Message object. If should_validate is also
-                # .. enabled, the parser runs validation and raises on errors.
-                # .. On success the callback receives the parsed object, otherwise
-                # .. it receives the raw ER7 string.
-                if settings.should_parse_on_input:
-
-                    # .. a header with no message type cannot be identified as any message at all,
-                    # .. so it is turned away here rather than handed to a parser that can only
-                    # .. refuse it - the sender is told exactly what was missing ..
-                    msh_fields = msh_line.split('|')
-
-                    if len(msh_fields) > _MSH9_Field_Index:
-                        message_type = msh_fields[_MSH9_Field_Index]
-                    else:
-                        message_type = ''
-
-                    if not message_type:
-                        logger.warning('No message type in MSH-9 from %s, rejecting (MSH: %s)',
-                            connection_context.endpoint, msh_line)
-
-                        ack_code = 'AR'
-                        error_text = 'No message type in MSH-9'
-
-                        # .. suppress error details if the channel hides them ..
-                        if not settings.should_return_errors:
-                            error_text = ''
-
-                        # .. a reject is a negative acknowledgment in the channel's live state,
-                        # .. the matched channel's own included ..
-                        self.state.on_nack_sent()
-                        if channel_state:
-                            channel_state.on_nack_sent()
-
-                        ack_string = build_ack(msh_line, ack_code, error_text=error_text,
-                            error_condition=Condition_Unsupported_Message)
-
-                        # .. a rejected message still leaves its audit trail - the receipt
-                        # .. and the negative acknowledgment that answered it ..
-                        if audit_log and audit_channel_name:
-                            _ = audit_message_received(
-                                audit_log, audit_channel_name, message_text,
-                                cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
-                            _ = audit_ack_sent(
-                                audit_log, audit_channel_name, ack_code, ack_string,
-                                cid=audit_cid, msg_id=audit_msg_id, facility=audit_attrs['facility'])
-
-                        self._send_framed(active_socket, ack_string, settings, connection_context)
-
-                        # .. skip to the next message in the batch ..
-                        continue
-
-                    # .. attempt to parse (and optionally validate) the message ..
-                    try:
-                        # Trace point 2: how long the parse took
-                        parse_start = monotonic()
-
-                        callback_data = parse_hl7(
-                            message_text, validate=settings.should_validate, tolerance=settings.tolerance_config)
-
-                        _trace('parse done %.1fms (%s)', (monotonic() - parse_start) * _ms_per_second, audit_msg_id)
-
-                        # .. a parsed message contributes richer searchable attributes,
-                        # .. including the patient's medical record number ..
-                        if audit_channel_name:
-                            audit_attrs = get_audit_attrs(callback_data)
-                            audit_msg_id = get_control_id(callback_data)
-
-                    # .. parsing or validation failed - send an AE reject ACK
-                    # .. back to the sender and skip this message. A malformed message is the
-                    # .. sender's error rather than an internal one, so one line says what was
-                    # .. wrong without a traceback ..
-                    except (ValueError, HL7ValidationError) as e:
-                        logger.warning('Parse/validation error for channel `%s` from %s; e:`%s`',
-                            matched_route.channel_name, connection_context.endpoint, e)
-                        ack_code = 'AE'
-                        error_text = 'Message parsing or validation failed'
-
-                        # .. suppress error details if the channel hides them ..
-                        if not settings.should_return_errors:
-                            error_text = ''
-
-                        # .. a reject is a negative acknowledgment in the channel's live state,
-                        # .. the matched channel's own included ..
-                        self.state.on_nack_sent()
-                        if channel_state:
-                            channel_state.on_nack_sent()
-
-                        ack_string = build_ack(msh_line, ack_code, error_text=error_text,
-                            error_condition=Condition_Data_Type_Error)
-
-                        # .. a rejected message still leaves its audit trail - the receipt
-                        # .. and the negative acknowledgment that answered it ..
-                        if audit_log and audit_channel_name:
-                            _ = audit_message_received(
-                                audit_log, audit_channel_name, message_text,
-                                cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
-                            _ = audit_ack_sent(
-                                audit_log, audit_channel_name, ack_code, ack_string,
-                                cid=audit_cid, msg_id=audit_msg_id, facility=audit_attrs['facility'])
-
-                        self._send_framed(active_socket, ack_string, settings, connection_context)
-
-                        # .. skip to the next message in the batch ..
-                        continue
-
-                # .. parsing not enabled - pass the raw ER7 string to the callback ..
-                else:
-                    callback_data = message_text
-
-                # .. the receipt is recorded before the service runs, so a message
-                # .. that crashes its service is still visibly received ..
-                if audit_log and audit_channel_name:
-
-                    # Trace point 3: how long the received-event audit write took
-                    audit_received_start = monotonic()
-
-                    _ = audit_message_received(
-                        audit_log, audit_channel_name, message_text,
-                        cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
-
-                    _trace('audit received done %.1fms (%s)',
-                        (monotonic() - audit_received_start) * _ms_per_second, audit_msg_id)
-
-                # .. invoke the matched route's service callback ..
-                callback_start = monotonic()
-
-                # The correlation id goes along with the message, so what the channel does with it
-                # next - the service it runs and the destinations it fans out to - is recorded
-                # under the very id the receipt was
-                try:
-                    callback_response = matched_route.callback(callback_data, audit_cid)
-                    ack_code = 'AA'
-                    error_text = ''
-
-                # .. service raised an exception - report it as an application error ..
-                except Exception:
-                    logger.warning('Service callback error for channel `%s` from %s; e:`%s`',
-                        matched_route.channel_name, connection_context.endpoint, format_exc())
-                    ack_code = 'AE'
-                    error_text = 'Internal processing error'
-
-                callback_duration_ms = int((monotonic() - callback_start) * _ms_per_second)
-
-                # Trace point 4: how long the service callback ran
-                _trace('callback done %dms (%s)', callback_duration_ms, audit_msg_id)
-
-            # .. suppress error details if configured to not return errors ..
-            if not settings.should_return_errors:
-                error_text = ''
-
-            # .. the acknowledgment outcome feeds the live state, the channel's own included ..
-            if ack_code == 'AA':
-                self.state.on_ack_sent()
-                if channel_state:
-                    channel_state.on_ack_sent()
-            else:
-                self.state.on_nack_sent()
-                if channel_state:
-                    channel_state.on_nack_sent()
-
-            # .. a channel that answered with a message of its own is answered with,
-            # .. and everything else is acknowledged by an acknowledgment built here ..
-            ack_string = _resolve_reply(callback_response, msh_line, ack_code, error_text)
-
-            # .. the acknowledgment lands on the same cid as the receipt it answers ..
-            if audit_log and audit_channel_name:
-
-                # Trace point 5: how long the acknowledgment audit write took
-                audit_ack_start = monotonic()
-
-                _ = audit_ack_sent(
-                    audit_log, audit_channel_name, ack_code, ack_string,
-                    cid=audit_cid, msg_id=audit_msg_id, facility=audit_attrs['facility'],
-                    duration_ms=callback_duration_ms)
-
-                _trace('audit ack done %.1fms (%s)', (monotonic() - audit_ack_start) * _ms_per_second, audit_msg_id)
-
-            self._send_framed(active_socket, ack_string, settings, connection_context)
-
-            # Trace point 6: the ACK left and the message is fully processed
-            _trace('message done %.1fms total (%s %s)',
-                (monotonic() - message_start) * _ms_per_second, ack_code, audit_msg_id)
+        handle_message(self, active_socket, raw_message_bytes, connection_context, matched_route, settings)
 
 # ################################################################################################################################
 # ################################################################################################################################

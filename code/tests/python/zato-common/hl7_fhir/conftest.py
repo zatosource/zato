@@ -97,6 +97,25 @@ def rep(text:'str') -> 'anylist':
 
 # ################################################################################################################################
 
+def segment(segment_id:'str', fields:'dict[int, str]') -> 'str':
+    """ Builds one ER7 segment from values keyed by 1-based field position, so a test
+    can name the far-off fields it sets without counting pipes.
+    """
+    last_position = max(fields)
+
+    values = []
+
+    for position in range(1, last_position + 1):
+        value = ''
+        if position in fields:
+            value = fields[position]
+        values.append(value)
+
+    out = '|'.join([segment_id] + values)
+    return out
+
+# ################################################################################################################################
+
 def convert(*segments:'str', config:'strnone'=None) -> 'any_':
     """ Parses ER7 segments into a message and converts it to a typed FHIR bundle.
     """

@@ -10,9 +10,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.hl7.mappings.config import load_mapping_config
 from zato.hl7.mappings.context import ConversionContext
 from zato.hl7.mappings.fields import SegmentAccessor
-from zato.hl7.mappings.segments import append_to_list_field, apply_evn, set_document_text
-from zato.hl7.mappings.walk import WalkState, add_basic, apply_pending_rol, flush_pending_orc, new_walk_state
+from zato.hl7.mappings.segments import absent_value, add_financial_class_extension, append_to_list_field, apply_evn, \
+    set_document_text
+from zato.hl7.mappings.walk import WalkState, add_basic, apply_pending_rol, flush_pending_mfe, flush_pending_orc, \
+    flush_pending_specimen, new_walk_state
 from zato.hl7.mappings.walk_handlers import segment_handlers
+from zato.hl7v2_rs import RawGroup
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,8 +27,14 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The parse tree nodes that hold other nodes rather than segment data
+_group_types = (RawGroup,)
+
 # Segments that only group other segments and carry no data of their own
 _grouping_segments = ('RGS',)
+
+# The status of the participant an Appointment gets when the message names none
+_absent_participant_status = 'needs-action'
 
 # The system of the bundle's processing-mode tag from MSH-11
 _processing_id_system = 'http://terminology.hl7.org/CodeSystem/v2-0103'
@@ -47,10 +56,10 @@ def _collect_segments(items:'any_', out:'anylist') -> 'anylist':
     """ Flattens raw message items into a segment list in document order, descending into groups.
     """
     for item in items:
-        if hasattr(item, 'segment_id'):
-            out.append(item)
-        else:
+        if type(item) in _group_types:
             _ = _collect_segments(item.items, out)
+        else:
+            out.append(item)
 
     return out
 
@@ -156,7 +165,9 @@ def _finish(state:'WalkState', context:'ConversionContext', structure_id:'strnon
 
     # A link message ties its two patients to each other.
     if structure_id == _link_structure:
-        if len(state.patients) >= 2:
+        patient_count = len(state.patients)
+
+        if patient_count >= 2:
             first_patient = state.patients[0]
             second_patient = state.patients[1]
 
@@ -169,12 +180,24 @@ def _finish(state:'WalkState', context:'ConversionContext', structure_id:'strnon
     # An ORC with no order or pharmacy segment after it still becomes a ServiceRequest.
     flush_pending_orc(state, context)
 
+    # An OBR whose specimen source met no SPM still describes a Specimen.
+    flush_pending_specimen(state, context)
+
+    # A master file entry whose group built no resource stays whole.
+    flush_pending_mfe(state, context)
+
     # A ROL whose PV1 never arrived is preserved on the message header.
     apply_pending_rol(state, context)
 
     # EVN backs the Encounter period up and preserves whatever else it carries.
     if state.evn_accessor:
         apply_evn(state.evn_accessor, context, state.encounter, state.message_header)
+
+    # A financial class with no Coverage to type stays with the Encounter.
+    if context.financial_class:
+        if not state.current_coverage:
+            if state.encounter:
+                add_financial_class_extension(state.encounter, context, context.financial_class)
 
     # A referral's RF1 precedes the PID and PV1, so the subject
     # and the encounter can only be filled in now.
@@ -215,8 +238,13 @@ def _finish(state:'WalkState', context:'ConversionContext', structure_id:'strnon
 
         participants.extend(state.appointment_participants)
 
-        if participants:
-            state.appointment.participant = participants
+        # A message that names no participant gets one that says so explicitly.
+        if not participants:
+            actor = absent_value()
+            absent_participant = {'actor': actor, 'status': _absent_participant_status}
+            participants.append(absent_participant)
+
+        state.appointment.participant = participants
 
 # ################################################################################################################################
 

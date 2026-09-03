@@ -49,19 +49,55 @@ class TestMFNStaffMasterFile:
         qualification = practitioner['qualification'][0]
         assert qualification['code']['text'] == 'Internal Medicine Cardiovascular Disease'
 
-        # The MFI and MFE frames are preserved whole.
-        basics = resources_of_type(bundle, 'Basic')
+        # The MFI frame describes the message itself ..
+        assert resources_of_type(bundle, 'Basic') == []
 
-        preserved_segments = []
-        for basic in basics:
-            preserved_segments.append(basic['code']['coding'][0]['code'])
+        header = one_resource(bundle, 'MessageHeader')
+        header_extensions = header['extension']
 
-        assert preserved_segments == ['MFI', 'MFE']
+        master_file = {
+            'url': 'urn:zato:hl7v2:extension/master-file',
+            'valueCodeableConcept': {
+                'coding': [{
+                    'code': 'PRA',
+                    'display': 'Practitioner master file',
+                    'system': 'http://terminology.hl7.org/CodeSystem/v2-0175',
+                }],
+                'text': 'Practitioner master file',
+            },
+        }
+        assert master_file in header_extensions
 
-        mfi_basic = basics[0]
-        extensions = mfi_basic['extension']
-        assert {'url': 'urn:zato:hl7v2:extension/MFI/1', 'valueString': 'PRA^Practitioner master file^HL70175'} \
-            in extensions
+        master_file_event = {
+            'url': 'urn:zato:hl7v2:extension/master-file-event',
+            'valueCodeableConcept': {
+                'coding': [{
+                    'code': 'UPD',
+                    'display': 'Update',
+                    'system': 'http://terminology.hl7.org/CodeSystem/v2-0180',
+                }],
+                'text': 'Update',
+            },
+        }
+        assert master_file_event in header_extensions
+
+        # .. the response level is preserved on it ..
+        assert {'url': 'urn:zato:hl7v2:extension/unmapped/MFI-6', 'valueString': 'NE'} in header_extensions
+
+        # .. and the MFE record event tags the Practitioner its group built, with the primary key as an identifier.
+        tag = {
+            'code': 'MAD',
+            'display': 'Add record to master file',
+            'system': 'http://terminology.hl7.org/CodeSystem/v2-0180',
+        }
+        assert practitioner['meta']['tag'] == [tag]
+        assert {'value': '8903456789'} in identifiers
+
+        practitioner_extensions = practitioner['extension']
+        assert {'url': 'urn:zato:hl7v2:extension/unmapped/MFE-2', 'valueString': '20240517155500'} \
+            in practitioner_extensions
+        assert {'url': 'urn:zato:hl7v2:extension/unmapped/MFE-4', 'valueString': '8903456789^Beaumont^Patricia'} \
+            in practitioner_extensions
 
         assert get_conversion_warnings(bundle) == []
 

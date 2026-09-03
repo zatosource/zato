@@ -10,8 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 
 # Zato
-from zato.hl7.mappings.segments import No_Consumed_Fields, append_to_list_field, apply_rol, apply_tq1, \
-    map_orc_obr_to_service_request, map_segment_to_basic, preserve_unmapped
+from zato.hl7.mappings.segments import No_Consumed_Fields, add_order_provenance, append_to_list_field, apply_mfe, \
+    apply_rol, apply_tq1, apply_tq1_to_dosage, map_orc_obr_to_service_request, map_segment_to_basic, \
+    preserve_unmapped, specimen_from_obr
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,6 +23,12 @@ if 0:
     from zato.hl7.mappings.fields import SegmentAccessor
     ConversionContext = ConversionContext
     SegmentAccessor = SegmentAccessor
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The pharmacy resources whose dosage instructions a TQ1 can go into
+Dosage_Instruction_Types = frozenset({'MedicationRequest', 'MedicationDispense'})
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,6 +51,9 @@ class WalkState:
     # The EVN segment waits until the walk ends to enrich the Encounter
     evn_accessor: 'SegmentAccessor | None'
 
+    # The MFE - master file entry - waiting for the resource its group builds
+    pending_mfe: 'SegmentAccessor | None'
+
     # The appointment the scheduling segments build up
     appointment:              'any_'
     appointment_participants: 'anylist'
@@ -61,6 +71,11 @@ class WalkState:
     # The ORC the last order group consumed - further OBRs with the same order numbers reuse it
     current_orc: 'any_'
 
+    # An OBR that named its specimen source waits for an SPM to describe the same specimen -
+    # when none arrives, the OBR's own description becomes a Specimen of the owner's
+    pending_specimen_obr:   'any_'
+    pending_specimen_owner: 'any_'
+
     # The ORC an RXO consumed - the RXE, RXD, RXG or RXA of the same order group reuses it
     current_pharmacy_orc: 'any_'
 
@@ -75,6 +90,10 @@ class WalkState:
     current_specimen:        'any_'
     current_coverage:        'any_'
     current_practitioner:    'any_'
+
+    # The compound Medication the RXC segments of the current pharmacy resource build up, and that resource
+    current_compound:       'any_'
+    current_compound_owner: 'any_'
 
     # The message metadata the bundle itself will carry
     message_datetime: 'strnone'
@@ -96,6 +115,7 @@ def new_walk_state() -> 'WalkState':
     out.patient_references = []
 
     out.evn_accessor = None
+    out.pending_mfe  = None
 
     out.appointment              = None
     out.appointment_participants = []
@@ -111,6 +131,9 @@ def new_walk_state() -> 'WalkState':
     out.current_orc = None
     out.current_pharmacy_orc = None
 
+    out.pending_specimen_obr   = None
+    out.pending_specimen_owner = None
+
     out.referral_request = None
 
     out.current_service_request = None
@@ -120,6 +143,9 @@ def new_walk_state() -> 'WalkState':
     out.current_specimen        = None
     out.current_coverage        = None
     out.current_practitioner    = None
+
+    out.current_compound       = None
+    out.current_compound_owner = None
 
     out.message_datetime = None
     out.control_id       = None
@@ -135,6 +161,24 @@ def add_basic(accessor:'SegmentAccessor', context:'ConversionContext') -> 'None'
     """
     if basic := map_segment_to_basic(accessor.raw_segment, context):
         _ = context.add(basic)
+
+# ################################################################################################################################
+
+def apply_pending_mfe(state:'WalkState', context:'ConversionContext', resource:'any_') -> 'None':
+    """ Moves the master file entry held back for its group onto the resource the group built.
+    """
+    if state.pending_mfe:
+        apply_mfe(state.pending_mfe, context, resource)
+        state.pending_mfe = None
+
+# ################################################################################################################################
+
+def flush_pending_mfe(state:'WalkState', context:'ConversionContext') -> 'None':
+    """ Preserves whole a master file entry whose group built no resource to carry it.
+    """
+    if state.pending_mfe:
+        add_basic(state.pending_mfe, context)
+        state.pending_mfe = None
 
 # ################################################################################################################################
 
@@ -158,13 +202,43 @@ def apply_pending_tq1(state:'WalkState', context:'ConversionContext', service_re
 
 # ################################################################################################################################
 
-def preserve_pending_tq1(state:'WalkState', context:'ConversionContext', resource:'any_') -> 'None':
-    """ Preserves the TQ1 segments held back for a pending ORC on the pharmacy resource it became.
+def apply_tq1_to_medication(accessor:'SegmentAccessor', context:'ConversionContext', medication:'any_') -> 'None':
+    """ Applies a TQ1 to the pharmacy resource it follows - a MedicationRequest and a MedicationDispense
+    carry dosage instructions the timing goes into, anything else preserves it whole.
+    """
+    current = medication.to_dict()
+    resource_type = current['resourceType']
+
+    if resource_type in Dosage_Instruction_Types:
+        apply_tq1_to_dosage(accessor, context, medication)
+    else:
+        preserve_unmapped(accessor, No_Consumed_Fields, medication, context)
+
+# ################################################################################################################################
+
+def apply_pending_tq1_to_medication(state:'WalkState', context:'ConversionContext', resource:'any_') -> 'None':
+    """ Applies the TQ1 segments held back for a pending ORC to the pharmacy resource it became.
     """
     for tq1_accessor in state.pending_tq1:
-        preserve_unmapped(tq1_accessor, No_Consumed_Fields, resource, context)
+        apply_tq1_to_medication(tq1_accessor, context, resource)
 
     state.pending_tq1 = []
+
+# ################################################################################################################################
+
+def flush_pending_specimen(state:'WalkState', context:'ConversionContext') -> 'None':
+    """ Turns the specimen description of an OBR that never met an SPM into a Specimen of its own,
+    recorded on the report or the order the OBR produced.
+    """
+    if state.pending_specimen_obr:
+        if specimen := specimen_from_obr(state.pending_specimen_obr, context):
+            specimen_reference = context.add(specimen)
+            append_to_list_field(state.pending_specimen_owner, 'specimen', specimen_reference)
+
+            state.current_specimen = specimen
+
+        state.pending_specimen_obr   = None
+        state.pending_specimen_owner = None
 
 # ################################################################################################################################
 
@@ -174,6 +248,8 @@ def flush_pending_orc(state:'WalkState', context:'ConversionContext') -> 'None':
     if state.pending_orc:
         service_request = map_orc_obr_to_service_request(state.pending_orc, None, context)
         _ = context.add(service_request)
+
+        add_order_provenance(state.pending_orc, service_request, context)
 
         state.current_service_request = service_request
 

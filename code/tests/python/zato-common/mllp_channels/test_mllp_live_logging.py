@@ -65,8 +65,8 @@ class TestShouldReturnErrors:
             response = _send_raw_and_recv(port, message)
             response_text = response.decode('utf-8', errors='replace')
 
-            # .. the response should be an AE with error details ..
-            assert 'AE' in response_text
+            # .. a failing service is answered with AR, with error details ..
+            assert 'MSA|AR|' in response_text
             assert 'error' in response_text.lower()
 
         finally:
@@ -87,8 +87,8 @@ class TestShouldReturnErrors:
             response = _send_raw_and_recv(port, message)
             response_text = response.decode('utf-8', errors='replace')
 
-            # .. the response should still be an AE (error) ..
-            assert 'AE' in response_text
+            # .. a failing service is still answered with AR ..
+            assert 'MSA|AR|' in response_text
 
             # .. but without detailed error text.
             assert 'internal processing error' not in response_text.lower()

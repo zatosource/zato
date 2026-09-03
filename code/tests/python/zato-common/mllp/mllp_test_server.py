@@ -20,6 +20,7 @@ import sys
 import time
 
 # Zato
+from zato.common.hl7.exception import HL7ApplicationError
 from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.hl7.mllp.preprocess import build_tolerance_config
 from zato.common.hl7.mllp.router import HL7MessageRouter
@@ -56,9 +57,16 @@ def _callback_echo(message_text:'str', cid:'str') -> 'None':
 # ################################################################################################################################
 
 def _callback_error(message_text:'str', cid:'str') -> 'None':
-    """ Raises an exception so the server will auto-ACK with AE.
+    """ Raises an exception so the server will auto-ACK with AR - a transient failure the sender should retry.
     """
     raise RuntimeError('Intentional test error')
+
+# ################################################################################################################################
+
+def _callback_application_error(message_text:'str', cid:'str') -> 'None':
+    """ Raises an application error so the server will auto-ACK with AE - the message itself is at fault.
+    """
+    raise HL7ApplicationError('Intentional application error')
 
 # ################################################################################################################################
 
@@ -92,6 +100,7 @@ _callback_map = {
     'ok':    _callback_ok,
     'echo':  _callback_echo,
     'error': _callback_error,
+    'application_error': _callback_application_error,
     'slow':  _callback_slow,
     'reply': _callback_reply,
 }

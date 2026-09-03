@@ -10,12 +10,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.fhir import Patient, RelatedPerson
 from zato.hl7.mappings.codes import lookup
 from zato.hl7.mappings.concepts import cwe_to_codeable_concept, cwe_to_language_concept, tag_coding_systems
-from zato.hl7.mappings.datatypes import Identifier_Type_System, cx_to_identifier, dtm_to_date, dtm_to_datetime, \
-    xad_to_address, xpn_to_human_name, xtn_to_contact_points
-from zato.hl7.mappings.fields import component_value
+from zato.hl7.mappings.datatypes import Identifier_Type_System, cx_to_identifier, xad_to_address, xpn_to_human_name, \
+    xtn_to_contact_points
+from zato.hl7.mappings.fields import component_value, serialize_repetition
 from zato.hl7.mappings.segments.common import Birth_Place_Extension_URL, Ethnicity_Extension_URL, \
     Mothers_Maiden_Name_Extension_URL, No_Consumed_Fields, Race_Extension_URL, Religion_Extension_URL, \
-    add_named_organization, add_practitioner, append_to_list_field, preserve_unmapped, preserve_value
+    add_named_organization, add_practitioner, append_to_list_field, patient_or_absent_reference, preserve_unmapped, \
+    preserve_value
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,14 +32,26 @@ if 0:
 # ################################################################################################################################
 
 # Which field positions each mapper consumes - anything else that carries data is preserved as an extension.
-_PID_Handled = frozenset({1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 23, 24, 25, 29, 30})
+_PID_Handled = frozenset({
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 29, 30,
+})
 _PD1_Handled = frozenset({3, 4})
 _NK1_Handled = frozenset({1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 16})
 _MRG_Handled = frozenset({1, 7})
 _GT1_Handled = frozenset({1, 2, 3, 5, 6, 7, 8, 9, 11})
 
+# The personal relationship code a mother has to the patient
+_Mother_Relationship_Code = 'MTH'
+
+# The type of the link from the patient to the mother's RelatedPerson
+Mother_Link_Type = 'seealso'
+
 # The identifier type code a driver's license number carries
 _Drivers_License_Type = 'DL'
+
+# The values an HL7 yes/no indicator may take
+_Yes_Indicator     = 'Y'
+_Yes_No_Indicators = ('Y', 'N')
 
 # The CDC Race and Ethnicity vocabulary PID-10 and PID-22 codes come from
 _CDC_Coding_System_Name = 'CDCREC'
@@ -108,6 +121,94 @@ def _add_cdc_extension(
 
 # ################################################################################################################################
 
+def _add_text_extension(
+    accessor:'SegmentAccessor',
+    position:'int',
+    extension_url:'str',
+    patient:'Patient',
+    ) -> 'None':
+    """ Builds a US Core race or ethnicity extension carrying text only, from a CWE field
+    coded in any vocabulary but the CDC one. A code outside the CDC vocabulary becomes
+    text next to its display.
+    """
+
+    # Each repetition contributes what it has - a display, a code, or both ..
+    texts:'anylist' = []
+
+    for repetition in accessor.repetitions(position):
+        code = component_value(repetition, 1)
+        display = component_value(repetition, 2)
+
+        if display:
+            if code:
+                if code != display:
+                    both = f'{display} ({code})'
+                    texts.append(both)
+                else:
+                    texts.append(display)
+            else:
+                texts.append(display)
+        elif code:
+            texts.append(code)
+
+    # .. a field with nothing in it builds no extension ..
+    if not texts:
+        return
+
+    # .. and everything gathered goes in as one text.
+    text = ', '.join(texts)
+    sub_extensions = [{'url': 'text', 'valueString': text}]
+
+    extension = {'url': extension_url, 'extension': sub_extensions}
+    append_to_list_field(patient, 'extension', extension)
+
+# ################################################################################################################################
+
+def map_pid_mother(
+    accessor:'SegmentAccessor',
+    context:'ConversionContext',
+    patient:'Patient',
+    ) -> 'RelatedPerson | None':
+    """ Turns the mother's identifiers in PID-21 into a RelatedPerson - the mother - of the patient.
+    Returns None when the field is empty, an identifier that does not read as a CX is preserved on the patient.
+    """
+    # Our response to produce
+    out = RelatedPerson()
+
+    config = context.config
+
+    # An empty PID-21 names no mother ..
+    repetitions = accessor.repetitions(21)
+
+    if not repetitions:
+        return None
+
+    # .. each repetition that reads as a CX is one of her identifiers,
+    # .. anything else is preserved on the patient ..
+    identifiers:'anylist' = []
+
+    for repetition in repetitions:
+        if identifier := cx_to_identifier(repetition, config):
+            identifiers.append(identifier)
+        else:
+            serialized = serialize_repetition(repetition)
+            preserve_value(patient, context, 'PID', 21, serialized)
+
+    if not identifiers:
+        return None
+
+    # .. and the mother relates to the patient as her child's mother.
+    out.patient = patient_or_absent_reference(context)
+    out.identifier = identifiers
+
+    if relationship := lookup('personal_relationship', _Mother_Relationship_Code, config):
+        coding = {'system': relationship['system'], 'code': relationship['code']}
+        out.relationship = [{'coding': [coding]}]
+
+    return out
+
+# ################################################################################################################################
+
 def map_pid(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Patient':
     """ Converts PID to a Patient.
     """
@@ -174,7 +275,7 @@ def map_pid(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Patient
             # .. is not a date at all is preserved whole instead of being dropped.
             expiration = component_value(license_repetition, 3)
             if expiration:
-                if expiration_date := dtm_to_date(expiration):
+                if expiration_date := context.date(expiration, 'PID', 20):
                     license_identifier['period'] = {'end': expiration_date}
                 else:
                     serialized_license = accessor.serialize(20)
@@ -198,7 +299,7 @@ def map_pid(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Patient
 
     # The birth date drops any time part, per FHIR's Patient.birthDate being a date.
     birth_value = accessor.value(7)
-    birth_date = dtm_to_date(birth_value)
+    birth_date = context.date(birth_value, 'PID', 7)
 
     if birth_date:
         out.birthDate = birth_date
@@ -268,38 +369,53 @@ def map_pid(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Patient
         birth_place_extension = {'url': Birth_Place_Extension_URL, 'valueAddress': {'text': birth_place}}
         append_to_list_field(out, 'extension', birth_place_extension)
 
-    # Multiple-birth data prefers the order number over the yes/no indicator.
-    birth_order = accessor.value(25)
-    multiple_birth = accessor.value(24)
+    # Multiple-birth data prefers the order number over the yes/no indicator,
+    # an order that is not a number and an indicator that is neither yes nor no are preserved as-is.
+    birth_order     = accessor.value(25)
+    multiple_birth  = accessor.value(24)
+    has_birth_order = False
 
     if birth_order:
         if birth_order.isdigit():
             out.multipleBirthInteger = int(birth_order)
-    elif multiple_birth == 'Y':
-        out.multipleBirthBoolean = True
+            has_birth_order = True
+        else:
+            preserve_value(out, context, 'PID', 25, birth_order)
 
-    # Death data prefers the timestamp over the yes/no indicator.
+    if not has_birth_order:
+        if multiple_birth:
+            if multiple_birth in _Yes_No_Indicators:
+                out.multipleBirthBoolean = multiple_birth == _Yes_Indicator
+            else:
+                preserve_value(out, context, 'PID', 24, multiple_birth)
+
+    # Death data prefers the timestamp over the yes/no indicator, a timestamp that
+    # is not a date/time at all and an indicator that is neither yes nor no are preserved as-is.
     death_value = accessor.value(29)
-    death_datetime = dtm_to_datetime(death_value, config)
+    death_datetime = context.datetime(death_value, 'PID', 29)
     death_indicator = accessor.value(30)
 
     if death_datetime:
         out.deceasedDateTime = death_datetime
-    elif death_indicator == 'Y':
-        out.deceasedBoolean = True
+    else:
+        if death_value:
+            preserve_value(out, context, 'PID', 29, death_value)
 
-    # The race and the ethnic group map to their US Core extensions when they come
-    # from the CDC vocabulary, any other vocabulary stays preserved as it arrived.
-    consumed = set()
+        if death_indicator:
+            if death_indicator in _Yes_No_Indicators:
+                out.deceasedBoolean = death_indicator == _Yes_Indicator
+            else:
+                preserve_value(out, context, 'PID', 30, death_indicator)
 
-    if _add_cdc_extension(accessor, 10, Race_Extension_URL, _OMB_Race_Categories, out):
-        consumed.add(10)
+    # The race and the ethnic group map to their US Core extensions - fully coded when they
+    # come from the CDC vocabulary, as text when they come from any other.
+    if not _add_cdc_extension(accessor, 10, Race_Extension_URL, _OMB_Race_Categories, out):
+        _add_text_extension(accessor, 10, Race_Extension_URL, out)
 
-    if _add_cdc_extension(accessor, 22, Ethnicity_Extension_URL, _OMB_Ethnicity_Categories, out):
-        consumed.add(22)
+    if not _add_cdc_extension(accessor, 22, Ethnicity_Extension_URL, _OMB_Ethnicity_Categories, out):
+        _add_text_extension(accessor, 22, Ethnicity_Extension_URL, out)
 
-    handled = _PID_Handled | consumed
-    preserve_unmapped(accessor, handled, out, context)
+    preserve_unmapped(accessor, _PID_Handled, out, context)
 
     return out
 
@@ -340,8 +456,8 @@ def map_nk1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Related
     # Our response to produce
     out = RelatedPerson()
 
-    if context.patient_reference:
-        out.patient = context.patient_reference
+    # FHIR requires the patient a related person relates to.
+    out.patient = patient_or_absent_reference(context)
 
     names:'anylist' = []
 
@@ -397,13 +513,13 @@ def map_nk1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Related
     period:'stranydict' = {}
 
     start_value = accessor.value(8)
-    start_date = dtm_to_date(start_value)
+    start_date = context.date(start_value, 'NK1', 8)
 
     if start_date:
         period['start'] = start_date
 
     end_value = accessor.value(9)
-    end_date = dtm_to_date(end_value)
+    end_date = context.date(end_value, 'NK1', 9)
 
     if end_date:
         period['end'] = end_date
@@ -421,7 +537,7 @@ def map_nk1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Related
 
     # The date of birth drops any time part.
     birth_value = accessor.value(16)
-    birth_date = dtm_to_date(birth_value)
+    birth_date = context.date(birth_value, 'NK1', 16)
 
     if birth_date:
         out.birthDate = birth_date
@@ -501,8 +617,8 @@ def map_gt1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Related
     # Our response to produce
     out = RelatedPerson()
 
-    if context.patient_reference:
-        out.patient = context.patient_reference
+    # FHIR requires the patient a guarantor relates to.
+    out.patient = patient_or_absent_reference(context)
 
     identifiers:'anylist' = []
 
@@ -546,7 +662,7 @@ def map_gt1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Related
 
     # The date of birth drops any time part.
     birth_value = accessor.value(8)
-    birth_date = dtm_to_date(birth_value)
+    birth_date = context.date(birth_value, 'GT1', 8)
 
     if birth_date:
         out.birthDate = birth_date
