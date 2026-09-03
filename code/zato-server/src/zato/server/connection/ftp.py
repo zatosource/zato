@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timezone
+from logging import getLogger
 from shlex import split as shlex_split
 from time import monotonic
 from traceback import format_exc
@@ -21,6 +22,11 @@ from zato.server.connection.file_transfer_base import EntryType, FileInfo, FileT
 if 0:
     from zato.common.typing_ import any_, stranydict, strlist
     any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -288,11 +294,13 @@ class FTPConnection(FileTransferConnection):
                 is_ok = False
                 break
 
-            # .. and so does one that fails.
+            # .. and so does one that fails - the traceback goes to the log
+            # .. while the caller only ever sees the error message itself.
             try:
                 result = handler(args)
-            except Exception:
-                out.stderr = format_exc()
+            except Exception as e:
+                logger.warning('FTP shell command error, cid:`%s`, `%s`', self.cid, format_exc())
+                out.stderr = str(e)
                 is_ok = False
                 break
             else:

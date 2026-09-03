@@ -8,6 +8,7 @@
 {% endblock %}
 
 {% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/file-command-shell.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
@@ -79,6 +80,10 @@ $(document).ready(function() {
 
             <div class="dashboard-tab-panel" id="file-shell-tab-panel-stderr" role="tabpanel" hidden>
                 <pre class="file-shell-output" id="file-shell-stderr"></pre>
+            </div>
+
+            <div class="file-shell-output-footer">
+                <button type="button" class="action-button" id="file-shell-copy">Copy</button>
             </div>
 
         </div>

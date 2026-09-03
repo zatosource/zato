@@ -376,6 +376,7 @@ class TestOutgoingSFTPCommandShell:
             '.action-button',
             '.secondary-button',
             '#file-shell-timing',
+            '#file-shell-copy',
         ]:
             assert page.query_selector(selector) is not None, f'Expected "{selector}" on the command shell page'
 
@@ -438,6 +439,57 @@ class TestOutgoingSFTPCommandShell:
         # .. and neither list may have anything in it.
         assert not real_errors, 'Console errors on the command shell page:\n' + '\n'.join(real_errors)
         assert not server_errors, 'HTTP 500+ responses on the command shell page:\n' + '\n'.join(server_errors)
+
+# ################################################################################################################################
+
+    def test_numeric_name_works_right_after_create(self, sftp_shell:'anydict', zato_dashboard:'anydict') -> 'None':
+        """ A connection whose name is all digits is usable in the command shell straight after it was created,
+        with no edit in between.
+        """
+
+        page = sftp_shell['page']
+        base_url = sftp_shell['base_url']
+        server = sftp_shell['server']
+
+        # The connection reuses the key the surrounding fixture already put in place.
+        private_key = zato_dashboard['sftp_key_path']
+        address = f'{server.host}:{server.port}'
+
+        # A name that consists of digits alone.
+        hex_string = CryptoManager.generate_hex_string(8)
+        number = int(hex_string, 16)
+        name = str(number)
+
+        conn_id = ''
+
+        try:
+            open_sftp_page(page, base_url)
+
+            create_sftp_connection(
+                page,
+                name,
+                address,
+                server.username,
+                server.password,
+                private_key=private_key,
+                strict_host_key_checking=False,
+            )
+
+            conn_id = get_sftp_conn_id(page, name)
+
+            # Straight to the shell, with no edit in between ..
+            _open_command_shell(page, base_url, name)
+            result = _run_command(page, 'ls .')
+
+            # .. the connection must be there under the very name it was created with.
+            assert 'No such outgoing SFTP connection' not in result['stderr'], \
+                f'The connection was not registered under its name, stderr was: "{result["stderr"]}"'
+            assert result['is_ok'], f'Expected the command to succeed, stderr was: "{result["stderr"]}"'
+
+        finally:
+            if conn_id:
+                open_sftp_page(page, base_url)
+                delete_sftp_connection(page, conn_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -245,6 +245,14 @@ class Generic(ConfigManagerImpl):
 
 # ################################################################################################################################
 
+    def _create_generic_connection_from_event(self, msg:'stranydict') -> 'None':
+        """ Handles a runtime create event. The message is rebuilt through the same roundtrip an edit goes through,
+        so a connection created at runtime is the same object a subsequent edit would build.
+        """
+        self._create_generic_connection(msg, True)
+
+# ################################################################################################################################
+
     def _edit_generic_connection(self, msg:'stranydict', skip:'any_'=None, secret:'strnone'=None) -> 'None':
 
         # The connection as this server currently knows it - it is also what a rename moves the topic from

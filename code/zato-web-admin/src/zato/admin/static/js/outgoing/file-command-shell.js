@@ -6,6 +6,9 @@ shell.config = {
     formSelector: '#file-shell-form',
     connectionSelector: '#file-shell-connection-select',
     tabSelector: '.file-shell-card .dashboard-tab',
+    copySelector: '#file-shell-copy',
+    copyTooltipPlacement: 'left',
+    activeOutputSelector: '.file-shell-card .dashboard-tab-panel:not([hidden]) .file-shell-output',
     panelPrefix: 'file-shell-tab-panel-',
     defaultTab: 'stdout',
     errorTab: 'stderr',
@@ -70,6 +73,27 @@ shell.clearOutput = function() {
     shell.setOutput('stdout', '');
     shell.setOutput('stderr', '');
     $('#file-shell-timing').prop('hidden', true).text('');
+    shell.refreshCopy();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+// Copy button
+// ////////////////////////////////////////////////////////////////////////
+
+// Copy is only clickable while the pane of the open tab has something to take.
+shell.refreshCopy = function() {
+    var config = shell.config;
+    var text = $(config.activeOutputSelector).text();
+
+    var hasText = false;
+
+    if (text) {
+        if (text !== config.emptyOutput) {
+            hasText = true;
+        }
+    }
+
+    $(config.copySelector).prop('disabled', !hasText);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -91,6 +115,8 @@ shell.onSuccess = function(data) {
         shell.setStatus(data.error_message, config.errorStatusClass);
         shell._tabHandle.set_tab(config.errorTab, true);
     }
+
+    shell.refreshCopy();
 };
 
 shell.onError = function(xhr) {
@@ -98,6 +124,7 @@ shell.onError = function(xhr) {
     shell.setOutput('stderr', xhr.responseText);
     shell.setStatus(xhr.responseText, shell.config.errorStatusClass);
     shell._tabHandle.set_tab(shell.config.errorTab, true);
+    shell.refreshCopy();
 };
 
 shell.run = function() {
@@ -128,7 +155,8 @@ shell.init = function() {
     shell._tabHandle = kit.tabs.init({
         tab_selector: config.tabSelector,
         panel_prefix: config.panelPrefix,
-        default_tab: config.defaultTab
+        default_tab: config.defaultTab,
+        on_change: shell.refreshCopy
     });
 
     $(config.formSelector).submit(function() {
@@ -144,6 +172,12 @@ shell.init = function() {
     $('#file-shell-clear').click(function() {
         shell.clearOutput();
         shell.setStatus('', null);
+    });
+
+    // Copy takes the pane of whichever tab stands open.
+    $(config.copySelector).click(function() {
+        var text = $(config.activeOutputSelector).text();
+        kit.copy_to_clipboard(this, text, config.copyTooltipPlacement);
     });
 
     shell.clearOutput();

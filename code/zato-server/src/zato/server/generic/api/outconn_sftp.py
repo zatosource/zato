@@ -327,8 +327,12 @@ class SFTPClient:
             if not result.is_ok:
                 out.details = result.stderr
 
-        except Exception:
+        except Exception as e:
             out.is_ok = False
+
+            # The command shell reads stderr, which is why it carries the error message alone,
+            # while details keeps the full traceback for the log and for raise_on_error callers.
+            out.stderr = str(e)
             out.details = format_exc()
 
         finally:
