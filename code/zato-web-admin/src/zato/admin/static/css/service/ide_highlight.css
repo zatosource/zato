@@ -11,6 +11,13 @@
     font-size: 1rem;
 }
 
+/* The invoker's textareas get a white background in ide.css, which loads after
+   the shared overlay rules and would paint over the overlay - a highlighted
+   textarea has to stay transparent, its white comes from the overlay behind it */
+.invoker-area textarea.highlight-source {
+    background: transparent;
+}
+
 /* ------------------------------------------------------------ */
 /* Syntax highlighting - the pretty view                         */
 /* ------------------------------------------------------------ */

@@ -35,7 +35,7 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, dictlist, stranydict, strintdict, strlist
+    from zato.common.typing_ import anydict, anylist, dictlist, stranydict, strintdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,8 +49,9 @@ _seconds_per_day    = 24 * 3600
 _seconds_per_hour   = 3600
 _seconds_per_minute = 60
 
-# Where the Microsoft service health overviews live.
-_graph_health_url = 'https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/healthOverviews'
+# Where the Microsoft service health overviews live, relative to the Graph service address
+# the connection itself is configured with.
+_graph_health_path = 'admin/serviceAnnouncement/healthOverviews'
 
 # The test transfer's file - its name, its contents and the extra-data key
 # naming the remote directory it goes to.
@@ -72,8 +73,7 @@ class AlertingRun(AdminService):
     name = Alerting.Service
 
     def _get_extra(self, key:'str', context:'anydict') -> 'str':
-        """ Returns one key of the scheduler job's extra data - the extra is user-editable
-        in the scheduler UI, so a missing key simply means the feature it drives is off.
+        """ Returns one key of the scheduler job's extra data, empty when the extra does not carry it.
         """
         if value := context.get(key):
             out = value
@@ -88,16 +88,15 @@ class AlertingRun(AdminService):
         """ Wires the real delivery callables the engine dispatches through - email,
         Slack and Microsoft Teams ride on the connections that share the default
         notification name, next to the server's own invoker, pub/sub and HTTP
-        for plain webhooks. The default connections ship inactive with placeholder
-        details, so each of these callables skips quietly until a person fills
-        its connection in and activates it.
+        for plain webhooks. Each callable returns without delivering when its
+        connection does not exist or is inactive.
         """
         conn_name = get_notification_conn_name()
         from_ = self._get_extra(Alerting.Extra_From, context)
 
         def send_email(addresses:'strlist', subject:'str', body:'str') -> 'None':
 
-            # The email component may be disabled in server.conf
+            # The email component may be disabled in server.conf.
             if not self.email:
                 self.logger.warning(
                     'Could not send an alerting email; is component_enabled.email set to True in server.conf?')
@@ -202,7 +201,7 @@ class AlertingRun(AdminService):
 
         for row in rows:
 
-            # An inactive job is not expected to run, so it can never be overdue
+            # An inactive job is not expected to run, so it can never be overdue.
             if not row.is_active:
                 continue
 
@@ -239,7 +238,7 @@ class AlertingRun(AdminService):
         # Our response to produce
         out:'strintdict' = {}
 
-        # Every SFTP and SMB connection may carry schedules in its opaque attributes
+        # Every SFTP and SMB connection may carry schedules in its opaque attributes.
         with closing(self.odb.session()) as session:
             rows = session.query(GenericConn.id).\
                 filter(GenericConn.type_.in_(FileTransfer.ConnTypeList)).\
@@ -251,11 +250,11 @@ class AlertingRun(AdminService):
 
                 for schedule in schedules:
 
-                    # A schedule switched off is not expected to receive anything
+                    # A schedule switched off is not expected to receive anything.
                     if not schedule['is_active']:
                         continue
 
-                    # Schedules created before the field existed carry no window
+                    # Schedules created before the field existed carry no window.
                     if window := schedule.get('arrival_window'):
                         out[schedule['name']] = window
 
@@ -272,31 +271,31 @@ class AlertingRun(AdminService):
         if not isinstance(context, dict):
             context = {}
 
-        # One reference moment for the whole sweep
+        # One reference moment for the whole sweep.
         now = utcnow()
 
-        # The rules live in the rule engine's SQL store - the live version of the alerts ruleset
+        # The rules live in the rule engine's SQL store - the live version of the alerts ruleset.
         backend = get_backend()
         rules = load_alert_rules(backend)
 
-        # With nothing published there is nothing to match against
+        # With nothing published there is nothing to match against.
         if not rules:
             self.logger.info('Alerting sweep found no published alert rules')
             return
 
-        # The live channel metrics the feed-silent collector runs over
+        # The live channel metrics the feed-silent collector runs over.
         metrics_by_name = get_current_metrics()
 
-        # Where the catch-all digest goes and where the links point to
+        # Where the catch-all digest goes and where the links point to.
         default_to = self._get_extra(Alerting.Extra_Default_To, context)
         dashboard_url = self._get_extra(Alerting.Extra_Dashboard_URL, context)
 
-        # The deployment-level targets a rule without its own delivers through
+        # The deployment-level targets a rule without its own delivers through.
         defaults = AlertDefaults()
         defaults.webhook_url = self._get_extra(Alerting.Extra_Webhook_URL, context)
 
         if default_to:
-            email_to = []
+            email_to:'strlist' = []
 
             for item in default_to.split(','):
                 email_to.append(item.strip())
@@ -315,10 +314,10 @@ class AlertingRun(AdminService):
         if not os.path.isdir(template_dir):
             template_dir = ''
 
-        # The intervals the missed-run measure sizes itself against
+        # The intervals the missed-run measure sizes itself against.
         job_intervals = self._get_job_intervals()
 
-        # The windows the arrival-overdue measure sizes itself against
+        # The windows the arrival-overdue measure sizes itself against.
         arrival_windows = self._get_arrival_windows()
 
         result = run_sweep(engine, rules, metrics_by_name, AuditSource.MLLP_Channel, transports, audit_log, self.cid, now,
@@ -344,10 +343,10 @@ class AlertingCertCheck(AdminService):
     name = Alerting.Cert_Service
 
     def _get_targets(self) -> 'dictlist':
-        """ Every connection whose configuration names a TLS endpoint - REST and SOAP
+        """ Every active connection whose configuration names a TLS endpoint - REST and SOAP
         outgoing addresses that speak https, and email connections in direct-TLS mode.
-        STARTTLS connections are not here because their handshake starts in plaintext
-        and needs the protocol's own upgrade dance, not a plain TLS connection.
+        A STARTTLS connection's handshake starts in plaintext and needs the protocol's
+        own upgrade step, so such connections are not here.
         """
 
         # Our response to produce
@@ -355,14 +354,18 @@ class AlertingCertCheck(AdminService):
 
         config_store = self.server.config_manager.config_store
 
-        # REST and SOAP outgoing connections with an https address
+        # REST and SOAP outgoing connections with an https address.
         for config_dict in (config_store.out_plain_http, config_store.out_soap):
             for item in config_dict.values():
 
                 config = item['config']
 
-                # Internal connections are Zato's own plumbing, not something to alert about
+                # Internal connections are Zato's own plumbing, not something to alert about.
                 if config['is_internal']:
+                    continue
+
+                # A connection switched off is not expected to be reachable at all.
+                if not config['is_active']:
                     continue
 
                 target = parse_tls_target(config['address'])
@@ -371,7 +374,7 @@ class AlertingCertCheck(AdminService):
                     host, port = target
                     out.append({'object_name': config['name'], 'host': host, 'port': port})
 
-        # Email connections in direct-TLS mode - their host and port take a handshake as-is
+        # Email connections in direct-TLS mode - their host and port take a handshake as-is.
         for config_dict, tls_mode in (
             (config_store.email_smtp, EMAIL.SMTP.MODE.SSL),
             (config_store.email_imap, EMAIL.IMAP.MODE.SSL),
@@ -383,7 +386,10 @@ class AlertingCertCheck(AdminService):
                 if config['mode'] != tls_mode:
                     continue
 
-                out.append({'object_name': config['name'], 'host': config['host'], 'port': int(config['port'])})
+                if not config['is_active']:
+                    continue
+
+                out.append({'object_name': config['name'], 'host': config['host'], 'port': config['port']})
 
         return out
 
@@ -408,37 +414,60 @@ class AlertingMicrosoftHealth(AdminService):
     Microsoft 365 connection - the default probe job invokes this service every
     quarter of an hour. One audit event per Microsoft service carries the normalized
     health state the collector reads and the Service_Degraded and Service_Interrupted
-    rules compare. The service no-ops quietly when no Microsoft 365 connection exists.
+    rules compare. The service returns without polling when no active Microsoft 365
+    connection exists.
     """
     name = Alerting.Health_Service
+
+    def _get_conn_name(self, conn_dict:'anydict') -> 'str':
+        """ The name of the connection the probe polls through - the first active one
+        by name, service health being tenant-wide, and an empty string when there is none.
+        An inactive connection is left alone - its client authenticates on first use,
+        which is a remote call an environment that switched the connection off never asked for.
+        """
+        for conn_name in sorted(conn_dict):
+            item = conn_dict[conn_name]
+
+            if item['is_active']:
+                out = conn_name
+                break
+        else:
+            out = ''
+
+        return out
+
+# ################################################################################################################################
 
     def handle(self) -> 'None':
 
         conn_dict = self.server.config_manager.cloud_microsoft_365
+        conn_name = self._get_conn_name(conn_dict)
 
-        # No connection means the probe has nothing to poll - quietly, because the job
-        # exists in every environment while the connection is the opt-in part.
-        if not conn_dict:
+        if not conn_name:
             return
 
-        # The first connection is as good as any - service health is tenant-wide
-        conn_name = sorted(conn_dict)[0]
         item = conn_dict[conn_name]
         client = item['conn'].shared_client
 
-        # The health overviews live under the service announcement API
-        response = client.connection.get(_graph_health_url)
-        payload = response.json()
+        def fetch() -> 'anylist':
 
-        states = []
+            # The health overviews live under the service announcement API, at the Graph
+            # address this connection is configured with.
+            url = client.protocol.service_url + _graph_health_path
+            response = client.connection.get(url)
+            payload = response.json()
 
-        for overview in payload['value']:
-            states.append((overview['service'], overview['status']))
+            out:'anylist' = []
+
+            for overview in payload['value']:
+                out.append((overview['service'], overview['status']))
+
+            return out
 
         now = utcnow()
         audit_log = AuditLog(self.server.name)
 
-        recorded = run_health_probe(audit_log, states, now, cid=self.cid)
+        recorded = run_health_probe(audit_log, conn_name, fetch, now, cid=self.cid)
 
         service_label = pluralize(recorded, 'service')
         self.logger.info('Microsoft health probe recorded %s through `%s`', service_label, conn_name)
@@ -450,8 +479,7 @@ class AlertingTestTransfer(AdminService):
     """ Runs one test transfer per active file transfer connection - upload, download,
     compare and delete a small test file - writing each outcome as an audit event the
     test transfer collector reads and rule Test_Transfer_Failing compares. The job ships
-    inactive, like the rule, because the test transfer writes to remote systems -
-    activating both is the documented opt-in.
+    inactive, like the rule, and both are activated together.
     """
     name = Alerting.Test_Transfer_Service
 
@@ -460,7 +488,7 @@ class AlertingTestTransfer(AdminService):
         now = utcnow()
         audit_log = AuditLog(self.server.name)
 
-        # The test transfer file's remote directory comes from the job's extra data when given
+        # The test transfer file's remote directory comes from the job's extra data when given.
         context = self.request.payload
 
         if not isinstance(context, dict):
@@ -474,8 +502,17 @@ class AlertingTestTransfer(AdminService):
 
         checked = 0
 
-        # SMB connections - write, read back, compare and remove
-        for conn_name in sorted(self.server.config_manager.outconn_smb):
+        # SMB connections - write, read back, compare and remove.
+        outconn_smb = self.server.config_manager.outconn_smb
+
+        for conn_name in sorted(outconn_smb):
+
+            # An inactive connection has no pool behind it, so a transfer would only
+            # wait for a client that is never built.
+            item = outconn_smb[conn_name]
+
+            if not item['is_active']:
+                continue
 
             def transfer_smb(conn_name:'str'=conn_name) -> 'None':
                 conn = self.smb[conn_name]
@@ -488,8 +525,15 @@ class AlertingTestTransfer(AdminService):
             _ = run_test_transfer_probe(audit_log, conn_name, transfer_smb, now, cid=self.cid)
             checked += 1
 
-        # SFTP connections - the same round trip over the SFTP command channel
-        for conn_name in sorted(self.server.config_manager.outconn_sftp):
+        # SFTP connections - the same round trip over the SFTP command channel.
+        outconn_sftp = self.server.config_manager.outconn_sftp
+
+        for conn_name in sorted(outconn_sftp):
+
+            item = outconn_sftp[conn_name]
+
+            if not item['is_active']:
+                continue
 
             def transfer_sftp(conn_name:'str'=conn_name) -> 'None':
                 conn = self.sftp[conn_name]
@@ -502,8 +546,15 @@ class AlertingTestTransfer(AdminService):
             _ = run_test_transfer_probe(audit_log, conn_name, transfer_sftp, now, cid=self.cid)
             checked += 1
 
-        # FTP connections - the same round trip as with SMB
-        for conn_name in sorted(self.server.config_manager.outconn_ftp):
+        # FTP connections - the same round trip as with SMB.
+        outconn_ftp = self.server.config_manager.outconn_ftp
+
+        for conn_name in sorted(outconn_ftp):
+
+            item = outconn_ftp[conn_name]
+
+            if not item['is_active']:
+                continue
 
             def transfer_ftp(conn_name:'str'=conn_name) -> 'None':
                 conn = self.ftp[conn_name]

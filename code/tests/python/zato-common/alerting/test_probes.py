@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
+# SQLAlchemy
 from sqlalchemy import select
 
 # Zato
@@ -30,6 +30,9 @@ if 0:
 
 # The server name all the test events are written under
 _server_name = 'test-probes-server'
+
+# The Microsoft 365 connection the health probe polls through
+_health_conn_name = 'Microsoft 365 notifications'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,11 +62,17 @@ class TestParseTLSTarget:
     def test_a_plain_https_address_gets_the_default_port(self) -> 'None':
         assert parse_tls_target('https://example.com/api/v1') == ('example.com', 443)
 
+# ################################################################################################################################
+
     def test_an_explicit_port_is_kept(self) -> 'None':
         assert parse_tls_target('https://example.com:8443/api') == ('example.com', 8443)
 
+# ################################################################################################################################
+
     def test_credentials_in_the_address_never_reach_the_handshake(self) -> 'None':
         assert parse_tls_target('https://user:secret@example.com:9443/x') == ('example.com', 9443)
+
+# ################################################################################################################################
 
     def test_an_address_that_does_not_speak_tls_yields_nothing(self) -> 'None':
         assert parse_tls_target('http://example.com') is None
@@ -76,6 +85,8 @@ class TestNormalizeHealthState:
     def test_the_provider_spellings_normalize(self) -> 'None':
         assert normalize_health_state('serviceDegradation') == 'degraded'
         assert normalize_health_state('ServiceInterruption') == 'interruption'
+
+# ################################################################################################################################
 
     def test_anything_unlisted_means_healthy(self) -> 'None':
         assert normalize_health_state('serviceOperational') == ''
@@ -149,11 +160,15 @@ class TestHealthProbe:
         engine = get_audit_engine()
         now = utcnow()
 
-        states = [
-            ('Exchange Online', 'serviceOperational'),
-            ('Microsoft Teams', 'serviceDegradation'),
-        ]
-        recorded = run_health_probe(audit_log, states, now, cid='health-probe-1')
+        # The remote side is faked - the probe's own bookkeeping is what runs for real
+        def fetch() -> 'anylist':
+            out = [
+                ('Exchange Online', 'serviceOperational'),
+                ('Microsoft Teams', 'serviceDegradation'),
+            ]
+            return out
+
+        recorded = run_health_probe(audit_log, _health_conn_name, fetch, now, cid='health-probe-1')
 
         assert recorded == 2
 
@@ -169,6 +184,33 @@ class TestHealthProbe:
         assert len(facts) == 1
         assert facts[0]['object_name'] == 'Microsoft Teams'
         assert facts[0]['health_state'] == 'degraded'
+
+# ################################################################################################################################
+
+    def test_a_fetch_that_fails_records_no_state_at_all(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        def fetch() -> 'anylist':
+            raise Exception('The health endpoint returned 403 Forbidden')
+
+        recorded = run_health_probe(audit_log, _health_conn_name, fetch, now, cid='health-probe-2')
+
+        assert recorded == 0
+
+        # The failure is filed under the connection the probe went through, with no state
+        events = _load_events(AuditSource.Microsoft_Health)
+
+        assert len(events) == 1
+        assert events[0].object_name == _health_conn_name
+        assert events[0].event_type == AuditEvent.Health_Checked
+        assert events[0].outcome == AuditOutcome.Error
+        assert events[0].status == ''
+
+        # An event with no state is not a healthy service, so the collector reports nothing
+        facts = collect_health_facts(engine, now)
+        assert facts == []
 
 # ################################################################################################################################
 # ################################################################################################################################
