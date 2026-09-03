@@ -13,9 +13,9 @@ from base64 import b64encode
 from zato.fhir import DocumentReference
 from zato.hl7.mappings.codes import lookup
 from zato.hl7.mappings.concepts import cwe_to_codeable_concept
-from zato.hl7.mappings.datatypes import dtm_to_datetime, ei_to_identifier
+from zato.hl7.mappings.datatypes import ei_to_identifier
 from zato.hl7.mappings.segments.common import Document_Status, add_practitioner, append_to_list_field, \
-    preserve_unmapped, preserve_value
+    preserve_other_components, preserve_unmapped, preserve_value
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,12 +31,73 @@ if 0:
 # ################################################################################################################################
 
 # Which field positions the mapper consumes - anything else that carries data is preserved as an extension.
-_TXA_Handled = frozenset({1, 2, 4, 5, 9, 12, 16, 17, 19, 22})
+_TXA_Handled = frozenset({1, 2, 3, 4, 5, 9, 12, 16, 17, 19, 22})
 
 # The content type the document text gathered from OBX segments is stored under
 _Text_Content_Type = 'text/plain'
 
+# What the TXA-3 document content presentation codes stand for as a MIME type - the HL7 table codes
+# and the shorthands that arrive in their place.
+_Presentation_Content_Types = {
+    'TX': _Text_Content_Type,
+    'TEXT': _Text_Content_Type,
+    'FT': _Text_Content_Type,
+    'AP': 'application/octet-stream',
+    'PD': 'application/pdf',
+    'PDF': 'application/pdf',
+}
+
+# What separates a MIME type from its subtype
+_Mime_Separator = '/'
+
+# Which components of TXA-3 the presentation consumes - the code, its display and its table
+_Presentation_Code_Component    = 1
+_Presentation_Display_Component = 2
+_Presentation_Table_Component   = 3
+_Presentation_Consumed = frozenset({
+    _Presentation_Code_Component,
+    _Presentation_Display_Component,
+    _Presentation_Table_Component,
+})
+
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _presentation_content_type(
+    accessor:'SegmentAccessor',
+    context:'ConversionContext',
+    document:'DocumentReference',
+    ) -> 'str':
+    """ Reads the content type the document is presented in from TXA-3 - the text type when there is none,
+    a presentation that is neither a known code nor a MIME type is preserved whole on the document.
+    """
+
+    # Our response to produce
+    out = _Text_Content_Type
+
+    # An empty presentation leaves the text type in place ..
+    code = accessor.component(3, _Presentation_Code_Component)
+
+    if not code:
+        return out
+
+    # .. a code with a subtype separator already is a MIME type, anything else goes through the table ..
+    if _Mime_Separator in code:
+        content_type = code
+    else:
+        code_upper = code.upper()
+        content_type = _Presentation_Content_Types.get(code_upper)
+
+    # .. and a presentation the table does not know is preserved whole.
+    if content_type:
+        out = content_type
+        preserve_other_components(accessor, 3, _Presentation_Consumed, document, context)
+    else:
+        serialized = accessor.serialize(3)
+        preserve_value(document, context, 'TXA', 3, serialized)
+
+    return out
+
 # ################################################################################################################################
 
 def map_txa(accessor:'SegmentAccessor', context:'ConversionContext') -> 'DocumentReference':
@@ -80,10 +141,12 @@ def map_txa(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Documen
 
     # .. the activity time is the document date ..
     activity_value = accessor.value(4)
-    activity_time = dtm_to_datetime(activity_value, config)
+    activity_time = context.instant(activity_value, 'TXA', 4)
 
     if activity_time:
         out.date = activity_time
+    elif activity_value:
+        preserve_value(out, context, 'TXA', 4, activity_value)
 
     # .. the activity providers and the originators become authors ..
     authors:'anylist' = []
@@ -109,9 +172,10 @@ def map_txa(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Documen
     if master_identifier := ei_to_identifier(document_number_repetition, config):
         out.masterIdentifier = master_identifier
 
-    # .. and the content starts out empty, titled by the unique file name,
+    # .. and the content starts out empty, in the presentation type, titled by the unique file name,
     # .. to be filled in from the following OBX segments.
-    attachment:'stranydict' = {'contentType': _Text_Content_Type}
+    content_type = _presentation_content_type(accessor, context, out)
+    attachment:'stranydict' = {'contentType': content_type}
 
     file_name = accessor.component(16, 1)
     if file_name:

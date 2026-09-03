@@ -16,7 +16,6 @@ import time
 from typing import NamedTuple
 
 # Zato
-from zato.common.crypto.api import CryptoManager
 from zato.common.hl7.mllp.haproxy import Env_Port_Name
 from zato.common.typing_ import cast_
 
@@ -49,7 +48,6 @@ Bind_Address = '127.0.0.1'
 # What the shipped configuration binds on every interface, and so what has to be moved out of
 # the way before a test run can bind it without colliding with whatever else is on this machine.
 _Fixed_Internal_Port = '11225'
-_Fixed_Stats_Bind    = 'bind *:${Zato_Port_Load_Balancer_Stats}'
 
 # The path the shipped configuration reads its blocked paths from, which exists in a container only
 _Blocked_Paths_Path = '/opt/zato/env/qs-1/blocked-paths.txt'
@@ -65,10 +63,6 @@ _Shutdown_Timeout = 5
 
 # How long a check of whether a port is open waits for the connection
 _Port_Check_Timeout = 1.0
-
-# How many bits the passwords the statistics listener asks for are made of. Nothing in a test run
-# ever reads that listener, so these exist only because the configuration will not parse without them.
-_Password_Bits = 256
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,9 +150,6 @@ def _render_config(
     # and that port may well belong to something already running here
     content = content.replace(_Fixed_Internal_Port, str(find_free_port()))
 
-    # The statistics listener binds every interface, so a test run gives it the loopback and its own port
-    content = content.replace(_Fixed_Stats_Bind, f'bind {Bind_Address}:{find_free_port()}')
-
     # The list of paths to turn away lives at a container path, so the run points at its own copy
     content = content.replace(_Blocked_Paths_Path, blocked_paths_path)
 
@@ -215,8 +206,6 @@ class HAProxyHandle:
         out['Zato_Port_Dashboard'] = str(find_free_port())
         out['Zato_Port_OpenAPI_Console'] = str(find_free_port())
         out['Zato_Port_Load_Balancer'] = str(find_free_port())
-        out['Zato_Load_Balancer_Stats_Password'] = CryptoManager.generate_hex_string(_Password_Bits)
-        out['Zato_Load_Balancer_Metrics_Password'] = CryptoManager.generate_hex_string(_Password_Bits)
 
         return out
 

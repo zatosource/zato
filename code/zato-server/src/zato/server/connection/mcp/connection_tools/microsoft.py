@@ -239,6 +239,8 @@ _fabric_methods = [
     'run_job', 'get_job', 'cancel_job',
     'list_shortcuts', 'create_shortcut', 'delete_shortcut',
     'list_capacities',
+    'list_tables', 'load_table', 'write_table', 'wait_for_operation',
+    'query',
     'onelake_list', 'onelake_read', 'onelake_write', 'onelake_delete',
 ]
 
@@ -274,7 +276,7 @@ def fabric_build_description(connection_name:'str', item:'any_') -> 'str':
     """ Describes a Fabric tool by the connection it invokes.
     """
 
-    out = f'Invokes the Microsoft Fabric connection `{connection_name}` - workspaces, items, jobs and OneLake'
+    out = f'Invokes the Microsoft Fabric connection `{connection_name}` - workspaces, items, jobs, lakehouse tables, SQL queries and OneLake'
     return out
 
 # ################################################################################################################################

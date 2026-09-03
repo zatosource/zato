@@ -122,18 +122,20 @@ class TestLookup:
 
     def test_config_override(self):
         config = _new_config()
-        config.code_mappings = {'patient_class': {'P': 'AMB'}}
+        override = {'code': 'AMB', 'system': 'http://terminology.hl7.org/CodeSystem/v3-ActCode'}
+        config.code_mappings = {'patient_class': {'P': override}}
 
         out = cast_('any_', lookup('patient_class', 'P', config))
-        assert out['code'] == 'AMB'
+        assert out == override
 
     def test_config_override_new_code(self):
         # A code the standard table does not know at all, added by the config
         config = _new_config()
-        config.code_mappings = {'patient_class': {'X': 'IMP'}}
+        override = {'code': 'IMP', 'system': 'http://terminology.hl7.org/CodeSystem/v3-ActCode'}
+        config.code_mappings = {'patient_class': {'X': override}}
 
         out = cast_('any_', lookup('patient_class', 'X', config))
-        assert out['code'] == 'IMP'
+        assert out == override
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -10,10 +10,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.fhir import DiagnosticReport, Practitioner, ServiceRequest
 from zato.hl7.mappings.codes import lookup
 from zato.hl7.mappings.concepts import cwe_to_codeable_concept
-from zato.hl7.mappings.datatypes import dtm_to_datetime, ei_to_identifier
+from zato.hl7.mappings.datatypes import ei_to_identifier, xtn_to_contact_points
 from zato.hl7.mappings.fields import subcomponent_value
-from zato.hl7.mappings.segments.common import Default_Order_Status, Default_Report_Status, Unknown_Code, \
-    absent_subject_reference, add_practitioner, preserve_unmapped, preserve_value
+from zato.hl7.mappings.segments.common import Default_Order_Status, Default_Report_Status, absent_subject_reference, \
+    absent_value, add_practitioner, preserve_unmapped, preserve_value
+from zato.hl7.mappings.segments.timing import apply_tq_timing
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,63 +33,154 @@ if 0:
 dictnone = 'stranydict | None'
 
 # Which field positions each mapper consumes - anything else that carries data is preserved as an extension.
-_ORC_Handled = frozenset({1, 2, 3, 4, 5, 7, 9, 12})
+# ORC-10, 11 and 13 are consumed by the Provenance the order's ORC produces.
+_ORC_Handled = frozenset({1, 2, 3, 4, 5, 7, 9, 10, 11, 12, 13, 14, 15})
 
 # What the ServiceRequest consumes of an OBR when there is no DiagnosticReport
-OBR_Handled_Order_Only = frozenset({1, 2, 3, 4, 13, 16, 27, 31})
+OBR_Handled_Order_Only = frozenset({1, 2, 3, 4, 6, 7, 13, 16, 27, 31})
 
 # What the ServiceRequest and the DiagnosticReport together consume of an OBR
-OBR_Handled_With_Report = frozenset({1, 2, 3, 4, 7, 8, 13, 16, 22, 24, 25, 27, 31, 32})
+OBR_Handled_With_Report = frozenset({1, 2, 3, 4, 6, 7, 8, 13, 16, 22, 24, 25, 27, 31, 32})
+
+# What the Specimen an OBR describes consumes on top of that - the received time and the specimen source
+OBR_Handled_Specimen = frozenset({14, 15})
 
 # Which ORC fields the Immunization mapper consumes - the filler order number and the control code
 ORC_Handled_Immunization = frozenset({1, 2, 3})
 
-# Which TQ1 field positions apply_tq1 consumes
-_TQ1_Handled = frozenset({1, 7, 8, 9})
-
-# Which TQ components carry the interval, the start time, the end time and the priority
-_TQ_Interval_Component = 2
-_TQ_Start_Component = 4
-_TQ_End_Component = 5
-_TQ_Priority_Component = 6
-
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _apply_tq_timing(
+def _has_occurrence(current:'stranydict') -> 'bool':
+    """ Tells whether a serialized ServiceRequest already says when the service takes place.
+    """
+    out = 'occurrenceDateTime' in current
+
+    if 'occurrencePeriod' in current:
+        out = True
+
+    return out
+
+# ################################################################################################################################
+
+def _repeats_slot(current:'stranydict', key:'str', value:'str') -> 'bool':
+    """ Tells whether a taken slot already holds this very value.
+    """
+    if key not in current:
+        return False
+
+    out = current[key] == value
+    return out
+
+# ################################################################################################################################
+
+def _apply_orc_requester(
     accessor:'SegmentAccessor',
-    position:'int',
     service_request:'ServiceRequest',
     context:'ConversionContext',
     ) -> 'None':
-    """ Applies one TQ - quantity/timing - field to a ServiceRequest, the start and end
-    times becoming the occurrence and the priority component the request priority.
+    """ The ordering provider becomes the requester, with the call back number as its contact point -
+    a number with no provider to belong to, or one that does not read as a contact point, is preserved as-is.
     """
     config = context.config
 
-    start_value = accessor.component(position, _TQ_Start_Component)
-    start_time = dtm_to_datetime(start_value, config)
+    # The call back numbers become the requester's contact points ..
+    telecoms:'anylist' = []
 
-    end_value = accessor.component(position, _TQ_End_Component)
-    end_time = dtm_to_datetime(end_value, config)
+    for repetition in accessor.repetitions(14):
+        for telecom in xtn_to_contact_points(repetition, config, default_use='work'):
+            telecoms.append(telecom)
 
-    if start_time:
-        if end_time:
-            service_request.occurrencePeriod = {'start': start_time, 'end': end_time}
+    callback_repetition = accessor.first(14)
+    has_callback        = bool(callback_repetition)
+    callback_consumed   = False
+
+    # .. the ordering provider becomes the requester and takes them along ..
+    provider_repetition = accessor.first(12)
+
+    if requester := add_practitioner(provider_repetition, context, telecoms):
+        service_request.requester = requester
+        callback_consumed = bool(telecoms)
+
+    # .. and a call back number no requester took is preserved as-is.
+    if has_callback:
+        if not callback_consumed:
+            serialized_callback = accessor.serialize(14)
+            preserve_value(service_request, context, 'ORC', 14, serialized_callback)
+
+# ################################################################################################################################
+
+def _apply_orc_effective_time(
+    accessor:'SegmentAccessor',
+    service_request:'ServiceRequest',
+    context:'ConversionContext',
+    ) -> 'None':
+    """ The order effective time fills in the occurrence when nothing else in the order group said
+    when the service takes place - otherwise it is preserved as-is.
+    """
+    # An empty effective time says nothing about when the service takes place ..
+    effective_value = accessor.value(15)
+
+    if not effective_value:
+        return
+
+    current = service_request.to_dict()
+    effective = context.datetime(effective_value, 'ORC', 15)
+
+    # .. a time whose slot is already taken is preserved as-is, unless it merely repeats what is there ..
+    if effective:
+        if _has_occurrence(current):
+            if not _repeats_slot(current, 'occurrenceDateTime', effective):
+                preserve_value(service_request, context, 'ORC', 15, effective_value)
         else:
-            service_request.occurrenceDateTime = start_time
+            service_request.occurrenceDateTime = effective
 
-    priority_code = accessor.component(position, _TQ_Priority_Component)
-
-    # The priority word can arrive in the interval component instead.
-    if not priority_code:
-        priority_code = accessor.component(position, _TQ_Interval_Component)
-
-    if priority := lookup('order_priority', priority_code, config):
-        service_request.priority = priority['code']
+    # .. and a value that is not a date/time at all is preserved as-is too.
     else:
-        if priority_code:
-            preserve_value(service_request, context, accessor.segment_id, position, priority_code)
+        preserve_value(service_request, context, 'ORC', 15, effective_value)
+
+# ################################################################################################################################
+
+def _apply_obr_times(
+    obr_accessor:'SegmentAccessor',
+    service_request:'ServiceRequest',
+    context:'ConversionContext',
+    ) -> 'None':
+    """ Fills in the authored time from OBR-6 and the occurrence from OBR-7 when nothing
+    earlier in the order group provided them - a value that finds its slot taken is preserved as-is.
+    """
+    current = service_request.to_dict()
+
+    # The requested time is when the order was authored ..
+    requested_value = obr_accessor.value(6)
+
+    if requested_value:
+        requested = context.datetime(requested_value, 'OBR', 6)
+        has_authored = 'authoredOn' in current
+
+        if requested:
+            if has_authored:
+                if not _repeats_slot(current, 'authoredOn', requested):
+                    preserve_value(service_request, context, 'OBR', 6, requested_value)
+            else:
+                service_request.authoredOn = requested
+        else:
+            preserve_value(service_request, context, 'OBR', 6, requested_value)
+
+    # .. and the observation time is when the requested service takes place.
+    observation_value = obr_accessor.value(7)
+
+    if observation_value:
+        observation_time = context.datetime(observation_value, 'OBR', 7)
+
+        if observation_time:
+            if _has_occurrence(current):
+                if not _repeats_slot(current, 'occurrenceDateTime', observation_time):
+                    preserve_value(service_request, context, 'OBR', 7, observation_value)
+            else:
+                service_request.occurrenceDateTime = observation_time
+        else:
+            preserve_value(service_request, context, 'OBR', 7, observation_value)
 
 # ################################################################################################################################
 
@@ -179,7 +271,7 @@ def map_orc_obr_to_service_request(
     # can arrive in this slot and those are preserved as-is ..
     if orc_accessor:
         authored_value = orc_accessor.value(9)
-        authored = dtm_to_datetime(authored_value, config)
+        authored = context.datetime(authored_value, 'ORC', 9)
 
         if authored:
             out.authoredOn = authored
@@ -188,17 +280,14 @@ def map_orc_obr_to_service_request(
             preserve_value(out, context, 'ORC', 9, serialized_authored)
 
         # .. the quantity/timing field carries the occurrence and the priority ..
-        _apply_tq_timing(orc_accessor, 7, out, context)
+        apply_tq_timing(orc_accessor, 7, out, context)
 
-        # .. and the ordering provider is the requester.
-        provider_repetition = orc_accessor.first(12)
-
-        if requester := add_practitioner(provider_repetition, context):
-            out.requester = requester
+        # .. and the ordering provider is the requester, reachable at the call back number.
+        _apply_orc_requester(orc_accessor, out, context)
 
         preserve_unmapped(orc_accessor, _ORC_Handled, out, context)
 
-    # Without an ORC, the ordering provider and the timing come from the OBR itself.
+    # Without an ORC, the ordering provider and the timing come from the OBR itself ..
     if obr_accessor:
         if not orc_accessor:
             provider_repetition = obr_accessor.first(16)
@@ -206,7 +295,14 @@ def map_orc_obr_to_service_request(
             if requester := add_practitioner(provider_repetition, context):
                 out.requester = requester
 
-        _apply_tq_timing(obr_accessor, 27, out, context)
+        apply_tq_timing(obr_accessor, 27, out, context)
+
+        # .. and the OBR's own times fill in whatever the ORC and the timing fields left open.
+        _apply_obr_times(obr_accessor, out, context)
+
+    # The order effective time is the last resort for when the service takes place.
+    if orc_accessor:
+        _apply_orc_effective_time(orc_accessor, out, context)
 
     return out
 
@@ -304,22 +400,31 @@ def enrich_service_request_with_orc(
         service_request.identifier = identifiers
 
     # The transaction time fills in the authored time when the OBR provided none -
-    # other values can arrive in this slot and those are preserved as-is.
+    # a transaction time whose slot is taken, or which is not a date/time, is preserved as-is.
+    authored_value = accessor.value(9)
+    needs_preserving = bool(authored_value)
+
     if 'authoredOn' not in current:
-        authored_value = accessor.value(9)
-
-        if authored := dtm_to_datetime(authored_value, config):
+        if authored := context.datetime(authored_value, 'ORC', 9):
             service_request.authoredOn = authored
-        elif authored_value:
-            serialized_authored = accessor.serialize(9)
-            preserve_value(service_request, context, 'ORC', 9, serialized_authored)
+            needs_preserving = False
 
-    # The ordering provider fills in the requester when the OBR provided none.
-    if 'requester' not in current:
-        provider_repetition = accessor.first(12)
+    if needs_preserving:
+        serialized_authored = accessor.serialize(9)
+        preserve_value(service_request, context, 'ORC', 9, serialized_authored)
 
-        if requester := add_practitioner(provider_repetition, context):
-            service_request.requester = requester
+    # The ordering provider fills in the requester when the OBR provided none -
+    # otherwise the provider and the call back number are preserved as-is.
+    if 'requester' in current:
+        for position in (12, 14):
+            if accessor.first(position):
+                serialized = accessor.serialize(position)
+                preserve_value(service_request, context, 'ORC', position, serialized)
+    else:
+        _apply_orc_requester(accessor, service_request, context)
+
+    # The order effective time fills in the occurrence when the OBR provided none.
+    _apply_orc_effective_time(accessor, service_request, context)
 
     preserve_unmapped(accessor, _ORC_Handled, service_request, context)
 
@@ -396,7 +501,7 @@ def map_obr_to_diagnostic_report(
     if code := cwe_to_codeable_concept(service_repetition, config):
         out.code = code
     else:
-        out.code = Unknown_Code
+        out.code = absent_value()
 
     # .. the diagnostic service section is the report category ..
     section_repetition = obr_accessor.first(24)
@@ -418,21 +523,23 @@ def map_obr_to_diagnostic_report(
 
     # .. the observation start and end times make the effective time or period ..
     effective_value = obr_accessor.value(7)
-    effective_time = dtm_to_datetime(effective_value, config)
+    effective_time = context.datetime(effective_value, 'OBR', 7)
 
     end_value = obr_accessor.value(8)
-    end_time = dtm_to_datetime(end_value, config)
+    end_time = context.datetime(end_value, 'OBR', 8)
 
     if effective_time:
         if end_time:
             out.effectivePeriod = {'start': effective_time, 'end': end_time}
         else:
             out.effectiveDateTime = effective_time
+    elif end_time:
+        out.effectivePeriod = {'end': end_time}
 
-    # .. the results-reported time is when the report was issued - other values
-    # can arrive in this slot and those are preserved as-is ..
+    # .. the results-reported time is when the report was issued,
+    # .. a value without a time part is preserved as-is ..
     issued_value = obr_accessor.value(22)
-    issued = dtm_to_datetime(issued_value, config)
+    issued = context.instant(issued_value, 'OBR', 22)
 
     if issued:
         out.issued = issued
@@ -446,40 +553,6 @@ def map_obr_to_diagnostic_report(
         out.resultsInterpreter = [interpreter]
 
     return out
-
-# ################################################################################################################################
-
-def apply_tq1(accessor:'SegmentAccessor', context:'ConversionContext', service_request:'ServiceRequest') -> 'None':
-    """ Applies TQ1 to a ServiceRequest - the start and end times become the occurrence,
-    the priority maps through the standard table.
-    """
-    config = context.config
-
-    start_value = accessor.value(7)
-    start_time = dtm_to_datetime(start_value, config)
-
-    end_value = accessor.value(8)
-    end_time = dtm_to_datetime(end_value, config)
-
-    # TQ1 is the authoritative timing, so it replaces whatever ORC or OBR provided.
-    if start_time:
-        if end_time:
-            service_request.occurrenceDateTime = None
-            service_request.occurrencePeriod = {'start': start_time, 'end': end_time}
-        else:
-            service_request.occurrencePeriod = None
-            service_request.occurrenceDateTime = start_time
-
-    # The priority maps through the standard table, unknown codes are preserved as-is.
-    priority_code = accessor.component(9, 1)
-
-    if priority := lookup('order_priority', priority_code, config):
-        service_request.priority = priority['code']
-    else:
-        if priority_code:
-            preserve_value(service_request, context, 'TQ1', 9, priority_code)
-
-    preserve_unmapped(accessor, _TQ1_Handled, service_request, context)
 
 # ################################################################################################################################
 # ################################################################################################################################

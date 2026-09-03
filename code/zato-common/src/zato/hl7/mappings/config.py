@@ -10,10 +10,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from dataclasses import dataclass
 from threading import Lock
+from urllib.parse import urlsplit
 
 # Zato
 from zato.common.ext.configobj_ import ConfigObj
 from zato.hl7.common import add_config_location, get_config_locations
+from zato.hl7.mappings.codes import coding_system_to_uri, vocabulary_map_names, vocabulary_map_systems, \
+    vocabulary_map_targets
+from zato.hl7.mappings.datetimes import Max_Offset_Hours, Max_Offset_Minutes
 
 # Re-exported so that callers can register directories through this module as well.
 add_config_location = add_config_location
@@ -22,8 +26,10 @@ add_config_location = add_config_location
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strnone, strstrdict
+    from zato.common.typing_ import any_, stranydict, strlist, strnone, strstrdict
     any_ = any_
+    stranydict = stranydict
+    strlist = strlist
     strnone = strnone
     strstrdict = strstrdict
 
@@ -31,8 +37,9 @@ if 0:
 # ################################################################################################################################
 
 # Type aliases
-code_map_dict  = dict[str, 'strstrdict']
-strconfigdict  = dict[str, 'FHIRMappingConfig']
+override_dict = dict[str, 'stranydict']
+code_map_dict = dict[str, 'override_dict']
+strconfigdict = dict[str, 'FHIRMappingConfig']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,6 +120,16 @@ _allowed_sections = {
 # The keys an [identifiers] subsection allows
 _identifier_keys = ('authority', 'system')
 
+# What separates the system from the code in a [codes] override value, e.g. system|code
+_override_separator = '|'
+
+# The default timezone that stands for UTC
+_utc_timezone = 'Z'
+
+# How long a default timezone offset is - [+-]HH:MM - and where its colon sits
+_offset_length      = 6
+_offset_colon_index = 3
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -134,7 +151,8 @@ class FHIRMappingConfig:
     # Maps assigning authority names to the identifier system URIs they stand for
     identifier_systems: 'strstrdict'
 
-    # Maps vocabulary map names to per-code overrides, e.g. {'patient_class': {'P': 'AMB'}}
+    # Maps vocabulary map names to per-code overrides, each resolved to its target code and system,
+    # e.g. {'patient_class': {'P': {'code': 'AMB', 'system': 'http://terminology.hl7.org/CodeSystem/v3-ActCode'}}}
     code_mappings: 'code_map_dict'
 
     # The base URL Z-segment extensions are published under
@@ -261,6 +279,136 @@ def _validate_sections(parsed:'any_', file_path:'str') -> 'None':
 
 # ################################################################################################################################
 
+def _validate_timezone(default_timezone:'str', file_path:'str') -> 'None':
+    """ Rejects a default timezone that is neither Z nor a [+-]HH:MM offset within FHIR's bounds.
+    """
+    if default_timezone == _utc_timezone:
+        return
+
+    is_valid = True
+
+    offset_length = len(default_timezone)
+    minutes_index = _offset_colon_index + 1
+
+    # The offset has a fixed shape - a sign, two digits, a colon and two digits ..
+    if offset_length != _offset_length:
+        is_valid = False
+    elif default_timezone[0] not in ('+', '-'):
+        is_valid = False
+    elif default_timezone[_offset_colon_index] != ':':
+        is_valid = False
+    else:
+        hours = default_timezone[1:_offset_colon_index]
+        minutes = default_timezone[minutes_index:]
+
+        if not hours.isdigit():
+            is_valid = False
+        elif not minutes.isdigit():
+            is_valid = False
+
+        # .. and both parts stay within what FHIR allows.
+        else:
+            hours = int(hours)
+            minutes = int(minutes)
+
+            if hours > Max_Offset_Hours:
+                is_valid = False
+            elif minutes > Max_Offset_Minutes:
+                is_valid = False
+
+    if not is_valid:
+        message = f'Invalid default_timezone `{default_timezone}` in `{file_path}`' + \
+            ', expected Z or an offset like +02:00'
+        raise Exception(message)
+
+# ################################################################################################################################
+
+def _validate_base_url(base_url:'str', file_path:'str') -> 'None':
+    """ Rejects an extension base URL that is not an absolute URI.
+    """
+    is_valid = True
+
+    stripped = base_url.strip()
+
+    # A URI has no whitespace anywhere ..
+    if base_url != stripped:
+        is_valid = False
+    elif ' ' in base_url:
+        is_valid = False
+    else:
+        parts = urlsplit(base_url)
+
+        # .. it names a scheme ..
+        if not parts.scheme:
+            is_valid = False
+
+        # .. and something after it.
+        elif not parts.netloc:
+            if not parts.path:
+                is_valid = False
+
+    if not is_valid:
+        raise Exception(f'Invalid base_url `{base_url}` in `{file_path}`, expected an absolute URI')
+
+# ################################################################################################################################
+
+def _resolve_override(map_name:'str', code:'str', value:'str', file_path:'str') -> 'stranydict':
+    """ Turns one [codes] override value - code or system|code - into the entry lookup returns for it,
+    rejecting targets the map's systems are not known to hold.
+    """
+    map_systems = vocabulary_map_systems(map_name)
+    where = f'Override `{code}={value}` in `[[{map_name}]]` in `{file_path}`'
+
+    # An explicit system wins, a coding system name resolves to its URI ..
+    if _override_separator in value:
+        system, target_code = value.split(_override_separator, 1)
+
+        if system_uri := coding_system_to_uri(system):
+            system = system_uri
+
+        if not system:
+            raise Exception(f'{where} has no system')
+
+        if not target_code:
+            raise Exception(f'{where} has no target code')
+
+        # .. a target under one of the map's systems must be a code that system is known to hold,
+        # .. a foreign system cannot be checked and is taken as-is ..
+        if system in map_systems:
+            known_targets = vocabulary_map_targets(map_name, system)
+
+            if target_code not in known_targets:
+                raise Exception(f'{where} targets unknown code `{target_code}` in `{system}`, known: {known_targets}')
+
+    # .. without one, the target must be a code exactly one of the map's systems knows.
+    else:
+        target_code = value
+        knowing_systems:'strlist' = []
+
+        for map_system in map_systems:
+            known_targets = vocabulary_map_targets(map_name, map_system)
+
+            if target_code in known_targets:
+                knowing_systems.append(map_system)
+
+        knowing_count = len(knowing_systems)
+
+        if knowing_count == 1:
+            system = knowing_systems[0]
+
+        elif not knowing_systems:
+            message = f'{where} targets unknown code `{target_code}`, use system|code for a code' + \
+                f' outside {map_systems}'
+            raise Exception(message)
+
+        else:
+            raise Exception(f'{where} is ambiguous, `{target_code}` exists in {knowing_systems}, use system|code')
+
+    out = {'code': target_code, 'system': system}
+    return out
+
+# ################################################################################################################################
+
 def _build_config(parsed:'any_', file_path:'str') -> 'FHIRMappingConfig':
     """ Turns a validated ConfigObj into a mapping config, merging the file over the defaults.
     """
@@ -280,9 +428,10 @@ def _build_config(parsed:'any_', file_path:'str') -> 'FHIRMappingConfig':
         if identifier_system := bundle_section.get('identifier_system'):
             out.bundle_identifier_system = identifier_system
 
-    # .. the default timezone is taken as-is ..
+    # .. the default timezone must be an offset FHIR accepts ..
     if datetime_section := parsed.get('datetime'):
         if default_timezone := datetime_section.get('default_timezone'):
+            _validate_timezone(default_timezone, file_path)
             out.default_timezone = default_timezone
 
     # .. each identifiers subsection maps an assigning authority to a system URI ..
@@ -307,21 +456,30 @@ def _build_config(parsed:'any_', file_path:'str') -> 'FHIRMappingConfig':
             system = subsection['system']
             out.identifier_systems[authority] = system
 
-    # .. each codes subsection carries per-code overrides for one vocabulary map ..
+    # .. each codes subsection carries per-code overrides for one vocabulary map, which must exist ..
     if codes_section := parsed.get('codes'):
+        map_names = vocabulary_map_names()
 
         for subsection_name in codes_section.sections:
+
+            if subsection_name not in map_names:
+                message = f'Unknown map `[[{subsection_name}]]` in `[codes]` in `{file_path}`' + \
+                    f', allowed: {map_names}'
+                raise Exception(message)
+
             subsection = codes_section[subsection_name]
-            overrides:'strstrdict' = {}
+            overrides:'override_dict' = {}
 
             for key in subsection.scalars:
-                overrides[key] = subsection[key]
+                value = subsection[key]
+                overrides[key] = _resolve_override(subsection_name, key, value, file_path)
 
             out.code_mappings[subsection_name] = overrides
 
-    # .. and the extension base URL is taken as-is.
+    # .. and the extension base URL must be an absolute URI.
     if extensions_section := parsed.get('extensions'):
         if base_url := extensions_section.get('base_url'):
+            _validate_base_url(base_url, file_path)
             out.extension_base_url = base_url
 
     return out

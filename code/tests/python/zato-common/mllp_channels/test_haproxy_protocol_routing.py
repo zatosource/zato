@@ -171,8 +171,6 @@ def _build_test_haproxy_cfg(
     config_text = re.sub(r'(?m)^backend dashboard_backend.*?(?=^# |\Z)', '', config_text, flags=re.DOTALL)
     config_text = re.sub(r'(?m)^# OpenAPI console frontend.*?(?=^# |\Z)', '', config_text, flags=re.DOTALL)
     config_text = re.sub(r'(?m)^# OpenAPI console backend.*?(?=^# |\Z)', '', config_text, flags=re.DOTALL)
-    config_text = re.sub(r'(?m)^userlist .*?(?=^# |\Z)', '', config_text, flags=re.DOTALL)
-    config_text = re.sub(r'(?m)^listen stats.*', '', config_text, flags=re.DOTALL)
 
     # .. replace the main frontend port ..
     config_text = config_text.replace('bind 0.0.0.0:${Zato_Port_Load_Balancer}', f'bind 127.0.0.1:{frontend_port}')

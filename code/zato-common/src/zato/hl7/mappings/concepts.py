@@ -6,6 +6,10 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from decimal import Decimal, InvalidOperation
+from typing import NamedTuple
+
 # Zato
 from zato.hl7.mappings.codes import coding_system_to_uri, lookup
 from zato.hl7.mappings.fields import component_value
@@ -23,13 +27,33 @@ if 0:
 
 # Type aliases
 dictnone = 'stranydict | None'
-value_pair = tuple[str, 'stranydict | str']
 
 # The system spoken-language codes belong to
 Language_Coding_System = 'urn:ietf:bcp:47'
 
 # The lengths ISO 639 language codes come in - two-letter 639-1 and three-letter 639-2 codes.
 _ISO_639_Lengths = (2, 3)
+
+# Which components of a CWE cwe_to_codeable_concept consumes
+CWE_Consumed = frozenset({1, 2, 3, 4, 5, 6, 9})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ParsedNumber(NamedTuple):
+    """ A number parsed from HL7 text, along with whether the float still equals the digits the text spelled out.
+    """
+    value:'float'
+    is_exact:'bool'
+
+# ################################################################################################################################
+
+class ObservationValue(NamedTuple):
+    """ One routed Observation.value[x] - the field name, its content and whether all its numbers stayed exact.
+    """
+    field_name:'str'
+    content:'stranydict | str'
+    is_exact:'bool'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -155,8 +179,9 @@ def cwe_to_language_concept(repetition:'anylist', config:'FHIRMappingConfig') ->
 
 # ################################################################################################################################
 
-def _quantity(value:'float', units:'dictnone') -> 'stranydict':
+def quantity(value:'float', units:'dictnone') -> 'stranydict':
     """ Builds a FHIR Quantity from a number and an optional units concept.
+    A unit code is set only together with its system, otherwise only the unit text is.
     """
 
     # Our response to produce
@@ -166,9 +191,9 @@ def _quantity(value:'float', units:'dictnone') -> 'stranydict':
         if coding_list := units.get('coding'):
             first_coding = coding_list[0]
 
-            out['code'] = first_coding['code']
             if coding_system := first_coding.get('system'):
                 out['system'] = coding_system
+                out['code'] = first_coding['code']
 
         if unit_text := units.get('text'):
             out['unit'] = unit_text
@@ -177,22 +202,36 @@ def _quantity(value:'float', units:'dictnone') -> 'stranydict':
 
 # ################################################################################################################################
 
-def _parse_number(value:'strnone') -> 'float | None':
-    """ Parses a string as a float, returning None when it is not a number.
+def parse_number(value:'strnone') -> 'ParsedNumber | None':
+    """ Parses a string as a finite number, returning None when it is not one.
+    The result says whether the float still equals the digits the text spelled out.
     """
     if not value:
         return None
 
     try:
-        out = float(value)
-    except ValueError:
+        decimal_value = Decimal(value)
+    except InvalidOperation:
         return None
 
+    if not decimal_value.is_finite():
+        return None
+
+    number = float(decimal_value)
+    number_text = repr(number)
+    round_trip = Decimal(number_text)
+    is_exact = round_trip == decimal_value
+
+    out = ParsedNumber(number, is_exact)
     return out
 
 # ################################################################################################################################
 
-def sn_to_observation_value(repetition:'anylist', config:'FHIRMappingConfig', units:'dictnone') -> 'value_pair | None':
+def sn_to_observation_value(
+    repetition:'anylist',
+    config:'FHIRMappingConfig',
+    units:'dictnone',
+    ) -> 'ObservationValue | None':
     """ Converts an SN - structured numeric - repetition to a FHIR observation value.
     Returns the value field name and its content, following the six-way branch the
     comparator, number, separator and second number combinations call for.
@@ -202,43 +241,59 @@ def sn_to_observation_value(repetition:'anylist', config:'FHIRMappingConfig', un
     separator = component_value(repetition, 3)
     second_number = component_value(repetition, 4)
 
-    first_amount = _parse_number(first_number)
-    second_amount = _parse_number(second_number)
+    first_amount = parse_number(first_number)
+    second_amount = parse_number(second_number)
 
     # A plain number, with or without a comparator, becomes a Quantity ..
-    if first_amount is not None:
+    if first_amount:
         if not separator:
-            quantity = _quantity(first_amount, units)
+            single = quantity(first_amount.value, units)
 
             if comparator:
-                quantity['comparator'] = comparator
+                single['comparator'] = comparator
 
-            out = ('valueQuantity', quantity)
+            out = ObservationValue('valueQuantity', single, first_amount.is_exact)
             return out
 
         # .. a range like 3 - 5 becomes a Range ..
         if separator == '-':
-            if second_amount is not None:
-                low = _quantity(first_amount, units)
-                high = _quantity(second_amount, units)
+            if second_amount:
+                low = quantity(first_amount.value, units)
+                high = quantity(second_amount.value, units)
 
-                out = ('valueRange', {'low': low, 'high': high})
+                is_exact = False
+
+                if first_amount.is_exact:
+                    if second_amount.is_exact:
+                        is_exact = True
+
+                content = {'low': low, 'high': high}
+
+                out = ObservationValue('valueRange', content, is_exact)
                 return out
 
         # .. a ratio like 1 : 128 or 1 / 128 becomes a Ratio ..
         if separator in (':', '/'):
-            if second_amount is not None:
-                numerator = _quantity(first_amount, units)
-                denominator = _quantity(second_amount, units)
+            if second_amount:
+                numerator = quantity(first_amount.value, units)
+                denominator = quantity(second_amount.value, units)
 
-                out = ('valueRatio', {'numerator': numerator, 'denominator': denominator})
+                is_exact = False
+
+                if first_amount.is_exact:
+                    if second_amount.is_exact:
+                        is_exact = True
+
+                content = {'numerator': numerator, 'denominator': denominator}
+
+                out = ObservationValue('valueRatio', content, is_exact)
                 return out
 
         # .. a plus after the number, like 2 +, marks categorical results and stays a string.
         if separator == '+':
             marked_number = f'{first_number}+'
 
-            out = ('valueString', marked_number)
+            out = ObservationValue('valueString', marked_number, True)
             return out
 
     # Anything else is preserved as the string the components spell out.
@@ -251,7 +306,7 @@ def sn_to_observation_value(repetition:'anylist', config:'FHIRMappingConfig', un
     if parts:
         joined = ''.join(parts)
 
-        out = ('valueString', joined)
+        out = ObservationValue('valueString', joined, True)
         return out
 
     return None

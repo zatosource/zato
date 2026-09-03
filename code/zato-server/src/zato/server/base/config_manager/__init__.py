@@ -1359,39 +1359,95 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def init_pubsub(self) -> 'None':
-        pass
+        """ Registers in the pub/sub backend the ODB subscriptions that appeared after the server started,
+        e.g. ones imported by enmasse, and starts push delivery for the push ones among them.
+        """
+        from contextlib import closing
+        from zato.common.odb.query.pubsub import pubsub_subscription_topic_pairs
+
+        _push = PubSub.Delivery_Type.Push
+        synced = 0
+
+        with closing(self.server.odb.session()) as session:
+
+            rows = pubsub_subscription_topic_pairs(session, self.server.cluster_id)
+
+            for row in rows:
+                topic_name = row.name
+                sub_key = row.sub_key
+
+                # A pair the backend already has is a no-op here ..
+                self.server.pubsub_backend.subscribe(sub_key, topic_name)
+                synced += 1
+
+                # .. pull subscriptions need nothing more ..
+                if row.delivery_type != _push:
+                    continue
+
+                # .. push subscriptions this server does not deliver to yet need a config and a greenlet.
+                if sub_key not in self._push_subs:
+                    self._push_subs[sub_key] = []
+
+                config_list = self._push_subs[sub_key]
+
+                for sub_config in config_list:
+                    if sub_config['topic_name'] == topic_name:
+                        break
+                else:
+                    sub_config = self._build_push_sub_config(session, row)
+                    config_list.append(sub_config)
+                    self.server.pubsub_push_delivery.start_sub_key(sub_key)
+
+        noun = 'pair' if synced == 1 else 'pairs'
+        logger.info('Reloaded %d ODB subscription-topic %s into the pub/sub backend', synced, noun)
+
+# ################################################################################################################################
+
+    def _build_push_sub_config(self, session:'any_', row:'any_') -> 'strdict':
+        """ Builds the push delivery config of one subscription-topic row, resolving the REST endpoint URL if there is one.
+        """
+        from zato.common.odb.model import HTTPSOAP
+
+        out = {
+            'sub_key': row.sub_key,
+            'topic_name': row.name,
+            'push_type': row.push_type,
+            'push_service_name': row.push_service_name,
+            'rest_push_endpoint_id': row.rest_push_endpoint_id,
+        }
+
+        if row.push_type == PubSub.Push_Type.REST:
+            if row.rest_push_endpoint_id:
+                endpoint = session.query(HTTPSOAP).filter(
+                    HTTPSOAP.id == row.rest_push_endpoint_id
+                ).first()
+                if endpoint:
+
+                    # The host column is nullable in the ODB.
+                    host = endpoint.host
+                    if host is None:
+                        host = ''
+
+                    out['rest_push_url'] = host + endpoint.url_path
+
+        return out
 
 # ################################################################################################################################
 
     def _sync_pubsub_subscriptions(self) -> 'None':
-
+        """ Registers all ODB subscriptions in the pub/sub backend at server startup
+        and builds the push delivery configs from scratch.
+        """
         from contextlib import closing
-        from zato.common.odb.model import HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
+        from zato.common.odb.query.pubsub import pubsub_subscription_topic_pairs
 
         _push = PubSub.Delivery_Type.Push
 
-        logger.info('Syncing ODB subscriptions to Redis pub/sub backend')
+        logger.info('Syncing ODB subscriptions to the pub/sub backend')
 
         with closing(self.server.odb.session()) as session:
 
-            rows = session.query(
-                PubSubSubscription.sub_key,
-                PubSubSubscription.delivery_type,
-                PubSubSubscription.push_type,
-                PubSubSubscription.push_service_name,
-                PubSubSubscription.rest_push_endpoint_id,
-                PubSubTopic.name,
-                SecurityBase.username,
-                SecurityBase.name.label('sec_name'),
-            ).join(
-                PubSubSubscriptionTopic, PubSubSubscriptionTopic.subscription_id == PubSubSubscription.id
-            ).join(
-                PubSubTopic, PubSubTopic.id == PubSubSubscriptionTopic.topic_id
-            ).join(
-                SecurityBase, SecurityBase.id == PubSubSubscription.sec_base_id
-            ).filter(
-                PubSubSubscription.cluster_id == self.server.cluster_id
-            ).all()
+            rows = pubsub_subscription_topic_pairs(session, self.server.cluster_id)
 
             synced = 0
             push_subs = {} # type: dict[str, list]
@@ -1403,20 +1459,7 @@ class ConfigManager(_ConfigManagerBase):
                 synced += 1
 
                 if row.delivery_type == _push:
-                    sub_config = {
-                        'sub_key': sub_key,
-                        'topic_name': topic_name,
-                        'push_type': row.push_type,
-                        'push_service_name': row.push_service_name,
-                        'rest_push_endpoint_id': row.rest_push_endpoint_id,
-                    }
-
-                    if row.push_type == 'rest' and row.rest_push_endpoint_id:
-                        endpoint = session.query(HTTPSOAP).filter(
-                            HTTPSOAP.id == row.rest_push_endpoint_id
-                        ).first()
-                        if endpoint:
-                            sub_config['rest_push_url'] = (endpoint.host or '') + endpoint.url_path
+                    sub_config = self._build_push_sub_config(session, row)
 
                     if sub_key not in push_subs:
                         push_subs[sub_key] = []
@@ -1425,8 +1468,8 @@ class ConfigManager(_ConfigManagerBase):
             self._push_subs = push_subs
 
         noun = 'pair' if synced == 1 else 'pairs'
-        push_count = sum(len(v) for v in push_subs.values())
-        logger.info('Synced %d ODB subscription-topic %s to Redis (%d push)', synced, noun, push_count)
+        push_count = sum(len(config_list) for config_list in push_subs.values())
+        logger.info('Synced %d ODB subscription-topic %s to the pub/sub backend (%d push)', synced, noun, push_count)
 
 # ################################################################################################################################
 

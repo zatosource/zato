@@ -268,12 +268,17 @@ class FabricTool(TestCase):
         self.assertEqual(tool['name'], 'fabric.lake')
         self.assertEqual(
             tool['description'],
-            'Invokes the Microsoft Fabric connection `lake` - workspaces, items, jobs and OneLake')
+            'Invokes the Microsoft Fabric connection `lake` - workspaces, items, jobs, lakehouse tables, SQL queries and OneLake')
         self.assertEqual(tool['inputSchema'], fabric_spec.input_schema)
 
         method_schema = fabric_spec.input_schema['properties']['method']
         self.assertIn('list_workspaces', method_schema['enum'])
         self.assertIn('onelake_read', method_schema['enum'])
+        self.assertIn('list_tables', method_schema['enum'])
+        self.assertIn('load_table', method_schema['enum'])
+        self.assertIn('write_table', method_schema['enum'])
+        self.assertIn('wait_for_operation', method_schema['enum'])
+        self.assertIn('query', method_schema['enum'])
 
 # ################################################################################################################################
 

@@ -17,7 +17,8 @@ from zato.hl7.mappings import get_conversion_warnings
 from zato.hl7v2 import parse_hl7
 
 # Local
-from conftest import Samples_Dir, Test_Conversions_Dir, convert, load_message, one_resource, resources_of_type
+from conftest import Samples_Dir, Test_Conversions_Dir, convert, load_message, one_resource, organization_named, \
+    resources_of_type
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -544,21 +545,46 @@ class TestPRTParticipation:
 
 # ################################################################################################################################
 
-    def test_prt_without_a_person_stays_whole(self) -> 'None':
+    def test_prt_without_a_person_is_preserved_on_the_report(self) -> 'None':
         # French senders route result copies with person-less PRT segments
-        # that carry only a telecommunication address.
+        # that carry only a telecommunication address - the participation
+        # still concerns the report, so that is where it is preserved.
         obr = 'OBR|1|ORD-10^EHR||24331-1^Lipid panel^LN'
         prt = 'PRT||UC||RCT^Results Copies To^participation|||||||||||^^X.400^copies@example.org'
 
         bundle = convert(MSH_ORU, PID, obr, prt)
-        basic = one_resource(bundle, 'Basic')
+        report = one_resource(bundle, 'DiagnosticReport')
 
-        assert basic['code']['coding'][0]['code'] == 'PRT'
+        assert resources_of_type(bundle, 'Basic') == []
 
-        extensions = basic['extension']
-        assert {'url': 'urn:zato:hl7v2:extension/PRT/15', 'valueString': '^^X.400^copies@example.org'} \
+        extensions = report['extension']
+        assert {'url': 'urn:zato:hl7v2:extension/unmapped/PRT-15', 'valueString': '^^X.400^copies@example.org'} \
             in extensions
 
+        assert get_conversion_warnings(bundle) == []
+
+# ################################################################################################################################
+
+    def test_prt_organization_becomes_a_performer(self) -> 'None':
+        obr = 'OBR|1|ORD-10^EHR||24331-1^Lipid panel^LN'
+        prt = 'PRT||UC||SB^Send by^participation||||Acme Labs^^^^^ACME&1.2.3&ISO^FI^^^300017985|||||||^WPN^PH^^^555^2001000'
+
+        bundle = convert(MSH_ORU, PID, obr, prt)
+        report = one_resource(bundle, 'DiagnosticReport')
+        organization = organization_named(bundle, 'Acme Labs')
+
+        assert organization['identifier'] == [{
+            'value': '300017985',
+            'system': 'urn:oid:1.2.3',
+            'type': {'coding': [{'system': 'http://terminology.hl7.org/CodeSystem/v2-0203', 'code': 'FI'}]},
+        }]
+        assert organization['telecom'] == [{'system': 'phone', 'value': '555 2001000', 'use': 'work'}]
+
+        performer = report['performer']
+        assert len(performer) == 1
+        assert performer[0]['reference'].startswith('urn:uuid:')
+
+        assert resources_of_type(bundle, 'Basic') == []
         assert get_conversion_warnings(bundle) == []
 
 # ################################################################################################################################

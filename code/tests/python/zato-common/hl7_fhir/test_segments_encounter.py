@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.hl7.mappings import get_conversion_warnings
 
 # Local
-from conftest import convert, one_resource
+from conftest import convert, one_resource, resources_of_type
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,9 +52,26 @@ class TestPV1:
     def test_location_resource(self) -> 'None':
         bundle = convert(MSH, PID, PV1)
 
-        location = one_resource(bundle, 'Location')
-        assert location['name'] == 'WARD1-101-A-GENHOSP'
+        # The facility, point of care, room and bed become a hierarchy, each part of the one before it.
+        facility, point_of_care, room, bed = resources_of_type(bundle, 'Location')
 
+        assert facility['name'] == 'GENHOSP'
+        assert facility['physicalType']['coding'][0]['code'] == 'si'
+        assert 'partOf' not in facility
+
+        assert point_of_care['name'] == 'WARD1'
+        assert 'physicalType' not in point_of_care
+
+        assert room['name'] == '101'
+        assert room['physicalType']['coding'][0]['code'] == 'ro'
+
+        assert bed['name'] == 'A'
+        assert bed['physicalType']['coding'][0]['code'] == 'bd'
+
+        for location in (facility, point_of_care, room, bed):
+            assert location['mode'] == 'instance'
+
+        # The encounter takes place in the most granular one, the bed.
         encounter = one_resource(bundle, 'Encounter')
 
         locations = encounter['location']
@@ -64,16 +81,33 @@ class TestPV1:
 
         assert location_url.startswith('urn:uuid:')
 
+        bundle_dict = bundle.to_dict()
+        bed_url = None
+
+        for entry in bundle_dict['entry']:
+            resource = entry['resource']
+            if resource['resourceType'] == 'Location':
+                if resource['name'] == 'A':
+                    bed_url = entry['fullUrl']
+
+        assert location_url == bed_url
+        assert bed['partOf']['reference'] != bed_url
+
 # ################################################################################################################################
 
     def test_location_facility_universal_id(self) -> 'None':
-        # A spelled-out facility name can arrive in the HD universal ID subcomponent.
+        # The facility is an HD - its namespace is the name and its universal ID an identifier.
         pv1 = 'PV1|1|O|^^^0105&North Clinic'
 
         bundle = convert(MSH, PID, pv1)
         location = one_resource(bundle, 'Location')
 
-        assert location['name'] == '0105-North Clinic'
+        assert location['name'] == '0105'
+
+        identifiers = location['identifier']
+        identifier = identifiers[0]
+
+        assert identifier['value'] == 'North Clinic'
 
 # ################################################################################################################################
 

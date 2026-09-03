@@ -10,9 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.fhir import Appointment
 from zato.hl7.mappings.codes import lookup
 from zato.hl7.mappings.concepts import cwe_to_codeable_concept
-from zato.hl7.mappings.datatypes import dtm_to_datetime, ei_to_identifier
+from zato.hl7.mappings.datatypes import ei_to_identifier
 from zato.hl7.mappings.segments.common import Default_Appointment_Status, Requested_Appointment_Status, add_location, \
-    add_practitioner, preserve_unmapped, preserve_value
+    add_practitioner, preserve_other_components, preserve_unmapped, preserve_value
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,8 +31,9 @@ if 0:
 dictnone = 'stranydict | None'
 
 # Which field positions each mapper consumes - anything else that carries data is preserved as an extension.
-_SCH_Handled = frozenset({1, 2, 6, 7, 8, 9, 10, 11, 12, 16, 25})
-_ARQ_Handled = frozenset({1, 2, 6, 7, 8, 9, 10, 11, 15})
+# SCH-6 and ARQ-6, the event reason, are preserved as-is.
+_SCH_Handled = frozenset({1, 2, 7, 8, 9, 10, 11, 12, 16, 25})
+_ARQ_Handled = frozenset({1, 2, 7, 8, 9, 10, 11, 15})
 _AIS_Handled = frozenset({1, 2, 3})
 _AIG_Handled = frozenset({1, 2, 3, 4})
 _AIL_Handled = frozenset({1, 2, 3, 4})
@@ -40,7 +41,13 @@ _AIP_Handled = frozenset({1, 2, 3, 4})
 
 # Which components of the SCH-11 timing quantity carry the start and end times
 _SCH_Timing_Start_Component = 4
-_SCH_Timing_End_Component = 5
+_SCH_Timing_End_Component   = 5
+_SCH_Timing_Consumed        = frozenset({_SCH_Timing_Start_Component, _SCH_Timing_End_Component})
+
+# Which components of the ARQ-11 requested range carry the start and end times
+_ARQ_Range_Start_Component = 1
+_ARQ_Range_End_Component   = 2
+_ARQ_Range_Consumed        = frozenset({_ARQ_Range_Start_Component, _ARQ_Range_End_Component})
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,17 +127,11 @@ def map_sch(accessor:'SegmentAccessor', context:'ConversionContext', participant
     if identifiers:
         out.identifier = identifiers
 
-    # .. the event and appointment reasons are why the appointment exists ..
-    reasons:'anylist' = []
+    # .. the appointment reason is why the appointment exists ..
+    reason_repetition = accessor.first(7)
 
-    for position in (6, 7):
-        reason_repetition = accessor.first(position)
-
-        if reason := cwe_to_codeable_concept(reason_repetition, config):
-            reasons.append(reason)
-
-    if reasons:
-        out.reasonCode = reasons
+    if reason := cwe_to_codeable_concept(reason_repetition, config):
+        out.reasonCode = [reason]
 
     # .. the appointment type keeps its coding ..
     type_repetition = accessor.first(8)
@@ -139,10 +140,10 @@ def map_sch(accessor:'SegmentAccessor', context:'ConversionContext', participant
         out.appointmentType = appointment_type
 
     # .. the duration takes its unit at face value when it counts minutes,
-    # values that make no minutes stay preserved together with their units ..
-    duration = accessor.value(9)
+    # .. values that make no minutes stay preserved together with their units ..
+    duration       = accessor.value(9)
     duration_units = accessor.component(10, 1)
-    populated = accessor.populated_positions()
+    populated      = accessor.populated_positions()
 
     if minutes := _minutes_duration(duration, duration_units):
         out.minutesDuration = minutes
@@ -154,25 +155,20 @@ def map_sch(accessor:'SegmentAccessor', context:'ConversionContext', participant
             units_value = accessor.serialize(10)
             preserve_value(out, context, 'SCH', 10, units_value)
 
-    # .. the timing quantity carries the start and end times, a populated
-    # quantity that yields neither stays preserved whole ..
+    # .. the timing quantity carries the start and end times, whatever else it carries stays preserved whole ..
     start_value = accessor.component(11, _SCH_Timing_Start_Component)
-    start_time = dtm_to_datetime(start_value, config)
+    start_time = context.datetime(start_value, 'SCH', 11)
 
     if start_time:
         out.start = start_time
 
     end_value = accessor.component(11, _SCH_Timing_End_Component)
-    end_time = dtm_to_datetime(end_value, config)
+    end_time = context.datetime(end_value, 'SCH', 11)
 
     if end_time:
         out.end = end_time
 
-    if not start_time:
-        if not end_time:
-            if 11 in populated:
-                timing_value = accessor.serialize(11)
-                preserve_value(out, context, 'SCH', 11, timing_value)
+    preserve_other_components(accessor, 11, _SCH_Timing_Consumed, out, context)
 
     # .. and the placer and filler contact people join the participants.
     _contact_participant(accessor, 12, context, participants)
@@ -207,17 +203,11 @@ def map_arq(accessor:'SegmentAccessor', context:'ConversionContext', participant
     if identifiers:
         out.identifier = identifiers
 
-    # .. the event and appointment reasons are why the appointment is asked for ..
-    reasons:'anylist' = []
+    # .. the appointment reason is why the appointment is asked for ..
+    reason_repetition = accessor.first(7)
 
-    for position in (6, 7):
-        reason_repetition = accessor.first(position)
-
-        if reason := cwe_to_codeable_concept(reason_repetition, config):
-            reasons.append(reason)
-
-    if reasons:
-        out.reasonCode = reasons
+    if reason := cwe_to_codeable_concept(reason_repetition, config):
+        out.reasonCode = [reason]
 
     # .. the appointment type keeps its coding ..
     type_repetition = accessor.first(8)
@@ -225,25 +215,37 @@ def map_arq(accessor:'SegmentAccessor', context:'ConversionContext', participant
     if appointment_type := cwe_to_codeable_concept(type_repetition, config):
         out.appointmentType = appointment_type
 
-    # .. the duration takes its unit at face value when it counts minutes ..
-    duration = accessor.value(9)
+    # .. the duration takes its unit at face value when it counts minutes,
+    # .. values that make no minutes stay preserved together with their units ..
+    duration       = accessor.value(9)
     duration_units = accessor.component(10, 1)
+    populated      = accessor.populated_positions()
 
     if minutes := _minutes_duration(duration, duration_units):
         out.minutesDuration = minutes
+    else:
+        if duration:
+            preserve_value(out, context, 'ARQ', 9, duration)
 
-    # .. the requested date/time range carries the start and end times ..
-    start_value = accessor.component(11, 1)
-    start_time = dtm_to_datetime(start_value, config)
+        if 10 in populated:
+            units_value = accessor.serialize(10)
+            preserve_value(out, context, 'ARQ', 10, units_value)
+
+    # .. the requested date/time range carries the start and end times,
+    # whatever else it carries stays preserved whole ..
+    start_value = accessor.component(11, _ARQ_Range_Start_Component)
+    start_time = context.datetime(start_value, 'ARQ', 11)
 
     if start_time:
         out.start = start_time
 
-    end_value = accessor.component(11, 2)
-    end_time = dtm_to_datetime(end_value, config)
+    end_value = accessor.component(11, _ARQ_Range_End_Component)
+    end_time = context.datetime(end_value, 'ARQ', 11)
 
     if end_time:
         out.end = end_time
+
+    preserve_other_components(accessor, 11, _ARQ_Range_Consumed, out, context)
 
     # .. and the placer contact person joins the participants.
     _contact_participant(accessor, 15, context, participants)

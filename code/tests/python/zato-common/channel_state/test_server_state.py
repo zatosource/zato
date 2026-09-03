@@ -131,8 +131,8 @@ class TestServerState:
         server = _new_server(callback)
         fake_socket = _deliver(server, _adt_a01)
 
-        # The sender got a negative acknowledgment ..
-        assert b'MSA|AE' in fake_socket.sent[0]
+        # The sender got a negative acknowledgment that asks it to resend ..
+        assert b'MSA|AR' in fake_socket.sent[0]
 
         # .. and the live state counts it toward the streak and the error rate.
         assert server.state.received == 1

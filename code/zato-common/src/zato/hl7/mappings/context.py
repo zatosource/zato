@@ -12,12 +12,13 @@ from uuid import NAMESPACE_URL, uuid5
 
 # Zato
 from zato.fhir.bundle import BatchBuilder, TransactionBuilder
+from zato.hl7.mappings.datetimes import dtm_to_date, dtm_to_datetime, dtm_to_instant
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, intstrdict, stranydict, strintdict, strlist, strstrdict
+    from zato.common.typing_ import any_, anylist, intstrdict, stranydict, strintdict, strlist, strnone, strstrdict
     from zato.hl7.mappings.config import FHIRMappingConfig
     FHIRMappingConfig = FHIRMappingConfig
 
@@ -54,20 +55,73 @@ class ConversionContext:
         # resources with identical initial content still get distinct full URLs.
         self._content_counts:'strintdict' = {}
 
-        # Everything the conversion could not map, one entry per field or segment
+        # Everything the conversion could neither map nor preserve, one entry per field
         self.warnings:'strlist' = []
 
         # References to the resources segment mappers need to point at
         self.patient_reference:'stranydict | None' = None
         self.encounter_reference:'stranydict | None' = None
 
+        # When the message was sent, as an instant - the recorded time of anything the message itself attests to
+        self.message_instant:'strnone' = None
+
+        # The visit's financial class from PV1-20, as a CodeableConcept the message's Coverages take as their type
+        self.financial_class:'stranydict | None' = None
+
 # ################################################################################################################################
 
-    def add(self, resource:'any_') -> 'stranydict':
+    def warn(self, segment_id:'str', position:'int', text:'str') -> 'None':
+        """ Records that a field's content was neither mapped nor preserved.
+        """
+        self.warnings.append(f'{segment_id}-{position}: {text}')
+
+# ################################################################################################################################
+
+    def datetime(self, value:'strnone', segment_id:'str', position:'int') -> 'strnone':
+        """ Converts a DTM field to a FHIR dateTime, recording a warning when a populated value does not parse.
+        """
+        out = dtm_to_datetime(value, self.config)
+
+        if not out:
+            if value:
+                self.warn(segment_id, position, f'`{value}` is not a valid date/time')
+
+        return out
+
+# ################################################################################################################################
+
+    def instant(self, value:'strnone', segment_id:'str', position:'int') -> 'strnone':
+        """ Converts a DTM field to a FHIR instant, recording a warning when a populated value does not qualify as one.
+        """
+        out = dtm_to_instant(value, self.config)
+
+        if not out:
+            if value:
+                self.warn(segment_id, position, f'`{value}` is not a valid date/time with a time part')
+
+        return out
+
+# ################################################################################################################################
+
+    def date(self, value:'strnone', segment_id:'str', position:'int') -> 'strnone':
+        """ Converts a DTM field to a FHIR date, recording a warning when a populated value does not parse.
+        """
+        out = dtm_to_date(value)
+
+        if not out:
+            if value:
+                self.warn(segment_id, position, f'`{value}` is not a valid date')
+
+        return out
+
+# ################################################################################################################################
+
+    def add(self, resource:'any_', first:'bool' = False) -> 'stranydict':
         """ Adds a resource to the bundle and returns a reference to it.
         Immutable resources whose content is identical to one already added are deduplicated -
         the reference points at the resource added first. Everything else may still be mutated
         after this call, so each occurrence stays a resource of its own, with a distinct URL.
+        With first=True the resource is inserted at the front of the bundle.
         """
 
         # The content key is the resource serialized in a stable order ..
@@ -85,7 +139,11 @@ class ConversionContext:
 
         # .. otherwise the key and its occurrence counter derive the resource's stable bundle-internal URL,
         # .. the counter keeping initially identical mutable resources apart.
-        occurrence = self._content_counts.get(content_key, 0)
+        occurrence = self._content_counts.get(content_key)
+
+        if occurrence is None:
+            occurrence = 0
+
         self._content_counts[content_key] = occurrence + 1
 
         occurrence_key = f'{content_key}|{occurrence}'
@@ -94,11 +152,26 @@ class ConversionContext:
 
         resource_id = id(resource)
 
-        self.resources.append(resource)
+        if first:
+            self.resources.insert(0, resource)
+        else:
+            self.resources.append(resource)
+
         self._full_urls[resource_id] = full_url
 
         if resource_type in _immutable_resource_types:
             self._dedup[content_key] = full_url
+
+        out = {'reference': full_url}
+        return out
+
+# ################################################################################################################################
+
+    def reference_to(self, resource:'any_') -> 'stranydict':
+        """ Returns a reference to a resource already added to the bundle.
+        """
+        resource_id = id(resource)
+        full_url = self._full_urls[resource_id]
 
         out = {'reference': full_url}
         return out

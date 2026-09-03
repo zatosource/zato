@@ -17,6 +17,9 @@ from urllib.parse import parse_qs, urlparse
 # Zato
 from zato.common.crypto.api import CryptoManager
 
+# Zato - test helpers
+from _fabric_lakehouse import handle_lakehouse_request, reset_lakehouse_state
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -221,9 +224,11 @@ class FabricTestHandler(BaseHTTPRequestHandler):
 
 # ################################################################################################################################
 
-    def _send_empty(self, status:'int') -> 'None':
+    def _send_empty(self, status:'int', location:'strnone'=None) -> 'None':
         self.send_response(status)
         self.send_header('Content-Length', '0')
+        if location:
+            self.send_header('Location', location)
         self.end_headers()
 
 # ################################################################################################################################
@@ -336,7 +341,7 @@ class FabricTestHandler(BaseHTTPRequestHandler):
                 }
 
                 location = f'/workspaces/{workspace_id}/items/{item_id}/jobs/instances/{job_id}'
-                self._send_json(ACCEPTED, item_jobs[job_id], location=location)
+                self._send_empty(ACCEPTED, location=location)
                 return
 
         # Anything below this point points to a specific job
@@ -563,10 +568,16 @@ class FabricTestHandler(BaseHTTPRequestHandler):
                 self._send_empty(OK)
                 return
 
-        # The workspace's items live under /workspaces/{workspace_id}/items
         if segment_count >= 2:
+
+            # The workspace's items live under /workspaces/{workspace_id}/items
             if segments[1] == 'items':
                 self._handle_items_request(method, workspace_id, segments[2:], params)
+                return
+
+            # The workspace's lakehouses expose tables, load operations and Spark sessions
+            if segments[1] == 'lakehouses':
+                handle_lakehouse_request(self, method, workspace_id, segments[2:])
                 return
 
         # Nothing above handled the request, so the path or method is not supported.
@@ -770,6 +781,8 @@ def start_fabric_server(
     FabricTestHandler.onelake_files = _build_initial_onelake_files()
     FabricTestHandler.capacities = _build_capacities()
     FabricTestHandler.object_counter = 0
+
+    reset_lakehouse_state()
 
     server = ThreadingHTTPServer(('127.0.0.1', port), FabricTestHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)

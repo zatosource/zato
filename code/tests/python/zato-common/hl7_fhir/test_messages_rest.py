@@ -109,10 +109,11 @@ class TestSIUAppointment:
         assert placer_identifier['value'] == 'APPT-1'
         assert filler_identifier['value'] == 'FIL-1'
 
-        reason_codes = appointment['reasonCode']
-        reason = reason_codes[0]
+        # SCH-6 is the event reason, not a clinical one, so it is preserved rather than mapped to reasonCode.
+        assert 'reasonCode' not in appointment
 
-        assert reason['text'] == 'Wellness checkup'
+        extensions = appointment['extension']
+        assert {'url': 'urn:zato:hl7v2:extension/unmapped/SCH-6', 'valueString': 'CHECKUP^Wellness checkup^L'} in extensions
 
         assert appointment['minutesDuration'] == 30
         assert appointment['start'] == '2024-06-01T09:00:00+00:00'
@@ -162,13 +163,23 @@ class TestSIUAppointment:
         assert len(participants) == 3
 
         practitioner = one_resource(bundle, 'Practitioner')
-        location = one_resource(bundle, 'Location')
 
         practitioner_names = practitioner['name']
         practitioner_name = practitioner_names[0]
 
         assert practitioner_name['family'] == 'Welby'
-        assert location['name'] == 'CLINIC-MAINFAC'
+
+        # The facility and the point of care become a Location hierarchy, the appointment takes place in the latter.
+        facility, point_of_care = resources_of_type(bundle, 'Location')
+
+        assert facility['name'] == 'MAINFAC'
+        assert point_of_care['name'] == 'CLINIC'
+        assert 'partOf' in point_of_care
+
+        location_participant = participants[2]
+        location_actor = location_participant['actor']
+
+        assert location_actor['reference'].startswith('urn:uuid:')
 
 # ################################################################################################################################
 
@@ -297,7 +308,8 @@ class TestRXOPharmacyOrder:
         # The dispense amount, units and refills make the dispense request.
         dispense_request = medication_request['dispenseRequest']
 
-        assert dispense_request['quantity'] == {'value': 30, 'unit': 'tablet', 'code': 'TAB'}
+        # The dispense units are local, so per qty-3 there is no code without a system.
+        assert dispense_request['quantity'] == {'value': 30, 'unit': 'tablet'}
         assert dispense_request['numberOfRepeatsAllowed'] == 2
 
         # The order number identifies the request.
@@ -460,7 +472,12 @@ class TestRDSPharmacyDispense:
         bundle = convert(msh, PID, rxd)
         dispense = one_resource(bundle, 'MedicationDispense')
 
-        assert dispense['medicationCodeableConcept']['text'] == 'unknown'
+        medication = dispense['medicationCodeableConcept']
+        extensions = medication['extension']
+        extension = extensions[0]
+
+        assert extension['url'] == 'http://hl7.org/fhir/StructureDefinition/data-absent-reason'
+        assert extension['valueCode'] == 'unknown'
 
 # ################################################################################################################################
 # ################################################################################################################################

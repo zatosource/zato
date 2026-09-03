@@ -37,6 +37,11 @@ _encounter_status          = 'http://hl7.org/fhir/encounter-status'
 _personal_relationship     = 'http://terminology.hl7.org/CodeSystem/v2-0063'
 _contact_role              = 'http://terminology.hl7.org/CodeSystem/v2-0131'
 _subscriber_relationship   = 'http://terminology.hl7.org/CodeSystem/subscriber-relationship'
+_ambulatory_status         = 'http://terminology.hl7.org/CodeSystem/v2-0009'
+_special_arrangements      = 'http://terminology.hl7.org/CodeSystem/encounter-special-arrangements'
+_special_courtesy          = 'http://terminology.hl7.org/CodeSystem/v3-EncounterSpecialCourtesy'
+_readmission_indicator     = 'http://terminology.hl7.org/CodeSystem/v2-0092'
+_bed_status                = 'http://terminology.hl7.org/CodeSystem/v2-0116'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -303,8 +308,57 @@ Subscriber_Relationship = {
     'Other': {'code': 'other', 'system': _subscriber_relationship},
 }
 
+# Table HL70009 - ambulatory status from PV1-15 - to Encounter's special arrangements.
+Ambulatory_Status = {
+    'A0': {'code': 'A0', 'system': _ambulatory_status},
+    'A1': {'code': 'A1', 'system': _ambulatory_status},
+    'A2': {'code': 'wheel', 'system': _special_arrangements},
+    'A3': {'code': 'A3', 'system': _ambulatory_status},
+    'A4': {'code': 'A4', 'system': _ambulatory_status},
+    'A5': {'code': 'A5', 'system': _ambulatory_status},
+    'A6': {'code': 'A6', 'system': _ambulatory_status},
+    'A7': {'code': 'A7', 'system': _ambulatory_status},
+    'A8': {'code': 'int', 'system': _special_arrangements},
+    'A9': {'code': 'A9', 'system': _ambulatory_status},
+    'B1': {'code': 'B1', 'system': _ambulatory_status},
+    'B2': {'code': 'B2', 'system': _ambulatory_status},
+    'B3': {'code': 'B3', 'system': _ambulatory_status},
+    'B4': {'code': 'B4', 'system': _ambulatory_status},
+    'B5': {'code': 'B5', 'system': _ambulatory_status},
+    'B6': {'code': 'B6', 'system': _ambulatory_status},
+}
+
+# Table HL70099 - VIP indicator from PV1-16 - to Encounter's special courtesy.
+VIP_Indicator = {
+    'VIP': {'code': 'VIP', 'system': _special_courtesy},
+    'STF': {'code': 'STF', 'system': _special_courtesy},
+    'PRF': {'code': 'PRF', 'system': _special_courtesy},
+    'NRM': {'code': 'NRM', 'system': _special_courtesy},
+    'EXT': {'code': 'EXT', 'system': _special_courtesy},
+    'Y': {'code': 'VIP', 'system': _special_courtesy},
+}
+
+# Table HL70092 - re-admission indicator from PV1-13.
+Readmission_Indicator = {
+    'R': {'code': 'R', 'system': _readmission_indicator},
+}
+
+# Table HL70116 - bed status from PV1-40 - to Location's operational status.
+Bed_Status = {
+    'C': {'code': 'C', 'system': _bed_status},
+    'H': {'code': 'H', 'system': _bed_status},
+    'I': {'code': 'I', 'system': _bed_status},
+    'K': {'code': 'K', 'system': _bed_status},
+    'O': {'code': 'O', 'system': _bed_status},
+    'U': {'code': 'U', 'system': _bed_status},
+}
+
 # The maps above, keyed by the names lookup resolves them under
 Standalone_Maps = {
+    'ambulatory_status': Ambulatory_Status,
+    'vip_indicator': VIP_Indicator,
+    'readmission_indicator': Readmission_Indicator,
+    'bed_status': Bed_Status,
     'referral_status': Referral_Status,
     'order_state': Order_State,
     'acknowledgment_code': Acknowledgment_Code,

@@ -13,7 +13,7 @@ from zato.hl7.mappings import vocabulary, vocabulary_supplement
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strnone
+    from zato.common.typing_ import stranydict, strlist, strnone, strset
     from zato.hl7.mappings.config import FHIRMappingConfig
     FHIRMappingConfig = FHIRMappingConfig
 
@@ -115,6 +115,47 @@ _vocabulary_maps = _build_vocabulary_maps()
 
 # ################################################################################################################################
 
+def vocabulary_map_names() -> 'strlist':
+    """ Returns the names of all the vocabulary maps a config file may override, sorted.
+    """
+    out = sorted(_vocabulary_maps)
+    return out
+
+# ################################################################################################################################
+
+def vocabulary_map_systems(map_name:'str') -> 'strlist':
+    """ Returns the distinct code systems the entries of one vocabulary map point to, sorted.
+    """
+    vocabulary_map = _vocabulary_maps[map_name]
+
+    # The systems our response is sorted from
+    systems:'strset' = set()
+
+    for entry in vocabulary_map.values():
+        systems.add(entry['system'])
+
+    out = sorted(systems)
+    return out
+
+# ################################################################################################################################
+
+def vocabulary_map_targets(map_name:'str', system:'str') -> 'strlist':
+    """ Returns the codes one vocabulary map produces under a given system, sorted.
+    """
+    vocabulary_map = _vocabulary_maps[map_name]
+
+    # The codes our response is sorted from
+    targets:'strset' = set()
+
+    for entry in vocabulary_map.values():
+        if entry['system'] == system:
+            targets.add(entry['code'])
+
+    out = sorted(targets)
+    return out
+
+# ################################################################################################################################
+
 def lookup(map_name:'str', code:'strnone', config:'FHIRMappingConfig') -> 'stranydict | None':
     """ Looks a code up in a vocabulary map, letting per-config overrides win over the generated data.
     Returns a dict with 'code' and 'system' keys or None when the code is not mapped anywhere.
@@ -122,25 +163,16 @@ def lookup(map_name:'str', code:'strnone', config:'FHIRMappingConfig') -> 'stran
     if not code:
         return None
 
-    vocabulary_map = _vocabulary_maps[map_name]
-
     # Config overrides take precedence over the generated map ..
     if overrides := config.code_mappings.get(map_name):
-        if override_code := overrides.get(code):
+        if override := overrides.get(code):
 
-            # .. an override carries only the target code, so the system comes from the map itself -
-            # .. from the entry the code replaces or, for new codes, from the map's first entry.
-            if replaced_entry := vocabulary_map.get(code):
-                system = replaced_entry['system']
-            else:
-                entry_iterator = iter(vocabulary_map.values())
-                first_entry = next(entry_iterator)
-                system = first_entry['system']
-
-            out = {'code': override_code, 'system': system}
+            out = override
             return out
 
     # .. otherwise the generated map decides.
+    vocabulary_map = _vocabulary_maps[map_name]
+
     if entry := vocabulary_map.get(code):
 
         out = entry

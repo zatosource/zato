@@ -10,14 +10,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from base64 import b64encode
 
 # Zato
-from zato.fhir import Device, Observation, Specimen
+from zato.common.typing_ import cast_
+from zato.fhir import Device, Observation
 from zato.hl7.mappings.codes import lookup
-from zato.hl7.mappings.concepts import cwe_to_codeable_concept, sn_to_observation_value
-from zato.hl7.mappings.datatypes import dtm_to_datetime, ei_to_identifier
+from zato.hl7.mappings.concepts import cwe_to_codeable_concept, parse_number, quantity, sn_to_observation_value
+from zato.hl7.mappings.datatypes import ei_to_identifier
+from zato.hl7.mappings.datetimes import tm_to_time
 from zato.hl7.mappings.fields import component_value, serialize_field, serialize_repetition, subcomponent_value
 from zato.hl7.mappings.segments.common import Coded_Value_Types, Datetime_Value_Types, Default_Observation_Status, \
     Encapsulated_Value_Type, Escape_Char, Reference_Pointer_Value_Type, Repetition_Char, Text_Value_Types, \
-    Unknown_Code, add_named_organization, add_practitioner, append_to_list_field, preserve_unmapped, preserve_value
+    absent_value, add_named_organization, add_practitioner, append_to_list_field, patient_or_absent_reference, \
+    preserve_inexact_number, preserve_unmapped, preserve_value
 from zato.hl7v2_rs import decode_escapes
 
 # ################################################################################################################################
@@ -38,10 +41,9 @@ if 0:
 dictnone = 'stranydict | None'
 
 # Which field positions each mapper consumes - anything else that carries data is preserved as an extension.
-_OBX_Handled = frozenset({1, 2, 3, 5, 6, 7, 8, 11, 14, 15, 16, 17, 18})
-_OBX_Attachment_Handled = frozenset({1, 2, 3, 5, 11})
-_SPM_Handled = frozenset({1, 2, 4, 7, 8, 14, 17, 18})
-_SAC_Handled = frozenset({3})
+_OBX_Handled            = frozenset({1, 2, 3, 5, 6, 7, 8, 11, 14, 15, 16, 17, 18})
+_OBX_Attachment_Handled = frozenset({1, 2, 3, 5, 11, 14, 15, 16})
+_OBX_Text_Handled       = frozenset({1, 2, 3, 5, 11, 15, 16})
 
 # What the ED type-of-data codes stand for in a MIME content type - both the HL7 table codes
 # and the spelled-out media type words that can arrive in ED-2 directly.
@@ -66,6 +68,9 @@ _Default_Content_Type = 'application/octet-stream'
 # The ED encoding whose data is already transported as base64
 _Base64_Encoding = 'BASE64'
 
+# The OBX value types whose FHIR value has room for one repetition only
+_Single_Repetition_Value_Types = ('NM', 'SN', 'TM', 'DT', 'DTM', 'TS', 'ED')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -77,8 +82,8 @@ def map_obx(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Observa
     # Our response to produce
     out = Observation()
 
-    if context.patient_reference:
-        out.subject = context.patient_reference
+    # A missing patient is stated explicitly.
+    out.subject = patient_or_absent_reference(context)
 
     if context.encounter_reference:
         out.encounter = context.encounter_reference
@@ -89,7 +94,7 @@ def map_obx(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Observa
     if code := cwe_to_codeable_concept(code_repetition, config):
         out.code = code
     else:
-        out.code = Unknown_Code
+        out.code = absent_value()
 
     # .. the result status is required, unknown codes map to the default and are preserved as-is ..
     status_code = accessor.value(11)
@@ -133,10 +138,10 @@ def map_obx(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Observa
     if interpretations:
         out.interpretation = interpretations
 
-    # The observation time maps to the effective time. Other values can arrive
-    # in this slot with shifted vendor feeds - those are preserved as-is.
+    # The observation time maps to the effective time,
+    # a value that is not a date/time is preserved as-is.
     effective_value = accessor.value(14)
-    effective_time = dtm_to_datetime(effective_value, config)
+    effective_time = context.datetime(effective_value, 'OBX', 14)
 
     if effective_time:
         out.effectiveDateTime = effective_time
@@ -144,21 +149,7 @@ def map_obx(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Observa
         preserve_value(out, context, 'OBX', 14, effective_value)
 
     # The producer and the responsible observer become performers.
-    performers:'anylist' = []
-
-    producer_repetition = accessor.first(15)
-    producer_name = component_value(producer_repetition, 2)
-
-    if not producer_name:
-        producer_name = component_value(producer_repetition, 1)
-
-    if producer_name:
-        producer_reference = add_named_organization(producer_name, context)
-        performers.append(producer_reference)
-
-    for repetition in accessor.repetitions(16):
-        if reference := add_practitioner(repetition, context):
-            performers.append(reference)
+    performers = _obx_performers(accessor, context)
 
     if performers:
         out.performer = performers
@@ -184,27 +175,57 @@ def map_obx(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Observa
 
 # ################################################################################################################################
 
-def _quantity_from_units(value:'str', units:'dictnone') -> 'stranydict':
-    """ Builds a FHIR Quantity from a numeric string and an optional units concept.
+def _obx_performers(accessor:'SegmentAccessor', context:'ConversionContext') -> 'anylist':
+    """ Builds the references an OBX's producer - an Organization - and its responsible observers -
+    Practitioners - stand for, in that order.
     """
 
-    value_number = float(value)
-
     # Our response to produce
-    out:'stranydict' = {'value': value_number}
+    # Our response to produce
+    out:'anylist' = []
 
-    if units:
-        if coding_list := units.get('coding'):
-            first_coding = coding_list[0]
-            out['code'] = first_coding['code']
+    # The producing organization comes from OBX-15, named by its universal ID or its namespace ..
+    producer_repetition = accessor.first(15)
+    producer_name = component_value(producer_repetition, 2)
 
-            if coding_system := first_coding.get('system'):
-                out['system'] = coding_system
+    if not producer_name:
+        producer_name = component_value(producer_repetition, 1)
 
-        if unit_text := units.get('text'):
-            out['unit'] = unit_text
+    if producer_name:
+        producer_reference = add_named_organization(producer_name, context)
+        out.append(producer_reference)
+
+    # .. and each responsible observer in OBX-16 becomes a Practitioner of its own.
+    for repetition in accessor.repetitions(16):
+        if reference := add_practitioner(repetition, context):
+            out.append(reference)
 
     return out
+
+# ################################################################################################################################
+
+def _attach_obx_performers(
+    accessor:'SegmentAccessor',
+    context:'ConversionContext',
+    target:'any_',
+    field_name:'str',
+    ) -> 'None':
+    """ Adds an OBX's producer and responsible observers to a list field of the resource
+    that carries the OBX's content - each person or organization once.
+    """
+    current = target.to_dict()
+
+    existing:'anylist' = []
+
+    if already_referenced := current.get(field_name):
+        existing = cast_('anylist', already_referenced)
+
+    performers = _obx_performers(accessor, context)
+
+    for reference in performers:
+        if reference not in existing:
+            append_to_list_field(target, field_name, reference)
+            existing.append(reference)
 
 # ################################################################################################################################
 
@@ -253,9 +274,15 @@ def ed_to_attachment(repetition:'anylist') -> 'stranydict':
 
 # ################################################################################################################################
 
-def obx_attachment(accessor:'SegmentAccessor', context:'ConversionContext', target:'any_') -> 'stranydict':
-    """ Converts a whole ED-carrying OBX to an Attachment, titling it with the observation code
-    and preserving whatever else the segment carries on the target resource.
+def obx_attachment(
+    accessor:'SegmentAccessor',
+    context:'ConversionContext',
+    target:'any_',
+    performer_field:'str',
+    ) -> 'stranydict':
+    """ Converts a whole ED-carrying OBX to an Attachment, titling it with the observation code.
+    The people behind the OBX join the target's performer field - author on a DocumentReference,
+    performer on a DiagnosticReport - and whatever else the segment carries is preserved on the target.
     """
 
     value_repetition = accessor.first(5)
@@ -263,13 +290,26 @@ def obx_attachment(accessor:'SegmentAccessor', context:'ConversionContext', targ
     # Our response to produce
     out = ed_to_attachment(value_repetition)
 
-    # The observation identifier titles the attachment.
+    # The observation identifier titles the attachment ..
     title = accessor.component(3, 2)
     if not title:
         title = accessor.component(3, 1)
 
     if title:
         out['title'] = title
+
+    # .. the observation time is when the attachment was created,
+    # .. a value that is not a date/time is preserved as-is ..
+    creation_value = accessor.value(14)
+    creation = context.datetime(creation_value, 'OBX', 14)
+
+    if creation:
+        out['creation'] = creation
+    elif creation_value:
+        preserve_value(target, context, 'OBX', 14, creation_value)
+
+    # .. and the producer and the responsible observer stand behind the target.
+    _attach_obx_performers(accessor, context, target, performer_field)
 
     preserve_unmapped(accessor, _OBX_Attachment_Handled, target, context)
 
@@ -289,17 +329,32 @@ def _set_observation_value(
     """
     config = context.config
 
-    # Most value types carry one repetition, coded ones may carry several.
+    # Coded and text values use every repetition, the other types can use one only -
+    # the repetitions such a type has no place for are recorded as lost.
     repetition = repetitions[0]
 
+    if value_type in _Single_Repetition_Value_Types:
+        repetition_count = len(repetitions)
+        has_extra_repetitions = repetition_count > 1
+
+        if has_extra_repetitions:
+            extra_repetitions = repetitions[1:]
+            serialized_extra = serialize_field(extra_repetitions)
+            text = f'`{value_type}` values carry one repetition, dropped `{serialized_extra}`'
+            context.warn('OBX', 5, text)
+
     # A numeric value becomes a Quantity with the units from OBX-6,
-    # values that fail to parse as numbers stay strings ..
+    # values that are not numbers stay strings, and a number the float
+    # cannot carry exactly keeps its digits as an extension ..
     if value_type == 'NM':
         value = component_value(repetition, 1)
         if value:
-            try:
-                observation.valueQuantity = _quantity_from_units(value, units)
-            except ValueError:
+            if number := parse_number(value):
+                observation.valueQuantity = quantity(number.value, units)
+
+                if not number.is_exact:
+                    preserve_inexact_number(observation, context, 'OBX', 5, value)
+            else:
                 observation.valueString = value
         return
 
@@ -339,32 +394,34 @@ def _set_observation_value(
             observation.valueCodeableConcept = concept
         return
 
-    # .. structured numerics go through their six-way branch ..
+    # .. structured numerics go through their six-way branch, keeping their
+    # .. digits as an extension when a float cannot carry them exactly ..
     if value_type == 'SN':
         if routed := sn_to_observation_value(repetition, config, units):
-            field_name, field_value = routed
-            setattr(observation, field_name, field_value)
+            setattr(observation, routed.field_name, routed.content)
+
+            if not routed.is_exact:
+                serialized_value = serialize_repetition(repetition)
+                preserve_inexact_number(observation, context, 'OBX', 5, serialized_value)
         return
 
     # .. dates and times keep their precision ..
     if value_type in Datetime_Value_Types:
         value = component_value(repetition, 1)
-        if datetime_value := dtm_to_datetime(value, config):
+        if datetime_value := context.datetime(value, 'OBX', 5):
             observation.valueDateTime = datetime_value
         return
 
     if value_type == 'TM':
         value = component_value(repetition, 1)
         if value:
-            time_length = len(value)
-            hour = value[:2]
-            minute = value[2:4]
-            second = value[4:6]
+            if time_value := tm_to_time(value):
+                observation.valueTime = time_value
 
-            if time_length >= 6:
-                observation.valueTime = f'{hour}:{minute}:{second}'
-            elif time_length == 4:
-                observation.valueTime = f'{hour}:{minute}:00'
+            # Anything shorter than hours and minutes is not a time FHIR can carry.
+            else:
+                text = f'`{value}` is not a valid time'
+                context.warn('OBX', 5, text)
         return
 
     # .. encapsulated data becomes an attachment extension, R4 observations
@@ -399,88 +456,10 @@ def _set_observation_value(
 
 # ################################################################################################################################
 
-def map_spm(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Specimen':
-    """ Converts SPM to a Specimen.
-    """
-    config = context.config
-
-    # Our response to produce
-    out = Specimen()
-
-    if context.patient_reference:
-        out.subject = context.patient_reference
-
-    # The specimen ID's placer part becomes the identifier ..
-    specimen_id_repetition = accessor.first(2)
-    specimen_id = subcomponent_value(specimen_id_repetition, 1, 1)
-
-    if specimen_id:
-        out.identifier = [{'value': specimen_id}]
-
-    # .. the specimen type keeps its coding ..
-    type_repetition = accessor.first(4)
-
-    if specimen_type := cwe_to_codeable_concept(type_repetition, config):
-        out.type_ = specimen_type
-
-    # .. the collection method, body site and time make the collection ..
-    collection:'stranydict' = {}
-
-    method_repetition = accessor.first(7)
-
-    if method := cwe_to_codeable_concept(method_repetition, config):
-        collection['method'] = method
-
-    site_repetition = accessor.first(8)
-
-    if site := cwe_to_codeable_concept(site_repetition, config):
-        collection['bodySite'] = site
-
-    collected_value = accessor.value(17)
-    collected = dtm_to_datetime(collected_value, config)
-
-    if collected:
-        collection['collectedDateTime'] = collected
-
-    if collection:
-        out.collection = collection
-
-    # .. the description becomes a note ..
-    description = accessor.value(14)
-    if description:
-        out.note = [{'text': description}]
-
-    # .. and the received time completes the picture.
-    received_value = accessor.value(18)
-    received = dtm_to_datetime(received_value, config)
-
-    if received:
-        out.receivedTime = received
-
-    preserve_unmapped(accessor, _SPM_Handled, out, context)
-
-    return out
-
-# ################################################################################################################################
-
-def apply_sac(accessor:'SegmentAccessor', context:'ConversionContext', specimen:'Specimen') -> 'None':
-    """ Adds the container from SAC to an existing Specimen.
-    """
-    config = context.config
-
-    container_repetition = accessor.first(3)
-
-    if container_id := ei_to_identifier(container_repetition, config):
-        container = {'identifier': [container_id]}
-        append_to_list_field(specimen, 'container', container)
-
-    preserve_unmapped(accessor, _SAC_Handled, specimen, context)
-
-# ################################################################################################################################
-
 def gather_obx_text(accessor:'SegmentAccessor', context:'ConversionContext', document:'any_') -> 'strnone':
     """ Collects the text lines of one document-carrying OBX, joining all the repetitions of its value.
-    Whatever else the segment carries is preserved on the document.
+    The people behind the OBX become the document's authors and whatever else the segment carries
+    is preserved on the document.
     """
     parts:'strlist' = []
 
@@ -493,7 +472,9 @@ def gather_obx_text(accessor:'SegmentAccessor', context:'ConversionContext', doc
             line = decode_escapes(line, Escape_Char)
             parts.append(line)
 
-    preserve_unmapped(accessor, _OBX_Attachment_Handled, document, context)
+    _attach_obx_performers(accessor, context, document, 'author')
+
+    preserve_unmapped(accessor, _OBX_Text_Handled, document, context)
 
     if parts:
 

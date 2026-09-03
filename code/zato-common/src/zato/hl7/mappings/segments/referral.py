@@ -10,8 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.fhir import Practitioner, ServiceRequest
 from zato.hl7.mappings.codes import lookup
 from zato.hl7.mappings.concepts import cwe_to_codeable_concept
-from zato.hl7.mappings.datatypes import dtm_to_datetime, ei_to_identifier, xad_to_address, xpn_to_human_name, \
-    xtn_to_contact_points
+from zato.hl7.mappings.datatypes import ei_to_identifier, xad_to_address, xpn_to_human_name, xtn_to_contact_points
 from zato.hl7.mappings.fields import component_value
 from zato.hl7.mappings.segments.common import Default_Order_Status, absent_subject_reference, append_to_list_field, \
     preserve_unmapped, preserve_value
@@ -102,20 +101,22 @@ def map_rf1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Service
 
     # .. the effective and expiration dates make the occurrence time or period ..
     effective_value = accessor.value(7)
-    effective_time = dtm_to_datetime(effective_value, config)
+    effective_time = context.datetime(effective_value, 'RF1', 7)
 
     expiration_value = accessor.value(8)
-    expiration_time = dtm_to_datetime(expiration_value, config)
+    expiration_time = context.datetime(expiration_value, 'RF1', 8)
 
     if effective_time:
         if expiration_time:
             out.occurrencePeriod = {'start': effective_time, 'end': expiration_time}
         else:
             out.occurrenceDateTime = effective_time
+    elif expiration_time:
+        out.occurrencePeriod = {'end': expiration_time}
 
     # .. the process date is when the referral was authored ..
     authored_value = accessor.value(9)
-    authored = dtm_to_datetime(authored_value, config)
+    authored = context.datetime(authored_value, 'RF1', 9)
 
     if authored:
         out.authoredOn = authored

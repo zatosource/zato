@@ -196,9 +196,9 @@ class FabricTestRunJob(Service):
         job_type = self.request.raw_request['job_type']
 
         conn = self.microsoft.fabric[conn_name]
-        result = conn.run_job(workspace_id, item_id, job_type)
+        job_id = conn.run_job(workspace_id, item_id, job_type)
 
-        self.response.payload = json.dumps(result)
+        self.response.payload = json.dumps({'job_id': job_id})
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -430,6 +430,89 @@ class FabricTestPing(Service):
         conn.ping()
 
         self.response.payload = json.dumps({'ok': True})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FabricTestListTables(Service):
+    """ Lists the tables of a lakehouse.
+    """
+    name = 'test.fabric.list-tables'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        workspace_id = self.request.raw_request['workspace_id']
+        lakehouse_id = self.request.raw_request['lakehouse_id']
+
+        conn = self.microsoft.fabric[conn_name]
+        result = conn.list_tables(workspace_id, lakehouse_id)
+
+        self.response.payload = json.dumps({'tables': result})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FabricTestLoadTable(Service):
+    """ Loads a OneLake file into a lakehouse table and waits until the load completes.
+    """
+    name = 'test.fabric.load-table'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        workspace_id = self.request.raw_request['workspace_id']
+        lakehouse_id = self.request.raw_request['lakehouse_id']
+        table_name = self.request.raw_request['table_name']
+        relative_path = self.request.raw_request['relative_path']
+
+        conn = self.microsoft.fabric[conn_name]
+
+        location = conn.load_table(workspace_id, lakehouse_id, table_name, relative_path)
+        operation = conn.wait_for_operation(location)
+
+        self.response.payload = json.dumps(operation)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FabricTestWriteTable(Service):
+    """ Writes a list of rows to a lakehouse table.
+    """
+    name = 'test.fabric.write-table'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        workspace_id = self.request.raw_request['workspace_id']
+        lakehouse_id = self.request.raw_request['lakehouse_id']
+        table_name = self.request.raw_request['table_name']
+        rows = self.request.raw_request['rows']
+
+        conn = self.microsoft.fabric[conn_name]
+        operation = conn.write_table(workspace_id, lakehouse_id, table_name, rows)
+
+        self.response.payload = json.dumps(operation)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FabricTestQuery(Service):
+    """ Runs an SQL query against a lakehouse.
+    """
+    name = 'test.fabric.query'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        workspace_id = self.request.raw_request['workspace_id']
+        lakehouse_id = self.request.raw_request['lakehouse_id']
+        sql = self.request.raw_request['sql']
+
+        conn = self.microsoft.fabric[conn_name]
+        rows = conn.query(workspace_id, lakehouse_id, sql)
+
+        self.response.payload = json.dumps({'rows': rows})
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from http.client import ACCEPTED, CREATED, NO_CONTENT, OK, UNAUTHORIZED
 from logging import getLogger
-from time import monotonic, time
+from time import monotonic, sleep, time
 
 # Requests
 import requests
@@ -26,7 +26,7 @@ from zato.common.typing_ import cast_, tuple_
 
 if 0:
     from requests import Response
-    from zato.common.typing_ import anydict, anydictnone, bytesnone, stranydict, strnone
+    from zato.common.typing_ import anydict, anydictnone, bytesnone, stranydict, strnone, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,6 +43,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 _default = MicrosoftFabric.Default
+_operation_status = MicrosoftFabric.Operation_Status
 
 # How many seconds before a token's expiration time we already treat it as expired,
 # which makes sure we never send a token that expires mid-flight.
@@ -60,8 +61,8 @@ _success_codes = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MicrosoftFabricClient:
-    """ Client for Microsoft Fabric APIs, using the OAuth2 client credentials grant.
+class MicrosoftFabricBase:
+    """ The Fabric client's plumbing - tokens, HTTP requests, long-running operations and the OneLake data plane.
     """
     def __init__(self, config:'stranydict') -> 'None':
 
@@ -70,14 +71,21 @@ class MicrosoftFabricClient:
         self.tenant_id = config['tenant_id']
         self.client_id = config['client_id']
 
-        # The secret lives in the secret column, except for connections created
-        # before it moved there, which keep it in the opaque attributes.
+        # The secret column may hold the real secret or an auto-generated placeholder ..
         client_secret = config.get('secret')
-        if (not client_secret) or client_secret.startswith(SECRETS.Auto_Generated_Prefix):
+
+        # .. a placeholder is not a credential, so it counts as no secret at all ..
+        if client_secret:
+            if client_secret.startswith(SECRETS.Auto_Generated_Prefix):
+                client_secret = ''
+
+        # .. and when there is no secret in the column, it lives in the opaque attributes.
+        if not client_secret:
             client_secret = config['client_secret']
+
         self.client_secret = client_secret
 
-        # The base address of the Fabric API - fall back to the public cloud if none was given on input.
+        # The base address of the Fabric API - the public cloud address is the default.
         if address := config.get('address'):
             self.address = address.rstrip('/')
         else:
@@ -112,6 +120,9 @@ class MicrosoftFabricClient:
 
         # When the current OneLake token expires, as seconds since the Unix epoch.
         self.onelake_token_expires_at = 0.0
+
+        # One shared Spark session per lakehouse, keyed by workspace ID and lakehouse ID.
+        self._spark_sessions:'strstrdict' = {}
 
         # The audit log every call is recorded in - the wrapper attaches it after construction
         self.zato_audit_log = None
@@ -230,12 +241,15 @@ class MicrosoftFabricClient:
 
 # ################################################################################################################################
 
-    def invoke(self, method:'str', path:'str', params:'anydictnone'=None, data:'anydictnone'=None) -> 'anydictnone':
-        """ Invokes any Fabric endpoint, returning the parsed JSON response, if there was any.
+    def invoke_raw(self, method:'str', path:'str', params:'anydictnone'=None, data:'anydictnone'=None) -> 'Response':
+        """ Invokes any Fabric endpoint and returns the whole response, headers included.
         """
 
-        # The full address of the endpoint - built first so a failure can be recorded against it
-        url = f'{self.address}{path}'
+        # The path may already be a full URL, e.g. a Location header or a continuation URI.
+        if path.startswith(('https://', 'http://')):
+            url = path
+        else:
+            url = f'{self.address}{path}'
 
         start = monotonic()
 
@@ -267,7 +281,17 @@ class MicrosoftFabricClient:
 
         self._record_call(url, start)
 
-        # .. and hand back the parsed response, if the endpoint returned one.
+        out = response
+        return out
+
+# ################################################################################################################################
+
+    def invoke(self, method:'str', path:'str', params:'anydictnone'=None, data:'anydictnone'=None) -> 'anydictnone':
+        """ Invokes any Fabric endpoint, returning the parsed JSON response, if there was any.
+        """
+        response = self.invoke_raw(method, path, params=params, data=data)
+
+        # Hand back the parsed response, if the endpoint returned one.
         if response.content:
             out = response.json()
             return out
@@ -306,164 +330,48 @@ class MicrosoftFabricClient:
 
 # ################################################################################################################################
 
-    def list_workspaces(self) -> 'anydict':
-        """ Returns all the workspaces the connection's principal has access to.
+    def get_operation(self, location:'str') -> 'anydict':
+        """ Returns the current state of a long-running operation, given the address of its status endpoint.
         """
-        response = self.get('/workspaces')
+        response = self.get(location)
 
         out = cast_('anydict', response)
         return out
 
 # ################################################################################################################################
 
-    def get_workspace(self, workspace_id:'str') -> 'anydict':
-        """ Returns details of a single workspace.
+    def wait_for_operation(
+        self,
+        location:'str',
+        timeout:'int'=_default.Operation_Timeout,
+        interval:'float'=_default.Operation_Poll_Interval,
+        ) -> 'anydict':
+        """ Waits until a long-running operation completes and returns its final state.
         """
-        response = self.get(f'/workspaces/{workspace_id}')
+        deadline = monotonic() + timeout
 
-        out = cast_('anydict', response)
-        return out
+        while True:
 
-# ################################################################################################################################
+            # Check where the operation stands now ..
+            operation = self.get_operation(location)
+            status = operation['status']
 
-    def create_workspace(self, name:'str', description:'str'='') -> 'anydict':
-        """ Creates a new workspace.
-        """
-        request_data = {'displayName': name}
-        if description:
-            request_data['description'] = description
+            # .. a completed operation goes back to the caller ..
+            if status == _operation_status.Succeeded:
+                out = operation
+                return out
 
-        response = self.post('/workspaces', data=request_data)
+            # .. a failed one ends with an exception ..
+            if status == _operation_status.Failed:
+                raise Exception(f'Fabric operation failed ({self.name}) -> {operation}')
 
-        out = cast_('anydict', response)
-        return out
+            # .. give up if the operation did not complete in time ..
+            now = monotonic()
+            if now >= deadline:
+                raise Exception(f'Fabric operation timed out after {timeout}s ({self.name}) -> {location}')
 
-# ################################################################################################################################
-
-    def delete_workspace(self, workspace_id:'str') -> 'None':
-        """ Deletes a workspace.
-        """
-        _ = self.delete(f'/workspaces/{workspace_id}')
-
-# ################################################################################################################################
-
-    def list_items(self, workspace_id:'str', item_type:'str'='') -> 'anydict':
-        """ Returns items in a workspace, optionally filtered by their type, e.g. Lakehouse or Notebook.
-        """
-        if item_type:
-            params = {'type': item_type}
-        else:
-            params = None
-
-        response = self.get(f'/workspaces/{workspace_id}/items', params=params)
-
-        out = cast_('anydict', response)
-        return out
-
-# ################################################################################################################################
-
-    def get_item(self, workspace_id:'str', item_id:'str') -> 'anydict':
-        """ Returns details of a single item in a workspace.
-        """
-        response = self.get(f'/workspaces/{workspace_id}/items/{item_id}')
-
-        out = cast_('anydict', response)
-        return out
-
-# ################################################################################################################################
-
-    def create_item(self, workspace_id:'str', name:'str', item_type:'str', description:'str'='') -> 'anydict':
-        """ Creates a new item in a workspace, e.g. a lakehouse or a notebook.
-        """
-        request_data = {'displayName': name, 'type': item_type}
-        if description:
-            request_data['description'] = description
-
-        response = self.post(f'/workspaces/{workspace_id}/items', data=request_data)
-
-        out = cast_('anydict', response)
-        return out
-
-# ################################################################################################################################
-
-    def update_item(self, workspace_id:'str', item_id:'str', data:'anydict') -> 'anydict':
-        """ Updates an item in a workspace, e.g. its display name or description.
-        """
-        response = self.patch(f'/workspaces/{workspace_id}/items/{item_id}', data=data)
-
-        out = cast_('anydict', response)
-        return out
-
-# ################################################################################################################################
-
-    def delete_item(self, workspace_id:'str', item_id:'str') -> 'None':
-        """ Deletes an item from a workspace.
-        """
-        _ = self.delete(f'/workspaces/{workspace_id}/items/{item_id}')
-
-# ################################################################################################################################
-
-    def run_job(self, workspace_id:'str', item_id:'str', job_type:'str', payload:'anydictnone'=None) -> 'anydictnone':
-        """ Runs an item's job on demand, e.g. executes a notebook or a data pipeline.
-        """
-        params = {'jobType': job_type}
-        out = self.post(f'/workspaces/{workspace_id}/items/{item_id}/jobs/instances', data=payload, params=params)
-
-        return out
-
-# ################################################################################################################################
-
-    def get_job(self, workspace_id:'str', item_id:'str', job_id:'str') -> 'anydict':
-        """ Returns details of a single job instance of an item.
-        """
-        response = self.get(f'/workspaces/{workspace_id}/items/{item_id}/jobs/instances/{job_id}')
-
-        out = cast_('anydict', response)
-        return out
-
-# ################################################################################################################################
-
-    def cancel_job(self, workspace_id:'str', item_id:'str', job_id:'str') -> 'None':
-        """ Cancels a job instance of an item.
-        """
-        _ = self.post(f'/workspaces/{workspace_id}/items/{item_id}/jobs/instances/{job_id}/cancel')
-
-# ################################################################################################################################
-
-    def list_shortcuts(self, workspace_id:'str', item_id:'str') -> 'anydict':
-        """ Returns OneLake shortcuts defined in an item.
-        """
-        response = self.get(f'/workspaces/{workspace_id}/items/{item_id}/shortcuts')
-
-        out = cast_('anydict', response)
-        return out
-
-# ################################################################################################################################
-
-    def create_shortcut(self, workspace_id:'str', item_id:'str', data:'anydict') -> 'anydict':
-        """ Creates a OneLake shortcut in an item.
-        """
-        response = self.post(f'/workspaces/{workspace_id}/items/{item_id}/shortcuts', data=data)
-
-        out = cast_('anydict', response)
-        return out
-
-# ################################################################################################################################
-
-    def delete_shortcut(self, workspace_id:'str', item_id:'str', shortcut_path:'str', shortcut_name:'str') -> 'None':
-        """ Deletes a OneLake shortcut from an item.
-        """
-        _ = self.delete(f'/workspaces/{workspace_id}/items/{item_id}/shortcuts/{shortcut_path}/{shortcut_name}')
-
-# ################################################################################################################################
-
-    def list_capacities(self) -> 'anydict':
-        """ Returns all the capacities the connection's principal has access to.
-        """
-        response = self.get('/capacities')
-
-        out = cast_('anydict', response)
-        return out
+            # .. otherwise, wait before the next check.
+            sleep(interval)
 
 # ################################################################################################################################
 
@@ -561,27 +469,6 @@ class MicrosoftFabricClient:
         """ Deletes a file from a workspace's OneLake filesystem.
         """
         _ = self._invoke_onelake('DELETE', f'/{workspace_id}/{file_path}')
-
-# ################################################################################################################################
-
-    def zato_delete_impl(self, reason:'str'='') -> 'None':
-        """ Closes the underlying HTTP session when the connection is deleted. Having this method here
-        also makes sure the queue's teardown never conflicts with the public .delete method above.
-        """
-        self.session.close()
-
-# ################################################################################################################################
-
-    def ping(self) -> 'None':
-        """ Confirms that the connection's credentials are valid by listing its workspaces.
-        """
-        response = self.list_workspaces()
-        workspaces = response['value']
-
-        workspace_count = len(workspaces)
-        suffix = 'workspace' if workspace_count == 1 else 'workspaces'
-
-        logger.info('Microsoft Fabric ping OK (%s) -> %d %s', self.name, workspace_count, suffix)
 
 # ################################################################################################################################
 # ################################################################################################################################

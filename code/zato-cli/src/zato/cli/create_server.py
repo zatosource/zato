@@ -199,7 +199,7 @@ hl7_fhir_demo_contents = """
 # Settings for msg.to_fhir(config='hl7-fhir-demo') - each section and key is optional
 # and msg.to_fhir() with no config at all uses the defaults described below.
 
-# What kind of bundle to produce - transaction, batch or collection.
+# What kind of bundle to produce - transaction, batch, collection or message.
 # The default is transaction.
 [bundle]
 type=transaction
@@ -219,7 +219,7 @@ authority=MYHOSP
 system=http://example.org/mrn
 
 [[visit_number]]
-authority=MYHOSP
+authority=MYVISITS
 system=http://example.org/visit
 
 # Overrides or additions to the standard code mappings, one subsection per map.

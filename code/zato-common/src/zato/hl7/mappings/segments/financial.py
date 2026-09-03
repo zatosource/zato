@@ -7,22 +7,22 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.fhir import ChargeItem, Coverage, Organization
+from zato.fhir import ChargeItem, Coverage, Organization, RelatedPerson
 from zato.hl7.mappings.codes import lookup
 from zato.hl7.mappings.config import Insurer_Authority_Systems
-from zato.hl7.mappings.concepts import cwe_to_codeable_concept, tag_coding_systems
-from zato.hl7.mappings.datatypes import cx_to_identifier, dtm_to_date, dtm_to_datetime, ei_to_identifier, \
-    xad_to_address, xtn_to_contact_points
+from zato.hl7.mappings.concepts import cwe_to_codeable_concept, parse_number, tag_coding_systems
+from zato.hl7.mappings.datatypes import cx_to_identifier, ei_to_identifier, xad_to_address, xpn_to_human_name, \
+    xtn_to_contact_points
 from zato.hl7.mappings.fields import subcomponent_value
 from zato.hl7.mappings.segments.common import Coverage_Class_System, Coverage_Status, Default_Charge_Status, \
-    No_Consumed_Fields, Self_Relationship_Codes, Unknown_Code, Unknown_Payor_Name, add_practitioner, \
-    preserve_unmapped, preserve_value
+    No_Consumed_Fields, Self_Relationship_Codes, absent_value, add_financial_class_extension, add_practitioner, \
+    patient_or_absent_reference, preserve_inexact_number, preserve_unmapped, preserve_value
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist, stranydict
+    from zato.common.typing_ import anylist, stranydict, strnone
     from zato.hl7.mappings.context import ConversionContext
     from zato.hl7.mappings.fields import SegmentAccessor
     ConversionContext = ConversionContext
@@ -32,10 +32,73 @@ if 0:
 # ################################################################################################################################
 
 # Which field positions each mapper consumes - anything else that carries data is preserved as an extension.
-_IN1_Handled = frozenset({1, 2, 3, 4, 5, 7, 8, 9, 12, 13, 15, 16, 17, 36})
+_IN1_Handled = frozenset({1, 2, 3, 4, 5, 7, 8, 9, 12, 13, 15, 16, 17, 18, 19, 36, 43})
 _FT1_Handled = frozenset({1, 2, 3, 4, 6, 7, 10, 20})
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _map_insured(
+    accessor:'SegmentAccessor',
+    context:'ConversionContext',
+    relationship_code:'strnone',
+    ) -> 'RelatedPerson | None':
+    """ Builds the RelatedPerson the insured is from the name, date of birth, address and sex in IN1 -
+    None when IN1 names no one, an insured's sex that is not a known code is preserved on the person.
+    """
+    # Our response to produce
+    out = RelatedPerson()
+
+    config = context.config
+
+    names:'anylist' = []
+
+    for repetition in accessor.repetitions(16):
+        if name := xpn_to_human_name(repetition, config):
+            names.append(name)
+
+    # An IN1 with no name in it names no insured.
+    if not names:
+        return None
+
+    out.patient = patient_or_absent_reference(context)
+    out.name = names
+
+    # The insured's relationship to the patient is the person's relationship, when it is a known code ..
+    if relationship_code:
+        if relationship := lookup('personal_relationship', relationship_code, config):
+            coding = {'system': relationship['system'], 'code': relationship['code']}
+            out.relationship = [{'coding': [coding]}]
+
+    # .. the date of birth carries over when it reads as a date, otherwise it is preserved as-is ..
+    birth_date = accessor.value(18)
+    birth = context.date(birth_date, 'IN1', 18)
+
+    if birth:
+        out.birthDate = birth
+    elif birth_date:
+        preserve_value(out, context, 'IN1', 18, birth_date)
+
+    addresses:'anylist' = []
+
+    for repetition in accessor.repetitions(19):
+        if address := xad_to_address(repetition, config):
+            addresses.append(address)
+
+    if addresses:
+        out.address = addresses
+
+    # .. and the administrative sex maps to the gender code, unknown codes are preserved as-is.
+    sex_code = accessor.value(43)
+
+    if sex_code:
+        if gender := lookup('administrative_sex', sex_code, config):
+            out.gender = gender['code']
+        else:
+            preserve_value(out, context, 'IN1', 43, sex_code)
+
+    return out
+
 # ################################################################################################################################
 
 def map_in1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Coverage':
@@ -48,8 +111,8 @@ def map_in1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Coverag
 
     out.status = Coverage_Status
 
-    if context.patient_reference:
-        out.beneficiary = context.patient_reference
+    # The patient the coverage benefits, or the statement that none is known.
+    out.beneficiary = patient_or_absent_reference(context)
 
     # The insurance company becomes the payor Organization ..
     organization = Organization()
@@ -94,18 +157,27 @@ def map_in1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Coverag
         organization.telecom = company_telecoms
         has_organization = True
 
-    # .. FHIR requires a payor even when IN1 does not identify the insurance company.
-    if not has_organization:
-        organization.name = Unknown_Payor_Name
+    # .. an IN1 that does not identify the insurance company states the payor's absence.
+    if has_organization:
+        payor_reference = context.add(organization)
+    else:
+        payor_reference = absent_value()
 
-    payor_reference = context.add(organization)
     out.payor = [payor_reference]
 
-    # The plan type maps to the coverage type ..
+    # The plan type maps to the coverage type, or the visit's financial class does when there is no plan type -
+    # .. a financial class next to a plan type becomes an extension ..
     plan_type_repetition = accessor.first(15)
+    coverage_type = cwe_to_codeable_concept(plan_type_repetition, config)
 
-    if coverage_type := cwe_to_codeable_concept(plan_type_repetition, config):
+    if coverage_type:
         out.type_ = coverage_type
+
+    if financial_class := context.financial_class:
+        if coverage_type:
+            add_financial_class_extension(out, context, financial_class)
+        else:
+            out.type_ = financial_class
 
     # .. the plan itself and the group become class entries ..
     classes:'anylist' = []
@@ -146,13 +218,13 @@ def map_in1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Coverag
     period:'stranydict' = {}
 
     effective_value = accessor.value(12)
-    effective_date = dtm_to_date(effective_value)
+    effective_date = context.date(effective_value, 'IN1', 12)
 
     if effective_date:
         period['start'] = effective_date
 
     expiration_value = accessor.value(13)
-    expiration_date = dtm_to_date(expiration_value)
+    expiration_date = context.date(expiration_value, 'IN1', 13)
 
     if expiration_date:
         period['end'] = expiration_date
@@ -175,17 +247,14 @@ def map_in1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Coverag
         if relationship_code.upper() in Self_Relationship_Codes:
             is_self = True
 
+    # .. the patient is their own subscriber - the insured's details repeat the patient's -
+    # .. and anyone else becomes a RelatedPerson ..
     if is_self:
         if context.patient_reference:
             out.subscriber = context.patient_reference
 
-    # .. the insured's name repeats the patient's when the insured is the patient,
-    # .. anyone else is preserved as-is ..
-    insured_name = accessor.component(16, 1)
-    if insured_name:
-        if not is_self:
-            serialized_name = accessor.serialize(16)
-            preserve_value(out, context, 'IN1', 16, serialized_name)
+    elif subscriber := _map_insured(accessor, context, relationship_code):
+        out.subscriber = context.add(subscriber)
 
     # .. and the policy number doubles as the identifier and the subscriber ID.
     policy_number = accessor.value(36)
@@ -214,8 +283,8 @@ def map_ft1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'ChargeI
     # Our response to produce
     out = ChargeItem()
 
-    if context.patient_reference:
-        out.subject = context.patient_reference
+    # The patient the charge concerns, or the statement that none is known.
+    out.subject = patient_or_absent_reference(context)
 
     if context.encounter_reference:
         out.context = context.encounter_reference
@@ -234,13 +303,13 @@ def map_ft1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'ChargeI
             serialized_type = accessor.serialize(6)
             preserve_value(out, context, 'FT1', 6, serialized_type)
 
-    # .. the transaction code is the charge code, which FHIR requires ..
+    # .. the transaction code is the charge code, or the statement that none is known ..
     code_repetition = accessor.first(7)
 
     if code := cwe_to_codeable_concept(code_repetition, config):
         out.code = code
     else:
-        out.code = Unknown_Code
+        out.code = absent_value()
 
     # .. the transaction and batch IDs become identifiers ..
     identifiers:'anylist' = []
@@ -257,19 +326,24 @@ def map_ft1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'ChargeI
     # .. the transaction date is when the charge occurred, values that are
     # .. not dates at all are preserved as-is ..
     transaction_value = accessor.value(4)
-    transaction_time = dtm_to_datetime(transaction_value, config)
+    transaction_time = context.datetime(transaction_value, 'FT1', 4)
 
     if transaction_time:
         out.occurrenceDateTime = transaction_time
     elif transaction_value:
         preserve_value(out, context, 'FT1', 4, transaction_value)
 
-    # .. the transaction quantity carries over when it is a number ..
+    # .. the transaction quantity carries over when it is a number, keeping its digits
+    # .. as an extension when the float cannot carry them exactly ..
     quantity = accessor.value(10)
+
     if quantity:
-        try:
-            out.quantity = {'value': float(quantity)}
-        except ValueError:
+        if number := parse_number(quantity):
+            out.quantity = {'value': number.value}
+
+            if not number.is_exact:
+                preserve_inexact_number(out, context, 'FT1', 10, quantity)
+        else:
             preserve_value(out, context, 'FT1', 10, quantity)
 
     # .. and the performing practitioners complete the picture.
