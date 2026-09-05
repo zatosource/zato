@@ -27,11 +27,11 @@ if 0:
 _Timeout = 15
 
 _CRM_URL      = 'https://zato.io/tutorial/api/get-user'
-_CRM_Request  = {'UserName': 'Mike'}
+_CRM_Request  = {'UserName': 'Mike Johnson'}
 _CRM_Expected = {'UserType': 'RGV', 'AccountNumber': '123456'}
 
 _Billing_URL      = 'https://zato.io/tutorial/api/balance/get'
-_Billing_Params   = {'USER': 'Mike'}
+_Billing_Params   = {'USER': 'Mike Johnson'}
 _Billing_Expected = {'ACC_BALANCE': '357.9'}
 
 # ################################################################################################################################
