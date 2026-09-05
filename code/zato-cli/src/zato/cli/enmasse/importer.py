@@ -125,6 +125,18 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_generic_connection_type(item:'stranydict') -> 'str':
+    """ Returns the connection type of one zato_generic_connection item. The canonical key is type
+    and its value is moved under type_, which is the key the per-type importers and the database column use.
+    """
+    if 'type' in item:
+        item['type_'] = item['type']
+        del item['type']
+    return item['type_']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class EnmasseYAMLImporter:
     """ Imports enmasse YAML configuration files and builds an in-memory representation.
     """
@@ -1715,7 +1727,7 @@ class EnmasseYAMLImporter:
         generic_list = yaml_config.get('zato_generic_connection')
         if generic_list:
             for item in generic_list:
-                item_type = item.get('type_')
+                item_type = get_generic_connection_type(item)
                 if item_type == 'cloud-jira':
                     jira_list.append(item)
         jira_created, jira_updated = self.sync_jira(jira_list, session)
@@ -1728,7 +1740,7 @@ class EnmasseYAMLImporter:
         salesforce_list = yaml_config.get('salesforce', [])
         if generic_list:
             for item in generic_list:
-                item_type = item.get('type_')
+                item_type = get_generic_connection_type(item)
                 if item_type == 'cloud-salesforce':
                     salesforce_list.append(item)
         salesforce_created, salesforce_updated = self.sync_salesforce(salesforce_list, session)
@@ -1930,7 +1942,7 @@ class EnmasseYAMLImporter:
         generic_list = yaml_config.get('zato_generic_connection')
         if generic_list:
             for item in generic_list:
-                item_type = item.get('type_')
+                item_type = get_generic_connection_type(item)
                 if item_type == 'cloud-microsoft-365':
                     microsoft_cloud_list.append(item)
         microsoft_cloud_created, microsoft_cloud_updated = self.sync_microsoft_cloud(microsoft_cloud_list, session)
@@ -1944,7 +1956,7 @@ class EnmasseYAMLImporter:
         generic_list = yaml_config.get('zato_generic_connection')
         if generic_list:
             for item in generic_list:
-                item_type = item.get('type_')
+                item_type = get_generic_connection_type(item)
                 if item_type == 'chat-microsoft-teams':
                     microsoft_teams_list.append(item)
         microsoft_teams_created, microsoft_teams_updated = self.sync_microsoft_teams(microsoft_teams_list, session)
@@ -1958,7 +1970,7 @@ class EnmasseYAMLImporter:
         generic_list = yaml_config.get('zato_generic_connection')
         if generic_list:
             for item in generic_list:
-                item_type = item.get('type_')
+                item_type = get_generic_connection_type(item)
                 if item_type == 'chat-slack':
                     slack_list.append(item)
         slack_created, slack_updated = self.sync_slack(slack_list, session)
@@ -1972,7 +1984,7 @@ class EnmasseYAMLImporter:
         generic_list = yaml_config.get('zato_generic_connection')
         if generic_list:
             for item in generic_list:
-                item_type = item.get('type_')
+                item_type = get_generic_connection_type(item)
                 if item_type == 'cloud-microsoft-fabric':
                     fabric_list.append(item)
         fabric_created, fabric_updated = self.sync_microsoft_fabric(fabric_list, session)
@@ -1986,7 +1998,7 @@ class EnmasseYAMLImporter:
         generic_list = yaml_config.get('zato_generic_connection')
         if generic_list:
             for item in generic_list:
-                item_type = item.get('type_')
+                item_type = get_generic_connection_type(item)
                 if item_type == 'cloud-microsoft-power-automate':
                     power_automate_list.append(item)
         power_automate_created, power_automate_updated = self.sync_microsoft_power_automate(power_automate_list, session)
