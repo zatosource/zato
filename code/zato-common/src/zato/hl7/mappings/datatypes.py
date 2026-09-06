@@ -276,6 +276,11 @@ def xad_to_address(repetition:'anylist', config:'FHIRMappingConfig') -> 'dictnon
     if country:
         out['country'] = country
 
+    # .. the county or parish is the district ..
+    county = component_value(repetition, 9)
+    if county:
+        out['district'] = county
+
     # .. and the address type maps to Address.use.
     address_type_code = component_value(repetition, 7)
     if use := lookup('address_type', address_type_code, config):

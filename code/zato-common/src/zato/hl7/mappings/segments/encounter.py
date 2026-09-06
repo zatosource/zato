@@ -36,8 +36,26 @@ if 0:
 _PV1_Handled = frozenset({
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 36, 37, 38, 40, 42, 43, 44, 45, 50,
 })
-_PV2_Handled = frozenset({3, 12})
+_PV2_Handled = frozenset({1, 3, 8, 9, 10, 11, 12, 13, 25, 38})
 _ROL_Handled = frozenset({1, 3, 4})
+
+# The R5 elements FHIR R4 reaches through cross-version extensions -
+# when the visit is expected to start and to end.
+_Planned_Start_Extension = 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Encounter.plannedStartDate'
+_Planned_End_Extension   = 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Encounter.plannedEndDate'
+
+# The standard extension for how the patient arrived
+_Mode_Of_Arrival_Extension = 'http://hl7.org/fhir/StructureDefinition/encounter-modeOfArrival'
+
+# The estimated length of stay has no FHIR element of its own
+_Estimated_Length_Extension = 'encounter/estimated-length-of-stay'
+
+# Lengths of inpatient stay are counted in days.
+_Stay_Unit_System = 'http://unitsofmeasure.org'
+_Stay_Unit_Code   = 'd'
+
+# The participation type of a referral source
+_Referrer_Participation = 'REF'
 
 # Which FC - financial class - component names the class, the other one is its effective date.
 _FC_Class_Component = 1
@@ -337,8 +355,51 @@ def map_pv1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Encount
 
 # ################################################################################################################################
 
+def _stay_duration(accessor:'SegmentAccessor', position:'int', encounter:'Encounter', context:'ConversionContext') -> 'dictnone':
+    """ Reads a length of inpatient stay as a Duration in days - a value
+    that is not a number stays preserved as-is.
+    """
+    value = accessor.value(position)
+    if not value:
+        return None
+
+    if not value.isdigit():
+        preserve_value(encounter, context, 'PV2', position, value)
+        return None
+
+    out = {'value': int(value), 'unit': _Stay_Unit_Code, 'system': _Stay_Unit_System, 'code': _Stay_Unit_Code}
+    return out
+
+# ################################################################################################################################
+
+def _planned_time_extension(
+    accessor:'SegmentAccessor',
+    position:'int',
+    url:'str',
+    encounter:'Encounter',
+    context:'ConversionContext',
+    ) -> 'None':
+    """ Turns one expected admit or discharge time into its cross-version extension -
+    a value that does not parse stays preserved as-is.
+    """
+    value = accessor.value(position)
+    if not value:
+        return
+
+    moment = context.datetime(value, 'PV2', position)
+
+    if moment:
+        extension = {'url': url, 'valueDateTime': moment}
+        append_to_list_field(encounter, 'extension', extension)
+    else:
+        preserve_value(encounter, context, 'PV2', position, value)
+
+# ################################################################################################################################
+
 def enrich_pv2(accessor:'SegmentAccessor', context:'ConversionContext', encounter:'Encounter') -> 'None':
-    """ Adds the admit reason and the visit description from PV2 to an existing Encounter.
+    """ Adds the visit details from PV2 to an existing Encounter - the admit reason and description,
+    the prior pending location, the expected and actual stay, the referral source, the priority
+    and the mode of arrival.
     """
     config = context.config
 
@@ -355,6 +416,45 @@ def enrich_pv2(accessor:'SegmentAccessor', context:'ConversionContext', encounte
 
     for reason in reasons:
         append_to_list_field(encounter, 'reasonCode', reason)
+
+    # The prior pending location is where the patient is yet to move ..
+    prior_pending_repetition = accessor.first(1)
+
+    if prior_pending := add_location(prior_pending_repetition, context):
+        append_to_list_field(encounter, 'location', {'location': prior_pending, 'status': _Planned_Location_Status})
+
+    # .. the expected admit and discharge times are R5's planned start and end dates,
+    # reached from R4 through their cross-version extensions ..
+    _planned_time_extension(accessor, 8, _Planned_Start_Extension, encounter, context)
+    _planned_time_extension(accessor, 9, _Planned_End_Extension, encounter, context)
+
+    # .. the estimated stay keeps its own extension, the actual stay is the encounter's length ..
+    if estimated := _stay_duration(accessor, 10, encounter, context):
+        base_url = config.extension_base_url
+        extension = {'url': f'{base_url}/{_Estimated_Length_Extension}', 'valueDuration': estimated}
+        append_to_list_field(encounter, 'extension', extension)
+
+    if actual := _stay_duration(accessor, 11, encounter, context):
+        encounter.length = actual
+
+    # .. the referral sources join the participants in the referrer role ..
+    for referral_repetition in accessor.repetitions(13):
+        if referrer := add_practitioner(referral_repetition, context):
+            participant_type = {'coding': [{'system': Participation_Type_System, 'code': _Referrer_Participation}]}
+            append_to_list_field(encounter, 'participant', {'type': [participant_type], 'individual': referrer})
+
+    # .. the visit priority carries over with its coding ..
+    priority_repetition = accessor.first(25)
+
+    if priority := cwe_to_codeable_concept(priority_repetition, config):
+        encounter.priority = priority
+
+    # .. and the mode of arrival goes to its standard extension.
+    arrival_repetition = accessor.first(38)
+
+    if arrival := cwe_to_codeable_concept(arrival_repetition, config):
+        extension = {'url': _Mode_Of_Arrival_Extension, 'valueCodeableConcept': arrival}
+        append_to_list_field(encounter, 'extension', extension)
 
     preserve_unmapped(accessor, _PV2_Handled, encounter, context)
 

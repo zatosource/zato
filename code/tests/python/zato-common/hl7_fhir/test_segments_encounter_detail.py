@@ -10,7 +10,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.hl7.mappings import get_conversion_warnings
 
 # Local
-from conftest import convert, one_resource, resources_of_type, segment
+from conftest import convert, full_url_of, one_resource, resources_of_type, segment
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anydict
+    any_ = any_
+    anydict = anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,7 +31,7 @@ Unmapped = 'urn:zato:hl7v2:extension/unmapped'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _location_named(bundle:'object', name:'str') -> 'dict':
+def _location_named(bundle:'any_', name:'str') -> 'anydict':
     """ The only Location with a given name in a bundle.
     """
     matches = []
@@ -36,17 +44,6 @@ def _location_named(bundle:'object', name:'str') -> 'dict':
 
     out = matches[0]
     return out
-
-# ################################################################################################################################
-
-def _full_url_of(bundle:'object', resource:'dict') -> 'str':
-    """ The bundle-internal URL a resource dict was entered under.
-    """
-    for entry in bundle.to_dict()['entry']:
-        if entry['resource'] == resource:
-            return entry['fullUrl']
-
-    raise AssertionError('Resource not found in bundle')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,7 +94,7 @@ class TestPV1Hospitalization:
         encounter = one_resource(bundle, 'Encounter')
 
         destination = _location_named(bundle, 'HOME')
-        destination_url = _full_url_of(bundle, destination)
+        destination_url = full_url_of(bundle, destination)
 
         assert encounter['hospitalization']['destination'] == {'reference': destination_url}
 
@@ -146,8 +143,11 @@ class TestPV1Locations:
         pending_bed = _location_named(bundle, 'B')
         prior_bed = _location_named(bundle, 'C')
 
-        assert pending['location'] == {'reference': _full_url_of(bundle, pending_bed)}
-        assert prior['location'] == {'reference': _full_url_of(bundle, prior_bed)}
+        pending_bed_url = full_url_of(bundle, pending_bed)
+        prior_bed_url = full_url_of(bundle, prior_bed)
+
+        assert pending['location'] == {'reference': pending_bed_url}
+        assert prior['location'] == {'reference': prior_bed_url}
 
         assert 'extension' not in encounter
         assert get_conversion_warnings(bundle) == []

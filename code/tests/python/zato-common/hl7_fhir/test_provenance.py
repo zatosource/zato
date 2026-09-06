@@ -10,7 +10,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.hl7.mappings import get_conversion_warnings
 
 # Local
-from conftest import convert, one_resource, resources_of_type, segment
+from conftest import convert, full_url_of, one_resource, resources_of_type, segment
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anydict
+    any_ = any_
+    anydict = anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,7 +31,7 @@ Participant_Type = 'http://terminology.hl7.org/CodeSystem/provenance-participant
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _practitioner_named(bundle:'object', family:'str') -> 'dict':
+def _practitioner_named(bundle:'any_', family:'str') -> 'anydict':
     """ The only Practitioner with a given family name in a bundle.
     """
     matches = []
@@ -36,17 +44,6 @@ def _practitioner_named(bundle:'object', family:'str') -> 'dict':
 
     out = matches[0]
     return out
-
-# ################################################################################################################################
-
-def _full_url_of(bundle:'object', resource:'dict') -> 'str':
-    """ The bundle-internal URL a resource dict was entered under.
-    """
-    for entry in bundle.to_dict()['entry']:
-        if entry['resource'] == resource:
-            return entry['fullUrl']
-
-    raise AssertionError('Resource not found in bundle')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,21 +64,26 @@ class TestOrderProvenance:
         provenance = one_resource(bundle, 'Provenance')
 
         # The Provenance is about the ServiceRequest, recorded when the ORC was ..
-        assert provenance['target'] == [{'reference': _full_url_of(bundle, service_request)}]
+        service_request_url = full_url_of(bundle, service_request)
+
+        assert provenance['target'] == [{'reference': service_request_url}]
         assert provenance['recorded'] == '2024-05-17T09:00:00+00:00'
 
         # .. with the enterer and the verifier as its agents ..
         enterer = _practitioner_named(bundle, 'Jones')
         verifier = _practitioner_named(bundle, 'Brown')
 
+        enterer_url = full_url_of(bundle, enterer)
+        verifier_url = full_url_of(bundle, verifier)
+
         assert provenance['agent'] == [
             {
                 'type': {'coding': [{'system': Participant_Type, 'code': 'enterer'}]},
-                'who': {'reference': _full_url_of(bundle, enterer)},
+                'who': {'reference': enterer_url},
             },
             {
                 'type': {'coding': [{'system': Participant_Type, 'code': 'verifier'}]},
-                'who': {'reference': _full_url_of(bundle, verifier)},
+                'who': {'reference': verifier_url},
             },
         ]
 
@@ -92,7 +94,9 @@ class TestOrderProvenance:
                 room = location
 
         assert room
-        assert provenance['location'] == {'reference': _full_url_of(bundle, room)}
+
+        room_url = full_url_of(bundle, room)
+        assert provenance['location'] == {'reference': room_url}
 
         assert 'extension' not in service_request
         assert resources_of_type(bundle, 'Basic') == []

@@ -14,15 +14,14 @@ from zato.hl7.mappings import get_conversion_warnings
 from zato.hl7v2 import parse_hl7
 
 # Local
-from conftest import one_resource, resources_of_type, segment
+from conftest import full_url_of, one_resource, resources_of_type, segment
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_
     any_ = any_
-    anydict = anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,17 +46,6 @@ def convert(*segments:'str') -> 'any_':
 
     out = msg.to_fhir()
     return out
-
-# ################################################################################################################################
-
-def _full_url_of(bundle:'any_', resource:'anydict') -> 'str':
-    """ The bundle-internal URL a resource dict was entered under.
-    """
-    for entry in bundle.to_dict()['entry']:
-        if entry['resource'] == resource:
-            return entry['fullUrl']
-
-    raise AssertionError('Resource not found in bundle')
 
 # ################################################################################################################################
 
@@ -91,18 +79,26 @@ class TestAdmissionsDischargesTransfers:
 
         patient = one_resource(bundle, 'Patient')
 
-        assert patient['identifier'][0]['value'] == '12345'
-        assert patient['identifier'][0]['type']['coding'][0]['code'] == 'MR'
+        identifier = patient['identifier'][0]
+        identifier_type = identifier['type']['coding'][0]
+        address = patient['address'][0]
+
+        assert identifier['value'] == '12345'
+        assert identifier_type['code'] == 'MR'
         assert patient['name'] == [{'family': 'Smith', 'given': ['John', 'A']}]
         assert patient['birthDate'] == '1980-01-15'
         assert patient['gender'] == 'male'
-        assert patient['address'][0]['city'] == 'Boston'
+        assert address['city'] == 'Boston'
         assert patient['telecom'] == [{'value': '+1 617 5550123', 'use': 'home', 'system': 'phone'}]
 
         encounter = one_resource(bundle, 'Encounter')
+
+        encounter_type = encounter['type'][0]['coding'][0]
+        admit_source = encounter['hospitalization']['admitSource']['coding'][0]
+
         assert encounter['status'] == 'in-progress'
-        assert encounter['type'][0]['coding'][0]['code'] == 'INP'
-        assert encounter['hospitalization']['admitSource']['coding'][0]['code'] == '7'
+        assert encounter_type['code'] == 'INP'
+        assert admit_source['code'] == '7'
         assert len(encounter['participant']) == 2
 
         _assert_clean(bundle)
@@ -124,7 +120,9 @@ class TestAdmissionsDischargesTransfers:
         assert encounter['period'] == {'start': '2026-03-15T10:10:00+00:00', 'end': '2026-03-18T14:30:00+00:00'}
 
         hospitalization = encounter['hospitalization']
-        assert hospitalization['dischargeDisposition']['coding'][0]['code'] == '01'
+        disposition = hospitalization['dischargeDisposition']['coding'][0]
+
+        assert disposition['code'] == '01'
 
         home = None
         for location in resources_of_type(bundle, 'Location'):
@@ -132,7 +130,9 @@ class TestAdmissionsDischargesTransfers:
                 home = location
 
         assert home
-        assert hospitalization['destination'] == {'reference': _full_url_of(bundle, home)}
+
+        home_url = full_url_of(bundle, home)
+        assert hospitalization['destination'] == {'reference': home_url}
 
         _assert_clean(bundle)
 
@@ -169,7 +169,7 @@ class TestAdmissionsDischargesTransfers:
             'EVN|A08|20260316120000',
             PID_FULL,
             segment('PV1', {1: '1', 2: 'I', 3: 'WEST^201^B^GENHOSP', 7: Doctor, 10: 'MED', 19: 'V2026001^^^GENHOSP', 20: 'COM'}),
-            segment('IN1', {1: '1', 2: 'PPO01^Preferred Plan', 3: 'BCBS001^^^NAIC', 4: 'Blue Cross Blue Shield',
+            segment('IN1', {1: '1', 2: 'PPO01^Preferred Plan', 3: 'GHI001^^^NAIC', 4: 'General Health Insurance',
                 5: '100 Insurance Way^^Boston^MA^02110', 8: 'GRP2026', 9: 'Acme Corp', 12: '20260101', 13: '20261231',
                 16: 'Smith^Jane', 17: 'SPO', 18: '19820420', 19: '123 Main St^^Boston^MA^02101', 36: 'POL998877', 43: 'F'}),
         )
@@ -177,17 +177,22 @@ class TestAdmissionsDischargesTransfers:
         coverage = one_resource(bundle, 'Coverage')
         subscriber = one_resource(bundle, 'RelatedPerson')
 
-        assert coverage['type']['coding'][0] == {'system': 'http://terminology.hl7.org/CodeSystem/v2-0064', 'code': 'COM'}
-        assert coverage['class'][0]['value'] == 'PPO01'
-        assert coverage['class'][1] == {
+        coverage_type = coverage['type']['coding'][0]
+        plan_class, group_class = coverage['class']
+        relationship = coverage['relationship']['coding'][0]
+        subscriber_url = full_url_of(bundle, subscriber)
+
+        assert coverage_type == {'system': 'http://terminology.hl7.org/CodeSystem/v2-0064', 'code': 'COM'}
+        assert plan_class['value'] == 'PPO01'
+        assert group_class == {
             'type': {'coding': [{'system': 'http://terminology.hl7.org/CodeSystem/coverage-class', 'code': 'group'}]},
             'value': 'GRP2026',
             'name': 'Acme Corp',
         }
         assert coverage['period'] == {'start': '2026-01-01', 'end': '2026-12-31'}
-        assert coverage['relationship']['coding'][0]['code'] == 'spouse'
+        assert relationship['code'] == 'spouse'
         assert coverage['subscriberId'] == 'POL998877'
-        assert coverage['subscriber'] == {'reference': _full_url_of(bundle, subscriber)}
+        assert coverage['subscriber'] == {'reference': subscriber_url}
 
         assert subscriber['name'] == [{'family': 'Smith', 'given': ['Jane']}]
         assert subscriber['birthDate'] == '1982-04-20'
@@ -207,9 +212,12 @@ class TestAdmissionsDischargesTransfers:
 
         surviving, merged = resources_of_type(bundle, 'Patient')
 
-        assert surviving['link'] == [{'other': {'reference': _full_url_of(bundle, merged)}, 'type': 'replaces'}]
+        merged_url = full_url_of(bundle, merged)
+        merged_identifier = merged['identifier'][0]
+
+        assert surviving['link'] == [{'other': {'reference': merged_url}, 'type': 'replaces'}]
         assert merged['active'] is False
-        assert merged['identifier'][0]['value'] == '67890'
+        assert merged_identifier['value'] == '67890'
         assert 'name' not in merged
 
         _assert_clean(bundle)
@@ -237,21 +245,28 @@ class TestResultsAndOrders:
         assert len(observations) == 3
 
         first = observations[0]
-        assert first['code']['coding'][0]['code'] == '2093-3'
+
+        first_code = first['code']['coding'][0]
+        interpretation = first['interpretation'][0]['coding'][0]
+
+        assert first_code['code'] == '2093-3'
         assert first['valueQuantity'] == {'value': 210.0, 'system': 'http://unitsofmeasure.org', 'code': 'mg/dL', 'unit': 'mg/dL'}
         assert first['referenceRange'] == [{'text': '<200'}]
-        assert first['interpretation'][0]['coding'][0]['code'] == 'H'
+        assert interpretation['code'] == 'H'
         assert first['status'] == 'final'
         assert first['effectiveDateTime'] == '2026-03-15T08:00:00+00:00'
 
         report = one_resource(bundle, 'DiagnosticReport')
         specimen = one_resource(bundle, 'Specimen')
 
+        specimen_url = full_url_of(bundle, specimen)
+        specimen_type = specimen['type']['coding'][0]
+
         assert len(report['result']) == 3
-        assert report['specimen'] == [{'reference': _full_url_of(bundle, specimen)}]
+        assert report['specimen'] == [{'reference': specimen_url}]
         assert report['issued'] == '2026-03-15T14:00:00+00:00'
 
-        assert specimen['type']['coding'][0]['system'] == 'http://snomed.info/sct'
+        assert specimen_type['system'] == 'http://snomed.info/sct'
         assert specimen['receivedTime'] == '2026-03-15T08:15:00+00:00'
 
         _assert_clean(bundle)
@@ -280,7 +295,9 @@ class TestResultsAndOrders:
         assert len(report['performer']) == 2
 
         practitioner = one_resource(bundle, 'Practitioner')
-        assert practitioner['name'][0]['family'] == 'Adams'
+        practitioner_name = practitioner['name'][0]
+
+        assert practitioner_name['family'] == 'Adams'
 
         _assert_clean(bundle)
 
@@ -314,7 +331,9 @@ class TestResultsAndOrders:
         }
 
         provenance = one_resource(bundle, 'Provenance')
-        assert provenance['target'] == [{'reference': _full_url_of(bundle, service_request)}]
+        service_request_url = full_url_of(bundle, service_request)
+
+        assert provenance['target'] == [{'reference': service_request_url}]
         assert len(provenance['agent']) == 2
         assert 'location' in provenance
 
@@ -333,10 +352,14 @@ class TestResultsAndOrders:
 
         specimen = one_resource(bundle, 'Specimen')
 
+        specimen_type = specimen['type']['coding'][0]
+        collection = specimen['collection']
+        body_site = collection['bodySite']['coding'][0]
+
         assert specimen['identifier'] == [{'value': 'SPM7002'}]
-        assert specimen['type']['coding'][0]['code'] == 'BLD'
-        assert specimen['collection']['bodySite']['coding'][0]['code'] == 'ARM'
-        assert specimen['collection']['collectedDateTime'] == '2026-03-15T09:30:00+00:00'
+        assert specimen_type['code'] == 'BLD'
+        assert body_site['code'] == 'ARM'
+        assert collection['collectedDateTime'] == '2026-03-15T09:30:00+00:00'
 
         service_request = one_resource(bundle, 'ServiceRequest')
         assert service_request['authoredOn'] == '2026-03-15T09:30:00+00:00'
@@ -362,18 +385,20 @@ class TestDocumentsAppointmentsImmunizations:
         )
 
         document = one_resource(bundle, 'DocumentReference')
+        document_type = document['type']['coding'][0]
 
         assert document['status'] == 'current'
         assert document['docStatus'] == 'final'
-        assert document['type']['coding'][0]['code'] == 'DS'
+        assert document_type['code'] == 'DS'
         assert document['date'] == '2026-03-18T15:30:00+00:00'
         assert document['masterIdentifier'] == {'value': 'DOC5001', 'system': 'urn:zato:hl7v2:authority:EHR'}
 
         attachment = document['content'][0]['attachment']
+        decoded = b64decode(attachment['data']).decode()
 
         assert attachment['contentType'] == 'text/plain'
         assert attachment['title'] == 'discharge-summary.txt'
-        assert b64decode(attachment['data']).decode() == \
+        assert decoded == \
             'Admitted with chest pain, ruled out for myocardial infarction.\n' + \
             'Discharged home in stable condition with follow-up in two weeks.'
 
@@ -396,22 +421,45 @@ class TestDocumentsAppointmentsImmunizations:
 
         appointment = one_resource(bundle, 'Appointment')
 
+        reason = appointment['reasonCode'][0]['coding'][0]
+        appointment_type = appointment['appointmentType']['coding'][0]
+        service_type = appointment['serviceType'][0]['coding'][0]
+
         assert appointment['status'] == 'booked'
         assert appointment['identifier'] == [{'value': 'APT6001', 'system': 'urn:zato:hl7v2:authority:SCHED'}]
-        assert appointment['reasonCode'][0]['coding'][0]['code'] == 'FOLLOWUP'
-        assert appointment['appointmentType']['coding'][0]['code'] == 'ROUTINE'
+        assert reason['code'] == 'FOLLOWUP'
+        assert appointment_type['code'] == 'ROUTINE'
         assert appointment['minutesDuration'] == 30
         assert appointment['start'] == '2026-04-01T14:00:00+00:00'
         assert appointment['end'] == '2026-04-01T14:30:00+00:00'
-        assert appointment['serviceType'][0]['coding'][0]['code'] == '99213'
-        assert len(appointment['participant']) == 4
+        assert service_type['code'] == '99213'
 
-        # The event reason and who entered the booking have no Appointment element, so they are kept as-is.
+        # The patient, the filler contact, the enterer, the AIP practitioner and the AIL location.
+        assert len(appointment['participant']) == 5
+
+        # Who entered the booking is a participant in the enterer role.
+        enterer_role = {
+            'coding': [{
+                'system': 'http://terminology.hl7.org/CodeSystem/provenance-participant-type',
+                'code': 'enterer',
+            }],
+        }
+
+        enterers = []
+
+        for item in appointment['participant']:
+            if 'type' in item:
+                if item['type'] == [enterer_role]:
+                    enterers.append(item)
+
+        assert len(enterers) == 1
+
+        # The event reason has no Appointment element, so it is kept as-is.
         urls = []
         for extension in appointment['extension']:
             urls.append(extension['url'])
 
-        assert urls == [Unmapped + '/SCH-6', Unmapped + '/SCH-20']
+        assert urls == [Unmapped + '/SCH-6']
         assert get_conversion_warnings(bundle) == []
 
 # ################################################################################################################################
@@ -423,14 +471,18 @@ class TestDocumentsAppointmentsImmunizations:
             segment('ORC', {1: 'RE', 3: 'IMM8001^EHR'}),
             segment('RXA', {1: '0', 2: '1', 3: '20260315104500', 4: '20260315104500', 5: '140^Influenza seasonal injectable preservative free^CVX',
                 6: '0.5', 7: 'mL^^UCUM', 9: '00^New immunization record^NIP001', 10: '2001^Davis^Karen^^^^RN', 15: 'FLU2026A',
-                16: '20261031', 17: 'SKB^GlaxoSmithKline^MVX', 20: 'CP'}),
+                16: '20261031', 17: 'GVL^General Vaccines^MVX', 20: 'CP'}),
             'RXR|IM^Intramuscular^HL70162|LD^Left deltoid^HL70163',
         )
 
         immunization = one_resource(bundle, 'Immunization')
 
+        vaccine_code = immunization['vaccineCode']['coding'][0]
+        route = immunization['route']['coding'][0]
+        site = immunization['site']['coding'][0]
+
         assert immunization['status'] == 'completed'
-        assert immunization['vaccineCode']['coding'][0] == {
+        assert vaccine_code == {
             'code': '140',
             'display': 'Influenza seasonal injectable preservative free',
             'system': 'http://hl7.org/fhir/sid/cvx',
@@ -440,8 +492,8 @@ class TestDocumentsAppointmentsImmunizations:
         assert immunization['primarySource'] is True
         assert immunization['lotNumber'] == 'FLU2026A'
         assert immunization['expirationDate'] == '2026-10-31'
-        assert immunization['route']['coding'][0]['code'] == 'IM'
-        assert immunization['site']['coding'][0]['code'] == 'LD'
+        assert route['code'] == 'IM'
+        assert site['code'] == 'LD'
         assert immunization['identifier'] == [{'value': 'IMM8001', 'system': 'urn:zato:hl7v2:authority:EHR'}]
 
         _assert_clean(bundle)
@@ -468,24 +520,34 @@ class TestPharmacyAndBilling:
         request = one_resource(bundle, 'MedicationRequest')
         medication = one_resource(bundle, 'Medication')
 
-        assert request['medicationReference'] == {'reference': _full_url_of(bundle, medication)}
+        medication_url = full_url_of(bundle, medication)
+
+        assert request['medicationReference'] == {'reference': medication_url}
         assert request['authoredOn'] == '2026-03-15T12:00:00+00:00'
         assert 'requester' in request
         assert request['priority'] == 'routine'
 
         dosage = request['dosageInstruction'][0]
-        assert dosage['timing']['repeat']['period'] == 24
-        assert dosage['timing']['repeat']['timeOfDay'] == ['18:00:00']
+
+        repeat = dosage['timing']['repeat']
+        route = dosage['route']['coding'][0]
+
+        assert repeat['period'] == 24
+        assert repeat['timeOfDay'] == ['18:00:00']
         assert dosage['text'] == 'Infuse over 12 hours'
-        assert dosage['route']['coding'][0]['code'] == 'IV'
+        assert route['code'] == 'IV'
 
         base, additive = medication['ingredient']
 
-        assert medication['code']['coding'][0]['code'] == 'TPN001'
+        medication_code = medication['code']['coding'][0]
+        base_strength = base['strength']['numerator']
+        additive_strength = additive['strength']['denominator']
+
+        assert medication_code['code'] == 'TPN001'
         assert base['isActive'] is False
-        assert base['strength']['numerator']['value'] == 500.0
+        assert base_strength['value'] == 500.0
         assert additive['isActive'] is True
-        assert additive['strength']['denominator']['value'] == 1000.0
+        assert additive_strength['value'] == 1000.0
 
         _assert_clean(bundle)
 
@@ -504,11 +566,14 @@ class TestPharmacyAndBilling:
 
         dispense = one_resource(bundle, 'MedicationDispense')
 
+        medication_code = dispense['medicationCodeableConcept']['coding'][0]
+        quantity = dispense['quantity']
+
         assert dispense['status'] == 'completed'
-        assert dispense['medicationCodeableConcept']['coding'][0]['code'] == 'AMOX500'
+        assert medication_code['code'] == 'AMOX500'
         assert dispense['whenHandedOver'] == '2026-03-15T12:55:00+00:00'
-        assert dispense['quantity']['value'] == 30.0
-        assert dispense['quantity']['code'] == 'CAP'
+        assert quantity['value'] == 30.0
+        assert quantity['code'] == 'CAP'
         assert dispense['identifier'] == [
             {'value': 'RX9002'},
             {'value': 'RX9002', 'system': 'urn:zato:hl7v2:authority:EHR'},
@@ -516,9 +581,11 @@ class TestPharmacyAndBilling:
         ]
 
         dosage = dispense['dosageInstruction'][0]
+        route = dosage['route']['coding'][0]
+
         assert dosage['timing'] == {'repeat': {'frequency': 3, 'period': 1, 'periodUnit': 'd'}}
         assert dosage['doseAndRate'] == [{'doseQuantity': {'value': 1.0, 'unit': 'CAP'}}]
-        assert dosage['route']['coding'][0]['code'] == 'PO'
+        assert route['code'] == 'PO'
 
         _assert_clean(bundle)
 
@@ -537,12 +604,15 @@ class TestPharmacyAndBilling:
         charge = one_resource(bundle, 'ChargeItem')
         encounter = one_resource(bundle, 'Encounter')
 
+        charge_code = charge['code']['coding'][0]
+        encounter_url = full_url_of(bundle, encounter)
+
         assert charge['status'] == 'billable'
-        assert charge['code']['coding'][0]['code'] == '99213'
+        assert charge_code['code'] == '99213'
         assert charge['identifier'] == [{'value': 'TXN5001', 'system': 'urn:zato:hl7v2:authority:BILLING'}]
         assert charge['occurrenceDateTime'] == '2026-03-18'
         assert charge['quantity'] == {'value': 1.0}
-        assert charge['context'] == {'reference': _full_url_of(bundle, encounter)}
+        assert charge['context'] == {'reference': encounter_url}
         assert len(charge['performer']) == 1
 
         _assert_clean(bundle)

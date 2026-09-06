@@ -9,14 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.fhir import Patient, RelatedPerson
 from zato.hl7.mappings.codes import lookup
-from zato.hl7.mappings.concepts import cwe_to_codeable_concept, cwe_to_language_concept, tag_coding_systems
+from zato.hl7.mappings.concepts import cwe_to_codeable_concept, cwe_to_language_concept
 from zato.hl7.mappings.datatypes import Identifier_Type_System, cx_to_identifier, xad_to_address, xpn_to_human_name, \
     xtn_to_contact_points
 from zato.hl7.mappings.fields import component_value, serialize_repetition
-from zato.hl7.mappings.segments.common import Birth_Place_Extension_URL, Ethnicity_Extension_URL, \
-    Mothers_Maiden_Name_Extension_URL, No_Consumed_Fields, Race_Extension_URL, Religion_Extension_URL, \
-    add_named_organization, add_practitioner, append_to_list_field, patient_or_absent_reference, preserve_unmapped, \
-    preserve_value
+from zato.hl7.mappings.segments.common import Birth_Place_Extension_URL, Citizenship_Extension_URL, \
+    Ethnicity_Extension_URL, Mothers_Maiden_Name_Extension_URL, No_Consumed_Fields, Race_Extension_URL, \
+    Religion_Extension_URL, add_named_organization, add_practitioner, append_to_list_field, \
+    patient_or_absent_reference, preserve_unmapped, preserve_value
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,12 +33,10 @@ if 0:
 
 # Which field positions each mapper consumes - anything else that carries data is preserved as an extension.
 _PID_Handled = frozenset({
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 29, 30,
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 29, 30,
 })
 _PD1_Handled = frozenset({3, 4})
-_NK1_Handled = frozenset({1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 16})
 _MRG_Handled = frozenset({1, 7})
-_GT1_Handled = frozenset({1, 2, 3, 5, 6, 7, 8, 9, 11})
 
 # The personal relationship code a mother has to the patient
 _Mother_Relationship_Code = 'MTH'
@@ -319,6 +317,21 @@ def map_pid(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Patient
         if address := xad_to_address(repetition, config):
             addresses.append(address)
 
+    # The county fills the first address's district when the address left it empty,
+    # with no address to sit on - or a district already there - it stays preserved.
+    county = accessor.component(12, 1)
+
+    if county:
+        if addresses:
+            first_address = addresses[0]
+
+            if 'district' not in first_address:
+                first_address['district'] = county
+            else:
+                preserve_value(out, context, 'PID', 12, county)
+        else:
+            preserve_value(out, context, 'PID', 12, county)
+
     if addresses:
         out.address = addresses
 
@@ -363,11 +376,18 @@ def map_pid(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Patient
         religion_extension = {'url': Religion_Extension_URL, 'valueCodeableConcept': religion}
         append_to_list_field(out, 'extension', religion_extension)
 
-    # .. and so does the birth place.
+    # .. and so does the birth place ..
     birth_place = accessor.value(23)
     if birth_place:
         birth_place_extension = {'url': Birth_Place_Extension_URL, 'valueAddress': {'text': birth_place}}
         append_to_list_field(out, 'extension', birth_place_extension)
+
+    # .. and each citizenship, with the country as the coded sub-extension.
+    for citizenship_repetition in accessor.repetitions(26):
+        if citizenship := cwe_to_codeable_concept(citizenship_repetition, config):
+            code_extension = {'url': 'code', 'valueCodeableConcept': citizenship}
+            citizenship_extension = {'url': Citizenship_Extension_URL, 'extension': [code_extension]}
+            append_to_list_field(out, 'extension', citizenship_extension)
 
     # Multiple-birth data prefers the order number over the yes/no indicator,
     # an order that is not a number and an indicator that is neither yes nor no are preserved as-is.
@@ -448,114 +468,6 @@ def enrich_pd1(accessor:'SegmentAccessor', context:'ConversionContext', patient:
 
 # ################################################################################################################################
 
-def map_nk1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'RelatedPerson | None':
-    """ Converts NK1 to a RelatedPerson tied to the current patient.
-    """
-    config = context.config
-
-    # Our response to produce
-    out = RelatedPerson()
-
-    # FHIR requires the patient a related person relates to.
-    out.patient = patient_or_absent_reference(context)
-
-    names:'anylist' = []
-
-    for repetition in accessor.repetitions(2):
-        if name := xpn_to_human_name(repetition, config):
-            names.append(name)
-
-    if names:
-        out.name = names
-
-    # The relationship and the contact role both keep their v2 codes,
-    # with standard table codes gaining their table's system.
-    relationships:'anylist' = []
-
-    relationship_repetition = accessor.first(3)
-
-    if relationship := cwe_to_codeable_concept(relationship_repetition, config):
-        tag_coding_systems(relationship, 'personal_relationship', config)
-        relationships.append(relationship)
-
-    role_repetition = accessor.first(7)
-
-    if role := cwe_to_codeable_concept(role_repetition, config):
-        tag_coding_systems(role, 'contact_role', config)
-        relationships.append(role)
-
-    if relationships:
-        out.relationship = relationships
-
-    addresses:'anylist' = []
-
-    for repetition in accessor.repetitions(4):
-        if address := xad_to_address(repetition, config):
-            addresses.append(address)
-
-    if addresses:
-        out.address = addresses
-
-    telecoms:'anylist' = []
-
-    for repetition in accessor.repetitions(5):
-        for telecom in xtn_to_contact_points(repetition, config, default_use='home'):
-            telecoms.append(telecom)
-
-    for repetition in accessor.repetitions(6):
-        for telecom in xtn_to_contact_points(repetition, config, default_use='work'):
-            telecoms.append(telecom)
-
-    if telecoms:
-        out.telecom = telecoms
-
-    # The relationship's start and end dates bound the period.
-    period:'stranydict' = {}
-
-    start_value = accessor.value(8)
-    start_date = context.date(start_value, 'NK1', 8)
-
-    if start_date:
-        period['start'] = start_date
-
-    end_value = accessor.value(9)
-    end_date = context.date(end_value, 'NK1', 9)
-
-    if end_date:
-        period['end'] = end_date
-
-    if period:
-        out.period = period
-
-    # The administrative sex maps to the gender code, unknown codes are preserved as-is.
-    sex_code = accessor.value(15)
-    if sex_code:
-        if gender := lookup('administrative_sex', sex_code, config):
-            out.gender = gender['code']
-        else:
-            preserve_value(out, context, 'NK1', 15, sex_code)
-
-    # The date of birth drops any time part.
-    birth_value = accessor.value(16)
-    birth_date = context.date(birth_value, 'NK1', 16)
-
-    if birth_date:
-        out.birthDate = birth_date
-
-    preserve_unmapped(accessor, _NK1_Handled, out, context)
-
-    # A next-of-kin with no data at all carries nothing to build a person from.
-    content = out.to_dict()
-    all_keys = set(content)
-    content_keys = all_keys - {'resourceType', 'patient'}
-
-    if not content_keys:
-        return None
-
-    return out
-
-# ################################################################################################################################
-
 def apply_mrg(accessor:'SegmentAccessor', context:'ConversionContext', patient:'Patient') -> 'None':
     """ Turns MRG into an inactive Patient carrying the prior identifiers,
     linked from the surviving Patient as the record it replaces.
@@ -606,86 +518,6 @@ def apply_pda(accessor:'SegmentAccessor', context:'ConversionContext', patient:'
             patient.deceasedBoolean = True
 
     preserve_unmapped(accessor, No_Consumed_Fields, patient, context)
-
-# ################################################################################################################################
-
-def map_gt1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'RelatedPerson':
-    """ Converts GT1 - the guarantor - to a RelatedPerson tied to the current patient.
-    """
-    config = context.config
-
-    # Our response to produce
-    out = RelatedPerson()
-
-    # FHIR requires the patient a guarantor relates to.
-    out.patient = patient_or_absent_reference(context)
-
-    identifiers:'anylist' = []
-
-    for repetition in accessor.repetitions(2):
-        if identifier := cx_to_identifier(repetition, config):
-            identifiers.append(identifier)
-
-    if identifiers:
-        out.identifier = identifiers
-
-    names:'anylist' = []
-
-    for repetition in accessor.repetitions(3):
-        if name := xpn_to_human_name(repetition, config):
-            names.append(name)
-
-    if names:
-        out.name = names
-
-    addresses:'anylist' = []
-
-    for repetition in accessor.repetitions(5):
-        if address := xad_to_address(repetition, config):
-            addresses.append(address)
-
-    if addresses:
-        out.address = addresses
-
-    telecoms:'anylist' = []
-
-    for repetition in accessor.repetitions(6):
-        for telecom in xtn_to_contact_points(repetition, config, default_use='home'):
-            telecoms.append(telecom)
-
-    for repetition in accessor.repetitions(7):
-        for telecom in xtn_to_contact_points(repetition, config, default_use='work'):
-            telecoms.append(telecom)
-
-    if telecoms:
-        out.telecom = telecoms
-
-    # The date of birth drops any time part.
-    birth_value = accessor.value(8)
-    birth_date = context.date(birth_value, 'GT1', 8)
-
-    if birth_date:
-        out.birthDate = birth_date
-
-    # The administrative sex maps to the gender code, unknown codes are preserved as-is.
-    sex_code = accessor.value(9)
-    if sex_code:
-        if gender := lookup('administrative_sex', sex_code, config):
-            out.gender = gender['code']
-        else:
-            preserve_value(out, context, 'GT1', 9, sex_code)
-
-    # The guarantor's relationship to the patient keeps its v2 code,
-    # with standard table codes gaining their table's system.
-    relationship_repetition = accessor.first(11)
-
-    if relationship := cwe_to_codeable_concept(relationship_repetition, config):
-        tag_coding_systems(relationship, 'personal_relationship', config)
-        out.relationship = [relationship]
-
-    preserve_unmapped(accessor, _GT1_Handled, out, context)
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

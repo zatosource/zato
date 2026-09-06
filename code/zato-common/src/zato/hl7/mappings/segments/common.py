@@ -127,6 +127,9 @@ Mothers_Maiden_Name_Extension_URL = 'http://hl7.org/fhir/StructureDefinition/pat
 # The extension a patient's religion goes to
 Religion_Extension_URL = 'http://hl7.org/fhir/StructureDefinition/patient-religion'
 
+# The extension a patient's citizenship goes to
+Citizenship_Extension_URL = 'http://hl7.org/fhir/StructureDefinition/patient-citizenship'
+
 # The US Core extension a CDC-coded race goes to
 Race_Extension_URL = 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-race'
 
@@ -200,8 +203,18 @@ _PL_Description_Position = 9
 # The PL component that carries the comprehensive location identifier
 _PL_Identifier_Position = 10
 
+# The PL components that carry the location status and the person location type
+_PL_Status_Position = 5
+_PL_Type_Position   = 6
+
+# Table HL70306 - the PL-5 location status codes come from
+_Location_Status_System = 'http://terminology.hl7.org/CodeSystem/v2-0306'
+
+# Table HL70305 - the PL-6 person location type codes come from
+_Location_Type_System = 'http://terminology.hl7.org/CodeSystem/v2-0305'
+
 # The PL components the hierarchy consumes - anything else is preserved on the most granular Location.
-_PL_Handled = frozenset({1, 2, 3, 4, 7, 8, 9, 10})
+_PL_Handled = frozenset({1, 2, 3, 4, _PL_Status_Position, _PL_Type_Position, 7, 8, 9, 10})
 
 # How many components a PL has
 _PL_Component_Count = 11
@@ -505,6 +518,19 @@ def add_location(
     if operational_status:
         most_granular.operationalStatus = operational_status
 
+    # The location status becomes the operational status too, unless a bed status
+    # already took that slot - then the status stays preserved as-is ..
+    if location_status := component_value(repetition, _PL_Status_Position):
+        if operational_status:
+            preserve_value(most_granular, context, 'PL', _PL_Status_Position, location_status)
+        else:
+            most_granular.operationalStatus = {'system': _Location_Status_System, 'code': location_status}
+
+    # .. and the person location type is the kind of place this is.
+    if location_type := component_value(repetition, _PL_Type_Position):
+        coding = {'system': _Location_Type_System, 'code': location_type}
+        most_granular.type = [{'coding': [coding]}]
+
     identifier = subcomponent_value(repetition, _PL_Identifier_Position, 1)
 
     if identifier:
@@ -545,7 +571,7 @@ def add_location(
 
 # ################################################################################################################################
 
-def add_hd_organization(repetition:'anylist', context:'ConversionContext') -> 'dictnone':
+def add_hd_organization(repetition:'anylist', context:'ConversionContext', country:'strnone' = None) -> 'dictnone':
     """ Builds an Organization from an HD - a facility - repetition, adds it to the bundle
     and returns a reference. The namespace is the name, the universal ID an identifier.
     """
@@ -564,6 +590,10 @@ def add_hd_organization(repetition:'anylist', context:'ConversionContext') -> 'd
     if universal_id:
         organization.identifier = [{'value': universal_id}]
 
+    # The country, when the caller passes one, is the organization's address.
+    if country:
+        organization.address = [{'country': country}]
+
     out = context.add(organization)
     return out
 
@@ -573,6 +603,7 @@ def add_xon_organization(
     repetition:'anylist',
     context:'ConversionContext',
     telecoms:'anylistnone' = None,
+    address:'dictnone' = None,
     ) -> 'dictnone':
     """ Builds an Organization from an XON repetition, adds it to the bundle and returns a reference.
     The name is XON-1, the identifier XON-10 - or XON-3 in older messages - with its assigning
@@ -613,9 +644,12 @@ def add_xon_organization(
 
         organization.identifier = [identifier_entry]
 
-    # .. the caller's contact points belong to the organization too ..
+    # .. the caller's contact points and address belong to the organization too ..
     if telecoms:
         organization.telecom = telecoms
+
+    if address:
+        organization.address = [address]
 
     # .. and whatever the name and identifier did not consume is preserved on it.
     _preserve_unconsumed(repetition, _XON_Consumed, organization, context, 'XON')

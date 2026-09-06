@@ -343,6 +343,33 @@ Readmission_Indicator = {
     'R': {'code': 'R', 'system': _readmission_indicator},
 }
 
+# The code system both verification status maps below point into.
+_condition_verification = 'http://terminology.hl7.org/CodeSystem/condition-ver-status'
+
+# Table HL70052 - working and final diagnoses from DG1-6 - to Condition's verification status.
+Diagnosis_Verification = {
+    'W': {'code': 'provisional', 'system': _condition_verification},
+    'F': {'code': 'confirmed', 'system': _condition_verification},
+}
+
+# Problem confirmation status from PRB-13 - to Condition's verification status.
+Problem_Confirmation_Status = {
+    'C': {'code': 'confirmed', 'system': _condition_verification},
+    'S': {'code': 'provisional', 'system': _condition_verification},
+    'U': {'code': 'unconfirmed', 'system': _condition_verification},
+    'R': {'code': 'refuted', 'system': _condition_verification},
+}
+
+# Problem life cycle status from PRB-14 - to Condition's clinical status.
+_condition_clinical = 'http://terminology.hl7.org/CodeSystem/condition-clinical'
+
+Problem_Lifecycle_Status = {
+    'A':  {'code': 'active', 'system': _condition_clinical},
+    'A1': {'code': 'active', 'system': _condition_clinical},
+    'I':  {'code': 'inactive', 'system': _condition_clinical},
+    'R':  {'code': 'resolved', 'system': _condition_clinical},
+}
+
 # Table HL70116 - bed status from PV1-40 - to Location's operational status.
 Bed_Status = {
     'C': {'code': 'C', 'system': _bed_status},
@@ -370,6 +397,9 @@ Standalone_Maps = {
     'personal_relationship': Personal_Relationship,
     'subscriber_relationship': Subscriber_Relationship,
     'transaction_type': Transaction_Type,
+    'diagnosis_verification': Diagnosis_Verification,
+    'problem_confirmation_status': Problem_Confirmation_Status,
+    'problem_lifecycle_status': Problem_Lifecycle_Status,
 }
 
 # ################################################################################################################################

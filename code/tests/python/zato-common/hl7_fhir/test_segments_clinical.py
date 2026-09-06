@@ -469,8 +469,8 @@ class TestUnmappedFields:
     """
 
     def test_populated_unhandled_field_is_preserved(self) -> 'None':
-        # PID-26, citizenship, is not a field the mapper consumes.
-        pid = 'PID|1||12345||Smith^John|||M||||||||||||||||||USA'
+        # PID-27, veterans military status, is not a field the mapper consumes.
+        pid = 'PID|1||12345||Smith^John|||M|||||||||||||||||||VET'
 
         bundle = convert(MSH, pid)
         patient = one_resource(bundle, 'Patient')
@@ -479,7 +479,7 @@ class TestUnmappedFields:
         extensions = patient['extension']
         preserved = extensions[0]
 
-        assert preserved == {'url': 'urn:zato:hl7v2:extension/unmapped/PID-26', 'valueString': 'USA'}
+        assert preserved == {'url': 'urn:zato:hl7v2:extension/unmapped/PID-27', 'valueString': 'VET'}
 
         warnings = get_conversion_warnings(bundle)
         assert warnings == []
