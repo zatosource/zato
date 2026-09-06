@@ -9,17 +9,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.hl7.mappings.segments import Encapsulated_Value_Type, Mother_Link_Type, OBR_Handled_Order_Only, \
     OBR_Handled_Specimen, OBR_Handled_With_Report, Text_Value_Types, add_document_attachment, \
-    add_order_provenance, aig_participant, ail_participant, aip_participant, append_to_list_field, apply_bpo, \
+    add_order_provenance, append_to_list_field, apply_bpo, \
     apply_in2, apply_ipc, apply_mfi, apply_mrg, apply_msa, apply_pda, apply_pra, apply_prd, apply_prt, apply_rol, \
-    apply_sac, apply_tq1, apply_zbe, apply_zds, enrich_ais, enrich_pd1, enrich_pv2, enrich_rxr, \
-    enrich_service_request_with_orc, enrich_sft, gather_obx_text, map_al1, map_arq, map_dg1, map_err, map_ft1, \
-    map_gt1, map_iam, map_in1, map_msh, map_nk1, map_obr_to_diagnostic_report, map_obx, \
-    map_orc_obr_to_service_request, map_pid, map_pid_mother, map_pr1, map_pv1, map_rf1, map_sch, map_spm, map_stf, \
+    apply_sac, apply_tq1, apply_tq1_to_appointment, apply_zbe, apply_zds, enrich_pd1, enrich_pv2, enrich_rxr, \
+    enrich_service_request_with_orc, enrich_sft, gather_obx_text, map_al1, map_dg1, map_err, map_ft1, \
+    map_gt1, map_iam, map_in1, map_msh, map_nk1, map_obr_to_diagnostic_report, map_obx, map_prb, \
+    map_orc_obr_to_service_request, map_pid, map_pid_mother, map_pr1, map_pv1, map_rf1, map_spm, map_stf, \
     map_txa, nte_text, merge_obr_specimen, obr_matches_orc, obx_attachment, orc_matches_service_request, \
     preserve_unmapped, preserve_value
 from zato.hl7.mappings.walk import add_basic, apply_pending_mfe, apply_pending_rol, apply_pending_tq1, \
     apply_tq1_to_medication, attach_pending_notes, flush_pending_mfe, flush_pending_orc, flush_pending_specimen
 from zato.hl7.mappings.walk_pharmacy import handle_rxa, handle_rxc, handle_rxd, handle_rxe, handle_rxg, handle_rxo
+from zato.hl7.mappings.walk_scheduling import handle_aig, handle_ail, handle_aip, handle_ais, handle_arq, handle_sch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -324,6 +325,14 @@ def _handle_pr1(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
 
 # ################################################################################################################################
 
+def _handle_prb(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
+
+    # The problem stays current so a PRT that follows can attach its participants to it.
+    state.current_condition = map_prb(accessor, context)
+    _ = context.add(state.current_condition)
+
+# ################################################################################################################################
+
 def _handle_gt1(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
 
     guarantor = map_gt1(accessor, context)
@@ -368,6 +377,10 @@ def _handle_tq1(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
     # .. after a pharmacy segment it is the dosage timing of the medication resource ..
     elif state.current_medication:
         apply_tq1_to_medication(accessor, context, state.current_medication)
+
+    # .. after an SCH it is the appointment's timing ..
+    elif state.appointment:
+        apply_tq1_to_appointment(accessor, context, state.appointment)
 
     # .. and with nothing to attach to it becomes a preserved segment of its own.
     else:
@@ -440,59 +453,6 @@ def _handle_sac(accessor:'SegmentAccessor', state:'WalkState', context:'Conversi
 
     if state.current_specimen:
         apply_sac(accessor, context, state.current_specimen)
-    else:
-        add_basic(accessor, context)
-
-# ################################################################################################################################
-
-def _handle_sch(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
-
-    state.appointment = map_sch(accessor, context, state.appointment_participants)
-    _ = context.add(state.appointment)
-
-# ################################################################################################################################
-
-def _handle_arq(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
-
-    state.appointment = map_arq(accessor, context, state.appointment_participants)
-    _ = context.add(state.appointment)
-
-# ################################################################################################################################
-
-def _handle_ais(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
-
-    if state.appointment:
-        enrich_ais(accessor, context, state.appointment)
-    else:
-        add_basic(accessor, context)
-
-# ################################################################################################################################
-
-def _handle_aig(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
-
-    if state.appointment:
-        if participant := aig_participant(accessor, context, state.appointment):
-            state.appointment_participants.append(participant)
-    else:
-        add_basic(accessor, context)
-
-# ################################################################################################################################
-
-def _handle_ail(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
-
-    if state.appointment:
-        if participant := ail_participant(accessor, context, state.appointment):
-            state.appointment_participants.append(participant)
-    else:
-        add_basic(accessor, context)
-
-# ################################################################################################################################
-
-def _handle_aip(accessor:'SegmentAccessor', state:'WalkState', context:'ConversionContext', family:'str') -> 'None':
-
-    if state.appointment:
-        if participant := aip_participant(accessor, context, state.appointment):
-            state.appointment_participants.append(participant)
     else:
         add_basic(accessor, context)
 
@@ -622,6 +582,9 @@ def _prt_target(state:'WalkState') -> 'any_':
     if state.current_observation:
         return state.current_observation
 
+    if state.current_condition:
+        return state.current_condition
+
     if state.document:
         return state.document
 
@@ -661,6 +624,7 @@ segment_handlers = {
     'IAM': _handle_iam,
     'DG1': _handle_dg1,
     'PR1': _handle_pr1,
+    'PRB': _handle_prb,
     'GT1': _handle_gt1,
     'IN1': _handle_in1,
     'IN2': _handle_in2,
@@ -671,12 +635,12 @@ segment_handlers = {
     'NTE': _handle_nte,
     'SPM': _handle_spm,
     'SAC': _handle_sac,
-    'SCH': _handle_sch,
-    'ARQ': _handle_arq,
-    'AIS': _handle_ais,
-    'AIG': _handle_aig,
-    'AIL': _handle_ail,
-    'AIP': _handle_aip,
+    'SCH': handle_sch,
+    'ARQ': handle_arq,
+    'AIS': handle_ais,
+    'AIG': handle_aig,
+    'AIL': handle_ail,
+    'AIP': handle_aip,
     'RXA': handle_rxa,
     'RXC': handle_rxc,
     'RXD': handle_rxd,

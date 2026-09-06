@@ -228,8 +228,8 @@ def _attach_person(
     reference:'stranydict',
     ) -> 'None':
     """ Points a resource at the Practitioner a PRT names - an Encounter records a participant
-    in the PRT's role, a document an author, everything else a performer - the role then has
-    no place of its own and is preserved as-is.
+    in the PRT's role, a document an author, a condition its asserter, everything else
+    a performer - the role then has no place of its own and is preserved as-is.
     """
     config = context.config
 
@@ -246,9 +246,12 @@ def _attach_person(
         append_to_list_field(target, 'participant', participant)
         return
 
-    # .. a document records the person as an author, everything else as a performer ..
+    # .. a document records the person as an author, a condition as its asserter,
+    # everything else as a performer ..
     if resource_type == 'DocumentReference':
         append_to_list_field(target, 'author', reference)
+    elif resource_type == 'Condition':
+        target.asserter = reference
     else:
         append_to_list_field(target, 'performer', reference)
 

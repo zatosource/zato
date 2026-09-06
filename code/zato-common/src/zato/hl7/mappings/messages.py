@@ -120,6 +120,10 @@ def _family_for_structure(structure_id:'strnone', raw_segments:'anylist') -> 'st
     if structure_id.startswith('MDM'):
         return 'documents'
 
+    # Problem list messages - added, updated and reviewed problems and goals.
+    if structure_id.startswith(('PPR', 'PGL', 'PRR', 'PPP')):
+        return 'problems'
+
     if structure_id.startswith(('REF', 'RRI')):
         return 'referral'
 

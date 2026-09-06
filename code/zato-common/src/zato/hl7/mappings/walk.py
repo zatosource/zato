@@ -86,6 +86,7 @@ class WalkState:
     current_service_request: 'any_'
     current_report:          'any_'
     current_observation:     'any_'
+    current_condition:       'any_'
     current_medication:      'any_'
     current_specimen:        'any_'
     current_coverage:        'any_'
@@ -139,6 +140,7 @@ def new_walk_state() -> 'WalkState':
     out.current_service_request = None
     out.current_report          = None
     out.current_observation     = None
+    out.current_condition       = None
     out.current_medication      = None
     out.current_specimen        = None
     out.current_coverage        = None

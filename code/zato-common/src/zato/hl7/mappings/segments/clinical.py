@@ -275,13 +275,19 @@ def map_dg1(accessor:'SegmentAccessor', context:'ConversionContext', encounter:'
     if recorded_date:
         out.recordedDate = recorded_date
 
-    # The diagnosis type maps to the encounter diagnosis role, unknown codes are preserved as-is.
+    # The diagnosis type maps to the encounter diagnosis role, while a working or a final
+    # diagnosis maps to the condition's verification status instead - codes
+    # that are neither one nor the other are preserved as-is.
     diagnosis_type_code = accessor.value(6)
     diagnosis_role = lookup('diagnosis_type', diagnosis_type_code, config)
 
     if diagnosis_type_code:
         if not diagnosis_role:
-            preserve_value(out, context, 'DG1', 6, diagnosis_type_code)
+            if verification := lookup('diagnosis_verification', diagnosis_type_code, config):
+                coding = {'system': verification['system'], 'code': verification['code']}
+                out.verificationStatus = {'coding': [coding]}
+            else:
+                preserve_value(out, context, 'DG1', 6, diagnosis_type_code)
 
     preserve_unmapped(accessor, _DG1_Handled, out, context)
 

@@ -14,13 +14,13 @@ from zato.common.typing_ import cast_
 from zato.fhir import Device, Observation
 from zato.hl7.mappings.codes import lookup
 from zato.hl7.mappings.concepts import cwe_to_codeable_concept, parse_number, quantity, sn_to_observation_value
-from zato.hl7.mappings.datatypes import ei_to_identifier
+from zato.hl7.mappings.datatypes import ei_to_identifier, xad_to_address
 from zato.hl7.mappings.datetimes import tm_to_time
 from zato.hl7.mappings.fields import component_value, serialize_field, serialize_repetition, subcomponent_value
 from zato.hl7.mappings.segments.common import Coded_Value_Types, Datetime_Value_Types, Default_Observation_Status, \
-    Encapsulated_Value_Type, Escape_Char, Reference_Pointer_Value_Type, Repetition_Char, Text_Value_Types, \
-    absent_value, add_named_organization, add_practitioner, append_to_list_field, patient_or_absent_reference, \
-    preserve_inexact_number, preserve_unmapped, preserve_value
+    Encapsulated_Value_Type, Escape_Char, Identifier_Type_System, Reference_Pointer_Value_Type, Repetition_Char, \
+    Text_Value_Types, absent_value, add_named_organization, add_practitioner, add_xon_organization, \
+    append_to_list_field, patient_or_absent_reference, preserve_inexact_number, preserve_unmapped, preserve_value
 from zato.hl7v2_rs import decode_escapes
 
 # ################################################################################################################################
@@ -41,9 +41,15 @@ if 0:
 dictnone = 'stranydict | None'
 
 # Which field positions each mapper consumes - anything else that carries data is preserved as an extension.
-_OBX_Handled            = frozenset({1, 2, 3, 5, 6, 7, 8, 11, 14, 15, 16, 17, 18})
+_OBX_Handled            = frozenset({1, 2, 3, 5, 6, 7, 8, 11, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24})
 _OBX_Attachment_Handled = frozenset({1, 2, 3, 5, 11, 14, 15, 16})
 _OBX_Text_Handled       = frozenset({1, 2, 3, 5, 11, 15, 16})
+
+# The analysis time has no FHIR element of its own
+_Analysis_Time_Extension = 'observation/analysis-time'
+
+# The observation instance identifier is one the filler assigned
+_Filler_Identifier_Type = 'FILL'
 
 # What the ED type-of-data codes stand for in a MIME content type - both the HL7 table codes
 # and the spelled-out media type words that can arrive in ED-2 directly.
@@ -168,6 +174,43 @@ def map_obx(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Observa
         device.identifier = [equipment]
 
         out.device = context.add(device)
+
+    # The analysis time keeps its own extension - an Observation has no slot for it,
+    # a value that is not a date/time is preserved as-is.
+    analysis_value = accessor.value(19)
+    analysis_time = context.datetime(analysis_value, 'OBX', 19)
+
+    if analysis_time:
+        base_url = config.extension_base_url
+        extension = {'url': f'{base_url}/{_Analysis_Time_Extension}', 'valueDateTime': analysis_time}
+        append_to_list_field(out, 'extension', extension)
+    elif analysis_value:
+        preserve_value(out, context, 'OBX', 19, analysis_value)
+
+    # The body site keeps its coding.
+    site_repetition = accessor.first(20)
+
+    if body_site := cwe_to_codeable_concept(site_repetition, config):
+        out.bodySite = body_site
+
+    # The observation instance identifier carries over as a filler identifier.
+    instance_repetition = accessor.first(21)
+
+    if instance := ei_to_identifier(instance_repetition, config):
+        instance['type'] = {'coding': [{'system': Identifier_Type_System, 'code': _Filler_Identifier_Type}]}
+        out.identifier = [instance]
+
+    # The performing organization joins the performers together with its address,
+    # an address with no organization to sit on is preserved as-is.
+    performing_repetition = accessor.first(23)
+    address_repetition = accessor.first(24)
+    address = xad_to_address(address_repetition, config)
+
+    if performing := add_xon_organization(performing_repetition, context, address=address):
+        append_to_list_field(out, 'performer', performing)
+    elif address:
+        address_value = accessor.serialize(24)
+        preserve_value(out, context, 'OBX', 24, address_value)
 
     preserve_unmapped(accessor, _OBX_Handled, out, context)
 

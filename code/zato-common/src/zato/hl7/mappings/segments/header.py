@@ -10,9 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.fhir import MessageHeader, OperationOutcome
 from zato.hl7.mappings.codes import lookup
 from zato.hl7.mappings.concepts import cwe_to_codeable_concept
-from zato.hl7.mappings.datatypes import hd_to_system
+from zato.hl7.mappings.datatypes import ei_to_identifier, hd_to_system
 from zato.hl7.mappings.segments.common import Default_Issue_Severity, Default_Issue_Type, Default_Message_Endpoint, \
-    Message_Event_System, No_Consumed_Fields, add_hd_organization, preserve_unmapped, preserve_value
+    Message_Event_System, No_Consumed_Fields, add_hd_organization, append_to_list_field, preserve_unmapped, \
+    preserve_value
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,7 +30,10 @@ if 0:
 
 # Which field positions each mapper consumes - anything else that carries data is preserved as an extension.
 # MSH-7, 10 and 11 are consumed at the bundle level - the timestamp, the identifier and the meta tag.
-_MSH_Handled = frozenset({1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12})
+_MSH_Handled = frozenset({1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 17, 19, 21})
+
+# The message profile identifiers have no FHIR element of their own
+_Message_Profile_Extension = 'message-profile'
 _SFT_Handled = frozenset({2, 3})
 _MSA_Handled = frozenset({1, 2})
 _ERR_Handled = frozenset({3, 4})
@@ -73,11 +77,16 @@ def map_msh(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Message
     source['endpoint'] = source_endpoint
     out.source = source
 
-    # .. the sending facility becomes the sender Organization ..
+    # .. the sending facility becomes the sender Organization,
+    # in the country MSH-17 names when it names one ..
     sending_facility = accessor.first(4)
+    country = accessor.component(17, 1)
 
-    if sender := add_hd_organization(sending_facility, context):
+    if sender := add_hd_organization(sending_facility, context, country):
         out.sender = sender
+    elif country:
+        # A country with no facility to sit on is preserved as-is.
+        preserve_value(out, context, 'MSH', 17, country)
 
     # .. the receiving application and facility become the destination ..
     destination:'stranydict' = {}
@@ -104,6 +113,19 @@ def map_msh(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Message
         destination['receiver'] = receiver
 
     out.destination = [destination]
+
+    # The principal language of the message is the resource's language.
+    if language := accessor.component(19, 1):
+        out.language = language
+
+    # Each message profile identifier keeps its own extension - FHIR's
+    # MessageHeader.definition expects a canonical URL, which an EI is not.
+    base_url = config.extension_base_url
+
+    for profile_repetition in accessor.repetitions(21):
+        if profile := ei_to_identifier(profile_repetition, config):
+            extension = {'url': f'{base_url}/{_Message_Profile_Extension}', 'valueIdentifier': profile}
+            append_to_list_field(out, 'extension', extension)
 
     preserve_unmapped(accessor, _MSH_Handled, out, context)
 

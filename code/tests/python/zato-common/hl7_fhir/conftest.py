@@ -168,6 +168,20 @@ def one_resource(bundle:'any_', resource_type:'str') -> 'any_':
 
 # ################################################################################################################################
 
+def full_url_of(bundle:'any_', resource:'any_') -> 'str':
+    """ The bundle-internal URL a resource dict was entered under.
+    """
+    for entry in bundle.to_dict()['entry']:
+        if entry['resource'] == resource:
+            out = entry['fullUrl']
+            break
+    else:
+        raise Exception('Resource not found in bundle')
+
+    return out
+
+# ################################################################################################################################
+
 def organization_named(bundle:'any_', name:'str') -> 'any_':
     """ Returns the only Organization with a given name from a bundle, asserting there is exactly one.
     """

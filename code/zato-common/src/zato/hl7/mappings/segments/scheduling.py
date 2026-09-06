@@ -18,7 +18,7 @@ from zato.hl7.mappings.segments.common import Default_Appointment_Status, Reques
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist, intnone, strnone
+    from zato.common.typing_ import anylist, intnone, stranydict, strnone
     from zato.hl7.mappings.context import ConversionContext
     from zato.hl7.mappings.fields import SegmentAccessor
     ConversionContext = ConversionContext
@@ -32,12 +32,23 @@ dictnone = 'stranydict | None'
 
 # Which field positions each mapper consumes - anything else that carries data is preserved as an extension.
 # SCH-6 and ARQ-6, the event reason, are preserved as-is.
-_SCH_Handled = frozenset({1, 2, 7, 8, 9, 10, 11, 12, 16, 25})
+_SCH_Handled = frozenset({1, 2, 7, 8, 9, 10, 11, 12, 16, 20, 25})
 _ARQ_Handled = frozenset({1, 2, 7, 8, 9, 10, 11, 15})
 _AIS_Handled = frozenset({1, 2, 3})
 _AIG_Handled = frozenset({1, 2, 3, 4})
 _AIL_Handled = frozenset({1, 2, 3, 4})
 _AIP_Handled = frozenset({1, 2, 3, 4})
+
+# Which TQ1 field positions the appointment timing consumes - anything else is preserved as an extension.
+_TQ1_Appointment_Handled = frozenset({1, 6, 7, 8})
+
+# Which components of the TQ1-6 duration quantity carry the amount and its units
+_TQ1_Duration_Amount_Component = 1
+_TQ1_Duration_Units_Component  = 2
+
+# Who entered the appointment participates in this role.
+_Enterer_Role_System = 'http://terminology.hl7.org/CodeSystem/provenance-participant-type'
+_Enterer_Role_Code   = 'enterer'
 
 # Which components of the SCH-11 timing quantity carry the start and end times
 _SCH_Timing_Start_Component = 4
@@ -170,9 +181,16 @@ def map_sch(accessor:'SegmentAccessor', context:'ConversionContext', participant
 
     preserve_other_components(accessor, 11, _SCH_Timing_Consumed, out, context)
 
-    # .. and the placer and filler contact people join the participants.
+    # .. the placer and filler contact people join the participants ..
     _contact_participant(accessor, 12, context, participants)
     _contact_participant(accessor, 16, context, participants)
+
+    # .. and so does whoever entered the appointment, in the enterer role.
+    enterer_repetition = accessor.first(20)
+
+    if enterer := add_practitioner(enterer_repetition, context):
+        enterer_role = {'coding': [{'system': _Enterer_Role_System, 'code': _Enterer_Role_Code}]}
+        participants.append({'actor': enterer, 'type': [enterer_role], 'status': 'accepted'})
 
     preserve_unmapped(accessor, _SCH_Handled, out, context)
 
@@ -316,6 +334,74 @@ def aip_participant(accessor:'SegmentAccessor', context:'ConversionContext', app
 
     out = {'actor': reference, 'status': 'accepted'}
     return out
+
+# ################################################################################################################################
+
+def _appointment_time(
+    accessor:'SegmentAccessor',
+    position:'int',
+    element:'str',
+    current:'stranydict',
+    appointment:'Appointment',
+    context:'ConversionContext',
+    ) -> 'strnone':
+    """ Reads one TQ1 time and returns it when the appointment's slot is free. A value whose
+    slot is taken, or one that does not parse, is preserved - unless it repeats what is there.
+    """
+    value = accessor.value(position)
+    if not value:
+        return None
+
+    moment = context.datetime(value, 'TQ1', position)
+
+    if not moment:
+        preserve_value(appointment, context, 'TQ1', position, value)
+        return None
+
+    if element in current:
+        # A repeat of the time already there is dropped.
+        if current[element] != moment:
+            preserve_value(appointment, context, 'TQ1', position, value)
+        return None
+
+    out = moment
+    return out
+
+# ################################################################################################################################
+
+def apply_tq1_to_appointment(accessor:'SegmentAccessor', context:'ConversionContext', appointment:'Appointment') -> 'None':
+    """ Applies TQ1 to an Appointment - the start, end and duration fill in what SCH left empty.
+    A value whose slot is already taken is preserved as-is, unless it merely repeats what is there.
+    """
+
+    # The current state comes from the serialized form, reading the typed fields would auto-vivify them.
+    current = appointment.to_dict()
+
+    # The start and end times take the slots SCH-11 did not fill ..
+    if start_time := _appointment_time(accessor, 7, 'start', current, appointment, context):
+        appointment.start = start_time
+
+    if end_time := _appointment_time(accessor, 8, 'end', current, appointment, context):
+        appointment.end = end_time
+
+    # .. and the duration fills the minutes when SCH-9 and SCH-10 did not,
+    # values that make no minutes stay preserved together with their units.
+    duration       = accessor.component(6, _TQ1_Duration_Amount_Component)
+    duration_units = accessor.component(6, _TQ1_Duration_Units_Component)
+
+    if minutes := _minutes_duration(duration, duration_units):
+        if 'minutesDuration' in current:
+            if current['minutesDuration'] != minutes:
+                duration_value = accessor.serialize(6)
+                preserve_value(appointment, context, 'TQ1', 6, duration_value)
+        else:
+            appointment.minutesDuration = minutes
+    else:
+        if duration:
+            duration_value = accessor.serialize(6)
+            preserve_value(appointment, context, 'TQ1', 6, duration_value)
+
+    preserve_unmapped(accessor, _TQ1_Appointment_Handled, appointment, context)
 
 # ################################################################################################################################
 # ################################################################################################################################
