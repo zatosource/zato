@@ -27,7 +27,7 @@ class TestNarrativeNutritionOrder:
     def test_narrative_nutrition_order_basic(self):
         r = NutritionOrder()
         r.id = 'test-1'
-        r.instantiatesCanonical = {'value': 'test'}
+        r.instantiatesCanonical = 'http://example.org/test'
         narrative = generate_narrative(r)
         assert narrative['status'] == 'generated'
         root = parse_xhtml(narrative['div'])
@@ -46,7 +46,7 @@ class TestNarrativeNutritionOrder:
     def test_narrative_nutrition_order_instantiatesCanonical(self):
         r = NutritionOrder()
         r.id = 'test-1'
-        r.instantiatesCanonical = {'value': 'test'}
+        r.instantiatesCanonical = 'http://example.org/test'
         narrative = generate_narrative(r)
         assert narrative['status'] == 'generated'
         root = parse_xhtml(narrative['div'])
@@ -141,7 +141,7 @@ class TestNarrativeNutritionOrder:
     def test_narrative_nutrition_order_custom_template(self):
         r = NutritionOrder()
         r.id = 'test-1'
-        r.instantiatesCanonical = {'value': 'test'}
+        r.instantiatesCanonical = 'http://example.org/test'
         template = NarrativeTemplate(
             fields=['instantiatesCanonical'],
             labels={'instantiatesCanonical': 'Custom Label'},

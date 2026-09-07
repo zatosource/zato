@@ -103,7 +103,7 @@ class TestNarrativeMeasureReport:
     def test_narrative_measure_report_measure(self):
         r = MeasureReport()
         r.id = 'test-1'
-        r.measure = {'value': 'test'}
+        r.measure = 'http://example.org/test'
         narrative = generate_narrative(r)
         assert narrative['status'] == 'generated'
         root = parse_xhtml(narrative['div'])

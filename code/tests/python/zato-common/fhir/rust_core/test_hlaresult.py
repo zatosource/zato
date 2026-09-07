@@ -64,7 +64,7 @@ class TestToDicthlaresult:
 
     def test_to_dict_extension(self):
         resource = hlaresult()
-        resource.extension = [{'url': 'http://example.org/ext', 'valueString': 'test'}]
+        resource.extension = {'url': 'http://example.org/ext', 'valueString': 'test'}
         result = zato.fhir_r4_0_1_core.to_dict(resource)
         assert 'extension' in result
 
@@ -372,7 +372,7 @@ class TestGetPathhlaresult:
 
     def test_get_path_extension(self):
         resource = hlaresult()
-        resource.extension = [{'url': 'http://example.org/ext', 'valueString': 'test'}]
+        resource.extension = {'url': 'http://example.org/ext', 'valueString': 'test'}
         result = zato.fhir_r4_0_1_core.get_path(resource, 'extension')
         assert result is not None
 

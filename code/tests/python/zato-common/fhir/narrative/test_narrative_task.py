@@ -27,7 +27,7 @@ class TestNarrativeTask:
     def test_narrative_task_basic(self):
         r = Task()
         r.id = 'test-1'
-        r.instantiatesCanonical = {'value': 'test'}
+        r.instantiatesCanonical = 'http://example.org/test'
         narrative = generate_narrative(r)
         assert narrative['status'] == 'generated'
         root = parse_xhtml(narrative['div'])
@@ -46,7 +46,7 @@ class TestNarrativeTask:
     def test_narrative_task_instantiatesCanonical(self):
         r = Task()
         r.id = 'test-1'
-        r.instantiatesCanonical = {'value': 'test'}
+        r.instantiatesCanonical = 'http://example.org/test'
         narrative = generate_narrative(r)
         assert narrative['status'] == 'generated'
         root = parse_xhtml(narrative['div'])
@@ -141,7 +141,7 @@ class TestNarrativeTask:
     def test_narrative_task_custom_template(self):
         r = Task()
         r.id = 'test-1'
-        r.instantiatesCanonical = {'value': 'test'}
+        r.instantiatesCanonical = 'http://example.org/test'
         template = NarrativeTemplate(
             fields=['instantiatesCanonical'],
             labels={'instantiatesCanonical': 'Custom Label'},

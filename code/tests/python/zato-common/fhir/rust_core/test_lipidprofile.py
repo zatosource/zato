@@ -142,7 +142,7 @@ class TestToDictlipidprofile:
 
     def test_to_dict_result(self):
         resource = lipidprofile()
-        resource.result = [{'reference': 'Patient/123', 'display': 'Test Patient'}]
+        resource.result = {'reference': 'Patient/123', 'display': 'Test Patient'}
         result = zato.fhir_r4_0_1_core.to_dict(resource)
         assert 'result' in result
 
@@ -450,7 +450,7 @@ class TestGetPathlipidprofile:
 
     def test_get_path_result(self):
         resource = lipidprofile()
-        resource.result = [{'reference': 'Patient/123', 'display': 'Test Patient'}]
+        resource.result = {'reference': 'Patient/123', 'display': 'Test Patient'}
         result = zato.fhir_r4_0_1_core.get_path(resource, 'result')
         assert result is not None
 

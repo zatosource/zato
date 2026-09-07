@@ -160,7 +160,7 @@ class TestToDictChargeItem:
 
     def test_to_dict_factor_override(self):
         resource = ChargeItem()
-        resource.factorOverride = 3.14
+        resource.factorOverride = '3.14'
         result = zato.fhir_r4_0_1_core.to_dict(resource)
         assert 'factorOverride' in result
 
@@ -545,7 +545,7 @@ class TestGetPathChargeItem:
 
     def test_get_path_factor_override(self):
         resource = ChargeItem()
-        resource.factorOverride = 3.14
+        resource.factorOverride = '3.14'
         result = zato.fhir_r4_0_1_core.get_path(resource, 'factorOverride')
         assert result is not None
 

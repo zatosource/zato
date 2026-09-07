@@ -3,7 +3,8 @@
 	server-clean scheduler-clean io-clean common-core-clean queue-bridge-clean \
 	server-install scheduler-install io-install common-core-install queue-bridge-install \
 	health-install health-build health-clean \
-	ruff pyright test-lint qa-reqs-install unify \
+	ruff pyright test-lint test-static test-static-python test-static-rust test-static-js \
+	qa-reqs-install rust-lint-tools-install unify \
 	analytics update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
@@ -321,12 +322,17 @@ health-clean: ## Clean health build artifacts and zato-libs entries.
 # QA and tooling
 # ############################################################################
 
-qa-reqs-install:
+qa-reqs-install: rust-lint-tools-install
 	$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python -r $(CURDIR)/code/qa-requirements.txt
 	npx --yes playwright install chromium
 	mkdir -p $(CURDIR)/code/eggs/requests/ || true
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 	sudo snap install k6
+
+rust-lint-tools-install: ## Install the cargo subcommands the Rust lint pipeline needs - dylint, deny, vet and geiger.
+	$(LOAD_CARGO_ENV) && cargo install dylint-link cargo-deny cargo-vet
+# These two need --locked - their newest dependency versions want a newer rustc than the toolchain ships
+	$(LOAD_CARGO_ENV) && cargo install --locked cargo-dylint cargo-geiger
 
 unify:
 	mkdir -p $(SITE_PACKAGES)/lib2to3/pgen2
@@ -343,6 +349,19 @@ pyright:
 	cd $(CURDIR)/code && pyright zato-common/src/zato/hl7v2/ tests/python/
 
 test-lint: ruff pyright format clippy ## Static analysis only - no test is executed. The first stage of test-all.
+
+test-static-python: ruff pyright ## Every Python static check - ruff and pyright.
+
+test-static-rust: rust-lint ## Every Rust static check - format, clippy, dylint, deny, vet and geiger.
+
+test-static-js: ## Every JS static check - a node --check syntax pass over all first-party sources.
+	find $(CURDIR)/code/zato-web-admin/src/zato/admin/static/js \
+		$(CURDIR)/code/zato-web-admin/src/zato/admin/static/message-viewer-src \
+		$(CURDIR)/code/zato-rule-engine-dashboard/src \
+		$(CURDIR)/code/tests/js \
+		-name '*.js' -type f -not -path '*/node_modules/*' -print0 | xargs -0 -n1 node --check
+
+test-static: test-static-python test-static-rust test-static-js ## Every static check there is - Python, Rust and JS. Nothing is executed.
 
 CYCLONEDX_BOM_VERSION := 7.3.0
 
@@ -1578,11 +1597,11 @@ dylint: dylint-zato ## Dylint everything.
 
 rust-deny-zato: ## Dependency audit (advisories, licenses, bans) for public crates.
 	. $(HOME)/.cargo/env && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    check --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    check --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml check --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             check --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_queue_bridge/Cargo.toml   check --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml
+	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
+	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
+	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
+	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
+	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_queue_bridge/Cargo.toml   --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check
 
 rust-deny: rust-deny-zato ## Dependency audit everywhere.
 
@@ -1592,11 +1611,26 @@ vet-zato: ## Supply-chain audit for public crates.
 
 vet: vet-zato ## Supply-chain audit everywhere.
 
+# geiger turns any warning into a failing exit, and its scan-coverage warnings are noise -
+# "never scanned" fires for files embedded through include_str! (pyo3's guide .md, icu's
+# .rs.data blobs) and, nondeterministically, for source files it did scan on the previous
+# run, so neither it nor "No metrics found" can gate the pipeline. Both are tolerated below,
+# the unsafe usage table stays the deliverable, and a run that fails for any other reason -
+# a compile error, a crash - still fails the target. No grep -q anywhere - with pipefail
+# a -q grep that quits early kills the pipe upstream and flips the pipeline's status.
 geiger-zato: ## Report unsafe usage in public crate dependency trees.
 	. $(HOME)/.cargo/env && \
-	cargo geiger --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml && \
-	cargo geiger --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml && \
-	cargo geiger --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml
+	for crate in zato_common_core zato_server_core zato_scheduler_core; do \
+		out=$$(cargo geiger --manifest-path $(ZATO_RUST_DIR)/$$crate/Cargo.toml 2>&1); \
+		status=$$?; \
+		echo "$$out"; \
+		if [ $$status -ne 0 ]; then \
+			errline=$$(echo "$$out" | grep -E '^error: Found [0-9]+ warnings$$'); \
+			if [ -z "$$errline" ]; then exit $$status; fi; \
+			bad=$$(echo "$$out" | grep '^WARNING:' | grep -Ev 'was never scanned:|No metrics found'); \
+			if [ -n "$$bad" ]; then printf 'Real geiger findings:\n%s\n' "$$bad"; exit $$status; fi; \
+		fi; \
+	done
 
 geiger: geiger-zato ## Report unsafe usage everywhere.
 

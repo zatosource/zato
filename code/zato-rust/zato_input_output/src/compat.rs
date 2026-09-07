@@ -107,8 +107,11 @@ macro_rules! define_elem_type {
             /// Creates a new instance from the element name, delegating to `create`.
             #[new]
             #[pyo3(signature = (name, *, default=None))]
-            fn new(name: String, default: Option<Py<PyAny>>) -> (Self, Elem) {
-                Self::create(name, default)
+            fn new(name: String, default: Option<Py<PyAny>>) -> PyClassInitializer<Self> {
+                // pyo3 0.29 phased out returning a (subclass, base) tuple from #[new],
+                // so the same pair is wrapped in a PyClassInitializer instead
+                let (subtype, parent) = Self::create(name, default);
+                PyClassInitializer::from(parent).add_subclass(subtype)
             }
         }
     };

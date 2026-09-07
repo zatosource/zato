@@ -11,7 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # and empty lists of either kind add nothing to the query.
 
 # Zato
-from zato.admin.web.views.audit_log.query import _build_where
+from zato.common.audit_log.search import build_search_conditions
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,7 +43,7 @@ def _build(
     """ Builds the WHERE conditions out of the picks alone - no outcomes, no query,
     no status and no time window, so what comes back is the picks' own doing.
     """
-    out = _build_where(
+    out = build_search_conditions(
         sources, object_names, [], '', '',
         sources_excluded=sources_excluded, object_names_excluded=object_names_excluded)
 

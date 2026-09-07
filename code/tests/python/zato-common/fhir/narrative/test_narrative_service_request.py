@@ -65,7 +65,7 @@ class TestNarrativeServiceRequest:
     def test_narrative_service_request_instantiatesCanonical(self):
         r = ServiceRequest()
         r.id = 'test-1'
-        r.instantiatesCanonical = {'value': 'test'}
+        r.instantiatesCanonical = 'http://example.org/test'
         narrative = generate_narrative(r)
         assert narrative['status'] == 'generated'
         root = parse_xhtml(narrative['div'])

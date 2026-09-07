@@ -18,7 +18,9 @@ name = "_zato_scheduler"
 path = "src/bin/scheduler.rs"
 
 [dependencies]
-actix-web = "4.13.0"
+# http2 is off on purpose - the API is loopback-only cleartext HTTP/1, actix uses HTTP/2
+# only over TLS, and dropping the feature removes the h2 crate (RUSTSEC-2026-0258) entirely
+actix-web = { version = "4.13.0", default-features = false, features = ["macros", "unicode"] }
 chrono = { version = "0.4.44", features = ["serde"] }
 chrono-tz = "0.10.4"
 humantime = "2.3.0"
@@ -28,7 +30,6 @@ rand = "0.10.1"
 redis = "1.2.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-tokio = { version = "1.52.1", features = ["full"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 

@@ -10,9 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
-import zato.edifact.nl # noqa: F401 - registers the MEDLAB and MEDVRI classes
-
+from zato.common.typing_ import cast_
 from zato.edifact.envelope import parse_edifact
+from zato.edifact.nl.messages import MEDLAB
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,7 +48,7 @@ class TestSelectiveModification(unittest.TestCase):
 
     def test_reads_do_not_modify(self) -> None:
         interchange = parse_edifact(_interchange)
-        msg = interchange.message
+        msg = cast_(MEDLAB, interchange.message)
 
         # Reads cache typed segments and composites on the message ..
         _ = msg.pid.sex
@@ -64,7 +64,7 @@ class TestSelectiveModification(unittest.TestCase):
 
     def test_element_assignment(self) -> None:
         interchange = parse_edifact(_interchange)
-        msg = interchange.message
+        msg = cast_(MEDLAB, interchange.message)
 
         # A direct element assignment
         msg.pid.sex = 'M'
@@ -78,7 +78,7 @@ class TestSelectiveModification(unittest.TestCase):
 
     def test_component_assignment(self) -> None:
         interchange = parse_edifact(_interchange)
-        msg = interchange.message
+        msg = cast_(MEDLAB, interchange.message)
 
         # An assignment inside a composite
         msg.pid.patient_name.married_name = 'Jansen'
@@ -92,7 +92,7 @@ class TestSelectiveModification(unittest.TestCase):
 
     def test_assignment_inside_group(self) -> None:
         interchange = parse_edifact(_interchange)
-        msg = interchange.message
+        msg = cast_(MEDLAB, interchange.message)
 
         # An assignment on a segment nested inside a repeating group
         material = msg.materials[0]

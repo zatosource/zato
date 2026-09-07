@@ -65,7 +65,7 @@ class TestNarrativeCommunication:
     def test_narrative_communication_instantiatesCanonical(self):
         r = Communication()
         r.id = 'test-1'
-        r.instantiatesCanonical = {'value': 'test'}
+        r.instantiatesCanonical = 'http://example.org/test'
         narrative = generate_narrative(r)
         assert narrative['status'] == 'generated'
         root = parse_xhtml(narrative['div'])
