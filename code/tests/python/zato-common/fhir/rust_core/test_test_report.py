@@ -106,7 +106,7 @@ class TestToDictTestReport:
 
     def test_to_dict_score(self):
         resource = TestReport()
-        resource.score = 3.14
+        resource.score = '3.14'
         result = zato.fhir_r4_0_1_core.to_dict(resource)
         assert 'score' in result
 
@@ -354,7 +354,7 @@ class TestGetPathTestReport:
 
     def test_get_path_score(self):
         resource = TestReport()
-        resource.score = 3.14
+        resource.score = '3.14'
         result = zato.fhir_r4_0_1_core.get_path(resource, 'score')
         assert result is not None
 

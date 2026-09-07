@@ -23,7 +23,9 @@ kafka = ["rdkafka", "rdkafka/ssl"]
 ibm-mq = ["mqi", "libmqm-sys", "openssl"]
 
 [dependencies]
-actix-web = "4.13.0"
+# http2 is off on purpose - the API is loopback-only cleartext HTTP/1, actix uses HTTP/2
+# only over TLS, and dropping the feature removes the h2 crate (RUSTSEC-2026-0258) entirely
+actix-web = { version = "4.13.0", default-features = false, features = ["macros", "unicode"] }
 libmqm-sys = { version = "0.10", default-features = false, features = ["dlopen2", "mqc_9_3_0_0"], optional = true }
 # The mqai feature is needed because mqi 0.3.0 does not compile without it
 mqi = { version = "0.3", default-features = false, features = ["dlopen2", "mqai", "mqc_9_3_0_0"], optional = true }

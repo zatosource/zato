@@ -18,11 +18,10 @@ default = []
 extension-module = ["pyo3/extension-module"]
 
 [dependencies]
-pyo3 = { version = "0.28.3", features = ["multiple-pymethods"] }
+pyo3 = { version = "0.29.2", features = ["multiple-pymethods"] }
 http = "1.4.0"
 httparse = "1"
 libc = "0.2.184"
-prctl = "1.0.0"
 log = "0.4.29"
 parking_lot = "0.12"
 chrono = "0.4.44"

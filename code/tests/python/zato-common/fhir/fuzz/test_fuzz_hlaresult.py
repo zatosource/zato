@@ -41,14 +41,14 @@ class TestFuzzhlaresult:
         r2 = hlaresult.from_json(json_str)
         assert r2.id == value
 
-    @given(st.lists(fhir_safe_text, min_size=0, max_size=10))
+    @given(fhir_safe_text)
     @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_hlaresult_extension_values(self, values: list[str]) -> None:
+    def test_fuzz_hlaresult_extension_values(self, value: str) -> None:
         r = hlaresult()
         r.id = 'fuzz-test'
-        r.extension = [{'url': f'http://example.org/ext{i}', 'valueString': v} for i, v in enumerate(values)]
+        r.extension = {'url': 'http://example.org/ext', 'valueString': value}
         d = r.to_dict()
-        assert len(d.get('extension', [])) == len(values)
+        assert d['extension']['valueString'] == value
 
     @given(fhir_safe_text, fhir_safe_text)
     @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow])

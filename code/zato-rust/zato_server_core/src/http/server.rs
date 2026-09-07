@@ -71,7 +71,13 @@ impl Drop for HTTPServer {
 
 /// Sets the Linux process name to `zato-server` for visibility in `ps`/`top`.
 fn set_process_name() {
-    let _result = prctl::set_name("zato-server");
+    // PR_SET_NAME copies at most 15 bytes plus the terminating NUL out of the buffer
+    let name = c"zato-server";
+    // SAFETY: the pointer is a valid NUL-terminated string that outlives the call,
+    // and PR_SET_NAME only reads from it.
+    unsafe {
+        let _result = libc::prctl(libc::PR_SET_NAME, name.as_ptr());
+    }
 }
 
 /// Atomically swaps `LISTEN_FD` to -1 and closes the old fd if it was valid.

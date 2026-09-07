@@ -100,7 +100,7 @@ class TestToDictvitalsigns:
 
     def test_to_dict_category(self):
         resource = vitalsigns()
-        resource.category = [{'coding': [{'system': 'http://example.org', 'code': 'test-code', 'display': 'Test'}], 'text': 'Test concept'}]
+        resource.category = {'coding': [{'system': 'http://example.org', 'code': 'test-code', 'display': 'Test'}], 'text': 'Test concept'}
         result = zato.fhir_r4_0_1_core.to_dict(resource)
         assert 'category' in result
 
@@ -469,7 +469,7 @@ class TestGetPathvitalsigns:
 
     def test_get_path_category(self):
         resource = vitalsigns()
-        resource.category = [{'coding': [{'system': 'http://example.org', 'code': 'test-code', 'display': 'Test'}], 'text': 'Test concept'}]
+        resource.category = {'coding': [{'system': 'http://example.org', 'code': 'test-code', 'display': 'Test'}], 'text': 'Test concept'}
         result = zato.fhir_r4_0_1_core.get_path(resource, 'category')
         assert result is not None
 

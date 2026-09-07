@@ -65,7 +65,7 @@ class TestNarrativeFamilyMemberHistory:
     def test_narrative_family_member_history_instantiatesCanonical(self):
         r = FamilyMemberHistory()
         r.id = 'test-1'
-        r.instantiatesCanonical = {'value': 'test'}
+        r.instantiatesCanonical = 'http://example.org/test'
         narrative = generate_narrative(r)
         assert narrative['status'] == 'generated'
         root = parse_xhtml(narrative['div'])

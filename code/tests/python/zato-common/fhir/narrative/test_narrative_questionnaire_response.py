@@ -103,7 +103,7 @@ class TestNarrativeQuestionnaireResponse:
     def test_narrative_questionnaire_response_questionnaire(self):
         r = QuestionnaireResponse()
         r.id = 'test-1'
-        r.questionnaire = {'value': 'test'}
+        r.questionnaire = 'http://example.org/test'
         narrative = generate_narrative(r)
         assert narrative['status'] == 'generated'
         root = parse_xhtml(narrative['div'])

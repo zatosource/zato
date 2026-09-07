@@ -184,7 +184,7 @@ class TestToDictMedia:
 
     def test_to_dict_duration(self):
         resource = Media()
-        resource.duration = 3.14
+        resource.duration = '3.14'
         result = zato.fhir_r4_0_1_core.to_dict(resource)
         assert 'duration' in result
 
@@ -537,7 +537,7 @@ class TestGetPathMedia:
 
     def test_get_path_duration(self):
         resource = Media()
-        resource.duration = 3.14
+        resource.duration = '3.14'
         result = zato.fhir_r4_0_1_core.get_path(resource, 'duration')
         assert result is not None
 
