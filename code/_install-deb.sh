@@ -49,8 +49,12 @@ if [[ "$CLEAR_VENV" == "y" ]]; then
     rm -rf $CURDIR/bin $CURDIR/lib $CURDIR/lib64 $CURDIR/include $CURDIR/pyvenv.cfg
 fi
 
-echo Creating virtual environment in $CURDIR using uv
-$UV_BIN venv "$(realpath $CURDIR)" --python $PY_BINARY --allow-existing -q
+# Resolve to an absolute path so that uv uses exactly this interpreter
+# instead of substituting one of its own managed Python installations.
+PY_BINARY_PATH=$(command -v $PY_BINARY)
+
+echo Creating virtual environment in $CURDIR using uv and $PY_BINARY_PATH
+$UV_BIN venv "$(realpath $CURDIR)" --python $PY_BINARY_PATH --python-preference only-system --allow-existing -q
 
 echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate
