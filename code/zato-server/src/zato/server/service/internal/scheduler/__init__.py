@@ -427,14 +427,14 @@ def _create_edit(self, action):
             # Read the link back after the commit - it may come from a previous save rather than from this input
             job_opaque = parse_instance_opaque_attr(job_row)
 
-        logger.info('_create_edit action=%s job_id=%s data=%s', action, job_id, data)
+        logger.debug('_create_edit action=%s job_id=%s data=%s', action, job_id, data)
 
         if action == 'create':
             self.server._scheduler.create_job(job_id, data)
-            logger.info('_create_edit: create_job returned for job_id=%s', job_id)
+            logger.debug('_create_edit: create_job returned for job_id=%s', job_id)
         else:
             self.server._scheduler.edit_job(job_id, data)
-            logger.info('_create_edit: edit_job returned for job_id=%s', job_id)
+            logger.debug('_create_edit: edit_job returned for job_id=%s', job_id)
 
         # An edit made directly in the scheduler is written back to the IMAP connection that this job is linked to,
         # so the connection never shows a stale description of its job. Edits that come from the IMAP layer itself

@@ -426,13 +426,13 @@ def _add_scheduler_job(api:'SchedulerAPI', job_data:'Bunch', spawn:'bool', sourc
 
     # Ignore jobs that have been removed
     if job_data.name in SCHEDULER.JobsToIgnore:
-        logger.info(f'Ignoring job `{job_data.name}` ({source})`')
+        logger.debug(f'Ignoring job `{job_data.name}` ({source})`')
         return
 
     if job_data.is_active:
         api.create_edit('create', job_data, spawn=spawn)
     else:
-        logger.info(f'Not adding an inactive job `{job_data}`')
+        logger.debug(f'Not adding an inactive job `{job_data}`')
 
 # ################################################################################################################################
 
@@ -580,7 +580,7 @@ def load_scheduler_jobs_by_api(api:'SchedulerAPI', spawn:'bool') -> 'None':
         # .. log what we are about to add ..
         items = sorted(elem['name'] for elem in response)
 
-        logger.info('Loading jobs into scheduler -> %s', items)
+        logger.debug('Loading jobs into scheduler -> %s', items)
 
         # .. go through each of the jobs received ..
         for item in response:

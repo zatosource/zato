@@ -46,6 +46,10 @@ _quickstart_timeout   = 600
 
 _ping_poll_interval   = 0.5
 
+# The logs that are copied out of an environment before it is torn down
+_server_log_file_name        = 'server.log'
+_file_transfer_log_file_name = 'file-transfer.log'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -97,11 +101,21 @@ class SessionState:
         """
         # Copy server logs before killing anything ..
         if self.quickstart_directory:
-            server_log_path = os.path.join(self.quickstart_directory, 'server1', 'logs', 'server.log')
-            if os.path.exists(server_log_path):
-                destination = f'/tmp/{self._server_log_copy_name}'
-                shutil.copy(server_log_path, destination)
-                self._logger.info('Copied server logs to %s', destination)
+            logs_directory = os.path.join(self.quickstart_directory, 'server1', 'logs')
+
+            # The server's log is copied out under the configured name, the file transfer one
+            # under that name prefixed, so that the two copies never collide.
+            log_copies = {
+                _server_log_file_name: self._server_log_copy_name,
+                _file_transfer_log_file_name: f'file-transfer-{self._server_log_copy_name}',
+            }
+
+            for log_file_name, copy_name in log_copies.items():
+                log_path = os.path.join(logs_directory, log_file_name)
+                if os.path.exists(log_path):
+                    destination = f'/tmp/{copy_name}'
+                    _ = shutil.copy(log_path, destination)
+                    self._logger.info('Copied %s to %s', log_file_name, destination)
 
         # Stop the server process ..
         self.kill_server()

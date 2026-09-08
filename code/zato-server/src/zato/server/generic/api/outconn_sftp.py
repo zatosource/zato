@@ -19,6 +19,7 @@ from zato.common.audit_log.api import AuditLog
 from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
 from zato.common.sftp import SFTPOutput
 from zato.common.util.api import new_cid
+from zato.common.util.logging_ import file_transfer_logger_name
 from zato.server.commands import CommandsFacade
 from zato.server.connection.queue import Wrapper
 
@@ -35,7 +36,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+logger = getLogger(file_transfer_logger_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -315,8 +316,9 @@ class SFTPClient:
                 prefix = self._get_askpass_prefix(password_path, helper_path)
                 command = prefix + command
 
-            # .. now, invoke the binary in a subprocess, feeding it commands via stdin ..
-            result:'CommandResult' = self.commands.invoke(command, cid=cid, stdin=data)
+            # .. now, invoke the binary in a subprocess, feeding it commands via stdin, with the command's
+            # .. own logging going to the file transfer log rather than to the server's one ..
+            result:'CommandResult' = self.commands.invoke(command, cid=cid, stdin=data, command_logger=logger)
 
             # .. and populate our output based on what the invocation returned.
             out.is_ok = result.is_ok

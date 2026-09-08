@@ -1173,7 +1173,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             self._ensure_stream_group(fire_redis, stream, group_name)
 
         def _fire_listener_loop() -> 'None':
-            logger.info('Scheduler fire listener loop entering')
+            logger.debug('Scheduler fire listener loop entering')
 
             error_since = 0.0
             last_logged = 0.0
@@ -1197,18 +1197,18 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                         continue
 
                     len_result = len(result)
-                    logger.info('Fire event: got %d %s in batch', len_result, 'stream' if len_result == 1 else 'streams')
+                    logger.debug('Fire event: got %d %s in batch', len_result, 'stream' if len_result == 1 else 'streams')
 
                     for stream_name, messages in result:
 
                         len_messages = len(messages)
-                        logger.info('Fire event: stream=%r %d %s stream_type=%s',
+                        logger.debug('Fire event: stream=%r %d %s stream_type=%s',
                             stream_name, len_messages, 'message' if len_messages == 1 else 'messages',
                             type(stream_name).__name__)
 
                         for msg_id, fields in messages:
 
-                            logger.info('Fire event: msg_id=%s stream=%r matched_fire=%s matched_timeout=%s fields_keys=%s',
+                            logger.debug('Fire event: msg_id=%s stream=%r matched_fire=%s matched_timeout=%s fields_keys=%s',
                                 msg_id, stream_name,
                                 stream_name == fire_stream,
                                 stream_name == timeout_stream,
@@ -1232,7 +1232,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     sleep(1)
 
         _ = spawn(_fire_listener_loop)
-        logger.info('Scheduler fire listener greenlet started')
+        logger.debug('Scheduler fire listener greenlet started')
 
 # ################################################################################################################################
 
@@ -1247,7 +1247,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self._ensure_stream_group(req_redis, request_stream, group_name)
 
         def _request_listener_loop() -> 'None':
-            logger.info('Scheduler request listener loop entering')
+            logger.debug('Scheduler request listener loop entering')
 
             error_since = 0.0
             last_logged = 0.0
@@ -1284,14 +1284,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     sleep(1)
 
         _ = spawn(_request_listener_loop)
-        logger.info('Scheduler request listener greenlet started')
+        logger.debug('Scheduler request listener greenlet started')
 
 # ################################################################################################################################
 
     def _handle_fire_event(self, fields:'dict') -> 'None':
         """ Processes a fire event from the scheduler - invokes the target service.
         """
-        logger.info('Fire event: handler entered, fields_keys=%s', list(fields.keys()))
+        logger.debug('Fire event: handler entered, fields_keys=%s', list(fields.keys()))
 
         payload_json = fields['payload']
         ctx = json_loads(payload_json)
@@ -1306,7 +1306,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         on_error_service = ctx.get('on_error_service')
         on_error_job = ctx.get('on_error_job')
 
-        logger.info('Invoking service for job: id=%s name=%s run=%s', job_id, job_name, current_run)
+        logger.debug('Invoking service for job: id=%s name=%s run=%s', job_id, job_name, current_run)
 
         extra = ctx.get('extra')
         if extra and isinstance(extra, str):
@@ -1369,7 +1369,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         duration_ms = int((monotonic() - invocation_start) * 1000)
 
-        logger.info('Fire event: before mark_complete job_id=%s name=%s outcome=%s duration_ms=%s run=%s error_tb_len=%s',
+        logger.debug('Fire event: before mark_complete job_id=%s name=%s outcome=%s duration_ms=%s run=%s error_tb_len=%s',
             job_id, job_name, outcome, duration_ms, current_run, len(error_traceback))
 
         # .. the run's record closes with its outcome, duration and error ..
@@ -1379,7 +1379,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # .. report the completion to the Rust scheduler so its in-flight state clears ..
         try:
             self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run, error_traceback)
-            logger.info('Fire event: mark_complete sent job_id=%s run=%s outcome=%s', job_id, current_run, outcome)
+            logger.debug('Fire event: mark_complete sent job_id=%s run=%s outcome=%s', job_id, current_run, outcome)
         except Exception:
             logger.warning('Fire event: mark_complete failed job_id=%s name=%s traceback=%s', job_id, job_name, format_exc())
 
@@ -1417,7 +1417,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         job_id = callback_context['job_id']
         job_name = callback_context['job_name']
 
-        logger.info('Invoking %s callback service=%s for job_id=%s name=%s', event_label, service_name, job_id, job_name)
+        logger.debug('Invoking %s callback service=%s for job_id=%s name=%s', event_label, service_name, job_id, job_name)
 
         payload = json_dumps(callback_context)
 
@@ -1459,11 +1459,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 return
 
             if not target_job.is_active:
-                logger.info(
+                logger.debug(
                     'Skipping inactive callback job=%s for source job_id=%s name=%s', target_job_name, source_job_id, source_job_name)
                 return
 
-            logger.info(
+            logger.debug(
                 'Triggering %s callback job=%s for source job_id=%s name=%s', event_label, target_job_name, source_job_id, source_job_name)
 
             target_job_id = target_job.id

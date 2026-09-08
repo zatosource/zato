@@ -25,6 +25,7 @@ from humanize import naturalsize
 from zato.common.audit_log.api import AuditOutcome
 from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Move, Operation_Read, \
     Operation_Store
+from zato.common.util.logging_ import file_transfer_logger_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,7 +38,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+logger = getLogger(file_transfer_logger_name)
 
 # How many seconds to wait for a client from the connection's pool. Waiting rather than giving up at once
 # means that two runs over one connection take turns instead of one of them failing, and it also covers

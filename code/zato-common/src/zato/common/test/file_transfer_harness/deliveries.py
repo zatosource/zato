@@ -25,6 +25,7 @@ Service_Store_File = 'file-transfer-scheduler-test.store-file'
 Service_Always_Raise = 'file-transfer-scheduler-test.always-raise'
 Service_Fail_Selected = 'file-transfer-scheduler-test.fail-selected'
 Service_Slow_Store = 'file-transfer-scheduler-test.slow-store'
+Service_Echo_Item = 'file-transfer-scheduler-test.echo-item'
 
 # A file whose name holds this is the one that Service_Fail_Selected refuses to accept
 Failing_File_Token = 'refused'
@@ -146,6 +147,20 @@ class SlowStoreFileTransfer(Service):
         sleep(_slow_store_delay)
 
         _record(item)
+
+
+class EchoFileTransferItem(Service):
+    """ Records the file and then hands the item itself back as the response, the way a generic echo
+    service would, so that tests can confirm that returning the item counts as a success.
+    """
+    name = '{service_echo_item}'
+
+    def handle(self):
+
+        item = self.request.raw_request
+        _record(item)
+
+        self.response.payload = item
 '''
 
 # ################################################################################################################################
@@ -163,6 +178,7 @@ def build_test_services_source(deliveries_file:'str') -> 'str':
         service_always_raise=Service_Always_Raise,
         service_fail_selected=Service_Fail_Selected,
         service_slow_store=Service_Slow_Store,
+        service_echo_item=Service_Echo_Item,
     )
 
     return out

@@ -18,6 +18,7 @@ from zato.common.api import FTP as CommonFTP
 from zato.common.audit_log.api import AuditLog
 from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
 from zato.common.typing_ import cast_
+from zato.common.util.logging_ import file_transfer_logger_name
 from zato.server.connection.queue import Wrapper
 
 # ################################################################################################################################
@@ -32,7 +33,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+logger = getLogger(file_transfer_logger_name)
 
 # How many seconds to wait for the control connection to be established
 _connect_timeout = 60
