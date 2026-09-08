@@ -1443,8 +1443,11 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
         }
 
         // The new or replaced row was built in JavaScript, so it needs
-        // the same inline column centering the initial rows received on load.
+        // the same inline column centering the initial rows received on load ..
         $.fn.zato.data_table.center_columns();
+
+        // .. and, on a page with a Last run column, its cell is humanized now that it is in the DOM.
+        $.fn.zato.time_ago.init('#data-table');
     }
 
     $.fn.zato.data_table._on_submit_complete(data, status);
@@ -2289,6 +2292,8 @@ $.fn.zato.count_text = function(count, singular, plural) {
 // Reusable "time ago" cells - each element with the .zato-time-ago class and a data-time-utc attribute
 // is turned into a humanized link, e.g. "3 minutes ago", with a click-triggered tippy that shows
 // the full timestamp both in the browser's timezone and in UTC.
+//
+// A cell's data-time-ago-id lists the IDs the refresh asks about, comma-separated.
 $.fn.zato.time_ago = {};
 
 // A click on the countdown text flips this - while it is true the ticker stands still
@@ -2311,6 +2316,7 @@ $.fn.zato.time_ago.config = {
     'utc_label': 'UTC',
     'tippy_placement': 'top',
     'refresh_interval_ms': 5000,
+    'refresh_url': '/zato/scheduler/get-last-run-list/',
     'spinner_min_visible_ms': 350,
     'value_fade_ms': 250,
 
@@ -2781,17 +2787,29 @@ $.fn.zato.time_ago.restart_progress = function(container_selector) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-// Runs one refresh cycle - the IDs of the rows currently shown go out in a single request
+// The IDs a cell stands for - none, one or several.
+$.fn.zato.time_ago.cell_ids = function(cell) {
+    var attr_value = cell.attr('data-time-ago-id');
+    if(attr_value === '') {
+        return [];
+    }
+    return attr_value.split(',');
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Runs one refresh cycle - the IDs of the cells currently shown go out in a single request
 // and the response maps each ID to its new timestamp. Cells keep their current content
 // while the request is in flight, only a tiny spinner appears next to each of them.
 $.fn.zato.time_ago.refresh = function(container_selector, url) {
     var config = $.fn.zato.time_ago.config;
 
-    // Collect the IDs of the rows currently shown - each data-table row's DOM ID is tr_{id} ..
+    // Collect the IDs of the cells currently shown ..
     var id_list = [];
     $(container_selector).find('td.zato-time-ago').each(function() {
-        var row_id = $(this).closest('tr').attr('id');
-        id_list.push(row_id.replace('tr_', ''));
+        $.each($.fn.zato.time_ago.cell_ids($(this)), function(ignored, item_id) {
+            id_list.push(item_id);
+        });
     });
 
     // .. an empty table means there is nothing to ask about ..
@@ -2815,11 +2833,24 @@ $.fn.zato.time_ago.refresh = function(container_selector, url) {
             var apply_update = function() {
                 $(container_selector).find('td.zato-time-ago').each(function() {
                     var cell = $(this);
-                    var row_id = cell.closest('tr').attr('id');
-                    var item_id = row_id.replace('tr_', '');
-                    if(item_id in data) {
-                        var entry = data[item_id];
-                        $.fn.zato.time_ago.update_cell(cell, entry.last_run_utc, entry.last_duration_ms);
+
+                    // A cell standing for several items shows the latest run among them - the timestamps
+                    // are ISO 8601 in UTC, so the later one is the greater string.
+                    var latest = null;
+                    $.each($.fn.zato.time_ago.cell_ids(cell), function(ignored, item_id) {
+                        if(item_id in data) {
+                            var entry = data[item_id];
+                            if(latest === null) {
+                                latest = entry;
+                            }
+                            else if(entry.last_run_utc > latest.last_run_utc) {
+                                latest = entry;
+                            }
+                        }
+                    });
+
+                    if(latest !== null) {
+                        $.fn.zato.time_ago.update_cell(cell, latest.last_run_utc, latest.last_duration_ms);
                     }
                 });
                 $.fn.zato.time_ago.hide_spinners(container_selector);
@@ -2872,6 +2903,18 @@ $.fn.zato.time_ago.start_auto_refresh = function(container_selector, url) {
 
         $.fn.zato.time_ago.update_countdowns(container_selector);
     }, 1000);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Sets up a data table with a Last run column - the cells are humanized before the sorter
+// reads their sort values, and the auto-refresh keeps them current.
+$.fn.zato.time_ago.init_table = function(container_selector) {
+    var config = $.fn.zato.time_ago.config;
+
+    $.fn.zato.time_ago.init(container_selector);
+    $(container_selector).tablesorter({textExtraction: $.fn.zato.data_table.text_extraction});
+    $.fn.zato.time_ago.start_auto_refresh(container_selector, config.refresh_url);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -2941,6 +2984,104 @@ $.fn.zato.inline_edit.config = {
     // The saved confirmation shows to the left of the edited link,
     // so it never covers the value that has just changed.
     'confirmation_placement': 'left',
+
+    // The HTTP status range a saved change is answered with
+    'http_ok_min': 200,
+    'http_ok_max': 299,
+};
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Says beside a link that what it stands for went through, for as long as that takes to read.
+$.fn.zato.inline_edit.flash = function(link, message) {
+
+    var config = $.fn.zato.inline_edit.config;
+
+    var instance = tippy(link, {
+        content: message,
+        theme: 'dark',
+        trigger: 'manual',
+        placement: config.confirmation_placement,
+        hideOnClick: false,
+        allowHTML: false,
+        onHidden: function(instance) {
+            instance.destroy();
+        }
+    });
+
+    instance.show();
+
+    setTimeout(function() {
+        instance.hide();
+    }, config.saved_hide_ms);
+};
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Posts what one row changed to an endpoint of the page's own. Options:
+//
+//   link        - the link that was clicked, the spinner and the outcome show on it
+//   url         - where the change is posted
+//   data        - what is posted, a map or an already serialized string
+//   on_saved    - called with the parsed JSON the endpoint answered with, it may return
+//                 the element the confirmation is to show on instead of the link
+//   saved_label - what the confirmation says, defaults to the shared saved label
+//
+// The endpoint answers with HTTP 200 and JSON when it saved and with an error page otherwise.
+$.fn.zato.inline_edit.post = function(options) {
+
+    var config = $.fn.zato.inline_edit.config;
+    var link = options.link;
+
+    var saved_label = options.saved_label;
+    if(saved_label === undefined) {
+        saved_label = config.saved_label;
+    }
+
+    $.fn.zato.action_runner.run({
+        link_elem: link,
+        url: options.url,
+        data: options.data,
+        spinner_label: config.saving_label,
+        details_modal_title: config.details_modal_title,
+        show_delay_ms: config.saving_lead_in_ms,
+
+        parse: function(jqXHR) {
+
+            var is_http_ok = false;
+            if(jqXHR.status >= config.http_ok_min) {
+                if(jqXHR.status <= config.http_ok_max) {
+                    is_http_ok = true;
+                }
+            }
+
+            return {
+                is_success: is_http_ok,
+                label: is_http_ok ? saved_label : config.error_label,
+                details_title: config.error_label,
+                details_body: jqXHR.responseText,
+                details_lexer: '',
+                status_code: jqXHR.status,
+                jqXHR: jqXHR
+            };
+        },
+
+        on_success: function(instance, result) {
+
+            // The spinner makes way for the confirmation.
+            instance.hide();
+            instance.destroy();
+
+            var saved = JSON.parse(result.jqXHR.responseText);
+            var flash_link = options.on_saved(saved);
+
+            if(!flash_link) {
+                flash_link = link;
+            }
+
+            $.fn.zato.inline_edit.flash(flash_link, saved_label);
+        }
+    });
 };
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

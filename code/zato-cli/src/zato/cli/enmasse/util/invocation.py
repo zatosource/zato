@@ -12,7 +12,7 @@ from json import dumps as json_dumps, loads as json_loads
 # Zato
 from zato.common.api import HTTP_SOAP, SCHEDULER, SchedulerLink, URL_TYPE
 from zato.common.odb.model import Job
-from zato.common.util.imap_scheduler import interval_from_unit
+from zato.common.util.interval import interval_from_unit
 
 # ################################################################################################################################
 # ################################################################################################################################

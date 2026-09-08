@@ -97,7 +97,10 @@ kit.forms.defaults = {
 
     // The per-field help badge label - the badge is rebuilt with every
     // page render, so one id can serve every micro-form
-    helpBadgeLabel: 'How does it work?'
+    helpBadgeLabel: 'How does it work?',
+
+    // Whether the popover carries the help badge
+    showHelp: true
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -356,6 +359,10 @@ kit.forms.setup = function(wizard, config) {
     forms.initHelp = function(container) {
 
         var formsConfig = forms.config;
+
+        if(!formsConfig.showHelp) {
+            return;
+        }
 
         if(!container.isConnected) {
             return;
@@ -625,6 +632,11 @@ kit.forms.setup = function(wizard, config) {
             container.style.width = descriptor.width;
         }
 
+        // A form of one short field is only as wide as that field
+        if(descriptor.fitContent) {
+            container.classList.add('wizard-tippy-fit');
+        }
+
         container.appendChild(forms.buildTitle(descriptor.title));
 
         var pageContainer = document.createElement('div');
@@ -692,7 +704,9 @@ kit.forms.setup = function(wizard, config) {
             buttons.className = 'wizard-tippy-buttons';
 
             // The per-field help sits to the left of the buttons ..
-            buttons.appendChild(forms.buildHelpBadge());
+            if(formsConfig.showHelp) {
+                buttons.appendChild(forms.buildHelpBadge());
+            }
 
             // .. multi-page micro-forms navigate with Back and Next ..
             if(pageIndex > 0) {

@@ -8,7 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timezone
+from fnmatch import fnmatch
 from logging import getLogger
+from posixpath import split as path_split
 from shlex import split as shlex_split
 from time import monotonic
 from traceback import format_exc
@@ -39,6 +41,9 @@ _modify_format_fraction = '%Y%m%d%H%M%S.%f'
 # What the shell shows for a boolean answer
 _shell_true = 'True'
 _shell_false = 'False'
+
+# The characters that make the last component of an ls argument a pattern rather than a directory name
+_glob_chars = ('*', '?', '[')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -151,8 +156,29 @@ class FTPConnection(FileTransferConnection):
 
         # Without a path, the account's root directory is listed.
         if args:
-            directory = args[0]
+            path = args[0]
         else:
+            path = '.'
+
+        # A last component with a glob character is a pattern the parent's entries are matched against,
+        # anything else is a directory.
+        parent, last = path_split(path)
+
+        is_pattern = False
+        for char in _glob_chars:
+            if char in last:
+                is_pattern = True
+                break
+
+        if is_pattern:
+            directory = parent
+            pattern = last
+        else:
+            directory = path
+            pattern = ''
+
+        # A pattern right at the root, e.g. ls "*.csv", has an empty parent.
+        if directory == '':
             directory = '.'
 
         entries = self.list(directory)
@@ -161,6 +187,12 @@ class FTPConnection(FileTransferConnection):
         lines:'strlist' = []
 
         for info in entries:
+
+            # A pattern that matches nothing gives an empty listing, the same as an empty directory.
+            if pattern:
+                if not fnmatch(info.name, pattern):
+                    continue
+
             if info.is_directory:
                 type_indicator = 'd'
             else:

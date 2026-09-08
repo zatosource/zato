@@ -7,9 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from http.client import OK
 from logging import getLogger
 from traceback import format_exc
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -20,17 +21,22 @@ from django.urls import reverse
 from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms.outgoing.file_transfer_schedule import CreateForm
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed, slugify
+from zato.admin.web.views.scheduler import default_last_duration_ms, default_last_run_utc, get_last_run_by_id
 from zato.common.api import FileTransfer, GENERIC
 from zato.common.json_internal import dumps
+from zato.common.util.interval import interval_from_unit, interval_text
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, dictlist, stranydict
+    from zato.common.typing_ import any_, anylist, dictlist, stranydict
     any_ = any_
+    anylist = anylist
     dictlist = dictlist
     stranydict = stranydict
+
+    dictlists = list['dictlist']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,10 +72,24 @@ _connection_types = {
     'ftp': GENERIC.CONNECTION.TYPE.OUTCONN_FTP,
 }
 
+# Where the command shell of each transfer type lives - SMB has none.
+_command_shell_links = {
+    'sftp': 'out-sftp-command-shell',
+    'ftp': 'out-ftp-command-shell',
+}
+
+# Characters a path handed to a command shell's ls has escaped with a backslash.
+_shell_escaped_chars = ('\\', '"', "'", ' ')
+
+# The stored fields of a schedule, as the edit service's input names them.
+# The arrival window is not here, a schedule created before the field existed has none.
+_schedule_stored_fields = ('name', 'is_active', 'directory', 'pattern', 'ready_how', 'stability_delay', 'marker_suffix',
+    'should_claim', 'service', 'on_success', 'move_directory', 'start_date')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_schedule_list(req:'any_', conn_id:'str') -> 'any_':
+def get_schedules_by_conn_id(req:'any_', conn_id:'str') -> 'dictlist':
     """ Returns the schedules stored with a connection, straight from the schedule services.
     """
     response = req.zato.client.invoke('zato.outgoing.file-transfer.schedule.get-list', {
@@ -81,6 +101,104 @@ def _get_schedule_list(req:'any_', conn_id:'str') -> 'any_':
         raise Exception(response.details)
 
     out = response.data
+    return out
+
+# ################################################################################################################################
+
+def get_schedules(item:'any_') -> 'dictlist':
+    """ Returns the schedules a connection list item carries in its opaque attributes.
+    """
+    out = getattr(item, _scheduler.Schedules_Field, None)
+
+    # The attribute is only there for connections that have any schedules.
+    if out is None:
+        out = []
+
+    return out
+
+# ################################################################################################################################
+
+def get_connection_last_run_list(req:'any_', schedule_lists:'dictlists') -> 'dictlist':
+    """ Returns, for each list of schedules given, the most recent run among all of its schedules.
+    """
+
+    # Every job of every list ..
+    job_id_list = []
+    for schedules in schedule_lists:
+        for schedule in schedules:
+            job_id = str(schedule['job_id'])
+            job_id_list.append(job_id)
+
+    # .. and one call covers all of them.
+    if job_id_list:
+        last_run_by_id = get_last_run_by_id(req, job_id_list)
+    else:
+        last_run_by_id = {}
+
+    out:'dictlist' = []
+
+    for schedules in schedule_lists:
+
+        job_ids = []
+        for schedule in schedules:
+            job_id = str(schedule['job_id'])
+            job_ids.append(job_id)
+
+        last_run_utc = default_last_run_utc
+        last_duration_ms = default_last_duration_ms
+
+        for job_id in job_ids:
+
+            # The timestamps are ISO 8601 in UTC, so the later one is the greater string.
+            if last_run := last_run_by_id.get(job_id):
+                if last_run['last_run_utc'] > last_run_utc:
+                    last_run_utc = last_run['last_run_utc']
+                    last_duration_ms = last_run['last_duration_ms']
+
+        # The cell keeps every job's id for the refresh.
+        last_run_job_ids = ','.join(job_ids)
+
+        out.append({
+            'last_run_job_ids': last_run_job_ids,
+            'last_run_utc': last_run_utc,
+            'last_duration_ms': last_duration_ms,
+        })
+
+    return out
+
+# ################################################################################################################################
+
+def set_connection_last_run(req:'any_', items:'anylist') -> 'None':
+    """ Sets the Last run fields of each connection list item to the latest run among its schedules.
+    """
+    schedule_lists = []
+    for item in items:
+        schedules = get_schedules(item)
+        schedule_lists.append(schedules)
+
+    last_run_list = get_connection_last_run_list(req, schedule_lists)
+
+    for item, last_run in zip(items, last_run_list):
+        item.update(last_run)
+
+# ################################################################################################################################
+
+def get_connection_command_shell_url(req:'any_', transfer_type:'str', conn_id:'str', conn_name:'str',
+    schedules:'dictlist') -> 'str':
+    """ Returns the URL of a connection's command shell. With exactly one schedule, the shell opens
+    with ls of that schedule's directory and pattern, otherwise with its default command.
+    """
+    schedule_count = len(schedules)
+    has_single_schedule = schedule_count == 1
+
+    if has_single_schedule:
+        command = _shell_command(schedules[0])
+    else:
+        command = ''
+
+    name_slug = slugify(conn_name)
+
+    out = _command_shell_url(transfer_type, conn_id, req.zato.cluster_id, name_slug, conn_name, command)
     return out
 
 # ################################################################################################################################
@@ -114,29 +232,61 @@ def _get_connection_list(req:'any_', transfer_type:'str', cluster_id:'str') -> '
 
 # ################################################################################################################################
 
-def _ready_how_human(schedule:'stranydict') -> 'str':
-    """ How a schedule's readiness mode reads on the list, e.g. Marker file with the .done suffix.
+def _interval_response(run_every:'int', run_unit:'str') -> 'stranydict':
+    """ Returns how a schedule's interval reads along with the count and unit it is stored as.
     """
-    if schedule['ready_how'] == _scheduler.ReadyHow.Marker:
-        out = 'Marker file with the {} suffix'.format(schedule['marker_suffix'])
-    else:
-        out = _scheduler.ReadyHowHuman[_scheduler.ReadyHow.Stability]
+    interval_fields = interval_from_unit(run_every, run_unit)
+    interval = interval_text(**interval_fields)
 
+    out = {
+        'interval': interval,
+        'run_every': run_every,
+        'run_unit': run_unit,
+    }
     return out
 
 # ################################################################################################################################
 
-def _run_every_human(schedule:'stranydict') -> 'str':
-    """ How a schedule's interval reads on the list, e.g. Every 5 minutes or Every 1 day.
+def _shell_escape(path:'str') -> 'str':
+    """ Returns a path in the shape a command shell's ls globs it, e.g. /my dir/*.csv becomes /my\\ dir/*.csv.
     """
-    run_every = schedule['run_every']
-    run_unit = schedule['run_unit']
+    out = path
+    for char in _shell_escaped_chars:
+        out = out.replace(char, '\\' + char)
+    return out
 
-    # One hour reads better than one hours
-    if run_every == 1:
-        run_unit = run_unit.rstrip('s')
+# ################################################################################################################################
 
-    out = f'Every {run_every} {run_unit}'
+def _shell_command(schedule:'stranydict') -> 'str':
+    """ The command a shell opened for a schedule starts with - ls of the schedule's directory and pattern,
+    e.g. /incoming/invoices/ and orders_*.csv give ls /incoming/invoices/orders_*.csv.
+    """
+    directory = schedule['directory'].rstrip('/')
+    pattern = schedule['pattern']
+
+    path = f'{directory}/{pattern}'
+    escaped_path = _shell_escape(path)
+
+    out = 'ls ' + escaped_path
+    return out
+
+# ################################################################################################################################
+
+def _command_shell_url(transfer_type:'str', conn_id:'str', cluster_id:'str', name_slug:'str', conn_name:'str',
+    command:'str') -> 'str':
+    """ The URL of the connection's command shell, opening with the given command typed in - or, if there is none,
+    with the shell's own default.
+    """
+    url_name = _command_shell_links[transfer_type]
+    url = reverse(url_name, args=[conn_id, cluster_id, name_slug])
+
+    query = {'name': conn_name}
+    if command:
+        query['command'] = command
+
+    query_string = urlencode(query)
+
+    out = f'{url}?{query_string}'
     return out
 
 # ################################################################################################################################
@@ -146,19 +296,52 @@ def _run_every_human(schedule:'stranydict') -> 'str':
 def schedules(req:'any_', transfer_type:'str', conn_id:'str', cluster_id:'str', name_slug:'str') -> 'TemplateResponse':
     """ The list of file transfer schedules of one SFTP, SMB or FTP connection.
     """
+    conn_name = req.GET['name']
     items = []
 
-    for schedule in _get_schedule_list(req, conn_id):
-        items.append({
+    # Only the types that have a command shell get a column linking each schedule to it.
+    has_command_shell = transfer_type in _command_shell_links
+
+    for schedule in get_schedules_by_conn_id(req, conn_id):
+
+        # The Last run cells are keyed by the scheduler job that runs the schedule.
+        job_id = str(schedule['job_id'])
+
+        item = {
             'id': schedule['id'],
             'name': schedule['name'],
             'is_active': schedule['is_active'],
             'directory': schedule['directory'],
             'pattern': schedule['pattern'],
-            'ready': _ready_how_human(schedule),
             'service': schedule['service'],
-            'run_every': _run_every_human(schedule),
-        })
+            'job_id': job_id,
+        }
+
+        interval_response = _interval_response(schedule['run_every'], schedule['run_unit'])
+        item.update(interval_response)
+
+        if has_command_shell:
+            command = _shell_command(schedule)
+            item['command_shell_url'] = _command_shell_url(
+                transfer_type, conn_id, cluster_id, name_slug, conn_name, command)
+
+        items.append(item)
+
+    # One call covers the last run times of every schedule on the page ..
+    job_id_list = []
+    for item in items:
+        job_id_list.append(item['job_id'])
+
+    last_run_by_id = get_last_run_by_id(req, job_id_list)
+
+    # .. and a schedule whose job has not run yet has nothing to show.
+    for item in items:
+        if last_run := last_run_by_id.get(item['job_id']):
+            item['last_run_utc'] = last_run['last_run_utc']
+            item['last_duration_ms'] = last_run['last_duration_ms']
+        else:
+            item['last_run_utc'] = default_last_run_utc
+            item['last_duration_ms'] = default_last_duration_ms
 
     # The link back to the connection list of the right type
     back_url_name, back_type = _back_links[transfer_type]
@@ -177,10 +360,13 @@ def schedules(req:'any_', transfer_type:'str', conn_id:'str', cluster_id:'str', 
         'transfer_type': transfer_type,
         'conn_id': conn_id,
         'name_slug': name_slug,
-        'conn_name': req.GET['name'],
+        'conn_name': conn_name,
         'connection_list': connection_list,
         'badge_label': badge_label,
         'back_url': back_url,
+        'has_command_shell': has_command_shell,
+
+        'interval_units': _scheduler.UnitList,
         'items': items,
     }
 
@@ -201,7 +387,7 @@ def schedule_name_exists(req:'any_') -> 'HttpResponse':
     # Look the name up among the connection's schedules ..
     exists = False
 
-    for schedule in _get_schedule_list(req, conn_id):
+    for schedule in get_schedules_by_conn_id(req, conn_id):
 
         # .. the schedule being edited keeps its own name ..
         if schedule_id:
@@ -273,7 +459,7 @@ def schedule_wizard_edit(req:'any_', transfer_type:'str', conn_id:'str', cluster
     """
 
     # Find the schedule being edited ..
-    for schedule in _get_schedule_list(req, conn_id):
+    for schedule in get_schedules_by_conn_id(req, conn_id):
         if schedule['id'] == schedule_id:
             break
     else:
@@ -380,6 +566,53 @@ def schedule_edit_action(req:'any_') -> 'HttpResponse':
     request['id'] = req.POST['id']
 
     out = _schedule_action(req, 'zato.outgoing.file-transfer.schedule.edit', request)
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def schedule_edit_interval_action(req:'any_') -> 'HttpResponse':
+    """ Changes the interval of one schedule, leaving everything else as stored.
+    """
+    conn_id = req.POST['conn_id']
+    schedule_id = req.POST['id']
+
+    # The popover's number field posts the count as a string.
+    run_every = int(req.POST['run_every'])
+    run_unit = req.POST['run_unit']
+
+    # Find the schedule being edited ..
+    for schedule in get_schedules_by_conn_id(req, conn_id):
+        if schedule['id'] == schedule_id:
+            break
+    else:
+        raise Exception(f'Schedule `{schedule_id}` not found')
+
+    # .. and hand the edit service everything it stores, with only the interval changed.
+    request = {
+        'cluster_id': req.zato.cluster_id,
+        'conn_id': conn_id,
+        'id': schedule_id,
+        'run_every': run_every,
+        'run_unit': run_unit,
+    }
+
+    for field in _schedule_stored_fields:
+        request[field] = schedule[field]
+
+    if arrival_window := schedule.get('arrival_window'):
+        request['arrival_window'] = arrival_window
+
+    response = _schedule_action(req, 'zato.outgoing.file-transfer.schedule.edit', request)
+
+    # Anything but success is the error page the other schedule actions return.
+    if response.status_code != OK:
+        return response
+
+    interval_response = _interval_response(run_every, run_unit)
+    body = dumps(interval_response)
+
+    out = HttpResponse(body, content_type='application/json')
     return out
 
 # ################################################################################################################################

@@ -65,12 +65,7 @@ $.fn.zato.scheduler.data_table.before_submit_hook = function(form) {
 
 $(document).ready(function() {
 
-    // Humanize the last-run cells first so that sorting can pick up their numeric sort values.
-    $.fn.zato.time_ago.init('#data-table');
-    $('#data-table').tablesorter({textExtraction: $.fn.zato.data_table.text_extraction});
-
-    // Keep the last-run column up to date - all the rows currently shown are refreshed in one call.
-    $.fn.zato.time_ago.start_auto_refresh('#data-table', '/zato/scheduler/get-last-run-list/');
+    $.fn.zato.time_ago.init_table('#data-table');
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Job;
     $.fn.zato.data_table.parse();
 
@@ -266,7 +261,7 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     // The name, the Active flag and the interval are editable in place - each is a link.
     row += String.format('<td><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.edit_name(\'{0}\', \'{1}\', this)">{2}</a></td>',
         job.job_type, job.id, job.name);
-    row += String.format('<td style="text-align:center"><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.toggle_active(\'{0}\', \'{1}\', this)">{2}</a></td>',
+    row += String.format('<td class="text-center"><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.toggle_active(\'{0}\', \'{1}\', this)">{2}</a></td>',
         job.job_type, job.id, job.is_active ? 'Yes' : 'No');
 
     if(job.job_type == 'interval_based') {
@@ -290,7 +285,8 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
             }
         }
     }
-    row += String.format('<td class="zato-time-ago" data-time-utc="{0}" data-duration-ms="{1}"></td>', last_run_utc, last_duration_ms);
+    row += String.format('<td class="zato-time-ago" data-time-ago-id="{0}" data-time-utc="{1}" data-duration-ms="{2}"></td>',
+        job.id, last_run_utc, last_duration_ms);
 
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(job.service, cluster_id));
     row += String.format('<td><a href="' + $.fn.zato.scheduler.dashboard_base_url + 'job/{0}/?cluster={1}&outcomes=all&range={2}">Audit log</a></td>', job.id, cluster_id, $.fn.zato.scheduler.default_time_range_minutes);

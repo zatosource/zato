@@ -108,8 +108,10 @@ shell.onSuccess = function(data) {
 
     $('#file-shell-timing').prop('hidden', false).text(data.response_time + ' (#' + data.command_no + ')');
 
+    // The pane follows the outcome - a success after a failure must not leave the stderr tab open.
     if (data.is_ok) {
         shell.setStatus(config.okMessage, config.okStatusClass);
+        shell._tabHandle.set_tab(config.defaultTab, true);
     }
     else {
         shell.setStatus(data.error_message, config.errorStatusClass);

@@ -4,18 +4,28 @@
 The list of file transfer schedules of one connection - each row is one
 recurring pickup task created through the schedule wizard. The view provides:
 
-* conn_id         - the connection the schedules belong to
-* conn_name       - its name
-* name_slug       - its name slugified, for links to the wizard
-* connection_list - all the connections of this transfer type, with the URL of each one's schedules
-* badge_label     - what the header badge says, e.g. SFTP schedules or SMB schedules
-* items           - the schedules themselves
+* conn_id           - the connection the schedules belong to
+* conn_name         - its name
+* name_slug         - its name slugified, for links to the wizard
+* connection_list   - all the connections of this transfer type, with the URL of each one's schedules
+* badge_label       - what the header badge says, e.g. SFTP schedules or SMB schedules
+* has_command_shell - whether this transfer type has a command shell
+* interval_units    - the choices of the interval popover's unit select
+* items             - the schedules themselves
 {% endcomment %}
 
 {% block html_title %}File transfer schedules{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+
+    {% comment %} Wizard kit {% endcomment %}
+    <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+
     <link rel="stylesheet" type="text/css" href="/static/css/outgoing/file-transfer-schedules.css">
 {% endblock %}
 
@@ -23,12 +33,23 @@ recurring pickup task created through the schedule wizard. The view provides:
 
     {% comment %} jQuery {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Tippy {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
 
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+
+    {% comment %} Wizard kit {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
 
     {% comment %} File transfer schedules {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/file-transfer-schedule-interval.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/file-transfer-schedules.js"></script>
 
 {% endblock %}
@@ -50,7 +71,7 @@ recurring pickup task created through the schedule wizard. The view provides:
             <a href="/zato/audit-log/?source=file-outgoing&amp;object_name={{ conn_name|urlencode }}&amp;cluster={{ cluster_id }}" class="common">Audit log</a>
         </div>
 
-        <table class="zato-table" id="data-table">
+        <table class="zato-table" id="data-table" data-has-command-shell="{{ has_command_shell|yesno:'true,false' }}">
             <thead>
                 <tr class='ignore'>
                     <th>&nbsp;</th>
@@ -58,14 +79,17 @@ recurring pickup task created through the schedule wizard. The view provides:
 
                     {% comment %} 1 {% endcomment %}
                     <th><a href="#">Name</a></th>
-                    <th><a href="#">Active</a></th>
-                    <th><a href="#">Directory</a></th>
-                    <th><a href="#">File pattern</a></th>
+                    <th class="text-center"><a href="#">Active</a></th>
+                    <th>Interval</th>
+                    <th class="zato-time-ago-header"><a href="#">Last run</a></th>
 
                     {% comment %} 2 {% endcomment %}
-                    <th><a href="#">A file is ready</a></th>
+                    <th><a href="#">Directory</a></th>
+                    <th><a href="#">File pattern</a></th>
                     <th><a href="#">Service</a></th>
-                    <th><a href="#">Runs</a></th>
+                    {% if has_command_shell %}
+                    <th>&nbsp;</th>
+                    {% endif %}
 
                     {% comment %} 3 {% endcomment %}
                     <th>&nbsp;</th>
@@ -83,14 +107,18 @@ recurring pickup task created through the schedule wizard. The view provides:
 
                     {% comment %} 1 {% endcomment %}
                     <td>{{ item.name }}</td>
-                    <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                    <td>{{ item.directory }}</td>
-                    <td>{{ item.pattern }}</td>
+                    <td class="text-center">{{ item.is_active|yesno:'Yes,No' }}</td>
+                    <td><a href="javascript:void(0)" data-id="{{ item.id }}" data-run_every="{{ item.run_every }}" data-run_unit="{{ item.run_unit }}"
+                        onclick="$.fn.zato.outgoing.file_transfer.schedules.interval.open(this)">{{ item.interval }}</a></td>
+                    <td class="zato-time-ago" data-time-ago-id="{{ item.job_id }}" data-time-utc="{{ item.last_run_utc }}" data-duration-ms="{{ item.last_duration_ms }}"></td>
 
                     {% comment %} 2 {% endcomment %}
-                    <td>{{ item.ready }}</td>
-                    <td>{{ item.service }}</td>
-                    <td>{{ item.run_every }}</td>
+                    <td>{{ item.directory }}</td>
+                    <td>{{ item.pattern }}</td>
+                    <td><a href="{% url "service-ide" "service" item.service %}?cluster={{ cluster_id }}">{{ item.service }}</a></td>
+                    {% if has_command_shell %}
+                    <td><a href="{{ item.command_shell_url }}">Command shell</a></td>
+                    {% endif %}
 
                     {% comment %} 3 {% endcomment %}
                     <td><a href="{% url "out-file-transfer-schedule-wizard-edit" transfer_type conn_id cluster_id name_slug item.id %}?name={{ conn_name|urlencode:"" }}">Edit</a></td>
@@ -100,16 +128,27 @@ recurring pickup task created through the schedule wizard. The view provides:
                 {% endfor %}
             {% else %}
                 <tr class='ignore'>
-                    <td colspan='11'>No results</td>
+                    <td colspan='{% if has_command_shell %}12{% else %}11{% endif %}'>No results</td>
                 </tr>
             {% endif %}
 
             </tbody>
         </table>
 
-        {% comment %} The delete function reads these {% endcomment %}
+        {% comment %} The delete and the interval popover's save read these {% endcomment %}
         <input type="hidden" id="file-transfer-schedules-conn-id" value="{{ conn_id }}" />
         <input type="hidden" id="file-transfer-schedules-delete-url" value="{% url "out-file-transfer-schedule-delete" %}" />
+        <input type="hidden" id="file-transfer-schedules-edit-interval-url" value="{% url "out-file-transfer-schedule-edit-interval" %}" />
+
+        {% comment %} The interval popover's fields {% endcomment %}
+        <div id="file-transfer-interval-fields" hidden>
+            <input type="hidden" id="id_file-transfer-interval-run_every">
+            <select id="id_file-transfer-interval-run_unit">
+                {% for unit in interval_units %}
+                <option value="{{ unit }}">{{ unit }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
     </div>
 

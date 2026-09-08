@@ -13,7 +13,17 @@ from zato.common.ext.bunch import Bunch
 from zato.admin.web.forms.outgoing.smb import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection, slugify, \
      SKIP_VALUE
-from zato.common.api import GENERIC
+from zato.admin.web.views.outgoing.file_transfer_schedule import get_connection_last_run_list, get_schedules, \
+     get_schedules_by_conn_id, set_connection_last_run
+from zato.common.api import FileTransfer, GENERIC
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, stranydict
+    any_ = any_
+    stranydict = stranydict
 
 # ################################################################################################################################
 
@@ -33,8 +43,17 @@ class Index(_Index):
 
     input_required = 'cluster_id', 'type_'
     output_required = ('id',) + _fields_required
-    output_optional = _fields_optional
+    output_optional = _fields_optional + (FileTransfer.Scheduler.Schedules_Field,)
     output_repeated = True
+
+    def on_before_append_item(self, item:'any_') -> 'any_':
+        schedules = get_schedules(item)
+        item.scheduler_schedule_count = len(schedules)
+        return item
+
+    def handle_return_data(self, return_data:'stranydict') -> 'stranydict':
+        set_connection_last_run(self.req, self.items)
+        return return_data
 
     def handle(self):
         return {
@@ -67,9 +86,16 @@ class _CreateEdit(CreateEdit):
             return SKIP_VALUE
         return value
 
-    def post_process_return_data(self, return_data):
-        # The Schedules link of a newly added row needs the connection's name in its URL form
+    def post_process_return_data(self, return_data:'stranydict') -> 'stranydict':
+        # The Scheduler link of a newly added row needs the connection's name in its URL form.
         return_data['name_slug'] = slugify(return_data['name'])
+        schedules = get_schedules_by_conn_id(self.req, return_data['id'])
+        return_data['scheduler_schedule_count'] = len(schedules)
+
+        last_run_list = get_connection_last_run_list(self.req, [schedules])
+        last_run = last_run_list[0]
+        return_data.update(last_run)
+
         return return_data
 
     def success_message(self, item):

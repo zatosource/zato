@@ -281,6 +281,10 @@ span.like-a {
 }
 
 
+:root {
+    --zato-sort-arrow-room: 15px;
+}
+
 #data-table th {
     white-space: nowrap;
     position: relative;
@@ -294,7 +298,7 @@ span.like-a {
 #data-table th a {
     display: block;
     position: relative;
-    padding-right: 15px;
+    padding-right: var(--zato-sort-arrow-room);
 }
 
 #data-table th a:after {
@@ -316,6 +320,27 @@ span.like-a {
 #data-table[data-center-columns="Active,Internal"] tr td:nth-child(4),
 #data-table[data-center-columns="Active,Internal"] tr td:nth-child(6) {
     text-align: center;
+}
+
+/* Every column centred, except those marked .text-left */
+#data-table.center-all-columns th,
+#data-table.center-all-columns td {
+    text-align: center;
+}
+
+#data-table.center-all-columns th.text-left,
+#data-table.center-all-columns td.text-left {
+    text-align: left;
+}
+
+/* A cell spanning the table is not centred */
+#data-table.center-all-columns td[colspan] {
+    text-align: left;
+}
+
+/* The sort arrow reserves room on the right, a centred label needs the same on the left */
+#data-table.center-all-columns th:not(.text-left) a {
+    padding-left: var(--zato-sort-arrow-room);
 }
 
 #data-table td.inline_header {

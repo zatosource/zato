@@ -227,10 +227,10 @@ def _delete_connection(page:'Page', kind:'ConnKind', item_id:'str') -> 'None':
 # ################################################################################################################################
 
 def _open_schedules(page:'Page', conn_name:'str') -> 'None':
-    """ Clicks the Schedules link of a connection's row and waits for the schedules list page.
+    """ Clicks the Scheduler link of a connection's row and waits for the schedules list page.
     """
     row_selector = f'#data-table tbody tr:has(td:text-is("{conn_name}"))'
-    page.click(f'{row_selector} a:has-text("Schedules")')
+    page.click(f'{row_selector} a[href*="/file-transfer/schedules/"]')
     _ = page.wait_for_selector('#data-table', state='visible')
 
 # ################################################################################################################################

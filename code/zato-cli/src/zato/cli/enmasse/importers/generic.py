@@ -15,7 +15,7 @@ from zato.common.api import FileTransfer, SCHEDULER, SchedulerLink
 from zato.common.odb.model import GenericConn, Job, to_json
 from zato.common.odb.query.generic import connection_list
 from zato.common.util.file_transfer_scheduler import build_job_extra, get_job_name, new_schedule_id, schedule_from_yaml
-from zato.common.util.imap_scheduler import interval_from_unit
+from zato.common.util.interval import interval_from_unit
 from zato.common.util.sql import parse_instance_opaque_attr, set_instance_opaque_attrs
 
 # ################################################################################################################################

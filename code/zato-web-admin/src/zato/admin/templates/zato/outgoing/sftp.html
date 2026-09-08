@@ -38,12 +38,13 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
+            '_last_run',
             '_address',
 
             {% comment %} 2 {% endcomment %}
             '_username',
+            '_scheduler',
             '_command_shell',
-            '_schedules',
             '_audit_log',
 
             {% comment %} 3 {% endcomment %}
@@ -89,20 +90,21 @@
             <a href="javascript:$.fn.zato.outgoing.sftp.create()">Create a new outgoing SFTP connection</a>
         </div>
 
-            <table class="zato-table" id="data-table">
+            <table class="zato-table center-all-columns" id="data-table">
                 <thead>
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
 
                         {% comment %} 1 {% endcomment %}
-                        <th><a href="#">Name</a></th>
+                        <th class="text-left"><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        <th class="zato-time-ago-header"><a href="#">Last run</a></th>
                         <th><a href="#">Address</a></th>
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Username</a></th>
-                        <th>&nbsp;</th>
+                        <th>Scheduler</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
 
@@ -135,14 +137,15 @@
                         <td class="impexp"><input type="checkbox" /></td>
 
                         {% comment %} 1 {% endcomment %}
-                        <td>{{ item.name }}</td>
+                        <td class="text-left">{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td class="zato-time-ago" data-time-ago-id="{{ item.last_run_job_ids }}" data-time-utc="{{ item.last_run_utc }}" data-duration-ms="{{ item.last_duration_ms }}"></td>
                         <td>{{ item.address|default:'<span class="form_hint">---</span>' }}</td>
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.username|default:'<span class="form_hint">---</span>' }}</td>
-                        <td><a href="{% url "out-sftp-command-shell" item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">Command shell</a></td>
-                        <td><a href="{% url "out-file-transfer-schedules" 'sftp' item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">Schedules</a></td>
+                        <td><a href="{% url "out-file-transfer-schedules" 'sftp' item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">{{ item.scheduler_schedule_count }}</a></td>
+                        <td><a href="{{ item.command_shell_url }}">Command shell</a></td>
                         <td><a href="/zato/audit-log/?source=file-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
 
                         {% comment %} 3 {% endcomment %}
@@ -168,7 +171,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='20'>No results</td>
+                        <td colspan='21'>No results</td>
                     </tr>
                 {% endif %}
 
