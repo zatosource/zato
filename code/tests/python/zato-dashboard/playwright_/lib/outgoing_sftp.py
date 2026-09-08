@@ -57,6 +57,13 @@ def open_sftp_page(page:'Page', base_url:'str', url_suffix:'str'='') -> 'None':
 
 # ################################################################################################################################
 
+def expand_more_options(page:'Page', form_type:'str') -> 'None':
+    """ Reveals a dialog's More options block, which always opens collapsed.
+    """
+    page.evaluate(f'$.fn.zato.toggle_visibility(".sftp-more-options-{form_type}")')
+
+# ################################################################################################################################
+
 def create_sftp_connection(
     page:'Page',
     name:'str',
@@ -64,7 +71,7 @@ def create_sftp_connection(
     username:'str',
     password:'str',
     private_key:'str'='',
-    strict_host_key_checking:'bool'=True,
+    strict_host_key_checking:'bool'=False,
     ignore_host_key_changes:'bool'=False,
     ) -> 'None':
     """ Creates an outgoing SFTP connection via the UI.
@@ -81,13 +88,16 @@ def create_sftp_connection(
     page.fill('#id_secret', password)
     page.fill('#id_private_key', private_key)
 
-    # .. the slider is on by default, which means it only ever needs to be clicked to turn it off ..
-    if not strict_host_key_checking:
-        page.click('#id_strict_host_key_checking')
+    # .. both host key sliders are off by default and they live in the collapsed
+    # .. More options block, which has to be unfolded before either can be clicked ..
+    if strict_host_key_checking or ignore_host_key_changes:
+        expand_more_options(page, 'create')
 
-    # .. this one is off by default, so it is the other way round ..
-    if ignore_host_key_changes:
-        page.click('#id_ignore_host_key_changes')
+        if strict_host_key_checking:
+            page.click('#id_strict_host_key_checking')
+
+        if ignore_host_key_changes:
+            page.click('#id_ignore_host_key_changes')
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')

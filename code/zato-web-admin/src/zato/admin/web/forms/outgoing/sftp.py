@@ -26,7 +26,10 @@ class CreateForm(forms.Form):
     secret = forms.CharField(required=False, strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
     private_key = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
-    strict_host_key_checking = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+
+    # Off by default - a new connection reaches a host whose key is not in known_hosts yet,
+    # so requiring it up front would reject the very first attempt.
+    strict_host_key_checking = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     ignore_host_key_changes = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     # Off by default - the audit log records every transfer either way,
@@ -41,7 +44,6 @@ class CreateForm(forms.Form):
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    strict_host_key_checking = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
 # ################################################################################################################################

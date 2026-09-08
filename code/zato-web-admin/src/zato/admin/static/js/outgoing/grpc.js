@@ -41,16 +41,17 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.grpc.field_descriptions = {
-    'id_name': 'A unique name for this gRPC connection.<br>Used to identify it in logs and the dashboard.',
-    'id_is_active': 'Whether this connection is active.<br>Inactive connections cannot be used by services.',
-    'id_address': 'Host and port of the gRPC server,<br>e.g. billing.example.com:50051.',
-    'id_security_id': 'Security definition whose credentials are sent<br>as call metadata with each request.',
-    'id_is_tls': 'Whether to connect over TLS.<br>Uncheck only for servers that require plaintext.',
-    'id_tls_ca_certs_file': 'Path to a PEM file with CA certificates<br>to verify the server\'s certificate against.',
-    'id_proto_path': 'Path to a .proto file on the server.<br>Client code is generated out of it automatically.',
-    'id_stub_module': 'Alternatively, the Python module with your own<br>pre-generated stub, e.g. billing_pb2_grpc, and optionally the stub class in it.',
-    'id_ping_timeout': 'How many seconds to wait for the server<br>when pinging the connection.',
-    'id_max_send_message_size': 'The biggest message that can be sent<br>or received, in bytes.',
+    'id_name': 'A unique name for this gRPC connection. Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this connection is active. Inactive connections cannot be used by services.',
+    'id_address': 'Host and port of the gRPC server, e.g. billing.example.com:50051.',
+    'id_security_id': 'Security definition whose credentials are sent as call metadata with each request.',
+    'id_is_tls': 'Whether to connect over TLS. Uncheck only for servers that require plaintext.',
+    'id_tls_ca_certs_file': 'Path to a PEM file with CA certificates to verify the server\'s certificate against.',
+    'id_proto_path': 'Path to a .proto file on the server. Client code is generated out of it automatically.',
+    'id_stub_module': 'Alternatively, the Python module with your own pre-generated stub, ' +
+        'e.g. billing_pb2_grpc, and optionally the stub class in it.',
+    'id_ping_timeout': 'How many seconds to wait for the server when pinging the connection.',
+    'id_max_send_message_size': 'The biggest message that can be sent or received, in bytes.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

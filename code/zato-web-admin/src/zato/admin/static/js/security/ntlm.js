@@ -33,9 +33,12 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.security.ntlm.field_descriptions = {
-    'id_name': 'A unique name for this definition.<br>Used to identify it in outgoing connections,<br>logs and the dashboard.',
-    'id_username': 'The Windows account to log in as,<br>in the DOMAIN\\username format.<br>Outgoing connections use it to authenticate<br>with Windows and Active Directory-protected APIs.',
-    'id_password': 'The password of the Windows account.<br>A random one is assigned at creation,<br>change it before the definition is used.',
+    'id_name': 'A unique name for this definition. ' +
+        'Used to identify it in outgoing connections, logs and the dashboard.',
+    'id_username': 'The Windows account to log in as, in the DOMAIN\\username format. ' +
+        'Outgoing connections use it to authenticate with Windows and Active Directory-protected APIs.',
+    'id_password': 'The password of the Windows account. A random one is assigned at creation, ' +
+        'change it before the definition is used.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

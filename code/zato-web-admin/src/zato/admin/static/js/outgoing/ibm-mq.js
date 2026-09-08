@@ -53,20 +53,26 @@ $.fn.zato.outgoing.ibm_mq._reset_tabs = function(action) {
 $.fn.zato.outgoing.ibm_mq.field_descriptions = {
 
     // Basic tab
-    'id_name': 'A unique name for this connection.<br>Services send messages through it<br>with self.ibm_mq[name].send(data).',
-    'id_is_active': 'Whether this connection can be used.<br>Messages are not sent through<br>inactive connections.',
-    'id_address': 'Address of the queue manager as host:port,<br>e.g. localhost:1414.',
-    'id_queue_manager': 'Name of the queue manager to connect to,<br>e.g. QM1.',
-    'id_mq_channel_name': 'Name of the server-connection (SVRCONN) channel<br>the connection goes through,<br>e.g. DEV.APP.SVRCONN.',
-    'id_queue': 'Queue that messages are sent to,<br>e.g. DEV.QUEUE.1.',
+    'id_name': 'A unique name for this connection. ' +
+        'Services send messages through it with self.ibm_mq[name].send(data).',
+    'id_is_active': 'Whether this connection can be used. Messages are not sent through inactive connections.',
+    'id_address': 'Address of the queue manager as host:port, e.g. localhost:1414.',
+    'id_queue_manager': 'Name of the queue manager to connect to, e.g. QM1.',
+    'id_mq_channel_name': 'Name of the server-connection (SVRCONN) channel the connection goes through, ' +
+        'e.g. DEV.APP.SVRCONN.',
+    'id_queue': 'Queue that messages are sent to, e.g. DEV.QUEUE.1.',
 
     // Security tab
-    'id_username': 'Username the connection authenticates with.<br>Leave empty if the queue manager<br>does not require credentials.<br>The password is set separately<br>with the Change password link.',
-    'id_ssl': 'Whether the connection uses TLS.<br>When on, the cipher spec and certificate<br>files below apply.',
-    'id_cipher_spec': 'TLS cipher specification the SVRCONN channel<br>requires, e.g. ANY_TLS12_OR_HIGHER<br>or TLS_AES_256_GCM_SHA384.',
-    'id_ssl_ca_file': 'Path to a PEM file with the CA certificate<br>that signed the queue manager\'s certificate.',
-    'id_ssl_cert_file': 'Path to a PEM file with the client certificate,<br>needed only when the queue manager<br>requires mutual TLS.',
-    'id_ssl_key_file': 'Path to the PEM private key matching<br>the client certificate.',
+    'id_username': 'Username the connection authenticates with. ' +
+        'Leave empty if the queue manager does not require credentials. ' +
+        'The password is set separately with the Change password link.',
+    'id_ssl': 'Whether the connection uses TLS. When on, the cipher spec and certificate files below apply.',
+    'id_cipher_spec': 'TLS cipher specification the SVRCONN channel requires, ' +
+        'e.g. ANY_TLS12_OR_HIGHER or TLS_AES_256_GCM_SHA384.',
+    'id_ssl_ca_file': 'Path to a PEM file with the CA certificate that signed the queue manager\'s certificate.',
+    'id_ssl_cert_file': 'Path to a PEM file with the client certificate, ' +
+        'needed only when the queue manager requires mutual TLS.',
+    'id_ssl_key_file': 'Path to the PEM private key matching the client certificate.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

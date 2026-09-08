@@ -272,7 +272,7 @@ wizard.helpDescriptions = function() {
         'Skills are authored on the AI - Skills screen. With none assigned, ' +
         'the gateway serves tools only.';
     out['badge-filter-text-sec-wizard'] = 'Security definitions used to authenticate incoming MCP requests. ' +
-        'More than one can be assigned. With none assigned, the gateway will accept ' +
+        'More than one can be assigned. With none assigned, the gateway accepts ' +
         'requests from anyone who knows its address.';
 
     // .. the size caps line of step 2 ..
@@ -301,10 +301,10 @@ wizard.titleHelp = function() {
         '<p>This wizard creates a gateway - the endpoint through which ' +
         'AI agents reach the services of the platform.</p>' +
 
-        '<p><span class="wizard-title-help-step">01</span> decides how agents connect - ' +
+        '<p>On <span class="wizard-title-help-step">01</span> you choose how agents connect - ' +
         'the address they call, the services they may invoke and the credentials they ' +
         'authenticate with. ' +
-        '<span class="wizard-title-help-step">02</span> shapes what they receive back - ' +
+        'On <span class="wizard-title-help-step">02</span> you shape what they receive back - ' +
         'response size, compaction and safety. ' +
         '<span class="wizard-title-help-step">03</span> is a review before the gateway is created.</p>' +
 
@@ -321,7 +321,7 @@ wizard.titleHelp = function() {
 
         '<p>Everything an agent receives back flows through the gateway, which is ' +
         'where responses can be capped in size, compacted, cleared of PII and ' +
-        'checked for unsafe content. If in doubt, name the gateway, assign a ' +
+        'checked for unsafe content. Name the gateway, assign a ' +
         'service and keep the defaults.</p>' +
 
         '</div>' +

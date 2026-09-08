@@ -34,21 +34,39 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.sftp.field_descriptions = {
-    'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>and the command shell runs against it.',
-    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection<br>and pings and the command shell are rejected.',
-    'id_address': 'Where the SFTP server listens, as host<br>or host:port, e.g. sftp.example.com:22.',
-    'id_username': 'Username to log in to the SFTP server as.<br>Leave empty if the server takes the identity<br>from the private key alone.',
-    'id_secret': 'Password for the username above.<br>Leave empty when logging in<br>with a private key instead.',
-    'id_private_key': 'Full path to the private key file on the<br>server\'s filesystem, e.g. /opt/zato/keys/id_rsa.<br>Used instead of a password.',
-    'id_strict_host_key_checking': 'When on, the server\'s host key must already be<br>in known_hosts or the connection is rejected.<br>Turning it off accepts the keys of new hosts.',
-    'id_ignore_host_key_changes': 'When on, host keys are neither checked nor recorded,<br>so a server that regenerated its key still connects.<br>This overrides strict host key checking.',
-    'id_should_store_content': 'Whether the audit log additionally keeps the bytes<br>of the files this connection moves,<br>so they can be reread and downloaded later. Off by default.',
+    'id_name': 'A unique name for this connection. ' +
+        'Services look it up by this name and the command shell runs against it.',
+    'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection ' +
+        'and pings and the command shell are rejected.',
+    'id_address': 'Where the SFTP server listens, as host or host:port, e.g. sftp.example.com:22.',
+    'id_username': 'Username to log in to the SFTP server as. ' +
+        'Leave empty if the server takes the identity from the private key alone.',
+    'id_secret': 'Password for the username above. Leave empty when logging in with a private key instead.',
+    'id_private_key': 'Full path to the private key file on the server\'s filesystem, ' +
+        'e.g. /opt/zato/keys/id_rsa. Used instead of a password.',
+    'id_strict_host_key_checking': 'When on, the server\'s host key must already be in known_hosts ' +
+        'or the connection is rejected. Turning it off accepts the keys of new hosts.',
+    'id_ignore_host_key_changes': 'When on, host keys are neither checked nor recorded, ' +
+        'so a server that regenerated its key still connects. This overrides strict host key checking.',
+    'id_should_store_content': 'Whether the audit log additionally keeps the bytes of the files ' +
+        'this connection moves, so they can be reread and downloaded later. Off by default.',
 };
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// A dialog always opens with its More options block collapsed,
+// no matter what state the previous open left it in.
+$.fn.zato.outgoing.sftp.collapse_more_options = function(form_type) {
+    $('.sftp-more-options-' + form_type).each(function(ignored, elem) {
+        $.fn.zato.toggle_visible_hidden(elem, false);
+    });
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.sftp.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing SFTP connection', null);
+    $.fn.zato.outgoing.sftp.collapse_more_options('create');
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
         divId: '#create-div',
@@ -60,6 +78,7 @@ $.fn.zato.outgoing.sftp.create = function() {
 
 $.fn.zato.outgoing.sftp.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing SFTP connection', id);
+    $.fn.zato.outgoing.sftp.collapse_more_options('edit');
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',
         divId: '#edit-div',

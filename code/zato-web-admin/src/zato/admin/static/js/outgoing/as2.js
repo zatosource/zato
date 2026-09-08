@@ -76,66 +76,108 @@ $.fn.zato.outgoing.as2.create = function() {
 $.fn.zato.outgoing.as2.field_descriptions = {
 
     // Main tab
-    'id_name': 'A unique name for this connection.<br>Used to identify the partner in logs<br>and the dashboard.',
-    'id_is_active': 'Whether this connection can be used.<br>Messages are not sent through<br>inactive connections.',
-    'id_is_audit_log_active': 'Whether this connection\'s exchanges are recorded<br>in the audit log. On by default.<br>Turning it off also disables MDN reconciliation<br>and duplicate detection for this partnership.',
-    'id_endpoint_url': 'The partner\'s AS2 endpoint,<br>e.g. https://as2.example.com/exchange.',
-    'id_as2_from': 'Your own AS2 identifier,<br>sent in the AS2-From header<br>of every outgoing message.',
-    'id_as2_to': 'The partner\'s AS2 identifier,<br>sent in the AS2-To header<br>of every outgoing message.',
-    'id_subject': 'The Subject header of outgoing messages.<br>Leave empty for the default.',
+    'id_name': 'A unique name for this connection. Used to identify the partner in logs and the dashboard.',
+    'id_is_active': 'Whether this connection can be used. Messages are not sent through inactive connections.',
+    'id_is_audit_log_active': 'Whether this connection\'s exchanges are recorded in the audit log. On by default. ' +
+        'Turning it off also disables MDN reconciliation and duplicate detection for this partnership.',
+    'id_endpoint_url': 'The partner\'s AS2 endpoint, e.g. https://as2.example.com/exchange.',
+    'id_as2_from': 'Your own AS2 identifier, sent in the AS2-From header of every outgoing message.',
+    'id_as2_to': 'The partner\'s AS2 identifier, sent in the AS2-To header of every outgoing message.',
+    'id_subject': 'The Subject header of outgoing messages. Leave empty for the default.',
 
     // EDI tab
-    'id_isa_qualifier': 'The partner\'s ISA qualifier, e.g. ZZ or 01.<br>Used for X12 routing, control numbers<br>and reconciliation.',
-    'id_isa_id': 'The partner\'s ISA interchange identifier,<br>the way it appears in ISA06 or ISA08.',
-    'id_gs_id': 'The partner\'s GS application identifier,<br>the way it appears in GS02 or GS03.',
-    'id_unb_id': 'The partner\'s UNB identifier,<br>for partners that exchange EDIFACT<br>rather than X12.',
-    'id_content_type': 'The Content-Type outgoing payloads<br>are sent with, matching what<br>the partner expects.',
-    'id_inbound_topic': 'The topic this partner\'s inbound documents<br>are published to. Leave empty<br>for the default inbound topic.',
-    'id_inbound_service': 'A service to invoke with this partner\'s<br>inbound documents. Takes precedence<br>over the inbound topic.',
+    'id_isa_qualifier': 'The partner\'s ISA qualifier, e.g. ZZ or 01. ' +
+        'Used for X12 routing, control numbers and reconciliation.',
+    'id_isa_id': 'The partner\'s ISA interchange identifier, the way it appears in ISA06 or ISA08.',
+    'id_gs_id': 'The partner\'s GS application identifier, the way it appears in GS02 or GS03.',
+    'id_unb_id': 'The partner\'s UNB identifier, for partners that exchange EDIFACT rather than X12.',
+    'id_content_type': 'The Content-Type outgoing payloads are sent with, matching what the partner expects.',
+    'id_inbound_topic': 'The topic this partner\'s inbound documents are published to. ' +
+        'Leave empty for the default inbound topic.',
+    'id_inbound_service': 'A service to invoke with this partner\'s inbound documents. ' +
+        'Takes precedence over the inbound topic.',
 
     // Security tab
-    'id_sign': 'Whether outgoing messages are signed<br>with your signing key. The select picks<br>the digest algorithm of signatures and MIC values -<br>SHA-256 is the standard, SHA-1 only<br>for partners that require it.',
-    'id_encrypt': 'Whether outgoing messages are encrypted<br>to the partner\'s certificate. The select picks<br>the content encryption algorithm -<br>AES-CBC is the interop baseline,<br>GCM only for partners that accept it.',
-    'id_compress': 'Whether outgoing messages are compressed<br>and whether compression runs before signing.<br>Both orders exist in the wild,<br>the partner\'s setup decides.',
-    'id_compress_before_signing': 'When on, the payload is compressed first<br>and the signature covers the compressed data.<br>When off, the message is signed first<br>and compression wraps the signed message.<br>The partner\'s setup decides which order works.',
-    'id_mdn_mode': 'How the partner returns its receipt -<br>on the HTTP response, asynchronously<br>to a separate URL, or not at all.<br>The toggle decides if the receipt<br>must be signed.',
-    'id_mdn_signed': 'Whether the receipt requested from the partner<br>must be signed. A signed MDN proves who sent it<br>and its MIC value confirms the partner received<br>exactly the message that went out.',
-    'id_async_mdn_url': 'Where the partner delivers asynchronous<br>receipts. Meaningful only when the MDN mode<br>is asynchronous.',
+    'id_sign': 'Whether outgoing messages are signed with your signing key. ' +
+        'The select picks the digest algorithm of signatures and MIC values - SHA-256 is the standard, ' +
+        'SHA-1 only for partners that require it.',
+    'id_encrypt': 'Whether outgoing messages are encrypted to the partner\'s certificate. ' +
+        'The select picks the content encryption algorithm - AES-CBC is the interop baseline, ' +
+        'GCM only for partners that accept it.',
+    'id_compress': 'Whether outgoing messages are compressed and whether compression runs before signing. ' +
+        'Both orders are in use, and the partner\'s configuration determines which one applies.',
+    'id_compress_before_signing': 'When on, the payload is compressed first and the signature covers ' +
+        'the compressed data. When off, the message is signed first and compression wraps the signed message. ' +
+        'The partner\'s configuration determines which order works.',
+    'id_mdn_mode': 'How the partner returns its receipt - on the HTTP response, asynchronously to a separate URL, ' +
+        'or not at all. Turn on the toggle when the receipt must be signed.',
+    'id_mdn_signed': 'Whether the receipt requested from the partner must be signed. ' +
+        'A signed MDN proves who sent it and its MIC value confirms the partner received exactly the message ' +
+        'that went out.',
+    'id_async_mdn_url': 'Where the partner delivers asynchronous receipts. ' +
+        'Meaningful only when the MDN mode is asynchronous.',
 
     // Partner tab
-    'id_as2_partner_cert': 'The partner\'s current certificate in PEM.<br>It verifies their signatures and encrypts<br>messages sent to them.',
-    'id_as2_partner_next_cert': 'The partner\'s next certificate in PEM,<br>staged ahead of a rotation. Both certificates<br>are accepted during the overlap window<br>and one day after the activation date<br>this certificate becomes the current one.',
-    'id_as2_partner_next_cert_from': 'The date the next certificate starts<br>being accepted, e.g. 2026-08-01.<br>With no date, the pasted certificate<br>is accepted right away.<br>With a date, the rotation completes<br>automatically one day after it.',
-    'id_as2_peer_signing_cert': 'A pinned partner signing certificate in PEM.<br>Leave empty to verify against<br>the partner certificate above.',
-    'id_as2_peer_encryption_cert': 'A pinned partner encryption certificate in PEM.<br>Leave empty to encrypt to<br>the partner certificate above.',
-    'id_as2_trust_anchors': 'CA certificates in PEM that partner<br>certificates must chain up to.<br>An alternative to pinning one certificate.',
+    'id_as2_partner_cert': 'The partner\'s current certificate in PEM. ' +
+        'It verifies their signatures and encrypts messages sent to them.',
+    'id_as2_partner_next_cert': 'The partner\'s next certificate in PEM, staged ahead of a rotation. ' +
+        'Both certificates are accepted during the overlap window and one day after the activation date ' +
+        'this certificate becomes the current one.',
+    'id_as2_partner_next_cert_from': 'The date the next certificate starts being accepted, e.g. 2026-08-01. ' +
+        'With no date, the pasted certificate is accepted right away. ' +
+        'With a date, the rotation completes automatically one day after it.',
+    'id_as2_peer_signing_cert': 'A pinned partner signing certificate in PEM. ' +
+        'Leave empty to verify against the partner certificate above.',
+    'id_as2_peer_encryption_cert': 'A pinned partner encryption certificate in PEM. ' +
+        'Leave empty to encrypt to the partner certificate above.',
+    'id_as2_trust_anchors': 'CA certificates in PEM that partner certificates must chain up to. ' +
+        'An alternative to pinning one certificate.',
 
     // Keys tab
-    'id_as2_signing_key': 'Your private key in PEM, pasted as text.<br>It signs every outgoing message and is<br>stored encrypted, never in plain text.<br>Leave empty to keep the stored key.',
-    'id_as2_signing_cert_chain': 'The certificate chain matching the signing key,<br>in PEM - your certificate first,<br>then any intermediates.',
-    'id_as2_decryption_key': 'The private key that decrypts messages<br>encrypted to you. Often the same<br>as the signing key. Stored encrypted.<br>Leave empty to keep the stored key.',
-    'id_as2_next_decryption_key': 'Your next private key, staged ahead<br>of your own rotation. Messages encrypted<br>to either key decrypt during the overlap.<br>Leave empty to keep the stored key.',
-    'id_as2_next_decryption_cert': 'The certificate of the next decryption key,<br>in PEM - it matches incoming messages<br>to the right key.',
+    'id_as2_signing_key': 'Your private key in PEM, pasted as text. It signs every outgoing message ' +
+        'and is stored encrypted, never in plain text. Leave empty to keep the stored key.',
+    'id_as2_signing_cert_chain': 'The certificate chain matching the signing key, in PEM - ' +
+        'your certificate first, then any intermediates.',
+    'id_as2_decryption_key': 'The private key that decrypts messages encrypted to you. ' +
+        'Often the same as the signing key. Stored encrypted. Leave empty to keep the stored key.',
+    'id_as2_next_decryption_key': 'Your next private key, staged ahead of your own rotation. ' +
+        'Messages encrypted to either key decrypt during the overlap. Leave empty to keep the stored key.',
+    'id_as2_next_decryption_cert': 'The certificate of the next decryption key, in PEM - ' +
+        'it matches incoming messages to the right key.',
 
     // Delivery tab
-    'id_verify_tls': 'Whether the TLS certificate of the partner\'s<br>endpoint must be validated. Turn it off<br>only in test environments.',
-    'id_username': 'The username for HTTP basic authentication,<br>if the partner requires it. The password<br>is set through Change password.',
-    'id_http_timeout_seconds': 'How many seconds to wait for a response<br>before the delivery times out.<br>Zero keeps the default.',
-    'id_http_transfer_mode': 'How the HTTP request body is framed -<br>with a Content-Length header, chunked,<br>or chunked only above the threshold.',
-    'id_chunked_threshold_bytes': 'Above this many bytes the threshold<br>transfer mode switches to chunked framing.<br>Zero keeps the default.',
-    'id_preserve_filename': 'Whether outgoing payloads carry their<br>filename in a Content-Disposition header.',
-    'id_ack_overdue_after': 'After how many seconds a missing receipt<br>or acknowledgment counts as overdue.<br>Zero keeps the default.',
-    'id_resend_max_retries': 'How many times an overdue receipt triggers<br>a resend of the original message.<br>Zero keeps the default.',
-    'id_ship_notice_window_hours': 'Within how many hours of an incoming order<br>a ship notice must go back to this partner.<br>Zero turns the check off.',
-    'id_alerting_opt_out': 'Whether the alerting job skips this partner -<br>no overdue, certificate or ship notice<br>findings are raised for it.',
+    'id_verify_tls': 'Whether the TLS certificate of the partner\'s endpoint must be validated. ' +
+        'Turn it off only in test environments.',
+    'id_username': 'The username for HTTP basic authentication, if the partner requires it. ' +
+        'The password is set through Change password.',
+    'id_http_timeout_seconds': 'How many seconds to wait for a response before the delivery times out. ' +
+        'Zero keeps the default.',
+    'id_http_transfer_mode': 'How the HTTP request body is framed - with a Content-Length header, chunked, ' +
+        'or chunked only above the threshold.',
+    'id_chunked_threshold_bytes': 'Above this many bytes the threshold transfer mode switches ' +
+        'to chunked framing. Zero keeps the default.',
+    'id_preserve_filename': 'Whether outgoing payloads carry their filename in a Content-Disposition header.',
+    'id_ack_overdue_after': 'After how many seconds a missing receipt or acknowledgment counts as overdue. ' +
+        'Zero keeps the default.',
+    'id_resend_max_retries': 'How many times an overdue receipt triggers a resend of the original message. ' +
+        'Zero keeps the default.',
+    'id_ship_notice_window_hours': 'Within how many hours of an incoming order a ship notice must go back ' +
+        'to this partner. Zero turns the check off.',
+    'id_alerting_opt_out': 'Whether the alerting job skips this partner - no overdue, certificate ' +
+        'or ship notice findings are raised for it.',
 
     // More tab
-    'id_as2_version': 'The AS2-Version header of outgoing messages.<br>Pin it to 1.1 only for partners<br>that require the older value.',
-    'id_content_transfer_encoding': 'The transfer encoding of outgoing payloads.<br>Binary is the standard, Base64 only<br>for partners that require it.',
-    'id_force_base64': 'Forces Base64 encoding of outgoing payloads<br>regardless of the transfer encoding.<br>An escape hatch for stubborn peers.',
-    'id_prevent_canonicalization': 'Prevents line-ending canonicalization<br>of text payloads. An escape hatch<br>for peers that disagree about it.',
-    'id_warn_on_duplicate_filename': 'Whether an already-seen filename gets<br>a processed/warning receipt<br>with explicit free text.',
-    'id_pool_size': 'How many pooled connections<br>this partner\'s messages are<br>delivered over.',
+    'id_as2_version': 'The AS2-Version header of outgoing messages. ' +
+        'Pin it to 1.1 only for partners that require the older value.',
+    'id_content_transfer_encoding': 'The transfer encoding of outgoing payloads. ' +
+        'Binary is the standard, Base64 only for partners that require it.',
+    'id_force_base64': 'Forces Base64 encoding of outgoing payloads regardless of the transfer encoding. ' +
+        'An escape hatch for stubborn peers.',
+    'id_prevent_canonicalization': 'Prevents line-ending canonicalization of text payloads. ' +
+        'An escape hatch for peers that disagree about it.',
+    'id_warn_on_duplicate_filename': 'Whether an already-seen filename gets a processed/warning receipt ' +
+        'with explicit free text.',
+    'id_pool_size': 'How many pooled connections this partner\'s messages are delivered over.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

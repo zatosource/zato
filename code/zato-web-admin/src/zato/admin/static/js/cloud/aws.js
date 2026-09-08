@@ -38,11 +38,13 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.cloud.aws.field_descriptions = {
-    'id_name': 'A unique name for this AWS connection.<br>Used to identify it in services, logs and the dashboard.',
-    'id_is_active': 'Whether this connection is active.<br>Inactive connections cannot be used by services.',
-    'id_region': 'The AWS region to connect to, e.g. us-east-1.<br>Per-service endpoints are derived from it automatically.',
-    'id_access_key_id': 'The access key ID of the IAM user or role<br>the connection authenticates as.',
-    'id_endpoint_url': 'Optional. Leave empty for AWS itself.<br>Fill it in only to point at an S3-compatible store<br>or a local AWS simulator.',
+    'id_name': 'A unique name for this AWS connection. Used to identify it in services, logs and the dashboard.',
+    'id_is_active': 'Whether this connection is active. Inactive connections cannot be used by services.',
+    'id_region': 'The AWS region to connect to, e.g. us-east-1. ' +
+        'Per-service endpoints are derived from it automatically.',
+    'id_access_key_id': 'The access key ID of the IAM user or role the connection authenticates as.',
+    'id_endpoint_url': 'Optional. Leave empty for AWS itself. ' +
+        'Fill it in only to point at an S3-compatible store or a local AWS simulator.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -42,12 +42,12 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.graphql.field_descriptions = {
-    'id_name': 'A unique name for this GraphQL connection.<br>Used to identify it in logs and the dashboard.',
-    'id_is_active': 'Whether this connection is active.<br>Inactive connections cannot be used by services.',
-    'id_default_query_timeout': 'How long to wait for a response,<br>in seconds.',
-    'id_address': 'Full URL to the GraphQL endpoint,<br>including the path.',
-    'id_security_id': 'Security definition used to authenticate<br>requests to the GraphQL server.',
-    'id_extra': 'Custom HTTP headers sent with every request<br>as a JSON object, e.g. {"X-Tenant": "acme"}.',
+    'id_name': 'A unique name for this GraphQL connection. Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this connection is active. Inactive connections cannot be used by services.',
+    'id_default_query_timeout': 'How long to wait for a response, in seconds.',
+    'id_address': 'Full URL to the GraphQL endpoint, including the path.',
+    'id_security_id': 'Security definition used to authenticate requests to the GraphQL server.',
+    'id_extra': 'Custom HTTP headers sent with every request as a JSON object, e.g. {"X-Tenant": "acme"}.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -15,8 +15,8 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.test.sftp_ import SFTPTestServer
 
 # Tests
-from outgoing_sftp import create_sftp_connection, delete_sftp_connection, forget_host_key, get_sftp_conn_id, \
-     open_edit_dialog, open_sftp_page, row_selector, submit_edit_form
+from outgoing_sftp import create_sftp_connection, delete_sftp_connection, expand_more_options, forget_host_key, \
+     get_sftp_conn_id, open_edit_dialog, open_sftp_page, row_selector, submit_edit_form
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,10 +53,10 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     # Navigate ..
     open_sftp_page(page, base_url)
 
-    # .. create ..
+    # .. create with the host key checking slider on so that the edit below has something to flip ..
     name = _Test_Name_Prefix + suffix
     create_sftp_connection(page, name, 'sftp.example.com:22', 'sftp-user',
-        'sftp-password-' + CryptoManager.generate_hex_string())
+        'sftp-password-' + CryptoManager.generate_hex_string(), strict_host_key_checking=True)
 
     # .. edit everything except the password, flipping the host key checking slider too ..
     item_id = get_sftp_conn_id(page, name)
@@ -67,6 +67,7 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     page.fill('#id_edit-address', 'sftp.edited.example.com:22022')
     page.fill('#id_edit-username', 'sftp-user-edited')
     page.fill('#id_edit-private_key', '/tmp/my-edited-sftp-key')
+    expand_more_options(page, 'edit')
     page.click('#id_edit-strict_host_key_checking')
 
     submit_edit_form(page)
@@ -157,10 +158,10 @@ class TestOutgoingSFTPLifecycle:
         # Navigate ..
         open_sftp_page(page, base_url)
 
-        # .. create ..
+        # .. create with the host key checking slider on so that the edit below turns it off ..
         name = _Test_Name_Prefix + 'crud'
         create_sftp_connection(page, name, 'sftp.example.com:22', 'sftp-user',
-            'sftp-password-' + CryptoManager.generate_hex_string())
+            'sftp-password-' + CryptoManager.generate_hex_string(), strict_host_key_checking=True)
 
         # .. verify row exists ..
         row = page.query_selector(row_selector(name))
@@ -174,6 +175,7 @@ class TestOutgoingSFTPLifecycle:
         page.fill('#id_edit-name', edited_name)
         page.fill('#id_edit-address', 'sftp.edited.example.com:22022')
         page.fill('#id_edit-username', 'sftp-user-edited')
+        expand_more_options(page, 'edit')
         page.click('#id_edit-strict_host_key_checking')
 
         submit_edit_form(page)

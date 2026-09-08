@@ -20,12 +20,14 @@ $.fn.zato.alerting.config = {
 // What the how-it-works walkthrough says about each field, the create
 // and the edit popup alike.
 $.fn.zato.alerting.field_descriptions = {
-    'id_name': 'A unique name for this rule.<br>Letters, digits and underscores only,<br>shown across the monitoring screens.',
+    'id_name': 'A unique name for this rule. ' +
+        'Letters, digits and underscores only, shown across the monitoring screens.',
     'id_is_active': 'Whether the rule runs and can raise alerts.',
-    'id_docs': 'What this rule is for, in your own words.<br>Shown next to the rule in the listing.',
-    'id_edit-name': 'A unique name for this rule.<br>Letters, digits and underscores only,<br>shown across the monitoring screens.',
+    'id_docs': 'What this rule is for, in your own words. Shown next to the rule in the listing.',
+    'id_edit-name': 'A unique name for this rule. ' +
+        'Letters, digits and underscores only, shown across the monitoring screens.',
     'id_edit-is_active': 'Whether the rule runs and can raise alerts.',
-    'id_edit-docs': 'What this rule is for, in your own words.<br>Shown next to the rule in the listing.',
+    'id_edit-docs': 'What this rule is for, in your own words. Shown next to the rule in the listing.',
 };
 
 // ////////////////////////////////////////////////////////////////////////

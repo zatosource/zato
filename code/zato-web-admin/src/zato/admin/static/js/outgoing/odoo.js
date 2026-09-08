@@ -31,14 +31,20 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.odoo.field_descriptions = {
-    'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>through self.out.odoo.get.',
-    'id_is_active': 'Whether this connection can be used.<br>Services cannot invoke Odoo<br>through an inactive connection.',
-    'id_host': 'Host name or IP address the Odoo server<br>listens on, without any protocol prefix.',
-    'id_port': 'Port the Odoo server listens on.<br>The standard Odoo port is 8069.',
-    'id_user': 'Odoo login of the account the connection<br>authenticates as. Its password is set<br>separately with the Change password link.',
-    'id_database': 'Name of the Odoo database to work with.<br>One server may host multiple databases<br>and each connection uses exactly one.',
-    'id_protocol': 'How to talk to Odoo - XML-RPC or JSON-RPC,<br>each in plain or TLS form. The TLS variants<br>require the server to expose HTTPS.',
-    'id_pool_size': 'How many connections are kept open in the pool.<br>More lets concurrent services call Odoo in parallel<br>at the cost of more open sessions.',
+    'id_name': 'A unique name for this connection. Services look it up by this name through self.out.odoo.get.',
+    'id_is_active': 'Whether this connection can be used. ' +
+        'Services cannot invoke Odoo through an inactive connection.',
+    'id_host': 'Host name or IP address the Odoo server listens on, without any protocol prefix.',
+    'id_port': 'Port the Odoo server listens on. The standard Odoo port is 8069.',
+    'id_user': 'Odoo login of the account the connection authenticates as. ' +
+        'Its password is set separately with the Change password link.',
+    'id_database': 'Name of the Odoo database to work with. ' +
+        'One server may host multiple databases and each connection uses exactly one.',
+    'id_protocol': 'Which protocol the connection uses to reach Odoo - XML-RPC or JSON-RPC, ' +
+        'each in plain or TLS form. ' +
+        'The TLS variants require the server to expose HTTPS.',
+    'id_pool_size': 'How many connections are kept open in the pool. ' +
+        'More lets concurrent services call Odoo in parallel at the cost of more open sessions.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

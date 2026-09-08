@@ -42,22 +42,34 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.email.imap.field_descriptions = {
-    'id_name': 'A unique name for this IMAP connection.<br>Used to identify it in services, logs and the dashboard.',
-    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
-    'id_is_audit_log_active': 'Whether this connection\'s activity is recorded<br>in the audit log. On by default.',
-    'id_server_type': 'What kind of server this is - generic IMAP<br>for any standard server or Microsoft 365<br>for cloud mailboxes accessed with OAuth2.',
-    'id_username': 'User or e-mail address the connection logs in as,<br>e.g. mailbox@example.com.<br>The password or secret is set separately<br>with the link in the connection\'s row.',
-    'id_host': 'Hostname of the IMAP server to connect to,<br>e.g. imap.example.com.<br>Used with generic IMAP servers only.',
-    'id_port': 'Port the IMAP server listens on.<br>Default is 993, the standard port<br>for IMAP over SSL.',
-    'id_mode': 'Whether the connection is encrypted with SSL<br>or sent in plaintext. Use plain only<br>with servers on trusted networks.',
-    'id_timeout': 'How many seconds to wait for the server<br>when connecting and reading. Default is 10.',
-    'id_debug_level': 'Verbosity of the underlying IMAP library,<br>from 0 (quiet) to 2 (detailed traffic logs).<br>Default is 0.',
-    'id_get_criteria': 'IMAP search criteria selecting which messages<br>to download, e.g. UNSEEN or ALL.<br>Used with generic IMAP servers only.',
-    'id_tenant_id': 'Directory (tenant) ID of the Microsoft Entra tenant<br>the mailbox belongs to.<br>Used with Microsoft 365 mailboxes only.',
-    'id_client_id': 'Application (client) ID of the Azure app registration<br>the connection authenticates as.<br>Used with Microsoft 365 mailboxes only.',
-    'id_filter_criteria': 'OData filter selecting which messages to download,<br>e.g. isRead ne true.<br>Used with Microsoft 365 mailboxes only.',
-    'id_scheduler_run_every': 'How often the mailbox is polled for new messages.<br>Leave empty if services read the mailbox on their own<br>and no automatic polling is needed.',
-    'id_scheduler_start_date': 'When the first polling run takes place.<br>Subsequent runs follow the interval above.',
+    'id_name': 'A unique name for this IMAP connection. ' +
+        'Used to identify it in services, logs and the dashboard.',
+    'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection.',
+    'id_is_audit_log_active': 'Whether this connection\'s activity is recorded in the audit log. On by default.',
+    'id_server_type': 'What kind of server this is - generic IMAP for any standard server ' +
+        'or Microsoft 365 for cloud mailboxes accessed with OAuth2.',
+    'id_username': 'User or e-mail address the connection logs in as, e.g. mailbox@example.com. ' +
+        'The password or secret is set separately with the link in the connection\'s row.',
+    'id_host': 'Hostname of the IMAP server to connect to, e.g. imap.example.com. ' +
+        'Used with generic IMAP servers only.',
+    'id_port': 'Port the IMAP server listens on. Default is 993, the standard port for IMAP over SSL.',
+    'id_mode': 'Whether the connection is encrypted with SSL or sent in plaintext. ' +
+        'Use plain only with servers on trusted networks.',
+    'id_timeout': 'How many seconds to wait for the server when connecting and reading. Default is 10.',
+    'id_debug_level': 'Verbosity of the underlying IMAP library, from 0 (quiet) to 2 (detailed traffic logs). ' +
+        'Default is 0.',
+    'id_get_criteria': 'IMAP search criteria selecting which messages to download, e.g. UNSEEN or ALL. ' +
+        'Used with generic IMAP servers only.',
+    'id_tenant_id': 'Directory (tenant) ID of the Microsoft Entra tenant the mailbox belongs to. ' +
+        'Used with Microsoft 365 mailboxes only.',
+    'id_client_id': 'Application (client) ID of the Azure app registration the connection authenticates as. ' +
+        'Used with Microsoft 365 mailboxes only.',
+    'id_filter_criteria': 'OData filter selecting which messages to download, e.g. isRead ne true. ' +
+        'Used with Microsoft 365 mailboxes only.',
+    'id_scheduler_run_every': 'How often the mailbox is polled for new messages. ' +
+        'Leave empty if services read the mailbox on their own and no automatic polling is needed.',
+    'id_scheduler_start_date': 'When the first polling run takes place. ' +
+        'Subsequent runs follow the interval above.',
     'id_scheduler_service': 'Service invoked for messages and attachments found during polling.',
     'id_scheduler_invoke_with': 'Whether the service is invoked once per whole message or once for each of a message\'s attachments.',
 };

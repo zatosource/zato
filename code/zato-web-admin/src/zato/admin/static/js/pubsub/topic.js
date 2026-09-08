@@ -29,33 +29,33 @@ $.fn.zato.pubsub.topic.highlight = function(text) {
 
 $.fn.zato.pubsub.topic.fieldDescriptions = {
 
-    'id_name': 'A unique name for this topic.<br>' +
+    'id_name': 'A unique name for this topic. ' +
         $.fn.zato.pubsub.topic.highlight('Publishers and subscribers refer to the topic by this name') + '.',
 
-    'id_description': 'An optional, free-form description.<br>' +
+    'id_description': 'An optional, free-form description. ' +
         $.fn.zato.pubsub.topic.highlight('It has no effect on how messages flow') + '.',
 
-    'id_is_audit_log_active': 'Whether this topic\'s messages are recorded<br>in the audit log. On by default.',
+    'id_is_audit_log_active': 'Whether this topic\'s messages are recorded in the audit log. On by default.',
 
-    'id_backend_type': 'Where messages of this topic live.<br>' +
-        'Built-in keeps them inside Zato.<br>' +
-        'AMQP hands them over to an external broker.<br>' +
+    'id_backend_type': 'Where messages of this topic live. ' +
+        'Built-in keeps them inside Zato. ' +
+        'AMQP sends them to an external broker. ' +
         $.fn.zato.pubsub.topic.highlight('Publishers and subscribers use the topic the same way in both cases') + '.',
 
-    'id_amqp_outconn_name': 'The outgoing AMQP connection that publishes<br>' +
-        'messages of this topic to the broker.<br>' +
+    'id_amqp_outconn_name': 'The outgoing AMQP connection that publishes ' +
+        'messages of this topic to the broker. ' +
         $.fn.zato.pubsub.topic.highlight('Required for AMQP topics') + '.',
 
-    'id_amqp_exchange': 'The exchange in the broker that messages<br>' +
-        'of this topic are published to.<br>' +
+    'id_amqp_exchange': 'The exchange in the broker that messages ' +
+        'of this topic are published to. ' +
         $.fn.zato.pubsub.topic.highlight('The exchange must already exist in the broker') + '.',
 
-    'id_amqp_routing_key': 'The routing key the broker uses to route<br>' +
-        'messages of this topic to queues.<br>' +
+    'id_amqp_routing_key': 'The routing key the broker uses to route ' +
+        'messages of this topic to queues. ' +
         $.fn.zato.pubsub.topic.highlight('The topic name is used when this is empty') + '.',
 
-    'id_amqp_channel_name': 'An AMQP channel that consumes messages<br>' +
-        'from a queue in the broker.<br>' +
+    'id_amqp_channel_name': 'An AMQP channel that consumes messages ' +
+        'from a queue in the broker. ' +
         $.fn.zato.pubsub.topic.highlight("Messages received by the channel are delivered to this topic's subscribers") + '.',
 };
 

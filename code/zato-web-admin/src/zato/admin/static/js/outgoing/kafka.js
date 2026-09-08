@@ -33,14 +33,18 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.kafka.field_descriptions = {
-    'id_name': 'A unique name for this connection.<br>Services publish messages through it,<br>referring to it by this exact name.',
-    'id_is_active': 'Whether this connection can be used.<br>Inactive connections do not publish messages.',
-    'id_address': 'Bootstrap server address as host:port,<br>e.g. localhost:9092. The client discovers<br>the rest of the cluster from it.',
-    'id_topic': 'Kafka topic the messages are published to.<br>It must already exist on the broker<br>unless auto-creation is enabled there.',
-    'id_ssl': 'Whether the connection uses TLS.<br>When on, the certificate files below apply.',
-    'id_ssl_ca_file': 'Path to a PEM file with the CA certificate<br>that signed the broker\'s certificate.',
-    'id_ssl_cert_file': 'Path to a PEM file with the client certificate,<br>needed only when the broker requires mutual TLS.',
-    'id_ssl_key_file': 'Path to the PEM private key matching<br>the client certificate.',
+    'id_name': 'A unique name for this connection. ' +
+        'Services publish messages through it, referring to it by this exact name.',
+    'id_is_active': 'Whether this connection can be used. Inactive connections do not publish messages.',
+    'id_address': 'Bootstrap server address as host:port, e.g. localhost:9092. ' +
+        'The client discovers the rest of the cluster from it.',
+    'id_topic': 'Kafka topic the messages are published to. ' +
+        'It must already exist on the broker unless auto-creation is enabled there.',
+    'id_ssl': 'Whether the connection uses TLS. When on, the certificate files below apply.',
+    'id_ssl_ca_file': 'Path to a PEM file with the CA certificate that signed the broker\'s certificate.',
+    'id_ssl_cert_file': 'Path to a PEM file with the client certificate, ' +
+        'needed only when the broker requires mutual TLS.',
+    'id_ssl_key_file': 'Path to the PEM private key matching the client certificate.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

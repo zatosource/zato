@@ -31,13 +31,18 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.sql.field_descriptions = {
-    'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>through self.out.sql.get.',
-    'id_is_active': 'Whether this connection pool can be used.<br>Services cannot run queries<br>through an inactive connection.',
-    'id_engine': 'The database type - it selects the driver<br>and SQL dialect, and picking one fills in<br>the default port and database name below.',
-    'id_host': 'Host name or IP address the database server<br>listens on, with the port in the field next to it.',
-    'id_db_name': 'Name of the database to connect to,<br>with the database user in the field next to it.<br>The user\'s password is set with the Change password link.',
-    'id_audit_log': 'How much of each SQL statement is kept<br>in the audit log - nothing, the statement alone,<br>the statement with its parameters,<br>or everything including the rows returned.',
-    'id_extra': 'Extra engine options as key=value pairs,<br>one per line, e.g. echo=True or pool_pre_ping=True.<br>They are passed to the underlying SQLAlchemy engine.',
+    'id_name': 'A unique name for this connection. Services look it up by this name through self.out.sql.get.',
+    'id_is_active': 'Whether this connection pool can be used. ' +
+        'Services cannot run queries through an inactive connection.',
+    'id_engine': 'The database type - it selects the driver and SQL dialect, ' +
+        'and picking one fills in the default port and database name below.',
+    'id_host': 'Host name or IP address the database server listens on, with the port in the field next to it.',
+    'id_db_name': 'Name of the database to connect to, with the database user in the field next to it. ' +
+        'The user\'s password is set with the Change password link.',
+    'id_audit_log': 'How much of each SQL statement is kept in the audit log - nothing, the statement alone, ' +
+        'the statement with its parameters, or everything including the rows returned.',
+    'id_extra': 'Extra engine options as key=value pairs, one per line, e.g. echo=True or pool_pre_ping=True. ' +
+        'They are passed to the underlying SQLAlchemy engine.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

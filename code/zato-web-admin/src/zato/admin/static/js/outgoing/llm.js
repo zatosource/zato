@@ -65,16 +65,20 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.llm.field_descriptions = {
-    'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>through self.llm[name].',
-    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
-    'id_pool_size': 'How many HTTP clients the pool keeps ready.<br>Each concurrent call checks one out.',
-    'id_model': 'The model every call through this connection uses.<br>Pick one from the list or choose Custom and enter<br>any name by hand - any OpenAI-compatible API<br>and model works, e.g. Ollama, vLLM or LiteLLM.',
-    'id_address': 'The base URL of the API to call.<br>It follows the model you pick and you can<br>point it at any self-hosted or proxy endpoint.',
-    'id_secret': 'The API key sent with each call.<br>Required for hosted providers while self-hosted<br>endpoints may not need one. Later on, it can be<br>updated with the Change API key link.',
-    'id_timeout': 'How many seconds to wait<br>for the provider\'s response.',
-    'id_max_tokens': 'The most tokens the model may generate<br>per reply, sent to providers that require it.',
-    'id_max_history_turns': 'How many past turns of a chat are sent<br>to the provider - a turn is one user message<br>plus the assistant\'s reply. Older turns stay<br>in the cache until they expire.',
-    'id_chat_expiry': 'How many seconds a chat\'s history<br>is kept in the cache after its last message.',
+    'id_name': 'A unique name for this connection. Services look it up by this name through self.llm[name].',
+    'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection.',
+    'id_pool_size': 'How many HTTP clients the pool keeps ready. Each concurrent call checks one out.',
+    'id_model': 'The model every call through this connection uses. Pick one from the list or choose Custom ' +
+        'and enter any name by hand - any OpenAI-compatible API and model works, e.g. Ollama, vLLM or LiteLLM.',
+    'id_address': 'The base URL of the API to call. It follows the model you pick and you can point it ' +
+        'at any self-hosted or proxy endpoint.',
+    'id_secret': 'The API key sent with each call. Required for hosted providers while self-hosted endpoints ' +
+        'may not need one. Later on, it can be updated with the Change API key link.',
+    'id_timeout': 'How many seconds to wait for the provider\'s response.',
+    'id_max_tokens': 'The most tokens the model may generate per reply, sent to providers that require it.',
+    'id_max_history_turns': 'How many past turns of a chat are sent to the provider - a turn is one user ' +
+        'message plus the assistant\'s reply. Older turns stay in the cache until they expire.',
+    'id_chat_expiry': 'How many seconds a chat\'s history is kept in the cache after its last message.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

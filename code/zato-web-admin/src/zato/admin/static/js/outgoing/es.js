@@ -34,15 +34,19 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.es.field_descriptions = {
-    'id_name': 'A unique name for this connection.<br>Services refer to it by this exact name.',
-    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
-    'id_address_list': 'ElasticSearch servers as full URLs, one per line,<br>e.g. https://localhost:9200. The scheme decides<br>whether TLS is used for each server.',
-    'id_username': 'Username to authenticate with.<br>Leave empty if the server<br>does not require authentication.',
-    'id_secret': 'Password matching the username above.<br>Stored encrypted in the Zato database.',
-    'id_timeout': 'How many seconds to wait for a response<br>to a single request before giving up. Default is 90.',
-    'id_is_tls_validation_enabled': 'When on, the server\'s certificate is verified<br>against the CA certs file below.<br>Turn it off only with test environments.',
-    'id_tls_ca_certs_file': 'Path to a PEM file with CA certificates<br>used to verify the server\'s certificate.',
-    'id_tls_cert_key_file': 'Path to a PEM file with the client certificate<br>and its private key combined, for mutual TLS.',
+    'id_name': 'A unique name for this connection. Services refer to it by this exact name.',
+    'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection.',
+    'id_address_list': 'ElasticSearch servers as full URLs, one per line, e.g. https://localhost:9200. ' +
+        'The scheme determines whether TLS is used for each server.',
+    'id_username': 'Username to authenticate with. Leave empty if the server does not require authentication.',
+    'id_secret': 'Password matching the username above. Stored encrypted in the Zato database.',
+    'id_timeout': 'How many seconds to wait for a response to a single request before giving up. ' +
+        'Default is 90.',
+    'id_is_tls_validation_enabled': 'When on, the server\'s certificate is verified against the CA certs file ' +
+        'below. Turn it off only with test environments.',
+    'id_tls_ca_certs_file': 'Path to a PEM file with CA certificates used to verify the server\'s certificate.',
+    'id_tls_cert_key_file': 'Path to a PEM file with the client certificate and its private key combined, ' +
+        'for mutual TLS.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

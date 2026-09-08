@@ -39,12 +39,18 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.cloud.jira.field_descriptions = {
-    'id_name': 'A unique name for this Jira connection.<br>Used to identify it in services, logs and the dashboard.',
-    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
-    'id_is_cloud': 'Whether this is a Jira Cloud instance<br>rather than a self-hosted Server or Data Center one.<br>Cloud uses email plus API token authentication.',
-    'id_api_version': 'Version of the Jira REST API to invoke.<br>The default of 3 is correct for Cloud instances,<br>self-hosted ones typically use version 2.',
-    'id_address': 'Base address of the Jira instance,<br>e.g. https://example.atlassian.net.<br>All API calls the connection makes go to this host.',
-    'id_username': 'Email address or username the connection<br>authenticates as. Issues are created and read<br>with this user\'s permissions.<br>The API token is set separately<br>with the Change API token link.',
+    'id_name': 'A unique name for this Jira connection. ' +
+        'Used to identify it in services, logs and the dashboard.',
+    'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection.',
+    'id_is_cloud': 'Whether this is a Jira Cloud instance rather than a self-hosted Server ' +
+        'or Data Center one. Cloud uses email plus API token authentication.',
+    'id_api_version': 'Version of the Jira REST API to invoke. The default of 3 is correct for Cloud instances, ' +
+        'self-hosted ones typically use version 2.',
+    'id_address': 'Base address of the Jira instance, e.g. https://example.atlassian.net. ' +
+        'All API calls the connection makes go to this host.',
+    'id_username': 'Email address or username the connection authenticates as. ' +
+        'Issues are created and read with this user\'s permissions. ' +
+        'The API token is set separately with the Change API token link.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

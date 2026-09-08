@@ -96,12 +96,14 @@ $.fn.zato.health_check.populate = function(action, item) {
 
 // Field descriptions merged into a page's how-it-works map
 $.fn.zato.health_check.field_descriptions = {
-    'id_health_check_run_every': 'How often this connection is pinged,<br>e.g. every 5 minutes.<br>Leave empty for no health checks.',
-    'id_health_check_notify_on': 'Whether the callback hears about failures only<br>or about every ping result.',
-    'id_health_check_callback_type': 'Where each health check outcome is delivered -<br>to a service, a pub/sub topic or a REST connection.',
+    'id_health_check_run_every': 'How often this connection is pinged, e.g. every 5 minutes. ' +
+        'Leave empty for no health checks.',
+    'id_health_check_notify_on': 'Whether the callback hears about failures only or about every ping result.',
+    'id_health_check_callback_type': 'Where each health check outcome is delivered - to a service, ' +
+        'a pub/sub topic or a REST connection.',
     'id_health_check_callback_service': 'The service invoked with each outcome.',
     'id_health_check_callback_topic': 'The pub/sub topic each outcome is published to.',
-    'id_health_check_callback_rest': 'The outgoing REST connection<br>each outcome is sent to.',
+    'id_health_check_callback_rest': 'The outgoing REST connection each outcome is sent to.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

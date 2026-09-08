@@ -34,13 +34,18 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.smb.field_descriptions = {
-    'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>to transfer files over SMB.',
-    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection<br>and pings against it are rejected.',
-    'id_host': 'Host name or IP address of the SMB server,<br>e.g. a Windows file server or a Samba host.<br>Shares and paths are given later, in API calls.',
-    'id_port': 'TCP port the SMB server listens on.<br>The default of 445 is what Windows<br>and Samba servers use for SMB over TCP.',
-    'id_username': 'Username to authenticate as, e.g. a domain<br>account in the DOMAIN\\user form<br>or a local account name.',
-    'id_secret': 'Password for the username above.<br>It is stored encrypted in the ODB.',
-    'id_should_store_content': 'Whether the audit log additionally keeps the bytes<br>of the files this connection moves,<br>so they can be reread and downloaded later. Off by default.',
+    'id_name': 'A unique name for this connection. Services look it up by this name to transfer files over SMB.',
+    'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection ' +
+        'and pings against it are rejected.',
+    'id_host': 'Host name or IP address of the SMB server, e.g. a Windows file server or a Samba host. ' +
+        'Shares and paths are given later, in API calls.',
+    'id_port': 'TCP port the SMB server listens on. ' +
+        'The default of 445 is what Windows and Samba servers use for SMB over TCP.',
+    'id_username': 'Username to authenticate as, e.g. a domain account in the DOMAIN\\user form ' +
+        'or a local account name.',
+    'id_secret': 'Password for the username above. It is stored encrypted in the ODB.',
+    'id_should_store_content': 'Whether the audit log additionally keeps the bytes of the files ' +
+        'this connection moves, so they can be reread and downloaded later. Off by default.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

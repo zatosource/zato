@@ -415,28 +415,40 @@ $.fn.zato.http_soap.edit_populate_groups_callback = function(data, status) {
 
 $.fn.zato.http_soap.field_descriptions = {
 
-    'id_name': 'A unique name for this endpoint.<br>Used to identify it in logs and the dashboard.',
-    'id_is_active': 'Whether this endpoint accepts messages.<br>Requests to inactive endpoints are rejected.',
-    'id_is_audit_log_active': 'Whether this endpoint\'s traffic is recorded<br>in the audit log. On by default.',
-    'id_should_include_in_openapi': 'Whether this endpoint appears<br>in OpenAPI documents. On by default.',
-    'id_is_deprecated': 'Whether this endpoint is deprecated.<br>Deprecated endpoints announce their status<br>in response headers and OpenAPI documents.',
-    'id_deprecation_sunset': 'The date this deprecated endpoint<br>will be retired, e.g. 2026-12-31.<br>Sent to callers in the Sunset header.',
-    'id_deprecation_successor': 'URL path of the endpoint that replaces<br>this deprecated one, e.g. /api/v2/example.<br>Sent to callers in the Link header.',
-    'id_url_path': 'URL path this endpoint listens on,<br>e.g. /services/endpoint.',
-    'id_service': 'The service invoked for each message<br>this endpoint receives.',
-    'id_security': 'Security definition each incoming message<br>must satisfy, e.g. WS-Security<br>or Basic Auth.',
+    'id_name': 'A unique name for this endpoint. Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this endpoint accepts messages. Requests to inactive endpoints are rejected.',
+    'id_is_audit_log_active': 'Whether this endpoint\'s traffic is recorded in the audit log. On by default.',
+    'id_should_include_in_openapi': 'Whether this endpoint appears in OpenAPI documents. On by default.',
+    'id_is_deprecated': 'Whether this endpoint is deprecated. Deprecated endpoints announce their status ' +
+        'in response headers and OpenAPI documents.',
+    'id_deprecation_sunset': 'The date this deprecated endpoint is retired, e.g. 2026-12-31. ' +
+        'Sent to callers in the Sunset header.',
+    'id_deprecation_successor': 'URL path of the endpoint that replaces this deprecated one, ' +
+        'e.g. /api/v2/example. Sent to callers in the Link header.',
+    'id_url_path': 'URL path this endpoint listens on, e.g. /services/endpoint.',
+    'id_service': 'The service invoked for each message this endpoint receives.',
+    'id_security': 'Security definition each incoming message must satisfy, e.g. WS-Security or Basic Auth.',
 
-    'id_soap_action': 'Value of the SOAPAction header expected<br>with each request. Leave empty if callers<br>do not send one.',
-    'id_soap_version': 'SOAP protocol version this endpoint speaks.<br>1.2 is the most common choice today,<br>1.1 is used by older systems.',
-    'id_use_mtom': 'When on and your service returns files or images,<br>this channel sends them back to the caller as they are (MTOM) instead of converting them to Base64 text, which would make them bigger and slower to transfer.',
+    'id_soap_action': 'Value of the SOAPAction header expected with each request. ' +
+        'Leave empty if callers do not send one.',
+    'id_soap_version': 'SOAP protocol version this endpoint accepts. 1.2 is the most common choice today, ' +
+        '1.1 is used by older systems.',
+    'id_use_mtom': 'When on and your service returns files or images, this channel sends them back ' +
+        'to the caller as they are (MTOM) instead of converting them to Base64 text, ' +
+        'which would make them bigger and slower to transfer.',
 
-    'id_url_params_pri': 'Whether parameters from the query string<br>or from the URL path win<br>when both carry the same name.',
-    'id_params_pri': 'Whether parameters from the URL<br>or from the message body win<br>when both carry the same name.',
-    'id_method': 'HTTP method required for incoming requests.<br>Leave empty to accept any method.',
-    'id_http_accept': 'Accept header required for incoming requests.<br>Leave the default to accept any content.',
-    'id_data_format': 'Format of the messages exchanged, e.g. JSON.<br>With a format selected, payloads are parsed<br>before your service sees them.',
-    'id_merge_url_params_req': 'When on, parameters from the URL path<br>and the query string are merged into the request,<br>so services read them like regular input.',
-    'id_match_slash': 'When on, {placeholders} in the URL path<br>can also match values that contain slashes.<br>When off, a placeholder stops at each slash,<br>matching exactly one path segment.',
+    'id_url_params_pri': 'Whether parameters from the query string or from the URL path win ' +
+        'when both carry the same name.',
+    'id_params_pri': 'Whether parameters from the URL or from the message body win ' +
+        'when both carry the same name.',
+    'id_method': 'HTTP method required for incoming requests. Leave empty to accept any method.',
+    'id_http_accept': 'Accept header required for incoming requests. Leave the default to accept any content.',
+    'id_data_format': 'Format of the messages exchanged, e.g. JSON. With a format selected, payloads are parsed ' +
+        'before they reach your service.',
+    'id_merge_url_params_req': 'When on, parameters from the URL path and the query string are merged ' +
+        'into the request, so services read them like regular input.',
+    'id_match_slash': 'When on, {placeholders} in the URL path can also match values that contain slashes. ' +
+        'When off, a placeholder stops at each slash, matching exactly one path segment.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -444,41 +456,54 @@ $.fn.zato.http_soap.field_descriptions = {
 $.fn.zato.http_soap.rest_outgoing_field_descriptions = {
 
     // Config tab
-    'id_name': 'A unique name for this connection.<br>Used to identify it in logs and the dashboard.',
-    'id_url_path': 'URL path on the remote server,<br>e.g. /api/employees.<br>May contain {placeholders} filled in<br>by the Request tab\'s path params.',
-    'id_security': 'Security definition used with each request,<br>e.g. Basic Auth or an OAuth bearer token.',
-    'id_data_format': 'Format of the data this connection exchanges,<br>e.g. JSON. Responses are parsed accordingly,<br>so services receive ready-to-use objects.',
+    'id_name': 'A unique name for this connection. Used to identify it in logs and the dashboard.',
+    'id_url_path': 'URL path on the remote server, e.g. /api/employees. ' +
+        'May contain {placeholders} filled in by the Request tab\'s path params.',
+    'id_security': 'Security definition used with each request, e.g. Basic Auth or an OAuth bearer token.',
+    'id_data_format': 'Format of the data this connection exchanges, e.g. JSON. ' +
+        'Responses are parsed accordingly, so services receive ready-to-use objects.',
 
     // Config tab - retry config under More options
-    'id_max_retries': 'How many times a failed invocation is retried<br>after a timeout or a connection error.<br>0 means no retries at all.',
-    'id_retry_sleep_time': 'How many seconds to sleep before the first retry.<br>Each subsequent sleep is multiplied<br>by the backoff multiplier.',
-    'id_retry_backoff_threshold': 'A cap on the total time spent sleeping<br>between retries, in seconds.<br>Once reached, no more retries take place.',
-    'id_retry_backoff_multiplier': 'Each retry sleeps this many times longer<br>than the previous one, up to 8 seconds<br>per a single sleep.',
+    'id_max_retries': 'How many times a failed invocation is retried after a timeout or a connection error. ' +
+        '0 means no retries at all.',
+    'id_retry_sleep_time': 'How many seconds to sleep before the first retry. ' +
+        'Each subsequent sleep is multiplied by the backoff multiplier.',
+    'id_retry_backoff_threshold': 'A cap on the total time spent sleeping between retries, in seconds. ' +
+        'Once reached, no more retries take place.',
+    'id_retry_backoff_multiplier': 'Each retry sleeps this many times longer than the previous one, ' +
+        'up to 8 seconds per a single sleep.',
 
     // Scheduler tab
-    'id_scheduler_run_every': 'How often this connection is invoked,<br>e.g. every 6 hours.<br>Leave empty for no scheduled invocations.',
-    'id_scheduler_start_date': 'When the first scheduled invocation takes place,<br>entered in your own timezone.',
+    'id_scheduler_run_every': 'How often this connection is invoked, e.g. every 6 hours. ' +
+        'Leave empty for no scheduled invocations.',
+    'id_scheduler_start_date': 'When the first scheduled invocation takes place, entered in your own timezone.',
 
     // Request tab
-    'id_request_method': 'HTTP method every invocation uses.<br>Empty means the connection\'s own method.',
-    'id_request_query_string': 'Query parameters sent with each request.<br>A value is sent exactly as typed unless its JSONata toggle<br>is on, then it is an expression evaluated<br>each time the request fires, e.g.<br>' +
+    'id_request_method': 'HTTP method every invocation uses. Empty means the connection\'s own method.',
+    'id_request_query_string': 'Query parameters sent with each request. A value is sent exactly as typed ' +
+        'unless its JSONata toggle is on, then it is an expression evaluated each time the request fires, e.g. ' +
         '<code>"Date ge \'" & $substring($now(), 0, 10) & "\'"</code>',
-    'id_request_path_params': 'Values for the {placeholders} in the URL path.<br>A value is sent exactly as typed, e.g. <code>emea</code>,<br>unless its JSONata toggle is on, then it is evaluated<br>each time the request fires, e.g.<br>' +
+    'id_request_path_params': 'Values for the {placeholders} in the URL path. ' +
+        'A value is sent exactly as typed, e.g. <code>emea</code>, unless its JSONata toggle is on, ' +
+        'then it is evaluated each time the request fires, e.g. ' +
         '<code>$substring($now(), 0, 10)</code>',
-    'id_request_headers': 'Extra HTTP headers sent with each request.<br>A value is sent exactly as typed unless its JSONata toggle<br>is on, then it is evaluated each time the request fires.',
-    'id_request_data': 'Request body sent with each request.<br>It is either sent exactly as typed<br>or it is JSONata that builds the body, e.g.<br>' +
+    'id_request_headers': 'Extra HTTP headers sent with each request. A value is sent exactly as typed ' +
+        'unless its JSONata toggle is on, then it is evaluated each time the request fires.',
+    'id_request_data': 'Request body sent with each request. It is either sent exactly as typed ' +
+        'or it is JSONata that builds the body, e.g. ' +
         '<code>{"since": $substring($now(), 0, 10)}</code>',
 
     // Response tab
     'id_response_map_mode': 'Whether the response map below is JSONata or XPath.',
-    'id_response_map': 'An expression that reshapes the response<br>before the callback receives it, e.g.<br>' +
-        '<code>$.{ "id": item_id, "email": email }</code><br>Leave empty to pass the response through as-is.',
+    'id_response_map': 'An expression that reshapes the response before the callback receives it, e.g. ' +
+        '<code>$.{ "id": item_id, "email": email }</code> Leave empty to pass the response through as-is.',
 
     // Callback tab
-    'id_callback_type': 'Where each response is delivered - to a service,<br>a pub/sub topic or another REST connection.',
-    'id_callback_service': 'The service invoked with the response<br>each time the connection is invoked.',
+    'id_callback_type': 'Where each response is delivered - to a service, a pub/sub topic ' +
+        'or another REST connection.',
+    'id_callback_service': 'The service invoked with the response each time the connection is invoked.',
     'id_callback_topic': 'The pub/sub topic the response is published to.',
-    'id_callback_rest': 'The outgoing REST connection<br>the response is sent to.',
+    'id_callback_rest': 'The outgoing REST connection the response is sent to.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

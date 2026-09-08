@@ -39,24 +39,40 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.email.smtp.field_descriptions = {
-    'id_name': 'A unique name for this SMTP connection.<br>Used to identify it in services, logs and the dashboard.',
-    'id_is_active': 'Whether this connection can send e-mail.<br>Services cannot send anything through<br>an inactive connection.',
-    'id_is_audit_log_active': 'Whether this connection\'s activity is recorded<br>in the audit log. On by default.',
-    'id_needs_tls_verify': 'Whether the server\'s TLS certificate is verified.<br>Turn it off only for servers<br>with self-signed certificates.',
-    'id_is_debug': 'When on, the full SMTP protocol conversation<br>is written out to server logs.<br>Useful when diagnosing delivery issues.',
-    'id_server_type': 'What kind of server this is - generic SMTP<br>for any standard server or Microsoft 365<br>for cloud mailboxes accessed with OAuth2.',
-    'id_tenant_id': 'The Microsoft 365 tenant the mailbox belongs to.<br>Found in the Azure portal under the app registration.',
-    'id_client_id': 'The application (client) ID of the app registration<br>the connection authenticates as.<br>Its secret is set with the Change secret link.',
-    'id_provider': 'Pre-fills the connection details<br>for a well-known e-mail provider.<br>Pick Generic to fill everything in yourself.',
-    'id_mode': 'How the connection is secured. STARTTLS upgrades<br>a plain connection to TLS, SSL uses TLS<br>from the start and Plain sends everything unencrypted.',
-    'id_host': 'Hostname of the SMTP server to connect to,<br>e.g. smtp.example.com.',
-    'id_port': 'Port the SMTP server listens on.<br>Common values are 587 for STARTTLS,<br>465 for SSL/TLS and 25 for plain connections.',
-    'id_username': 'Username the connection authenticates with.<br>Leave empty if the server does not require credentials.<br>The password is set separately<br>with the Change password link.',
-    'id_from_address': 'Default From address for messages<br>sent through this connection,<br>e.g. notifications@example.com.',
-    'id_timeout': 'How many seconds to wait for the server to respond<br>before a send attempt is abandoned.',
-    'id_helo_hostname': 'Hostname announced to the server<br>in the EHLO command.<br>Leave empty to use the local hostname.',
-    'id_ca_certs_path': 'Path to a CA certificate bundle on the server<br>used to verify the SMTP server\'s certificate.<br>Leave empty to use the system-wide bundle.',
-    'id_ping_address': 'Optional recipient that pings of this connection<br>send their test messages to.<br>When empty, pings check the connection<br>without sending anything.',
+    'id_name': 'A unique name for this SMTP connection. ' +
+        'Used to identify it in services, logs and the dashboard.',
+    'id_is_active': 'Whether this connection can send e-mail. ' +
+        'Services cannot send anything through an inactive connection.',
+    'id_is_audit_log_active': 'Whether this connection\'s activity is recorded in the audit log. On by default.',
+    'id_needs_tls_verify': 'Whether the server\'s TLS certificate is verified. ' +
+        'Turn it off only for servers with self-signed certificates.',
+    'id_is_debug': 'When on, the full SMTP protocol conversation is written out to server logs. ' +
+        'Useful when diagnosing delivery issues.',
+    'id_server_type': 'What kind of server this is - generic SMTP for any standard server ' +
+        'or Microsoft 365 for cloud mailboxes accessed with OAuth2.',
+    'id_tenant_id': 'The Microsoft 365 tenant the mailbox belongs to. ' +
+        'Found in the Azure portal under the app registration.',
+    'id_client_id': 'The application (client) ID of the app registration the connection authenticates as. ' +
+        'Its secret is set with the Change secret link.',
+    'id_provider': 'Pre-fills the connection details for a well-known e-mail provider. ' +
+        'Pick Generic to fill everything in yourself.',
+    'id_mode': 'How the connection is secured. STARTTLS upgrades a plain connection to TLS, ' +
+        'SSL uses TLS from the start and Plain sends everything unencrypted.',
+    'id_host': 'Hostname of the SMTP server to connect to, e.g. smtp.example.com.',
+    'id_port': 'Port the SMTP server listens on. ' +
+        'Common values are 587 for STARTTLS, 465 for SSL/TLS and 25 for plain connections.',
+    'id_username': 'Username the connection authenticates with. ' +
+        'Leave empty if the server does not require credentials. ' +
+        'The password is set separately with the Change password link.',
+    'id_from_address': 'Default From address for messages sent through this connection, ' +
+        'e.g. notifications@example.com.',
+    'id_timeout': 'How many seconds to wait for the server to respond before a send attempt is abandoned.',
+    'id_helo_hostname': 'Hostname announced to the server in the EHLO command. ' +
+        'Leave empty to use the local hostname.',
+    'id_ca_certs_path': 'Path to a CA certificate bundle on the server used to verify the SMTP server\'s ' +
+        'certificate. Leave empty to use the system-wide bundle.',
+    'id_ping_address': 'Optional recipient that pings of this connection send their test messages to. ' +
+        'When empty, pings check the connection without sending anything.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

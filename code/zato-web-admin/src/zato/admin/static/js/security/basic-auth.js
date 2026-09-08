@@ -34,10 +34,14 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.security.basic_auth.field_descriptions = {
-    'id_name': 'A unique name for this definition.<br>Used to identify it in channels, connections,<br>logs and the dashboard.',
-    'id_username': 'The username part of the credentials.<br>Channels check it against incoming requests,<br>outgoing connections send it to the remote server.',
-    'id_realm': 'The HTTP authentication realm, API by default.<br>Returned in WWW-Authenticate challenges<br>when a request carries no valid credentials.',
-    'id_password': 'The password part of the credentials.<br>A random one is assigned at creation,<br>change it before the definition is used.',
+    'id_name': 'A unique name for this definition. ' +
+        'Used to identify it in channels, connections, logs and the dashboard.',
+    'id_username': 'The username part of the credentials. Channels check it against incoming requests, ' +
+        'outgoing connections send it to the remote server.',
+    'id_realm': 'The HTTP authentication realm, API by default. Returned in WWW-Authenticate challenges ' +
+        'when a request carries no valid credentials.',
+    'id_password': 'The password part of the credentials. A random one is assigned at creation, ' +
+        'change it before the definition is used.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

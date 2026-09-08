@@ -30,12 +30,18 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.security.mtls.field_descriptions = {
-    'id_name': 'A unique name for this definition.<br>Used to identify it in channels, outgoing connections,<br>logs and the dashboard.',
-    'id_cert_path': 'Path to a PEM file on the server<br>with the client certificate that outgoing<br>connections present during the TLS handshake.',
-    'id_key_path': 'Path to a PEM file on the server<br>with the private key matching the certificate.<br>Leave empty if the certificate file<br>contains the key too.',
-    'id_ca_certs_path': 'Path to a PEM file on the server<br>with the CA certificates that the remote<br>server\'s certificate must chain up to.<br>Leave empty to use the system trust store.',
-    'id_client_cert_fingerprint': 'For channels - the SHA256 fingerprint<br>of the client certificate that is allowed<br>to invoke channels using this definition.',
-    'id_client_cert_subject_dn': 'For channels - the subject DN<br>of the client certificate that is allowed<br>to invoke channels using this definition.<br>The fingerprint takes precedence if both are given.',
+    'id_name': 'A unique name for this definition. ' +
+        'Used to identify it in channels, outgoing connections, logs and the dashboard.',
+    'id_cert_path': 'Path to a PEM file on the server with the client certificate that outgoing connections ' +
+        'present during the TLS handshake.',
+    'id_key_path': 'Path to a PEM file on the server with the private key matching the certificate. ' +
+        'Leave empty if the certificate file contains the key too.',
+    'id_ca_certs_path': 'Path to a PEM file on the server with the CA certificates that the remote server\'s ' +
+        'certificate must chain up to. Leave empty to use the system trust store.',
+    'id_client_cert_fingerprint': 'For channels - the SHA256 fingerprint of the client certificate ' +
+        'that is allowed to invoke channels using this definition.',
+    'id_client_cert_subject_dn': 'For channels - the subject DN of the client certificate that is allowed ' +
+        'to invoke channels using this definition. The fingerprint takes precedence if both are given.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

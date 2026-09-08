@@ -40,13 +40,19 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.cloud.microsoft_power_automate.field_descriptions = {
-    'id_name': 'A unique name for this Power Automate connection.<br>Used to identify it in services, logs and the dashboard.',
-    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
-    'id_address': 'Address of the Power Automate API,<br>e.g. https://api.flow.microsoft.com.<br>Change it only when using a non-default cloud.',
-    'id_tenant_id': 'Directory (tenant) ID of the Microsoft Entra tenant<br>the connection signs in to. Found on the overview page<br>of the app registration in the Azure portal.',
-    'id_client_id': 'Application (client) ID of the Azure app registration<br>the connection authenticates as. The app needs<br>permissions to call the Power Automate API.',
-    'id_client_secret': 'Value of a client secret created for the app registration.<br>Note that secrets expire in Azure<br>and need to be rotated periodically.',
-    'id_environment_id': 'ID of the Power Platform environment whose flows<br>the connection works with. Found under Environments<br>in the Power Platform admin center.',
+    'id_name': 'A unique name for this Power Automate connection. ' +
+        'Used to identify it in services, logs and the dashboard.',
+    'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection.',
+    'id_address': 'Address of the Power Automate API, e.g. https://api.flow.microsoft.com. ' +
+        'Change it only when using a non-default cloud.',
+    'id_tenant_id': 'Directory (tenant) ID of the Microsoft Entra tenant the connection signs in to. ' +
+        'Found on the overview page of the app registration in the Azure portal.',
+    'id_client_id': 'Application (client) ID of the Azure app registration the connection authenticates as. ' +
+        'The app needs permissions to call the Power Automate API.',
+    'id_client_secret': 'Value of a client secret created for the app registration. ' +
+        'Secrets expire in Azure and need to be rotated periodically.',
+    'id_environment_id': 'ID of the Power Platform environment whose flows the connection works with. ' +
+        'Found under Environments in the Power Platform admin center.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

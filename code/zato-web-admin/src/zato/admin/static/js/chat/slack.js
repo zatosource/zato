@@ -36,9 +36,11 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.chat.slack.field_descriptions = {
-    'id_name': 'A unique name for this Slack connection.<br>Used to identify it in services, logs and the dashboard.',
-    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
-    'id_token': 'A bot token of a Slack app installed in the workspace,<br>starting with xoxb-. The app\'s scopes decide<br>what channels and people it can message.',
+    'id_name': 'A unique name for this Slack connection. ' +
+        'Used to identify it in services, logs and the dashboard.',
+    'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection.',
+    'id_token': 'A bot token of a Slack app installed in the workspace, starting with xoxb-. ' +
+        'The app\'s scopes decide what channels and people it can message.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

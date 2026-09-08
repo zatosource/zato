@@ -33,8 +33,10 @@ $.fn.zato.service.create = function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.service.field_descriptions = {
-    'id_is_active': 'Whether this service can be invoked.<br>An inactive service rejects all invocations,<br>whether from channels, the scheduler or other services.',
-    'id_slow_threshold': 'Executions taking longer than this many<br>milliseconds are logged as slow responses,<br>available in the service\'s details.',
+    'id_is_active': 'Whether this service can be invoked. An inactive service rejects all invocations, ' +
+        'whether from channels, the scheduler or other services.',
+    'id_slow_threshold': 'Executions taking longer than this many milliseconds are logged as slow responses, ' +
+        'available in the service\'s details.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
