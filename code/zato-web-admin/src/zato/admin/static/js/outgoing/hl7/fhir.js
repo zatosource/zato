@@ -38,12 +38,15 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.hl7.fhir.field_descriptions = {
-    'id_name': 'A unique name for this connection.<br>Services obtain a client with self.fhir[name].',
-    'id_address': 'Base URL of the FHIR server,<br>e.g. https://fhir.example.com.<br>Resource paths are appended to it.',
-    'id_username': 'Security definition the connection<br>authenticates with, e.g. Basic Auth or OAuth.<br>Pick no security for open servers.',
-    'id_extra': 'Additional client options, one key=value per line.<br>Passed as-is to the underlying FHIR client.',
-    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
-    'id_pool_size': 'How many connections to the FHIR server<br>the pool keeps open. Each service using<br>the client concurrently needs one.<br>The default is 10.',
+    'id_name': 'A unique name for this connection. Services obtain a client with self.fhir[name].',
+    'id_address': 'Base URL of the FHIR server, e.g. https://fhir.example.com. ' +
+        'Resource paths are appended to it.',
+    'id_username': 'Security definition the connection authenticates with, e.g. Basic Auth or OAuth. ' +
+        'Pick no security for open servers.',
+    'id_extra': 'Additional client options, one key=value per line. Passed as-is to the underlying FHIR client.',
+    'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection.',
+    'id_pool_size': 'How many connections to the FHIR server the pool keeps open. ' +
+        'Each service using the client concurrently needs one. The default is 10.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

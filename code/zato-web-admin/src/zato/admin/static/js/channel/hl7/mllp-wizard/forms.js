@@ -285,8 +285,8 @@ forms.registerKind('securityList', {
         // .. clicking the badge explains the situation - and any tooltip
         // already open in this popover leaves first, one at a time is enough ..
         tippy(disabledBadge, {
-            content: 'Security is disabled - the channel will accept requests<br>' +
-                'from anyone who knows its address.<br>' +
+            content: 'Security is disabled - the channel will accept requests ' +
+                'from anyone who knows its address. ' +
                 'Slide security back on to require authentication.',
             allowHTML: true,
             theme: 'dark',

@@ -31,9 +31,12 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.security.apikey.field_descriptions = {
-    'id_name': 'A unique name for this API key definition.<br>Used to identify it in channels, connections,<br>logs and the dashboard.',
-    'id_header': 'The HTTP header that carries the key,<br>X-API-Key by default.<br>Clients must send the key in exactly this header.',
-    'id_password': 'The API key itself, sent as the header\'s value.<br>Each client application should have its own key<br>so access can be tracked and revoked per client.',
+    'id_name': 'A unique name for this API key definition. ' +
+        'Used to identify it in channels, connections, logs and the dashboard.',
+    'id_header': 'The HTTP header that carries the key, X-API-Key by default. ' +
+        'Clients must send the key in exactly this header.',
+    'id_password': 'The API key itself, sent as the header\'s value. ' +
+        'Each client application should have its own key so access can be tracked and revoked per client.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

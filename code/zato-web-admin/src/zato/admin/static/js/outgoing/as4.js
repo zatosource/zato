@@ -68,44 +68,74 @@ $.fn.zato.outgoing.as4.create = function() {
 $.fn.zato.outgoing.as4.field_descriptions = {
 
     // Main tab
-    'id_name': 'A unique name for this connection.<br>Used to identify it in logs and the dashboard.',
-    'id_is_active': 'Whether this connection can be used.<br>Messages are not sent through<br>inactive connections.',
-    'id_is_audit_log_active': 'Whether the exchanges of this connection<br>are recorded in the audit log - the messages,<br>the receipts and the bytes of each.',
-    'id_as4_profile': 'The AS4 profile of the network you exchange<br>messages with - it selects the correct<br>signing, encryption and packaging settings.',
-    'id_as4_from_party': 'Your own party identifier, the way<br>the receiving side knows you,<br>e.g. your access point certificate name.',
-    'id_as4_to_party': 'The receiving side\'s party identifier.<br>With discovery it is filled in automatically<br>from the receiver\'s certificate.',
-    'id_as4_service': 'The ebMS service of outgoing messages,<br>e.g. a process identifier. Filled in<br>automatically when discovery is used.',
-    'id_as4_action': 'The ebMS action of outgoing messages,<br>e.g. a document type identifier. Filled in<br>automatically when discovery is used.',
-    'id_as4_agreement': 'The agreement reference of outgoing messages,<br>e.g. the Peppol TIA identifier.<br>The profile preset supplies the usual value.',
+    'id_name': 'A unique name for this connection. Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this connection can be used. Messages are not sent through inactive connections.',
+    'id_is_audit_log_active': 'Whether the exchanges of this connection are recorded in the audit log - ' +
+        'the messages, the receipts and the bytes of each.',
+    'id_as4_profile': 'The AS4 profile of the network you exchange messages with - it selects the correct ' +
+        'signing, encryption and packaging settings.',
+    'id_as4_from_party': 'Your own party identifier, the one the receiving side expects from you, ' +
+        'e.g. your access point certificate name.',
+    'id_as4_to_party': 'The receiving side\'s party identifier. ' +
+        'With discovery it is filled in automatically from the receiver\'s certificate.',
+    'id_as4_service': 'The ebMS service of outgoing messages, e.g. a process identifier. ' +
+        'Filled in automatically when discovery is used.',
+    'id_as4_action': 'The ebMS action of outgoing messages, e.g. a document type identifier. ' +
+        'Filled in automatically when discovery is used.',
+    'id_as4_agreement': 'The agreement reference of outgoing messages, e.g. the Peppol TIA identifier. ' +
+        'The profile preset supplies the usual value.',
 
     // Delivery tab
-    'id_host': 'Address of the receiving access point,<br>e.g. https://ap.example.com.<br>Ignored when discovery is on.',
-    'id_url_path': 'URL path of the AS4 endpoint<br>on the receiving access point,<br>e.g. /as4. Ignored when discovery is on.',
-    'id_as4_use_discovery': 'When on, the receiver\'s endpoint is looked up<br>dynamically through SML and SMP<br>instead of using the configured address.',
-    'id_as4_sml_domain': 'The SML domain that discovery queries,<br>e.g. edelivery.tech.ec.europa.eu for production<br>or acc.edelivery.tech.ec.europa.eu for tests.',
-    'id_as4_mpc': 'The message partition channel that pull requests<br>read from and that messages queued for the<br>partner to pull wait on.',
-    'id_timeout': 'How many seconds to wait for a response<br>before the invocation times out.',
-    'id_validate_tls': 'Whether the TLS certificate of the remote<br>server must be validated. Turn it off<br>only in test environments.',
-    'id_as4_retry_max_attempts': 'How many times one message is delivered<br>in total while no receipt arrives,<br>the first delivery included.<br>Empty means the profile\'s own value.',
-    'id_as4_retry_interval': 'How long a delivery goes unanswered<br>before it is repeated under the same<br>message id. Empty means the profile\'s own value.',
-    'id_as4_missing_receipt_after': 'How long an exchange is given before its receipt<br>counts as missing - past this point the retries<br>stop and the exchange is reported instead.',
+    'id_host': 'Address of the receiving access point, e.g. https://ap.example.com. ' +
+        'Ignored when discovery is on.',
+    'id_url_path': 'URL path of the AS4 endpoint on the receiving access point, e.g. /as4. ' +
+        'Ignored when discovery is on.',
+    'id_as4_use_discovery': 'When on, the receiver\'s endpoint is looked up dynamically through SML and SMP ' +
+        'instead of using the configured address.',
+    'id_as4_sml_domain': 'The SML domain that discovery queries, e.g. edelivery.tech.ec.europa.eu ' +
+        'for production or acc.edelivery.tech.ec.europa.eu for tests.',
+    'id_as4_mpc': 'The message partition channel that pull requests read from and that messages queued ' +
+        'for the partner to pull wait on.',
+    'id_timeout': 'How many seconds to wait for a response before the invocation times out.',
+    'id_validate_tls': 'Whether the TLS certificate of the remote server must be validated. ' +
+        'Turn it off only in test environments.',
+    'id_as4_retry_max_attempts': 'How many times one message is delivered in total while no receipt arrives, ' +
+        'the first delivery included. Empty means the profile\'s own value.',
+    'id_as4_retry_interval': 'How long a delivery goes unanswered before it is repeated under the same ' +
+        'message id. Empty means the profile\'s own value.',
+    'id_as4_missing_receipt_after': 'How long an exchange is given before its receipt counts as missing - ' +
+        'past this point the retries stop and the exchange is reported instead.',
 
     // Security tab
-    'id_as4_token_type': 'How your signing certificate travels in outgoing<br>messages - a single certificate, the whole chain,<br>or a SAML assertion. Empty means<br>what the profile prescribes.',
-    'id_as4_username': 'The username outgoing messages carry in a<br>WS-Security UsernameToken, which is how some<br>networks authorize pull requests.<br>Leave empty to send no token.',
-    'id_as4_password': 'The password that goes with the username above.<br>It travels in clear text inside the token, so the<br>connection has to be TLS. Stored encrypted.<br>Leave empty to keep the stored password.',
-    'id_as4_signing_key': 'Your private key in PEM, pasted as text.<br>It signs every outgoing message and is<br>stored encrypted, never in plain text.<br>Leave empty to keep the stored key.',
-    'id_as4_signing_cert_chain': 'The certificate chain matching the signing key,<br>in PEM - your access point certificate first,<br>then any intermediates.',
-    'id_as4_decryption_key': 'The private key that decrypts messages<br>encrypted to you. Often the same<br>as the signing key. Stored encrypted.<br>Leave empty to keep the stored key.',
-    'id_as4_saml_assertion': 'A SAML 2.0 assertion in XML, issued by a security<br>token service, that travels in place of a certificate<br>when the token type above is SAML.',
-    'id_as4_peer_signing_cert': 'The certificate the peer signs with, in PEM.<br>Used to verify receipts and incoming messages.<br>With discovery it comes from the SMP.',
-    'id_as4_peer_encryption_cert': 'The certificate outgoing messages are<br>encrypted to, in PEM. With discovery<br>it comes from the SMP.',
-    'id_as4_trust_anchors': 'CA certificates in PEM that peer certificates<br>must chain up to, e.g. the Peppol root CA.<br>An alternative to pinning one peer certificate.',
+    'id_as4_token_type': 'How your signing certificate travels in outgoing messages - a single certificate, ' +
+        'the whole chain, or a SAML assertion. Empty means what the profile prescribes.',
+    'id_as4_username': 'The username outgoing messages carry in a WS-Security UsernameToken, ' +
+        'which is how some networks authorize pull requests. Leave empty to send no token.',
+    'id_as4_password': 'The password that goes with the username above. It travels in clear text ' +
+        'inside the token, so the connection has to be TLS. Stored encrypted. ' +
+        'Leave empty to keep the stored password.',
+    'id_as4_signing_key': 'Your private key in PEM, pasted as text. It signs every outgoing message ' +
+        'and is stored encrypted, never in plain text. Leave empty to keep the stored key.',
+    'id_as4_signing_cert_chain': 'The certificate chain matching the signing key, in PEM - ' +
+        'your access point certificate first, then any intermediates.',
+    'id_as4_decryption_key': 'The private key that decrypts messages encrypted to you. ' +
+        'Often the same as the signing key. Stored encrypted. Leave empty to keep the stored key.',
+    'id_as4_saml_assertion': 'A SAML 2.0 assertion in XML, issued by a security token service, ' +
+        'that travels in place of a certificate when the token type above is SAML.',
+    'id_as4_peer_signing_cert': 'The certificate the peer signs with, in PEM. ' +
+        'Used to verify receipts and incoming messages. With discovery it comes from the SMP.',
+    'id_as4_peer_encryption_cert': 'The certificate outgoing messages are encrypted to, in PEM. ' +
+        'With discovery it comes from the SMP.',
+    'id_as4_trust_anchors': 'CA certificates in PEM that peer certificates must chain up to, ' +
+        'e.g. the Peppol root CA. An alternative to pinning one peer certificate.',
 
     // More tab
-    'id_as4_original_sender': 'The participant identifier of the original sender,<br>e.g. your Peppol participant id.<br>send_to uses it when no sender is given.',
-    'id_as4_final_recipient': 'The participant identifier of the final recipient.<br>send_to fills it in per message,<br>set it here only for fixed bilateral exchanges.',
-    'id_as4_extra_pmodes': 'Additional service and action pairs served<br>under otherwise the same settings,<br>one per line, as service|action.',
+    'id_as4_original_sender': 'The participant identifier of the original sender, ' +
+        'e.g. your Peppol participant id. send_to uses it when no sender is given.',
+    'id_as4_final_recipient': 'The participant identifier of the final recipient. ' +
+        'send_to fills it in per message, set it here only for fixed bilateral exchanges.',
+    'id_as4_extra_pmodes': 'Additional service and action pairs served under otherwise the same settings, ' +
+        'one per line, as service|action.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

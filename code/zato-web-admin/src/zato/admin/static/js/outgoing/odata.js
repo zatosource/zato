@@ -34,21 +34,32 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.odata.field_descriptions = {
-    'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>to invoke the ' +
+    'id_name': 'A unique name for this connection. Services look it up by this name to invoke the ' +
         $.fn.zato.outgoing.odata.config.label + ' API.',
-    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
-    'id_odata_version': 'OData protocol version the remote API speaks,<br>4.0 or 2.0. SAP systems commonly use 2.0.',
-    'id_pool_size': 'How many client connections the pool keeps<br>for concurrent requests to this API.<br>Default is 1.',
-    'id_address': 'Service root URL of the OData API,<br>e.g. https://host/sap/opu/odata/sap/API_BUSINESS_PARTNER.<br>All entity sets are addressed relative to it.',
-    'id_auth_type': 'How requests authenticate - Basic with username<br>and secret, Bearer with a static token,<br>OAuth2 with tokens obtained dynamically,<br>or no authentication at all.',
-    'id_needs_csrf_token': 'When on, a CSRF token is fetched first<br>and sent with each modifying request.<br>Required by SAP OData services.',
-    'id_timeout': 'How many seconds to wait for a response<br>to each request. Default is 60.',
-    'id_page_size': 'How many entities to request per page<br>when reading results. 0 means the server\'s<br>own default page size is used.',
-    'id_username': 'Username for Basic authentication.<br>Leave empty with OAuth2 - the secret is set<br>separately with the Change secret link.',
-    'id_token_url': 'OAuth2 token endpoint the connection obtains<br>access tokens from, e.g.<br>https://login.microsoftonline.com/tenant/oauth2/v2.0/token.',
-    'id_tenant_id': 'Directory or tenant the OAuth2 client belongs to,<br>e.g. an Entra ID tenant with Microsoft APIs.',
-    'id_client_id': 'OAuth2 client ID registered with the<br>authorization server. Its secret is set<br>with the Change secret link.',
-    'id_scopes': 'OAuth2 scopes requested with each token,<br>one per line, e.g.<br>https://environment.dynamics.com/.default.',
+    'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection.',
+    'id_odata_version': 'OData protocol version the remote API implements, 4.0 or 2.0. SAP systems commonly use 2.0.',
+    'id_pool_size': 'How many client connections the pool keeps for concurrent requests to this API. ' +
+        'Default is 1.',
+    'id_address': 'Service root URL of the OData API, ' +
+        'e.g. https://host/sap/opu/odata/sap/API_BUSINESS_PARTNER. ' +
+        'All entity sets are addressed relative to it.',
+    'id_auth_type': 'How requests authenticate - Basic with username and secret, Bearer with a static token, ' +
+        'OAuth2 with tokens obtained dynamically, or no authentication at all.',
+    'id_needs_csrf_token': 'When on, a CSRF token is fetched first and sent with each modifying request. ' +
+        'Required by SAP OData services.',
+    'id_timeout': 'How many seconds to wait for a response to each request. Default is 60.',
+    'id_page_size': 'How many entities to request per page when reading results. ' +
+        '0 means the server\'s own default page size is used.',
+    'id_username': 'Username for Basic authentication. Leave empty with OAuth2 - the secret is set separately ' +
+        'with the Change secret link.',
+    'id_token_url': 'OAuth2 token endpoint the connection obtains access tokens from, ' +
+        'e.g. https://login.microsoftonline.com/tenant/oauth2/v2.0/token.',
+    'id_tenant_id': 'Directory or tenant the OAuth2 client belongs to, ' +
+        'e.g. an Entra ID tenant with Microsoft APIs.',
+    'id_client_id': 'OAuth2 client ID registered with the authorization server. ' +
+        'Its secret is set with the Change secret link.',
+    'id_scopes': 'OAuth2 scopes requested with each token, one per line, ' +
+        'e.g. https://environment.dynamics.com/.default.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

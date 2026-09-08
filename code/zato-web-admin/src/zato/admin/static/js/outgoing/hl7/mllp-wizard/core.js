@@ -253,22 +253,31 @@ wizard.helpDescriptions = function() {
     out['mllp-outconn-wizard-title'] = wizard.titleHelp();
 
     // The summary links of step 1, each standing for the popover behind it ..
-    out['mllp-outconn-wizard-edit-framing'] = 'How each message is wrapped on the wire -<br>the bytes that mark where a message begins<br>and ends, and how large a reply may be.<br>The defaults follow the MLLP standard.';
-    out['mllp-outconn-wizard-edit-timing'] = 'How long to wait for the acknowledgment<br>the receiving system sends back.<br>A message with no answer within that time<br>counts as a failed send.';
-    out['mllp-outconn-wizard-toggle-tls'] = 'When on, the connection is encrypted with TLS<br>and the receiving system\'s certificate is verified<br>against the CA bundle given.<br>When off, messages travel in plaintext.';
+    out['mllp-outconn-wizard-edit-framing'] = 'How each message is wrapped on the wire - the bytes that mark ' +
+        'where a message begins and ends, and how large a reply may be. The defaults follow the MLLP standard.';
+    out['mllp-outconn-wizard-edit-timing'] = 'How long to wait for the acknowledgment the receiving system ' +
+        'sends back. A message with no answer within that time counts as a failed send.';
+    out['mllp-outconn-wizard-toggle-tls'] = 'When on, the connection is encrypted with TLS and the receiving ' +
+        'system\'s certificate is verified against the CA bundle given. ' +
+        'When off, messages travel in plaintext.';
     out['mllp-outconn-wizard-edit-tls'] = out['mllp-outconn-wizard-toggle-tls'];
 
     // .. the live check, which both of its mounts share ..
-    out['mllp-outconn-wizard-check'] = 'Sends one test message to the address above<br>and reports what came back.<br>Nothing is saved either way, so this can be used<br>before the connection is created.';
+    out['mllp-outconn-wizard-check'] = 'Sends one test message to the address above and reports what came back. ' +
+        'Nothing is saved either way, so this can be used before the connection is created.';
     out['mllp-outconn-wizard-review-check'] = out['mllp-outconn-wizard-check'];
 
     // .. the three decisions of step 2 ..
     out['mllp-outconn-wizard-edit-pool'] = shared['id_pool_size'];
-    out['mllp-outconn-wizard-edit-retries'] = 'What happens to a message the receiving system<br>did not take - how many times it is sent again<br>and how long the platform waits between attempts.';
-    out['mllp-outconn-wizard-edit-breaker'] = 'When too many sends fail in a row, the platform<br>stops trying for a while rather than queueing up<br>work for an endpoint that is down.<br>One trial message decides when to resume.';
+    out['mllp-outconn-wizard-edit-retries'] = 'What happens to a message the receiving system did not take - ' +
+        'how many times it is sent again and how long the platform waits between attempts.';
+    out['mllp-outconn-wizard-edit-breaker'] = 'When too many sends fail in a row, the platform stops trying ' +
+        'for a while rather than queueing up work for an endpoint that is down. ' +
+        'The connection resumes when one trial message succeeds.';
 
     // .. and what is folded away under them.
-    out['mllp-outconn-wizard-edit-options'] = 'What this connection writes about the messages<br>it sends - the server log and the audit log.<br>The line says what is currently set.';
+    out['mllp-outconn-wizard-edit-options'] = 'What this connection writes about the messages it sends - ' +
+        'the server log and the audit log. The line says what is currently set.';
 
     return out;
 };
@@ -288,10 +297,10 @@ wizard.titleHelp = function() {
         '<p>This wizard creates an outgoing connection - the way services on ' +
         'this platform send HL7 v2 messages to a system elsewhere.</p>' +
 
-        '<p><span class="wizard-title-help-step">01</span> names the connection ' +
-        'and says which system it reaches, with a test message that can be sent ' +
+        '<p>On <span class="wizard-title-help-step">01</span> you name the connection ' +
+        'and say which system it reaches, with a test message that can be sent ' +
         'before anything is saved. ' +
-        '<span class="wizard-title-help-step">02</span> decides what happens to a ' +
+        'On <span class="wizard-title-help-step">02</span> you choose what happens to a ' +
         'message the far side did not take. ' +
         '<span class="wizard-title-help-step">03</span> is a review before the ' +
         'connection is created.</p>' +
@@ -309,8 +318,8 @@ wizard.titleHelp = function() {
         'agree on message boundaries.</p>' +
 
         '<p>An outgoing connection is the sending end of that. A service ' +
-        'hands it a message, it frames it, sends it and waits for the ' +
-        'acknowledgment. If in doubt, name the connection, fill in the ' +
+        'sends a message through it - the connection frames the message, ' +
+        'transmits it and waits for the acknowledgment. Name the connection, fill in the ' +
         'address and keep the defaults.</p>' +
 
         '</div>' +

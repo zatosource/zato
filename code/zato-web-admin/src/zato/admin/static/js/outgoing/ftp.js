@@ -55,14 +55,44 @@ $(document).ready(function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.outgoing.ftp.field_descriptions = {
+    'id_name': 'A unique name for this connection. Services look it up by this name through self.ftp[name], ' +
+        'and the command shell and the schedules run against it.',
+    'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection ' +
+        'and pings and the command shell are rejected.',
+    'id_host': 'Host name or IP address of the FTP server, e.g. ftp.example.com. ' +
+        'The port is set in the field next to it.',
+    'id_port': 'Port the FTP server listens on. The default of 21 is the standard FTP control port.',
+    'id_username': 'Username the connection logs in as. Files are read and written with this user\'s permissions.',
+    'id_secret': 'Password for the username above. Stored encrypted in the Zato database.',
+    'id_use_ssl': 'When on, the connection uses SSL, which for FTP is called FTPS - the login and ' +
+        'the file transfers that follow are encrypted. When off, both travel in plain text. ' +
+        'Zato does not validate the server certificate, so SSL protects the traffic here ' +
+        'rather than confirming the identity of the server.',
+    'id_should_store_content': 'Whether the audit log additionally keeps the bytes of the files ' +
+        'this connection moves, so they can be reread and downloaded later. Off by default.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.ftp.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing FTP connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.outgoing.ftp.field_descriptions
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.ftp.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing FTP connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.outgoing.ftp.field_descriptions
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////

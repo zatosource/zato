@@ -37,16 +37,23 @@ $(document).ready(function() {
 $.fn.zato.outgoing.amqp.get_field_descriptions = function() {
     var config = $.fn.zato.outgoing.amqp.config;
     return {
-        'id_name': 'A unique name for this connection.<br>Services publish messages through it,<br>referring to it by this exact name.',
-        'id_address': 'Address of the broker as host:port,<br>e.g. ' + config.address_example + '.',
+        'id_name': 'A unique name for this connection. ' +
+            'Services publish messages through it, referring to it by this exact name.',
+        'id_address': 'Address of the broker as host:port, e.g. ' + config.address_example + '.',
         'id_username': 'Username the connection authenticates with.',
-        'id_password': 'Password matching the username above.<br>Stored encrypted in the Zato database.',
-        'id_content_type': 'MIME type stamped on published messages,<br>e.g. application/json or text/xml.<br>Consumers use it to decide how to parse the body.',
-        'id_content_encoding': 'Content encoding property of published messages,<br>e.g. utf-8. Tells consumers how the body bytes<br>are encoded.',
-        'id_app_id': 'Application ID stamped on published messages.<br>Lets consumers tell which producer<br>a message came from.',
-        'id_pool_size': 'How many connections to the broker<br>the pool keeps open. Each service publishing<br>concurrently needs one connection.<br>The default is 10.',
-        'id_priority': 'Priority stamped on published messages, 0 to 9,<br>with 9 the most urgent. Brokers deliver<br>higher priorities first on queues that<br>support priorities. The default is 5.',
-        'id_delivery_mode': 'Whether messages survive a broker restart.<br>Persistent ones are written to disk,<br>non-persistent ones stay in memory only<br>and are faster to publish.',
+        'id_password': 'Password matching the username above. Stored encrypted in the Zato database.',
+        'id_content_type': 'MIME type stamped on published messages, e.g. application/json or text/xml. ' +
+            'Consumers use it to decide how to parse the body.',
+        'id_content_encoding': 'Content encoding property of published messages, e.g. utf-8. ' +
+            'Tells consumers how the body bytes are encoded.',
+        'id_app_id': 'Application ID stamped on published messages. ' +
+            'Lets consumers tell which producer a message came from.',
+        'id_pool_size': 'How many connections to the broker the pool keeps open. ' +
+            'Each service publishing concurrently needs one connection. The default is 10.',
+        'id_priority': 'Priority stamped on published messages, 0 to 9, with 9 the most urgent. ' +
+            'Brokers deliver higher priorities first on queues that support priorities. The default is 5.',
+        'id_delivery_mode': 'Whether messages survive a broker restart. Persistent ones are written to disk, ' +
+            'non-persistent ones stay in memory only and are faster to publish.',
     };
 }
 

@@ -30,11 +30,15 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.security.spnego.field_descriptions = {
-    'id_name': 'A unique name for this definition.<br>Used to identify it in outgoing connections,<br>logs and the dashboard.',
-    'id_principal': 'The Kerberos principal that outgoing connections<br>authenticate as, e.g. zato@EXAMPLE.COM.',
-    'id_keytab_path': 'Path to a keytab file on the server<br>with the keys of the principal.<br>Tickets are acquired and renewed from it automatically.',
-    'id_target_spn': 'The remote service\'s principal name,<br>e.g. HTTP@api.example.com.<br>Leave empty to derive it from the target host name.',
-    'id_needs_delegation': 'Whether to delegate credentials<br>to the remote service so it can act<br>on behalf of this principal.',
+    'id_name': 'A unique name for this definition. ' +
+        'Used to identify it in outgoing connections, logs and the dashboard.',
+    'id_principal': 'The Kerberos principal that outgoing connections authenticate as, e.g. zato@EXAMPLE.COM.',
+    'id_keytab_path': 'Path to a keytab file on the server with the keys of the principal. ' +
+        'Tickets are acquired and renewed from it automatically.',
+    'id_target_spn': 'The remote service\'s principal name, e.g. HTTP@api.example.com. ' +
+        'Leave empty to derive it from the target host name.',
+    'id_needs_delegation': 'Whether to delegate credentials to the remote service ' +
+        'so it can act on behalf of this principal.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

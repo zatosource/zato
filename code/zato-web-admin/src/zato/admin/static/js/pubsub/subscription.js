@@ -754,10 +754,15 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
 $.fn.zato.pubsub.subscription.field_descriptions = {
 
-    'id_is_delivery_active': 'Whether messages are delivered to this subscriber.<br>When off, messages accumulate in the subscriber\'s queue<br>until delivery is enabled again, so nothing is lost.',
-    'id_is_pub_active': 'Whether this security definition can also publish<br>to the topics it is subscribed to.<br>Turn it off to revoke publishing temporarily<br>without changing any permissions.',
-    'id_sec_base_id': 'The Basic Auth definition the subscriber uses<br>to authenticate. The topics listed below come from<br>this definition\'s pub/sub permissions.',
-    'id_delivery_type': 'How messages reach the subscriber.<br>With pull, the client fetches them from its queue<br>through the REST API. With push, Zato delivers each<br>message on its own, to a REST endpoint or a service.',
+    'id_is_delivery_active': 'Whether messages are delivered to this subscriber. When off, messages ' +
+        'accumulate in the subscriber\'s queue until delivery is enabled again, so nothing is lost.',
+    'id_is_pub_active': 'Whether this security definition can also publish to the topics ' +
+        'it is subscribed to. Turn it off to revoke publishing temporarily without changing any permissions.',
+    'id_sec_base_id': 'The Basic Auth definition the subscriber uses to authenticate. ' +
+        'The topics listed below come from this definition\'s pub/sub permissions.',
+    'id_delivery_type': 'How messages reach the subscriber. With pull, the client fetches them from its queue ' +
+        'through the REST API. With push, Zato delivers each message as it arrives, ' +
+        'to a REST endpoint or a service.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

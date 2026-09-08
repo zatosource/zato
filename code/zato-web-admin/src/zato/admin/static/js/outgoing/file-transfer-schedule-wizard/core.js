@@ -198,12 +198,12 @@ wizard.titleHelp = function() {
     var out =
         '<div class="wizard-title-help">' +
 
-        '<p>This wizard creates a schedule - a recurring task that looks into ' +
-        'a directory of this connection and hands each new file to a service.</p>' +
+        '<p>This wizard creates a schedule - a recurring task that scans ' +
+        'a directory of this connection and invokes a service with each new file.</p>' +
 
-        '<p><span class="wizard-title-help-step">01</span> decides what to pick up - ' +
+        '<p>On <span class="wizard-title-help-step">01</span> you choose what to pick up - ' +
         'which directory, which files and when a file counts as ready. ' +
-        '<span class="wizard-title-help-step">02</span> picks the service that handles ' +
+        'On <span class="wizard-title-help-step">02</span> you pick the service that handles ' +
         'each file, what happens to it afterwards and how often to look. ' +
         '<span class="wizard-title-help-step">03</span> is a review before the schedule is created.</p>' +
 
@@ -212,7 +212,7 @@ wizard.titleHelp = function() {
         '<div class="wizard-title-help-primer">' +
 
         '<p>Other systems drop files into a directory - invoices, orders, reports - ' +
-        'and this platform picks them up on a schedule, so nothing needs to be ' +
+        'and Zato collects them on a schedule, so nothing needs to be ' +
         'watched by hand.</p>' +
 
         '<p>The one thing to get right is not reading a file while it is still ' +
@@ -220,7 +220,7 @@ wizard.titleHelp = function() {
         'Once a file is processed, it is moved away or deleted, so it is never ' +
         'picked up twice.</p>' +
 
-        '<p>If in doubt, name the schedule, point it at a directory, pick a ' +
+        '<p>Name the schedule, point it at a directory, pick a ' +
         'service on step 02 and keep the defaults.</p>' +
 
         '</div>' +

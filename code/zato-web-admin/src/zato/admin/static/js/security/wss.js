@@ -142,27 +142,39 @@ $.fn.zato.security.wss.beforeSubmitHook = function(form) {
 $.fn.zato.security.wss.field_descriptions = {
 
     // Main tab
-    'id_name': 'A unique name for this definition.<br>Used to identify it in logs and the dashboard.',
-    'id_is_active': 'Whether this definition can be used.<br>Connections do not apply<br>inactive definitions.',
-    'id_mode': 'The credential scheme this definition carries -<br>a username token, X.509 signing and encryption<br>or a SAML assertion.',
-    'id_username': 'The username the definition operates with.<br>With username tokens it goes into the message,<br>with other modes it identifies the definition.',
+    'id_name': 'A unique name for this definition. Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this definition can be used. Connections do not apply inactive definitions.',
+    'id_mode': 'The credential scheme this definition carries - a username token, ' +
+        'X.509 signing and encryption or a SAML assertion.',
+    'id_username': 'The username the definition operates with. With username tokens it goes into the message, ' +
+        'with other modes it identifies the definition.',
 
     // Username token tab
-    'id_use_digest': 'When on, the password goes out in digest form<br>with a nonce and a timestamp instead of clear text.<br>The profile mandates SHA-1 for the digest,<br>and verifying one requires the password to be<br>recoverable here, not stored as a hash.',
+    'id_use_digest': 'When on, the password goes out in digest form with a nonce and a timestamp ' +
+        'instead of clear text. The profile mandates SHA-1 for the digest, and verifying one requires ' +
+        'the password to be recoverable here, not stored as a hash.',
 
     // SAML tab
-    'id_issuer': 'The entity that vouches for the assertion,<br>e.g. the URI of your organization or gateway.',
-    'id_subject': 'Who the assertion is about,<br>e.g. the identity of the calling system or user.',
-    'id_audience': 'Optionally, who the assertion is meant for.<br>Leave empty if the endpoint does not restrict it.',
+    'id_issuer': 'The entity that vouches for the assertion, e.g. the URI of your organization or gateway.',
+    'id_subject': 'Who the assertion is about, e.g. the identity of the calling system or user.',
+    'id_audience': 'Optionally, who the assertion is meant for. ' +
+        'Leave empty if the endpoint does not restrict it.',
 
     // Crypto material tab
-    'id_sign': 'When on, outgoing messages are signed -<br>the message body with X.509,<br>the assertion itself with SAML.',
-    'id_encrypt': 'When on, the message body is encrypted<br>for the recipient using their certificate.<br>Applies to the X.509 mode.',
-    'id_signing_key': 'Path to a PEM file on the server<br>with your private key,<br>used to produce signatures.',
-    'id_signing_certificate_chain': 'Path to a PEM file on the server<br>with the certificate matching the signing key,<br>optionally followed by its chain.<br>It travels with the message so the other side<br>can verify the signature.',
-    'id_decryption_key': 'Path to a PEM file on the server<br>with the private key that decrypts<br>incoming messages. With RSA it is usually<br>the signing key again.',
-    'id_peer_certificate': 'Path to a PEM file on the server<br>with the other side\'s certificate -<br>used to encrypt to them and to pin<br>their signatures.',
-    'id_trust_anchors': 'Path to a PEM file on the server<br>with CA certificates that the other side\'s<br>signing certificates may chain up to,<br>as an alternative to pinning one certificate.',
+    'id_sign': 'When on, outgoing messages are signed - the message body with X.509, ' +
+        'the assertion itself with SAML.',
+    'id_encrypt': 'When on, the message body is encrypted for the recipient using their certificate. ' +
+        'Applies to the X.509 mode.',
+    'id_signing_key': 'Path to a PEM file on the server with your private key, used to produce signatures.',
+    'id_signing_certificate_chain': 'Path to a PEM file on the server with the certificate matching ' +
+        'the signing key, optionally followed by its chain. It travels with the message so the other side ' +
+        'can verify the signature.',
+    'id_decryption_key': 'Path to a PEM file on the server with the private key that decrypts ' +
+        'incoming messages. With RSA it is usually the signing key again.',
+    'id_peer_certificate': 'Path to a PEM file on the server with the other side\'s certificate - ' +
+        'used to encrypt to them and to pin their signatures.',
+    'id_trust_anchors': 'Path to a PEM file on the server with CA certificates that the other side\'s ' +
+        'signing certificates may chain up to, as an alternative to pinning one certificate.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

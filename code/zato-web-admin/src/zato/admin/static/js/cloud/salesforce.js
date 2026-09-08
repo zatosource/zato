@@ -42,14 +42,21 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.cloud.salesforce.field_descriptions = {
-    'id_name': 'A unique name for this Salesforce connection.<br>Used to identify it in services, logs and the dashboard.',
-    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
-    'id_api_version': 'Version of the Salesforce REST API to invoke,<br>e.g. 54.0. It decides which objects and fields<br>are available to the connection.',
-    'id_address': 'Address of the Salesforce instance,<br>e.g. https://example.my.salesforce.com.<br>All API calls the connection makes go to this host.',
-    'id_username': 'Username the connection logs in as.<br>Records are read and written<br>with this user\'s permissions.',
-    'id_password': 'Password of the user above. Used together with<br>the consumer key and secret to obtain<br>OAuth2 access tokens from Salesforce.',
-    'id_consumer_key': 'Consumer key of the connected app created<br>in Salesforce for Zato. Found under the app\'s<br>Manage Consumer Details in Salesforce setup.',
-    'id_consumer_secret': 'Consumer secret of the same connected app.<br>Keep it confidential, it works like a password.',
+    'id_name': 'A unique name for this Salesforce connection. ' +
+        'Used to identify it in services, logs and the dashboard.',
+    'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection.',
+    'id_api_version': 'Version of the Salesforce REST API to invoke, e.g. 54.0. ' +
+        'The version determines which objects and fields are available to the connection.',
+    'id_address': 'Address of the Salesforce instance, e.g. https://example.my.salesforce.com. ' +
+        'All API calls the connection makes go to this host.',
+    'id_username': 'Username the connection logs in as. Records are read and written ' +
+        'with this user\'s permissions.',
+    'id_password': 'Password of the user above. Used together with the consumer key and secret ' +
+        'to obtain OAuth2 access tokens from Salesforce.',
+    'id_consumer_key': 'Consumer key of the connected app created in Salesforce for Zato. ' +
+        'Found under the app\'s Manage Consumer Details in Salesforce setup.',
+    'id_consumer_secret': 'Consumer secret of the same connected app. ' +
+        'Keep it confidential, it works like a password.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

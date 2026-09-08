@@ -78,8 +78,10 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.openapi.field_descriptions = {
-    'id_name': 'A unique name for this OpenAPI channel.<br>The URL path below is derived from it<br>as a slug, so the name decides the address<br>the specification is served under.',
-    'id_is_active': 'Whether the OpenAPI specification<br>can be downloaded from the URL path.<br>Inactive channels do not serve it.',
+    'id_name': 'A unique name for this OpenAPI channel. The URL path below is derived from it as a slug, ' +
+        'so the name determines the address the specification is served under.',
+    'id_is_active': 'Whether the OpenAPI specification can be downloaded from the URL path. ' +
+        'Inactive channels do not serve it.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -63,20 +63,29 @@
     // and then handed to the help mode once per database, under that database's
     // own ids - the three panels ask the same questions.
     $.fn.zato.config_db.sql.field_descriptions = {
-        'display_name':  'A short name for this connection.<br>It is what the connection is called<br>in the dashboard, nothing else reads it.',
-        'description':   'What this connection is used for.<br>A note to whoever opens this screen next.',
-        'enabled':       'Whether the audit log records anything at all.<br>With it off nothing is written, from the very<br>next event on, and the audit log screens<br>stay empty. No restart is needed either way.',
-        'type':          'Which database engine is on the other side.<br>Picking one fills in the port it listens on.',
-        'host':          'The address the database answers at.<br>Left out for SQLite, which is a file, not a server.',
-        'port':          'The port the database listens on.<br>Filled in from the type, change it if yours differs.',
-        'name':          'The name of the database to use.<br>For SQLite this is the path to the file instead.',
+        'display_name':  'A short name for this connection. ' +
+            'It is what the connection is called in the dashboard, nothing else reads it.',
+        'description':   'What this connection is used for. A note for the next person who opens this screen.',
+        'enabled':       'Whether the audit log records anything at all. With it off nothing is written, ' +
+            'from the very next event on, and the audit log screens stay empty. ' +
+            'No restart is needed either way.',
+        'type':          'Which database engine is on the other side. Picking one fills in the port ' +
+            'it listens on.',
+        'host':          'The address the database answers at. ' +
+            'Left out for SQLite, where the database is a local file.',
+        'port':          'The port the database listens on. ' +
+            'Filled in from the type, change it if yours differs.',
+        'name':          'The name of the database to use. For SQLite this is the path to the file instead.',
         'username':      'The user the server connects as.',
-        'password':      'The password that user connects with.<br>It is stored as an environment variable,<br>never shown back on this screen.',
-        'ssl':           'Whether the connection is encrypted.<br>The three files below are only read when it is on.',
-        'ssl_ca_file':   'The certificate authority the database\'s<br>own certificate is checked against.',
-        'ssl_cert_file': 'The client certificate this server presents,<br>for a database that asks for one.',
+        'password':      'The password that user connects with. It is stored as an environment variable, ' +
+            'never shown back on this screen.',
+        'ssl':           'Whether the connection is encrypted. ' +
+            'The three files below are only read when it is on.',
+        'ssl_ca_file':   'The certificate authority the database\'s own certificate is checked against.',
+        'ssl_cert_file': 'The client certificate this server presents, for a database that asks for one.',
         'ssl_key_file':  'The private key belonging to that client certificate.',
-        'ssl_verify':    'Whether the database\'s certificate is checked<br>against the CA file. Off accepts any certificate,<br>which is a test-environment setting.'
+        'ssl_verify':    'Whether the database\'s certificate is checked against the CA file. ' +
+            'Off accepts any certificate, which is a test-environment setting.'
     };
 
     // ////////////////////////////////////////////////////////////////////////

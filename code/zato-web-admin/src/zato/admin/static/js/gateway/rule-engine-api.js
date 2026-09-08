@@ -132,10 +132,16 @@ $.fn.zato.gateway.rule_engine.security_badge_picker.load = function(action, obje
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.gateway.rule_engine.field_descriptions = {
-    'id_name': 'A unique name for this object.<br>Used to identify it in logs and the dashboard.',
-    'id_is_active': 'Whether this object accepts requests.<br>Callers cannot reach inactive objects.',
-    'id_url_path': 'The base URL path rulesets are invoked under,<br>e.g. /api/rules. The ruleset name follows it -<br>POST /api/rules/payments.discounts runs the live<br>version and appending /versions/3 pins one.',
-    'id_rulesets': 'Which rulesets this object exposes, comma-separated.<br>A grant is an exact name (payments.discounts),<br>a subtree (payments.*) or everything (*).<br>Names outside the grants answer with 404,<br>the same as names that do not exist,<br>so credentials cannot enumerate what exists.<br>A grant that matches no published ruleset<br>is flagged in the list.',
+    'id_name': 'A unique name for this object. Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this object accepts requests. Callers cannot reach inactive objects.',
+    'id_url_path': 'The base URL path rulesets are invoked under, e.g. /api/rules. ' +
+        'The ruleset name follows it - POST /api/rules/payments.discounts runs the live version ' +
+        'and appending /versions/3 pins one.',
+    'id_rulesets': 'Which rulesets this object exposes, comma-separated. ' +
+        'A grant is an exact name (payments.discounts), a subtree (payments.*) or everything (*). ' +
+        'Names outside the grants answer with 404, the same as names that do not exist, ' +
+        'so credentials cannot enumerate what exists. ' +
+        'A grant that matches no published ruleset is flagged in the list.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

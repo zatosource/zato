@@ -316,21 +316,32 @@ wizard.helpDescriptions = function() {
     out['mllp-wizard-title'] = wizard.titleHelp();
 
     // The security rows of the REST popover allow more than one pick
-    out['mllp-wizard-tippy-rest_security_id'] = 'Security definitions used to authenticate<br>incoming REST requests.<br>More than one can be assigned.<br>When the slider is off, with security disabled,<br>the channel will accept requests from anyone<br>who knows its address.';
+    out['mllp-wizard-tippy-rest_security_id'] = 'Security definitions used to authenticate ' +
+        'incoming REST requests. More than one can be assigned. ' +
+        'When the slider is off, with security disabled, the channel accepts requests from anyone ' +
+        'who knows its address.';
 
     // The step 1 transport toggles and the routing link ..
-    out['mllp-wizard-toggle-mllp'] = 'When on, HL7 v2 messages framed with MLLP<br>are received over plain TCP.<br>When off, messages arrive over REST only.';
+    out['mllp-wizard-toggle-mllp'] = 'When on, HL7 v2 messages framed with MLLP are received over plain TCP. ' +
+        'When off, messages arrive over REST only.';
     out['mllp-wizard-toggle-rest'] = shared['id_use_rest'];
-    out['mllp-wizard-edit-routing'] = 'Which incoming messages this channel will accept.<br>With no matchers, every message will be accepted -<br>matchers filter by MSH header fields,<br>e.g. sending application or message type.';
+    out['mllp-wizard-edit-routing'] = 'Which incoming messages this channel accepts. ' +
+        'With no matchers, the channel accepts every message - matchers filter by MSH header fields, ' +
+        'e.g. sending application or message type.';
 
     // .. and the four decisions of step 2.
-    out['mllp-wizard-slot-destinations-chip'] = 'The outgoing connections every message reaches<br>once the service has run.<br>Each of them carries the options its kind has,<br>e.g. the HTTP method of a REST call,<br>and a switch deciding whether it receives messages at all.';
+    out['mllp-wizard-slot-destinations-chip'] = 'The outgoing connections every message reaches ' +
+        'once the service has run. Each of them carries the options its kind has, ' +
+        'e.g. the HTTP method of a REST call, and a switch deciding whether it receives messages at all.';
     out['mllp-wizard-slot-service-chip'] = shared['id_service'];
-    out['mllp-wizard-slot-delivery'] = 'All the destinations at once,<br>or one after another in the order<br>they were picked.';
+    out['mllp-wizard-slot-delivery'] = 'All the destinations at once, or one after another ' +
+        'in the order they were picked.';
     out['mllp-wizard-slot-reply-chip'] = shared['destinations-respond-from'];
 
     // .. and the options folded away under the four decisions.
-    out['mllp-wizard-edit-options'] = 'The fixups applied to messages that do not<br>quite follow the standard, how long control IDs<br>are remembered for and what is written to the logs.<br>The line says what is currently set.';
+    out['mllp-wizard-edit-options'] = 'The fixups applied to messages that do not quite follow the standard, ' +
+        'how long control IDs are remembered for and what is written to the logs. ' +
+        'The line says what is currently set.';
 
     return out;
 };
@@ -350,9 +361,9 @@ wizard.titleHelp = function() {
         '<p>This wizard creates a channel - the entry point through which ' +
         'HL7 v2 messages reach the platform.</p>' +
 
-        '<p><span class="wizard-title-help-step">01</span> decides how messages arrive - ' +
-        'MLLP over TCP, REST, or both - and which ones will be accepted. ' +
-        '<span class="wizard-title-help-step">02</span> picks the service that handles ' +
+        '<p>On <span class="wizard-title-help-step">01</span> you choose how messages arrive - ' +
+        'MLLP over TCP, REST, or both - and which ones the channel accepts. ' +
+        'On <span class="wizard-title-help-step">02</span> you pick the service that handles ' +
         'each message and where results go next. ' +
         '<span class="wizard-title-help-step">03</span> is a review before the channel is created.</p>' +
 
@@ -369,8 +380,8 @@ wizard.titleHelp = function() {
         'agree on message boundaries.</p>' +
 
         '<p>A channel is a listener for such connections - it unwraps each ' +
-        'message, hands it to a service and replies with an acknowledgment ' +
-        'on its own. If in doubt, name the channel, pick a service on step 02 ' +
+        'message, invokes a service with it and returns an acknowledgment. ' +
+        'Name the channel, pick a service on step 02 ' +
         'and keep the defaults.</p>' +
 
         '</div>' +

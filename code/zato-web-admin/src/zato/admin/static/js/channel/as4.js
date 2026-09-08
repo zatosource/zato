@@ -67,40 +67,66 @@ $.fn.zato.channel.as4.create = function() {
 $.fn.zato.channel.as4.field_descriptions = {
 
     // Main tab
-    'id_name': 'A unique name for this channel.<br>Used to identify it in logs and the dashboard.',
-    'id_is_active': 'Whether this channel accepts messages.<br>Requests to inactive channels are rejected.',
-    'id_is_audit_log_active': 'Whether the exchanges of this channel<br>are recorded in the audit log - the messages,<br>the receipts and the bytes of each.',
-    'id_url_path': 'The URL path this channel listens on,<br>e.g. /as4 or /peppol - the address<br>counterparties send their messages to.',
-    'id_security_id': 'Optional HTTP-level security on top of AS4\'s<br>own message-level security. Counterparties<br>authenticate cryptographically, so this<br>is usually left as no security.',
-    'id_as4_profile': 'The AS4 profile of the network this channel<br>serves - it selects the correct signature,<br>encryption and packaging checks.',
-    'id_as4_from_party': 'The party identifier expected in incoming<br>messages as the sender. Leave empty<br>to accept any sender party.',
-    'id_as4_to_party': 'Your own party identifier - the one incoming<br>messages must be addressed to,<br>e.g. your access point certificate name.',
-    'id_as4_service': 'The ebMS service accepted by this channel,<br>e.g. a process identifier.<br>The profile preset supplies the usual value.',
-    'id_as4_action': 'The ebMS action accepted by this channel,<br>e.g. a document type identifier.<br>The profile preset supplies the usual value.',
-    'id_as4_agreement': 'The agreement reference accepted<br>by this channel, e.g. the Peppol TIA identifier.',
-    'id_as4_mpc': 'The message partition channel this endpoint<br>answers pull requests for, sub-channels of it<br>included. Leave empty to take deliveries only.',
-    'id_as4_extra_pmodes': 'Additional service and action pairs accepted<br>under otherwise the same settings,<br>one per line, as service|action.',
+    'id_name': 'A unique name for this channel. Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this channel accepts messages. Requests to inactive channels are rejected.',
+    'id_is_audit_log_active': 'Whether the exchanges of this channel are recorded in the audit log - ' +
+        'the messages, the receipts and the bytes of each.',
+    'id_url_path': 'The URL path this channel listens on, e.g. /as4 or /peppol - ' +
+        'the address counterparties send their messages to.',
+    'id_security_id': 'Optional HTTP-level security on top of AS4\'s own message-level security. ' +
+        'Counterparties authenticate cryptographically, so this is usually left as no security.',
+    'id_as4_profile': 'The AS4 profile of the network this channel serves - it selects the correct signature, ' +
+        'encryption and packaging checks.',
+    'id_as4_from_party': 'The party identifier expected in incoming messages as the sender. ' +
+        'Leave empty to accept any sender party.',
+    'id_as4_to_party': 'Your own party identifier - the one incoming messages must be addressed to, ' +
+        'e.g. your access point certificate name.',
+    'id_as4_service': 'The ebMS service accepted by this channel, e.g. a process identifier. ' +
+        'The profile preset supplies the usual value.',
+    'id_as4_action': 'The ebMS action accepted by this channel, e.g. a document type identifier. ' +
+        'The profile preset supplies the usual value.',
+    'id_as4_agreement': 'The agreement reference accepted by this channel, e.g. the Peppol TIA identifier.',
+    'id_as4_mpc': 'The message partition channel this endpoint answers pull requests for, ' +
+        'sub-channels of it included. Leave empty to take deliveries only.',
+    'id_as4_extra_pmodes': 'Additional service and action pairs accepted under otherwise the same settings, ' +
+        'one per line, as service|action.',
 
     // Security tab
-    'id_as4_token_type': 'How the signing certificate travels in messages<br>this channel sends - a single certificate,<br>the whole chain, or a SAML assertion.<br>Empty means what the profile prescribes.',
-    'id_as4_username': 'The username incoming messages must carry<br>in a WS-Security UsernameToken, which is how<br>some networks authorize pull requests.<br>Leave empty to ask for no token.',
-    'id_as4_password': 'The password that goes with the username above.<br>It travels in clear text inside the token, so the<br>connection has to be TLS. Stored encrypted.<br>Leave empty to keep the stored password.',
-    'id_as4_signing_key': 'Your private key in PEM, pasted as text.<br>It signs receipts and error signals and is<br>stored encrypted, never in plain text.<br>Leave empty to keep the stored key.',
-    'id_as4_signing_cert_chain': 'The certificate chain matching the signing key,<br>in PEM - your access point certificate first,<br>then any intermediates.',
-    'id_as4_decryption_key': 'The private key that decrypts incoming<br>encrypted messages. Often the same<br>as the signing key. Stored encrypted.<br>Leave empty to keep the stored key.',
-    'id_as4_saml_assertion': 'A SAML 2.0 assertion in XML, issued by a security<br>token service, that travels in place of a certificate<br>when the token type above is SAML.',
-    'id_as4_peer_signing_cert': 'The certificate incoming messages must be<br>signed with, in PEM. Use trust anchors instead<br>when many counterparties send to this channel.',
-    'id_as4_peer_encryption_cert': 'The certificate the peer encrypts to, in PEM.<br>Only needed when this channel\'s responses<br>carry encrypted payloads.',
-    'id_as4_trust_anchors': 'CA certificates in PEM that the signatures<br>of incoming messages must chain up to,<br>e.g. the Peppol root CA.',
+    'id_as4_token_type': 'How the signing certificate travels in messages this channel sends - ' +
+        'a single certificate, the whole chain, or a SAML assertion. ' +
+        'Empty means what the profile prescribes.',
+    'id_as4_username': 'The username incoming messages must carry in a WS-Security UsernameToken, ' +
+        'which is how some networks authorize pull requests. Leave empty to ask for no token.',
+    'id_as4_password': 'The password that goes with the username above. It travels in clear text ' +
+        'inside the token, so the connection has to be TLS. Stored encrypted. ' +
+        'Leave empty to keep the stored password.',
+    'id_as4_signing_key': 'Your private key in PEM, pasted as text. It signs receipts and error signals ' +
+        'and is stored encrypted, never in plain text. Leave empty to keep the stored key.',
+    'id_as4_signing_cert_chain': 'The certificate chain matching the signing key, in PEM - ' +
+        'your access point certificate first, then any intermediates.',
+    'id_as4_decryption_key': 'The private key that decrypts incoming encrypted messages. ' +
+        'Often the same as the signing key. Stored encrypted. Leave empty to keep the stored key.',
+    'id_as4_saml_assertion': 'A SAML 2.0 assertion in XML, issued by a security token service, ' +
+        'that travels in place of a certificate when the token type above is SAML.',
+    'id_as4_peer_signing_cert': 'The certificate incoming messages must be signed with, in PEM. ' +
+        'Use trust anchors instead when many counterparties send to this channel.',
+    'id_as4_peer_encryption_cert': 'The certificate the peer encrypts to, in PEM. ' +
+        'Only needed when this channel\'s responses carry encrypted payloads.',
+    'id_as4_trust_anchors': 'CA certificates in PEM that the signatures of incoming messages ' +
+        'must chain up to, e.g. the Peppol root CA.',
 
     // Participants tab
-    'id_as4_serviced_participants': 'The participant identifiers this access point<br>serves, one per line, e.g. 0192:991825827.<br>Peppol documents addressed to anyone else<br>are rejected. Empty means everyone is accepted.',
-    'id_as4_original_sender': 'The original sender expected in message<br>properties. Leave empty to accept any.',
-    'id_as4_final_recipient': 'The final recipient expected in message<br>properties. Leave empty to accept any.',
+    'id_as4_serviced_participants': 'The participant identifiers this access point serves, one per line, ' +
+        'e.g. 0192:991825827. Peppol documents addressed to anyone else are rejected. ' +
+        'Empty means everyone is accepted.',
+    'id_as4_original_sender': 'The original sender expected in message properties. Leave empty to accept any.',
+    'id_as4_final_recipient': 'The final recipient expected in message properties. Leave empty to accept any.',
 
     // Routing tab
-    'id_service': 'The service that receives each accepted<br>message directly. Leave empty to publish<br>to the inbound topic instead.',
-    'id_as4_inbound_topic': 'The pub/sub topic accepted messages are<br>published to when no service is configured.<br>Empty means the default zato.as4.inbound topic.',
+    'id_service': 'The service that receives each accepted message directly. ' +
+        'Leave empty to publish to the inbound topic instead.',
+    'id_as4_inbound_topic': 'The pub/sub topic accepted messages are published to when no service ' +
+        'is configured. Empty means the default zato.as4.inbound topic.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

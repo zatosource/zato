@@ -597,58 +597,83 @@
     $.fn.zato.outgoing.soap.field_descriptions = {
 
         // Main tab
-        'id_name': 'A unique name for this connection.<br>Used to identify it in logs and the dashboard.',
-        'id_is_active': 'Whether this connection can be used.<br>Messages are not sent through<br>inactive connections.',
-        'id_is_audit_log_active': 'Whether this connection\'s traffic is recorded<br>in the audit log. On by default.',
-        'id_host': 'Address of the remote SOAP server,<br>e.g. https://example.com:8443.',
-        'id_url_path': 'URL path of the SOAP endpoint<br>on the remote server,<br>e.g. /services/endpoint.',
-        'id_soap_action': 'Value of the SOAPAction header<br>sent with each request. Leave empty<br>if the endpoint does not require one.',
-        'id_timeout': 'How many seconds to wait for a response<br>before the invocation times out.',
+        'id_name': 'A unique name for this connection. Used to identify it in logs and the dashboard.',
+        'id_is_active': 'Whether this connection can be used. Messages are not sent through inactive connections.',
+        'id_is_audit_log_active': 'Whether this connection\'s traffic is recorded in the audit log. On by default.',
+        'id_host': 'Address of the remote SOAP server, e.g. https://example.com:8443.',
+        'id_url_path': 'URL path of the SOAP endpoint on the remote server, e.g. /services/endpoint.',
+        'id_soap_action': 'Value of the SOAPAction header sent with each request. ' +
+            'Leave empty if the endpoint does not require one.',
+        'id_timeout': 'How many seconds to wait for a response before the invocation times out.',
 
         // SOAP tab
-        'id_soap_version': 'SOAP protocol version the endpoint expects.<br>1.2 is the most common choice today,<br>1.1 is used by older systems.',
-        'id_use_ws_addressing': 'When on, WS-Addressing headers - Action,<br>MessageID, To and ReplyTo - are added<br>to each outgoing message.',
-        'id_use_mtom': 'When on, binary attachments are sent<br>as MTOM/XOP parts instead of being<br>embedded in the message as Base64.',
+        'id_soap_version': 'SOAP protocol version the endpoint expects. ' +
+            '1.2 is the most common choice today, 1.1 is used by older systems.',
+        'id_use_ws_addressing': 'When on, WS-Addressing headers - Action, MessageID, To and ReplyTo - ' +
+            'are added to each outgoing message.',
+        'id_use_mtom': 'When on, binary attachments are sent as MTOM/XOP parts ' +
+            'instead of being embedded in the message as Base64.',
 
         // Security tab
-        'id_security_id': 'Security definition applied to outgoing messages,<br>e.g. WS-Security, Basic Auth<br>or an OAuth bearer token.',
-        'id_validate_tls': 'Whether the TLS certificate of the remote<br>server must be validated. Turn it off<br>only in test environments.',
-        'id_tls_client_cert': 'Path to a PEM file with the client certificate<br>this connection presents to mutual-TLS endpoints.<br>The file is mounted into the container and may<br>hold both the certificate and its private key.',
-        'id_tls_client_key': 'Path to the private key matching the client<br>certificate, if it lives in its own PEM file.<br>Leave empty when the certificate file<br>already contains the key.',
+        'id_security_id': 'Security definition applied to outgoing messages, ' +
+            'e.g. WS-Security, Basic Auth or an OAuth bearer token.',
+        'id_validate_tls': 'Whether the TLS certificate of the remote server must be validated. ' +
+            'Turn it off only in test environments.',
+        'id_tls_client_cert': 'Path to a PEM file with the client certificate this connection presents ' +
+            'to mutual-TLS endpoints. The file is mounted into the container and may hold both ' +
+            'the certificate and its private key.',
+        'id_tls_client_key': 'Path to the private key matching the client certificate, ' +
+            'if it lives in its own PEM file. Leave empty when the certificate file already contains the key.',
 
         // Body credentials tab
-        'id_body_credentials': 'Credentials from the security definition injected<br>into the message body, for endpoints that expect<br>them there rather than in a header.<br>Each mapping is an element name with an optional<br>position among the body\'s child elements.',
+        'id_body_credentials': 'Credentials from the security definition injected into the message body, ' +
+            'for endpoints that expect them there rather than in a header. Each mapping is an element name ' +
+            'with an optional position among the body\'s child elements.',
 
         // More options in the main tab
-        'id_ping_method': 'HTTP method used when pinging<br>the connection, e.g. HEAD or GET.',
-        'id_content_type': 'Overrides the default Content-Type header.<br>Leave empty to use the default matching<br>the SOAP version selected.',
-        'id_max_retries': 'How many times a failed invocation is retried<br>after a timeout or a connection error.<br>0 means no retries at all.',
-        'id_retry_sleep_time': 'How many seconds to sleep before the first retry.<br>Each subsequent sleep is multiplied<br>by the backoff multiplier.',
-        'id_retry_backoff_threshold': 'A cap on the total time spent sleeping<br>between retries, in seconds.<br>Once reached, no more retries take place.',
-        'id_retry_backoff_multiplier': 'Each retry sleeps this many times longer<br>than the previous one, up to 8 seconds<br>per a single sleep.',
+        'id_ping_method': 'HTTP method used when pinging the connection, e.g. HEAD or GET.',
+        'id_content_type': 'Overrides the default Content-Type header. ' +
+            'Leave empty to use the default matching the SOAP version selected.',
+        'id_max_retries': 'How many times a failed invocation is retried after a timeout or a connection error. ' +
+            '0 means no retries at all.',
+        'id_retry_sleep_time': 'How many seconds to sleep before the first retry. ' +
+            'Each subsequent sleep is multiplied by the backoff multiplier.',
+        'id_retry_backoff_threshold': 'A cap on the total time spent sleeping between retries, in seconds. ' +
+            'Once reached, no more retries take place.',
+        'id_retry_backoff_multiplier': 'Each retry sleeps this many times longer than the previous one, ' +
+            'up to 8 seconds per a single sleep.',
 
         // Scheduler tab
-        'id_scheduler_run_every': 'How often this connection is invoked,<br>e.g. every 6 hours.<br>Leave empty for no scheduled invocations.',
-        'id_scheduler_start_date': 'When the first scheduled invocation takes place,<br>entered in your own timezone.',
+        'id_scheduler_run_every': 'How often this connection is invoked, e.g. every 6 hours. ' +
+            'Leave empty for no scheduled invocations.',
+        'id_scheduler_start_date': 'When the first scheduled invocation takes place, entered in your own timezone.',
 
         // Request tab
-        'id_request_operation': 'The operation every invocation calls,<br>e.g. GetItemDetails.<br>Empty means the caller names it explicitly.',
-        'id_request_message': 'Elements of the message each invocation sends.<br>Names may use dot-paths, e.g. <code>order.customer_id</code>.<br>A value is sent exactly as typed unless its JSONata toggle<br>is on, then it is evaluated each time the request fires.',
-        'id_request_message_map': 'A single JSONata expression that builds<br>the whole message instead of the rows above, e.g.<br><code>{"since": $substring($now(), 0, 10)}</code>',
-        'id_request_soap_headers': 'Custom elements injected into the soap:Header<br>of every envelope. A value is sent exactly as typed<br>unless its JSONata toggle is on.',
-        'id_wsa_action': 'The WS-Addressing Action header<br>sent with every envelope.',
-        'id_wsa_to': 'The WS-Addressing To header<br>sent with every envelope.',
-        'id_wsa_reply_to': 'The WS-Addressing ReplyTo header<br>sent with every envelope.',
+        'id_request_operation': 'The operation every invocation calls, e.g. GetItemDetails. ' +
+            'Empty means the caller names it explicitly.',
+        'id_request_message': 'Elements of the message each invocation sends. ' +
+            'Names may use dot-paths, e.g. <code>order.customer_id</code>. A value is sent exactly as typed ' +
+            'unless its JSONata toggle is on, then it is evaluated each time the request fires.',
+        'id_request_message_map': 'A single JSONata expression that builds the whole message ' +
+            'instead of the rows above, e.g. <code>{"since": $substring($now(), 0, 10)}</code>',
+        'id_request_soap_headers': 'Custom elements injected into the soap:Header of every envelope. ' +
+            'A value is sent exactly as typed unless its JSONata toggle is on.',
+        'id_wsa_action': 'The WS-Addressing Action header sent with every envelope.',
+        'id_wsa_to': 'The WS-Addressing To header sent with every envelope.',
+        'id_wsa_reply_to': 'The WS-Addressing ReplyTo header sent with every envelope.',
 
         // Response tab
-        'id_response_map_mode': 'Whether the response map below is JSONata,<br>applied to the parsed response,<br>or XPath, applied to the raw XML envelope.',
-        'id_response_map': 'An expression that reshapes the response<br>before the callback receives it.<br>Leave empty to pass the response through as-is.',
+        'id_response_map_mode': 'Whether the response map below is JSONata, applied to the parsed response, ' +
+            'or XPath, applied to the raw XML envelope.',
+        'id_response_map': 'An expression that reshapes the response before the callback receives it. ' +
+            'Leave empty to pass the response through as-is.',
 
         // Callback tab
-        'id_callback_type': 'Where each response is delivered - to a service,<br>a pub/sub topic or an outgoing REST connection.',
-        'id_callback_service': 'The service invoked with the response<br>each time the connection is invoked.',
+        'id_callback_type': 'Where each response is delivered - to a service, a pub/sub topic ' +
+            'or an outgoing REST connection.',
+        'id_callback_service': 'The service invoked with the response each time the connection is invoked.',
         'id_callback_topic': 'The pub/sub topic the response is published to.',
-        'id_callback_rest': 'The outgoing REST connection<br>the response is sent to.'
+        'id_callback_rest': 'The outgoing REST connection the response is sent to.'
     };
 
     // ////////////////////////////////////////////////////////////////////////

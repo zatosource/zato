@@ -547,9 +547,15 @@ $.fn.zato.pubsub.permission.data_table = {};
 
 $.fn.zato.pubsub.permission.field_descriptions = {
 
-    'id_sec_base_id': 'The Basic Auth definition this permission applies to.<br>It represents an API client of pub/sub topics,<br>the same credentials are used to publish and subscribe.',
-    'id_access_type': 'What the client is allowed to do with matching topics.<br>Publisher can only send messages, subscriber can only<br>receive them, and publisher and subscriber can do both.',
-    'id_pattern_type_0': 'Topic patterns this permission covers.<br>Use * to match a whole name segment, e.g. orders.*<br>matches orders.processed but not orders.eu.processed.<br>Exact patterns are evaluated before wildcards.',
+    'id_sec_base_id': 'The Basic Auth definition this permission applies to. ' +
+        'It represents an API client of pub/sub topics, ' +
+        'the same credentials are used to publish and subscribe.',
+    'id_access_type': 'What the client is allowed to do with matching topics. ' +
+        'Publisher can only send messages, subscriber can only receive them, ' +
+        'and publisher and subscriber can do both.',
+    'id_pattern_type_0': 'Topic patterns this permission covers. Use * to match a whole name segment, ' +
+        'e.g. orders.* matches orders.processed but not orders.eu.processed. ' +
+        'Exact patterns are evaluated before wildcards.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

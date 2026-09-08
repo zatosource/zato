@@ -367,35 +367,57 @@ $.fn.zato.scheduler.data_table.add_row = function(data, action, job_type, includ
 $.fn.zato.scheduler.field_descriptions = {
 
     'one_time': {
-        'name': 'A unique name for this job.<br>Used in logs and on the scheduler dashboard.',
-        'is_active': 'Whether the scheduler runs this job.<br>An inactive job keeps its definition<br>but never fires.',
-        'start_date': 'The exact date and time the job runs.<br>A one-time job fires once at this moment<br>and never again.',
-        'service': 'The service invoked when the job fires.<br>Data from the extra field is available to it<br>as self.request.raw_request.',
-        'extra': 'Optional data passed to the service on each run,<br>available as self.request.raw_request.<br>Use it to parameterize the service.',
-        'on_success_service': 'A service invoked each time this job<br>completes successfully, e.g. for follow-up<br>processing or notifications.',
-        'on_success_job': 'Another scheduler job to run after this one<br>completes successfully. Lets you chain jobs<br>into sequences.',
-        'on_error_service': 'A service invoked when this job\'s execution fails.<br>Use it for alerting or compensating actions.',
-        'on_error_job': 'Another scheduler job to run when this one fails,<br>e.g. a cleanup or retry job.',
+        'name': 'A unique name for this job. Used in logs and on the scheduler dashboard.',
+        'is_active': 'Whether the scheduler runs this job. ' +
+            'An inactive job keeps its definition but never fires.',
+        'start_date': 'The exact date and time the job runs. ' +
+            'A one-time job fires once at this moment and never again.',
+        'service': 'The service invoked when the job fires. ' +
+            'Data from the extra field is available to it as self.request.raw_request.',
+        'extra': 'Optional data passed to the service on each run, available as self.request.raw_request. ' +
+            'Use it to parameterize the service.',
+        'on_success_service': 'A service invoked each time this job completes successfully, ' +
+            'e.g. for follow-up processing or notifications.',
+        'on_success_job': 'Another scheduler job to run after this one completes successfully. ' +
+            'Lets you chain jobs into sequences.',
+        'on_error_service': 'A service invoked when this job\'s execution fails. ' +
+            'Use it for alerting or compensating actions.',
+        'on_error_job': 'Another scheduler job to run when this one fails, e.g. a cleanup or retry job.',
     },
 
     'interval_based': {
-        'name': 'A unique name for this job.<br>Used in logs and on the scheduler dashboard.',
-        'is_active': 'Whether the scheduler runs this job.<br>An inactive job keeps its definition<br>but never fires.',
-        'repeats': 'How many times the job runs in total.<br>Leave empty for the job to keep repeating<br>indefinitely, at each interval.',
-        'weeks': 'How many weeks between consecutive runs.<br>All the interval fields add up<br>into one combined interval.',
-        'days': 'How many days between consecutive runs.<br>Added to the other interval fields,<br>e.g. 1 week and 2 days.',
-        'hours': 'How many hours between consecutive runs.<br>Added to the other interval fields<br>to form the full interval.',
-        'minutes': 'How many minutes between consecutive runs.<br>Added to the other interval fields<br>to form the full interval.',
-        'seconds': 'How many seconds between consecutive runs.<br>Added to the other interval fields<br>to form the full interval.',
-        'max_execution_time_ms': 'The longest a single run may take,<br>in milliseconds. Runs exceeding it<br>count as timed out on the dashboard.<br>Leave empty for no limit.',
-        'start_date': 'When the first execution takes place.<br>Later runs follow at each interval,<br>counted from this moment.',
-        'service': 'The service invoked each time the job fires.<br>Data from the extra field is available to it<br>as self.request.raw_request.',
-        'extra': 'Optional data passed to the service on each run,<br>available as self.request.raw_request.<br>Use it to parameterize the service.',
-        'timezone': 'The timezone the start time and intervals<br>are computed in. Leave empty to use<br>the scheduler server\'s own timezone.',
-        'on_success_service': 'A service invoked each time this job<br>completes successfully, e.g. for follow-up<br>processing or notifications.',
-        'on_success_job': 'Another scheduler job to run after this one<br>completes successfully. Lets you chain jobs<br>into sequences.',
-        'on_error_service': 'A service invoked when this job\'s execution fails.<br>Use it for alerting or compensating actions.',
-        'on_error_job': 'Another scheduler job to run when this one fails,<br>e.g. a cleanup or retry job.',
+        'name': 'A unique name for this job. Used in logs and on the scheduler dashboard.',
+        'is_active': 'Whether the scheduler runs this job. ' +
+            'An inactive job keeps its definition but never fires.',
+        'repeats': 'How many times the job runs in total. ' +
+            'Leave empty for the job to keep repeating indefinitely, at each interval.',
+        'weeks': 'How many weeks between consecutive runs. ' +
+            'All the interval fields add up into one combined interval.',
+        'days': 'How many days between consecutive runs. ' +
+            'Added to the other interval fields, e.g. 1 week and 2 days.',
+        'hours': 'How many hours between consecutive runs. ' +
+            'Added to the other interval fields to form the full interval.',
+        'minutes': 'How many minutes between consecutive runs. ' +
+            'Added to the other interval fields to form the full interval.',
+        'seconds': 'How many seconds between consecutive runs. ' +
+            'Added to the other interval fields to form the full interval.',
+        'max_execution_time_ms': 'The longest a single run may take, in milliseconds. ' +
+            'Runs exceeding it count as timed out on the dashboard. Leave empty for no limit.',
+        'start_date': 'When the first execution takes place. ' +
+            'Later runs follow at each interval, counted from this moment.',
+        'service': 'The service invoked each time the job fires. ' +
+            'Data from the extra field is available to it as self.request.raw_request.',
+        'extra': 'Optional data passed to the service on each run, available as self.request.raw_request. ' +
+            'Use it to parameterize the service.',
+        'timezone': 'The timezone the start time and intervals are computed in. ' +
+            'Leave empty to use the scheduler server\'s own timezone.',
+        'on_success_service': 'A service invoked each time this job completes successfully, ' +
+            'e.g. for follow-up processing or notifications.',
+        'on_success_job': 'Another scheduler job to run after this one completes successfully. ' +
+            'Lets you chain jobs into sequences.',
+        'on_error_service': 'A service invoked when this job\'s execution fails. ' +
+            'Use it for alerting or compensating actions.',
+        'on_error_job': 'Another scheduler job to run when this one fails, e.g. a cleanup or retry job.',
     },
 };
 
