@@ -31,7 +31,9 @@ from zato.server.connection.http_soap.url_dispatcher import Matcher
 
 if 0:
     from zato.common.odb.model import Server as ServerModel
+    from zato.common.typing_ import any_
     from zato.server.base.parallel import ParallelServer
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,6 +45,16 @@ logger = getLogger(__name__)
 
 class ModuleCtx:
     Config_Store = ('apikey', 'basic_auth',)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def generic_connection_key(item:'any_') -> 'str':
+    """ The key one generic connection is stored under in the config store - its type and name together,
+    since a name is unique within a type only.
+    """
+    out = '{}/{}'.format(item.type_, item.name)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -202,9 +214,11 @@ class ConfigLoader:
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        # Connections
+        # Connections - names are unique per type only, so the entries are keyed by type and name together
+        # right as they are read, otherwise connections of different types sharing a name would overwrite each other.
         query = self.odb.get_generic_connection_list(server.cluster.id, True)
-        self.config.generic_connection = ConfigDict.from_query('generic_connection', query, decrypt_func=self.decrypt)
+        self.config.generic_connection = ConfigDict.from_query('generic_connection', query, decrypt_func=self.decrypt,
+            key_func=generic_connection_key)
 
         # Connections kept in the external AS2/AS4 database, if one is configured
         if is_ext_db_configured():
@@ -212,18 +226,9 @@ class ConfigLoader:
             with closing(get_ext_db_session()) as ext_session:
                 ext_query = connection_list(
                     ext_session, ext_cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_AS2, True)
-                ext_generic = ConfigDict.from_query('generic_connection', ext_query, decrypt_func=self.decrypt)
+                ext_generic = ConfigDict.from_query('generic_connection', ext_query, decrypt_func=self.decrypt,
+                    key_func=generic_connection_key)
             merge_ext_config_entries(self.config.generic_connection._impl, ext_generic._impl)
-
-        # Names are unique per type only, so the entries are rekeyed by type and name together
-        rekeyed = Bunch()
-
-        for entry in self.config.generic_connection._impl.values():
-            entry_config = entry['config']
-            key = '{}/{}'.format(entry_config['type_'], entry_config['name'])
-            rekeyed[key] = entry
-
-        self.config.generic_connection._impl = rekeyed
 
         #
         # Generic - end

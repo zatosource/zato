@@ -37,6 +37,7 @@ warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*multi-
 # ################################################################################################################################
 
 if 0:
+    from logging import Logger
     from pathlib import Path
     from gevent.subprocess import CompletedProcess
     from zato.common.typing_ import any_, anydict
@@ -174,7 +175,8 @@ class CommandsFacade:
         timeout:  'float',
         encoding: 'str',
         replace_char: 'str',
-        use_pubsub: 'bool'
+        use_pubsub: 'bool',
+        command_logger: 'Logger',
     ) -> 'CommandResult':
 
         # Our response to produce
@@ -199,7 +201,7 @@ class CommandsFacade:
         # Invoke the subprocess ..
         try:
             # Log what we are about to do ..
-            logger.info('Invoking command: `%s` (%s)', command, cid)
+            command_logger.info('Invoking command: `%s` (%s)', command, cid)
 
             # .. start measuring the response time ..
             out.start_time = utcnow()
@@ -243,11 +245,11 @@ class CommandsFacade:
                 out.timeout_msg = out.timeout_msg.replace(' seconds', ' sec.')
 
             # .. issue information about what happened ..
-            logger.warning('Timeout: %s (%s)', out.timeout_msg, cid)
+            command_logger.warning('Timeout: %s (%s)', out.timeout_msg, cid)
 
         # .. we get here only if there was no timeout ..
         else:
-            logger.info('Command `%s` completed in %s, exit_code -> %s; len-out=%s (%s); len-err=%s (%s); cid -> %s',
+            command_logger.info('Command `%s` completed in %s, exit_code -> %s; len-out=%s (%s); len-err=%s (%s); cid -> %s',
                 command, out.total_time, out.exit_code,
                 out.len_stdout_bytes,
                 out.len_stdout_human,
@@ -329,6 +331,7 @@ class CommandsFacade:
         encoding:    'str'   = Config.Encoding,
         use_pubsub:  'bool'  = Config.UsePubSub,
         replace_char:'str'   = Config.ReplaceChar,
+        command_logger:'Logger' = logger,
     ) -> 'CommandResult':
 
         # Accept input or create a new Correlation ID
@@ -349,7 +352,7 @@ class CommandsFacade:
         # .. run in background ..
         _ = spawn(
             self.invoke, cid=cid, command=command, callback=callback, stdin=stdin, timeout=timeout,
-            use_pubsub=use_pubsub, encoding=encoding, replace_char=replace_char)
+            use_pubsub=use_pubsub, encoding=encoding, replace_char=replace_char, command_logger=command_logger)
 
         # .. and return the basic information to our caller ..
         return out
@@ -367,6 +370,7 @@ class CommandsFacade:
         encoding:    'str'   = Config.Encoding,
         use_pubsub:  'bool'  = Config.UsePubSub,
         replace_char:'str'   = Config.ReplaceChar,
+        command_logger:'Logger' = logger,
     ) -> 'CommandResult':
 
         # Accept input or create a new Correlation ID
@@ -374,7 +378,7 @@ class CommandsFacade:
 
         return self._run(
             cid=cid, command=command, callback=callback, stdin=stdin, timeout=timeout, encoding=encoding,
-            use_pubsub=use_pubsub, replace_char=replace_char)
+            use_pubsub=use_pubsub, replace_char=replace_char, command_logger=command_logger)
 
 # ################################################################################################################################
 

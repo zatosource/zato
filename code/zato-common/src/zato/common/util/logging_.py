@@ -46,6 +46,9 @@ _loggers_to_ignore = {'bzr', 'future_stdlib', 'pyasn1', 'sh.command', 'zato_audi
 # Used when a caller submits an empty logging configuration
 _no_input_error = 'No loggers provided'
 
+# The logger that every kind of file transfer activity - FTP, SFTP and SMB alike - goes through
+file_transfer_logger_name = 'zato_file_transfer'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -126,6 +129,23 @@ loggers:
         handlers: [stdout, scheduler]
         qualname: zato_scheduler
         propagate: false
+    zato_file_transfer:
+        level: INFO
+        handlers: [file_transfer]
+        qualname: zato_file_transfer
+        propagate: false
+    'zato.outgoing.ftp.process-files':
+        level: INFO
+        handlers: [file_transfer]
+        propagate: false
+    'zato.outgoing.sftp.process-files':
+        level: INFO
+        handlers: [file_transfer]
+        propagate: false
+    'zato.outgoing.smb.process-files':
+        level: INFO
+        handlers: [file_transfer]
+        propagate: false
 handlers:
     default:
         formatter: default
@@ -167,6 +187,14 @@ handlers:
         formatter: default
         class: {log_handler_class}
         filename: './logs/scheduler.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+        encoding: 'utf8'
+    file_transfer:
+        formatter: default
+        class: {log_handler_class}
+        filename: './logs/file-transfer.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10

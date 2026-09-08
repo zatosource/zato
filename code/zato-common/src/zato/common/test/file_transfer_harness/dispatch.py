@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.api import FileTransfer
 from zato.common.test.file_transfer_harness.base import FileTransferScheduleTestBase
-from zato.common.test.file_transfer_harness.deliveries import Service_Always_Raise
+from zato.common.test.file_transfer_harness.deliveries import Service_Always_Raise, Service_Echo_Item
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -168,6 +168,31 @@ class DispatchTests(FileTransferScheduleTestBase):
 
         assert harness.delivered(schedule_name) == []
         harness.assert_names(directory, ['unlucky.txt'])
+
+# ################################################################################################################################
+
+    def test_service_returning_the_item_is_a_success(self, harness:'Harness') -> 'None':
+
+        harness.require('supports_move')
+
+        conn = harness.new_conn()
+        directory = harness.make_directory()
+        schedule_name = harness.new_schedule_name('echo')
+
+        harness.write(directory, 'echoed.txt', 'Payload handed straight back')
+
+        # The target service returns the item it received as its own response
+        schedule = harness.create_schedule(conn, schedule_name, directory, service=Service_Echo_Item)
+        harness.run(conn, schedule)
+
+        # The file was recorded once ..
+        entries = harness.deliveries.by_file_name(schedule_name)
+        assert list(entries) == ['echoed.txt']
+        assert entries['echoed.txt']['data'] == 'Payload handed straight back'
+
+        # .. and returning the item did not count as a failure, so the file was moved out of the way.
+        harness.assert_names(directory, [_move_directory])
+        harness.assert_names(harness.move_directory_of(directory), ['echoed.txt'])
 
 # ################################################################################################################################
 

@@ -998,6 +998,7 @@ a.wizard-select-delete:hover::before {
 }
 
 .wizard-footer-center {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1024,6 +1025,29 @@ a.wizard-cancel {
 .wizard-footer button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* The spinner turning to the right of the button a save was asked for through -
+   the same image, size, turn and dark-blue tint as the Check for updates button's
+   spinner on the updates page. It is taken out of the flow and hung off the right
+   edge of the footer's middle, so showing it moves none of the buttons. The kit
+   inserts it hidden and shows it only while a save is running, the keyframes
+   being the global zato-spin of style.css. */
+.wizard-save-spinner {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    width: 25px;
+    height: 25px;
+    margin-left: 10px;
+    margin-top: -12.5px;
+    animation: zato-spin 0.8s linear infinite;
+    filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);
+}
+
+.wizard-save-spinner.active {
+    display: inline-block;
 }
 
 /* ------------------------------------------------------------ */

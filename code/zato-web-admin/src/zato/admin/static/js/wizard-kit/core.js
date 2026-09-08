@@ -91,8 +91,12 @@
 //                       action of the page's own. An edit hides Back and Next
 //                       and moves Save into the middle they leave, so every
 //                       step is saved from where it is, and it drops the
-//                       review step's tab. How a save went is said in a
-//                       tooltip beside the button it was asked for through,
+//                       review step's tab. While a save runs, a spinner the
+//                       kit hangs off the right edge of the footer's middle,
+//                       out of the flow, turns beside the button the save was
+//                       asked for through, and a save that went through leaves for
+//                       the list page with the saved row highlighted. One
+//                       that did not says so in a tooltip beside that button,
 //                       and Enter anywhere in the form does what that
 //                       button does.
 //      #<idPrefix>-how-it-works - the page-wide help badge
@@ -111,8 +115,10 @@
 //
 // The init options:
 //
-//      list_url       - where the link closing the form goes back to, a save
-//                       leaving the page it was made on open
+//      list_url       - where the link closing the form goes back to, and
+//                       where a save that went through redirects to, with
+//                       the saved row's id appended as the highlight
+//                       parameter - the URL always carries a query string
 //      is_edit        - whether the page was opened on an object that
 //                       already exists
 
@@ -147,7 +153,20 @@ kit.core.defaults = {
     pulsateClass: 'pulsate',
 
     // Which row that is, for a field whose target names no anchor of its own
-    missingRowSelector: '.wizard-name-row, .wizard-field-row, .wizard-line, .wizard-toggle-row'
+    missingRowSelector: '.wizard-name-row, .wizard-field-row, .wizard-line, .wizard-toggle-row',
+
+    // The spinner turning beside the button while a save runs - the very image
+    // the Check for updates button on the updates page spins
+    spinnerSrc: '/static/gfx/spinner.svg',
+    spinnerClass: 'wizard-save-spinner',
+    spinnerActiveClass: 'active',
+
+    // How long that spinner stays on screen at a minimum, so a fast save does not
+    // make it a barely visible blip - the same lead the updates page's own save has
+    saveSpinnerMinMs: 500,
+
+    // The query parameter the list page highlights the saved row through
+    highlightParam: 'highlight'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -317,6 +336,15 @@ kit.core.setup = function(wizard, config) {
             var reviewStep = wizardConfig.stepCount - 1;
             $('#' + idPrefix + '-steps .wizard-step[data-step="' + reviewStep + '"]').prop('hidden', true);
         }
+
+        // .. the spinner a running save turns goes last in the footer's middle, which puts
+        // it to the right of the button a save is asked for through - Next on a create,
+        // Save on an edit - and it is positioned out of the flow, so the buttons stay put ..
+        var spinner = $('<img>', {
+            'src': wizardConfig.spinnerSrc,
+            'class': wizardConfig.spinnerClass
+        });
+        $('#' + idPrefix + ' .wizard-footer-center').append(spinner);
 
         // .. the name badge follows the name as the user types ..
         wizard.field(wizardConfig.nameField).on('input', function() {
@@ -761,6 +789,35 @@ kit.core.setup = function(wizard, config) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    // Whether a save is running - the spinner after the button that asked for it turns
+    // and every footer button is disabled, so a second click cannot post the form twice.
+    wizard._setSaving = function(isSaving) {
+
+        var wizardConfig = wizard.config;
+        var spinner = $('#' + idPrefix + ' .wizard-footer-center .' + wizardConfig.spinnerClass);
+
+        spinner.toggleClass(wizardConfig.spinnerActiveClass, isSaving);
+
+        $('#' + idPrefix + '-back, #' + idPrefix + '-next, #' + idPrefix + '-save').prop('disabled', isSaving);
+
+        // Back has nothing behind it on the first step and stays disabled there
+        if(!isSaving && wizard.state.currentStep === 0) {
+            $('#' + idPrefix + '-back').prop('disabled', true);
+        }
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Where a save that went through leaves for - the list page the form closes to,
+    // pointed at the saved row so that page highlights it.
+    wizard._redirectAfterSave = function(savedId) {
+
+        var url = wizard.state.listUrl + '&' + wizard.config.highlightParam + '=' + encodeURIComponent(savedId);
+        window.location.href = url;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
     wizard.save = function() {
 
         var wizardConfig = wizard.config;
@@ -797,9 +854,14 @@ kit.core.setup = function(wizard, config) {
             $(this).val($(this).val().trim());
         });
 
-        // .. and the save itself says how it went beside the button that asked for it,
-        // in the very words and the very tooltip an inline edit answers with, a failure
-        // keeping the whole of what came back one click away.
+        // .. while the save runs, the spinner after the button that asked for it turns ..
+        var startedAt = Date.now();
+        wizard._setSaving(true);
+
+        // .. a save that went through leaves for the list page with the saved row
+        // highlighted, once the spinner has been on screen for its minimum, and one
+        // that did not says so beside the button in the very tooltip an inline edit
+        // answers with, keeping the whole of what came back one click away.
         var inlineConfig = $.fn.zato.inline_edit.config;
 
         $.fn.zato.action_runner.run({
@@ -809,21 +871,43 @@ kit.core.setup = function(wizard, config) {
             placement: inlineConfig.confirmation_placement,
             spinner_label: inlineConfig.saving_label,
             details_modal_title: inlineConfig.details_modal_title,
-            show_delay_ms: inlineConfig.saving_lead_in_ms,
+            show_spinner: false,
 
-            // The endpoint answers with JSON when it saved and with the exception when it did not
+            // The endpoint answers with JSON carrying the saved object's id when it saved
+            // and with the exception when it did not
             parse: function(jqXHR) {
 
                 var isHttpOk = (jqXHR.status >= 200 && jqXHR.status < 300);
+                var savedId = '';
+
+                if(isHttpOk) {
+                    savedId = JSON.parse(jqXHR.responseText).id;
+                }
 
                 return {
                     is_success: isHttpOk,
+                    saved_id: savedId,
                     label: isHttpOk ? inlineConfig.saved_label : inlineConfig.error_label,
                     details_title: inlineConfig.error_label,
                     details_body: jqXHR.responseText,
                     details_lexer: '',
                     status_code: jqXHR.status
                 };
+            },
+
+            on_success: function(instance, result) {
+
+                // The spinner stays until its minimum has passed, so a fast save does not flash it
+                var elapsed = Date.now() - startedAt;
+                var remaining = Math.max(0, wizardConfig.saveSpinnerMinMs - elapsed);
+
+                setTimeout(function() {
+                    wizard._redirectAfterSave(result.saved_id);
+                }, remaining);
+            },
+
+            on_error: function() {
+                wizard._setSaving(false);
             }
         });
     };

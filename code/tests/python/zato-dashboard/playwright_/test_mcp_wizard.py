@@ -273,7 +273,7 @@ def _click_review_edit(page:'Page', group_label:'str') -> 'None':
 
 def _attempt_refused_save(page:'Page') -> 'None':
     """ Clicks Save on the review of a create that cannot go through and asserts
-    that no confirmation shows and the wizard stays on its page.
+    that the browser is not sent to the list and the wizard stays on its page.
     """
 
     wizard_page.go_to_step(page, wizard_page.Review_Step)
@@ -281,8 +281,7 @@ def _attempt_refused_save(page:'Page') -> 'None':
 
     page.wait_for_timeout(_Refusal_Wait)
 
-    saved_visible = page.is_visible(f'text="{wizard_page.Saved_Label}"')
-    assert not saved_visible, 'Expected no save confirmation for a refused save'
+    assert wizard_page.is_on_wizard_page(page), f'Expected no redirect for a refused save, got: {page.url}'
 
     wizard_visible = page.is_visible('#mcp-wizard')
     assert wizard_visible, 'Expected the wizard to remain open after a refused save'

@@ -136,5 +136,22 @@ class FileTransferItem:
         return '<{} at {}, full_path:`{}`, size:`{}`, conn_name:`{}`, schedule_name:`{}`>'.format(
             class_name, self_id, self.full_path, self.size, self.conn_name, self.schedule_name)
 
+    def to_dict(self) -> 'stranydict':
+        """ The item as a JSON-friendly dict, which is what lets a service return the item it received
+        as its response - the file's bytes become text, size is still the byte count.
+        """
+        out:'stranydict' = {
+            'conn_type': self.conn_type,
+            'conn_name': self.conn_name,
+            'schedule_name': self.schedule_name,
+            'directory': self.directory,
+            'file_name': self.file_name,
+            'full_path': self.full_path,
+            'size': self.size,
+            'last_modified': self.last_modified,
+            'data': self.data.decode('utf8', 'replace'),
+        }
+        return out
+
 # ################################################################################################################################
 # ################################################################################################################################
