@@ -33,6 +33,7 @@ from zato.admin.web.forms.scheduler import IntervalBasedSchedulerJobForm, OneTim
 from zato.common.api import SCHEDULER, TRACE1
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
+from zato.common.util.interval import interval_text
 # Bunch
 from zato.common.ext.bunch import Bunch
 from zato.common.util.api import pprint
@@ -44,7 +45,7 @@ from zato.common.py23_.past.builtins import unicode
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anylist, intlist, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,6 +57,9 @@ default_timezone = ''
 default_max_execution_time_ms = ''
 default_last_run_utc = ''
 default_last_duration_ms = ''
+
+# The interval fields of an interval-based job's form, in the order interval_text takes them.
+_interval_field_names = ('weeks', 'days', 'hours', 'minutes', 'seconds')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -85,24 +89,6 @@ def _one_time_job_def(user_profile, start_date):
     return 'Execute once on {0} at {1}'.format(
         from_utc_to_user(start_date, user_profile, 'date'),
         from_utc_to_user(start_date, user_profile, 'time'))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _interval_text(weeks:'any_', days:'any_', hours:'any_', minutes:'any_', seconds:'any_') -> 'str':
-    """ Returns a human-readable interval only, e.g. "10 seconds" or "3 hours 5 minutes".
-    """
-    parts = []
-
-    for name, value in (('week',weeks), ('day',days), ('hour',hours), ('minute',minutes), ('second',seconds)):
-        if value:
-            # Values arriving from POST parameters are strings, hence the conversion.
-            value = int(value)
-            suffix = '' if value == 1 else 's'
-            parts.append(f'{value} {name}{suffix}')
-
-    out = ' '.join(parts)
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -230,6 +216,24 @@ def _get_create_edit_interval_based_message(user_profile, cluster, params, form_
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _interval_fields_from_params(params:'any_', form_prefix:'str') -> 'intlist':
+    """ Returns the weeks, days, hours, minutes and seconds of an interval-based job's form, in that order.
+    """
+    out:'intlist' = []
+
+    # A field left empty on the form counts as zero.
+    for name in _interval_field_names:
+        if value := params.get(form_prefix + name):
+            value = int(value)
+        else:
+            value = 0
+        out.append(value)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _create_one_time(client, user_profile, cluster, params):
     """ Creates a one_time scheduler job.
     """
@@ -254,13 +258,8 @@ def _create_interval_based(client, user_profile, cluster, params):
     response = client.invoke('zato.scheduler.job.create', input_dict)
     logger.debug('Successfully created an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
-    weeks = params.get('create-interval_based-weeks')
-    days = params.get('create-interval_based-days')
-    hours = params.get('create-interval_based-hours')
-    minutes = params.get('create-interval_based-minutes')
-    seconds = params.get('create-interval_based-seconds')
-
-    definition = _interval_text(weeks, days, hours, minutes, seconds)
+    interval_fields = _interval_fields_from_params(params, create_interval_based_prefix+'-')
+    definition = interval_text(*interval_fields)
 
     return {'id': response.data.id, 'definition_text':definition}
 
@@ -290,13 +289,8 @@ def _edit_interval_based(client, user_profile, cluster, params):
     client.invoke('zato.scheduler.job.edit', input_dict)
     logger.debug('Successfully updated an interval_based job, cluster.id:`%s`, params:`%s`', cluster.id, params)
 
-    weeks = params.get('edit-interval_based-weeks')
-    days = params.get('edit-interval_based-days')
-    hours = params.get('edit-interval_based-hours')
-    minutes = params.get('edit-interval_based-minutes')
-    seconds = params.get('edit-interval_based-seconds')
-
-    definition = _interval_text(weeks, days, hours, minutes, seconds)
+    interval_fields = _interval_fields_from_params(params, edit_interval_based_prefix+'-')
+    definition = interval_text(*interval_fields)
 
     return {'definition_text':definition, 'id':params['edit-interval_based-id']}
 
@@ -348,7 +342,7 @@ def index(req):
                     definition_text=_one_time_job_def(req.zato.user_profile, start_date)
 
                 elif job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
-                    definition_text = _interval_text(
+                    definition_text = interval_text(
                         job_elem.weeks, job_elem.days, job_elem.hours, job_elem.minutes, job_elem.seconds)
 
                     weeks = job_elem.weeks
@@ -488,6 +482,24 @@ def execute(req, job_id, cluster_id):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_last_run_by_id(req:'any_', id_list:'anylist') -> 'stranydict':
+    """ Returns a mapping of job IDs to their last run details, one invocation covering every ID given.
+    """
+    response = req.zato.client.invoke('zato.scheduler.job.get-last-run-list', {'id_list': id_list})
+
+    # The keys are strings so that JavaScript and Django templates can look them up as they are.
+    out:'stranydict' = {}
+    for item in response.data['items']:
+        job_id = str(item['id'])
+        out[job_id] = {
+            'last_run_utc': item['last_run_utc'],
+            'last_duration_ms': item['last_duration_ms'],
+        }
+
+    return out
+
+# ################################################################################################################################
+
 @method_allowed('POST')
 def get_last_run_list(req:'any_') -> 'HttpResponse':
     """ Returns a mapping of job IDs to their last run times for the jobs given on input.
@@ -498,16 +510,8 @@ def get_last_run_list(req:'any_') -> 'HttpResponse':
     else:
         id_list = []
 
-    # .. one invocation covers all of them ..
-    response = req.zato.client.invoke('zato.scheduler.job.get-last-run-list', {'id_list': id_list})
-
-    # .. and the response maps each ID to its last run details, keyed by strings for easy lookups in JavaScript.
-    last_run_by_id = {}
-    for item in response.data['items']:
-        last_run_by_id[str(item['id'])] = {
-            'last_run_utc': item['last_run_utc'],
-            'last_duration_ms': item['last_duration_ms'],
-        }
+    # .. and one call covers all of them.
+    last_run_by_id = get_last_run_by_id(req, id_list)
 
     out = dumps(last_run_by_id)
     return HttpResponse(out, content_type='application/json')

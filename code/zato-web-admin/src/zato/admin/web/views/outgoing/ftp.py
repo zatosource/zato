@@ -23,7 +23,9 @@ from django.urls import reverse
 from zato.admin.web.forms.outgoing.ftp import CommandShellForm, CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection, \
      SKIP_VALUE, slugify
-from zato.common.api import GENERIC
+from zato.admin.web.views.outgoing.file_transfer_schedule import get_connection_command_shell_url, \
+     get_connection_last_run_list, get_schedules, get_schedules_by_conn_id, set_connection_last_run
+from zato.common.api import FileTransfer, GENERIC
 from zato.common.json_internal import dumps
 
 # ################################################################################################################################
@@ -47,6 +49,9 @@ _fields_optional = 'is_active', 'host', 'port', 'username', 'use_ssl', 'should_s
 # The connection's fields that a checkbox stands for, which is what turns their input into a boolean.
 _fields_checkbox = 'use_ssl', 'should_store_content'
 
+# How the schedule pages know this transfer type.
+_transfer_type = 'ftp'
+
 # What the command shell shows in an output pane that the command left empty.
 Command_Shell_Empty_Output = '(None)'
 
@@ -69,8 +74,19 @@ class Index(_Index):
 
     input_required = 'cluster_id', 'type_'
     output_required = ('id',) + _fields_required
-    output_optional = _fields_optional
+    output_optional = _fields_optional + (FileTransfer.Scheduler.Schedules_Field,)
     output_repeated = True
+
+    def on_before_append_item(self, item:'any_') -> 'any_':
+        schedules = get_schedules(item)
+        item.scheduler_schedule_count = len(schedules)
+        item.command_shell_url = get_connection_command_shell_url(
+            self.req, _transfer_type, item.id, item.name, schedules)
+        return item
+
+    def handle_return_data(self, return_data:'stranydict') -> 'stranydict':
+        set_connection_last_run(self.req, self.items)
+        return return_data
 
     def handle(self) -> 'stranydict':
         out = {
@@ -111,8 +127,17 @@ class _CreateEdit(CreateEdit):
         return value
 
     def post_process_return_data(self, return_data:'stranydict') -> 'stranydict':
-        # The Schedules link of a newly added row needs the connection's name in its URL form.
+        # The Scheduler link of a newly added row needs the connection's name in its URL form.
         return_data['name_slug'] = slugify(return_data['name'])
+        schedules = get_schedules_by_conn_id(self.req, return_data['id'])
+        return_data['scheduler_schedule_count'] = len(schedules)
+        return_data['command_shell_url'] = get_connection_command_shell_url(
+            self.req, _transfer_type, return_data['id'], return_data['name'], schedules)
+
+        last_run_list = get_connection_last_run_list(self.req, [schedules])
+        last_run = last_run_list[0]
+        return_data.update(last_run)
+
         return return_data
 
     def success_message(self, item:'any_') -> 'str':
@@ -178,6 +203,12 @@ def command_shell(req:'any_', id:'str', cluster_id:'str', name_slug:'str') -> 'T
             'url': f'{item_url}?name={item_name_encoded}',
         })
 
+    # A link into the shell, e.g. from a schedule, may say what command to start with.
+    if command := req.GET.get('command'):
+        form = CommandShellForm(initial_command=command)
+    else:
+        form = CommandShellForm()
+
     return_data = {
         'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
@@ -186,7 +217,7 @@ def command_shell(req:'any_', id:'str', cluster_id:'str', name_slug:'str') -> 'T
         'name_slug': name_slug,
         'conn_name': req.GET['name'],
         'connection_list': connection_list,
-        'form':CommandShellForm(),
+        'form': form,
         }
 
     out = TemplateResponse(req, 'zato/outgoing/ftp-command-shell.html', return_data)

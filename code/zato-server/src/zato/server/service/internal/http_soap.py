@@ -28,7 +28,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool, utcnow
 from zato.common.util.channel import channel_security_key, find_channel_collision, find_channel_conflict, \
      get_channel_collision_items, validate_channel_url_path
-from zato.common.util.imap_scheduler import interval_from_unit
+from zato.common.util.interval import interval_from_unit
 from zato.common.util.rest_invocation import parse_param_rows, update_linked_job_fields, validate_jsonata, validate_xpath
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs

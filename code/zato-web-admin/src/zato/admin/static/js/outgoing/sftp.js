@@ -13,7 +13,7 @@ $.fn.zato.data_table.SFTP = new Class({
 // /////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
-    $('#data-table').tablesorter();
+    $.fn.zato.time_ago.init_table('#data-table');
     $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.SFTP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.sftp.data_table.new_row;
@@ -103,18 +103,18 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
     // 1
-    row += String.format('<td>{0}</td>', item.name);
+    row += String.format('<td class="text-left">{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td class="zato-time-ago" data-time-ago-id="{0}" data-time-utc="{1}" data-duration-ms="{2}"></td>',
+        data.last_run_job_ids, data.last_run_utc, data.last_duration_ms);
     row += String.format('<td>{0}</td>', item.address ? item.address : $.fn.zato.empty_value);
 
     // 2
     row += String.format('<td>{0}</td>', item.username ? item.username : $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>',
-        String.format("<a href=\"./command-shell/{0}/cluster/{1}/{2}/?name={3}\">Command shell</a>",
-        item.id, item.cluster_id, data.name_slug, item.name));
-    row += String.format('<td>{0}</td>',
-        String.format("<a href=\"/zato/outgoing/file-transfer/schedules/sftp/{0}/cluster/{1}/{2}/?name={3}\">Schedules</a>",
-        item.id, item.cluster_id, data.name_slug, item.name));
+        String.format('<a href="/zato/outgoing/file-transfer/schedules/sftp/{0}/cluster/{1}/{2}/?name={3}">{4}</a>',
+        item.id, item.cluster_id, data.name_slug, item.name, data.scheduler_schedule_count));
+    row += String.format('<td><a href="{0}">Command shell</a></td>', data.command_shell_url);
     row += String.format('<td><a href="/zato/audit-log/?source=file-outgoing&object_name={0}&cluster={1}">Audit log</a></td>',
         encodeURIComponent(item.name), item.cluster_id);
 

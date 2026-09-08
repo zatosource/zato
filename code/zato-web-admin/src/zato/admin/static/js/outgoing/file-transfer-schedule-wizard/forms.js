@@ -42,12 +42,8 @@ $.fn.zato.wizard_kit.forms.setup(wizard, {
             ]]
         },
 
-        'run_every': {
-            title: 'How often to look',
-            pages: [[
-                {field: 'run_every', label: 'Run every', kind: 'number', unitField: 'run_unit', width: '220px'}
-            ]]
-        },
+        // Shared with the schedule list
+        'run_every': $.fn.zato.outgoing.file_transfer.interval.descriptor,
 
         'arrival_window': {
             title: 'When to expect a file',

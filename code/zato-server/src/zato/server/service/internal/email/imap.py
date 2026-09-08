@@ -22,7 +22,8 @@ from zato.common.defaults import default_cluster_id
 from zato.common.exception import BadRequest
 from zato.common.odb.model import IMAP, Job
 from zato.common.odb.query import email_imap_list
-from zato.common.util.imap_scheduler import interval_from_unit, update_imap_scheduler_fields
+from zato.common.util.imap_scheduler import update_imap_scheduler_fields
+from zato.common.util.interval import interval_from_unit
 from zato.common.util.sql import parse_instance_opaque_attr
 from zato.server.service import AsIs, Boolean
 from zato.server.service.internal import AdminService, ChangePasswordBase

@@ -1092,6 +1092,12 @@ a.wizard-cancel {
     box-sizing: border-box;
 }
 
+/* A popover no wider than its content */
+.wizard-tippy-form.wizard-tippy-fit {
+    min-width: 0;
+    width: max-content;
+}
+
 /* The fields under the popup header, on the same sandy panel
    the IDE's right-click menus use for their action lists */
 .wizard-tippy-body {

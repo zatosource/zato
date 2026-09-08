@@ -111,7 +111,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
-                        <th style="text-align:center"><a href="#">Active</a></th>
+                        <th class="text-center"><a href="#">Active</a></th>
                         <th>Interval</th>
                         <th class="zato-time-ago-header"><a href="#">Last run</a></th>
                         <th><a href="#">Service</a></th>
@@ -139,9 +139,9 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.edit_name('{{ job.job_type }}', '{{ job.id }}', this)">{{ job.name }}</a></td>
-                        <td style="text-align:center"><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.toggle_active('{{ job.job_type }}', '{{ job.id }}', this)">{{ job.is_active|yesno:"Yes,No" }}</a></td>
+                        <td class="text-center"><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.toggle_active('{{ job.job_type }}', '{{ job.id }}', this)">{{ job.is_active|yesno:"Yes,No" }}</a></td>
                         <td>{% if job.job_type == 'interval_based' %}<a href="javascript:void(0)" onclick="$.fn.zato.scheduler.edit_interval('{{ job.id }}', this)">{{ job.definition_text|safe }}</a>{% else %}{{ job.definition_text|safe }}{% endif %}</td>
-                        <td class="zato-time-ago" data-time-utc="{{ job.last_run_utc }}" data-duration-ms="{{ job.last_duration_ms }}"></td>
+                        <td class="zato-time-ago" data-time-ago-id="{{ job.id }}" data-time-utc="{{ job.last_run_utc }}" data-duration-ms="{{ job.last_duration_ms }}"></td>
                         <td><a href="{% url "service-ide" "service" job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
                         <td><a href="{% url "scheduler-job-detail" job.id %}?cluster={{ cluster_id }}&range={{ default_time_range_minutes }}&outcomes=all">Audit log</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.execute('{{ job.id }}', this)">Execute</a></td>

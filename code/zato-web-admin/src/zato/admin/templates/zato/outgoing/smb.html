@@ -38,12 +38,13 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
+            '_last_run',
             '_host',
 
             {% comment %} 2 {% endcomment %}
             '_port',
             '_username',
-            '_schedules',
+            '_scheduler',
             '_audit_log',
 
             {% comment %} 3 {% endcomment %}
@@ -85,21 +86,22 @@
             <a href="javascript:$.fn.zato.outgoing.smb.create()">Create a new outgoing SMB connection</a>
         </div>
 
-            <table class="zato-table" id="data-table">
+            <table class="zato-table center-all-columns" id="data-table">
                 <thead>
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
 
                         {% comment %} 1 {% endcomment %}
-                        <th><a href="#">Name</a></th>
+                        <th class="text-left"><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        <th class="zato-time-ago-header"><a href="#">Last run</a></th>
                         <th><a href="#">Host</a></th>
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Port</a></th>
                         <th><a href="#">Username</a></th>
-                        <th>&nbsp;</th>
+                        <th>Scheduler</th>
                         <th>&nbsp;</th>
 
                         {% comment %} 3 {% endcomment %}
@@ -127,14 +129,15 @@
                         <td class="impexp"><input type="checkbox" /></td>
 
                         {% comment %} 1 {% endcomment %}
-                        <td>{{ item.name }}</td>
+                        <td class="text-left">{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td class="zato-time-ago" data-time-ago-id="{{ item.last_run_job_ids }}" data-time-utc="{{ item.last_run_utc }}" data-duration-ms="{{ item.last_duration_ms }}"></td>
                         <td>{{ item.host|default:'<span class="form_hint">---</span>' }}</td>
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.port|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.username|default:'<span class="form_hint">---</span>' }}</td>
-                        <td><a href="{% url "out-file-transfer-schedules" 'smb' item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">Schedules</a></td>
+                        <td><a href="{% url "out-file-transfer-schedules" 'smb' item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">{{ item.scheduler_schedule_count }}</a></td>
                         <td><a href="/zato/audit-log/?source=file-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
 
                         {% comment %} 3 {% endcomment %}
@@ -156,7 +159,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='18'>No results</td>
+                        <td colspan='19'>No results</td>
                     </tr>
                 {% endif %}
 

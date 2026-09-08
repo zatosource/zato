@@ -18,7 +18,7 @@ from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericConn, Job
 from zato.common.util.file_transfer_scheduler import build_job_extra, get_job_name, get_schedule_list, \
     new_schedule_id, set_schedule_list
-from zato.common.util.imap_scheduler import interval_from_unit
+from zato.common.util.interval import interval_from_unit
 from zato.common.util.sql import parse_instance_opaque_attr
 from zato.server.service import Boolean, Int
 from zato.server.service.internal import AdminService

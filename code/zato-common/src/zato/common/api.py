@@ -608,6 +608,15 @@ class SCHEDULER:
         Active = 'Active'
         Paused = 'Paused'
 
+    class Interval_Unit:
+        """ The units an interval-based job's period can be expressed in.
+        """
+        Seconds = 'seconds'
+        Minutes = 'minutes'
+        Hours = 'hours'
+        Days = 'days'
+        Weeks = 'weeks'
+
     class Env:
 
         # Basic information about where the scheduler can be found

@@ -29,7 +29,8 @@ from zato.common.defaults import default_cluster_id
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service as ServiceModel
 from zato.common.util.file_transfer_scheduler import delete_schedule_entry, update_schedule_job_fields
-from zato.common.util.imap_scheduler import clear_imap_scheduler_fields, unit_from_interval, update_imap_scheduler_fields
+from zato.common.util.imap_scheduler import clear_imap_scheduler_fields, update_imap_scheduler_fields
+from zato.common.util.interval import unit_from_interval
 from zato.common.util.rest_invocation import clear_linked_job_fields, update_linked_job_fields
 from zato.common.typing_ import any_, anylist, anytuple
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs

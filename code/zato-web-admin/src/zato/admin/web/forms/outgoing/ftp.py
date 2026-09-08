@@ -48,9 +48,16 @@ class EditForm(CreateForm):
 # ################################################################################################################################
 # ################################################################################################################################
 
+# What the shell starts with unless a link into it, e.g. from a schedule, says otherwise
+_default_command = 'ls .'
+
 class CommandShellForm(forms.Form):
 
-    data = forms.CharField(widget=forms.Textarea(), initial='ls .')
+    data = forms.CharField(widget=forms.Textarea())
+
+    def __init__(self, initial_command:'str'=_default_command) -> 'None':
+        super(CommandShellForm, self).__init__()
+        self.fields['data'].initial = initial_command
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -16,7 +16,7 @@ from zato.cli.enmasse.util import preprocess_item
 from zato.common.api import EMAIL as EMail_Common, SCHEDULER
 from zato.common.odb.model import IMAP, Job, to_json
 from zato.common.odb.query import email_imap_list
-from zato.common.util.imap_scheduler import interval_from_unit
+from zato.common.util.interval import interval_from_unit
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################

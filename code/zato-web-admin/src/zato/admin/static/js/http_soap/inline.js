@@ -81,9 +81,6 @@ $.fn.zato.http_soap.inline.config = {
     // What a cell with no security definition says - clicking it opens the picker
     empty_security_label: 'Click to add',
 
-    // How long a confirmation takes to fade once it has been read
-    confirmation_fade_ms: 200,
-
     // What the flag reads as, in the order a boolean puts them
     flag_labels: ['No', 'Yes']
 };
@@ -107,27 +104,7 @@ $.fn.zato.http_soap.inline.entity_type = function() {
 
 // Says beside a row that it went through, for as long as that takes to read
 $.fn.zato.http_soap.inline.flash = function(link, message) {
-
-    var config = $.fn.zato.inline_edit.config;
-
-    var instance = tippy(link, {
-        content: message,
-        theme: 'dark',
-        trigger: 'manual',
-        placement: config.confirmation_placement,
-        hideOnClick: false,
-        allowHTML: false
-    });
-
-    instance.show();
-
-    // The tooltip leaves nothing of itself behind
-    setTimeout(function() {
-        instance.hide();
-        setTimeout(function() {
-            instance.destroy();
-        }, $.fn.zato.http_soap.inline.config.confirmation_fade_ms);
-    }, config.saved_hide_ms);
+    $.fn.zato.inline_edit.flash(link, message);
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -136,47 +113,17 @@ $.fn.zato.http_soap.inline.flash = function(link, message) {
 $.fn.zato.http_soap.inline.save = function(link, id, data, on_saved, saved_label) {
 
     var inline = $.fn.zato.http_soap.inline;
-    var config = $.fn.zato.inline_edit.config;
-    var url = inline.config.inline_edit_url + id + '/';
 
     // The one endpoint serves all four listings, told apart by these two
     data['connection'] = inline.config.connection;
     data['transport'] = inline.config.transport;
 
-    $.fn.zato.action_runner.run({
-        link_elem: link,
-        url: url,
+    $.fn.zato.inline_edit.post({
+        link: link,
+        url: inline.config.inline_edit_url + id + '/',
         data: data,
-        spinner_label: config.saving_label,
-        details_modal_title: config.details_modal_title,
-        show_delay_ms: config.saving_lead_in_ms,
-
-        // The endpoint answers with JSON when it saved and with an error page when it did not
-        parse: function(jqXHR) {
-
-            var is_http_ok = (jqXHR.status >= 200 && jqXHR.status < 300);
-
-            return {
-                is_success: is_http_ok,
-                label: is_http_ok ? saved_label : config.error_label,
-                details_title: config.error_label,
-                details_body: jqXHR.responseText,
-                details_lexer: '',
-                status_code: jqXHR.status,
-                jqXHR: jqXHR
-            };
-        },
-
-        on_success: function(instance, result) {
-
-            // The spinner makes way for the confirmation
-            instance.hide();
-            instance.destroy();
-
-            on_saved(JSON.parse(result.jqXHR.responseText));
-
-            $.fn.zato.http_soap.inline.flash(link, saved_label);
-        }
+        on_saved: on_saved,
+        saved_label: saved_label
     });
 };
 
