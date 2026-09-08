@@ -15,11 +15,22 @@
  *           return {is_success, label, details_title, details_body, details_lexer, status_code};
  *       },
  *       details_modal_title: 'Response',
- *       placement: 'left'
+ *       placement: 'left',
+ *       show_spinner: true,
+ *       on_success: function(instance, r) { ... },
+ *       on_error: function(instance, r) { ... }
  *   });
  *
  *   Every parse function returns the full shape above - details_lexer is the Pygments
  *   lexer the details highlight with, an empty string meaning server-side auto-detection.
+ *
+ *   show_spinner is optional and true by default - with false, the tooltip is not shown
+ *   before the response arrives, so a caller showing its own indicator has the tooltip
+ *   report the outcome only.
+ *
+ *   on_success and on_error are optional - on_success replaces the OK tooltip altogether,
+ *   on_error runs before the error tooltip is rendered, e.g. to take the caller's own
+ *   indicator down, the tooltip with its Show details link still following.
  *
  *   $.fn.zato.action_runner.close_all();
  */
@@ -300,6 +311,18 @@ $.fn.zato.action_runner = {
             on_success = opts.on_success;
         }
 
+        var on_error = null;
+        if('on_error' in opts) {
+            on_error = opts.on_error;
+        }
+
+        // The caller may show an indicator of its own, in which case the tooltip
+        // stays hidden until there is an outcome to report
+        var show_spinner = true;
+        if('show_spinner' in opts) {
+            show_spinner = opts.show_spinner;
+        }
+
         console.log('[action_runner] run: url=' + url + ' data_length=' + data.length + ' has_on_success=' + !!on_success);
         console.log('[action_runner] run: link_elem=' + (link_elem ? link_elem.tagName + '.' + link_elem.className : 'null'));
         console.log('[action_runner] run: tippy available=' + (typeof tippy !== 'undefined'));
@@ -351,7 +374,10 @@ $.fn.zato.action_runner = {
         // A lead-in delay means the spinner shows up only for requests that actually take
         // a while - anything that completes sooner never flashes it at all.
         var show_timer = null;
-        if(show_delay_ms) {
+        if(!show_spinner) {
+            // The caller has its own indicator on screen - nothing to show yet
+        }
+        else if(show_delay_ms) {
             show_timer = setTimeout(function() {
                 show_timer = null;
                 instance.show();
@@ -381,6 +407,9 @@ $.fn.zato.action_runner = {
                     _render_success(instance, r.label);
                 }
             } else {
+                if(on_error) {
+                    on_error(instance, r);
+                }
                 instance.show();
                 _details_seq += 1;
                 var details_id = 'action-details-' + _details_seq + '-' + Date.now();

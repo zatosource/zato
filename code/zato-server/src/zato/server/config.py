@@ -31,8 +31,9 @@ from zato.common.util.sql import ElemsWithOpaqueMaker
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist, stranydict
+    from zato.common.typing_ import anylist, callnone, stranydict
     anylist = anylist
+    callnone = callnone
     stranydict = stranydict
 
 # ################################################################################################################################
@@ -207,8 +208,11 @@ class ConfigDict:
 # ################################################################################################################################
 
     @staticmethod
-    def from_query(name, query_data, impl_class=Bunch, item_class=Bunch, list_config=False, decrypt_func=None, drop_opaque=False):
-        """ Return a new ConfigDict with items taken from an SQL query.
+    def from_query(name, query_data, impl_class=Bunch, item_class=Bunch, list_config=False, decrypt_func=None, drop_opaque=False,
+        key_func:'callnone'=None):
+        """ Return a new ConfigDict with items taken from an SQL query. Items are keyed by their name unless
+        key_func is given, which is for tables whose names are unique only together with another column,
+        e.g. generic connections, where the same name may be reused across types.
         """
         config_dict = ConfigDict(name)
         config_dict._impl = impl_class()
@@ -218,7 +222,9 @@ class ConfigDict:
 
             for item in query:
 
-                if hasattr(item, 'name'):
+                if key_func:
+                    item_name = key_func(item)
+                elif hasattr(item, 'name'):
                     item_name = item.name
                 elif hasattr(item, 'topic_name'):
                     item_name = item.topic_name

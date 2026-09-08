@@ -981,11 +981,10 @@ class TestMCPGatewayCreate:
         wizard_page.go_to_step(page, wizard_page.Review_Step)
         page.click('#mcp-wizard-next')
 
-        # .. no save confirmation shows and the wizard stays on its page ..
+        # .. the browser is not sent to the list and the wizard stays on its page ..
         page.wait_for_timeout(2000)
 
-        saved_visible = page.is_visible(f'text="{wizard_page.Saved_Label}"')
-        assert not saved_visible, 'Expected no save confirmation for duplicate name'
+        assert wizard_page.is_on_wizard_page(page), f'Expected no redirect for duplicate name, got: {page.url}'
 
         wizard_visible = page.is_visible('#mcp-wizard')
         assert wizard_visible, 'Expected the wizard to remain open for duplicate name'
@@ -1021,11 +1020,10 @@ class TestMCPGatewayCreate:
         wizard_page.go_to_step(page, wizard_page.Review_Step)
         page.click('#mcp-wizard-next')
 
-        # .. no save confirmation shows and the wizard stays on its page ..
+        # .. the browser is not sent to the list and the wizard stays on its page ..
         page.wait_for_timeout(2000)
 
-        saved_visible = page.is_visible(f'text="{wizard_page.Saved_Label}"')
-        assert not saved_visible, 'Expected no save confirmation for duplicate url_path'
+        assert wizard_page.is_on_wizard_page(page), f'Expected no redirect for duplicate url_path, got: {page.url}'
 
         wizard_visible = page.is_visible('#mcp-wizard')
         assert wizard_visible, 'Expected the wizard to remain open for duplicate url_path'

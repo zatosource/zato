@@ -56,6 +56,12 @@ _Refused_Log_Patterns = (
     'zato.admin.web.views.outgoing.file_transfer_schedule',
 )
 
+# Where a save that went through lands - the schedules list, pointed at the saved row
+_Saved_Redirect_Pattern = '**/zato/outgoing/file-transfer/schedules/**highlight=*'
+
+# The row the list marks as the one just saved
+_Highlighted_Row_Selector = '#data-table tbody tr.updated'
+
 # How long to wait for a dialog, a popup or a wizard element, in milliseconds
 _Dialog_Timeout = 5000
 
@@ -259,24 +265,24 @@ def _go_to_step(page:'Page', step_index:'int') -> 'None':
 
 def _wizard_save(page:'Page') -> 'None':
     """ Saves from the button the current action ends in - Save on an edit, the last Next
-    on a create - and waits for the tooltip saying the save went through.
+    on a create - and waits for the redirect a save that went through makes, to the schedules
+    list with the saved row highlighted.
     """
     if page.is_visible('#file-transfer-wizard-save'):
         page.click('#file-transfer-wizard-save')
     else:
         page.click('#file-transfer-wizard-next')
 
-    _ = page.wait_for_selector('.tippy-box:has-text("OK, saved")', timeout=_Submit_Timeout)
+    _ = page.wait_for_url(_Saved_Redirect_Pattern, timeout=_Submit_Timeout)
+    _ = page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector(_Highlighted_Row_Selector, state='visible', timeout=_Dialog_Timeout)
 
 # ################################################################################################################################
 
 def _wizard_finish(page:'Page') -> 'None':
-    """ Saves and then closes the form.
+    """ Saves, which lands back on the schedules list on its own.
     """
     _wizard_save(page)
-
-    page.click('#file-transfer-wizard-cancel')
-    _ = page.wait_for_selector('#data-table', state='visible')
 
 # ################################################################################################################################
 

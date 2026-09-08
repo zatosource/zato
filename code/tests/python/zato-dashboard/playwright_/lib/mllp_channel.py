@@ -32,6 +32,15 @@ if 0:
 # The page these helpers drive - where the outgoing connections are is mllp_outconn's own
 Channel_Page_Url = '/zato/channel/hl7/mllp/?cluster=1&type_=channel-hl7-mllp'
 
+# Where a save that went through lands - the channel list, pointed at the saved row
+Saved_Redirect_Pattern = '**/zato/channel/hl7/mllp/**highlight=*'
+
+# The row the list marks as the one just saved
+Highlighted_Row_Selector = '#data-table tbody tr.updated'
+
+# How long a save is given to redirect to the list, in milliseconds
+Save_Timeout = 10000
+
 # Where the channels listen
 Host = '127.0.0.1'
 
@@ -190,18 +199,24 @@ def create_channel(
     page.click('#mllp-wizard-next')
     time.sleep(0.2)
 
-    # .. step 3 - finish, which posts the form and says so where it was asked for, the page
-    # it was saved from staying open, so the list is gone back to on its own ..
+    # .. step 3 - finish, which posts the form and, once saved, lands on the list with
+    # the new row highlighted ..
     page.click('#mllp-wizard-next')
-    _ = page.wait_for_selector('.tippy-box:has-text("OK, saved")', timeout=10000)
-
-    page.click('#mllp-wizard-cancel')
-    _ = page.wait_for_url('**/zato/channel/hl7/mllp/**', timeout=10000)
-    _ = page.wait_for_selector('#data-table', state='visible')
+    wait_until_saved(page)
 
     # .. and the new channel is on the list.
     row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')
     assert row is not None, f'Channel "{name}" should be on the list after the wizard'
+
+# ################################################################################################################################
+
+def wait_until_saved(page:'Page') -> 'None':
+    """ Waits for the redirect a wizard save that went through makes - to the channel list,
+    with the saved row wearing the just-updated look.
+    """
+    _ = page.wait_for_url(Saved_Redirect_Pattern, timeout=Save_Timeout)
+    _ = page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector(Highlighted_Row_Selector, state='visible', timeout=Save_Timeout)
 
 # ################################################################################################################################
 
@@ -218,14 +233,10 @@ def save_channel(page:'Page', base_url:'str', name:'str') -> 'None':
     page.click(f'{row_selector} a:text-is("Edit")')
     _ = page.wait_for_selector('#mllp-wizard', state='visible')
 
-    # An edit is saved from the step it is on, every step being in the form at once
+    # An edit is saved from the step it is on, every step being in the form at once,
+    # and the save lands back on the list with the row highlighted
     page.click('#mllp-wizard-save')
-    _ = page.wait_for_selector('.tippy-box:has-text("OK, saved")', timeout=10000)
-
-    # The wizard page has no data table of its own, so waiting for one is waiting for
-    # the list page closing the form goes back to
-    page.click('#mllp-wizard-cancel')
-    _ = page.wait_for_selector('#data-table', state='visible', timeout=10000)
+    wait_until_saved(page)
 
     row = page.query_selector(row_selector)
     assert row is not None, f'Channel "{name}" should be on the list after the edit wizard'

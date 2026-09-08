@@ -15,7 +15,7 @@ import pytest
 # Zato
 from hl7_client.mllp_receiver import MLLPReceiver
 from mllp_channel import delete_channel, get_item_id, navigate_to_channels, send_with_both_clients, wait_for_item, \
-    wait_for_port, wait_until_routed, Host
+    wait_for_port, wait_until_routed, wait_until_saved, Host
 from mllp_outconn import create_outgoing_connection, delete_outgoing_connection
 from zato.common.crypto.api import CryptoManager
 
@@ -153,14 +153,10 @@ class TestChannelHL7MLLPWizard:
         assert _Test_Service in review_text, f'Expected "{_Test_Service}" in the review, got: "{review_text}"'
         assert outconn_name in review_text, f'Expected "{outconn_name}" in the review, got: "{review_text}"'
 
-        # Finish - the save says so beside the button it was asked for through, and closing
-        # the form is what goes back to the list the new channel is on
+        # Finish - a save that went through lands on the list the new channel is on,
+        # with its row highlighted
         page.click('#mllp-wizard-next')
-        _ = page.wait_for_selector('.tippy-box:has-text("OK, saved")', timeout=10000)
-
-        page.click('#mllp-wizard-cancel')
-        page.wait_for_url('**/zato/channel/hl7/mllp/**', timeout=10000)
-        _ = page.wait_for_selector('#data-table', state='visible')
+        wait_until_saved(page)
 
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{channel_name}"))')
         assert row is not None, f'Channel "{channel_name}" should be on the list after the wizard'
@@ -200,13 +196,9 @@ class TestChannelHL7MLLPWizard:
         chip_text = page.inner_text('#mllp-wizard-slot-destinations-chip')
         assert '1 destination' in chip_text, f'Expected "1 destination" on the chip, got: "{chip_text}"'
 
-        # .. and saving with nothing changed says so where it was asked for, the form
-        # staying open until it is closed.
+        # .. and saving with nothing changed lands back on the list, the row highlighted.
         page.click('#mllp-wizard-save')
-        _ = page.wait_for_selector('.tippy-box:has-text("OK, saved")', timeout=10000)
-
-        page.click('#mllp-wizard-cancel')
-        _ = page.wait_for_selector('#data-table', state='visible', timeout=10000)
+        wait_until_saved(page)
 
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{channel_name}"))')
         assert row is not None, f'Channel "{channel_name}" should still be on the list after the edit wizard'

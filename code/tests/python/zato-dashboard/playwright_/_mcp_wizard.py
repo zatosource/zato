@@ -30,8 +30,11 @@ if 0:
 # Where the gateway list lives - the wizard is reached through its links
 MCP_List_URL = '/zato/gateway/mcp/?cluster=1'
 
-# What the tooltip beside the button says once a wizard save went through
-Saved_Label = 'OK, saved'
+# Where a wizard save that went through lands - the gateway list, pointed at the saved row
+Saved_Redirect_Pattern = '**/zato/gateway/mcp/**highlight=*'
+
+# What the address of a wizard page contains, a refused save leaving the page where it is
+Wizard_URL_Fragment = '/zato/gateway/mcp/wizard/'
 
 # The step a create ends on - the review, where Next says Save
 Review_Step = 2
@@ -164,15 +167,25 @@ def go_to_step(page:'Page', step_index:'int') -> 'None':
 # ################################################################################################################################
 
 def wait_until_saved(page:'Page') -> 'None':
-    """ Waits until the tooltip beside the save button confirms the save.
+    """ Waits for the redirect a save that went through makes - to the gateway list, the saved
+    row's id in the query string so the list highlights it.
     """
-    _ = page.wait_for_selector(f'text="{Saved_Label}"', state='visible', timeout=_Save_Timeout)
+    _ = page.wait_for_url(Saved_Redirect_Pattern, timeout=_Save_Timeout)
+    _ = page.wait_for_selector('#data-table', state='visible', timeout=_Wizard_Timeout)
+
+# ################################################################################################################################
+
+def is_on_wizard_page(page:'Page') -> 'bool':
+    """ Whether the browser is still on a wizard page - what a refused save leaves behind.
+    """
+    out = Wizard_URL_Fragment in page.url
+    return out
 
 # ################################################################################################################################
 
 def save_create(page:'Page') -> 'None':
     """ Finishes a create - walks to the review step, where Next says Save, and clicks it.
-    The wizard stays on its page, the tooltip beside the button confirming the save.
+    A save that went through leaves for the gateway list with the new row highlighted.
     """
     go_to_step(page, Review_Step)
     page.click('#mcp-wizard-next')
@@ -182,7 +195,8 @@ def save_create(page:'Page') -> 'None':
 # ################################################################################################################################
 
 def save_edit(page:'Page') -> 'None':
-    """ Saves an edit from whichever step is on screen - an edit has one Save button in its footer.
+    """ Saves an edit from whichever step is on screen - an edit has one Save button in its footer,
+    and the save lands back on the gateway list with the row highlighted.
     """
     page.click('#mcp-wizard-save')
 
@@ -191,7 +205,8 @@ def save_edit(page:'Page') -> 'None':
 # ################################################################################################################################
 
 def go_to_list(page:'Page', base_url:'str', gateway_name:'str') -> 'any_':
-    """ Goes back to the gateway list and returns the row of the given gateway.
+    """ Opens the gateway list filtered down to the given gateway and returns its row - a save
+    lands on the unfiltered list, where a row may sit on a later page.
     """
 
     # The query keeps the row on the first page of results ..

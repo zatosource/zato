@@ -57,7 +57,7 @@ The page then calls `wizard.init({list_url: ...})` when the DOM is ready.
 
 | Key | Meaning |
 |---|---|
-| `list_url` | Where the link closing the form goes back to |
+| `list_url` | Where the link closing the form goes back to, and where a save that went through redirects to with `&highlight=<id>` appended - it always carries a query string of its own |
 | `is_edit` | Whether the page was opened on an object that already exists |
 
 ## Core config contract
@@ -89,7 +89,7 @@ All ids derive from `idPrefix` and all are required:
 - `#<idPrefix>-steps` - the step strip, tabs carry `.wizard-step` and a `data-step` attribute
 - `#<idPrefix>-step-body-N` - one body per step, N counted from 0
 - `#<idPrefix>-name-badge` - the header badge mirroring the name
-- `#<idPrefix>-back`, `-next`, `-cancel`, `-save` - the footer. Back is rendered `disabled`, since a page opens on its first step and there is nothing behind it - the step walking takes it from there. Save is rendered `hidden`, a create ending in the Next button rather than in one of its own. Closing the form is an `a.wizard-cancel` rather than a button, leaving being no action of the page's own, so it wears the same link face as everything else on a wizard. An edit hides Back and Next and moves Save into the middle they leave
+- `#<idPrefix>-back`, `-next`, `-cancel`, `-save` - the footer. Back is rendered `disabled`, since a page opens on its first step and there is nothing behind it - the step walking takes it from there. Save is rendered `hidden`, a create ending in the Next button rather than in one of its own. Closing the form is an `a.wizard-cancel` rather than a button, leaving being no action of the page's own, so it wears the same link face as everything else on a wizard. An edit hides Back and Next and moves Save into the middle they leave. The kit appends one `img.wizard-save-spinner` to `.wizard-footer-center`, absolutely positioned off its right edge so it takes no room, hidden until a save is running
 - `#<idPrefix>-how-it-works` - the page-wide help badge
 - `#<idPrefix>-review` - where the review step renders
 
@@ -244,13 +244,13 @@ The fields themselves are not marked by the kit at all. A save runs `$.fn.zato.i
 
 What the kit adds around that is the row asking the question: the label naming it wears `.wizard-missing` and turns the same red, wherever the row is, so a step walked back to says on its own what it is waiting for. The mark stays on the cell asking the question, so a label beside it, an Active switch say, is left alone.
 
-A save that goes through says so the way every inline edit on a listing does - a tooltip reading `OK, saved` to the left of the button it was asked for through, gone a moment later, the page it was made on staying open. One that does not shows `Save failed` there instead, with a `Show details` link opening the exception the endpoint sent back. Both come from `$.fn.zato.action_runner`, the labels and the timings from `$.fn.zato.inline_edit.config`, so a wizard and a listing answer in the same words.
+While a save runs, a spinner turns to the right of the button it was asked for through - the very image the Check for updates button on the updates page spins, `/static/gfx/spinner.svg` in `.wizard-save-spinner`, positioned out of the flow so the buttons do not move when it appears - and every footer button is disabled, so the form cannot be posted twice. The spinner stays for `saveSpinnerMinMs` (500 ms) at the least, so a fast save does not make it a barely visible blip. A save that goes through then leaves the page - the browser is sent to `list_url` with `&highlight=<id>` appended, the id being what the endpoint answered with, and the list page marks that row with the just-updated look it gives any highlighted row. One that does not takes the spinner down, gives the buttons back and shows `Save failed` beside the button, with a `Show details` link opening the exception the endpoint sent back - the tooltip comes from `$.fn.zato.action_runner`, run with `show_spinner: false` since the wizard shows its own, the labels from `$.fn.zato.inline_edit.config`, so a wizard and a listing fail in the same words.
 
 Which questions a save waits on follows what the page is. A create is one walk ending in one save, so it waits on all of them and the review is where they are read. An edit is a page per step, each saved from where it is, so a save there waits only on the questions its own step asks - saving the first step of a channel is not the moment to answer for the second, and the save made on that step is where those answers are due. The shared validator is pointed the same way, at the whole form on a create and at the body of the step on screen on an edit, so it does not refuse a save over a field another step holds. Nothing is said in a message area or a popup - the page shows what it is waiting for where the answer is given.
 
 ## CSS
 
-The shared stylesheet is `static/css/shared/wizard-kit.css` - the card, the step strip, the badges, the name row, sections, toggle rows, select rows, the service picker, option cards, choice cards, the review, the popover micro-forms (tippy theme `wizard`), the live check and the footer. The decision lines have one of their own, `static/css/shared/wizard-lines.css` - the lines, the chips, the options strip and the panels, including how a badge picker sits inside a panel. An instance stylesheet adds only what is truly its own, e.g. the MLLP tolerance grid.
+The shared stylesheet is `static/css/shared/wizard-kit.css` - the card, the step strip, the badges, the name row, sections, toggle rows, select rows, the service picker, option cards, choice cards, the review, the popover micro-forms (tippy theme `wizard`), the live check, the footer and the save spinner (`.wizard-save-spinner`, turning on the global `zato-spin` keyframes of `style.css`). The decision lines have one of their own, `static/css/shared/wizard-lines.css` - the lines, the chips, the options strip and the panels, including how a badge picker sits inside a panel. An instance stylesheet adds only what is truly its own, e.g. the MLLP tolerance grid.
 
 Parameterization runs through the `--wizard-*` tokens, declared with defaults on `:root` because the popover micro-forms are appended to `document.body`, outside any page container. An instance recolors itself by overriding the tokens in its own stylesheet, also on `:root`, since one page carries one wizard.
 
