@@ -274,6 +274,9 @@ page.init = function() {
     // everywhere, bound once for the page
     $.fn.zato.audit_log.flow.init();
 
+    // A file transfer step clicked on this page is selected on the drawing.
+    $.fn.zato.audit_log.fileOutgoing.config.selectOnDrawing = true;
+
     // The two tabs - which one is open goes into the address bar, so a link
     // is a link to the very reading its sender had in front of them
     // The tabs are the same badges every chosen thing on a dark panel wears,

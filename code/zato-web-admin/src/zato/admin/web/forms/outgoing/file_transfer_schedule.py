@@ -12,6 +12,8 @@ from django import forms
 # Zato
 from zato.admin.web.forms import add_services
 from zato.common.api import FileTransfer
+from zato.common.file_transfer.api import Default_Expected_By, Default_Expected_Days, Default_Expected_Files, \
+    Default_Max_Attempts, Default_Quarantine_Directory, Default_Retry_Backoff
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,6 +69,17 @@ class CreateForm(forms.Form):
     # How many seconds may pass without a file arriving before an alert - zero means no expectation.
     arrival_window = forms.CharField(
         initial=_default_arrival_window, widget=forms.TextInput(attrs={'class':'validate-digits'}))
+
+    max_attempts = forms.CharField(
+        initial=Default_Max_Attempts, widget=forms.TextInput(attrs={'class':'validate-digits'}))
+    retry_backoff = forms.CharField(
+        initial=Default_Retry_Backoff, widget=forms.TextInput(attrs={'class':'validate-digits'}))
+    quarantine_directory = forms.CharField(initial=Default_Quarantine_Directory, widget=forms.TextInput())
+
+    expected_files = forms.CharField(
+        initial=Default_Expected_Files, widget=forms.TextInput(attrs={'class':'validate-digits'}))
+    expected_by = forms.CharField(required=False, initial=Default_Expected_By, widget=forms.TextInput())
+    expected_days = forms.CharField(initial=Default_Expected_Days, widget=forms.TextInput())
 
     def __init__(self, prefix:'strnone'=None, post_data:'anydictnone'=None, req:'any_'=None) -> 'None':
         super().__init__(post_data, prefix=prefix)

@@ -44,7 +44,7 @@ var mllp = {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-var presenter = {
+var presenter = $.extend({}, $.fn.zato.audit_log.sources['default'], {
 
     chips: function(row) {
         var config = mllp.config;
@@ -92,7 +92,7 @@ var presenter = {
     identity: function(row) {
         return row.msg_id;
     }
-};
+});
 
 // /////////////////////////////////////////////////////////////////////////////
 

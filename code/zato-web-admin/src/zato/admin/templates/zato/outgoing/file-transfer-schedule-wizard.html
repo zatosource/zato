@@ -176,6 +176,16 @@ $(document).ready(function() {
                                 <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="file-transfer-wizard-edit-arrival-window"><span class="zato-link-face wizard-toggle-summary" id="file-transfer-wizard-summary-arrival-window"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
+                            <div class="wizard-line" id="file-transfer-wizard-line-expectation">
+                                <label class="wizard-line-label" for="file-transfer-wizard-edit-expectation">Expects a day</label>
+                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="file-transfer-wizard-edit-expectation"><span class="zato-link-face wizard-toggle-summary" id="file-transfer-wizard-summary-expectation"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
+                            <div class="wizard-line" id="file-transfer-wizard-line-retries">
+                                <label class="wizard-line-label" for="file-transfer-wizard-edit-retries">A failing file</label>
+                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="file-transfer-wizard-edit-retries"><span class="zato-link-face wizard-toggle-summary" id="file-transfer-wizard-summary-retries"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
                         </div>
                     </div>
 
@@ -219,6 +229,12 @@ $(document).ready(function() {
                     {{ form.run_every }}
                     {{ form.run_unit }}
                     {{ form.arrival_window }}
+                    {{ form.max_attempts }}
+                    {{ form.retry_backoff }}
+                    {{ form.quarantine_directory }}
+                    {{ form.expected_files }}
+                    {{ form.expected_by }}
+                    {{ form.expected_days }}
                 </div>
 
                 <input type="hidden" id="id_cluster_id" name="cluster_id" value="{{ cluster_id }}" />

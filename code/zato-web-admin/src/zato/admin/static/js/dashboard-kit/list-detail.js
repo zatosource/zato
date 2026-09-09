@@ -342,10 +342,29 @@
             return out;
         }
 
-        function show_detail() {
+        // The item the pane keeps holding after the list no longer has it.
+        var detachedItem = null;
+
+        function currentItem() {
             var item_index = index_of(selected_id);
 
-            if (item_index === -1) {
+            if (item_index !== -1) {
+                return items[item_index];
+            }
+
+            if (detachedItem !== null) {
+                if (id_text(detachedItem) === selected_id) {
+                    return detachedItem;
+                }
+            }
+
+            return null;
+        }
+
+        function show_detail() {
+            var item = currentItem();
+
+            if (item === null) {
 
                 // A pane asking for a selection that cannot be made says the wrong thing
                 var empty_html = config.empty_detail;
@@ -358,8 +377,6 @@
                 pane_is_built = false;
                 return;
             }
-
-            var item = items[item_index];
 
             // A pane already holding an item is brought to the next one where it stands,
             // so walking the list does not blank and rebuild the pane at every step.
@@ -425,8 +442,9 @@
         // Drawing the list
         // ////////////////////////////////////////////////////////////////////
 
-        function set_items(new_items) {
+        function set_items(new_items, detached) {
             items = new_items;
+            detachedItem = detached;
 
             var html = '';
 
@@ -440,9 +458,8 @@
 
             $items_host.html(html);
 
-            // A redraw of the same events keeps the one that was being read, and a redraw
-            // that no longer has it falls back to the top of the list.
-            if (index_of(selected_id) === -1) {
+            // A redraw that has the selected item neither on the page nor detached selects the top of the list.
+            if (currentItem() === null) {
                 selected_id = items.length ? id_text(items[0]) : null;
             }
 

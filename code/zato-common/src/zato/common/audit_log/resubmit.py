@@ -97,11 +97,16 @@ _hop_actions = {
     AuditEvent.Request_Sent: {'label': Resubmit_Label, 'service': 'zato.audit-log.resend-hop'},
 }
 
+# The label of the action on a quarantined file.
+Retry_Label = 'Retry now'
+
 # A file a schedule handed to its target service is run through that service again,
-# using the bytes the read event stored under the same cid.
+# using the bytes the read event stored under the same cid. A quarantined file is moved back
+# to the schedule's directory.
 _file_transfer_actions = {
-    AuditEvent.Delivered:       {'label': Resubmit_Label, 'service': 'zato.audit-log.file-transfer-reprocess'},
-    AuditEvent.Delivery_Failed: {'label': Resubmit_Label, 'service': 'zato.audit-log.file-transfer-reprocess'},
+    AuditEvent.Delivered:        {'label': Resubmit_Label, 'service': 'zato.audit-log.file-transfer-reprocess'},
+    AuditEvent.Delivery_Failed:  {'label': Resubmit_Label, 'service': 'zato.audit-log.file-transfer-reprocess'},
+    AuditEvent.File_Quarantined: {'label': Retry_Label,    'service': 'zato.audit-log.file-transfer-retry'},
 }
 
 # The sources whose events carry resubmit actions at all, each with its own catalog

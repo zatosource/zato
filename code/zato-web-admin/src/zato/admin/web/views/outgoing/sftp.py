@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 _fields_required = ('name',)
 _fields_optional = 'is_active', 'address', 'username', 'private_key', 'strict_host_key_checking', \
-    'ignore_host_key_changes', 'should_store_content'
+    'ignore_host_key_changes', 'should_store_content', 'verify_how'
 
 # The connection's fields that a checkbox stands for, which is what turns their input into a boolean
 _fields_checkbox = 'strict_host_key_checking', 'ignore_host_key_changes', 'should_store_content'

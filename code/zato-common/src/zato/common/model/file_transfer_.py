@@ -55,6 +55,16 @@ class FileTransferSchedule:
     # considers the schedule overdue - zero means no such expectation.
     arrival_window: int = 0
 
+    # The retry settings, zero attempts means no limit.
+    max_attempts:         int = 0
+    retry_backoff:        int = 0
+    quarantine_directory: str = ''
+
+    # The daily expectation, zero files means no expectation.
+    expected_files: int = 0
+    expected_by:    str = ''
+    expected_days:  str = ''
+
     # The database ID of the linked scheduler job
     job_id: int = 0
 
@@ -79,6 +89,12 @@ class FileTransferSchedule:
             'run_unit': self.run_unit,
             'start_date': self.start_date,
             'arrival_window': self.arrival_window,
+            'max_attempts': self.max_attempts,
+            'retry_backoff': self.retry_backoff,
+            'quarantine_directory': self.quarantine_directory,
+            'expected_files': self.expected_files,
+            'expected_by': self.expected_by,
+            'expected_days': self.expected_days,
             'job_id': self.job_id,
         }
 

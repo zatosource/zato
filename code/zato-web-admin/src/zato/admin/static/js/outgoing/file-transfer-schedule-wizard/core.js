@@ -77,7 +77,12 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         'move_directory',
         'run_every',
         'start_date',
-        'arrival_window'
+        'arrival_window',
+        'max_attempts',
+        'retry_backoff',
+        'quarantine_directory',
+        'expected_files',
+        'expected_days'
     ],
 
     // Where each of them is read on the review and answered on its step - the
@@ -99,7 +104,17 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
                             anchorSelector: '#file-transfer-wizard-line-run-every'},
         start_date:        {group: wizard.config_own.groups.schedule, label: 'Start time'},
         arrival_window:    {group: wizard.config_own.groups.schedule, label: 'Expects a file',
-                            anchorSelector: '#file-transfer-wizard-line-arrival-window'}
+                            anchorSelector: '#file-transfer-wizard-line-arrival-window'},
+        max_attempts:      {group: wizard.config_own.groups.schedule, label: 'A failing file',
+                            anchorSelector: '#file-transfer-wizard-line-retries'},
+        retry_backoff:     {group: wizard.config_own.groups.schedule, label: 'A failing file',
+                            anchorSelector: '#file-transfer-wizard-line-retries'},
+        quarantine_directory: {group: wizard.config_own.groups.schedule, label: 'A failing file',
+                            anchorSelector: '#file-transfer-wizard-line-retries'},
+        expected_files:    {group: wizard.config_own.groups.schedule, label: 'Expects a day',
+                            anchorSelector: '#file-transfer-wizard-line-expectation'},
+        expected_days:     {group: wizard.config_own.groups.schedule, label: 'Expects a day',
+                            anchorSelector: '#file-transfer-wizard-line-expectation'}
     },
 
 // ////////////////////////////////////////////////////////////////////////

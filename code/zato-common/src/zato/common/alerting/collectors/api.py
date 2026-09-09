@@ -29,7 +29,8 @@ from zato.common.alerting.collectors.scheduler import collect_scheduler_facts
 if 0:
     from datetime import datetime
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import dictlist, stranydict, strintdict
+    from zato.common.typing_ import anydict, dictlist, stranydict, strintdict
+    anydict = anydict
     datetime = datetime
     dictlist = dictlist
     Engine = Engine
@@ -51,6 +52,7 @@ def collect_facts(
     end_event_type:'str' = Default_End_Event_Type,
     job_intervals:'strintdict | None' = None,
     arrival_windows:'strintdict | None' = None,
+    schedule_expectations:'anydict | None' = None,
     ) -> 'dictlist':
     """ Runs every fact producer and merges their measures into one fact
     per (source, object) pair - the input the alert rules match over.
@@ -64,6 +66,9 @@ def collect_facts(
     if arrival_windows is None:
         arrival_windows = {}
 
+    if schedule_expectations is None:
+        schedule_expectations = {}
+
     error_rate_facts = collect_error_rate_facts(engine, window_seconds, now)
     latency_facts = collect_latency_facts(engine, window_seconds, now)
     consecutive_facts = collect_consecutive_failure_facts(engine, now)
@@ -74,7 +79,7 @@ def collect_facts(
     health_facts = collect_health_facts(engine, now)
     test_transfer_facts = collect_test_transfer_facts(engine, now)
     scheduler_facts = collect_scheduler_facts(engine, window_seconds, now, job_intervals)
-    file_transfer_facts = collect_file_transfer_facts(engine, now, arrival_windows)
+    file_transfer_facts = collect_file_transfer_facts(engine, now, arrival_windows, schedule_expectations)
 
     # A source with a window of its own is measured again over that window,
     # and its own measures replace the default-window ones below.

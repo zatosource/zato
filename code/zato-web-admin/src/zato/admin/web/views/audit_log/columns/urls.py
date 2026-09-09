@@ -66,6 +66,8 @@ _endpoint_page_url = {
 _run_page_url = {
     AuditSource.Scheduler:
         f'/zato/scheduler/dashboard/job/{{job_id}}/run/{{run}}/?cluster={default_cluster_id}&range=0&outcomes=all',
+    AuditSource.File_Outgoing:
+        f'/zato/scheduler/dashboard/job/{{job_id}}/run/{{run}}/?cluster={default_cluster_id}&range=0&outcomes=all',
 }
 
 # ################################################################################################################################

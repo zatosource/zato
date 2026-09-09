@@ -67,6 +67,7 @@
             {% comment %} 6 {% endcomment %}
             'ignore_host_key_changes',
             'should_store_content',
+            'verify_how',
         ]
     }
     </script>
@@ -168,6 +169,7 @@
                         {% comment %} 6 {% endcomment %}
                         <td class='ignore'>{{ item.ignore_host_key_changes }}</td>
                         <td class='ignore'>{{ item.should_store_content }}</td>
+                        <td class='ignore'>{{ item.verify_how }}</td>
 
                     </tr>
                 {% endfor %}
@@ -207,6 +209,13 @@
                                 <label for="{{ create_form.should_store_content.id_for_label }}">
                                 Store file contents
                                 {{ create_form.should_store_content }}
+                                </label>
+
+                                |
+
+                                <label for="{{ create_form.verify_how.id_for_label }}">
+                                Verify stores by
+                                {{ create_form.verify_how }}
                                 </label>
 
                             </td>
@@ -315,6 +324,13 @@
                                 <label for="{{ edit_form.should_store_content.id_for_label }}">
                                 Store file contents
                                 {{ edit_form.should_store_content }}
+                                </label>
+
+                                |
+
+                                <label for="{{ edit_form.verify_how.id_for_label }}">
+                                Verify stores by
+                                {{ edit_form.verify_how }}
                                 </label>
 
                             </td>

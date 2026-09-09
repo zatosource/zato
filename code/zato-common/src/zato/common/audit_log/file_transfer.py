@@ -50,6 +50,10 @@ Operation_Read   = 'read'
 Operation_Delete = 'delete'
 Operation_Move   = 'move'
 
+# The statuses of a verified store.
+Status_Verified      = 'verified'
+Status_Verify_Failed = 'verify-failed'
+
 # What a stored file is served back as when nothing better is known about it
 _default_content_type = 'application/octet-stream'
 
@@ -70,6 +74,9 @@ def record_file_transfer(
     to_path:'str' = '',
     checksum:'str' = '',
     content:'bytesnone' = None,
+    status:'str' = '',
+    event_type:'str' = AuditEvent.Request_Sent,
+    extra:'strdictnone' = None,
     ) -> 'intnone':
     """ Writes one audit event describing an outgoing file operation. The content is stored
     only when given, as an attachment envelope under the shared size cap - which is what
@@ -77,7 +84,7 @@ def record_file_transfer(
     """
 
     # What happened is readable off the event without opening anything else
-    summary = {
+    summary:'stranydict' = {
         'operation': operation,
         'remote_path': remote_path,
         'size': size,
@@ -90,6 +97,10 @@ def record_file_transfer(
     # A failed operation says what went wrong right in its data
     if error:
         summary['error'] = error
+
+    # Extra data of the operation, e.g. the verification result of a store.
+    if extra:
+        summary.update(extra)
 
     # The operation and its duration are searchable attributes -
     # "every delete on this share" and "the slowest transfers" are one query each.
@@ -107,6 +118,7 @@ def record_file_transfer(
         'endpoint': remote_path,
         'size': size,
         'outcome': outcome,
+        'status': status,
         'duration_ms': duration_ms,
         'data': dumps(summary),
         'attrs': attrs,
@@ -119,7 +131,7 @@ def record_file_transfer(
         insert_options['attachments'] = [build_attachment(filename, _default_content_type, content)]
 
     # Our response to produce
-    out = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Request_Sent, conn_name, **insert_options)
+    out = audit_log.insert(AuditSource.File_Outgoing, event_type, conn_name, **insert_options)
 
     return out
 
@@ -139,7 +151,11 @@ def record_schedule_event(
     service:'str' = '',
     size:'int' = 0,
     error:'str' = '',
+    status:'str' = '',
+    duration_ms:'int' = 0,
     extra:'strdictnone' = None,
+    attrs_extra:'strdictnone' = None,
+    bodies:'strdictnone' = None,
     parents:'intlistnone' = None,
     ) -> 'intnone':
     """ Writes one audit event of a file transfer schedule - a file claimed, handed to its
@@ -181,15 +197,24 @@ def record_schedule_event(
     if service:
         attrs['service'] = service
 
+    # Extra searchable attributes, e.g. the checksum or the scheduler's run number.
+    if attrs_extra:
+        attrs.update(attrs_extra)
+
     insert_options:'stranydict' = {
         'cid': cid,
         'correl_id': correl_id,
         'endpoint': remote_path,
         'size': size,
         'outcome': outcome,
+        'status': status,
+        'duration_ms': duration_ms,
         'data': dumps(summary),
         'attrs': attrs,
     }
+
+    if bodies:
+        insert_options['bodies'] = bodies
 
     # A reprocessed event names the event it repeats
     if parents:

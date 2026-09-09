@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 _fields_required = ('name',)
-_fields_optional = 'is_active', 'host', 'port', 'username', 'use_ssl', 'should_store_content'
+_fields_optional = 'is_active', 'host', 'port', 'username', 'use_ssl', 'should_store_content', 'verify_how'
 
 # The connection's fields that a checkbox stands for, which is what turns their input into a boolean.
 _fields_checkbox = 'use_ssl', 'should_store_content'

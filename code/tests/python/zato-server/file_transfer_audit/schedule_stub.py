@@ -168,8 +168,9 @@ class ServiceStub:
         self.logger = getLogger('test-file-transfer-schedule')
         self.smb = {Connection_Name: conn}
         self.invoked:'anylist' = []
+        self.wsgi_environ:'stranydict' = {}
 
-    def invoke(self, service_name:'str', item:'any_') -> 'None':
+    def invoke(self, service_name:'str', item:'any_', cid:'str'='') -> 'None':
         self.invoked.append((service_name, item))
 
 # ################################################################################################################################
@@ -178,7 +179,7 @@ class FailingServiceStub(ServiceStub):
     """ A dispatch service whose target service is down - every invocation fails.
     """
 
-    def invoke(self, service_name:'str', item:'any_') -> 'None':
+    def invoke(self, service_name:'str', item:'any_', cid:'str'='') -> 'None':
         raise Exception(Service_Error)
 
 # ################################################################################################################################

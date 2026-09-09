@@ -47,6 +47,45 @@
     --dashboard-row-selected: #e0f0ff;
 
     --dashboard-mono: 'Menlo', 'Consolas', 'Monaco', monospace;
+
+    /* The tones a chip, a tile or a step can carry, each an ink and a fill. */
+    --dashboard-tone-good: #1b813e;
+    --dashboard-tone-good-fill: rgba(27, 129, 62, 0.10);
+    --dashboard-tone-bad: #e0226e;
+    --dashboard-tone-bad-fill: rgba(224, 34, 110, 0.12);
+    --dashboard-tone-bad-line: rgba(224, 34, 110, 0.35);
+    --dashboard-tone-warning: #b35e00;
+    --dashboard-tone-warning-fill: rgba(179, 94, 0, 0.10);
+    --dashboard-tone-accent: #0f6ea8;
+    --dashboard-tone-accent-fill: #e0f0ff;
+    --dashboard-tone-accent-bar: rgba(15, 110, 168, 0.18);
+    --dashboard-tone-dim: #a8aebc;
+    --dashboard-tone-dim-fill: rgba(110, 110, 115, 0.10);
+    --dashboard-tone-accent-dark: #8fc6ee;
+    --dashboard-tone-accent-dark-fill: rgba(111, 182, 232, 0.16);
+    --dashboard-frame-fill: rgba(1, 40, 69, 0.08);
+    --dashboard-frame-fill-soft: rgba(1, 40, 69, 0.05);
+    --dashboard-frame-line: rgba(1, 40, 69, 0.10);
+    --dashboard-frame-line-strong: rgba(1, 40, 69, 0.18);
+    --dashboard-frame-dark-fill: rgba(255, 255, 255, 0.05);
+    --dashboard-frame-dark-fill-strong: rgba(255, 255, 255, 0.06);
+    --dashboard-frame-dark-line: rgba(255, 255, 255, 0.10);
+    --dashboard-frame-dark-line-strong: rgba(255, 255, 255, 0.16);
+    --dashboard-error-ink: #c0392b;
+    --dashboard-error-ink-dark: #ff8a80;
+
+    /* The type sizes the kit's small print is set in. */
+    --dashboard-font-tiny: 9px;
+    --dashboard-font-small: 10px;
+    --dashboard-font-caption: 11px;
+    --dashboard-font-body: 12px;
+    --dashboard-font-sentence: 12.5px;
+    --dashboard-font-figure: 18px;
+
+    /* How long a kit element takes to move. */
+    --dashboard-motion: 200ms;
+    --dashboard-motion-quick: 180ms;
+    --dashboard-hover-delay: 60ms;
 }
 
 .dashboard-page {
@@ -63,6 +102,26 @@
 
 .kit-puff {
     animation: kit-puff 0.7s ease-out;
+}
+
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the pulse of a chip whose words changed       */
+/* ------------------------------------------------------------ */
+
+@keyframes kit-pulse {
+    0%   { opacity: 0.55; transform: scale(0.97); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.kit-pulse {
+    animation: kit-pulse 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kit-puff,
+    .kit-pulse {
+        animation: none;
+    }
 }
 
 @keyframes kit-fade-in {

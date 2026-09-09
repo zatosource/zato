@@ -17,6 +17,7 @@ from smbprotocol.exceptions import SMBOSError
 # Zato
 from zato.common.api import SMB
 from zato.common.audit_log.api import AuditLog
+from zato.common.file_transfer.api import Default_Verify_How
 from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
 from zato.common.typing_ import cast_
 from zato.common.util.logging_ import file_transfer_logger_name
@@ -46,6 +47,7 @@ outconn_smb_config_defaults:'dict[str, object]' = {
     'port': SMB.DEFAULT.PORT,
     'username': '',
     'should_store_content': False,
+    'verify_how': Default_Verify_How,
 }
 
 # Config keys that must be integers but may arrive as strings from opaque storage
@@ -55,7 +57,7 @@ outconn_smb_int_config_keys = ('port',)
 outconn_smb_bool_config_keys = ('should_store_content',)
 
 # Config keys that must be strings but may arrive as integers from opaque storage
-outconn_smb_string_config_keys = ('host', 'username')
+outconn_smb_string_config_keys = ('host', 'username', 'verify_how')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -265,6 +267,12 @@ class OutconnSMBWrapper(Wrapper):
             self.should_store_content = config['should_store_content']
         else:
             self.should_store_content = False
+
+        # A connection without the setting checks the size.
+        if not (verify_how := config.get('verify_how')):
+            verify_how = Default_Verify_How
+
+        self.verify_how = verify_how
 
         # What a guaranteed delivery to this connection goes through. It is built from the connection's
         # id rather than its name because that is what a rename leaves alone.

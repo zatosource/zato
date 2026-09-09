@@ -49,8 +49,14 @@ review.refreshSummaries = function() {
     var runEvery = 'Every ' + wizard.field('run_every').val() + ' ' + wizard.field('run_unit').val();
     review.setSummary('file-transfer-wizard-summary-run-every', runEvery);
 
-    // .. and whether a file is expected within some window at all.
+    // .. whether a file is expected within some window at all ..
     review.setSummary('file-transfer-wizard-summary-arrival-window', review.arrivalWindowText());
+
+    // .. what a day should bring ..
+    review.setSummary('file-transfer-wizard-summary-expectation', review.expectationText());
+
+    // .. and what happens to a file that keeps failing.
+    review.setSummary('file-transfer-wizard-summary-retries', review.retriesText());
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -66,6 +72,46 @@ review.arrivalWindowText = function() {
     }
     else {
         out = 'No expectation';
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// How the daily expectation reads - zero files means none was declared
+review.expectationText = function() {
+
+    var expectedFiles = parseInt(wizard.field('expected_files').val());
+    var out;
+
+    if(expectedFiles) {
+        var expectedBy = wizard.field('expected_by').val();
+        var expectedDays = wizard.field('expected_days').val();
+        out = expectedFiles + ' by ' + expectedBy + ' on days ' + expectedDays;
+    }
+    else {
+        out = 'No expectation';
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// How the handling of a failing file reads - zero attempts means it is retried on every run
+review.retriesText = function() {
+
+    var maxAttempts = parseInt(wizard.field('max_attempts').val());
+    var retryBackoff = wizard.field('retry_backoff').val();
+    var quarantineDirectory = wizard.field('quarantine_directory').val();
+    var out;
+
+    if(maxAttempts) {
+        out = maxAttempts + ' attempts, ' + retryBackoff + 's apart, then to ' + quarantineDirectory + '/';
+    }
+    else {
+        out = 'Retried every run, ' + retryBackoff + 's apart';
     }
 
     return out;
@@ -158,6 +204,8 @@ review.render = function() {
             ['Run every', runEvery],
             ['Start time', wizard.field('start_date').val()],
             ['Expects a file', review.arrivalWindowText()],
+            ['Expects a day', review.expectationText()],
+            ['A failing file', review.retriesText()],
             ['Active', isActive ? 'Yes' : 'No']
         ]}
     ]);

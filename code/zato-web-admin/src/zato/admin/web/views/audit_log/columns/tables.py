@@ -126,6 +126,7 @@ _file_outgoing_columns = [
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'operation', 'label': 'Operation', 'type': 'text'},
     {'key': 'schedule', 'label': 'Schedule', 'type': 'text'},
+    {'key': 'current_run', 'label': 'Run', 'type': 'text'},
     {'key': 'file_name', 'label': 'File', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Remote path', 'type': 'text'},
     {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},

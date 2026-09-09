@@ -102,10 +102,63 @@ def _enrich_as4_row(row:'anydict') -> 'None':
 
 # ################################################################################################################################
 
+# The data keys a file transfer row lifts into columns of its own.
+_file_outgoing_data_keys = (
+    'entries', 'candidates', 'taken', 'processed', 'failed', 'skipped', 'acked', 'ack_failed', 'quarantined',
+    'taken_so_far', 'current_file', 'phase', 'note', 'error', 'job_id', 'current_run', 'remote_path', 'to_path',
+    'list_ms', 'stability_wait_ms', 'unchanged_since_event_id', 'unchanged_since_iso',
+    'ledger_overflow', 'first_failed_file', 'first_failed_error',
+    'expected_files', 'expected_by', 'delivered_today',
+    'read_ms', 'service_ms', 'ack_ms', 'attempt', 'max_attempts', 'moved_to', 'deleted', 'claim_released',
+    'release_error', 'seen_before_event_id', 'seen_before_iso', 'seen_before_file_name',
+    'attempts', 'quarantine_path', 'first_failed_iso', 'actor',
+    'remote_size', 'remote_checksum', 'verify_ms', 'verify_how', 'mismatch',
+)
+
+# The data keys that default to zero, the rest default to an empty string.
+_file_outgoing_count_keys = (
+    'entries', 'candidates', 'taken', 'processed', 'failed', 'skipped', 'acked', 'ack_failed', 'quarantined',
+    'taken_so_far', 'expected_files', 'delivered_today', 'read_ms', 'service_ms', 'ack_ms', 'list_ms',
+    'stability_wait_ms', 'attempt', 'max_attempts', 'attempts', 'verify_ms', 'ledger_overflow',
+)
+
+# ################################################################################################################################
+
+def _enrich_file_outgoing_row(row:'anydict') -> 'None':
+    """ Lifts the data keys of a file transfer event into row keys, every key is present on every row.
+    """
+    for key in _file_outgoing_data_keys:
+        if key in _file_outgoing_count_keys:
+            row[key] = 0
+        else:
+            row[key] = ''
+
+    row['skip_reasons'] = {}
+
+    # Filled by the checksum lookup for the rows that carry a checksum.
+    row['delivered_count_for_checksum'] = 0
+    row['last_delivered_iso_for_checksum'] = ''
+
+    data = row['data']
+    if not data:
+        return
+
+    details = json.loads(data)
+
+    if skip_reasons := details.get('skip_reasons'):
+        row['skip_reasons'] = skip_reasons
+
+    for key in _file_outgoing_data_keys:
+        if key in details:
+            row[key] = details[key]
+
+# ################################################################################################################################
+
 # Per-source row enrichment - a source with columns extracted out of the event data registers itself here
 _source_row_enrich = {
     'as2': _enrich_as2_row,
     'as4': _enrich_as4_row,
+    'file-outgoing': _enrich_file_outgoing_row,
 }
 
 # ################################################################################################################################

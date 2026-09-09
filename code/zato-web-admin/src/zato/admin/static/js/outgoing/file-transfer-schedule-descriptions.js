@@ -45,7 +45,20 @@ $.fn.zato.outgoing.file_transfer.field_descriptions = {
         'If none arrives for this many seconds, an alert is raised. ' +
         'Zero means no expectation and no alerts about missing files.',
     'id_arrival_window': 'How many seconds may pass without a file before an alert is raised. ' +
-        'Zero means no expectation.'
+        'Zero means no expectation.',
+    'file-transfer-wizard-edit-expectation': 'How many files a day should bring and by what local time. ' +
+        'Once the time passes on one of the listed weekdays with fewer files than expected, an alert is raised. ' +
+        'Zero files means no expectation.',
+    'id_expected_files': 'How many files a day is expected to bring. Zero means no expectation.',
+    'id_expected_by': 'The local time by which the files should have arrived, e.g. 08:00.',
+    'id_expected_days': 'The weekdays the expectation applies to, as ISO numbers separated by commas - ' +
+        'Monday is 1, Sunday is 7.',
+    'file-transfer-wizard-edit-retries': 'What happens to a file the service keeps rejecting. ' +
+        'Each attempt waits twice as long as the one before it, and once the attempts run out ' +
+        'the file is moved to the quarantine directory, from where it can be put back with one click.',
+    'id_max_attempts': 'How many attempts a file gets before it is quarantined. Zero means no limit.',
+    'id_retry_backoff': 'How many seconds pass before the second attempt. Each later attempt waits twice as long.',
+    'id_quarantine_directory': 'Where files that ran out of attempts are moved, relative to the directory being polled.'
 };
 
 // ////////////////////////////////////////////////////////////////////////

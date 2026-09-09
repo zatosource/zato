@@ -84,6 +84,56 @@ $.fn.zato.audit_log.sources['default'] = {
         }
 
         return row.msg_id;
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // The hooks a source with details of its own overrides, the default source reads them as absent.
+    eventWordAsChip: false,
+    rowChipLimit: listing.config.rowChipLimit,
+
+    eventChip: function(_rowModel, chip) {
+        return chip;
+    },
+
+    sentence: function(_row) {
+        return '';
+    },
+
+    detailFacts: function(_rowModel) {
+        return [];
+    },
+
+    detailPanel: function(_models, $host, _variant) {
+        $host.html('');
+    },
+
+    attrLabel: function(_rowModel, _attr) {
+        return '';
+    },
+
+    attrValueHTML: function(_rowModel, _attr) {
+        return null;
+    },
+
+    resubmitWarning: function(_rowModel) {
+        return '';
+    },
+
+    cardKey: function(row) {
+        return row.cid + '|' + row.object_name;
+    },
+
+    cardTitle: function(row) {
+        return row.object_name;
+    },
+
+    lineNote: function(_model) {
+        return '';
+    },
+
+    lineTooltip: function(_model) {
+        return '';
     }
 };
 

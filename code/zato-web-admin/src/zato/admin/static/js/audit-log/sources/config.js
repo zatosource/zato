@@ -17,7 +17,7 @@ var presenterConfig = {
     viewedWord: 'viewed'
 };
 
-$.fn.zato.audit_log.sources['config'] = {
+$.fn.zato.audit_log.sources['config'] = $.extend({}, $.fn.zato.audit_log.sources['default'], {
 
     // The log access rows declare no chips beyond what their columns already say - except
     // the source chip, which the row's own tag already reads, so it is left out
@@ -59,7 +59,7 @@ $.fn.zato.audit_log.sources['config'] = {
     identity: function(row) {
         return $.fn.zato.audit_log.sources['default'].identity(row);
     }
-};
+});
 
 // /////////////////////////////////////////////////////////////////////////////
 

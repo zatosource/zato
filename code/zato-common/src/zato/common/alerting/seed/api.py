@@ -25,6 +25,8 @@ from zato.common.alerting.seed.rules_connections import email_rules, file_transf
     microsoft_rules, odoo_rules, rest_rules, sql_rules
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditSource
+from zato.common.audit_log.file_transfer_run import Run_Status_Clean, Run_Status_Empty, Run_Status_Failed, \
+    Run_Status_Interrupted, Run_Status_List_Failed, Run_Status_No_Directory, Run_Status_Partial, Run_Status_Unchanged
 from zato.common.rule_engine.document_checks import validate_definition_document
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary, Documents_Key, \
@@ -116,6 +118,18 @@ _health_states = [
     'interruption',
 ]
 
+# The values of `alert.last_run_status`.
+_run_statuses = [
+    Run_Status_Clean,
+    Run_Status_Partial,
+    Run_Status_Failed,
+    Run_Status_Empty,
+    Run_Status_Unchanged,
+    Run_Status_No_Directory,
+    Run_Status_List_Failed,
+    Run_Status_Interrupted,
+]
+
 # The test transfer rule ships inactive because the test transfer writes to remote
 # systems - activating the rule together with the test transfer job is the documented opt-in.
 _inactive_rule_full_names = [
@@ -185,6 +199,18 @@ def alerting_vocabulary() -> 'anydict':
         _term('start_delay_ms',         TermType.Number, 'the worst delay between planned and actual fire time in the window'),
         _term('seconds_since_last_arrival', TermType.Number, 'how long ago a schedule last received a file'),
         _term('arrival_overdue_ratio',  TermType.Number, 'time since the newest file as a multiple of the schedule arrival window'),
+        _term('expected_files_missing', TermType.Number, 'how many expected files a schedule is still missing today'),
+        _term('delivered_today',        TermType.Number, 'how many files a schedule delivered today'),
+        _term('last_run_status',        TermType.Choice, 'how the newest run of a schedule ended',
+            values=_run_statuses),
+        _term('list_failed_streak',     TermType.Number, 'how many newest runs in a row never listed the directory'),
+        _term('runs_failed_in_window',  TermType.Number, 'how many runs of a schedule failed within the window'),
+        _term('failed_files_in_window', TermType.Number, 'how many files failed within the window'),
+        _term('runs_interrupted_in_window', TermType.Number,
+            'how many runs of a schedule were interrupted in the window'),
+        _term('quarantined_count',      TermType.Number, 'how many files a connection quarantined within the last day'),
+        _term('verify_failed_count',    TermType.Number,
+            'how many stores of a connection failed verification in the last day'),
     ]
 
     outcome_terms = [

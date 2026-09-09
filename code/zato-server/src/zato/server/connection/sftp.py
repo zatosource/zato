@@ -22,10 +22,11 @@ from gevent.fileobject import FileObjectThread
 from humanize import naturalsize
 
 # Zato
-from zato.common.audit_log.api import AuditOutcome
+from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Move, Operation_Read, \
     Operation_Store
 from zato.common.util.logging_ import file_transfer_logger_name
+from zato.server.connection.sftp_verify import record_sftp_store
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -209,12 +210,15 @@ class SFTPConnection:
         to_path:'str' = '',
         checksum:'str' = '',
         content:'any_' = None,
+        status:'str' = '',
+        event_type:'str' = AuditEvent.Request_Sent,
+        extra:'stranydict | None' = None,
         ) -> 'None':
         """ Records one file operation of this connection in the audit log.
         """
         _ = record_file_transfer(self.wrapper.audit_log, self.wrapper.config.name, operation, remote_path,
             cid=self.cid, outcome=outcome, size=size, duration_ms=duration_ms, error=error,
-            to_path=to_path, checksum=checksum, content=content)
+            to_path=to_path, checksum=checksum, content=content, status=status, event_type=event_type, extra=extra)
 
 # ################################################################################################################################
 
@@ -812,9 +816,8 @@ class SFTPConnection:
                 outcome=AuditOutcome.Error, size=size, duration_ms=duration_ms, error=format_exc())
             raise
 
-        duration_ms = int((monotonic() - start) * 1000)
-        self._record_transfer(Operation_Store, remote_path,
-            outcome=AuditOutcome.OK, size=size, duration_ms=duration_ms, checksum=checksum, content=content)
+        # The store is verified and recorded.
+        record_sftp_store(self, remote_path, size, checksum, content, start)
 
         return out
 

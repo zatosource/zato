@@ -587,6 +587,87 @@ then
     outcome.action = 'email'
     outcome.severity = 'warning'
     outcome.dedup_window_seconds = 14400
+
+rule
+    Expected_Files_Missing
+docs
+    A schedule that is still short of the files it expects once its expected-by time has passed
+    raises a warning email alert, once a day per schedule.
+when
+    alert.source is 'file-outgoing' and
+    alert.expected_files_missing is at least 1
+then
+    outcome.action = 'email'
+    outcome.severity = 'warning'
+    outcome.dedup_window_seconds = 86400
+
+rule
+    Run_Failed
+docs
+    A schedule whose runs within the window left any file undelivered raises a critical email alert,
+    once an hour per schedule. The measure counts failed files, not failed runs.
+defaults
+    failed_files = 1
+when
+    alert.source is 'file-outgoing' and
+    alert.failed_files_in_window is at least default.failed_files
+then
+    outcome.action = 'email'
+    outcome.severity = 'critical'
+    outcome.dedup_window_seconds = 3600
+
+rule
+    Run_Interrupted
+docs
+    A schedule whose run was interrupted by a server stop raises a critical email alert.
+    The run row names the file that was in flight.
+when
+    alert.source is 'file-outgoing' and
+    alert.runs_interrupted_in_window is at least 1
+then
+    outcome.action = 'email'
+    outcome.severity = 'critical'
+    outcome.dedup_window_seconds = 3600
+
+rule
+    Directory_Unreachable
+docs
+    A schedule whose three newest runs in a row failed to connect or to list the directory
+    raises a critical email alert.
+defaults
+    list_failed_streak_threshold = 3
+when
+    alert.source is 'file-outgoing' and
+    alert.list_failed_streak is at least default.list_failed_streak_threshold
+then
+    outcome.action = 'email'
+    outcome.severity = 'critical'
+    outcome.dedup_window_seconds = 14400
+
+rule
+    Files_Quarantined
+docs
+    A connection that quarantined any file within the last day raises a warning email alert, once a day per connection.
+when
+    alert.source is 'file-outgoing' and
+    alert.quarantined_count is at least 1
+then
+    outcome.action = 'email'
+    outcome.severity = 'warning'
+    outcome.dedup_window_seconds = 86400
+
+rule
+    Verify_Failed
+docs
+    A connection whose stored file failed verification - a different size, or different bytes when read back -
+    raises a critical email alert.
+when
+    alert.source is 'file-outgoing' and
+    alert.verify_failed_count is at least 1
+then
+    outcome.action = 'email'
+    outcome.severity = 'critical'
+    outcome.dedup_window_seconds = 14400
 """.strip()
 
 

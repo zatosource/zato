@@ -48,6 +48,8 @@ $.fn.zato.outgoing.sftp.field_descriptions = {
         'or the connection is rejected. Turning it off accepts the keys of new hosts.',
     'id_ignore_host_key_changes': 'When on, host keys are neither checked nor recorded, ' +
         'so a server that regenerated its key still connects. This overrides strict host key checking.',
+    'id_verify_how': 'How a stored file is checked against what was sent - by its remote size, ' +
+        'or by reading it back and comparing checksums.',
     'id_should_store_content': 'Whether the audit log additionally keeps the bytes of the files ' +
         'this connection moves, so they can be reread and downloaded later. Off by default.',
 };
@@ -137,6 +139,7 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
     // 6
     row += String.format("<td class='ignore'>{0}</td>", ignore_host_key_changes ? 'True' : 'False');
     row += String.format("<td class='ignore'>{0}</td>", item.should_store_content == true);
+    row += String.format("<td class='ignore'>{0}</td>", item.verify_how);
 
     if(include_tr) {
         row += '</tr>';

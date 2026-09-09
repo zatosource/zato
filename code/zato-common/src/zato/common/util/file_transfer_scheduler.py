@@ -11,6 +11,8 @@ from json import dumps, loads
 
 # Zato
 from zato.common.api import FileTransfer
+from zato.common.file_transfer.api import Default_Expected_By, Default_Expected_Days, Default_Expected_Files, \
+    Default_Max_Attempts, Default_Quarantine_Directory, Default_Retry_Backoff
 from zato.common.odb.model import GenericConn
 from zato.common.util.api import new_cid
 
@@ -45,6 +47,9 @@ def get_schedule_list(session:'SASession', conn_id:'int') -> 'dictlist':
 
     # .. and hand back the schedules stored there, if any.
     out = opaque.get(_scheduler.Schedules_Field) or []
+
+    for schedule in out:
+        apply_schedule_defaults(schedule)
 
     return out
 
@@ -166,7 +171,25 @@ _optional_field_defaults = {
     # How many seconds may pass without a file arriving before the arrival alert
     # considers the schedule overdue.
     'arrival_window': FileTransfer.Scheduler.Default_Arrival_Window,
+
+    # The retry settings.
+    'max_attempts': Default_Max_Attempts,
+    'retry_backoff': Default_Retry_Backoff,
+    'quarantine_directory': Default_Quarantine_Directory,
+
+    # The daily expectation.
+    'expected_files': Default_Expected_Files,
+    'expected_by': Default_Expected_By,
+    'expected_days': Default_Expected_Days,
 }
+
+# ################################################################################################################################
+
+def apply_schedule_defaults(schedule:'stranydict') -> 'None':
+    """ Fills in the defaults of the optional fields the schedule does not name.
+    """
+    for name, value in _optional_field_defaults.items():
+        _ = schedule.setdefault(name, value)
 
 # ################################################################################################################################
 
