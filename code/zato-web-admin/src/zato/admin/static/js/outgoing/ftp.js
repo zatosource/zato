@@ -69,6 +69,8 @@ $.fn.zato.outgoing.ftp.field_descriptions = {
         'the file transfers that follow are encrypted. When off, both travel in plain text. ' +
         'Zato does not validate the server certificate, so SSL protects the traffic here ' +
         'rather than confirming the identity of the server.',
+    'id_verify_how': 'How a stored file is checked against what was sent - by its remote size, ' +
+        'or by reading it back and comparing checksums.',
     'id_should_store_content': 'Whether the audit log additionally keeps the bytes of the files ' +
         'this connection moves, so they can be reread and downloaded later. Off by default.',
 };
@@ -163,6 +165,7 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, includeTr) {
     row += String.format("<td class='ignore'>{0}</td>", usernameCell);
     row += String.format("<td class='ignore'>{0}</td>", item.use_ssl == true);
     row += String.format("<td class='ignore'>{0}</td>", item.should_store_content == true);
+    row += String.format("<td class='ignore'>{0}</td>", item.verify_how);
 
     if(includeTr) {
         row += '</tr>';

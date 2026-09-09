@@ -50,6 +50,24 @@ $.fn.zato.wizard_kit.forms.setup(wizard, {
             pages: [[
                 {field: 'arrival_window', label: 'Alert after seconds without one', kind: 'number', width: '220px'}
             ]]
+        },
+
+        'expectation': {
+            title: 'What a day should bring',
+            pages: [[
+                {field: 'expected_files', label: 'Files expected', kind: 'number', width: '220px'},
+                {field: 'expected_by', label: 'By local time, e.g. 08:00', kind: 'text', width: '220px'},
+                {field: 'expected_days', label: 'On weekdays, 1 to 7', kind: 'text', width: '220px'}
+            ]]
+        },
+
+        'retries': {
+            title: 'A file that keeps failing',
+            pages: [[
+                {field: 'max_attempts', label: 'Attempts before quarantine, 0 for no limit', kind: 'number', width: '220px'},
+                {field: 'retry_backoff', label: 'Seconds before the second attempt', kind: 'number', width: '220px'},
+                {field: 'quarantine_directory', label: 'Quarantine directory', kind: 'text', width: '220px'}
+            ]]
         }
     }
 });
@@ -110,6 +128,14 @@ forms.initLines = function() {
 
     $('#file-transfer-wizard-edit-arrival-window').on('click', function() {
         forms.open('arrival_window', this);
+    });
+
+    $('#file-transfer-wizard-edit-expectation').on('click', function() {
+        forms.open('expectation', this);
+    });
+
+    $('#file-transfer-wizard-edit-retries').on('click', function() {
+        forms.open('retries', this);
     });
 };
 

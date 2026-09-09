@@ -15,11 +15,6 @@
     background: #e8eef4;
 }
 
-.dashboard-tag-accent {
-    color: #0f6ea8;
-    background: #e0f0ff;
-}
-
 .dashboard-tag-good {
     color: #1b813e;
     background: rgba(27, 129, 62, 0.12);
@@ -38,4 +33,43 @@
 .dashboard-tag-muted {
     color: #6b7280;
     background: rgba(110, 110, 115, 0.12);
+}
+
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the accent tone and the running dot          */
+/* ------------------------------------------------------------ */
+
+.dashboard-tag-accent,
+.dashboard-tag-running,
+.dashboard-journey-step-running {
+    color: var(--dashboard-tone-accent);
+    background: var(--dashboard-tone-accent-fill);
+}
+
+.dashboard-journey-dark .dashboard-journey-step-running {
+    color: var(--dashboard-tone-accent-dark);
+    background: var(--dashboard-tone-accent-dark-fill);
+}
+
+.dashboard-tag-running .dashboard-chip-value::before {
+    content: '';
+    display: inline-block;
+    width: 0.45em;
+    height: 0.45em;
+    margin-right: 0.4em;
+    border-radius: 50%;
+    vertical-align: 0.1em;
+    background: currentColor;
+    animation: dashboard-tag-running-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes dashboard-tag-running-pulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-tag-running .dashboard-chip-value::before {
+        animation: none;
+    }
 }

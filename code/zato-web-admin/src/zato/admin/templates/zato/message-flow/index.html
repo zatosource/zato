@@ -12,8 +12,15 @@
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/payload_panel.css">
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/tree.css">
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/attachments.css">
-<link rel="stylesheet" type="text/css" href="/static/css/audit-log/listing.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/run-summary.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/journey.css">
+<link rel="stylesheet" type="text/css" href="/static/css/audit-log/listing/base.css">
+<link rel="stylesheet" type="text/css" href="/static/css/audit-log/listing/list.css">
+<link rel="stylesheet" type="text/css" href="/static/css/audit-log/listing/pane.css">
+<link rel="stylesheet" type="text/css" href="/static/css/audit-log/listing/flow.css">
 <link rel="stylesheet" type="text/css" href="/static/css/message-flow/page.css">
+<link rel="stylesheet" type="text/css" href="/static/css/message-flow/drawing.css">
+<link rel="stylesheet" type="text/css" href="/static/css/message-flow/pane.css">
 <link rel="stylesheet" type="text/css" href="/static/css/message-flow/replay.css">
 {% endblock %}
 
@@ -75,19 +82,38 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/log_line.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/fact_rows.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/attachments.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/run-summary.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/journey.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/draw.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/draw_zoom.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/listing.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/actions.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/listing/config.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/listing/rows.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/listing/pane.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/listing/poll.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/listing/resubmit.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/listing/filters.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/listing/init.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/flow.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/flow-panel.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/default.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/config.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/scheduler.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/mllp.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/file-outgoing/words.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/file-outgoing/chips.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/file-outgoing/facts.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/file-outgoing/summary.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/file-outgoing/journey.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/file-outgoing/presenter.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/http-method.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/pane-split.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/drawing.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/drawing/layout.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/drawing/connectors.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/drawing/exchanges.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/drawing/nodes.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/drawing/select.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/detail.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/replay/replay.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/replay/timeline.js"></script>
@@ -101,6 +127,7 @@ $.fn.zato.audit_log.config.sourceLabels = {{ source_labels_json|safe }};
 $.fn.zato.audit_log.config.objectLinks = {{ object_links_json|safe }};
 $.fn.zato.audit_log.config.endpointLabels = {{ endpoint_labels_json|safe }};
 $.fn.zato.audit_log.config.eventLabels = {{ event_labels_json|safe }};
+$.fn.zato.audit_log.config.fileTransferWords = {{ file_transfer_words_json|safe }};
 </script>
 
 {% endblock %}

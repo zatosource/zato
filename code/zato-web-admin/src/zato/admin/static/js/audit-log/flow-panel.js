@@ -115,6 +115,12 @@ panel.facts = function(rowModel) {
         panel.pushFact(facts, rowModel, config.sizeLabel, sizeText, '');
     }
 
+    // What the source itself says about an event of this kind - a run's counts, a file's
+    // timings - each fact already worded by the presenter, the same facts the list's pane reads
+    if (presenter.detailFacts !== undefined) {
+        facts = facts.concat(presenter.detailFacts(rowModel));
+    }
+
     return facts;
 };
 

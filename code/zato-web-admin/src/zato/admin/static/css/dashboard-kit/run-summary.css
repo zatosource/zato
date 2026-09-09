@@ -1,0 +1,245 @@
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the run summary                               */
+/* ------------------------------------------------------------ */
+
+/* The facts of a run stand in the same rows as the facts of any event, running out to the
+   frame's edges, and the ledger under them keeps to the rows' own inset */
+
+.dashboard-run-summary {
+    padding: 0 0 10px;
+}
+
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the run summary values                        */
+/* ------------------------------------------------------------ */
+
+/* The light tones are inks for a light panel - on the dark one each has a lighter reading of itself */
+
+.dashboard-run-value-good {
+    color: var(--dashboard-tone-good);
+}
+
+.dashboard-run-summary-dark .dashboard-run-value-good {
+    color: var(--dashboard-tone-good-dark);
+}
+
+.dashboard-run-value-bad {
+    color: var(--dashboard-tone-bad);
+}
+
+.dashboard-run-value-warning {
+    color: var(--dashboard-tone-warning);
+}
+
+.dashboard-run-summary-dark .dashboard-run-value-warning {
+    color: var(--dashboard-tone-warning-dark);
+}
+
+.dashboard-run-value-muted {
+    color: var(--dashboard-muted);
+}
+
+.dashboard-run-summary-dark .dashboard-run-value-muted {
+    color: var(--dashboard-tone-dim);
+}
+
+.dashboard-run-value-running {
+    color: var(--dashboard-tone-accent);
+}
+
+.dashboard-run-summary-dark .dashboard-run-value-running {
+    color: var(--dashboard-tone-accent-dark);
+}
+
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the run summary skip chips                    */
+/* ------------------------------------------------------------ */
+
+.dashboard-run-skips {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.dashboard-run-skip-chip {
+    cursor: pointer;
+    transition: transform var(--dashboard-motion) ease, opacity var(--dashboard-motion) ease;
+}
+
+.dashboard-run-skip-chip:hover {
+    transform: translateY(-1px);
+    transition-delay: var(--dashboard-hover-delay);
+}
+
+.dashboard-run-skip-chip:active {
+    opacity: 0.8;
+    transform: translateY(0);
+}
+
+.dashboard-run-skip-chip-active {
+    color: var(--dashboard-line-strong);
+    background: var(--dashboard-tone-accent-fill);
+}
+
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the run summary ledger                        */
+/* ------------------------------------------------------------ */
+
+.dashboard-run-ledger-host {
+    min-height: 20px;
+    padding: 8px 10px 0;
+}
+
+.dashboard-run-ledger {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.dashboard-run-ledger th {
+    padding: 4px 10px 6px 0;
+    font-size: var(--dashboard-font-small);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.dashboard-run-ledger td {
+    padding: 5px 10px 5px 0;
+    font-size: var(--dashboard-font-body);
+    vertical-align: middle;
+}
+
+.dashboard-run-ledger th:last-child,
+.dashboard-run-ledger td:last-child {
+    padding-right: 0;
+}
+
+.dashboard-run-summary-light .dashboard-run-ledger th {
+    color: var(--dashboard-muted);
+    border-bottom: 1px solid var(--dashboard-line);
+}
+
+.dashboard-run-summary-light .dashboard-run-ledger td {
+    color: var(--dashboard-line-strong);
+    border-bottom: 1px solid var(--dashboard-line);
+}
+
+.dashboard-run-summary-light .dashboard-run-ledger-row:hover td {
+    background: var(--dashboard-fact-tint);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger th {
+    color: var(--dashboard-fact-label-dark);
+    border-bottom: 1px solid var(--dashboard-fact-line-dark);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger td {
+    color: var(--dashboard-panel-text);
+    border-bottom: 1px solid var(--dashboard-fact-line-dark);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger-row:hover td {
+    background: var(--dashboard-fact-tint-dark);
+}
+
+.dashboard-run-ledger-name {
+    font-family: var(--dashboard-mono);
+    word-break: break-all;
+}
+
+.dashboard-run-ledger-size,
+.dashboard-run-ledger-took {
+    font-family: var(--dashboard-mono);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.dashboard-run-ledger-modified {
+    font-family: var(--dashboard-mono);
+    white-space: nowrap;
+}
+
+.dashboard-run-ledger-reason {
+    color: var(--dashboard-muted);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger-reason {
+    color: var(--dashboard-tone-dim);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger-link {
+    color: var(--dashboard-tone-accent-dark);
+}
+
+.dashboard-run-ledger-loading,
+.dashboard-run-ledger-empty,
+.dashboard-run-ledger-overflow {
+    padding: 6px 0;
+    font-size: var(--dashboard-font-body);
+    color: var(--dashboard-muted);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger-loading,
+.dashboard-run-summary-dark .dashboard-run-ledger-empty,
+.dashboard-run-summary-dark .dashboard-run-ledger-overflow {
+    color: var(--dashboard-tone-dim);
+}
+
+.dashboard-run-ledger-fold {
+    padding: 6px 0 0;
+}
+
+.dashboard-run-ledger-fold-toggle {
+    margin-left: 0;
+}
+
+.dashboard-run-summary-light .dashboard-run-ledger-fold-toggle,
+.dashboard-run-summary-light .dashboard-run-skip-clear,
+.dashboard-run-summary-light .dashboard-run-traceback-toggle {
+    color: var(--dashboard-line-strong);
+    background: var(--dashboard-frame-fill);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger-fold-toggle,
+.dashboard-run-summary-dark .dashboard-run-skip-clear,
+.dashboard-run-summary-dark .dashboard-run-traceback-toggle {
+    color: var(--dashboard-badge-dark-text);
+    background: var(--dashboard-badge-dark-fill);
+}
+
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the run summary traceback                     */
+/* ------------------------------------------------------------ */
+
+.dashboard-run-traceback-host {
+    padding: 0 10px;
+}
+
+.dashboard-run-traceback {
+    max-height: 240px;
+    margin: 4px 0 0;
+    padding: 8px 10px;
+    border-radius: 4px;
+    overflow: auto;
+    font-family: var(--dashboard-mono);
+    font-size: var(--dashboard-font-caption);
+    line-height: 1.45;
+    color: var(--dashboard-line-strong);
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--dashboard-frame-fill-soft);
+}
+
+.dashboard-run-summary-dark .dashboard-run-traceback {
+    color: var(--dashboard-panel-text);
+    background: var(--dashboard-frame-dark-fill-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-run-skip-chip {
+        transition: none;
+    }
+}

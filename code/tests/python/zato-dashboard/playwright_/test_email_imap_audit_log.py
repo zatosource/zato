@@ -36,9 +36,9 @@ if 0:
 # ################################################################################################################################
 
 from _imap_test_server import IMAPTestServer
-from audit_log_ui import attach_diagnostics, format_diagnostics, get_details_value, get_row_cid, get_row_event, \
-    get_row_main_text, get_row_outcome, get_row_time_text, get_rows, goto_audit_log, open_cid_overlay, open_data, \
-    open_details, close_cid_overlay, search, wait_for_empty, wait_for_payload_text, wait_for_row_count, wait_for_table
+from audit_log_ui import attach_diagnostics, format_diagnostics, get_row_cid, get_row_event, \
+    get_row_main_text, get_row_outcome, get_row_time_text, get_rows, get_summary_value, goto_audit_log, open_cid_overlay, open_data, \
+    open_summary, close_cid_overlay, search, wait_for_empty, wait_for_payload_text, wait_for_row_count, wait_for_table
 
 from rest_channel import create_channel, deploy_service_file, invoke_until_status, wait_for_service_in_dialog
 
@@ -234,12 +234,12 @@ def _invoke_helper(server_port:'int', url_path:'str', conn_name:'str', action:'s
 # ################################################################################################################################
 
 def _get_row_msg_id(page:'Page', row:'any_') -> 'str':
-    """ The message id of one row's event, read off the Message id fact in the pane's Details tab.
+    """ The message id of one row's event, read off the Message id fact in the pane's Summary tab.
     """
 
-    open_details(page, row)
+    open_summary(page, row)
 
-    out = get_details_value(page, 'Message id')
+    out = get_summary_value(page, 'Message id')
     return out
 
 # ################################################################################################################################
@@ -319,7 +319,7 @@ class TestEmailIMAPAuditLog:
             assert '+00:00' not in time_text, \
                 f'Row {row_index}: expected a locale-formatted time, got a raw ISO string: "{time_text}"'
 
-            # .. the message id is read off the pane's Details tab ..
+            # .. the message id is read off the pane's Summary tab ..
             msg_id = _get_row_msg_id(page, row)
             assert msg_id == expected_uid, \
                 f'Row {row_index}: expected message id "{expected_uid}", got: "{msg_id}"'

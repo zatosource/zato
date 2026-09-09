@@ -11,7 +11,7 @@ from zato.common.as2.reconcile import MDNReconciler
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditSource
 from zato.common.crypto.api import CryptoManager
 from zato.common.json_internal import dumps
-from audit_log_ui import click_pane_cid, get_rows, goto_audit_log, open_details
+from audit_log_ui import click_pane_cid, get_rows, goto_audit_log, open_summary
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,11 +55,11 @@ _purchase_order_850 = 'ISA*00*          *00*          *ZZ*SENDERID       *ZZ*REC
 # ################################################################################################################################
 
 def _open_message_overlay(page:'Page') -> 'None':
-    """ Opens the message overlay of the newest event - the row is selected, its Details tab
+    """ Opens the message overlay of the newest event - the row is selected, its Summary tab
     opened and the CID link in the pane clicked.
     """
     rows = get_rows(page)
-    open_details(page, rows[0])
+    open_summary(page, rows[0])
     click_pane_cid(page)
 
     # The overlay is only usable once its editor holds the payload.

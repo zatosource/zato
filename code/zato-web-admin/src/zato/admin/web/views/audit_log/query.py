@@ -17,6 +17,7 @@ from zato.admin.web.views.audit_log.columns import _data_preview_length, _row_nu
     _source_attr_columns, _source_body_preview
 from zato.admin.web.views.audit_log.sources import _source_resubmit, _source_row_enrich
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table
+from zato.common.audit_log.common import AuditEvent, AuditSource
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,6 +30,9 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# The attribute a delivered file's checksum is stored under.
+_checksum_attr = 'checksum'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,6 +92,10 @@ def _hydrate_rows(connection:'any_', rows:'anylist') -> 'None':
 
         # .. a payload kept outside the event row is previewed the same way ..
         _attach_body_previews(connection, source, source_rows)
+
+        # .. a file transfer row carries how many deliveries share its checksum ..
+        if source == AuditSource.File_Outgoing:
+            _attach_checksum_counts(connection, source_rows)
 
         # .. and a row can only carry the resubmitted marker on a source that has resubmits at all.
         if source in _source_resubmit:
@@ -177,12 +185,19 @@ def _attach_body_kinds(connection:'any_', rows:'anylist') -> 'None':
 
 def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None':
     """ Flags the rows whose event was already resubmitted - a resubmit lands as a new event
-    whose correlation id is the CID of the original one.
+    whose correlation id is the CID of the original one. Only a row that can be resubmitted
+    at all is ever flagged - a source may use the correlation id for other kinship too, e.g.
+    a file transfer run's own events all name the run by it, and a run summary is no resubmit
+    of itself.
     """
+    resubmittable_types = _source_resubmit[source]
     cids:'anylist' = []
 
     for row in rows:
         row['is_resubmitted'] = False
+
+        if row['event_type'] not in resubmittable_types:
+            continue
 
         if row['cid']:
             cids.append(row['cid'])
@@ -206,6 +221,9 @@ def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None'
         resubmitted.add(db_row[0])
 
     for row in rows:
+        if row['event_type'] not in resubmittable_types:
+            continue
+
         if row['cid'] in resubmitted:
             row['is_resubmitted'] = True
 
@@ -241,6 +259,45 @@ def _attach_attr_columns(connection:'any_', source:'str', rows:'anylist') -> 'No
     for event_id, name, value in result:
         row = row_by_event_id[event_id]
         row[name] = value
+
+# ################################################################################################################################
+
+def _attach_checksum_counts(connection:'any_', rows:'anylist') -> 'None':
+    """ Fills the count and newest time of the deliveries sharing each row's checksum, one query for the page.
+    """
+    rows_by_checksum:'dict[str, anylist]' = {}
+
+    for row in rows:
+
+        if not (checksum := row['checksum']):
+            continue
+
+        checksum_rows = rows_by_checksum.setdefault(checksum, [])
+        checksum_rows.append(row)
+
+    if not rows_by_checksum:
+        return
+
+    attr_join = event_table.join(event_attr_table, event_table.c.id == event_attr_table.c.event_id)
+    delivered_count = func.count(event_table.c.id)
+    last_delivered_iso = func.max(event_table.c.event_time_iso)
+
+    is_same_source = event_table.c.source == AuditSource.File_Outgoing
+    is_delivered = event_table.c.event_type == AuditEvent.Delivered
+    is_checksum_attr = event_attr_table.c.name == _checksum_attr
+    is_wanted_checksum = event_attr_table.c.value.in_(rows_by_checksum)
+
+    statement = select(event_attr_table.c.value, delivered_count, last_delivered_iso)
+    statement = statement.select_from(attr_join)
+    statement = statement.where(and_(is_same_source, is_delivered, is_checksum_attr, is_wanted_checksum))
+    statement = statement.group_by(event_attr_table.c.value)
+
+    result = connection.execute(statement)
+
+    for checksum, delivered_count, last_delivered_iso in result:
+        for row in rows_by_checksum[checksum]:
+            row['delivered_count_for_checksum'] = delivered_count
+            row['last_delivered_iso_for_checksum'] = last_delivered_iso
 
 # ################################################################################################################################
 

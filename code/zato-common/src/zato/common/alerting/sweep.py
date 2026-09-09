@@ -42,11 +42,12 @@ if 0:
     from zato.common.audit_log.api import AuditLog
     from zato.common.rule_engine.models import Rule
     from zato.common.rule_engine.sql import RuleSQLBackend
-    from zato.common.typing_ import anylist, stranydict, strintdict, strlist
+    from zato.common.typing_ import anydict, anylist, stranydict, strintdict, strlist
 
     AlertDefaults = AlertDefaults
     AlertRule = AlertRule
     AlertTransports = AlertTransports
+    anydict = anydict
     anylist = anylist
     AuditLog = AuditLog
     Engine = Engine
@@ -224,6 +225,31 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
     if arrival_overdue_ratio := fact['arrival_overdue_ratio']:
         parts.append(f'{arrival_overdue_ratio}x its arrival window since the last file')
 
+    if expected_files_missing := fact['expected_files_missing']:
+        missing_label = pluralize(expected_files_missing, 'expected file')
+        parts.append(f'{missing_label} still missing today, {fact["delivered_today"]} delivered')
+
+    if list_failed_streak := fact['list_failed_streak']:
+        run_label = pluralize(list_failed_streak, 'run')
+        parts.append(f'the newest {run_label} never reached the directory')
+
+    if failed_files_in_window := fact['failed_files_in_window']:
+        failed_label = pluralize(failed_files_in_window, 'file')
+        runs_label = pluralize(fact['runs_failed_in_window'], 'run')
+        parts.append(f'{failed_label} failed across {runs_label}')
+
+    if runs_interrupted_in_window := fact['runs_interrupted_in_window']:
+        interrupted_label = pluralize(runs_interrupted_in_window, 'run')
+        parts.append(f'{interrupted_label} cut short by a server stop')
+
+    if quarantined_count := fact['quarantined_count']:
+        quarantined_label = pluralize(quarantined_count, 'file')
+        parts.append(f'{quarantined_label} quarantined')
+
+    if verify_failed_count := fact['verify_failed_count']:
+        verify_label = pluralize(verify_failed_count, 'stored file')
+        parts.append(f'{verify_label} did not verify')
+
     measures = ', '.join(parts)
 
     # A streak measure on a health source already opens with the source's name, so
@@ -355,6 +381,7 @@ def run_sweep(
     template_dir:'str' = '',
     job_intervals:'strintdict | None' = None,
     arrival_windows:'strintdict | None' = None,
+    schedule_expectations:'anydict | None' = None,
     ) -> 'SweepResult':
     """ Runs one full sweep - the fact producers measure everything once, each fact runs
     through each rule of every alert ruleset, and every match is dispatched through
@@ -367,7 +394,7 @@ def run_sweep(
     out.dispatched = []
 
     facts = collect_facts(engine, metrics_by_name, metrics_source, now, job_intervals=job_intervals,
-        arrival_windows=arrival_windows)
+        arrival_windows=arrival_windows, schedule_expectations=schedule_expectations)
     out.fact_count = len(facts)
 
     for rule in rules:

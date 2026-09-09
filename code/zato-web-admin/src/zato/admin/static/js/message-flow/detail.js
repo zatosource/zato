@@ -189,6 +189,32 @@ detail.show = function(nodeDetail) {
     time.textContent = nodeDetail.time;
     meta.appendChild(time);
 
+    // A source with a sentence for its exchange - what a file transfer run did, in one
+    // line - says it under the header, and a source with a panel of its own - a run's
+    // report, a file's journey - draws it before the bodies. The models arrive newest
+    // first, so the newest one is the one the sentence is about.
+    var newestModel = nodeDetail.models[nodeDetail.models.length - 1];
+    var presenter = $.fn.zato.audit_log.presenterFor(newestModel.raw.source);
+
+    if (presenter.sentence !== undefined) {
+        var sentenceText = presenter.sentence(newestModel.raw);
+
+        if (sentenceText !== '') {
+            var sentence = document.createElement('div');
+            sentence.className = 'message-flow-detail-sentence';
+            sentence.textContent = sentenceText;
+            host.appendChild(sentence);
+        }
+    }
+
+    if (presenter.detailPanel !== undefined) {
+        var sourcePanel = document.createElement('div');
+        sourcePanel.className = 'message-flow-detail-source-panel';
+        host.appendChild(sourcePanel);
+
+        presenter.detailPanel(nodeDetail.models, $(sourcePanel), 'dark');
+    }
+
     // The files the events carried are asked about the moment the pane holds
     // them - an event carrying none keeps its strip's place empty
     var attachments = document.createElement('div');

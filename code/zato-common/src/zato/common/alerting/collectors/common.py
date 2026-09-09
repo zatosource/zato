@@ -108,6 +108,19 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
         'seconds_since_last_arrival': 0,
         'arrival_overdue_ratio': 0.0,
 
+        # The daily expectation and run facts of a file transfer schedule.
+        'expected_files_missing': 0,
+        'delivered_today': 0,
+        'last_run_status': '',
+        'list_failed_streak': 0,
+        'runs_failed_in_window': 0,
+        'failed_files_in_window': 0,
+        'runs_interrupted_in_window': 0,
+
+        # The quarantine and verification facts of a file transfer connection.
+        'quarantined_count': 0,
+        'verify_failed_count': 0,
+
         # The id of the object's newest failing event and whether that event's type
         # can be resubmitted per its source's declaration - what lets an alert
         # deep-link straight at the message that failed.

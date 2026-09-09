@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 Helpers for driving the audit log listing - the list of event rows beside the detail pane
 holding the selected event, with the payload read in the pane's Data tab, the facts in its
-Details tab and the complete message in the overlay behind the CID link.
+Summary tab and the complete message in the overlay behind the CID link.
 """
 
 # stdlib
@@ -47,11 +47,11 @@ _Pane_Event_Selector   = '.audit-log-pane-head .audit-log-pane-event'
 _Pane_Outcome_Selector = '.audit-log-pane-head .audit-log-outcome-filter'
 
 _Data_Tab_Selector    = '.audit-log-pane-tab[data-tab="data"]'
-_Details_Tab_Selector = '.audit-log-pane-tab[data-tab="details"]'
+_Summary_Tab_Selector = '.audit-log-pane-tab[data-tab="summary"]'
 
 _Data_Panel_Selector    = '#audit-log-pane-panel-data'
-_Details_Panel_Selector = '#audit-log-pane-panel-details .audit-log-pane-details'
-_Details_CID_Selector   = '#audit-log-pane-panel-details .audit-log-cid-link'
+_Summary_Panel_Selector = '#audit-log-pane-panel-summary .audit-log-pane-summary'
+_Summary_CID_Selector   = '#audit-log-pane-panel-summary .audit-log-cid-link'
 
 _Payload_Text_Selector = '#audit-log-pane-payload .dashboard-payload-text'
 
@@ -246,35 +246,35 @@ def select_row(page:'Page', row:'any_') -> 'None':
 
 # ################################################################################################################################
 
-def open_details(page:'Page', row:'any_') -> 'None':
-    """ Selects one row and opens the pane's Details tab on it.
+def open_summary(page:'Page', row:'any_') -> 'None':
+    """ Selects one row and opens the pane's Summary tab on it.
     """
     select_row(page, row)
 
-    page.click(_Details_Tab_Selector)
-    _ = page.wait_for_selector(_Details_Panel_Selector, state='visible', timeout=_UI_Timeout)
+    page.click(_Summary_Tab_Selector)
+    _ = page.wait_for_selector(_Summary_Panel_Selector, state='visible', timeout=_UI_Timeout)
 
 # ################################################################################################################################
 
-def get_details_text(page:'Page') -> 'str':
-    """ Everything the pane's Details tab says about the selected event, lowercased because
+def get_summary_text(page:'Page') -> 'str':
+    """ Everything the pane's Summary tab says about the selected event, lowercased because
     the fact labels are uppercased with CSS.
     """
-    details_text = page.inner_text(_Details_Panel_Selector)
+    summary_text = page.inner_text(_Summary_Panel_Selector)
 
-    out = details_text.lower()
+    out = summary_text.lower()
     return out
 
 # ################################################################################################################################
 
-def get_details_value(page:'Page', label:'str') -> 'str':
-    """ The value of one fact in the pane's Details tab, found by the fact's label. The value
+def get_summary_value(page:'Page', label:'str') -> 'str':
+    """ The value of one fact in the pane's Summary tab, found by the fact's label. The value
     is read out of the DOM rather than the rendered text because the Copy and Search badges
     share the value's line, hidden only by their opacity.
     """
     out = page.evaluate(
         '''label => {
-            let rows = document.querySelectorAll('#audit-log-pane-panel-details .dashboard-fact-row');
+            let rows = document.querySelectorAll('#audit-log-pane-panel-summary .dashboard-fact-row');
             for (const row of rows) {
                 let rowLabel = row.querySelector('.dashboard-fact-row-label').textContent;
                 if (rowLabel.toLowerCase() === label) {
@@ -290,17 +290,17 @@ def get_details_value(page:'Page', label:'str') -> 'str':
 # ################################################################################################################################
 
 def get_pane_cid(page:'Page') -> 'str':
-    """ The CID of the selected event, read off the pane's Details tab.
+    """ The CID of the selected event, read off the pane's Summary tab.
     """
-    out = page.inner_text(_Details_CID_Selector)
+    out = page.inner_text(_Summary_CID_Selector)
     return out
 
 # ################################################################################################################################
 
 def get_row_cid(page:'Page', row:'any_') -> 'str':
-    """ The CID of one row's event, read by selecting the row and opening its Details tab.
+    """ The CID of one row's event, read by selecting the row and opening its Summary tab.
     """
-    open_details(page, row)
+    open_summary(page, row)
 
     out = get_pane_cid(page)
     return out
@@ -362,9 +362,9 @@ def get_payload_text(page:'Page') -> 'str':
 # ################################################################################################################################
 
 def click_pane_cid(page:'Page') -> 'None':
-    """ Clicks the CID link in the pane's Details tab, which opens the complete message overlay.
+    """ Clicks the CID link in the pane's Summary tab, which opens the complete message overlay.
     """
-    page.click(_Details_CID_Selector)
+    page.click(_Summary_CID_Selector)
     _ = page.wait_for_selector(f'{_Overlay_Selector}:not(.hidden)', state='visible', timeout=_UI_Timeout)
 
 # ################################################################################################################################
@@ -384,10 +384,10 @@ def read_overlay_text(page:'Page') -> 'str':
 # ################################################################################################################################
 
 def open_cid_overlay(page:'Page', row:'any_') -> 'str':
-    """ Opens the complete message of one row's event - the row is selected, its Details tab
+    """ Opens the complete message of one row's event - the row is selected, its Summary tab
     opened and the CID link clicked - and returns what the overlay shows.
     """
-    open_details(page, row)
+    open_summary(page, row)
     click_pane_cid(page)
 
     out = read_overlay_text(page)

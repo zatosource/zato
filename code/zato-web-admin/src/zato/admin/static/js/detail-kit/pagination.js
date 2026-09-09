@@ -34,6 +34,12 @@
             for (var ek in extra) {
                 data[ek] = extra[ek];
             }
+
+            // The rows the page shows as still changing ride with every request.
+            if (get_active_items) {
+                data[active_items_field] = get_active_items();
+            }
+
             return data;
         }
 
@@ -143,7 +149,7 @@
                     total_count = data.total;
                     current_page = data.page;
 
-                    render_page($body, rows, total_count);
+                    render_page($body, rows, total_count, data.updated);
 
                     update_last_ts(rows);
                     update_controls();
@@ -173,7 +179,7 @@
                     }
                     var rows = data.rows;
                     total_count = data.total;
-                    render_page($body, rows, total_count);
+                    render_page($body, rows, total_count, data.updated);
                     update_last_ts(rows);
                     update_controls();
                 }
@@ -188,12 +194,6 @@
             if (!show_all && current_page !== 1) return;
 
             var poll_extra = {since_timestamp: last_ts};
-            if (get_active_items) {
-                var active = get_active_items();
-                if (active.length > 0) {
-                    poll_extra[active_items_field] = active;
-                }
-            }
             $.ajax({
                 url: poll_url,
                 type: 'POST',
@@ -204,6 +204,7 @@
                     if (typeof data === 'string') {
                         data = JSON.parse(data);
                     }
+
                     var rows = data.rows;
                     if (rows.length === 0) return;
 
@@ -231,7 +232,7 @@
             var initialRows = config.initial_data.rows;
             total_count = config.initial_data.total;
             current_page = config.initial_data.page;
-            render_page($body, initialRows, total_count);
+            render_page($body, initialRows, total_count, []);
             update_last_ts(initialRows);
             update_controls();
         } else {

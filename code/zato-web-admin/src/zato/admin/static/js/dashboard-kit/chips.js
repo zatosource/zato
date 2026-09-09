@@ -18,7 +18,8 @@
         'good': 'dashboard-tag-good',
         'bad': 'dashboard-tag-bad',
         'warn': 'dashboard-tag-warn',
-        'muted': 'dashboard-tag-muted'
+        'muted': 'dashboard-tag-muted',
+        'running': 'dashboard-tag-running'
     };
 
     /* One chip - {label, value, tone, key}. The key and the value travel on the element

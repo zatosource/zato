@@ -262,6 +262,46 @@ class AlertingRun(AdminService):
 
 # ################################################################################################################################
 
+    def _get_schedule_expectations(self) -> 'anydict':
+        """ The daily expectation of each active file transfer schedule that declares one, by schedule name.
+        """
+
+        # Our response to produce
+        out:'anydict' = {}
+
+        # The schedules of every file transfer connection.
+        with closing(self.odb.session()) as session:
+            rows = session.query(GenericConn.id).\
+                filter(GenericConn.type_.in_(FileTransfer.ConnTypeList)).\
+                filter(GenericConn.cluster_id==self.server.cluster_id).\
+                all()
+
+            for row in rows:
+                schedules = get_schedule_list(session, row.id)
+
+                for schedule in schedules:
+
+                    # An inactive schedule expects nothing.
+                    if not schedule['is_active']:
+                        continue
+
+                    # A schedule without a count or a time of day expects nothing.
+                    if not schedule['expected_files']:
+                        continue
+
+                    if not schedule['expected_by']:
+                        continue
+
+                    out[schedule['name']] = {
+                        'expected_files': schedule['expected_files'],
+                        'expected_by': schedule['expected_by'],
+                        'expected_days': schedule['expected_days'],
+                    }
+
+        return out
+
+# ################################################################################################################################
+
     def handle(self) -> 'None':
 
         # The job's extra data arrives as a dict - an empty extra arrives as something else,
@@ -320,9 +360,12 @@ class AlertingRun(AdminService):
         # The windows the arrival-overdue measure sizes itself against.
         arrival_windows = self._get_arrival_windows()
 
+        # The daily expectations of the schedules.
+        schedule_expectations = self._get_schedule_expectations()
+
         result = run_sweep(engine, rules, metrics_by_name, AuditSource.MLLP_Channel, transports, audit_log, self.cid, now,
             defaults=defaults, dashboard_url=dashboard_url, template_dir=template_dir, job_intervals=job_intervals,
-            arrival_windows=arrival_windows)
+            arrival_windows=arrival_windows, schedule_expectations=schedule_expectations)
 
         rule_label       = pluralize(result.rule_count, 'rule')
         fact_label       = pluralize(result.fact_count, 'fact')

@@ -1,0 +1,270 @@
+/* ------------------------------------------------------------ */
+/* The drawing vocabulary                                        */
+/* ------------------------------------------------------------ */
+
+/* A node - a lit card: gradient face, a hairline of light along the top edge,
+   a shadow cast into the room */
+
+.message-flow-node {
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+    transition: filter 0.25s;
+}
+
+.message-flow-node-selectable {
+    cursor: pointer;
+}
+
+.message-flow-box {
+    fill: url(#message-flow-node-fill);
+}
+
+/* The node the reader picked - amber says selection and nothing else - and
+   the nodes the selection came by, the root included, wearing the same
+   border without holding the selection */
+
+.message-flow-node-selected .message-flow-box,
+.message-flow-node-way .message-flow-box {
+    stroke: var(--message-flow-selected);
+    stroke-width: 1.6;
+}
+
+.message-flow-rim {
+    fill: none;
+    stroke: var(--message-flow-rim);
+    stroke-width: 1;
+}
+
+/* The title band across a node's top and the hairline under it */
+
+.message-flow-band,
+.message-flow-band-square {
+    fill: rgba(0, 0, 0, 0.2);
+}
+
+.message-flow-band-line {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 1;
+}
+
+.message-flow-band-type {
+    fill: var(--message-flow-label);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* The words inside a node */
+
+.message-flow-title {
+    fill: var(--message-flow-text);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.message-flow-sub {
+    fill: var(--message-flow-muted);
+    font-size: 10px;
+}
+
+/* The strip across every node's foot - the node's own elapsed words, always
+   on the card, over a hairline of its own */
+
+.message-flow-node-footer-line {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 1;
+}
+
+.message-flow-node-footer {
+    fill: var(--message-flow-muted);
+    font-size: 10px;
+}
+
+.message-flow-identity {
+    fill: var(--message-flow-selected-text);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* Chips - the same tones the listing and the flow wear, lifted for a dark frame */
+
+.message-flow-chip-back {
+    fill: var(--message-flow-canvas-surface);
+}
+
+.message-flow-chip-text {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+}
+
+.message-flow-chip-id {
+    fill: rgba(246, 166, 5, 0.16);
+}
+
+.message-flow-chip-text-id {
+    fill: var(--message-flow-selected-text);
+}
+
+.message-flow-chip-request {
+    fill: rgba(111, 182, 232, 0.18);
+}
+
+.message-flow-chip-text-request {
+    fill: var(--message-flow-request);
+}
+
+/* The answering message, whatever shape the answer took */
+
+.message-flow-chip-response {
+    fill: rgba(116, 207, 146, 0.18);
+}
+
+.message-flow-chip-text-response {
+    fill: var(--message-flow-response);
+}
+
+/* An event that is neither a request nor a reply - a message expiring, a ledger being written */
+
+.message-flow-chip-none {
+    fill: rgba(157, 157, 184, 0.18);
+}
+
+.message-flow-chip-text-none {
+    fill: var(--message-flow-sys);
+}
+
+/* A person reading a stored message after the fact */
+
+.message-flow-chip-view {
+    fill: rgba(207, 169, 234, 0.18);
+}
+
+.message-flow-chip-text-view {
+    fill: var(--message-flow-view);
+}
+
+/* A scheduler job's run - work done at its appointed time */
+
+.message-flow-chip-job {
+    fill: rgba(232, 196, 111, 0.18);
+}
+
+.message-flow-chip-text-job {
+    fill: var(--message-flow-job);
+}
+
+/* A log access record - a config change or someone reading a message body -
+   in the same inks the platform's own records wear */
+
+.message-flow-chip-access {
+    fill: rgba(157, 157, 184, 0.18);
+}
+
+.message-flow-chip-text-access {
+    fill: var(--message-flow-sys);
+}
+
+.message-flow-chip-good {
+    fill: rgba(116, 207, 146, 0.18);
+}
+
+.message-flow-chip-text-good {
+    fill: var(--message-flow-good);
+}
+
+.message-flow-chip-bad {
+    fill: rgba(214, 69, 80, 0.22);
+}
+
+.message-flow-chip-text-bad {
+    fill: var(--message-flow-bad);
+}
+
+.message-flow-chip-muted {
+    fill: rgba(255, 255, 255, 0.1);
+}
+
+.message-flow-chip-text-muted {
+    fill: #a8aebc;
+}
+
+/* Connectors - soft translucent guides with rounded elbows */
+
+.message-flow-connector {
+    fill: none;
+    stroke: var(--message-flow-guide);
+    stroke-width: 2;
+}
+
+.message-flow-connector-arrow {
+    fill: var(--message-flow-guide);
+}
+
+/* ------------------------------------------------------------ */
+/* Message flow - the dotted connector and the line note         */
+/* ------------------------------------------------------------ */
+
+.message-flow-connector-dotted {
+    stroke-dasharray: 4 4;
+}
+
+.message-flow-line-note {
+    font-size: var(--dashboard-font-small);
+}
+
+/* The connector into the node currently standing out - picked by hand or
+   stood on by the pass - draws in the selection amber */
+
+.message-flow-connector-set.message-flow-connector-current .message-flow-connector {
+    stroke: var(--message-flow-selected);
+}
+
+.message-flow-connector-set.message-flow-connector-current .message-flow-connector-arrow {
+    fill: var(--message-flow-selected);
+}
+
+/* What is under the pointer or held by a click stays in colour, the rest of
+   the room is drained. The cards dim one by one rather than row by row, so a
+   selection can keep just its own ancestry lit, and the root never dims. */
+
+.message-flow-branch {
+    cursor: pointer;
+}
+
+/* During a replay pass the clock is what lights the cards, so the pointer's
+   own dimming stands down there and only the connector layers keep theirs */
+
+svg.message-flow-focus:not(.message-flow-replay) .message-flow-node:not(.message-flow-lit):not(.message-flow-root) {
+    filter: grayscale(1) brightness(0.75) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+}
+
+/* The lines live in a layer of their own under the cards - each one lights
+   and dims with the branch it belongs to */
+
+.message-flow-connector-set {
+    cursor: pointer;
+    transition: filter 0.25s;
+}
+
+svg.message-flow-focus .message-flow-connector-set:not(.message-flow-lit) {
+    filter: grayscale(1) brightness(0.75);
+}
+
+/* The layer the connectors' words stand on - over the whole drawing, so
+   nothing can run through an elapsed label, the words themselves standing
+   only where no card is. Made of labels only, it answers to no pointer, and
+   each group of words dims with its own branch. */
+
+.message-flow-chip-layer {
+    pointer-events: none;
+}
+
+.message-flow-connector-chip {
+    transition: filter 0.25s;
+}
+
+svg.message-flow-focus .message-flow-connector-chip:not(.message-flow-lit) {
+    filter: grayscale(1) brightness(0.75);
+}

@@ -44,6 +44,8 @@ $.fn.zato.outgoing.smb.field_descriptions = {
     'id_username': 'Username to authenticate as, e.g. a domain account in the DOMAIN\\user form ' +
         'or a local account name.',
     'id_secret': 'Password for the username above. It is stored encrypted in the ODB.',
+    'id_verify_how': 'How a stored file is checked against what was sent - by its remote size, ' +
+        'or by reading it back and comparing checksums.',
     'id_should_store_content': 'Whether the audit log additionally keeps the bytes of the files ' +
         'this connection moves, so they can be reread and downloaded later. Off by default.',
 };
@@ -115,6 +117,7 @@ $.fn.zato.outgoing.smb.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.port);
     row += String.format("<td class='ignore'>{0}</td>", item.username ? item.username : '');
     row += String.format("<td class='ignore'>{0}</td>", item.should_store_content == true);
+    row += String.format("<td class='ignore'>{0}</td>", item.verify_how);
 
     if(include_tr) {
         row += '</tr>';

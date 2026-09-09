@@ -16,6 +16,7 @@ from traceback import format_exc
 # Zato
 from zato.common.api import SFTP
 from zato.common.audit_log.api import AuditLog
+from zato.common.file_transfer.api import Default_Verify_How
 from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
 from zato.common.sftp import SFTPOutput
 from zato.common.util.api import new_cid
@@ -70,6 +71,7 @@ outconn_sftp_config_defaults:'dict[str, object]' = {
     'strict_host_key_checking': True,
     'ignore_host_key_changes': False,
     'should_store_content': False,
+    'verify_how': Default_Verify_How,
 }
 
 # Config keys that must be integers but may arrive as strings from opaque storage
@@ -79,7 +81,7 @@ outconn_sftp_int_config_keys = ()
 outconn_sftp_bool_config_keys = ('strict_host_key_checking', 'ignore_host_key_changes', 'should_store_content')
 
 # Config keys that must be strings but may arrive as integers from opaque storage
-outconn_sftp_string_config_keys = ('address', 'username')
+outconn_sftp_string_config_keys = ('address', 'username', 'verify_how')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -396,6 +398,12 @@ class OutconnSFTPWrapper(Wrapper):
             self.should_store_content = config['should_store_content']
         else:
             self.should_store_content = False
+
+        # A connection without the setting checks the size.
+        if not (verify_how := config.get('verify_how')):
+            verify_how = Default_Verify_How
+
+        self.verify_how = verify_how
 
         # What a guaranteed delivery to this connection goes through. It is built from the connection's
         # id rather than its name because that is what a rename leaves alone.

@@ -19,24 +19,28 @@ than for any one of them:
 
 # stdlib
 from dataclasses import dataclass, field
+from json import loads
 
 # SQLAlchemy
 from sqlalchemy import and_, or_, select
 
 # Zato
 from zato.common.audit_log.api import event_link_table, event_table
+from zato.common.audit_log.common import AuditEvent, AuditSource
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, intdict, intlist, intstrdict, strintdict
+    from zato.common.typing_ import any_, anydict, anylist, intdict, intlist, intstrdict, strintdict, strstrdict
     any_ = any_
+    anydict = anydict
     anylist = anylist
     intdict = intdict
     intlist = intlist
     intstrdict = intstrdict
     strintdict = strintdict
+    strstrdict = strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,6 +53,34 @@ Relation_Child = 'child'
 Relation_Resubmit_Of = 'resubmit-of'
 Relation_Resubmitted_As = 'resubmitted-as'
 Relation_Same_Msg_Id = 'same-msg-id'
+
+# The correl_id relation of a file transfer run and its files, one per direction.
+Relation_Member_Of = 'member-of'
+Relation_Has_Member = 'has-member'
+
+# The relation of a scheduler firing to the events under its cid.
+Relation_Triggered_By = 'triggered-by'
+
+# The relation of a delivery to the events its service wrote under the file's cid.
+Relation_Handed_To = 'handed-to'
+
+# The relation of a delivery to an earlier delivery of the same checksum.
+Relation_Same_Content = 'same-content'
+
+# The correl_id relation per source, sources not listed use the resubmission relations.
+_correl_id_relation_forward = {
+    AuditSource.File_Outgoing: Relation_Member_Of,
+}
+
+_correl_id_relation_backward = {
+    AuditSource.File_Outgoing: Relation_Has_Member,
+}
+
+# The sources whose same-cid events are never repointed to a delivery.
+_frame_sources = (AuditSource.File_Outgoing, AuditSource.Scheduler)
+
+# The file transfer events that hand a file to a service.
+_hand_off_events = (AuditEvent.Delivered, AuditEvent.Delivery_Failed)
 
 # What a search term resolved as, which is what the journey endpoint reports back
 Resolved_Event_Id = 'event-id'
@@ -240,7 +272,7 @@ def _select_resubmits_of_held(frontier:'_Frontier') -> 'any_':
     as the cid of the message it is sending out again. The named cid rides along so each found
     resubmission can be traced back to the held event it was born from.
     """
-    statement = select(event_table.c.id, event_table.c.correl_id)
+    statement = select(event_table.c.id, event_table.c.correl_id, event_table.c.source)
     statement = statement.where(event_table.c.correl_id.in_(frontier.cids))
 
     return statement
@@ -252,7 +284,7 @@ def _select_origins_of_held(frontier:'_Frontier') -> 'any_':
     born from, found by the cid each of those events names as its origin. The cid rides along so
     each found original can be traced back to the resubmission that named it.
     """
-    statement = select(event_table.c.id, event_table.c.cid)
+    statement = select(event_table.c.id, event_table.c.cid, event_table.c.source)
     statement = statement.where(event_table.c.cid.in_(frontier.correl_ids))
 
     return statement
@@ -318,18 +350,34 @@ def _run_step(connection:'any_', statement:'any_', flow_ids:'FlowIds', relation:
 
 # ################################################################################################################################
 
-def _run_via_step(connection:'any_', statement:'any_', via_by_key:'strintdict', flow_ids:'FlowIds', relation:'str', new_ids:'intlist') -> 'None':
-    """ One widening step whose relation points at one held event - the select returns each found
-    event together with the cid that led to it, and the map turns that cid back into the id of the
-    held event it belongs to.
+def _run_via_step(
+    connection:'any_',
+    statement:'any_',
+    via_by_key:'strintdict',
+    flow_ids:'FlowIds',
+    relation:'str',
+    relation_by_source:'strstrdict',
+    new_ids:'intlist',
+    ) -> 'None':
+    """ One widening step whose relation points at one held event, with the relation chosen per source.
     """
     result = connection.execute(statement)
-    found:'anylist' = []
 
-    for event_id, key in result:
-        found.append((event_id, via_by_key[key]))
+    # The found events grouped by relation.
+    found_by_relation:'anydict' = {}
 
-    _add_found(flow_ids, found, relation, new_ids)
+    for event_id, key, source in result:
+
+        if not (found_relation := relation_by_source.get(source)):
+            found_relation = relation
+
+        if found_relation not in found_by_relation:
+            found_by_relation[found_relation] = []
+
+        found_by_relation[found_relation].append((event_id, via_by_key[key]))
+
+    for found_relation, found in found_by_relation.items():
+        _add_found(flow_ids, found, found_relation, new_ids)
 
 # ################################################################################################################################
 
@@ -393,10 +441,14 @@ def get_flow_ids(connection:'any_', seed_id:'int') -> 'FlowIds':
         # .. then the resubmission arrow, which is a cid named rather than shared, read from
         # each of its two ends, either end tracing back to the held event at the other ..
         if frontier.cids:
-            _run_via_step(connection, _select_resubmits_of_held(frontier), frontier.id_by_cid, out, Relation_Resubmit_Of, new_ids)
+            resubmits_statement = _select_resubmits_of_held(frontier)
+            _run_via_step(connection, resubmits_statement, frontier.id_by_cid, out,
+                Relation_Resubmit_Of, _correl_id_relation_forward, new_ids)
 
         if frontier.correl_ids:
-            _run_via_step(connection, _select_origins_of_held(frontier), frontier.id_by_correl_id, out, Relation_Resubmitted_As, new_ids)
+            origins_statement = _select_origins_of_held(frontier)
+            _run_via_step(connection, origins_statement, frontier.id_by_correl_id, out,
+                Relation_Resubmitted_As, _correl_id_relation_backward, new_ids)
 
         # .. and last the pairing by message id, which is the only one of the four that says
         # nothing about who wrote either event down.
@@ -409,7 +461,160 @@ def get_flow_ids(connection:'any_', seed_id:'int') -> 'FlowIds':
 
         frontier_ids = new_ids
 
+    # The same-cid relations are then refined.
+    _refine_same_cid(connection, out)
+
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class _FlowEvent:
+    """ The columns of one flow event the refinement reads.
+    """
+    id:         int = 0
+    cid:        str = ''
+    source:     str = ''
+    event_type: str = ''
+
+# ################################################################################################################################
+
+def _read_flow_events(connection:'any_', flow_ids:'FlowIds') -> 'anylist':
+    """ The id, cid, source and event type of every event of the flow.
+    """
+    out:'anylist' = []
+
+    flow_event_ids = list(flow_ids.relation_by_id)
+    is_flow_event = event_table.c.id.in_(flow_event_ids)
+
+    statement = select(event_table.c.id, event_table.c.cid, event_table.c.source, event_table.c.event_type)
+    statement = statement.where(is_flow_event)
+
+    result = connection.execute(statement)
+
+    for event_id, cid, source, event_type in result:
+        item = _FlowEvent()
+        item.id = event_id
+        item.cid = cid
+        item.source = source
+        item.event_type = event_type
+        out.append(item)
+
+    return out
+
+# ################################################################################################################################
+
+def _repoint(flow_ids:'FlowIds', item:'_FlowEvent', relation:'str', via_id:'int') -> 'None':
+    """ Changes the relation of a same-cid event to the given one, pointing at the given event.
+    """
+    if flow_ids.relation_by_id[item.id] != Relation_Same_Cid:
+        return
+
+    flow_ids.relation_by_id[item.id] = relation
+    flow_ids.via_by_id[item.id] = via_id
+
+# ################################################################################################################################
+
+def _refine_triggered_by(flow_ids:'FlowIds', events:'anylist') -> 'None':
+    """ Repoints the events of other sources under a scheduler firing's cid to the firing.
+    """
+    trigger_by_cid:'strintdict' = {}
+
+    for item in events:
+        is_scheduler = item.source == AuditSource.Scheduler
+        is_firing = item.event_type == AuditEvent.Job_Executed
+
+        if is_scheduler:
+            if is_firing:
+                trigger_by_cid[item.cid] = item.id
+
+    if not trigger_by_cid:
+        return
+
+    for item in events:
+
+        if item.cid not in trigger_by_cid:
+            continue
+
+        if item.source == AuditSource.Scheduler:
+            continue
+
+        _repoint(flow_ids, item, Relation_Triggered_By, trigger_by_cid[item.cid])
+
+# ################################################################################################################################
+
+def _refine_handed_to(flow_ids:'FlowIds', events:'anylist') -> 'None':
+    """ Repoints the events of other sources under a file's cid to the file's delivery event.
+    """
+    hand_off_by_cid:'strintdict' = {}
+
+    for item in events:
+        is_file_transfer = item.source == AuditSource.File_Outgoing
+        is_hand_off = item.event_type in _hand_off_events
+
+        if is_file_transfer:
+            if is_hand_off:
+                hand_off_by_cid[item.cid] = item.id
+
+    if not hand_off_by_cid:
+        return
+
+    for item in events:
+
+        if item.cid not in hand_off_by_cid:
+            continue
+
+        if item.source in _frame_sources:
+            continue
+
+        _repoint(flow_ids, item, Relation_Handed_To, hand_off_by_cid[item.cid])
+
+# ################################################################################################################################
+
+def _refine_same_content(connection:'any_', flow_ids:'FlowIds', events:'anylist') -> 'None':
+    """ Adds the earlier delivery of the same checksum to the flow of each delivery that recorded one.
+    """
+    delivered_ids:'intlist' = []
+
+    for item in events:
+        is_file_transfer = item.source == AuditSource.File_Outgoing
+        is_delivered = item.event_type == AuditEvent.Delivered
+
+        if is_file_transfer:
+            if is_delivered:
+                delivered_ids.append(item.id)
+
+    if not delivered_ids:
+        return
+
+    statement = select(event_table.c.id, event_table.c.data)
+    statement = statement.where(event_table.c.id.in_(delivered_ids))
+
+    result = connection.execute(statement)
+    found:'anylist' = []
+
+    for event_id, data in result:
+
+        details = loads(data)
+
+        if seen_before_event_id := details.get('seen_before_event_id'):
+            found.append((seen_before_event_id, event_id))
+
+    # The flow is not widened on the earlier delivery.
+    unused_new_ids:'intlist' = []
+    _add_found(flow_ids, found, Relation_Same_Content, unused_new_ids)
+
+# ################################################################################################################################
+
+def _refine_same_cid(connection:'any_', flow_ids:'FlowIds') -> 'None':
+    """ Refines the same-cid relations into triggered-by, handed-to and same-content, in that order.
+    """
+    events = _read_flow_events(connection, flow_ids)
+
+    _refine_triggered_by(flow_ids, events)
+    _refine_handed_to(flow_ids, events)
+    _refine_same_content(connection, flow_ids, events)
 
 # ################################################################################################################################
 # ################################################################################################################################

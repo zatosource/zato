@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.as2.reconcile import MDNReconciler
 from zato.common.crypto.api import CryptoManager
 from zato.edi.reconcile import Reconciler
-from audit_log_ui import get_details_value, get_row_event_types, get_row_msg_ids, get_rows, goto_audit_log, open_details
+from audit_log_ui import get_row_event_types, get_row_msg_ids, get_rows, get_summary_value, goto_audit_log, open_summary
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -147,9 +147,9 @@ class TestX12Outstanding:
 
         # .. an X12 event names its interchange by its control number, said in the pane ..
         rows = get_rows(page)
-        open_details(page, rows[0])
+        open_summary(page, rows[0])
 
-        control_number = get_details_value(page, 'Control number')
+        control_number = get_summary_value(page, 'Control number')
         assert control_number != '', 'Expected a control number in the pane of an X12 event'
 
         # .. and the filter narrows it down to the unacknowledged interchange -
@@ -160,9 +160,9 @@ class TestX12Outstanding:
         assert events == [_Event_Interchange_Sent], f'Unexpected outstanding events: {events}'
 
         rows = get_rows(page)
-        open_details(page, rows[0])
+        open_summary(page, rows[0])
 
-        control_number = get_details_value(page, 'Control number')
+        control_number = get_summary_value(page, 'Control number')
         assert control_number == '2', f'Unexpected outstanding control number: {control_number}'
 
 # ################################################################################################################################

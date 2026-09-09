@@ -1,0 +1,210 @@
+@import url("../../dashboard-kit/kit.css");
+@import url("../../dashboard-kit/outcome.css");
+@import url("../../dashboard-kit/time_range.css");
+@import url("../../dashboard-kit/time-scrub.css");
+@import url("../../dashboard-kit/main_chart.css");
+@import url("../../dashboard-kit/chips.css");
+@import url("../../dashboard-kit/role.css");
+@import url("../../dashboard-kit/http-method.css");
+@import url("../../dashboard-kit/payload_panel.css");
+@import url("../../dashboard-kit/list_detail.css");
+@import url("../../dashboard-kit/tabs.css");
+@import url("../../dashboard-kit/log_line.css");
+@import url("../../dashboard-kit/fact_rows.css");
+
+/* What stands out on the dark frame the pane reads on - the line a flow was read from, the tag
+   saying how an event got into it, and the one value of an event that leads somewhere */
+
+:root {
+
+    /* The room the frame around the page used to give what stands inside it, kept now that the
+       frame itself is gone, so nothing on the page moved out to the edge along with it */
+    --audit-log-page-inset: 20px;
+
+    /* The digits of a time of day - darker than the grey the dashboard mutes text to, so a
+       column of them is legible at a glance, and still held back from what a row is named by */
+    --audit-log-time-text: #43506a;
+
+    /* The red an error is named in everywhere else on the screen, kept as its channels so that the
+       frame a failed row is picked out by and the wash behind it are the one colour at two
+       strengths. The frame is dashed so it reads as a mark left on the row rather than as a border
+       the table drew, and it is written as one value because all four sides are the one frame. The
+       wash is faint enough to leave the row's own colours - the tint of a new arrival underneath
+       it, the blue of the selection over it - reading through. */
+    --audit-log-error-rgb: 224, 34, 110;
+
+    /* The frame sits inside each row's own box, so two framed rows meeting show both their
+       edges - at 1px the seam between them reads as the one 2px line it used to be */
+    --audit-log-error-frame-width: 1px;
+    --audit-log-error-frame: var(--audit-log-error-frame-width) dashed rgb(var(--audit-log-error-rgb));
+    --audit-log-error-tint: rgba(var(--audit-log-error-rgb), 0.05);
+
+    /* The room left between the end of a row and the list's own edge, so that a framed row stops
+       short of the scrollbar the list carries rather than running into it */
+    --audit-log-list-end-gap: 6px;
+
+    /* Every row is this tall whatever it holds, so a dropped tag does not shorten the rows and
+       walk the list up under the reader. It is the height the tallest of them already came to.  */
+    --audit-log-row-height: 28px;
+
+    /* The dot a failed row is marked with, and how far its rail stands off the list. Both come out
+       of the inset the page already keeps at its edge, so nothing in the list gives up any room. */
+    --audit-log-error-dot-size: 8px;
+    --audit-log-error-rail-gap: 10px;
+
+    --dashboard-flow-accent: #f6c66a;
+    --dashboard-flow-accent-bright: #f9d99a;
+    --dashboard-flow-accent-tint: rgba(246, 166, 5, 0.10);
+    --dashboard-flow-accent-tint-strong: rgba(246, 166, 5, 0.18);
+    --dashboard-flow-accent-tint-tag: rgba(246, 166, 5, 0.14);
+
+    /* The block an open flow line and its panel form together - how far it stands off the
+       lines around it and the solid surface the two of them share, a clearly lighter shade
+       of the panel's own so the block reads as raised off it. What is not open is pushed
+       down toward black instead of being faded: on a dark frame, transparency only sinks
+       light text into the background, while darkening keeps it legible and unmistakably
+       set back. */
+    --audit-log-flow-open-gap: 20px;
+
+    /* Every line stands in from the frame's own sides by the same measure, so the dark
+       shows along the edges and an open card is no wider or narrower than its line was */
+    --audit-log-flow-open-side-gap: 8px;
+
+    --audit-log-flow-open-surface: #32324f;
+
+    /* What sets the closed lines back is their colour being drained, not their light - text
+       pushed toward black stops being readable, while text merely gone grey still reads and
+       yet could never be mistaken for the one thing on the frame still in colour, the card.
+       The touch of darkening only settles the greys into the darkened room behind them. */
+    --audit-log-flow-backdrop-filter: grayscale(1) brightness(0.75);
+
+    /* With a block open, the frame itself falls to near-black under the closed lines, so
+       the card is lit against a room gone dark rather than against the everyday panel */
+    --audit-log-flow-backdrop-surface: #191926;
+
+    /* What the raised block adds on top of its surface - text a shade brighter than the
+       frame's own, a hairline of light along its top edge the way a lit card catches it,
+       and the shadow it casts into the dark, upward off the line and downward off the
+       panel so the two throw one glow rather than two */
+    --audit-log-flow-open-text: #e9e9f4;
+
+    /* The names down the card's fact rows - the grey they wear on the everyday panel sinks
+       into the navy, so on the card they read nearly as bright as the text they name, the
+       size and the capitals being what keeps them apart from it */
+    --audit-log-flow-open-label: #d9d9ec;
+    --audit-log-flow-open-rim: rgba(255, 255, 255, 0.22);
+
+    /* The way to the rest of a cut message - barely more than the caption beside it, a badge
+       only by its shape */
+    --audit-log-show-all-fill: rgba(255, 255, 255, 0.07);
+    --audit-log-show-all-fill-hover: rgba(255, 255, 255, 0.13);
+    --audit-log-flow-open-shadow-up: 0 -14px 30px rgba(0, 0, 0, 0.55);
+    --audit-log-flow-open-shadow-down: 0 18px 36px rgba(0, 0, 0, 0.6);
+
+    /* The elbows joining an indented line of the thread to the line it was found through -
+       a quiet grey that reads on the navy without competing with the text */
+    --audit-log-flow-tree-guide: rgba(255, 255, 255, 0.22);
+
+    /* How much deeper each level of the thread starts, in the guides' inset and the item
+       indent together, and the narrower step a narrow pane falls back to before anything
+       else is given up */
+    --audit-log-flow-tree-inset: 9px;
+    --audit-log-flow-tree-indent: 15px;
+    --audit-log-flow-tree-inset-narrow: 5px;
+    --audit-log-flow-tree-indent-narrow: 7px;
+    --audit-log-flow-tree-stub-narrow: 11px;
+}
+
+/* ------------------------------------------------------------ */
+/* The page around the listing                                   */
+/* ------------------------------------------------------------ */
+
+/* Every settings page stands in a container that insists on being a window tall, and its
+   padding comes on top of that, so the document is always some 60px taller than the window.
+   On this page the pair is what fills the window - it measures the room the page leaves it,
+   and a floor under the page would only be measured back off the pair while keeping the page
+   scrollable. So the floor goes, and the padding below is kept small - what the pair may not
+   have is only what is really drawn under it. */
+
+.settings-container:has(.detail-page-audit-log) {
+    min-height: 0;
+    padding-bottom: 12px;
+}
+
+.detail-page-audit-log {
+    padding-left: var(--audit-log-page-inset);
+    padding-right: var(--audit-log-page-inset);
+}
+
+/* The page itself has nothing to tab between - everything on it is an event.
+   The tabs inside the detail pane are another matter. */
+
+.detail-page-audit-log > .dashboard-tabs {
+    display: none;
+}
+
+.audit-log-search-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0 1rem 0;
+}
+
+/* The filter selects of the all-events page stand a step apart from the search itself -
+   they narrow the list by what an event is, not by what it says. A single-source page
+   builds no selects at all and their empty hosts take no room from the row. */
+
+.audit-log-filter-select {
+    display: inline-flex;
+}
+
+.audit-log-filter-select:empty {
+    display: none;
+}
+
+.audit-log-filter-select + .audit-log-filter-select {
+    margin-right: 8px;
+}
+
+/* Clear stands inside the box - the shared search-clear component provides both the badge
+   and the room the box keeps for it, the width alone is this page's own */
+
+.audit-log-search-input {
+    width: 24rem;
+}
+
+/* ------------------------------------------------------------ */
+/* The chrome above the listing                                  */
+/* ------------------------------------------------------------ */
+
+/* The chrome and the paginator share one row - the chrome against the left edge,
+   the pages against the right, the row keeping the listing at arm's length below */
+
+/* The activity strip over the listing - as tall with events as without any,
+   so an empty window does not shift the rows under it */
+.audit-log-activity-strip {
+    height: 36px;
+    margin: 0 0 0.6rem 0;
+}
+
+.audit-log-activity-strip .dashboard-inline-empty {
+    line-height: 36px;
+}
+
+.audit-log-controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.6rem;
+}
+
+.audit-log-controls-row .detail-pagination-controls {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* The chrome stays on one line whatever joins it - the event chip appearing beside the
+   legend is not to push anything onto a second line and make the row taller */
+.audit-log-controls-row .detail-header-controls {
+    flex-wrap: nowrap;
+}

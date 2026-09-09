@@ -1,0 +1,131 @@
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the journey strip                             */
+/* ------------------------------------------------------------ */
+
+.dashboard-journey {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 8px;
+    padding: 8px 10px;
+}
+
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the journey steps                             */
+/* ------------------------------------------------------------ */
+
+.dashboard-journey-step {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 4px 10px;
+    border: 1px solid var(--dashboard-frame-line-strong);
+    border-radius: 4px;
+    line-height: 1.2;
+    transition: transform var(--dashboard-motion-quick) ease, opacity var(--dashboard-motion-quick) ease;
+}
+
+.dashboard-journey-dark .dashboard-journey-step {
+    border-color: var(--dashboard-frame-dark-line-strong);
+}
+
+.dashboard-journey-step-selectable,
+.dashboard-journey-fold {
+    cursor: pointer;
+}
+
+.dashboard-journey-step-selectable:hover {
+    transform: translateY(-1px);
+    transition-delay: var(--dashboard-hover-delay);
+}
+
+.dashboard-journey-step-selectable:active {
+    opacity: 0.8;
+    transform: translateY(0);
+}
+
+.dashboard-journey-step-label {
+    font-size: var(--dashboard-font-caption);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.dashboard-journey-step-duration {
+    font-family: var(--dashboard-mono);
+    font-size: var(--dashboard-font-small);
+    opacity: 0.8;
+}
+
+.dashboard-journey-step-done {
+    color: var(--dashboard-tone-good);
+    background: var(--dashboard-tone-good-fill);
+}
+
+.dashboard-journey-step-failed {
+    border-color: var(--dashboard-tone-bad-line);
+    color: var(--dashboard-tone-bad);
+    background: var(--dashboard-tone-bad-fill);
+}
+
+.dashboard-journey-step-warning {
+    color: var(--dashboard-tone-warning);
+    background: var(--dashboard-tone-warning-fill);
+}
+
+.dashboard-journey-step-skipped,
+.dashboard-journey-step-pending {
+    color: var(--dashboard-muted);
+}
+
+.dashboard-journey-step-skipped {
+    text-decoration: line-through;
+    background: var(--dashboard-tone-dim-fill);
+}
+
+.dashboard-journey-step-pending {
+    border-style: dashed;
+    background: transparent;
+}
+
+.dashboard-journey-dark .dashboard-journey-step-pending,
+.dashboard-journey-dark .dashboard-journey-step-skipped,
+.dashboard-journey-dark .dashboard-journey-gap {
+    color: var(--dashboard-tone-dim);
+}
+
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the journey connectors                        */
+/* ------------------------------------------------------------ */
+
+.dashboard-journey-connector {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-width: 22px;
+    height: 1px;
+    margin: 0 2px;
+    background: var(--dashboard-frame-line-strong);
+}
+
+.dashboard-journey-dark .dashboard-journey-connector {
+    background: var(--dashboard-frame-dark-line-strong);
+}
+
+.dashboard-journey-gap {
+    padding: 0 4px;
+    font-family: var(--dashboard-mono);
+    font-size: var(--dashboard-font-tiny);
+    color: var(--dashboard-muted);
+    background: #fff;
+}
+
+.dashboard-journey-dark .dashboard-journey-gap {
+    background: var(--dashboard-panel-background);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-journey-step {
+        transition: none;
+    }
+}

@@ -8,7 +8,7 @@
 
 (function($) {
 
-$.fn.zato.audit_log.sources['scheduler'] = {
+$.fn.zato.audit_log.sources['scheduler'] = $.extend({}, $.fn.zato.audit_log.sources['default'], {
 
     // The scheduler's rows already wear its name on the role tag, so the source
     // chip saying it again is left out - every other chip reads the default way
@@ -50,7 +50,7 @@ $.fn.zato.audit_log.sources['scheduler'] = {
     identity: function(row) {
         return $.fn.zato.audit_log.sources['default'].identity(row);
     }
-};
+});
 
 // /////////////////////////////////////////////////////////////////////////////
 

@@ -8,12 +8,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from datetime import datetime
 from posixpath import normpath
 
 # Zato
 from zato.common.api import FileTransfer, SCHEDULER, SchedulerLink
 from zato.common.defaults import default_cluster_id
 from zato.common.exception import BadRequest
+from zato.common.file_transfer.api import Default_Expected_By, Default_Expected_Days, Default_Expected_Files, \
+    Default_Max_Attempts, Default_Quarantine_Directory, Default_Retry_Backoff
 from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericConn, Job
 from zato.common.util.file_transfer_scheduler import build_job_extra, get_job_name, get_schedule_list, \
@@ -40,10 +43,20 @@ _scheduler = FileTransfer.Scheduler
 # and its job already agree on, which is how a job switched off by hand stays off.
 _schedule_input = ('name', Boolean('-is_active'), 'directory', '-pattern', 'ready_how', Int('-stability_delay'),
     '-marker_suffix', Boolean('-should_claim'), 'service', 'on_success', '-move_directory', Int('run_every'),
-    'run_unit', 'start_date', Int('-arrival_window'))
+    'run_unit', 'start_date', Int('-arrival_window'), Int('-max_attempts'), Int('-retry_backoff'),
+    '-quarantine_directory', Int('-expected_files'), '-expected_by', '-expected_days')
 
 # What a schedule nobody said anything about starts out as
 _default_is_active = True
+
+# The values of an optional input the caller left out.
+_not_given = (None, '')
+
+# The format of the expected-by time, e.g. 08:00.
+_expected_by_format = '%H:%M'
+
+# The ISO weekday numbers, Monday is 1.
+_weekday_numbers = ('1', '2', '3', '4', '5', '6', '7')
 
 # All of a connection's schedules live in one JSON blob, so every change is a read of the whole list,
 # an edit in Python and a write of the whole list back. This is the name of the lock that makes those
@@ -121,6 +134,44 @@ def _validate_schedule(service:'Service', input:'any_') -> 'None':
 
         _validate_move_directory(service, input.move_directory)
 
+    # A relative quarantine directory follows the rules of a move directory.
+    if input.quarantine_directory:
+        if not input.quarantine_directory.startswith('/'):
+            _validate_move_directory(service, input.quarantine_directory)
+
+    if input.max_attempts:
+        if input.max_attempts < 0:
+            raise BadRequest(service.cid, f'Max attempts must not be negative instead of `{input.max_attempts}`')
+
+    if input.retry_backoff:
+        if input.retry_backoff < 1:
+            raise BadRequest(service.cid, f'Retry backoff must be positive instead of `{input.retry_backoff}`')
+
+    _validate_expectation(service, input)
+
+# ################################################################################################################################
+
+def _validate_expectation(service:'Service', input:'any_') -> 'None':
+    """ Validates the expected files, the expected-by time and the expected days.
+    """
+    if input.expected_files:
+        if input.expected_files < 0:
+            raise BadRequest(service.cid, f'Expected files must not be negative instead of `{input.expected_files}`')
+
+        if not input.expected_by:
+            raise BadRequest(service.cid, 'Expected-by time is required when a number of files is expected')
+
+    if input.expected_by:
+        try:
+            _ = datetime.strptime(input.expected_by, _expected_by_format)
+        except Exception:
+            raise BadRequest(service.cid, f'Expected-by `{input.expected_by}` is not a time of day like 08:00')
+
+    if input.expected_days:
+        for day in input.expected_days.split(','):
+            if day.strip() not in _weekday_numbers:
+                raise BadRequest(service.cid, f'Expected days `{input.expected_days}` must be weekday numbers 1 to 7')
+
 # ################################################################################################################################
 
 def _validate_move_directory(service:'Service', move_directory:'str') -> 'None':
@@ -165,6 +216,15 @@ def _build_schedule_dict(input:'any_', schedule_id:'str', job_id:'int', is_activ
     if should_claim is None:
         should_claim = False
 
+    # Zero attempts is a value of its own, only a missing input means the default.
+    max_attempts = input.max_attempts
+    if max_attempts in _not_given:
+        max_attempts = Default_Max_Attempts
+
+    expected_by = input.expected_by
+    if expected_by in _not_given:
+        expected_by = Default_Expected_By
+
     out = {
         'id': schedule_id,
         'name': input.name,
@@ -182,6 +242,12 @@ def _build_schedule_dict(input:'any_', schedule_id:'str', job_id:'int', is_activ
         'run_unit': input.run_unit,
         'start_date': input.start_date,
         'arrival_window': input.arrival_window or _scheduler.Default_Arrival_Window,
+        'max_attempts': max_attempts,
+        'retry_backoff': input.retry_backoff or Default_Retry_Backoff,
+        'quarantine_directory': input.quarantine_directory or Default_Quarantine_Directory,
+        'expected_files': input.expected_files or Default_Expected_Files,
+        'expected_by': expected_by,
+        'expected_days': input.expected_days or Default_Expected_Days,
         'job_id': job_id,
     }
 

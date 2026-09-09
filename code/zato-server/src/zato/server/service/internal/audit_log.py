@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from time import monotonic
 from traceback import format_exc
 
 # Zato
@@ -62,6 +63,17 @@ if 0:
 # What the resubmit reports call each of the two directions.
 _action_resend    = 'resend'
 _action_reprocess = 'reprocess'
+
+# Milliseconds per second.
+_ms_per_second = 1000
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _elapsed_ms(start:'float') -> 'int':
+    elapsed = monotonic() - start
+    out = int(elapsed * _ms_per_second)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -553,12 +565,17 @@ class ReprocessFileTransfer(AdminService):
     linked to the original one by the correlation id.
     """
     name = 'zato.audit-log.file-transfer-reprocess'
-    input = Int('event_id')
+    input = Int('event_id'), '-actor'
     output = 'response_data'
 
     def handle(self) -> 'None':
 
         event_id = self.request.input.event_id
+
+        # The actor is optional.
+        actor = self.request.input.actor
+        if actor is None:
+            actor = ''
 
         # A failed reprocess comes back as a report too, never as a bare exception,
         # so the caller always sees the same shape with the details inside.
@@ -605,22 +622,33 @@ class ReprocessFileTransfer(AdminService):
                 'last_modified': last_modified,
             }
 
-            # Hand the file to the target service again - a failed attempt is recorded
-            # as its own event too, and then the caller learns about it.
+            # The actor is a searchable attribute.
+            attrs_extra:'stranydict' = {}
+            if actor:
+                attrs_extra['actor'] = actor
+
+            # The file is handed to the target service again under this cid, a failed attempt is recorded too.
+            service_start = monotonic()
+
             try:
-                _ = self.server.invoke(service_name, item)
+                _ = self.server.invoke(service_name, item, cid=self.cid)
             except Exception:
                 error = format_exc()
+                service_ms = _elapsed_ms(service_start)
+                event_extra['service_ms'] = service_ms
                 _ = record_schedule_event(audit_log, event.object_name, AuditEvent.Delivery_Failed, full_path,
                     cid=self.cid, correl_id=event.cid, schedule=schedule_name, outcome=AuditOutcome.Error,
-                    file_name=file_name, service=service_name, size=len(data), error=error,
-                    extra=event_extra, parents=[event.id])
+                    file_name=file_name, service=service_name, size=len(data), error=error, duration_ms=service_ms,
+                    extra=event_extra, attrs_extra=attrs_extra, parents=[event.id])
                 raise
+
+            service_ms = _elapsed_ms(service_start)
+            event_extra['service_ms'] = service_ms
 
             new_event_id = record_schedule_event(audit_log, event.object_name, AuditEvent.Delivered, full_path,
                 cid=self.cid, correl_id=event.cid, schedule=schedule_name, outcome=AuditOutcome.OK,
-                file_name=file_name, service=service_name, size=len(data),
-                extra=event_extra, parents=[event.id])
+                file_name=file_name, service=service_name, size=len(data), duration_ms=service_ms,
+                extra=event_extra, attrs_extra=attrs_extra, parents=[event.id])
 
             report['is_ok'] = True
             report['event_id'] = new_event_id

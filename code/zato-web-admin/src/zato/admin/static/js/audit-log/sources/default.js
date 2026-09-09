@@ -84,6 +84,74 @@ $.fn.zato.audit_log.sources['default'] = {
         }
 
         return row.msg_id;
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // The hooks a source with details of its own overrides, the default source reads them as absent.
+    eventWordAsChip: false,
+    rowChipLimit: listing.config.rowChipLimit,
+
+    eventChip: function(_rowModel, chip) {
+        return chip;
+    },
+
+    sentence: function(_row) {
+        return '';
+    },
+
+    detailFacts: function(_rowModel) {
+        return [];
+    },
+
+    // The ways the message can be read on the Data tab - parsed first, being what a message
+    // is opened to be read as, the wire form there for whoever asks for it.
+    payloadTabs: function() {
+        var config = listing.config;
+
+        var out = [
+            {label: config.parsedTabLabel, kind: '', parsed: true},
+            {label: config.rawTabLabel, kind: '', parsed: false}
+        ];
+
+        return out;
+    },
+
+    // Whether the pane has a Details tab for this event, which is where detailPanel draws.
+    hasDetails: function(_rowModel) {
+        return false;
+    },
+
+    detailPanel: function(_models, $host, _variant) {
+        $host.html('');
+    },
+
+    attrLabel: function(_rowModel, _attr) {
+        return '';
+    },
+
+    attrValueHTML: function(_rowModel, _attr) {
+        return null;
+    },
+
+    resubmitWarning: function(_rowModel) {
+        return '';
+    },
+
+    cardKey: function(row) {
+        return row.cid + '|' + row.object_name;
+    },
+
+    cardTitle: function(row) {
+        return row.object_name;
+    },
+
+    lineNote: function(_model) {
+        return '';
+    },
+
+    lineTooltip: function(_model) {
+        return '';
     }
 };
 

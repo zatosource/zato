@@ -20,9 +20,10 @@ from gevent.fileobject import FileObjectThread
 from humanize import naturalsize
 
 # Zato
-from zato.common.audit_log.api import AuditOutcome
+from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Move, Operation_Read, \
-    Operation_Store
+    Operation_Store, Status_Verified, Status_Verify_Failed
+from zato.server.connection.file_transfer_verify import verify_store, FileTransferVerifyError
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -188,12 +189,15 @@ class FileTransferConnection:
         to_path:'str' = '',
         checksum:'str' = '',
         content:'any_' = None,
+        status:'str' = '',
+        event_type:'str' = AuditEvent.Request_Sent,
+        extra:'stranydict | None' = None,
         ) -> 'None':
         """ Records one file operation of this connection in the audit log.
         """
         _ = record_file_transfer(self.wrapper.audit_log, self.wrapper.config.name, operation, remote_path,
             cid=self.cid, outcome=outcome, size=size, duration_ms=duration_ms, error=error,
-            to_path=to_path, checksum=checksum, content=content)
+            to_path=to_path, checksum=checksum, content=content, status=status, event_type=event_type, extra=extra)
 
 # ################################################################################################################################
 
@@ -405,9 +409,47 @@ class FileTransferConnection:
         hasher = sha256(data)
         checksum = hasher.hexdigest()
 
+        # The stored file is verified ..
+        verify_start = monotonic()
+        verification = self._verify_store(remote_path, size, checksum)
+        verification['verify_ms'] = _elapsed_ms(verify_start)
+
         duration_ms = _elapsed_ms(start)
+
+        # .. a mismatch is recorded on the store's row and as a Verify_Failed event ..
+        if mismatch := verification['mismatch']:
+            self._record_transfer(Operation_Store, remote_path,
+                outcome=AuditOutcome.Error, size=size, duration_ms=duration_ms, checksum=checksum, content=content,
+                status=Status_Verify_Failed, error=mismatch, extra=verification)
+            self._record_transfer(Operation_Store, remote_path,
+                outcome=AuditOutcome.Error, size=size, checksum=checksum, error=mismatch, extra=verification,
+                event_type=AuditEvent.Verify_Failed)
+            raise FileTransferVerifyError(mismatch)
+
+        # .. and a match is recorded on the store's row.
         self._record_transfer(Operation_Store, remote_path,
-            outcome=AuditOutcome.OK, size=size, duration_ms=duration_ms, checksum=checksum, content=content)
+            outcome=AuditOutcome.OK, size=size, duration_ms=duration_ms, checksum=checksum, content=content,
+            status=Status_Verified, extra=verification)
+
+# ################################################################################################################################
+
+    def _get_remote_size(self, remote_path:'str') -> 'int':
+        info = self.get_info(remote_path)
+        out = info.size
+        return out
+
+# ################################################################################################################################
+
+    def _read_back(self, remote_path:'str') -> 'bytes':
+        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
+            out = client.read(remote_path)
+        return out
+
+# ################################################################################################################################
+
+    def _verify_store(self, remote_path:'str', size:'int', checksum:'str') -> 'stranydict':
+        out = verify_store(self._get_remote_size, self._read_back, remote_path, size, checksum, self.wrapper.verify_how)
+        return out
 
 # ################################################################################################################################
 

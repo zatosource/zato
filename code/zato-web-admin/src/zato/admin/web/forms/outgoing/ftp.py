@@ -11,6 +11,7 @@ from django import forms
 
 # Zato
 from zato.common.api import FTP
+from zato.common.file_transfer.api import Verify_How_Human, Verify_How_List
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,8 +37,19 @@ class CreateForm(forms.Form):
 
     should_store_content = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
+    verify_how = forms.ChoiceField(widget=forms.Select())
+
     def __init__(self, prefix:'any_' = None, req:'any_' = None) -> 'None':
         super(CreateForm, self).__init__(prefix=prefix)
+
+        # One choice per verification method.
+        choices = []
+
+        for item in Verify_How_List:
+            label = Verify_How_Human[item]
+            choices.append([item, label])
+
+        self.fields['verify_how'].choices = choices
 
 # ################################################################################################################################
 # ################################################################################################################################

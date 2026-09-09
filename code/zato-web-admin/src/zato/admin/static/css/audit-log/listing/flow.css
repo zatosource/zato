@@ -1,0 +1,340 @@
+/* ------------------------------------------------------------ */
+/* The message flow                                              */
+/* ------------------------------------------------------------ */
+
+/* The flow is as wide as the pane it is read in, so how much of a line is shown is answered
+   against the flow rather than against the window */
+
+.audit-log-flow {
+    container-type: inline-size;
+    container-name: audit-log-flow;
+
+    /* The room going dark and lighting back up is part of the same movement as the card */
+    transition: background 0.2s;
+
+    /* The thread's elbows in the frame's own ink and geometry - the flow has no kit-tree
+       root of its own, the roots standing flush, so the variables the nested containers
+       read are set here. The stub crosses a line at its vertical centre. */
+    --kit-tree-guide: var(--audit-log-flow-tree-guide);
+    --kit-tree-inset: var(--audit-log-flow-tree-inset);
+    --kit-tree-child-indent: var(--audit-log-flow-tree-indent);
+    --kit-tree-stub-width: 17px;
+    --kit-tree-stub-top: 14px;
+}
+
+/* Nothing in the flow's actions is pushed away from what it acts on - the actions of a line
+   sit at its right edge and the padding a run log needs there is not needed here */
+
+.audit-log-flow .detail-log-actions {
+    padding-left: 12px;
+}
+
+/* Each line is ruled off from the next, and the whole of it reads in the panel's own colour
+   with only what tells one line from another taking a colour of its own. Everything a line
+   goes through - falling dark, coming back, rising into a block and settling out of one -
+   is one movement rather than a jump. */
+
+.audit-log-flow .detail-log-line {
+    margin: 0 var(--audit-log-flow-open-side-gap);
+    border-bottom: 1px solid var(--dashboard-panel-border);
+    color: var(--dashboard-panel-text);
+    transition: filter 0.2s, margin 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+.audit-log-flow .detail-log-ts {
+    color: var(--dashboard-fact-label-dark);
+}
+
+/* The day is named the way the list names it, but the colour the list gives it belongs on
+   white - here it reads in the timestamp's own */
+
+.audit-log-flow .audit-log-cell-day {
+    color: inherit;
+}
+
+/* A timestamp under the pointer turns amber on every line - a hovered line steps forward
+   out of the dimming anyway, and its time is what it is picked out of the flow by */
+
+.audit-log-flow .detail-log-line:hover .detail-log-ts {
+    color: var(--dashboard-flow-accent);
+}
+
+/* A line being read lifts by its own background rather than by a filter laid over everything
+   standing on it, which would brighten what can be done with the line along with the line and
+   leave neither of them where the reader left it */
+
+.audit-log-flow .detail-log-line:hover {
+    filter: none;
+    background-color: var(--dashboard-fact-tint-dark);
+}
+
+/* The scheduler's stepping back, remade for the dark frame the flow reads on. Fading is what
+   a white table does - here the closed lines are darkened toward the background instead,
+   whole, text and stripe and tags together, and come back whole under the pointer. */
+
+.audit-log-flow.detail-dimmed {
+    background: var(--audit-log-flow-backdrop-surface);
+}
+
+.audit-log-flow.detail-dimmed .detail-log-line {
+    opacity: 1;
+    filter: var(--audit-log-flow-backdrop-filter);
+}
+
+.audit-log-flow.detail-dimmed .detail-log-line:hover {
+    filter: none;
+}
+
+.audit-log-flow.detail-dimmed .detail-log-line[aria-expanded="true"] {
+    filter: none;
+}
+
+/* An open line and its panel are one thing being read, and the two of them stand off the
+   list as one raised block - air above and below it, one solid lighter surface under both,
+   no rule left between them, and the panel closing the block with the rule the line gave
+   up. The block keeps the same sides every line stands at, so opening moves nothing
+   sideways. Against the darkened lines around it, it is the one lit thing on the frame. */
+
+.audit-log-flow .detail-log-line[aria-expanded="true"] {
+    margin: var(--audit-log-flow-open-gap) var(--audit-log-flow-open-side-gap) 0;
+    border-top: 1px solid var(--audit-log-flow-open-rim);
+    border-bottom-color: transparent;
+    background-color: var(--audit-log-flow-open-surface);
+    color: var(--audit-log-flow-open-text);
+    box-shadow: var(--audit-log-flow-open-shadow-up);
+}
+
+.audit-log-flow .audit-log-flow-panel.expanded {
+    margin: 0 var(--audit-log-flow-open-side-gap) var(--audit-log-flow-open-gap);
+    border-bottom: 1px solid var(--dashboard-panel-border);
+    background-color: var(--audit-log-flow-open-surface);
+    box-shadow: var(--audit-log-flow-open-shadow-down);
+    transition: margin 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+/* The names of the card's facts and the open line's own time, read against the navy
+   rather than the everyday panel */
+
+.audit-log-flow .audit-log-flow-panel.expanded .dashboard-fact-row-label,
+.audit-log-flow .detail-log-line[aria-expanded="true"] .detail-log-ts {
+    color: var(--audit-log-flow-open-label);
+}
+
+/* The line the flow was read from is where the reader stands, so it is the one line that
+   says so without being hovered over */
+
+.audit-log-flow-line-seed {
+    background-color: var(--dashboard-flow-accent-tint);
+}
+
+/* Open, the seed is raised like any other open line and keeps its amber on top of that */
+
+.audit-log-flow .audit-log-flow-line-seed[aria-expanded="true"] {
+    background:
+        linear-gradient(var(--dashboard-flow-accent-tint), var(--dashboard-flow-accent-tint)),
+        var(--audit-log-flow-open-surface);
+}
+
+.audit-log-flow .audit-log-flow-line-seed:hover {
+    background-color: var(--dashboard-flow-accent-tint-strong);
+}
+
+.audit-log-flow-line-seed .audit-log-flow-headline {
+    color: var(--dashboard-flow-accent);
+}
+
+/* How long after the line below it - the one before it in time - the event happened, said
+   beside the time it happened at and kept quieter than it */
+
+.audit-log-flow-elapsed {
+    margin-right: 12px;
+    font-size: 0.92em;
+    opacity: 0.6;
+}
+
+.audit-log-flow-source,
+.audit-log-flow-event {
+    margin-right: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.audit-log-flow-source {
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.10);
+}
+
+.audit-log-flow-event {
+    opacity: 0.62;
+}
+
+.audit-log-flow-headline {
+    margin-right: 12px;
+    font-weight: 700;
+}
+
+/* ------------------------------------------------------------ */
+/* The panel one line of the flow opens into                     */
+/* ------------------------------------------------------------ */
+
+.audit-log-flow-panel {
+    cursor: default;
+}
+
+.audit-log-flow-body {
+    margin-top: 8px;
+}
+
+.audit-log-flow-body-bar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-bottom: 4px;
+}
+
+/* How much of the message is on the screen, out of how much of it there is */
+
+.audit-log-flow-body-caption {
+    margin-left: 10px;
+    font-size: 10.5px;
+    color: var(--dashboard-fact-label-dark);
+    white-space: nowrap;
+}
+
+/* The rest of a cut message, offered beside the caption as the quietest badge on the page -
+   the caption's own colour on a fill barely apart from the frame */
+
+.audit-log-flow-show-all {
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10.5px;
+    color: var(--dashboard-fact-label-dark);
+    background: var(--audit-log-show-all-fill);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.audit-log-flow-show-all:hover {
+    background: var(--audit-log-show-all-fill-hover);
+}
+
+/* A body shown whole has no rest to offer */
+
+.audit-log-flow-show-all-absent {
+    display: none;
+}
+
+/* The words turned into the wait they announced - dimmed a shade and no longer reading as a
+   way anywhere, with the spinner cut down to the line's own height so nothing around it moves */
+
+.audit-log-flow-show-all-loading,
+.audit-log-flow-show-all-loading:hover {
+    opacity: 0.7;
+    background: var(--audit-log-show-all-fill);
+    cursor: default;
+}
+
+.audit-log-flow-show-all-loading .detail-spinner {
+    width: 10px;
+    height: 10px;
+    margin-right: 2px;
+    filter: brightness(0) invert(0.85);
+}
+
+/* The parsed or raw badge standing open is the one raised off the bar, here and on the
+   Data tab both */
+
+.detail-page-audit-log .audit-log-flow-body-view.dashboard-panel-action-badge-active,
+.detail-page-audit-log .audit-log-flow-body-view.dashboard-panel-action-badge-active:hover,
+.detail-page-audit-log .audit-log-flow-body-kind.dashboard-panel-action-badge-active,
+.detail-page-audit-log .audit-log-flow-body-kind.dashboard-panel-action-badge-active:hover,
+.detail-page-audit-log .dashboard-payload-tab.dashboard-panel-action-badge-active,
+.detail-page-audit-log .dashboard-payload-tab.dashboard-panel-action-badge-active:hover {
+    color: var(--dashboard-chosen-badge-text);
+    background: var(--dashboard-chosen-badge-fill);
+    box-shadow: var(--dashboard-chosen-badge-shadow);
+}
+
+/* And the ones not chosen sink into it, coming part of the way back up under the pointer */
+
+.detail-page-audit-log .audit-log-flow-body-view:not(.dashboard-panel-action-badge-active),
+.detail-page-audit-log .audit-log-flow-body-kind:not(.dashboard-panel-action-badge-active),
+.detail-page-audit-log .dashboard-payload-tab:not(.dashboard-panel-action-badge-active) {
+    background: var(--dashboard-unchosen-badge-fill);
+    box-shadow: var(--dashboard-unchosen-badge-shadow);
+}
+
+.detail-page-audit-log .audit-log-flow-body-view:not(.dashboard-panel-action-badge-active):hover,
+.detail-page-audit-log .audit-log-flow-body-kind:not(.dashboard-panel-action-badge-active):hover,
+.detail-page-audit-log .dashboard-payload-tab:not(.dashboard-panel-action-badge-active):hover {
+    background: var(--dashboard-unchosen-badge-fill-hover);
+}
+
+.audit-log-flow-body-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.audit-log-flow-body-text {
+    max-height: 320px;
+    margin: 0;
+    padding: 6px 8px;
+    overflow: auto;
+    border: 1px solid var(--dashboard-fact-line-dark);
+    border-radius: 3px;
+    font-family: var(--dashboard-mono);
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--dashboard-panel-text);
+    background: rgba(0, 0, 0, 0.22);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* A pane dragged narrow keeps what tells one line of the flow from another and drops the
+   rest, in the order the rest is least missed in - the thread's indent is the first thing
+   to shrink, before any part of a line is given up */
+
+@container audit-log-flow (max-width: 700px) {
+
+    /* The flow is the container itself, which a container query cannot reach, so the
+       narrower step is set on the nested containers the variables are read by */
+    .audit-log-flow .kit-tree-children {
+        --kit-tree-inset: var(--audit-log-flow-tree-inset-narrow);
+        --kit-tree-child-indent: var(--audit-log-flow-tree-indent-narrow);
+        --kit-tree-stub-width: var(--audit-log-flow-tree-stub-narrow);
+    }
+}
+
+@container audit-log-flow (max-width: 620px) {
+
+    .audit-log-flow-elapsed {
+        display: none;
+    }
+}
+
+@container audit-log-flow (max-width: 520px) {
+
+    .audit-log-flow-source {
+        display: none;
+    }
+}
+
+@container audit-log-flow (max-width: 440px) {
+
+    .audit-log-flow-open {
+        display: none;
+    }
+
+    .audit-log-flow-body-caption,
+    .audit-log-flow-show-all {
+        display: none;
+    }
+}

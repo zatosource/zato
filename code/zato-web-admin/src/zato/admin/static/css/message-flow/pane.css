@@ -1,0 +1,383 @@
+/* ------------------------------------------------------------ */
+/* The detail pane - a clicked node's bodies under the drawing   */
+/* ------------------------------------------------------------ */
+
+/* The pane is always on the page and always this one size - a node opened,
+   switched or let go swaps what is inside it and moves nothing around it */
+
+.message-flow-detail {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    height: var(--message-flow-detail-height);
+    border: 1px solid var(--dashboard-panel-border);
+    border-radius: 6px;
+    background-color: var(--dashboard-panel-background);
+    overflow: hidden;
+}
+
+/* A pane snapped shut is fully gone - a height of zero with a border still on
+   would linger as a seam over the page's bottom edge. The bar above it stays
+   where it is, and the same pull upward brings the pane back. */
+
+.message-flow-detail-shut .message-flow-detail {
+    display: none;
+}
+
+/* The bar between the drawing and the pane - grabbing it and pulling shares
+   the room between the two. Its handle is a small lit card of the drawing's
+   own family - gradient face, rim of light, a shadow into the room - standing
+   on a hairline that fades out before the edges, and the pull turns it amber
+   the way selection reads everywhere on this page. */
+
+.message-flow-resize {
+    position: relative;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--message-flow-page-pad);
+    cursor: row-resize;
+}
+
+.message-flow-resize::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 255, 255, 0.16) 15%,
+        rgba(255, 255, 255, 0.16) 85%,
+        transparent);
+}
+
+.message-flow-resize::after {
+    content: '';
+    position: relative;
+    width: 46px;
+    height: 5px;
+    border-radius: 3px;
+    border: 1px solid var(--message-flow-rim);
+    background: var(--message-flow-card-face);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+/* A pointer passing across the bar paints nothing - the amber waits out a
+   short delay, and only a pointer that stays gets it. The pull itself is an
+   intentional gesture and answers at once. */
+
+.message-flow-resize:hover::after {
+    transition-delay: 0.15s;
+}
+
+.message-flow-resize:hover::after,
+.message-flow-resizing::after {
+    border-color: var(--message-flow-selected);
+    background: var(--message-flow-card-face-selected);
+}
+
+.message-flow-resizing::after {
+    transition-delay: 0s;
+}
+
+/* With nothing picked, the pane says what it is waiting for */
+
+.message-flow-detail-hint {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    color: var(--message-flow-muted);
+    font-size: 11px;
+}
+
+.message-flow-detail-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.message-flow-detail-title {
+    color: var(--message-flow-text);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.message-flow-detail-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+}
+
+.message-flow-detail-identity {
+    color: var(--message-flow-selected-text);
+    font-weight: 700;
+}
+
+.message-flow-detail-time {
+    color: var(--message-flow-muted);
+}
+
+/* ------------------------------------------------------------ */
+/* Message flow - the detail sentence and the source panel       */
+/* ------------------------------------------------------------ */
+
+.message-flow-detail-sentence {
+    flex: 0 0 auto;
+    padding: 8px 12px 0;
+    font-size: var(--dashboard-font-body);
+    color: var(--message-flow-text);
+}
+
+.message-flow-detail-source-panel {
+    flex: 0 0 auto;
+    padding: 0 12px;
+}
+
+.message-flow-detail-source-panel:empty {
+    padding: 0;
+}
+
+/* The files the exchange's events carried, through the kit's own attachment
+   strips - the row takes no room at all until a strip has anything to say */
+
+.message-flow-detail-attachments {
+    flex: 0 0 auto;
+    padding: 0 12px;
+}
+
+.message-flow-detail-attachments .dashboard-attachments {
+    margin: 6px 0;
+}
+
+/* The pane's body stands in two sides - the request's and the reply's - the
+   bar between them sharing the width, each side's badges always on top of it */
+
+.message-flow-detail-split {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.message-flow-detail-side {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.message-flow-detail-side-request {
+    flex: 0 0 var(--message-flow-detail-split);
+}
+
+.message-flow-detail-side-response {
+    flex: 1 1 auto;
+}
+
+/* A side with no events of its own kind says so where its badges would
+   stand - the first row and column, not the middle of the room */
+
+.message-flow-detail-side-hint {
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    color: var(--message-flow-muted);
+    font-size: 11px;
+}
+
+/* The root's own right side - the message's whole flow summed up. Its badge
+   bar stands where the reply side's badges stand, and under it one quiet row
+   per measure, the error row in the bad ink when there is anything to say. */
+
+.message-flow-detail-summary-bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--dashboard-panel-border);
+}
+
+.message-flow-detail-summary-badge {
+    display: inline-flex;
+    padding: 3px 8px;
+    border-radius: 3px;
+    color: var(--message-flow-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    background: var(--dashboard-unchosen-badge-fill);
+    box-shadow: var(--dashboard-unchosen-badge-shadow);
+}
+
+.message-flow-detail-summary {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px 12px;
+    font-size: 11px;
+}
+
+.message-flow-detail-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.message-flow-detail-summary-row:last-child {
+    border-bottom: none;
+}
+
+.message-flow-detail-summary-label {
+    color: var(--message-flow-muted);
+}
+
+.message-flow-detail-summary-value {
+    color: var(--message-flow-text);
+    font-weight: 600;
+}
+
+.message-flow-detail-summary-value-bad {
+    color: var(--message-flow-bad);
+}
+
+/* The bar between the sides - a hairline with room around it to grab, lit a
+   little under the pointer and while pulled */
+
+.message-flow-detail-split-bar {
+    position: relative;
+    flex: 0 0 auto;
+    width: 7px;
+    cursor: col-resize;
+}
+
+.message-flow-detail-split-bar::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    left: 3px;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.message-flow-detail-split-bar:hover::before,
+.message-flow-detail-splitting::before {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* The bodies are read through the kit's payload panel - the pane itself is the
+   frame, so inside it the panel's own frame is stood down and its window takes
+   whatever room the pane has left */
+
+.message-flow-detail-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.message-flow-detail-panel .dashboard-payload {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+.message-flow-detail-panel .dashboard-payload-text {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    background: transparent;
+    animation: message-flow-body-fade 0.15s ease-out;
+}
+
+@keyframes message-flow-body-fade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* A tab wears the exchange's own words - the role in its ink, the id in
+   amber, an outcome in the outcome's colour */
+
+.message-flow-detail-panel .dashboard-payload-tab {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.message-flow-detail-tab-role-request {
+    color: var(--message-flow-request);
+}
+
+.message-flow-detail-tab-role-response {
+    color: var(--message-flow-response);
+}
+
+.message-flow-detail-tab-role-none {
+    color: var(--message-flow-sys);
+}
+
+.message-flow-detail-tab-role-view {
+    color: var(--message-flow-view);
+}
+
+.message-flow-detail-tab-role-job {
+    color: var(--message-flow-job);
+}
+
+.message-flow-detail-tab-role-access {
+    color: var(--message-flow-sys);
+}
+
+.message-flow-detail-tab-id {
+    color: var(--message-flow-selected-text);
+}
+
+.message-flow-detail-tab-outcome-good {
+    color: var(--message-flow-good);
+}
+
+.message-flow-detail-tab-outcome-bad {
+    color: var(--message-flow-bad);
+}
+
+/* The tab standing open is raised off the bar and the others sink into it,
+   the same treatment the audit log's parsed and raw badges wear */
+
+.message-flow-detail-panel .dashboard-payload-tab.dashboard-panel-action-badge-active,
+.message-flow-detail-panel .dashboard-payload-tab.dashboard-panel-action-badge-active:hover {
+    color: var(--dashboard-chosen-badge-text);
+    background: var(--dashboard-chosen-badge-fill);
+    box-shadow: var(--dashboard-chosen-badge-shadow);
+}
+
+.message-flow-detail-panel .dashboard-payload-tab:not(.dashboard-panel-action-badge-active) {
+    background: var(--dashboard-unchosen-badge-fill);
+    box-shadow: var(--dashboard-unchosen-badge-shadow);
+}
+
+.message-flow-detail-panel .dashboard-payload-tab:not(.dashboard-panel-action-badge-active):hover {
+    background: var(--dashboard-unchosen-badge-fill-hover);
+}
+
+/* How much text the open tab holds, in the caption's dim ink */
+
+.message-flow-detail-caption {
+    flex: 0 0 auto;
+    padding: 5px 12px 7px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--message-flow-muted);
+    font-size: 10px;
+}

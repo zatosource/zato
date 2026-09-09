@@ -144,7 +144,7 @@ source_attr_names = {
     AuditSource.MLLP_Outgoing: ('msg_type', 'mrn', 'facility', 'ack_status'),
     AuditSource.FHIR: ('resource_type', 'method'),
     AuditSource.Scheduler: ('current_run', 'delay_ms', 'job_id'),
-    AuditSource.File_Outgoing: ('operation', 'schedule', 'file_name'),
+    AuditSource.File_Outgoing: ('operation', 'schedule', 'file_name', 'service', 'checksum', 'current_run'),
 
     # How many days the checked certificate had left at check time.
     AuditSource.Certificate: ('days_left',),
@@ -251,6 +251,11 @@ class AuditEvent:
     File_Acked           = 'file-acked'
     Run_Completed        = 'run-completed'
 
+    # A file quarantined after its last attempt, a quarantined file retried, and a store whose verification failed.
+    File_Quarantined     = 'file-quarantined'
+    File_Retried         = 'file-retried'
+    Verify_Failed        = 'verify-failed'
+
     # A call that failed on credentials rather than networking - its own type
     # because its remedy is different, so alerting counts it separately.
     Auth_Failed          = 'auth-failed'
@@ -267,6 +272,9 @@ class AuditOutcome:
     OK      = 'ok'
     Error   = 'error'
     Expired = 'expired'
+
+    # An event still in progress.
+    Running = 'running'
 
 # ################################################################################################################################
 
@@ -285,6 +293,9 @@ class AuditBody:
     Error      = 'error'
     Attachment = 'attachment'
     SQL_Rows   = 'sql-rows'
+
+    # The ledger of a file transfer run.
+    Run_Ledger = 'run-ledger'
 
 # ################################################################################################################################
 

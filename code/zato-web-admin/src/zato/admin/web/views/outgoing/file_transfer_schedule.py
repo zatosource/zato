@@ -82,9 +82,13 @@ _command_shell_links = {
 _shell_escaped_chars = ('\\', '"', "'", ' ')
 
 # The stored fields of a schedule, as the edit service's input names them.
-# The arrival window is not here, a schedule created before the field existed has none.
 _schedule_stored_fields = ('name', 'is_active', 'directory', 'pattern', 'ready_how', 'stability_delay', 'marker_suffix',
-    'should_claim', 'service', 'on_success', 'move_directory', 'start_date')
+    'should_claim', 'service', 'on_success', 'move_directory', 'start_date', 'arrival_window', 'max_attempts',
+    'retry_backoff', 'quarantine_directory', 'expected_files', 'expected_by', 'expected_days')
+
+# The stored fields the wizard's form edits.
+_schedule_form_fields = ('arrival_window', 'max_attempts', 'retry_backoff', 'quarantine_directory',
+    'expected_files', 'expected_by', 'expected_days')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -482,9 +486,8 @@ def schedule_wizard_edit(req:'any_', transfer_type:'str', conn_id:'str', cluster
     form.fields['run_every'].initial = schedule['run_every']
     form.fields['run_unit'].initial = schedule['run_unit']
 
-    # A schedule created before the field existed declares no arrival expectation
-    if arrival_window := schedule.get('arrival_window'):
-        form.fields['arrival_window'].initial = arrival_window
+    for field in _schedule_form_fields:
+        form.fields[field].initial = schedule[field]
 
     # The start date is stored in UTC and edited in the user's own timezone and format.
     form.fields['start_date'].initial = from_utc_to_user(schedule['start_date'] + '+00:00', req.zato.user_profile)
@@ -519,6 +522,12 @@ def _schedule_request_from_post(req:'any_') -> 'stranydict':
         'run_unit': req.POST['run_unit'],
         'start_date': start_date,
         'arrival_window': req.POST['arrival_window'],
+        'max_attempts': req.POST['max_attempts'],
+        'retry_backoff': req.POST['retry_backoff'],
+        'quarantine_directory': req.POST['quarantine_directory'],
+        'expected_files': req.POST['expected_files'],
+        'expected_by': req.POST['expected_by'],
+        'expected_days': req.POST['expected_days'],
     }
 
     return out
@@ -599,9 +608,6 @@ def schedule_edit_interval_action(req:'any_') -> 'HttpResponse':
 
     for field in _schedule_stored_fields:
         request[field] = schedule[field]
-
-    if arrival_window := schedule.get('arrival_window'):
-        request['arrival_window'] = arrival_window
 
     response = _schedule_action(req, 'zato.outgoing.file-transfer.schedule.edit', request)
 

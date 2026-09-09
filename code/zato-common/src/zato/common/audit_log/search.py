@@ -87,10 +87,11 @@ def build_search_conditions(
     event_types:'anylist' = [],
     sources_excluded:'anylist' = [],
     object_names_excluded:'anylist' = [],
+    statuses_excluded:'anylist' = [],
     ) -> 'anylist':
     """ Builds the WHERE conditions of one search. Every filter is optional - an empty list
-    leaves its column unfiltered. Sources and object names can also be excluded, which
-    returns everything except the ones named.
+    leaves its column unfiltered. Sources, object names and statuses can also be excluded,
+    which returns everything except the ones named.
     """
 
     # Our response to produce
@@ -103,12 +104,16 @@ def build_search_conditions(
     if object_names:
         out.append(event_table.c.object_name.in_(object_names))
 
-    # Exclusions remove the named sources and objects from whatever the filters above cover
+    # Exclusions remove the named sources and objects from whatever the filters above cover ..
     if sources_excluded:
         out.append(event_table.c.source.notin_(sources_excluded))
 
     if object_names_excluded:
         out.append(event_table.c.object_name.notin_(object_names_excluded))
+
+    # .. and excluded statuses leave out the rows of that status.
+    if statuses_excluded:
+        out.append(event_table.c.status.notin_(statuses_excluded))
 
     # Only the named outcomes are returned, none named returns all
     if outcomes:

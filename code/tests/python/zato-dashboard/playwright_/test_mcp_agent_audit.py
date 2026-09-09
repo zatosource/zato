@@ -83,8 +83,8 @@ _Plural_Suffix = '(s)'
 # else the event says is read in the detail pane beside the list
 _Row_Selector = '#audit-log-table-body tr.audit-log-row'
 _Row_Event_Selector = '.audit-log-row-event'
-_Details_Tab_Selector = '.audit-log-pane-tab[data-tab="details"]'
-_Details_Panel_Selector = '#audit-log-pane-panel-details .audit-log-pane-details'
+_Summary_Tab_Selector = '.audit-log-pane-tab[data-tab="summary"]'
+_Summary_Panel_Selector = '#audit-log-pane-panel-summary .audit-log-pane-summary'
 
 # How a tool call reads on its row - the one event kind whose pane carries a duration
 _Event_Tools_Call_Label = 'MCP tools call'
@@ -254,22 +254,22 @@ class TestMCPAgentAudit:
 
             row.click()
 
-            _ = page.wait_for_selector(_Details_Tab_Selector, state='visible', timeout=_UI_Timeout)
-            page.click(_Details_Tab_Selector)
-            _ = page.wait_for_selector(_Details_Panel_Selector, state='visible', timeout=_UI_Timeout)
+            _ = page.wait_for_selector(_Summary_Tab_Selector, state='visible', timeout=_UI_Timeout)
+            page.click(_Summary_Tab_Selector)
+            _ = page.wait_for_selector(_Summary_Panel_Selector, state='visible', timeout=_UI_Timeout)
 
             # The fact labels are uppercased with CSS, so the whole text is compared lowercase
-            details_text = page.inner_text(_Details_Panel_Selector)
-            details_text = details_text.lower()
+            summary_text = page.inner_text(_Summary_Panel_Selector)
+            summary_text = summary_text.lower()
 
-            assert details_text.strip() != '', f'Expected details for row {row_index}'
-            assert 'size\n' in details_text, f'Expected a Size line for row {row_index}, got: "{details_text}"'
+            assert summary_text.strip() != '', f'Expected a summary for row {row_index}'
+            assert 'size\n' in summary_text, f'Expected a Size line for row {row_index}, got: "{summary_text}"'
 
             # A tool call is the one event kind whose pane carries a duration
             if event_label == _Event_Tools_Call_Label:
-                assert 'duration' in details_text, f'Expected a Duration line for row {row_index}, got: "{details_text}"'
+                assert 'duration' in summary_text, f'Expected a Duration line for row {row_index}, got: "{summary_text}"'
 
-            cid_text = page.inner_text(f'{_Details_Panel_Selector} .audit-log-cid-link')
+            cid_text = page.inner_text(f'{_Summary_Panel_Selector} .audit-log-cid-link')
             assert cid_text.strip() != '', f'Expected a CID for row {row_index}'
 
         # .. pluralization is clean throughout.
@@ -433,9 +433,9 @@ mcp_gateway:
 
             row.click()
 
-            _ = page.wait_for_selector(_Details_Tab_Selector, state='visible', timeout=_UI_Timeout)
-            page.click(_Details_Tab_Selector)
-            _ = page.wait_for_selector(_Details_Panel_Selector, state='visible', timeout=_UI_Timeout)
+            _ = page.wait_for_selector(_Summary_Tab_Selector, state='visible', timeout=_UI_Timeout)
+            page.click(_Summary_Tab_Selector)
+            _ = page.wait_for_selector(_Summary_Panel_Selector, state='visible', timeout=_UI_Timeout)
 
             seen_texts.append(page.inner_text('body'))
 

@@ -17,6 +17,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.audit_log.columns import _event_type_label, _object_page_url, _source_endpoint_label, \
     _source_event_label
+from zato.common.audit_log.file_transfer_words import file_transfer_words
 from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
@@ -40,12 +41,17 @@ def index(req:'HttpRequest') -> 'TemplateResponse':
     a search term is resolved and answered by the journey endpoint, and everything on the screen
     is built in the browser out of what it returns.
     """
+    # The words the file transfer presenter renders runs with.
+    words = file_transfer_words()
+    file_transfer_words_json = json.dumps(words)
+
     return TemplateResponse(req, 'zato/message-flow/index.html', {
         'cluster_id': default_cluster_id,
         'source_labels_json': json.dumps(_source_event_label),
         'object_links_json': json.dumps(_object_page_url),
         'endpoint_labels_json': json.dumps(_source_endpoint_label),
         'event_labels_json': json.dumps(_event_type_label),
+        'file_transfer_words_json': file_transfer_words_json,
         'zato_clusters': True,
         'zato_template_name': 'zato/message-flow/index.html',
     })

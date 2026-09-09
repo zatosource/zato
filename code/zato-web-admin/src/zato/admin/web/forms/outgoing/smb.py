@@ -11,6 +11,7 @@ from django import forms
 
 # Zato
 from zato.common.api import SMB
+from zato.common.file_transfer.api import Verify_How_Human, Verify_How_List
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,8 +30,19 @@ class CreateForm(forms.Form):
     # this flag additionally keeps the bytes of the files moved.
     should_store_content = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
+    verify_how = forms.ChoiceField(widget=forms.Select())
+
     def __init__(self, prefix=None, req=None):
         super(CreateForm, self).__init__(prefix=prefix)
+
+        # One choice per verification method.
+        choices = []
+
+        for item in Verify_How_List:
+            label = Verify_How_Human[item]
+            choices.append([item, label])
+
+        self.fields['verify_how'].choices = choices
 
 # ################################################################################################################################
 # ################################################################################################################################

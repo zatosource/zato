@@ -16,6 +16,7 @@ from traceback import format_exc
 # Zato
 from zato.common.api import FTP as CommonFTP
 from zato.common.audit_log.api import AuditLog
+from zato.common.file_transfer.api import Default_Verify_How
 from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
 from zato.common.typing_ import cast_
 from zato.common.util.logging_ import file_transfer_logger_name
@@ -48,6 +49,7 @@ Outconn_FTP_Config_Defaults:'stranydict' = {
     'username': '',
     'use_ssl': False,
     'should_store_content': False,
+    'verify_how': Default_Verify_How,
 }
 
 # Config keys that must be integers but may arrive as strings from opaque storage
@@ -57,7 +59,7 @@ Outconn_FTP_Int_Config_Keys = ('port',)
 Outconn_FTP_Bool_Config_Keys = ('use_ssl', 'should_store_content')
 
 # Config keys that must be strings but may arrive as integers from opaque storage
-Outconn_FTP_String_Config_Keys = ('host', 'username')
+Outconn_FTP_String_Config_Keys = ('host', 'username', 'verify_how')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -381,6 +383,12 @@ class OutconnFTPWrapper(Wrapper):
             self.should_store_content = should_store_content
         else:
             self.should_store_content = False
+
+        # A connection without the setting checks the size.
+        if not (verify_how := config.get('verify_how')):
+            verify_how = Default_Verify_How
+
+        self.verify_how = verify_how
 
         # What a guaranteed delivery to this connection goes through. It is built from the connection's
         # id rather than its name because that is what a rename leaves alone.
