@@ -177,12 +177,19 @@ def _attach_body_kinds(connection:'any_', rows:'anylist') -> 'None':
 
 def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None':
     """ Flags the rows whose event was already resubmitted - a resubmit lands as a new event
-    whose correlation id is the CID of the original one.
+    whose correlation id is the CID of the original one. Only a row that can be resubmitted
+    at all is ever flagged - a source may use the correlation id for other kinship too, e.g.
+    a file transfer run's own events all name the run by it, and a run summary is no resubmit
+    of itself.
     """
+    resubmittable_types = _source_resubmit[source]
     cids:'anylist' = []
 
     for row in rows:
         row['is_resubmitted'] = False
+
+        if row['event_type'] not in resubmittable_types:
+            continue
 
         if row['cid']:
             cids.append(row['cid'])
@@ -206,6 +213,9 @@ def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None'
         resubmitted.add(db_row[0])
 
     for row in rows:
+        if row['event_type'] not in resubmittable_types:
+            continue
+
         if row['cid'] in resubmitted:
             row['is_resubmitted'] = True
 

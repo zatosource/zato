@@ -206,6 +206,12 @@
     padding-bottom: 0;
 }
 
+/* The chrome stays on one line whatever joins it - the event chip appearing beside the
+   legend is not to push anything onto a second line and make the row taller */
+.audit-log-controls-row .detail-header-controls {
+    flex-wrap: nowrap;
+}
+
 /* ------------------------------------------------------------ */
 /* The main list                                                 */
 /* ------------------------------------------------------------ */
@@ -413,14 +419,23 @@
 /* The chip beside the legend naming the kind of event the list is narrowed down to,
    with the cross that asks for every kind back */
 
+/* The chip's host is a flex box of its own rather than a line of the page's text - a pill
+   standing on a line box of the page font is taller than the pill, and the row with it */
+#audit-log-event-chip {
+    display: flex;
+    align-items: center;
+}
+
 .audit-log-filter-chip {
     gap: 7px;
 }
 
+/* The cross is drawn larger than the word beside it yet takes no more height than the word
+   does, so the chip stands as tall as the pills beside it and the row it joins does not grow */
 .audit-log-filter-chip-clear {
     cursor: pointer;
     font-size: 14px;
-    line-height: 1;
+    line-height: 0;
     opacity: 0.6;
 }
 

@@ -82,6 +82,11 @@ listing.config = {
     // rather than shouted across the list.
     rowChipLimit: 2,
 
+    // The tones the event word wears when a source has it worn as a chip - one for an event
+    // that went well, one for an event that failed
+    eventChipTone: 'good',
+    eventChipErrorTone: 'bad',
+
     // The order a row gives its columns up in as the list is narrowed, from the one least missed
     // to the one it holds on to longest. Each name is the class the list carries while that
     // column is being left out, and the event's own number is not on the list at all - it is
@@ -461,6 +466,23 @@ listing.rowChips = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The event word as a chip - a good tone for an event that went well and a bad one for
+// an event that failed, so the row says how it went in the same breath as what it was
+listing.eventChip = function(rowModel) {
+    var config = listing.config;
+    var tone = config.eventChipTone;
+
+    if (rowModel.outcome === config.errorOutcome) {
+        tone = config.eventChipErrorTone;
+    }
+
+    var out = {key: 'event_type', label: '', value: rowModel.eventType, text: rowModel.eventLabel, tone: tone};
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // When an event happened - which day it was, read as how far back that day is, then the time of
 // day down to the last digit it was written down with, two events of one exchange sharing
 // everything above that digit. The list is scanned, not scrubbed - the scrubber lives on
@@ -513,12 +535,28 @@ listing.rowHTML = function(rowModel) {
     // nothing twice either. The words are read, not clicked - filtering by an event's
     // kind is the pane's affair.
     var saysNothingOfKind = rowModel.role === 'none' || rowModel.role === 'access';
+    var saysItsKind = saysNothingOfKind && rowModel.eventType !== listing.config.viewEventType;
 
-    if (saysNothingOfKind && rowModel.eventType !== listing.config.viewEventType) {
-        html += '<span class="audit-log-row-event">' + listing.escapeHTML(rowModel.eventLabel) + '</span>';
+    // A source whose rows are known by what they name first, e.g. a schedule, wears its
+    // event word as one more chip after the others, coloured by how the event turned out,
+    // rather than as the word leading the row
+    var presenter = $.fn.zato.audit_log.presenterFor(rowModel.raw.source);
+    var chipsHTML = kit.chips.render(listing.rowChips(rowModel));
+
+    if (presenter.eventWordAsChip === true) {
+        html += chipsHTML;
+
+        if (saysItsKind) {
+            html += kit.chips.render_one(listing.eventChip(rowModel));
+        }
     }
+    else {
+        if (saysItsKind) {
+            html += '<span class="audit-log-row-event">' + listing.escapeHTML(rowModel.eventLabel) + '</span>';
+        }
 
-    html += kit.chips.render(listing.rowChips(rowModel));
+        html += chipsHTML;
+    }
 
     // A message that went out again wears that as one more badge after the others
     if (rowModel.isResubmitted) {
