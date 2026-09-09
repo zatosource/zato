@@ -1345,39 +1345,51 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     opacity: var(--zato-time-ago-value-fade-opacity);
 }
 
-/* The header link is a block element by default, which would push the spinner
-   to its own line - inline-block keeps them side by side, and dropping
-   the built-in right padding keeps the spinner close to the column name. */
+/* The column is only as wide as its values - the countdown sits under the column
+   name rather than next to it, so the header is never the widest thing in the
+   column, and the 1% width keeps the table from handing this column any spare
+   room, which would only pile up to the right of the left-aligned values and push
+   the columns after it away. The values never wrap, so the narrow column is safe. */
+#data-table th.zato-time-ago-header {
+    width: 1%;
+}
+
+#data-table td.zato-time-ago {
+    white-space: nowrap;
+}
+
+/* The header link keeps the built-in right padding away so that the column name
+   alone sets the width of the first header line. */
 #data-table th.zato-time-ago-header a {
     display: inline-block;
     padding-right: 0;
 }
 
-/* One shared slot next to the column name - the countdown and the spinner both live
+/* One shared slot under the column name - the countdown and the spinner both live
    inside it and swap places through opacity, so the spinner appears exactly where
    the countdown text was and the layout never moves. */
 .zato-time-ago-indicator {
-    display: inline-block;
+    display: block;
     position: relative;
-    vertical-align: middle;
-    /* The slot must be exactly as tall as the countdown text inside it - otherwise
-       the header's taller strut leaves empty space above the text and pushes both
-       the text and the spinner below the middle of the header. */
+    /* The slot must be exactly as tall as the countdown text inside it, and the
+       header's 34px content box fits the 19px name line plus this 10px line. */
     font-size: 10px;
     line-height: 10px;
-    /* vertical-align: middle centers on the parent's x-height midpoint, which sits
-       below the true middle of the 19px line box, so the slot is nudged back up. */
-    top: -1px;
+    margin-top: 2px;
 }
 
 .zato-time-ago-indicator .zato-time-ago-countdown {
-    /* Top-aligned inside the tight 10px slot, so no baseline gap can reappear below it. */
+    /* Top-aligned inside the tight 10px slot, so no baseline gap can reappear below it,
+       and flush with the column name above it rather than indented like an inline hint. */
     vertical-align: top;
+    margin-left: 0;
 }
 
 .zato-time-ago-indicator .zato-time-ago-spinner {
     position: absolute;
-    left: 12px;
+    /* The ring of dots reaches 6px around the dot, so this keeps its left edge flush
+       with the column name above. */
+    left: 6px;
     top: 50%;
     margin: -1.5px 0 0 0;
 }

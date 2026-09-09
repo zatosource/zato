@@ -30,6 +30,8 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/smb.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.center_column_names.push('Host', 'Port', 'Username', 'Scheduler');
+
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
@@ -94,7 +96,7 @@
 
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
-                        <th class="text-center"><a href="#">Active</a></th>
+                        <th><a href="#">Active</a></th>
                         <th class="zato-time-ago-header"><a href="#">Last run</a></th>
                         <th><a href="#">Host</a></th>
 
@@ -130,7 +132,7 @@
 
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
-                        <td class="text-center">{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td class="zato-time-ago" data-time-ago-id="{{ item.last_run_job_ids }}" data-time-utc="{{ item.last_run_utc }}" data-duration-ms="{{ item.last_duration_ms }}"></td>
                         <td>{{ item.host|default:'<span class="form_hint">---</span>' }}</td>
 

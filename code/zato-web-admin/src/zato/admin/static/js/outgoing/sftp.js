@@ -104,7 +104,7 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
 
     // 1
     row += String.format('<td>{0}</td>', item.name);
-    row += String.format('<td class="text-center">{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td class="zato-time-ago" data-time-ago-id="{0}" data-time-utc="{1}" data-duration-ms="{2}"></td>',
         data.last_run_job_ids, data.last_run_utc, data.last_duration_ms);
     row += String.format('<td>{0}</td>', item.address ? item.address : $.fn.zato.empty_value);
