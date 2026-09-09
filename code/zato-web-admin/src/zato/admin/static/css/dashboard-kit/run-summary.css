@@ -1,0 +1,235 @@
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the run summary                               */
+/* ------------------------------------------------------------ */
+
+.dashboard-run-summary {
+    padding: 6px 10px 10px;
+}
+
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the run summary tiles                         */
+/* ------------------------------------------------------------ */
+
+.dashboard-run-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.dashboard-run-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 88px;
+    padding: 6px 10px;
+    border: 1px solid var(--dashboard-frame-line);
+    border-radius: 4px;
+    transition: background-color var(--dashboard-motion) ease, color var(--dashboard-motion) ease;
+}
+
+.dashboard-run-summary-dark .dashboard-run-tile {
+    border-color: var(--dashboard-frame-dark-line);
+    background: var(--dashboard-frame-dark-fill);
+}
+
+.dashboard-run-tile-value {
+    font-family: var(--dashboard-mono);
+    font-size: var(--dashboard-font-figure);
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.dashboard-run-tile-label {
+    font-size: var(--dashboard-font-small);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    opacity: 0.75;
+}
+
+.dashboard-run-tile-neutral {
+    color: var(--dashboard-line-strong);
+}
+
+.dashboard-run-summary-dark .dashboard-run-tile-neutral {
+    color: var(--dashboard-panel-text);
+}
+
+.dashboard-run-tile-good {
+    color: var(--dashboard-tone-good);
+    background: var(--dashboard-tone-good-fill);
+}
+
+.dashboard-run-tile-bad {
+    color: var(--dashboard-tone-bad);
+    background: var(--dashboard-tone-bad-fill);
+}
+
+.dashboard-run-tile-warning {
+    color: var(--dashboard-tone-warning);
+    background: var(--dashboard-tone-warning-fill);
+}
+
+.dashboard-run-tile-muted {
+    color: var(--dashboard-muted);
+}
+
+.dashboard-run-summary-dark .dashboard-run-tile-muted {
+    color: var(--dashboard-tone-dim);
+}
+
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the run summary skip chips                    */
+/* ------------------------------------------------------------ */
+
+.dashboard-run-skips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.dashboard-run-skip-chip {
+    cursor: pointer;
+    transition: transform var(--dashboard-motion) ease, opacity var(--dashboard-motion) ease;
+}
+
+.dashboard-run-skip-chip:hover {
+    transform: translateY(-1px);
+    transition-delay: var(--dashboard-hover-delay);
+}
+
+.dashboard-run-skip-chip:active {
+    opacity: 0.8;
+    transform: translateY(0);
+}
+
+.dashboard-run-skip-chip-active {
+    color: var(--dashboard-line-strong);
+    background: var(--dashboard-tone-accent-fill);
+}
+
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the run summary ledger                        */
+/* ------------------------------------------------------------ */
+
+.dashboard-run-ledger-host {
+    min-height: 20px;
+}
+
+.dashboard-run-ledger {
+    width: 100%;
+}
+
+.dashboard-run-ledger th {
+    font-size: var(--dashboard-font-small);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.dashboard-run-ledger td {
+    font-size: var(--dashboard-font-body);
+    vertical-align: middle;
+}
+
+.dashboard-run-ledger-name {
+    font-family: var(--dashboard-mono);
+    word-break: break-all;
+}
+
+.dashboard-run-ledger-size,
+.dashboard-run-ledger-took {
+    font-family: var(--dashboard-mono);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.dashboard-run-ledger-age,
+.dashboard-run-ledger-reason {
+    color: var(--dashboard-muted);
+}
+
+.dashboard-run-ledger-age {
+    white-space: nowrap;
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger-link {
+    color: var(--dashboard-tone-accent-dark);
+}
+
+.dashboard-run-ledger-loading,
+.dashboard-run-ledger-empty,
+.dashboard-run-ledger-overflow {
+    padding: 6px 0;
+    font-size: var(--dashboard-font-body);
+    color: var(--dashboard-muted);
+}
+
+.dashboard-run-ledger-fold {
+    padding: 6px 0 0;
+}
+
+.dashboard-run-ledger-fold-toggle {
+    margin-left: 0;
+}
+
+.dashboard-run-summary-light .dashboard-run-ledger-fold-toggle,
+.dashboard-run-summary-light .dashboard-run-skip-clear,
+.dashboard-run-summary-light .dashboard-run-traceback-toggle {
+    color: var(--dashboard-line-strong);
+    background: var(--dashboard-frame-fill);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger-fold-toggle,
+.dashboard-run-summary-dark .dashboard-run-skip-clear,
+.dashboard-run-summary-dark .dashboard-run-traceback-toggle {
+    color: var(--dashboard-badge-dark-text);
+    background: var(--dashboard-badge-dark-fill);
+}
+
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the run summary error                         */
+/* ------------------------------------------------------------ */
+
+.dashboard-run-error {
+    padding: 6px 0;
+    font-size: var(--dashboard-font-sentence);
+    line-height: 1.4;
+    color: var(--dashboard-error-ink);
+    word-break: break-word;
+}
+
+.dashboard-run-summary-dark .dashboard-run-error {
+    color: var(--dashboard-error-ink-dark);
+}
+
+.dashboard-run-traceback {
+    max-height: 240px;
+    margin: 4px 0 0;
+    padding: 8px 10px;
+    border-radius: 4px;
+    overflow: auto;
+    font-family: var(--dashboard-mono);
+    font-size: var(--dashboard-font-caption);
+    line-height: 1.45;
+    color: var(--dashboard-line-strong);
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--dashboard-frame-fill-soft);
+}
+
+.dashboard-run-summary-dark .dashboard-run-traceback {
+    color: var(--dashboard-panel-text);
+    background: var(--dashboard-frame-dark-fill-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-run-tile,
+    .dashboard-run-skip-chip {
+        transition: none;
+    }
+}

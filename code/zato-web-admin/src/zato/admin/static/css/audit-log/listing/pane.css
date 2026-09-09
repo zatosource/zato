@@ -1,0 +1,236 @@
+/* ------------------------------------------------------------ */
+/* The detail pane                                               */
+/* ------------------------------------------------------------ */
+
+/* On this page the pane is not a box of its own - the kit's frame, its padding and the
+   scrollbar it keeps room for would hold everything in the pane short of the page's right
+   edge, and the head would end under nothing. Without them the head, the tabs and the
+   panels below all run out to the very edge the pagination above them ends at, and the
+   two lines read as one column. Only a little room is kept on the left, for the handle. */
+
+.detail-page-audit-log .dashboard-list-detail-pane {
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 0 10px;
+    border: none;
+    background: transparent;
+    overflow: hidden;
+}
+
+/* It is the panels alone that scroll, in a body of their own below the head and the tabs -
+   so the scrollbar they bring stands inside the body and never holds the head or the tabs
+   short of the page's right edge */
+
+.audit-log-pane-body {
+    flex: 1;
+    min-height: 0;
+    padding-bottom: 10px;
+    overflow: auto;
+}
+
+.audit-log-pane-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+/* Which event the pane is holding, said the way the list says it */
+
+.audit-log-pane-event {
+    flex: none;
+    font-family: var(--dashboard-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--dashboard-accent);
+    white-space: nowrap;
+}
+
+/* A headline longer than the room the head has is the one thing here that gives way,
+   so what the event is called and what can be done with it stay where they are */
+
+.audit-log-pane-title {
+    min-width: 0;
+    overflow: hidden;
+    font-family: var(--dashboard-mono);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--dashboard-line-strong);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.audit-log-pane-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+/* The outcome badge stands right beside the headline it speaks for - pinned out at the
+   head's far edge it only looked stranded, a room's width away from its own sentence.
+   The leftover room now lies to the right of the two of them, where it crowds nothing,
+   and the actions alone keep to the far edge. */
+
+.audit-log-pane-head .audit-log-outcome-filter {
+    flex: none;
+}
+
+.audit-log-resubmit-link {
+    flex: none;
+    font-size: 11px;
+}
+
+/* ------------------------------------------------------------ */
+/* Audit log - the pane sentence                                 */
+/* ------------------------------------------------------------ */
+
+.audit-log-pane-sentence {
+    margin: -2px 0 8px;
+    font-size: var(--dashboard-font-sentence);
+    line-height: 1.4;
+    color: var(--dashboard-line-strong);
+    word-break: break-word;
+}
+
+/* ------------------------------------------------------------ */
+/* Audit log - the pane source panel                             */
+/* ------------------------------------------------------------ */
+
+.audit-log-pane-source-panel:not(:empty) {
+    border-bottom: 1px solid var(--dashboard-panel-border);
+}
+
+.audit-log-pane-source-panel .dashboard-run-summary,
+.audit-log-pane-source-panel .dashboard-journey {
+    color: var(--dashboard-panel-text);
+}
+
+/* ------------------------------------------------------------ */
+/* Audit log - the resubmit warning                              */
+/* ------------------------------------------------------------ */
+
+.audit-log-resubmit-confirm-warning {
+    font-weight: 600;
+    color: var(--dashboard-tone-warning);
+}
+
+/* ------------------------------------------------------------ */
+/* Audit log - the progress chip                                 */
+/* ------------------------------------------------------------ */
+
+.audit-log-progress {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.audit-log-progress-text {
+    white-space: nowrap;
+}
+
+.audit-log-progress-bar {
+    display: inline-block;
+    height: 4px;
+    border-radius: 2px;
+    overflow: hidden;
+    vertical-align: middle;
+    background: var(--dashboard-tone-accent-bar);
+}
+
+.audit-log-progress-fill {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: currentColor;
+    transition: width 240ms ease-out;
+}
+
+/* ------------------------------------------------------------ */
+/* Audit log - the journey loading line                          */
+/* ------------------------------------------------------------ */
+
+.audit-log-journey-loading {
+    padding: 8px 12px;
+    font-size: var(--dashboard-font-caption);
+    color: var(--dashboard-badge-dark-text);
+}
+
+/* The pane's tabs are the dashboard's own, only smaller - the pane is a column of a
+   listing, not a page of its own. The row they stand in also holds the doorway to the
+   event's flow - a link beside the strip, not a tab inside it. */
+
+.audit-log-pane-tabs-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.audit-log-pane-tabs {
+    --tab-padding: 4px 14px;
+    --tab-font-size: 10.5px;
+
+    margin-bottom: 0;
+}
+
+.audit-log-pane-tabs-row .audit-log-open-flow {
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* What is known about the event is set out on the same dark frame the message itself is
+   read on, so the two tabs of the pane are two ways of reading one thing rather than
+   two places */
+
+.audit-log-pane-details {
+    padding: 1px 0;
+    border: 1px solid var(--dashboard-panel-border);
+    border-radius: 4px;
+    background: var(--dashboard-panel-background);
+    overflow: hidden;
+}
+
+/* The topmost rule of the fact rows would sit a pixel inside the frame's own.
+   The label column keeps one width whatever event is being read - sized by content,
+   it would resize at every click down the list. 130px holds the widest label there
+   is at the labels' own 10px uppercase. */
+
+.audit-log-pane-details .dashboard-fact-rows {
+    border-top: none;
+    grid-template-columns: 130px 1fr;
+}
+
+/* The CID opens the whole message and a lineage marker selects the event it names, so those
+   two values lead somewhere and the rest do not - which is what sets them apart here */
+
+.audit-log-pane-details a,
+.audit-log-pane-details a:visited {
+    padding: 0;
+    color: var(--dashboard-flow-accent);
+    text-decoration: none;
+}
+
+.audit-log-pane-details a:hover {
+    background: none;
+    text-decoration: underline;
+
+    /* The page's global link hover would turn the value dark blue - here it
+       brightens within its own amber instead */
+    color: var(--dashboard-flow-accent-bright);
+}
+
+/* The sign that a value leads off this page - kept small and quiet beside its own
+   text, speaking up only when the link itself does */
+
+.audit-log-external-icon {
+    width: 10px;
+    height: 10px;
+    margin-left: 4px;
+    vertical-align: -1px;
+    opacity: 0.65;
+}
+
+a:hover .audit-log-external-icon {
+    opacity: 1;
+}

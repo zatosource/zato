@@ -1,0 +1,381 @@
+/* ------------------------------------------------------------ */
+/* The main list                                                 */
+/* ------------------------------------------------------------ */
+
+/* The list takes all the room it is given bar the last few pixels of it, which are left for the
+   scrollbar to stand in - a row's own frame is no thing to meet a scrollbar with. It begins where
+   the list begins, so nothing on this screen holds a row away from the edge it is read from. */
+
+.audit-log-list-table {
+    width: calc(100% - var(--audit-log-list-end-gap));
+    margin: 0;
+}
+
+.audit-log-row {
+    cursor: pointer;
+}
+
+.audit-log-row:hover {
+    background: var(--dashboard-row-hover);
+}
+
+/* The tint of a row that has just arrived is set on the row itself, so what marks the
+   selection is laid over whatever colour the row is already wearing, and it is laid on
+   the cells because a collapsed table draws no shadow of a row */
+
+.audit-log-row.dashboard-list-detail-item-selected > td {
+    box-shadow: inset 0 0 0 999px var(--dashboard-row-selected);
+}
+
+.audit-log-row.dashboard-list-detail-item-selected .audit-log-cell-number {
+    color: var(--dashboard-accent);
+    font-weight: 700;
+}
+
+/* The columns before the main one each hold one width, written down where the cell is styled -
+   sized by content they would be laid out anew every time a filter changes which rows are on
+   view, moving everything to their right. The main column stays as wide as what it holds,
+   nothing wraps, and the room the row has over goes to the empty cell at its end. A list dragged
+   narrow drops the columns it no longer has room for one at a time. */
+
+/* A cell asks for the row's height, which a table reads as the least it may be */
+
+.audit-log-list-table td {
+    height: var(--audit-log-row-height);
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--dashboard-line);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* A failed event wears a frame and a wash of the error red. The frame is an outline pulled
+   inside the row's own box, not a border - an outline takes no part in layout, so a list of
+   framed rows and a list of plain ones stand at the very same heights and switching between
+   the ok-only and errors-only views moves nothing. The wash stays on the cells, where it covers
+   the tint of a new arrival and is itself covered by the blue of the selection. */
+
+.audit-log-row-error {
+    outline: var(--audit-log-error-frame);
+    outline-offset: calc(-1 * var(--audit-log-error-frame-width));
+}
+
+.audit-log-row-error > td {
+    background: var(--audit-log-error-tint);
+}
+
+/* The dots that say which rows failed stand outside the table altogether, in a rail of their own
+   beside the list, and are read down the edge of the page where nothing else is - which is what
+   lets a failure be found without reading a single row.
+
+   A rail is what it takes. The list scrolls, so it shows nothing painted outside its own edge, and
+   a mark on a row could never reach past it; the rail is next to the list rather than inside it, in
+   the room the page already leaves at its edge, and each mark is held level with its row by the
+   listing. Nothing of this is in the table, so no row moves and no column changes.
+
+   The rail is no taller than the list, and cuts off what runs past its ends, so a mark whose row
+   has been scrolled out of sight goes with it. */
+
+.detail-page-audit-log .dashboard-list-detail {
+    position: relative;
+}
+
+.audit-log-error-rail {
+    position: absolute;
+    left: calc(-1 * (var(--audit-log-error-rail-gap) + var(--audit-log-error-dot-size)));
+    width: var(--audit-log-error-dot-size);
+    overflow: hidden;
+
+    /* The rail is read, never reached for - the row beside it is what answers a click */
+    pointer-events: none;
+}
+
+.audit-log-error-rail-dot {
+    position: absolute;
+    left: 0;
+    width: var(--audit-log-error-dot-size);
+    height: var(--audit-log-error-dot-size);
+    transform: translateY(-50%);
+    border-radius: 50%;
+    background: rgb(var(--audit-log-error-rgb));
+}
+
+/* A list dragged shut has no rows to mark, and marks beside a list nobody can read stand
+   against nothing */
+
+.dashboard-list-detail-closed .audit-log-error-rail {
+    display: none;
+}
+
+/* The event's own number, which is how one event is pointed at - it is the first thing
+   read on a row and the first thing read in the pane, so it is not kept quiet */
+
+/* Wide enough for a six-digit event number */
+
+.audit-log-cell-number {
+    width: 6ch;
+    padding-right: 8px;
+    font-family: var(--dashboard-mono);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: right;
+    color: var(--dashboard-line-strong);
+}
+
+/* Two events of one exchange land within the same second of each other, so the second is not
+   what tells them apart - the cell holds the whole fraction the event was written down with,
+   which is the same count of digits on every row */
+
+/* Wide enough for the longest day word a 30-day retention window can name - "2 weeks ago" -
+   with the separator and a time carrying its whole six-digit fraction after it */
+
+.audit-log-cell-time {
+    width: 29ch;
+    font-family: var(--dashboard-mono);
+    font-size: 12px;
+    color: var(--audit-log-time-text);
+}
+
+/* The day is read before the time and not instead of it - it is set apart by its colour alone,
+   a column of names in bold being a column shouting the one thing every row has in common.
+   The word hugs its separator, so a short day like Today leaves no gap before the time. */
+
+.audit-log-cell-day {
+    color: var(--dashboard-line-strong);
+}
+
+/* Wide enough for the REQ and REP tags, and kept at that width on the rows
+   that carry no tag at all */
+
+.audit-log-cell-role {
+    width: 40px;
+}
+
+/* Wide enough for a Resubmit link with the resubmitted marker after it, and kept at that
+   width whatever a row carries, so no row widens the column for everyone else. The link is
+   glued to the right edge, away from the badges of the cell before it, so every Resubmit
+   stands at the same x down the whole list. */
+
+.audit-log-cell-action {
+    width: 140px;
+    text-align: right;
+}
+
+/* The one cell that asks for everything, which is what a table hands its leftover room to. It
+   holds nothing, so that room reads as the end of the row, and every column before it is left
+   at the width of what it holds. */
+
+.audit-log-cell-filler {
+    width: 100%;
+    padding: 0;
+}
+
+/* A row saying there is nothing to list, or that there soon will be, spans the whole table and
+   is a sentence rather than a column */
+
+.audit-log-empty-row td,
+.detail-loading-row td {
+    padding: 10px 12px;
+    color: var(--dashboard-muted);
+}
+
+/* What an event says about itself, always on the one line - a row of a list read a hundred at a
+   time is one row tall whatever it is holding. It is as wide as the tags it holds, the room the
+   row has over being the filler's business. */
+
+.audit-log-cell-main {
+    line-height: 20px;
+}
+
+/* What an event is, for the events that are not a message going one way or the other - it is
+   the only thing such a row is named by, so it is read at the same strength as any other name
+   on the list rather than as a note beside one */
+
+.audit-log-row-event {
+    margin-right: 8px;
+    font-size: 12px;
+    color: var(--dashboard-line-strong);
+}
+
+/* An outcome badge filters wherever it is worn */
+
+.audit-log-outcome-filter {
+    cursor: pointer;
+}
+
+/* The chip beside the legend naming the kind of event the list is narrowed down to,
+   with the cross that asks for every kind back */
+
+/* The chip's host is a flex box of its own rather than a line of the page's text - a pill
+   standing on a line box of the page font is taller than the pill, and the row with it */
+#audit-log-event-chip {
+    display: flex;
+    align-items: center;
+}
+
+.audit-log-filter-chip {
+    gap: 7px;
+}
+
+/* The cross is drawn larger than the word beside it yet takes no more height than the word
+   does, so the chip stands as tall as the pills beside it and the row it joins does not grow */
+.audit-log-filter-chip-clear {
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 0;
+    opacity: 0.6;
+}
+
+.audit-log-filter-chip-clear:hover {
+    opacity: 1;
+}
+
+/* A tag in the list is read a hundred at a time, so it is kept smaller and quieter than
+   the same tag in the pane, where one event is being read on its own.
+
+   It takes the row's own cursor rather than one of its own, because it is part of what the row
+   says and not something to be clicked apart from it - the row opens the event, tag and all. */
+
+.audit-log-list-table .dashboard-chip,
+.audit-log-list-table .dashboard-outcome-badge {
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    cursor: inherit;
+}
+
+/* A list dragged narrow gives its columns up one at a time, in the order they are least missed
+   in, and nothing that stays gets any narrower for it. Which way an event went goes before what
+   kind of event it was, that goes before what it has in common with others, that goes before
+   when it happened, and the event's own number is never given up, because it is what a row is
+   pointed at by.
+
+   No width appears below. Which columns the row has room for is measured on the page - the
+   columns are as wide as the data makes them, so a number written down here could only ever be
+   a guess at when the room runs out. The list carries one class per column it is leaving out. */
+
+/* Resubmitting an event is the pane's business once the row is this tight */
+
+.audit-log-drop-action .audit-log-cell-action {
+    display: none;
+}
+
+/* The event's role tag goes first - which way an event went is read off the chips beside it */
+
+.audit-log-drop-role .audit-log-cell-role {
+    display: none;
+}
+
+/* What kind of event it was goes next, worn as a word or as a chip */
+
+.audit-log-drop-event .audit-log-row-event,
+.audit-log-drop-event .audit-log-row-event-chip {
+    display: none;
+}
+
+/* A tag is what an event has in common with others rather than what it is */
+
+.audit-log-drop-chips .audit-log-cell-main .dashboard-chip,
+.audit-log-drop-chips .audit-log-cell-main .audit-log-resubmitted-marker {
+    display: none;
+}
+
+/* A cell holding nothing asks for no room either */
+
+.audit-log-drop-chips .audit-log-cell-main {
+    padding: 0;
+}
+
+/* The time is the last thing to go - past this the list has nothing left to give up
+   and shuts altogether, which the kit sees to */
+
+.audit-log-drop-time .audit-log-cell-time {
+    display: none;
+}
+
+/* The event this one came out of, or one that came out of it, read as the value of the
+   line it stands on rather than as a tag of its own */
+
+.audit-log-lineage {
+    font-family: var(--dashboard-mono);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* The confirmation a resubmit deep link opens - which connection the message goes
+   through again and what it is known by, with the confirm button the only way
+   anything goes out. It rides inside a tippy, whose dark face the text reads on. */
+
+.audit-log-resubmit-confirm {
+    padding: 4px 2px;
+    text-align: left;
+    font-size: 12.5px;
+}
+
+.audit-log-resubmit-confirm-title {
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.audit-log-resubmit-confirm-text {
+    margin-bottom: 4px;
+    max-width: 280px;
+    word-break: break-word;
+}
+
+.audit-log-resubmit-confirm-label {
+    margin-right: 5px;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.audit-log-resubmit-confirm-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.audit-log-resubmit-confirm-yes,
+.audit-log-resubmit-confirm-cancel {
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.audit-log-resubmit-confirm-yes {
+    border: 1px solid #22863a;
+    background: #22863a;
+    color: #fff;
+}
+
+.audit-log-resubmit-confirm-yes:hover {
+    background: #1d7534;
+}
+
+.audit-log-resubmit-confirm-cancel {
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: transparent;
+    color: #fff;
+}
+
+.audit-log-resubmit-confirm-cancel:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* One more badge among the row's chips, saying the message went out again - its
+   background leaning a touch towards green, everything else as the other tags */
+
+.audit-log-resubmitted-marker {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    background: #e0f0e8;
+    color: var(--dashboard-line-strong);
+}
