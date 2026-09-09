@@ -131,8 +131,8 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, includeTr) {
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
     // 1
-    row += String.format('<td class="text-left">{0}</td>', item.name);
-    row += String.format('<td>{0}</td>', isActive ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', item.name);
+    row += String.format('<td class="text-center">{0}</td>', isActive ? 'Yes' : 'No');
     row += String.format('<td class="zato-time-ago" data-time-ago-id="{0}" data-time-utc="{1}" data-duration-ms="{2}"></td>',
         data.last_run_job_ids, data.last_run_utc, data.last_duration_ms);
     row += String.format('<td>{0}</td>', host);
@@ -142,7 +142,8 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, includeTr) {
     row += String.format('<td>{0}</td>', username);
     row += String.format('<td>{0}</td>',
         String.format('<a href="/zato/outgoing/file-transfer/schedules/ftp/{0}/cluster/{1}/{2}/?name={3}">{4}</a>',
-        item.id, item.cluster_id, data.name_slug, item.name, data.scheduler_schedule_count));
+        item.id, item.cluster_id, data.name_slug, item.name,
+        $.fn.zato.count_text(data.scheduler_schedule_count, 'schedule', 'schedules')));
     row += String.format('<td><a href="{0}">Command shell</a></td>', data.command_shell_url);
     row += String.format('<td><a href="/zato/audit-log/?source=file-outgoing&object_name={0}&cluster={1}">Audit log</a></td>',
         encodeURIComponent(item.name), item.cluster_id);
