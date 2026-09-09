@@ -1345,11 +1345,10 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     opacity: var(--zato-time-ago-value-fade-opacity);
 }
 
-/* The column is only as wide as its values - the countdown sits under the column
-   name rather than next to it, so the header is never the widest thing in the
-   column, and the 1% width keeps the table from handing this column any spare
-   room, which would only pile up to the right of the left-aligned values and push
-   the columns after it away. The values never wrap, so the narrow column is safe. */
+/* The column takes no spare width - with left-aligned values, any room the table
+   hands this column piles up to the right of the values and pushes the columns
+   after it away, so the column stays as wide as its header and no wider. The values
+   never wrap, so the narrow column is safe. */
 #data-table th.zato-time-ago-header {
     width: 1%;
 }
@@ -1358,38 +1357,58 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     white-space: nowrap;
 }
 
-/* The header link keeps the built-in right padding away so that the column name
-   alone sets the width of the first header line. */
+/* An action link pulled towards the link after it - the table distributes its spare
+   width in proportion to content, so a long link draws the most room and drifts away
+   from its neighbour. The cell keeps its width untouched, since changing it would move
+   every other column, and the text alone sits at the cell's right edge, then steps back
+   by a fixed gap so it is not glued to the next link. Relative positioning is used on
+   purpose - it moves the text without changing any width the table lays out. */
+:root {
+    --zato-action-gap: 40px;
+}
+
+#data-table td.action {
+    text-align: right;
+}
+
+#data-table td.action > a {
+    position: relative;
+    right: var(--zato-action-gap);
+}
+
+/* The header link is a block element by default, which would push the spinner
+   to its own line - inline-block keeps them side by side, and dropping
+   the built-in right padding keeps the spinner close to the column name. */
 #data-table th.zato-time-ago-header a {
     display: inline-block;
     padding-right: 0;
 }
 
-/* One shared slot under the column name - the countdown and the spinner both live
+/* One shared slot next to the column name - the countdown and the spinner both live
    inside it and swap places through opacity, so the spinner appears exactly where
    the countdown text was and the layout never moves. */
 .zato-time-ago-indicator {
-    display: block;
+    display: inline-block;
     position: relative;
-    /* The slot must be exactly as tall as the countdown text inside it, and the
-       header's 34px content box fits the 19px name line plus this 10px line. */
+    vertical-align: middle;
+    /* The slot must be exactly as tall as the countdown text inside it - otherwise
+       the header's taller strut leaves empty space above the text and pushes both
+       the text and the spinner below the middle of the header. */
     font-size: 10px;
     line-height: 10px;
-    margin-top: 2px;
+    /* vertical-align: middle centers on the parent's x-height midpoint, which sits
+       below the true middle of the 19px line box, so the slot is nudged back up. */
+    top: -1px;
 }
 
 .zato-time-ago-indicator .zato-time-ago-countdown {
-    /* Top-aligned inside the tight 10px slot, so no baseline gap can reappear below it,
-       and flush with the column name above it rather than indented like an inline hint. */
+    /* Top-aligned inside the tight 10px slot, so no baseline gap can reappear below it. */
     vertical-align: top;
-    margin-left: 0;
 }
 
 .zato-time-ago-indicator .zato-time-ago-spinner {
     position: absolute;
-    /* The ring of dots reaches 6px around the dot, so this keeps its left edge flush
-       with the column name above. */
-    left: 6px;
+    left: 12px;
     top: 50%;
     margin: -1.5px 0 0 0;
 }

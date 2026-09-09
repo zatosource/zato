@@ -115,7 +115,7 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
         String.format('<a href="/zato/outgoing/file-transfer/schedules/sftp/{0}/cluster/{1}/{2}/?name={3}">{4}</a>',
         item.id, item.cluster_id, data.name_slug, item.name,
         $.fn.zato.count_text(data.scheduler_schedule_count, 'schedule', 'schedules')));
-    row += String.format('<td><a href="{0}">Command shell</a></td>', data.command_shell_url);
+    row += String.format('<td class="action"><a href="{0}">Command shell</a></td>', data.command_shell_url);
     row += String.format('<td><a href="/zato/audit-log/?source=file-outgoing&object_name={0}&cluster={1}">Audit log</a></td>',
         encodeURIComponent(item.name), item.cluster_id);
 
