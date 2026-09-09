@@ -88,10 +88,11 @@ listing.config = {
     eventChipErrorTone: 'bad',
 
     // The order a row gives its columns up in as the list is narrowed, from the one least missed
-    // to the one it holds on to longest. Each name is the class the list carries while that
-    // column is being left out, and the event's own number is not on the list at all - it is
-    // what a row is pointed at by, so it is never given up.
-    dropOrder: ['action', 'chips', 'time', 'role'],
+    // to the one it holds on to longest - the action, the role tag, the event word, the chips
+    // and then the time. Each name is the class the list carries while that column is being
+    // left out, and the event's own number is not on the list at all - it is what a row is
+    // pointed at by, so it is never given up.
+    dropOrder: ['action', 'role', 'event', 'chips', 'time'],
     dropClassPrefix: 'audit-log-drop-',
 
     emptyListing: 'No events found',
@@ -547,7 +548,7 @@ listing.rowHTML = function(rowModel) {
         html += chipsHTML;
 
         if (saysItsKind) {
-            html += kit.chips.render_one(listing.eventChip(rowModel));
+            html += '<span class="audit-log-row-event-chip">' + kit.chips.render_one(listing.eventChip(rowModel)) + '</span>';
         }
     }
     else {
@@ -1215,7 +1216,8 @@ listing.markNewRows = function() {
 listing.fitColumns = function() {
     var config = listing.config;
     var $host = $(config.host);
-    var listElement = listing.panes.items_host().closest('table').parent()[0];
+    var tableElement = listing.panes.items_host().closest('table')[0];
+    var listElement = tableElement.parentElement;
 
     // Everything is put back before the row is measured, so a pane being widened takes its
     // columns back in the reverse of the order it gave them up
@@ -1226,8 +1228,12 @@ listing.fitColumns = function() {
     for (var dropIndex = 0; dropIndex < config.dropOrder.length; dropIndex++) {
 
         // Reading the width is what settles the layout, so the row that is measured next is the
-        // row as it stands with the column just given up already gone
-        if (listElement.scrollWidth <= listElement.clientWidth) {
+        // row as it stands with the column just given up already gone. It is the table that is
+        // measured and not what the list scrolls over - a row that has just arrived puffs up for
+        // a moment, and a puffed row reaches past the list without the table being any wider,
+        // so a list measured by its scroll width while a drag happens mid-puff would give up
+        // every column it has and get none of them back.
+        if (tableElement.offsetWidth <= listElement.clientWidth) {
             break;
         }
 

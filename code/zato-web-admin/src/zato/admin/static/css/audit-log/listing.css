@@ -459,9 +459,10 @@
 }
 
 /* A list dragged narrow gives its columns up one at a time, in the order they are least missed
-   in, and nothing that stays gets any narrower for it. What an event has in common with others
-   goes before when it happened, when it happened goes before which way it went, and the event's
-   own number is never given up, because it is what a row is pointed at by.
+   in, and nothing that stays gets any narrower for it. Which way an event went goes before what
+   kind of event it was, that goes before what it has in common with others, that goes before
+   when it happened, and the event's own number is never given up, because it is what a row is
+   pointed at by.
 
    No width appears below. Which columns the row has room for is measured on the page - the
    columns are as wide as the data makes them, so a number written down here could only ever be
@@ -473,11 +474,23 @@
     display: none;
 }
 
+/* The event's role tag goes first - which way an event went is read off the chips beside it */
+
+.audit-log-drop-role .audit-log-cell-role {
+    display: none;
+}
+
+/* What kind of event it was goes next, worn as a word or as a chip */
+
+.audit-log-drop-event .audit-log-row-event,
+.audit-log-drop-event .audit-log-row-event-chip {
+    display: none;
+}
+
 /* A tag is what an event has in common with others rather than what it is */
 
 .audit-log-drop-chips .audit-log-cell-main .dashboard-chip,
-.audit-log-drop-chips .audit-log-cell-main .audit-log-resubmitted-marker,
-.audit-log-drop-chips .audit-log-row-event {
+.audit-log-drop-chips .audit-log-cell-main .audit-log-resubmitted-marker {
     display: none;
 }
 
@@ -487,14 +500,10 @@
     padding: 0;
 }
 
+/* The time is the last thing to go - past this the list has nothing left to give up
+   and shuts altogether, which the kit sees to */
+
 .audit-log-drop-time .audit-log-cell-time {
-    display: none;
-}
-
-/* The event's role tag is the last thing to go - past this the list has nothing left to
-   give up and shuts altogether, which the kit sees to */
-
-.audit-log-drop-role .audit-log-cell-role {
     display: none;
 }
 
