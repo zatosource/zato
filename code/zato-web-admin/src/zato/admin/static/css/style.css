@@ -1345,6 +1345,37 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     opacity: var(--zato-time-ago-value-fade-opacity);
 }
 
+/* The column takes no spare width - with left-aligned values, any room the table
+   hands this column piles up to the right of the values and pushes the columns
+   after it away, so the column stays as wide as its header and no wider. The values
+   never wrap, so the narrow column is safe. */
+#data-table th.zato-time-ago-header {
+    width: 1%;
+}
+
+#data-table td.zato-time-ago {
+    white-space: nowrap;
+}
+
+/* An action link pulled towards the link after it - the table distributes its spare
+   width in proportion to content, so a long link draws the most room and drifts away
+   from its neighbour. The cell keeps its width untouched, since changing it would move
+   every other column, and the text alone sits at the cell's right edge, then steps back
+   by a fixed gap so it is not glued to the next link. Relative positioning is used on
+   purpose - it moves the text without changing any width the table lays out. */
+:root {
+    --zato-action-gap: 40px;
+}
+
+#data-table td.action {
+    text-align: right;
+}
+
+#data-table td.action > a {
+    position: relative;
+    right: var(--zato-action-gap);
+}
+
 /* The header link is a block element by default, which would push the spinner
    to its own line - inline-block keeps them side by side, and dropping
    the built-in right padding keeps the spinner close to the column name. */

@@ -30,6 +30,8 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/smb.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.center_column_names.push('Host', 'Port', 'Username', 'Scheduler');
+
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
@@ -86,14 +88,14 @@
             <a href="javascript:$.fn.zato.outgoing.smb.create()">Create a new outgoing SMB connection</a>
         </div>
 
-            <table class="zato-table center-all-columns" id="data-table">
+            <table class="zato-table" id="data-table">
                 <thead>
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
 
                         {% comment %} 1 {% endcomment %}
-                        <th class="text-left"><a href="#">Name</a></th>
+                        <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th class="zato-time-ago-header"><a href="#">Last run</a></th>
                         <th><a href="#">Host</a></th>
@@ -129,7 +131,7 @@
                         <td class="impexp"><input type="checkbox" /></td>
 
                         {% comment %} 1 {% endcomment %}
-                        <td class="text-left">{{ item.name }}</td>
+                        <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td class="zato-time-ago" data-time-ago-id="{{ item.last_run_job_ids }}" data-time-utc="{{ item.last_run_utc }}" data-duration-ms="{{ item.last_duration_ms }}"></td>
                         <td>{{ item.host|default:'<span class="form_hint">---</span>' }}</td>
@@ -137,7 +139,7 @@
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.port|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.username|default:'<span class="form_hint">---</span>' }}</td>
-                        <td><a href="{% url "out-file-transfer-schedules" 'smb' item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">{{ item.scheduler_schedule_count }}</a></td>
+                        <td><a href="{% url "out-file-transfer-schedules" 'smb' item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">{{ item.scheduler_schedule_count }} schedule{{ item.scheduler_schedule_count|pluralize }}</a></td>
                         <td><a href="/zato/audit-log/?source=file-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
 
                         {% comment %} 3 {% endcomment %}

@@ -451,7 +451,10 @@ $.fn.zato.data_table.center_columns = function() {
 
     header_row.find('th').each(function(col_index) {
         var header_cell = $(this);
-        var header_text = header_cell.find('a').text().trim();
+
+        // Sortable headers carry their name in a link, the others in the cell itself
+        var header_link = header_cell.find('a');
+        var header_text = (header_link.length ? header_link : header_cell).text().trim();
 
         if(!$.fn.zato.data_table.center_column_names.includes(header_text)) {
             return;
