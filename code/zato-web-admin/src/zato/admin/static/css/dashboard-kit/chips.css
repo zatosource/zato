@@ -41,13 +41,11 @@
 
 .dashboard-tag-accent,
 .dashboard-tag-running,
-.dashboard-run-tile-running,
 .dashboard-journey-step-running {
     color: var(--dashboard-tone-accent);
     background: var(--dashboard-tone-accent-fill);
 }
 
-.dashboard-run-summary-dark .dashboard-run-tile-running,
 .dashboard-journey-dark .dashboard-journey-step-running {
     color: var(--dashboard-tone-accent-dark);
     background: var(--dashboard-tone-accent-dark-fill);

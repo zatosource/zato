@@ -18,7 +18,6 @@ from django.http import HttpResponse, HttpResponseNotFound
 # Zato
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.audit_log.columns import _preview_length
-from zato.admin.web.views.audit_log.file_transfer_record import render_file_transfer_record
 from zato.admin.web.views.audit_log.sources import _source_parse, render_scheduler_record, render_view_record
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, AuditSource
 from zato.common.audit_log.attachment import get_attachment, list_attachments
@@ -50,7 +49,6 @@ _access_log = AuditLog(_dashboard_server_name)
 # The sources whose parsed view is rendered from the database by event id.
 _source_render_by_event_id = {
     AuditSource.Scheduler: render_scheduler_record,
-    AuditSource.File_Outgoing: render_file_transfer_record,
 }
 
 # ################################################################################################################################

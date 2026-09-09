@@ -78,8 +78,8 @@ def poll(req:'any_') -> 'HttpResponse':
     event_types = body['event_types']
     statuses_excluded = body['statuses_excluded']
 
-    # The rows the client shows as running, read again alongside the page.
-    running_ids = body['running_ids']
+    # The rows the client keeps watching - the running ones and the selected one - read again alongside the page.
+    watched_ids = body['watched_ids']
 
     page = body['page']
     page_size = body['page_size']
@@ -161,7 +161,7 @@ def poll(req:'any_') -> 'HttpResponse':
         # the per-source enrichment reads columns out of them, e.g. an AS4 conversation id.
         _hydrate_rows(connection, rows)
 
-        # The running rows the page no longer holds are read on their own.
+        # The watched rows the page no longer holds are read on their own.
         page_ids = set()
 
         for row in rows:
@@ -169,9 +169,9 @@ def poll(req:'any_') -> 'HttpResponse':
 
         wanted_ids:'anylist' = []
 
-        for running_id in running_ids:
-            if running_id not in page_ids:
-                wanted_ids.append(running_id)
+        for watched_id in watched_ids:
+            if watched_id not in page_ids:
+                wanted_ids.append(watched_id)
 
         if wanted_ids:
             updated = _read_rows_by_id(connection, select_columns, wanted_ids)
@@ -381,10 +381,6 @@ def _read_flow_rows(connection:'any_', seed_id:'int') -> 'anylist':
             if data:
                 attach_trace_lines(row, data)
 
-        # Only a preview of the payload travels with a line - the whole of it is fetched
-        # by the line that is opened, and only then.
-        row['data'] = data[:_data_preview_length]
-
         # Why this event is in the flow, and whether it is the one the flow was read from
         relation = relation_by_id[row['id']]
 
@@ -401,8 +397,12 @@ def _read_flow_rows(connection:'any_', seed_id:'int') -> 'anylist':
         rows.append(row)
 
     # .. and brought up to the shape a list row arrives in, per source, because a flow
-    # is not all one source.
+    # is not all one source. The enrichment reads the full documents, so they are cut down
+    # to a preview only afterwards - the whole of a payload is fetched by the line that is opened.
     _hydrate_rows(connection, rows)
+
+    for row in rows:
+        row['data'] = row['data'][:_data_preview_length]
 
     return rows
 

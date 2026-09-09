@@ -47,7 +47,21 @@ Skip_Mtime_Changed     = 'mtime-changed'
 Skip_Claimed_Elsewhere = 'claimed-elsewhere'
 Skip_Retry_Backoff     = 'retry-backoff'
 
-# The label of each skip reason.
+# The name of each skip reason, read in a table or on a chip.
+Skip_Reason_Name = {
+    Skip_Not_A_File:        'Not a file',
+    Skip_Claim_File:        'Claimed by a consumer',
+    Skip_Marker_File:       'Marker file',
+    Skip_Marker_Missing:    'Marker missing',
+    Skip_Pattern_Mismatch:  'Pattern mismatch',
+    Skip_Vanished:          'Vanished',
+    Skip_Size_Changed:      'Size changed',
+    Skip_Mtime_Changed:     'Modified',
+    Skip_Claimed_Elsewhere: 'Claimed elsewhere',
+    Skip_Retry_Backoff:     'Retry backoff',
+}
+
+# The label of each skip reason, read in a sentence after its count.
 Skip_Reason_Label = {
     Skip_Not_A_File:        'not files',
     Skip_Claim_File:        'claimed by a consumer',

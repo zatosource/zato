@@ -24,13 +24,16 @@ listing.config = {
     payloadHost: '#audit-log-pane-payload',
     rangePillId: 'audit-log-range',
 
-    // The pane's two halves - the message itself and everything said about it. The whole
-    // flow the message belongs to is a page of its own, which the pane head links to.
+    // The pane's tabs - everything said about the event, the message itself, and for a source
+    // with a panel of its own what that panel shows. The whole flow the message belongs to
+    // is a page of its own, which the pane head links to.
     tabSelector: '.audit-log-pane-tab',
     tabPanelPrefix: 'audit-log-pane-panel-',
     tabStorageKey: 'zato_audit_log_pane_tab',
+    summaryTab: 'summary',
     dataTab: 'data',
     detailsTab: 'details',
+    summaryTabLabel: 'Summary',
     dataTabLabel: 'Data',
     detailsTabLabel: 'Details',
 

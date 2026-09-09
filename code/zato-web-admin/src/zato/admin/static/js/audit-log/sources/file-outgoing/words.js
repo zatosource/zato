@@ -87,17 +87,7 @@ var fileOutgoing = {
         runWord: 'Run',
         chipSeparator: ', ',
 
-        // The tiles of a run's summary, in order.
-        tileLabels: {
-            seen: 'Seen',
-            taken: 'Taken',
-            delivered: 'Delivered',
-            failed: 'Failed',
-            quarantined: 'Quarantined',
-            expected: 'Expected'
-        },
-        expectedTileTitle: 'Expected by {expected_by} today',
-        expectedOverdueTitle: 'Expected by {expected_by} today, {minutes} minutes overdue',
+        // How the day's count reads against the schedule's expectation on a chip.
         expectedValue: '{delivered_today} of {expected_files}',
 
         // The steps of a file and the steps of a stored file.
@@ -126,7 +116,7 @@ var fileOutgoing = {
         ledgerKind: 'run-ledger',
         errorBodyKind: 'error',
 
-        // What the Details tab says for the things it says of its own.
+        // What the pane's facts say for the things they say of their own.
         expectedOfLabel: '{delivered_today} of {expected_files} by {expected_by}',
         deliveredBeforeLabel: 'Delivered before',
         deliveredBeforeText: '{count} times, last at {when}',
@@ -234,8 +224,12 @@ fileOutgoing.orderedSkips = function(skipReasons) {
     var out = [];
 
     for (var reason in skipReasons) {
-        var label = words.skip_reason_label[reason];
-        out.push({reason: reason, label: label, count: skipReasons[reason]});
+        out.push({
+            reason: reason,
+            label: words.skip_reason_label[reason],
+            name: words.skip_reason_name[reason],
+            count: skipReasons[reason]
+        });
     }
 
     out.sort(function(first, second) {

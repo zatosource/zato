@@ -792,17 +792,8 @@ input.detail-search-input::placeholder {
     display: none;
 }
 
-/* The component pill lives in shared/component-pill.css, imported above */
-
-.detail-spinner {
-    width: 20px;
-    height: 20px;
-    vertical-align: middle;
-    margin-right: 6px;
-    animation: zato-spin 0.6s linear infinite;
-    filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%)
-            hue-rotate(194deg) brightness(96%) contrast(99%);
-}
+/* The component pill lives in shared/component-pill.css, imported above,
+   and the spinner the kit's loading label carries in dashboard-kit/kit.css */
 
 .detail-loading-row td {
     text-align: center;

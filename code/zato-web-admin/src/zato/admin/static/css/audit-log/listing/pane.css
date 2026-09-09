@@ -82,24 +82,8 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Audit log - the pane sentence                                 */
-/* ------------------------------------------------------------ */
-
-.audit-log-pane-sentence {
-    margin: -2px 0 8px;
-    font-size: var(--dashboard-font-sentence);
-    line-height: 1.4;
-    color: var(--dashboard-line-strong);
-    word-break: break-word;
-}
-
-/* ------------------------------------------------------------ */
 /* Audit log - the pane source panel                             */
 /* ------------------------------------------------------------ */
-
-.audit-log-pane-source-panel:not(:empty) {
-    border-bottom: 1px solid var(--dashboard-panel-border);
-}
 
 .audit-log-pane-source-panel .dashboard-run-summary,
 .audit-log-pane-source-panel .dashboard-journey {
@@ -179,11 +163,11 @@
     white-space: nowrap;
 }
 
-/* What is known about the event is set out on the same dark frame the message itself is
-   read on, so the two tabs of the pane are two ways of reading one thing rather than
-   two places */
+/* What is known about the event and what its source shows of it are set out on the same
+   dark frame the message itself is read on, so the tabs of the pane are ways of reading
+   one thing rather than places */
 
-.audit-log-pane-details {
+.audit-log-pane-frame {
     padding: 1px 0;
     border: 1px solid var(--dashboard-panel-border);
     border-radius: 4px;
@@ -196,7 +180,7 @@
    it would resize at every click down the list. 130px holds the widest label there
    is at the labels' own 10px uppercase. */
 
-.audit-log-pane-details .dashboard-fact-rows {
+.audit-log-pane-frame .dashboard-fact-rows {
     border-top: none;
     grid-template-columns: 130px 1fr;
 }
@@ -204,14 +188,14 @@
 /* The CID opens the whole message and a lineage marker selects the event it names, so those
    two values lead somewhere and the rest do not - which is what sets them apart here */
 
-.audit-log-pane-details a,
-.audit-log-pane-details a:visited {
+.audit-log-pane-frame a,
+.audit-log-pane-frame a:visited {
     padding: 0;
     color: var(--dashboard-flow-accent);
     text-decoration: none;
 }
 
-.audit-log-pane-details a:hover {
+.audit-log-pane-frame a:hover {
     background: none;
     text-decoration: underline;
 

@@ -71,8 +71,8 @@ _Row_Selector = '#audit-log-table-body tr.audit-log-row'
 _Row_Event_Selector = '.audit-log-row-event'
 _Row_Main_Cell_Selector = '.audit-log-cell-main'
 _Pane_Head_Selector = '.audit-log-pane-head'
-_Details_Tab_Selector = '.audit-log-pane-tab[data-tab="details"]'
-_Details_Panel_Selector = '#audit-log-pane-panel-details .audit-log-pane-details'
+_Summary_Tab_Selector = '.audit-log-pane-tab[data-tab="summary"]'
+_Summary_Panel_Selector = '#audit-log-pane-panel-summary .audit-log-pane-summary'
 
 # The land whose detectors the PII gateway of the trace test runs, as the wizard labels it
 _PII_Land_Label = 'International'
@@ -306,30 +306,30 @@ class TestMCPAuditLog:
         outcome_text = outcome_text.strip().lower()
         assert outcome_text == _Outcome_OK, f'Expected outcome "{_Outcome_OK}", got: "{outcome_text}"'
 
-        # .. the Details tab reads everything the event says ..
-        page.click(_Details_Tab_Selector)
-        _ = page.wait_for_selector(_Details_Panel_Selector, state='visible', timeout=_UI_Timeout)
+        # .. the Summary tab reads everything the event says ..
+        page.click(_Summary_Tab_Selector)
+        _ = page.wait_for_selector(_Summary_Panel_Selector, state='visible', timeout=_UI_Timeout)
 
         # The fact labels are uppercased with CSS, so the whole text is compared lowercase,
         # each label together with the value standing right under it
-        details_text = page.inner_text(_Details_Panel_Selector)
-        details_text = details_text.lower()
+        summary_text = page.inner_text(_Summary_Panel_Selector)
+        summary_text = summary_text.lower()
 
         # .. the CID leads, the tool, the caller and the size all follow ..
-        cid_text = page.inner_text(f'{_Details_Panel_Selector} .audit-log-cid-link')
+        cid_text = page.inner_text(f'{_Summary_Panel_Selector} .audit-log-cid-link')
         assert cid_text.strip() != '', 'Expected a CID in the detail pane'
 
         tool_line = f'tool\n{_Echo_Service}'
-        assert tool_line in details_text, f'Expected a Tool line in the detail pane, got: "{details_text}"'
+        assert tool_line in summary_text, f'Expected a Tool line in the detail pane, got: "{summary_text}"'
 
         caller_line = f'caller\n{definition_name}'
-        assert caller_line in details_text, f'Expected a Caller line in the detail pane, got: "{details_text}"'
+        assert caller_line in summary_text, f'Expected a Caller line in the detail pane, got: "{summary_text}"'
 
-        assert 'size\n' in details_text, f'Expected a Size line in the detail pane, got: "{details_text}"'
+        assert 'size\n' in summary_text, f'Expected a Size line in the detail pane, got: "{summary_text}"'
 
         # .. and the payload itself never reaches the audit log.
-        assert 'customer name here' not in details_text, \
-            f'Expected no payload in the detail pane, got: "{details_text}"'
+        assert 'customer name here' not in summary_text, \
+            f'Expected no payload in the detail pane, got: "{summary_text}"'
 
 # ################################################################################################################################
 
@@ -389,35 +389,35 @@ class TestMCPAuditLog:
         assert event_label == _Event_Tools_Call_Label, \
             f'Expected event "{_Event_Tools_Call_Label}", got: "{event_label}"'
 
-        # .. its detail pane's Details tab holds the trace lines ..
+        # .. its detail pane's Summary tab holds the trace lines ..
         tools_call_row.click()
 
-        _ = page.wait_for_selector(_Details_Tab_Selector, state='visible', timeout=_UI_Timeout)
-        page.click(_Details_Tab_Selector)
-        _ = page.wait_for_selector(_Details_Panel_Selector, state='visible', timeout=_UI_Timeout)
+        _ = page.wait_for_selector(_Summary_Tab_Selector, state='visible', timeout=_UI_Timeout)
+        page.click(_Summary_Tab_Selector)
+        _ = page.wait_for_selector(_Summary_Panel_Selector, state='visible', timeout=_UI_Timeout)
 
         # The fact labels are uppercased with CSS, so the whole text is compared lowercase
-        details_text = page.inner_text(_Details_Panel_Selector)
-        details_text = details_text.lower()
+        summary_text = page.inner_text(_Summary_Panel_Selector)
+        summary_text = summary_text.lower()
 
         # .. one email reads singular ..
-        assert _Trace_Line_Email in details_text, \
-            f'Expected "{_Trace_Line_Email}" in the detail pane, got: "{details_text}"'
+        assert _Trace_Line_Email in summary_text, \
+            f'Expected "{_Trace_Line_Email}" in the detail pane, got: "{summary_text}"'
 
-        assert _Trace_Line_Email_Wrong not in details_text, \
-            f'Expected no "{_Trace_Line_Email_Wrong}" in the detail pane, got: "{details_text}"'
+        assert _Trace_Line_Email_Wrong not in summary_text, \
+            f'Expected no "{_Trace_Line_Email_Wrong}" in the detail pane, got: "{summary_text}"'
 
         # .. three IMEIs read plural ..
-        assert _Trace_Line_IMEI in details_text, \
-            f'Expected "{_Trace_Line_IMEI}" in the detail pane, got: "{details_text}"'
+        assert _Trace_Line_IMEI in summary_text, \
+            f'Expected "{_Trace_Line_IMEI}" in the detail pane, got: "{summary_text}"'
 
         # .. no count anywhere on the page hedges with a "(s)" ..
         page_text = page.inner_text('body')
         assert _Plural_Suffix not in page_text, f'Expected no "{_Plural_Suffix}" on the page, got one'
 
         # .. and none of the PII values themselves ever reach the audit log.
-        assert _PII_Email not in details_text, f'Expected no email in the detail pane, got: "{details_text}"'
-        assert _PII_IMEI_Compact not in details_text, f'Expected no IMEI in the detail pane, got: "{details_text}"'
+        assert _PII_Email not in summary_text, f'Expected no email in the detail pane, got: "{summary_text}"'
+        assert _PII_IMEI_Compact not in summary_text, f'Expected no IMEI in the detail pane, got: "{summary_text}"'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -195,8 +195,10 @@ listing.draw = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The ids of the running rows, the selected one included even once off the page.
-listing.runningIds = function() {
+// The ids of the rows the page keeps hearing about whether or not the next page still holds
+// them - the running rows, whose words are still changing, and the selected row, so that new
+// rows pushing it off the page never take the pane away from what is being read.
+listing.watchedIds = function() {
     var config = listing.config;
     var out = [];
 
@@ -209,10 +211,8 @@ listing.runningIds = function() {
     }
 
     if (listing.selected !== null) {
-        if (listing.selected.outcome === config.runningOutcome) {
-            if (out.indexOf(listing.selected.id) === -1) {
-                out.push(listing.selected.id);
-            }
+        if (out.indexOf(listing.selected.id) === -1) {
+            out.push(listing.selected.id);
         }
     }
 

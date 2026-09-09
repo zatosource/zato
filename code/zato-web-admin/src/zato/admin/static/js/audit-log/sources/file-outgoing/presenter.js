@@ -179,7 +179,33 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // The panel under the pane's head for the newest of the models.
+    // A file transfer document is JSON, read once as it stands rather than twice.
+    payloadTabs: function() {
+        var config = $.fn.zato.audit_log.listing.config;
+
+        var out = [
+            {label: config.rawTabLabel, kind: '', parsed: false}
+        ];
+
+        return out;
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // A run has its files to show and a file has its journey, any other event has nothing more to say.
+    hasDetails: function(rowModel) {
+        var row = rowModel.raw;
+
+        if (fileOutgoing.isRun(row)) {
+            return true;
+        }
+
+        return fileOutgoing.hasJourney(row);
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // The Details tab for the newest of the models.
     detailPanel: function(models, $host, variant) {
         var rowModel = models[models.length - 1];
         var row = rowModel.raw;

@@ -104,6 +104,24 @@ $.fn.zato.audit_log.sources['default'] = {
         return [];
     },
 
+    // The ways the message can be read on the Data tab - parsed first, being what a message
+    // is opened to be read as, the wire form there for whoever asks for it.
+    payloadTabs: function() {
+        var config = listing.config;
+
+        var out = [
+            {label: config.parsedTabLabel, kind: '', parsed: true},
+            {label: config.rawTabLabel, kind: '', parsed: false}
+        ];
+
+        return out;
+    },
+
+    // Whether the pane has a Details tab for this event, which is where detailPanel draws.
+    hasDetails: function(_rowModel) {
+        return false;
+    },
+
     detailPanel: function(_models, $host, _variant) {
         $host.html('');
     },

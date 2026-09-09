@@ -143,17 +143,30 @@ listing.lineageFact = function(label, eventId) {
 // reading of it starts whatever source wrote it down, and as that source's own reader makes
 // sense of it. Every event of every source is read through these same two tabs, so moving down
 // the list swaps the text inside the frame rather than taking the frame down and putting it up.
-listing.detailTabs = function() {
+// The ways the event's message can be read, which its source decides.
+listing.detailTabs = function(rowModel) {
+    var presenter = $.fn.zato.audit_log.presenterFor(rowModel.raw.source);
+    return presenter.payloadTabs();
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The payload tab standing open is the one the address bar names, so a copied link opens
+// on the very reading its sender had in front of them.
+listing.openPayloadIndex = function(tabs) {
     var config = listing.config;
 
-    // Parsed reads first, being what a message is opened to be read as - the wire form is
-    // there for whoever asks for it
-    var out = [
-        {label: config.parsedTabLabel, kind: '', parsed: true},
-        {label: config.rawTabLabel, kind: '', parsed: false}
-    ];
+    if (kit.url_state.get(config.viewURLKey) !== config.rawView) {
+        return 0;
+    }
 
-    return out;
+    for (var tabIndex = 0; tabIndex < tabs.length; tabIndex++) {
+        if (!tabs[tabIndex].parsed) {
+            return tabIndex;
+        }
+    }
+
+    return 0;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -365,9 +378,9 @@ listing.paneAttrLabel = function(rowModel, attr) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Everything said about the event, which is what the Details tab holds - one thing to a
+// Everything said about the event, which is what the Summary tab holds - one thing to a
 // line, read from the top down, rather than several of them side by side to be picked out
-listing.paneDetailsHTML = function(rowModel) {
+listing.paneSummaryHTML = function(rowModel) {
     var config = listing.config;
     var attrs = listing.paneAttrs(rowModel);
     var facts = [];
@@ -410,13 +423,36 @@ listing.paneDetailsHTML = function(rowModel) {
     facts.push(listing.paneFact(config.timeLabel, kit.time_scrub.stamp(rowModel.timeIso),
         rowModel.timeLocal, ''));
 
-    var html = '<div class="audit-log-pane-source-panel"></div>';
-    html += kit.fact_rows.render(facts, config.paneFactVariant);
+    var html = kit.fact_rows.render(facts, config.paneFactVariant);
 
     // The files the event carried, filled in once their metadata has arrived and only
     // when there are any at all
     html += '<div class="' + config.attachmentsHostClass + '" data-attachments-id="' +
         rowModel.id + '"></div>';
+
+    return html;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Whether the event's source has a Details tab to show for this very event.
+listing.hasDetailsTab = function(rowModel) {
+    var presenter = $.fn.zato.audit_log.presenterFor(rowModel.raw.source);
+    return presenter.hasDetails(rowModel);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The pane's tabs - Summary and Data for every event, Details for one whose source has a panel for it.
+listing.paneTabsHTML = function(rowModel) {
+    var config = listing.config;
+
+    var html = listing.paneTabHTML(config.summaryTab, config.summaryTabLabel);
+    html += listing.paneTabHTML(config.dataTab, config.dataTabLabel);
+
+    if (listing.hasDetailsTab(rowModel)) {
+        html += listing.paneTabHTML(config.detailsTab, config.detailsTabLabel);
+    }
 
     return html;
 };
@@ -438,35 +474,18 @@ listing.loadAttachments = function(rowModel, $host) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The source's sentence under the pane's head, empty for a source without one.
-listing.paneSentenceHTML = function(rowModel) {
-    var sentence = listing.sentenceOf(rowModel);
-
-    if (sentence === '') {
-        return '';
-    }
-
-    var out = '<div class="audit-log-pane-sentence">' + listing.escapeHTML(sentence) + '</div>';
-
-    return out;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
 listing.paneHTML = function(rowModel) {
     var config = listing.config;
 
     var html = '<div class="audit-log-pane-head">' + listing.paneHeadHTML(rowModel) + '</div>';
-    html += '<div class="audit-log-pane-sentence-host">' + listing.paneSentenceHTML(rowModel) + '</div>';
 
-    // The message itself and everything said about it are two ways of reading one event,
-    // so the pane is one of them at a time rather than both at once. The flow the event
-    // belongs to is a page of its own, and its doorway stands to the right of the tabs -
-    // beside the strip, not inside it, being a way out rather than a way to turn the page.
+    // Everything said about the event, the message itself and the source's own panel are
+    // ways of reading one event, so the pane is one of them at a time rather than all at once.
+    // The flow the event belongs to is a page of its own, and its doorway stands to the right
+    // of the tabs - beside the strip, not inside it, being a way out rather than a way to turn the page.
     html += '<div class="audit-log-pane-tabs-row">';
     html += '<div class="dashboard-tabs audit-log-pane-tabs" role="tablist">';
-    html += listing.paneTabHTML(config.dataTab, config.dataTabLabel);
-    html += listing.paneTabHTML(config.detailsTab, config.detailsTabLabel);
+    html += listing.paneTabsHTML(rowModel);
     html += '</div>';
     html += '<a class="audit-log-open-flow" href="' + config.flowPagePath + '?term=' + rowModel.id +
         '">' + config.openFlowLabel + '</a>';
@@ -477,13 +496,19 @@ listing.paneHTML = function(rowModel) {
     html += '<div class="audit-log-pane-body">';
 
     html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
+        config.tabPanelPrefix + config.summaryTab + '">';
+    html += '<div class="audit-log-pane-frame audit-log-pane-summary">' + listing.paneSummaryHTML(rowModel) + '</div>';
+    html += '</div>';
+
+    html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
         config.tabPanelPrefix + config.dataTab + '">';
     html += '<div id="' + config.payloadHost.slice(1) + '"></div>';
     html += '</div>';
 
+    // The source's panel is drawn into the frame once the pane holds the event.
     html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
         config.tabPanelPrefix + config.detailsTab + '">';
-    html += '<div class="audit-log-pane-details">' + listing.paneDetailsHTML(rowModel) + '</div>';
+    html += '<div class="audit-log-pane-frame audit-log-pane-details audit-log-pane-source-panel"></div>';
     html += '</div>';
 
     html += '</div>';
@@ -493,27 +518,19 @@ listing.paneHTML = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The pane brought from one event to the next where it stands - the frame, the tabs and
-// whichever of them is open all stay as they are, and only what they hold is replaced.
-// The message and the flow are left alone here, each of them deciding for itself whether
-// the event it is holding is still the one being read.
+// The pane brought from one event to the next where it stands - the frame and whichever tab
+// is open stay as they are, and only what they hold is replaced. The message and the source's
+// panel are left alone here, each of them deciding for itself whether the event it is holding
+// is still the one being read.
 listing.paneUpdate = function(rowModel, $pane) {
-    var $details = $pane.find('.audit-log-pane-details');
-    var $panelBefore = $details.find('.audit-log-pane-source-panel');
-
     $pane.find('.audit-log-pane-head').html(listing.paneHeadHTML(rowModel));
-    $pane.find('.audit-log-pane-sentence-host').html(listing.paneSentenceHTML(rowModel));
-    $details.html(listing.paneDetailsHTML(rowModel));
-
-    // The panel the pane already had goes back into the redrawn details.
-    if ($panelBefore.length) {
-        $details.find('.audit-log-pane-source-panel').replaceWith($panelBefore);
-    }
+    $pane.find('.audit-log-pane-tabs').html(listing.paneTabsHTML(rowModel));
+    $pane.find('.audit-log-pane-summary').html(listing.paneSummaryHTML(rowModel));
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The source's own panel under the facts.
+// The source's own panel, which is what the Details tab holds.
 listing.fillSourcePanel = function(rowModel, $pane) {
     var presenter = $.fn.zato.audit_log.presenterFor(rowModel.raw.source);
     var $host = $pane.find('.audit-log-pane-source-panel');
@@ -568,15 +585,8 @@ listing.showPayload = function() {
 
     $host.data('payload_event_id', rowModel.id);
 
-    var tabs = listing.detailTabs();
-
-    // The tab standing open is the one the address bar names, so a copied link opens on the
-    // very reading its sender had in front of them
-    var openIndex = 0;
-
-    if (kit.url_state.get(listing.config.viewURLKey) === listing.config.rawView) {
-        openIndex = 1;
-    }
+    var tabs = listing.detailTabs(rowModel);
+    var openIndex = listing.openPayloadIndex(tabs);
 
     kit.payload_panel.swap($host, tabs, function(tab, onDone) {
         listing.fetchDetails(rowModel.id, tab.kind, false, function(details) {
@@ -600,14 +610,30 @@ listing.showPayload = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Whichever of the two ways of reading an event is open asks for what it shows, and the
-// one that is not open asks for nothing until its turn comes
+// Whichever way of reading an event is open asks for what it shows, and the ones that
+// are not open ask for nothing until their turn comes
 listing.showTab = function(tab) {
     var config = listing.config;
 
     if (tab === config.dataTab) {
         listing.showPayload();
     }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The tab the pane opens the event in - the one already open, unless that is a Details tab
+// the event does not have, in which case the Summary stands in for it.
+listing.tabFor = function(rowModel, openTab) {
+    var config = listing.config;
+
+    if (openTab === config.detailsTab) {
+        if (!listing.hasDetailsTab(rowModel)) {
+            return config.summaryTab;
+        }
+    }
+
+    return openTab;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -628,7 +654,7 @@ listing.onSelect = function(rowModel, $pane) {
             tab_selector: config.tabSelector,
             panel_prefix: config.tabPanelPrefix,
             storage_key: config.tabStorageKey,
-            default_tab: config.dataTab,
+            default_tab: config.summaryTab,
             on_change: function(tab) {
                 kit.url_state.replace({tab: tab});
                 listing.showTab(tab);
@@ -639,11 +665,11 @@ listing.onSelect = function(rowModel, $pane) {
         var urlTab = listing.urlTab();
 
         if (urlTab !== '') {
-            listing.tabs.set_tab(urlTab, true);
+            listing.tabs.set_tab(listing.tabFor(rowModel, urlTab), true);
         }
     }
     else {
-        listing.tabs.set_tab(listing.tabs.get_tab(), true);
+        listing.tabs.set_tab(listing.tabFor(rowModel, listing.tabs.get_tab()), true);
     }
 
     // A link to this page is a link to the event being read on it, in the tab it is
@@ -660,8 +686,12 @@ listing.urlTab = function() {
     var config = listing.config;
     var wanted = kit.url_state.get(config.tabURLKey);
 
-    // Only the two the pane actually has are honoured, so a hand-typed address cannot
+    // Only the tabs the pane actually has are honoured, so a hand-typed address cannot
     // leave the pane with no tab open at all.
+    if (wanted === config.summaryTab) {
+        return wanted;
+    }
+
     if (wanted === config.dataTab) {
         return wanted;
     }

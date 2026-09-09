@@ -2,7 +2,7 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The facts a file transfer row adds to the pane's Details tab.
+// The facts a file transfer row adds to the pane's Summary tab, and the facts a run's Details tab opens with.
 
 (function($) {
 
@@ -81,30 +81,118 @@ fileOutgoing.repeatsFact = function(row) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-fileOutgoing.expectedFact = function(row) {
-    var text = fileOutgoing.fill(fileOutgoing.config.expectedOfLabel, {
-        delivered_today: row.delivered_today, expected_files: row.expected_files, expected_by: row.expected_by});
-
-    return fileOutgoing.textFact('expected', text);
+// A count in its tone, the tone carried by the value rather than said in words.
+fileOutgoing.countFact = function(key, count, tone) {
+    var valueHTML = kit.runSummary.valueHTML(count, tone);
+    return fileOutgoing.fact(key, valueHTML, String(count), '');
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The day's count against the schedule's expectation, in warning once the deadline has passed short.
+fileOutgoing.expectedFact = function(row) {
+    var text = fileOutgoing.fill(fileOutgoing.config.expectedOfLabel, {
+        delivered_today: row.delivered_today, expected_files: row.expected_files, expected_by: row.expected_by});
+
+    var tone = 'muted';
+
+    if (fileOutgoing.overdueOf(row) > 0) {
+        tone = 'warn';
+    }
+
+    return fileOutgoing.fact('expected', kit.runSummary.valueHTML(text, tone), text, '');
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The skip reasons of a run as chips, each narrowing the ledger to its reason.
+fileOutgoing.skippedFact = function(row) {
+    var skips = fileOutgoing.orderedSkips(row.skip_reasons);
+    var chips = [];
+
+    for (var index = 0; index < skips.length; index++) {
+        var skip = skips[index];
+        chips.push({reason: skip.reason, label: skip.name, count: skip.count});
+    }
+
+    var copyValue = fileOutgoing.skipsText(row.skip_reasons);
+
+    return fileOutgoing.fact('skipped', kit.runSummary.skipsHTML(chips), copyValue, '');
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The counts of a run, which is what its Details tab opens with - a count is toned only when
+// there is something in it, and a running run's counts are still moving.
 fileOutgoing.countFacts = function(row) {
+    var config = fileOutgoing.config;
+    var isRunning = row.status === config.runningStatus;
     var out = [];
 
-    out.push(fileOutgoing.textFact('entries', row.entries));
-    out.push(fileOutgoing.textFact('candidates', row.candidates));
-    out.push(fileOutgoing.textFact('taken', row.taken));
-    out.push(fileOutgoing.textFact('processed', row.processed));
-    out.push(fileOutgoing.textFact('failed', row.failed));
-    out.push(fileOutgoing.textFact('skipped', row.skipped));
+    var takenTone = 'neutral';
+    var deliveredTone = 'neutral';
+
+    if (isRunning) {
+        takenTone = 'running';
+        deliveredTone = 'running';
+    }
+    else if (row.processed > 0) {
+        deliveredTone = 'good';
+    }
+
+    var failedTone = 'muted';
+
+    if (row.failed > 0) {
+        failedTone = 'bad';
+    }
+
+    out.push(fileOutgoing.countFact('entries', row.entries, 'neutral'));
+    out.push(fileOutgoing.countFact('taken', row.taken, takenTone));
+    out.push(fileOutgoing.countFact('processed', row.processed, deliveredTone));
+    out.push(fileOutgoing.countFact('failed', row.failed, failedTone));
+
+    if (row.quarantined) {
+        out.push(fileOutgoing.countFact('quarantined', row.quarantined, 'bad'));
+    }
+
+    if (row.acked) {
+        out.push(fileOutgoing.countFact('acked', row.acked, 'neutral'));
+    }
+
+    if (row.ack_failed) {
+        out.push(fileOutgoing.countFact('ack_failed', row.ack_failed, 'bad'));
+    }
+
+    if (row.expected_files) {
+        out.push(fileOutgoing.expectedFact(row));
+    }
+
+    if (row.skipped > 0) {
+        out.push(fileOutgoing.skippedFact(row));
+    }
 
     return out;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The facts of a run's Details tab - what it is doing while it runs, then its counts.
+fileOutgoing.runDetailFacts = function(row) {
+    var config = fileOutgoing.config;
+    var out = [];
+
+    if (row.status === config.runningStatus) {
+        out.push(fileOutgoing.runningFact(row));
+    }
+
+    out = out.concat(fileOutgoing.countFacts(row));
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The facts of a run's Summary tab - the counts are the Details tab's.
 fileOutgoing.runFacts = function(row) {
     var config = fileOutgoing.config;
     var out = [];
@@ -115,32 +203,6 @@ fileOutgoing.runFacts = function(row) {
 
     if (row.status === config.unchangedStatus) {
         out.push(fileOutgoing.repeatsFact(row));
-    }
-
-    var hasCounts = row.entries > 0;
-
-    if (row.taken > 0) {
-        hasCounts = true;
-    }
-
-    if (hasCounts) {
-        out = out.concat(fileOutgoing.countFacts(row));
-    }
-
-    if (row.quarantined) {
-        out.push(fileOutgoing.textFact('quarantined', row.quarantined));
-    }
-
-    if (row.acked) {
-        out.push(fileOutgoing.textFact('acked', row.acked));
-    }
-
-    if (row.ack_failed) {
-        out.push(fileOutgoing.textFact('ack_failed', row.ack_failed));
-    }
-
-    if (row.expected_files) {
-        out.push(fileOutgoing.expectedFact(row));
     }
 
     if (row.list_ms) {

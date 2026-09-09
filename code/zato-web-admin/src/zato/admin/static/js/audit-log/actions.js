@@ -400,8 +400,8 @@ $.fn.zato.audit_log.init = function(initConfig) {
         table_body: listing.config.itemsHost,
 
         // The rows still changing are sent with every request.
-        get_active_items: listing.runningIds,
-        active_items_field: 'running_ids',
+        get_active_items: listing.watchedIds,
+        active_items_field: 'watched_ids',
 
         // The page links are read above the list only - the list is as tall as the page and
         // scrolls inside itself, so a second row of them at the foot of it would be reached
@@ -410,8 +410,8 @@ $.fn.zato.audit_log.init = function(initConfig) {
 
         // The strip follows the listing - the same filters, redrawn whenever a page
         // of it arrives, whoever asked - a filter change, a page turn or the clock
-        render_page: function(tableBody, rows, total) {
-            listing.renderPage(tableBody, rows, total);
+        render_page: function(tableBody, rows, total, updated) {
+            listing.renderPage(tableBody, rows, total, updated);
 
             $.fn.zato.audit_log.refreshStrip();
         }

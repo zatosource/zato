@@ -40,6 +40,8 @@ page.config = {
     // and when a term names nothing
     idleHint: 'Search a control id, a CID or an event id',
     notFoundHint: 'Nothing found',
+    errorHint: 'Could not read the journey',
+    httpWord: 'HTTP',
 
     // How long the page waits for a journey before saying it is waiting
     spinnerDelayMs: 150,
@@ -139,6 +141,31 @@ page.showNotFound = function(term) {
 
     var hint = kit._esc_html(config.notFoundHint) + ' - <span class="message-flow-hint-term">' +
         kit._esc_html(term) + '</span>';
+
+    page.showCanvasHint(hint);
+    page.showListHint(hint);
+    page.showStatus('');
+
+    detail.hide();
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// A journey the server could not answer for - both tabs say so with the status it answered.
+page.showError = function(statusCode) {
+    var config = page.config;
+    var detail = $.fn.zato.message_flow.detail;
+    var flow = $.fn.zato.audit_log.flow;
+
+    page.state.identity = '';
+
+    $.fn.zato.message_flow.replay.onCleared();
+
+    flow.seedId = null;
+    flow.rows = [];
+
+    var hint = kit._esc_html(config.errorHint) + ' - <span class="message-flow-hint-term">' +
+        config.httpWord + ' ' + statusCode + '</span>';
 
     page.showCanvasHint(hint);
     page.showListHint(hint);
@@ -250,6 +277,17 @@ page.search = function(term) {
             else {
                 page.showJourney(data);
             }
+        },
+
+        // A failed read says so where the journey would have stood - without this,
+        // the page keeps its spinner up forever.
+        error: function(jqXHR) {
+            if (page.state.token !== token) {
+                return;
+            }
+
+            clearTimeout(spinnerTimer);
+            page.showError(jqXHR.status);
         }
     });
 };

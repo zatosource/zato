@@ -12,7 +12,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.json_internal import dumps
 from as2_outconn import create_as2_outconn, delete_as2_outconn, open_as2_outconn_page, wait_for_as2_outconn_row
 from as4_keys import new_party
-from audit_log_ui import get_details_value, get_row_event, get_row_time_text, get_rows, goto_audit_log, open_details, \
+from audit_log_ui import get_row_event, get_row_time_text, get_rows, get_summary_value, goto_audit_log, open_summary, \
     wait_for_table
 
 # ################################################################################################################################
@@ -60,7 +60,7 @@ def _seed_exchange(as2_from:'str', as2_to:'str', message_id:'str') -> 'None':
 # ################################################################################################################################
 
 class TestAS2AuditLog:
-    """ The audit log page as the AS2 transaction monitor - the pane's Details tab
+    """ The audit log page as the AS2 transaction monitor - the pane's Summary tab
     shows the partner pair, the MDN disposition and the MIC values, and each
     connection row links to the log pre-filtered to that partner.
     """
@@ -102,7 +102,7 @@ class TestAS2AuditLog:
         assert row_count == 2, f'Expected 2 audit log rows, got {row_count}'
 
         # .. the newest one is the arrival of the MDN, with the pair, the disposition
-        # .. and the MIC read in the pane's Details tab ..
+        # .. and the MIC read in the pane's Summary tab ..
         mdn_event = get_row_event(rows[0])
         assert mdn_event == _Event_MDN_Received, f'Expected event "{_Event_MDN_Received}", got: "{mdn_event}"'
 
@@ -111,18 +111,18 @@ class TestAS2AuditLog:
         assert mdn_time != '', 'Expected a non-empty event time'
         assert '+00:00' not in mdn_time, f'Expected a locale-formatted time, got a raw ISO string: "{mdn_time}"'
 
-        open_details(page, rows[0])
+        open_summary(page, rows[0])
 
-        mdn_partner = get_details_value(page, 'Partner')
+        mdn_partner = get_summary_value(page, 'Partner')
         assert mdn_partner == pair, f'Expected partner "{pair}", got: "{mdn_partner}"'
 
-        mdn_msg_id = get_details_value(page, 'Message id')
+        mdn_msg_id = get_summary_value(page, 'Message id')
         assert mdn_msg_id == message_id, f'Expected message id "{message_id}", got: "{mdn_msg_id}"'
 
-        mdn_disposition = get_details_value(page, 'Disposition')
+        mdn_disposition = get_summary_value(page, 'Disposition')
         assert mdn_disposition == _Disposition, f'Expected disposition "{_Disposition}", got: "{mdn_disposition}"'
 
-        mdn_mic = get_details_value(page, 'MIC')
+        mdn_mic = get_summary_value(page, 'MIC')
         assert mdn_mic == _MIC, f'Expected MIC "{_MIC}", got: "{mdn_mic}"'
 
         # .. and the older one is the send itself, which carries the MIC computed
@@ -130,19 +130,19 @@ class TestAS2AuditLog:
         sent_event = get_row_event(rows[1])
         assert sent_event == _Event_Message_Sent, f'Expected event "{_Event_Message_Sent}", got: "{sent_event}"'
 
-        open_details(page, rows[1])
+        open_summary(page, rows[1])
 
-        sent_partner = get_details_value(page, 'Partner')
+        sent_partner = get_summary_value(page, 'Partner')
         assert sent_partner == pair, f'Expected partner "{pair}", got: "{sent_partner}"'
 
-        sent_msg_id = get_details_value(page, 'Message id')
+        sent_msg_id = get_summary_value(page, 'Message id')
         assert sent_msg_id == message_id, f'Expected message id "{message_id}", got: "{sent_msg_id}"'
 
         # A fact with no value at all is left out of the pane altogether.
-        sent_disposition = get_details_value(page, 'Disposition')
+        sent_disposition = get_summary_value(page, 'Disposition')
         assert sent_disposition == '', f'Expected no disposition on the send, got: "{sent_disposition}"'
 
-        sent_mic = get_details_value(page, 'MIC')
+        sent_mic = get_summary_value(page, 'MIC')
         assert sent_mic == _MIC, f'Expected MIC "{_MIC}", got: "{sent_mic}"'
 
 # ################################################################################################################################
@@ -207,9 +207,9 @@ class TestAS2AuditLog:
             mdn_event = get_row_event(rows[0])
             assert mdn_event == _Event_MDN_Received, f'Expected event "{_Event_MDN_Received}", got: "{mdn_event}"'
 
-            open_details(page, rows[0])
+            open_summary(page, rows[0])
 
-            mdn_msg_id = get_details_value(page, 'Message id')
+            mdn_msg_id = get_summary_value(page, 'Message id')
             assert mdn_msg_id == message_id, f'Expected message id "{message_id}", got: "{mdn_msg_id}"'
 
         finally:

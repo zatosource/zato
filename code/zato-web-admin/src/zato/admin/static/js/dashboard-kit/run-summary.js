@@ -1,6 +1,6 @@
 
 
-// Dashboard kit - the run summary, a row of tiles, the skip chips and a folded ledger of one run.
+// Dashboard kit - the run summary, the fact rows of one run and the folded ledger of what it saw.
 
 (function() {
     var kit = $.fn.zato.dashboard_kit;
@@ -9,7 +9,10 @@
     kit.runSummary.config = {
 
         // The ledger's columns, in reading order.
-        ledgerColumns: ['Name', 'Size', 'Age at run', 'Decision', 'Reason', 'Took'],
+        ledgerColumns: ['Name', 'Size', 'Modified', 'Decision', 'Reason', 'Took'],
+
+        // What a cell with nothing to say reads as.
+        emptyCell: '-',
 
         clearFilterLabel: 'Show all',
 
@@ -33,61 +36,36 @@
             'dark': 'dashboard-run-summary-dark'
         },
 
+        // The ink a fact's value is written in, a neutral value in the panel's own.
         toneClasses: {
-            'neutral': 'dashboard-run-tile-neutral',
-            'good': 'dashboard-run-tile-good',
-            'bad': 'dashboard-run-tile-bad',
-            'warn': 'dashboard-run-tile-warning',
-            'muted': 'dashboard-run-tile-muted',
-            'running': 'dashboard-run-tile-running'
+            'neutral': '',
+            'good': 'dashboard-run-value-good',
+            'bad': 'dashboard-run-value-bad',
+            'warn': 'dashboard-run-value-warning',
+            'muted': 'dashboard-run-value-muted',
+            'running': 'dashboard-run-value-running'
         }
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // One tile of {label, value, tone, title}, an empty title renders none.
-    kit.runSummary.tileHTML = function(tile) {
+    // A fact's value in its tone, ready to stand in a fact row.
+    kit.runSummary.valueHTML = function(value, tone) {
         var config = kit.runSummary.config;
 
-        var out = '<div class="dashboard-run-tile ' + config.toneClasses[tile.tone] + '"';
-
-        if (tile.title !== '') {
-            out += ' title="' + kit._esc_html(tile.title) + '"';
-        }
-
-        out += '>';
-        out += '<span class="dashboard-run-tile-value">' + kit._esc_html(String(tile.value)) + '</span>';
-        out += '<span class="dashboard-run-tile-label">' + kit._esc_html(tile.label) + '</span>';
-        out += '</div>';
+        var out = '<span class="dashboard-run-value ' + config.toneClasses[tone] + '">' +
+            kit._esc_html(String(value)) + '</span>';
 
         return out;
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    kit.runSummary.tilesHTML = function(tiles) {
-        var out = '<div class="dashboard-run-tiles">';
-
-        for (var tileIndex = 0; tileIndex < tiles.length; tileIndex++) {
-            out += kit.runSummary.tileHTML(tiles[tileIndex]);
-        }
-
-        out += '</div>';
-
-        return out;
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    // The skip chips of {reason, label, count}, each narrows the ledger down to its reason.
+    // The skip chips of {reason, label, count} as one fact's value, each narrows the ledger down to its reason.
     kit.runSummary.skipsHTML = function(skips) {
         var config = kit.runSummary.config;
 
-        if (skips.length === 0) {
-            return '';
-        }
-
-        var out = '<div class="dashboard-run-skips">';
+        var out = '<span class="dashboard-run-skips">';
 
         for (var skipIndex = 0; skipIndex < skips.length; skipIndex++) {
             var skip = skips[skipIndex];
@@ -101,7 +79,7 @@
         out += '<span class="dashboard-panel-action-badge dashboard-run-skip-clear" hidden>' +
             config.clearFilterLabel + '</span>';
 
-        out += '</div>';
+        out += '</span>';
 
         return out;
     };
@@ -131,7 +109,20 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // One ledger row of {name, sizeText, ageText, decision, decisionLabel, decisionTone, reason,
+    // A cell's text, or the empty cell when there is none.
+    kit.runSummary.cellHTML = function(text) {
+        var config = kit.runSummary.config;
+
+        if (text === '') {
+            return config.emptyCell;
+        }
+
+        return kit._esc_html(text);
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // One ledger row of {name, sizeText, modifiedHTML, decision, decisionLabel, decisionTone, reason,
     // reasonLabel, tookText, linkURL}, an empty linkURL renders the name as text.
     kit.runSummary.ledgerRowHTML = function(entry, isHidden) {
         var out = '<tr class="dashboard-run-ledger-row" data-reason="' + kit._esc_html(entry.reason) + '"';
@@ -154,10 +145,10 @@
 
         out += '<td class="dashboard-run-ledger-name">' + nameHTML + '</td>';
         out += '<td class="dashboard-run-ledger-size">' + kit._esc_html(entry.sizeText) + '</td>';
-        out += '<td class="dashboard-run-ledger-age">' + kit._esc_html(entry.ageText) + '</td>';
+        out += '<td class="dashboard-run-ledger-modified">' + entry.modifiedHTML + '</td>';
         out += '<td class="dashboard-run-ledger-decision">' + decisionChip + '</td>';
-        out += '<td class="dashboard-run-ledger-reason">' + kit._esc_html(entry.reasonLabel) + '</td>';
-        out += '<td class="dashboard-run-ledger-took">' + kit._esc_html(entry.tookText) + '</td>';
+        out += '<td class="dashboard-run-ledger-reason">' + kit.runSummary.cellHTML(entry.reasonLabel) + '</td>';
+        out += '<td class="dashboard-run-ledger-took">' + kit.runSummary.cellHTML(entry.tookText) + '</td>';
         out += '</tr>';
 
         return out;
@@ -195,7 +186,7 @@
 
         var ordered = kit.runSummary.leadFirst(entries);
 
-        var out = '<table class="detail-table dashboard-run-ledger"><thead><tr>';
+        var out = '<table class="dashboard-run-ledger"><thead><tr>';
 
         for (var columnIndex = 0; columnIndex < config.ledgerColumns.length; columnIndex++) {
             out += '<th>' + config.ledgerColumns[columnIndex] + '</th>';
@@ -239,12 +230,11 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // A summary of {tiles, skips, variant, foldKey}, the ledger arrives later through fillLedger.
+    // A summary of {factsHTML, variant, foldKey}, the ledger arrives later through fillLedger.
     kit.runSummary.render = function(summary) {
         var config = kit.runSummary.config;
 
-        var inner = kit.runSummary.tilesHTML(summary.tiles);
-        inner += kit.runSummary.skipsHTML(summary.skips);
+        var inner = summary.factsHTML;
         inner += '<div class="dashboard-run-ledger-host"><div class="dashboard-run-ledger-loading">' +
             config.loadingLabel + '</div></div>';
 
@@ -265,9 +255,9 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // A summary of {error, variant, foldKey} for a run without a ledger, the traceback arrives through fillError.
+    // A summary of {factsHTML, variant, foldKey} for a run without a ledger, the traceback arrives through fillError.
     kit.runSummary.renderError = function(summary) {
-        var inner = '<div class="dashboard-run-error">' + kit._esc_html(summary.error) + '</div>';
+        var inner = summary.factsHTML;
         inner += '<div class="dashboard-run-traceback-host"></div>';
 
         var out = kit.runSummary.frameHTML(summary, inner);

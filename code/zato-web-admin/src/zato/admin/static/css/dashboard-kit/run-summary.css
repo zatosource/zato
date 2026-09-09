@@ -2,81 +2,53 @@
 /* Dashboard kit - the run summary                               */
 /* ------------------------------------------------------------ */
 
+/* The facts of a run stand in the same rows as the facts of any event, running out to the
+   frame's edges, and the ledger under them keeps to the rows' own inset */
+
 .dashboard-run-summary {
-    padding: 6px 10px 10px;
+    padding: 0 0 10px;
 }
 
 /* ------------------------------------------------------------ */
-/* Dashboard kit - the run summary tiles                         */
+/* Dashboard kit - the run summary values                        */
 /* ------------------------------------------------------------ */
 
-.dashboard-run-tiles {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 8px;
-}
+/* The light tones are inks for a light panel - on the dark one each has a lighter reading of itself */
 
-.dashboard-run-tile {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    min-width: 88px;
-    padding: 6px 10px;
-    border: 1px solid var(--dashboard-frame-line);
-    border-radius: 4px;
-    transition: background-color var(--dashboard-motion) ease, color var(--dashboard-motion) ease;
-}
-
-.dashboard-run-summary-dark .dashboard-run-tile {
-    border-color: var(--dashboard-frame-dark-line);
-    background: var(--dashboard-frame-dark-fill);
-}
-
-.dashboard-run-tile-value {
-    font-family: var(--dashboard-mono);
-    font-size: var(--dashboard-font-figure);
-    font-weight: 700;
-    line-height: 1.1;
-}
-
-.dashboard-run-tile-label {
-    font-size: var(--dashboard-font-small);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    opacity: 0.75;
-}
-
-.dashboard-run-tile-neutral {
-    color: var(--dashboard-line-strong);
-}
-
-.dashboard-run-summary-dark .dashboard-run-tile-neutral {
-    color: var(--dashboard-panel-text);
-}
-
-.dashboard-run-tile-good {
+.dashboard-run-value-good {
     color: var(--dashboard-tone-good);
-    background: var(--dashboard-tone-good-fill);
 }
 
-.dashboard-run-tile-bad {
+.dashboard-run-summary-dark .dashboard-run-value-good {
+    color: var(--dashboard-tone-good-dark);
+}
+
+.dashboard-run-value-bad {
     color: var(--dashboard-tone-bad);
-    background: var(--dashboard-tone-bad-fill);
 }
 
-.dashboard-run-tile-warning {
+.dashboard-run-value-warning {
     color: var(--dashboard-tone-warning);
-    background: var(--dashboard-tone-warning-fill);
 }
 
-.dashboard-run-tile-muted {
+.dashboard-run-summary-dark .dashboard-run-value-warning {
+    color: var(--dashboard-tone-warning-dark);
+}
+
+.dashboard-run-value-muted {
     color: var(--dashboard-muted);
 }
 
-.dashboard-run-summary-dark .dashboard-run-tile-muted {
+.dashboard-run-summary-dark .dashboard-run-value-muted {
     color: var(--dashboard-tone-dim);
+}
+
+.dashboard-run-value-running {
+    color: var(--dashboard-tone-accent);
+}
+
+.dashboard-run-summary-dark .dashboard-run-value-running {
+    color: var(--dashboard-tone-accent-dark);
 }
 
 /* ------------------------------------------------------------ */
@@ -84,11 +56,10 @@
 /* ------------------------------------------------------------ */
 
 .dashboard-run-skips {
-    display: flex;
+    display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    margin-bottom: 8px;
 }
 
 .dashboard-run-skip-chip {
@@ -117,14 +88,18 @@
 
 .dashboard-run-ledger-host {
     min-height: 20px;
+    padding: 8px 10px 0;
 }
 
 .dashboard-run-ledger {
     width: 100%;
+    border-collapse: collapse;
 }
 
 .dashboard-run-ledger th {
+    padding: 4px 10px 6px 0;
     font-size: var(--dashboard-font-small);
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.6px;
     text-align: left;
@@ -132,8 +107,42 @@
 }
 
 .dashboard-run-ledger td {
+    padding: 5px 10px 5px 0;
     font-size: var(--dashboard-font-body);
     vertical-align: middle;
+}
+
+.dashboard-run-ledger th:last-child,
+.dashboard-run-ledger td:last-child {
+    padding-right: 0;
+}
+
+.dashboard-run-summary-light .dashboard-run-ledger th {
+    color: var(--dashboard-muted);
+    border-bottom: 1px solid var(--dashboard-line);
+}
+
+.dashboard-run-summary-light .dashboard-run-ledger td {
+    color: var(--dashboard-line-strong);
+    border-bottom: 1px solid var(--dashboard-line);
+}
+
+.dashboard-run-summary-light .dashboard-run-ledger-row:hover td {
+    background: var(--dashboard-fact-tint);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger th {
+    color: var(--dashboard-fact-label-dark);
+    border-bottom: 1px solid var(--dashboard-fact-line-dark);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger td {
+    color: var(--dashboard-panel-text);
+    border-bottom: 1px solid var(--dashboard-fact-line-dark);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger-row:hover td {
+    background: var(--dashboard-fact-tint-dark);
 }
 
 .dashboard-run-ledger-name {
@@ -148,13 +157,17 @@
     white-space: nowrap;
 }
 
-.dashboard-run-ledger-age,
+.dashboard-run-ledger-modified {
+    font-family: var(--dashboard-mono);
+    white-space: nowrap;
+}
+
 .dashboard-run-ledger-reason {
     color: var(--dashboard-muted);
 }
 
-.dashboard-run-ledger-age {
-    white-space: nowrap;
+.dashboard-run-summary-dark .dashboard-run-ledger-reason {
+    color: var(--dashboard-tone-dim);
 }
 
 .dashboard-run-summary-dark .dashboard-run-ledger-link {
@@ -167,6 +180,12 @@
     padding: 6px 0;
     font-size: var(--dashboard-font-body);
     color: var(--dashboard-muted);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger-loading,
+.dashboard-run-summary-dark .dashboard-run-ledger-empty,
+.dashboard-run-summary-dark .dashboard-run-ledger-overflow {
+    color: var(--dashboard-tone-dim);
 }
 
 .dashboard-run-ledger-fold {
@@ -192,19 +211,11 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Dashboard kit - the run summary error                         */
+/* Dashboard kit - the run summary traceback                     */
 /* ------------------------------------------------------------ */
 
-.dashboard-run-error {
-    padding: 6px 0;
-    font-size: var(--dashboard-font-sentence);
-    line-height: 1.4;
-    color: var(--dashboard-error-ink);
-    word-break: break-word;
-}
-
-.dashboard-run-summary-dark .dashboard-run-error {
-    color: var(--dashboard-error-ink-dark);
+.dashboard-run-traceback-host {
+    padding: 0 10px;
 }
 
 .dashboard-run-traceback {
@@ -228,7 +239,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .dashboard-run-tile,
     .dashboard-run-skip-chip {
         transition: none;
     }

@@ -146,7 +146,7 @@ listing.init = function(initConfig) {
         }
     }
 
-    // The events sharing a value are asked for wherever that value is named - the Details tab
+    // The events sharing a value are asked for wherever that value is named - the pane's facts
     // and the panel a flow line opens
     $(document).on('click', listing.config.host + ' .dashboard-fact-row-search', function(event) {
         event.stopPropagation();
@@ -183,7 +183,7 @@ listing.init = function(initConfig) {
     // read there the same way it is on the screen
     $(document).on('click', listing.config.payloadHost + ' .dashboard-payload-tab', function() {
         var config = listing.config;
-        var tab = listing.detailTabs()[Number($(this).attr('data-tab-index'))];
+        var tab = listing.detailTabs(listing.selected)[Number($(this).attr('data-tab-index'))];
 
         var view = '';
 

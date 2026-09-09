@@ -30,7 +30,7 @@ if 0:
 
 from audit_log_ui import attach_diagnostics, format_diagnostics, get_pane_cid, get_row_cid, get_row_event, \
     get_row_main_text, get_row_outcome, get_row_time_text, get_rows, goto_audit_log, close_cid_overlay, open_cid_overlay, \
-    open_data, open_details, search, wait_for_empty, wait_for_payload_text, wait_for_row_count, wait_for_table
+    open_data, open_summary, search, wait_for_empty, wait_for_payload_text, wait_for_row_count, wait_for_table
 
 from rest_channel import create_channel, deploy_service_file, invoke_until_status, open_channel_page, \
     wait_for_service_in_dialog
@@ -191,8 +191,8 @@ class TestRESTChannelAuditLog:
             open_data(page, row)
             wait_for_payload_text(page, 'single-invocation')
 
-        # .. and each event's CID is a link in the Details tab that opens the complete message.
-        open_details(page, rows[0])
+        # .. and each event's CID is a link in the Summary tab that opens the complete message.
+        open_summary(page, rows[0])
         cid = get_pane_cid(page)
         assert cid.strip() != '', 'Expected a non-empty CID in the detail pane'
 

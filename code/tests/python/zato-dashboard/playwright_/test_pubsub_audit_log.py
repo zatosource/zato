@@ -25,8 +25,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-from audit_log_ui import attach_diagnostics, format_diagnostics, get_details_value, get_pane_cid, get_row_event, \
-    get_row_main_text, get_row_time_text, get_rows, goto_audit_log, click_pane_cid, open_data, open_details, \
+from audit_log_ui import attach_diagnostics, format_diagnostics, get_pane_cid, get_row_event, \
+    get_row_main_text, get_row_time_text, get_rows, get_summary_value, goto_audit_log, click_pane_cid, open_data, open_summary, \
     close_cid_overlay, read_overlay_text, search, search_via_enter, wait_for_empty, wait_for_payload_text, \
     wait_for_row_count
 
@@ -117,13 +117,13 @@ class TestPubSubAuditLog:
         assert _Publish_Service in main_text, \
             f'Expected the publishing service "{_Publish_Service}" on the row, got: "{main_text}"'
 
-        # .. the Details tab reads everything the event says ..
-        open_details(page, rows[0])
+        # .. the Summary tab reads everything the event says ..
+        open_summary(page, rows[0])
 
-        msg_id = get_details_value(page, 'Message id')
+        msg_id = get_summary_value(page, 'Message id')
         assert msg_id != '', 'Expected a non-empty message id in the detail pane'
 
-        endpoint = get_details_value(page, 'Endpoint')
+        endpoint = get_summary_value(page, 'Endpoint')
         assert endpoint == _Publish_Service, \
             f'Expected the endpoint "{_Publish_Service}" in the detail pane, got: "{endpoint}"'
 
@@ -321,7 +321,7 @@ class TestPubSubAuditLog:
 
         # .. the overlay behind the CID holds the payload in full, read through the Ace API
         # .. because Ace renders only the visible part of the text into the DOM ..
-        open_details(page, rows[0])
+        open_summary(page, rows[0])
         click_pane_cid(page)
 
         editor_value = read_overlay_text(page)
@@ -367,7 +367,7 @@ class TestPubSubAuditLog:
         # .. the CID of the publication is filled in ..
         rows = get_rows(page)
 
-        open_details(page, rows[0])
+        open_summary(page, rows[0])
         cid = get_pane_cid(page)
         assert cid.strip() != '', 'Expected a non-empty CID in the detail pane'
 

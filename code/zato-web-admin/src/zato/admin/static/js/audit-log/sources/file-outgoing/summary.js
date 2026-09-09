@@ -2,81 +2,12 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The run summary of a file transfer run, its tiles, skip chips and ledger.
+// The Details tab of a file transfer run, its fact rows and the ledger of what it saw.
 
 (function($) {
 
 var kit = $.fn.zato.dashboard_kit;
 var fileOutgoing = $.fn.zato.audit_log.fileOutgoing;
-
-// /////////////////////////////////////////////////////////////////////////////
-
-fileOutgoing.expectedTile = function(row) {
-    var config = fileOutgoing.config;
-    var labels = config.tileLabels;
-
-    var tone = 'muted';
-    var title = fileOutgoing.fill(config.expectedTileTitle, {expected_by: row.expected_by});
-    var overdue = fileOutgoing.overdueOf(row);
-
-    if (overdue > 0) {
-        tone = 'warn';
-        title = fileOutgoing.fill(config.expectedOverdueTitle, {expected_by: row.expected_by, minutes: overdue});
-    }
-
-    var value = fileOutgoing.fill(config.expectedValue, {
-        delivered_today: row.delivered_today, expected_files: row.expected_files});
-
-    return {label: labels.expected, value: value, tone: tone, title: title};
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// The tiles of a run, a count is toned only when there is something in it.
-fileOutgoing.runTiles = function(row) {
-    var config = fileOutgoing.config;
-    var labels = config.tileLabels;
-    var isRunning = row.status === config.runningStatus;
-    var out = [];
-
-    var takenTone = 'neutral';
-    var deliveredTone = 'neutral';
-
-    if (isRunning) {
-        takenTone = 'running';
-        deliveredTone = 'running';
-    }
-    else if (row.processed > 0) {
-        deliveredTone = 'good';
-    }
-
-    var failedTone = 'muted';
-
-    if (row.failed > 0) {
-        failedTone = 'bad';
-    }
-
-    out.push({label: labels.seen, value: row.entries, tone: 'neutral', title: ''});
-    out.push({label: labels.taken, value: row.taken, tone: takenTone, title: ''});
-    out.push({label: labels.delivered, value: row.processed, tone: deliveredTone, title: ''});
-    out.push({label: labels.failed, value: row.failed, tone: failedTone, title: ''});
-
-    if (row.quarantined > 0) {
-        out.push({label: labels.quarantined, value: row.quarantined, tone: 'bad', title: ''});
-    }
-
-    if (row.expected_files) {
-        out.push(fileOutgoing.expectedTile(row));
-    }
-
-    return out;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-fileOutgoing.runSkips = function(row) {
-    return fileOutgoing.orderedSkips(row.skip_reasons);
-};
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -86,7 +17,7 @@ fileOutgoing.ledgerReason = function(record) {
     var out = '';
 
     if (record.reason !== '') {
-        out = words.skip_reason_label[record.reason];
+        out = words.skip_reason_name[record.reason];
     }
 
     if (record.attempt) {
@@ -105,22 +36,7 @@ fileOutgoing.ledgerReason = function(record) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// How old an entry was when the run saw it.
-fileOutgoing.ledgerAge = function(record, runTimeIso) {
-    var runTime = new Date(runTimeIso).getTime();
-    var modifiedTime = new Date(record.last_modified_iso).getTime();
-    var ageMs = runTime - modifiedTime;
-
-    if (ageMs < 0) {
-        return '';
-    }
-
-    return kit.format_ago(Math.floor(ageMs / 1000));
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-fileOutgoing.ledgerEntry = function(record, runTimeIso) {
+fileOutgoing.ledgerEntry = function(record) {
     var config = fileOutgoing.config;
     var words = fileOutgoing.words();
 
@@ -139,7 +55,7 @@ fileOutgoing.ledgerEntry = function(record, runTimeIso) {
     return {
         name: record.name,
         sizeText: kit.format_number_full(record.size),
-        ageText: fileOutgoing.ledgerAge(record, runTimeIso),
+        modifiedHTML: kit.time_scrub.stamp(record.last_modified_iso),
         decision: record.decision,
         decisionLabel: words.decision_label[record.decision],
         decisionTone: words.decision_tone[record.decision],
@@ -159,20 +75,31 @@ fileOutgoing.isHostAttached = function($host) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The summary of a run that never listed its directory, its error with the traceback behind a fold.
+// The fact rows of a run's Details tab, in the variant the panel is drawn in.
+fileOutgoing.runDetailFactsHTML = function(row, variant) {
+    var facts = fileOutgoing.runDetailFacts(row);
+    return kit.fact_rows.render(facts, variant);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The Details of a run that never listed its directory - its error as a fact, the traceback behind a fold under it.
 fileOutgoing.renderRunError = function(rowModel, $host, variant) {
     var config = fileOutgoing.config;
     var listing = $.fn.zato.audit_log.listing;
     var row = rowModel.raw;
 
+    // A directory that is not there is the whole of the error, the row itself carries none.
     var errorLine = fileOutgoing.errorSummary(row.error);
 
     if (row.status === config.noDirectoryStatus) {
-        errorLine = fileOutgoing.runSentence(row);
+        errorLine = fileOutgoing.noDirectorySentence(row);
     }
 
+    var facts = [fileOutgoing.textFact('error', errorLine)];
+
     $host.html(kit.runSummary.renderError({
-        error: errorLine,
+        factsHTML: kit.fact_rows.render(facts, variant),
         variant: variant,
         foldKey: config.runErrorFoldPrefix + row.schedule
     }));
@@ -194,7 +121,7 @@ fileOutgoing.renderRunError = function(rowModel, $host, variant) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-fileOutgoing.ledgerEntries = function(details, row) {
+fileOutgoing.ledgerEntries = function(details) {
     var out = [];
 
     if (details.data === '') {
@@ -204,7 +131,7 @@ fileOutgoing.ledgerEntries = function(details, row) {
     var records = JSON.parse(details.data);
 
     for (var index = 0; index < records.length; index++) {
-        out.push(fileOutgoing.ledgerEntry(records[index], row.event_time_iso));
+        out.push(fileOutgoing.ledgerEntry(records[index]));
     }
 
     return out;
@@ -212,7 +139,8 @@ fileOutgoing.ledgerEntries = function(details, row) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The summary drawn into a host, the tiles and skips at once and the ledger once read.
+// The Details drawn into a host, the facts at once and the ledger once read. A running run
+// has no ledger yet, its facts alone are redrawn at every poll.
 fileOutgoing.renderRunSummary = function(rowModel, $host, variant) {
     var config = fileOutgoing.config;
     var listing = $.fn.zato.audit_log.listing;
@@ -223,26 +151,27 @@ fileOutgoing.renderRunSummary = function(rowModel, $host, variant) {
         return;
     }
 
+    var factsHTML = fileOutgoing.runDetailFactsHTML(row, variant);
+
+    if (row.status === config.runningStatus) {
+        $host.html(kit.runSummary.frameHTML({variant: variant, foldKey: config.runFoldPrefix + row.schedule}, factsHTML));
+        return;
+    }
+
     $host.html(kit.runSummary.render({
-        tiles: fileOutgoing.runTiles(row),
-        skips: fileOutgoing.runSkips(row),
+        factsHTML: factsHTML,
         variant: variant,
         foldKey: config.runFoldPrefix + row.schedule
     }));
 
     var $summary = $host.find('.dashboard-run-summary');
 
-    if (row.status === config.runningStatus) {
-        kit.runSummary.fillLedger($summary, [], 0);
-        return;
-    }
-
     listing.fetchDetails(rowModel.id, config.ledgerKind, false, function(details) {
         if (!fileOutgoing.isHostAttached($host)) {
             return;
         }
 
-        var entries = fileOutgoing.ledgerEntries(details, row);
+        var entries = fileOutgoing.ledgerEntries(details);
         kit.runSummary.fillLedger($summary, entries, row.ledger_overflow);
     });
 };

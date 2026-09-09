@@ -20,8 +20,8 @@ from as4_exchange import delete_exchange, new_exchange, send_with_retry, wait_fo
 from as4_keys import new_test_parties
 from as4_outconn import create_as4_outconn, delete_as4_outconn, edit_as4_outconn, open_as4_outconn_page, \
     open_edit_dialog, wait_for_as4_outconn_row
-from audit_log_ui import get_details_value, get_pane_cid, get_row_event, get_row_outcome, get_row_time_text, get_rows, \
-    open_details
+from audit_log_ui import get_pane_cid, get_row_event, get_row_outcome, get_row_time_text, get_rows, get_summary_value, \
+    open_summary
 from audit_toggle import assert_checkbox_exists, get_audit_row_count, get_checkbox_state, wait_for_table
 
 # ################################################################################################################################
@@ -139,7 +139,7 @@ class TestAS4AuditLog:
             assert set(events) == expected_events, f'Expected the four events of one exchange, got: {sorted(events)}'
 
             # Every event is filed under the pair and names the message it belongs to,
-            # all of which the pane's Details tab says ..
+            # all of which the pane's Summary tab says ..
             conversation_ids = {} # type: anydict
 
             for event_label, row in events.items():
@@ -153,19 +153,19 @@ class TestAS4AuditLog:
                 outcome = get_row_outcome(page, row)
                 assert outcome == _Outcome_Ok, f'Expected outcome "{_Outcome_Ok}" on {event_label}, got: "{outcome}"'
 
-                open_details(page, row)
+                open_summary(page, row)
 
-                partner = get_details_value(page, 'Partner')
+                partner = get_summary_value(page, 'Partner')
                 assert partner == pair, f'Expected partner "{pair}" on {event_label}, got: "{partner}"'
 
-                msg_id = get_details_value(page, 'Message id')
+                msg_id = get_summary_value(page, 'Message id')
                 assert msg_id == result['message_id'], \
                     f'Expected message id "{result["message_id"]}" on {event_label}, got: "{msg_id}"'
 
                 cid = get_pane_cid(page)
                 assert cid != '', f'Expected a correlation id on {event_label}'
 
-                conversation_ids[event_label] = get_details_value(page, 'Conversation id')
+                conversation_ids[event_label] = get_summary_value(page, 'Conversation id')
 
             # .. and the user message events carry the conversation their exchange belongs to.
             sent_conversation_id = conversation_ids[_Event_Message_Sent]
@@ -225,9 +225,9 @@ class TestAS4AuditLog:
             events = _get_events_by_type(page)
             assert _Event_Message_Sent in events, f'Expected a sent message, got: {sorted(events)}'
 
-            open_details(page, events[_Event_Message_Sent])
+            open_summary(page, events[_Event_Message_Sent])
 
-            msg_id = get_details_value(page, 'Message id')
+            msg_id = get_summary_value(page, 'Message id')
             assert msg_id == result['message_id'], \
                 f'Expected message id "{result["message_id"]}", got: "{msg_id}"'
 
