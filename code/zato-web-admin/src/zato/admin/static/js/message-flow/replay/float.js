@@ -46,6 +46,7 @@ replay.floatState = {
     // it has never been dragged and still rides the frame's foot
     x: null,
     y: null,
+    width: null,
 
     isMinimized: false,
 
@@ -75,9 +76,16 @@ replay.loadFloatState = function() {
 
     var parsed = JSON.parse(kept);
 
+    state.isMinimized = parsed.isMinimized;
+
+    // A position kept without its width comes from before widths were kept, the bar rides the foot instead.
+    if (parsed.width === undefined) {
+        return;
+    }
+
     state.x = parsed.x;
     state.y = parsed.y;
-    state.isMinimized = parsed.isMinimized;
+    state.width = parsed.width;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -88,6 +96,7 @@ replay.saveFloatState = function() {
     var kept = {
         x: state.x,
         y: state.y,
+        width: state.width,
         isMinimized: state.isMinimized
     };
 
@@ -135,12 +144,19 @@ replay.clampFloat = function(x, y) {
 replay.applyFloat = function() {
     var state = replay.floatState;
     var bar = replay.bar();
+    var frame = replay.floatFrame();
+
+    // A hidden frame has no size to clamp against, the bar is placed once the frame shows.
+    if (frame.clientWidth === 0) {
+        return;
+    }
 
     if (state.x !== null) {
 
         // The bar keeps the width it has at the frame's foot even once it
         // floats free, so the track never collapses under it
         bar.classList.add('message-flow-replay-bar-floating');
+        bar.style.width = state.width + 'px';
 
         var clamped = replay.clampFloat(state.x, state.y);
 
@@ -309,8 +325,9 @@ replay.buildFloat = function() {
         // anchors moves nothing and folds nothing under it
         state.x = barRect.left - frameRect.left;
         state.y = barRect.top - frameRect.top;
+        state.width = barRect.width;
 
-        bar.style.width = barRect.width + 'px';
+        bar.style.width = state.width + 'px';
         bar.style.left = state.x + 'px';
         bar.style.top = state.y + 'px';
         bar.classList.add('message-flow-replay-bar-floating');
