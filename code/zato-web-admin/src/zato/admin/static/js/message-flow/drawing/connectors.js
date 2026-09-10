@@ -112,6 +112,38 @@ drawing.addChip = function(host, x, y, label, kind, onCanvas) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// How wide a row of chips of {label, kind} stands, gaps included.
+drawing.chipRowWidth = function(chips) {
+    var config = drawing.config;
+    var width = 0;
+
+    for (var chipIndex = 0; chipIndex < chips.length; chipIndex++) {
+        width += drawing.chipWidth(chips[chipIndex].label);
+    }
+
+    width += (chips.length - 1) * config.chipRowGap;
+
+    return width;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// A row of chips of {label, kind} side by side, from x on.
+drawing.addChipRow = function(host, x, y, chips) {
+    var config = drawing.config;
+    var cursor = x;
+
+    for (var chipIndex = 0; chipIndex < chips.length; chipIndex++) {
+        var chip = chips[chipIndex];
+        cursor += drawing.addChip(host, cursor, y, chip.label, chip.kind, false);
+        cursor += config.chipRowGap;
+    }
+
+    return cursor - config.chipRowGap - x;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // The class of the connector leading into a node.
 drawing.connectorClass = function(node) {
     var out = 'message-flow-connector';

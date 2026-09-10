@@ -55,7 +55,7 @@ fileOutgoing.ledgerEntry = function(record) {
     return {
         name: record.name,
         sizeText: kit.format_number_full(record.size),
-        modifiedHTML: kit.time_scrub.stamp(record.last_modified_iso),
+        modifiedText: kit.format_local_time(record.last_modified_iso),
         decision: record.decision,
         decisionLabel: words.decision_label[record.decision],
         decisionTone: words.decision_tone[record.decision],
@@ -166,13 +166,21 @@ fileOutgoing.renderRunSummary = function(rowModel, $host, variant) {
 
     var $summary = $host.find('.dashboard-run-summary');
 
-    listing.fetchDetails(rowModel.id, config.ledgerKind, false, function(details) {
+    // A run that saw the same listing as the one before it writes no ledger of its own - the
+    // entries it saw are the ones the first run of that listing wrote down, so they are read from there.
+    var ledgerEventId = rowModel.id;
+
+    if (row.status === config.unchangedStatus) {
+        ledgerEventId = row.unchanged_since_event_id;
+    }
+
+    listing.fetchDetails(ledgerEventId, config.ledgerKind, false, function(details) {
         if (!fileOutgoing.isHostAttached($host)) {
             return;
         }
 
         var entries = fileOutgoing.ledgerEntries(details);
-        kit.runSummary.fillLedger($summary, entries, row.ledger_overflow);
+        kit.runSummary.fillLedger($summary, entries, row.ledger_overflow, row.entries);
     });
 };
 

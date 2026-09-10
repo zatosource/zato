@@ -104,7 +104,7 @@
 }
 
 .message-flow-detail-title {
-    color: var(--message-flow-text);
+    color: var(--message-flow-selected-text);
     font-size: 11px;
     font-weight: 700;
 }
@@ -116,7 +116,7 @@
 }
 
 .message-flow-detail-identity {
-    color: var(--message-flow-selected-text);
+    color: var(--message-flow-text);
     font-weight: 700;
 }
 
@@ -125,15 +125,8 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Message flow - the detail sentence and the source panel       */
+/* Message flow - the source panel                               */
 /* ------------------------------------------------------------ */
-
-.message-flow-detail-sentence {
-    flex: 0 0 auto;
-    padding: 8px 12px 0;
-    font-size: var(--dashboard-font-body);
-    color: var(--message-flow-text);
-}
 
 .message-flow-detail-source-panel {
     flex: 0 0 auto;
@@ -177,6 +170,12 @@
 }
 
 .message-flow-detail-side-response {
+    flex: 1 1 auto;
+}
+
+/* A pane with one side only - a source whose events nothing answers - gives it the whole width */
+
+.message-flow-detail-split-single .message-flow-detail-side-request {
     flex: 1 1 auto;
 }
 

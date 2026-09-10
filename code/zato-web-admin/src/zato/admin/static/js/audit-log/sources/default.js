@@ -156,6 +156,21 @@ $.fn.zato.audit_log.sources['default'] = {
         return row.object_name;
     },
 
+    // What the flow's root node is called - the message's headline unless the source says otherwise.
+    hubTitle: function(rowModel) {
+        return rowModel.headline;
+    },
+
+    // The chips of {label, kind} the root node wears in place of its title, none for a root written as words.
+    hubChips: function(_rowModel) {
+        return [];
+    },
+
+    // Whether the source's events are requests and replies, which is what the flow pane splits its bodies by.
+    isExchange: function(_rowModel) {
+        return true;
+    },
+
     lineNote: function(_model) {
         return '';
     },

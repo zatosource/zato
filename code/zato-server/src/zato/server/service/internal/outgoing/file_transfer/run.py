@@ -20,7 +20,7 @@ from zato.common.audit_log.file_transfer import record_schedule_event
 from zato.common.audit_log.file_transfer_run import count_delivered_since, find_running_runs, Interrupted_Note, \
     Phase_Connecting, Phase_Done, Run_Ledger_Max_Entries, Run_Status_Clean, Run_Status_Empty, Run_Status_Failed, \
     Run_Status_Interrupted, Run_Status_List_Failed, Run_Status_No_Directory, Run_Status_Partial, Run_Status_Running, \
-    Run_Status_Unchanged, update_run_event, write_run_error, write_run_ledger
+    Run_Status_Unchanged, update_run_event, write_run_error, write_run_exchanges, write_run_ledger
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -295,6 +295,18 @@ def note_listing(run:'RunContext', entries:'anylist', list_ms:'int') -> 'None':
 
 # ################################################################################################################################
 
+def note_exchanges(run:'RunContext', conn:'any_') -> 'None':
+    """ Stores what the run said to the server while checking and listing the directory
+    and what the server said back, as the run's request and response bodies.
+    """
+    exchanges = conn.take_exchanges()
+
+    now = utcnow()
+    now_iso = now.isoformat()
+    write_run_exchanges(run.event_id, now_iso, exchanges)
+
+# ################################################################################################################################
+
 def remember_listing(run:'RunContext') -> 'None':
     """ Remembers the run's listing fingerprint for the next run, unless the run repeated the previous one.
     """
@@ -391,12 +403,12 @@ def close_run(run:'RunContext') -> 'None':
 # ################################################################################################################################
 
 def close_run_no_directory(run:'RunContext') -> 'None':
-    """ Closes the run's row with the no-directory status.
+    """ Closes the run's row with the no-directory status - a directory that is not there is an error of the run.
     """
     run.data['phase'] = Phase_Done
     duration_ms = run.elapsed_ms()
 
-    update_run_event(run.event_id, outcome=AuditOutcome.OK, status=Run_Status_No_Directory,
+    update_run_event(run.event_id, outcome=AuditOutcome.Error, status=Run_Status_No_Directory,
         duration_ms=duration_ms, data=run.data)
 
 # ################################################################################################################################

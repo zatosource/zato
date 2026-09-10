@@ -27,6 +27,9 @@ var fileOutgoing = {
         // The part every event of this source plays - a file moving is neither a request nor a reply.
         transferRole: 'transfer',
 
+        // The ink the connection and the schedule wear on a run's root node.
+        hubChipKind: 'muted',
+
         // The connection the row belongs to, which is what leads every row.
         connectionKey: 'object_name',
         sourceKey: 'source',

@@ -49,6 +49,10 @@ drawing.config = {
     chipHeight: 16,
     chipPadX: 6,
     chipCharWidth: 6.4,
+
+    // The air between two chips standing in a row, and how far a chip's top stands above its text baseline
+    chipRowGap: 6,
+    chipTextBaseline: 12,
     roleChipWidth: 70,
 
     // The word each kind of line wears - the part the event played in its exchange,
@@ -59,6 +63,7 @@ drawing.config = {
         'none': 'SYS',
         'view': 'VIEW',
         'job': 'SCHEDULER',
+        'transfer': 'TRANSFER',
         'access': 'ACCESS'
     },
 

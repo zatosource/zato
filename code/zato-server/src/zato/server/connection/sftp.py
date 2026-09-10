@@ -52,6 +52,26 @@ _hash_chunk_size = 65536
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _reply_text(out:'SFTPOutput') -> 'str':
+    """ What the server said back to one command, as one piece of text - its regular output
+    first, then anything it wrote to stderr, which is where the sftp binary explains a failure.
+    """
+    parts = []
+
+    # Either stream is None when the binary could not be run at all
+    if out.stdout:
+        parts.append(out.stdout)
+
+    if out.stderr:
+        parts.append(out.stderr)
+
+    reply = '\n'.join(parts)
+
+    return reply
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class EntryType:
     file = 'file'
     directory = 'directory'
@@ -234,13 +254,17 @@ class SFTPConnection:
         if log_level > 0:
             logger.info('Response received, cid:`%s`, data:`%s`', self.cid, out.to_dict())
 
+        # .. remove the echoed sftp> prompt lines from the output ..
+        out.strip_stdout_prefix()
+
+        # .. what was sent and what came back is kept for the audit log, a failure included,
+        # so a reader sees the server's own words on why a command did not work ..
+        self.note_exchange(data.rstrip('\n'), _reply_text(out))
+
         # .. perhaps we are to raise an exception on an error encountered ..
         if not out.is_ok:
             if raise_on_error:
                 raise Exception(out.to_dict())
-
-        # .. remove the echoed sftp> prompt lines from the output ..
-        out.strip_stdout_prefix()
 
         # .. and return the business response.
         return out

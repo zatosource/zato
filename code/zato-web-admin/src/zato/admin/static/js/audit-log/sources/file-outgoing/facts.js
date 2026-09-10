@@ -60,18 +60,6 @@ fileOutgoing.yesNo = function(value) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-fileOutgoing.runningFact = function(row) {
-    var phaseWord = fileOutgoing.phaseWord(row);
-
-    if (row.current_file !== '') {
-        phaseWord += ' ' + row.current_file;
-    }
-
-    return fileOutgoing.textFact('phase', phaseWord);
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
 // The directory the run listed, in full.
 fileOutgoing.directoryFact = function(row) {
     return fileOutgoing.textFact('remote_path', row.endpoint);
@@ -123,15 +111,18 @@ fileOutgoing.filesFact = function(row) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The facts of a run's Details tab - what it is doing while it runs, where it looked and what it found there.
+// What the run came to in one line, the same line its row reads as.
+fileOutgoing.resultFact = function(row) {
+    return fileOutgoing.textFact('result', fileOutgoing.sentence(row));
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The facts of a run's Details tab - what it came to, where it looked and what it found there.
 fileOutgoing.runDetailFacts = function(row) {
-    var config = fileOutgoing.config;
     var out = [];
 
-    if (row.status === config.runningStatus) {
-        out.push(fileOutgoing.runningFact(row));
-    }
-
+    out.push(fileOutgoing.resultFact(row));
     out.push(fileOutgoing.directoryFact(row));
     out.push(fileOutgoing.filesFact(row));
 

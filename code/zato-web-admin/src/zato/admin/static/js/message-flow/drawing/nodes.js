@@ -37,6 +37,11 @@ drawing.nodeWidth = function(node) {
         var lineWidth = config.bodyPadLeft + config.roleChipWidth + 6 + drawing.chipWidth(line.id) + 8 +
             labelWidth + config.lineMinGap + timeWidth + config.bodyPadLeft;
 
+        // The source's note after the chip takes its own room, or it runs into the time
+        if (line.note !== '') {
+            lineWidth += 8 + Math.round(line.note.length * config.subCharWidth);
+        }
+
         if (lineWidth > width) {
             width = lineWidth;
         }
@@ -178,9 +183,11 @@ drawing.render = function(models, seedModel) {
 
     drawing.clear();
 
-    // What the message is known by - the hub's own words, the headline above
-    // and the source's own identity for the message under it
-    var hubTitle = seedModel.headline;
+    // What the message is known by - the hub's own words, the title the source
+    // gives it above and the source's own identity for the message under it
+    var seedPresenter = $.fn.zato.audit_log.presenterFor(seedModel.raw.source);
+    var hubTitle = seedPresenter.hubTitle(seedModel);
+    var hubChips = seedPresenter.hubChips(seedModel);
     var hubIdentity = seedModel.identity;
 
     // A seed whose source has no message id of its own reads by its CID, and
@@ -255,6 +262,11 @@ drawing.render = function(models, seedModel) {
 
     // The hub is as wide as its own words ask, and the fan starts past it
     var hubTitleWidth = Math.round(hubTitle.length * config.titleCharWidth) + 4 * config.bodyPadLeft;
+
+    // A root wearing chips is as wide as the chips ask
+    if (hubChips.length > 0) {
+        hubTitleWidth = drawing.chipRowWidth(hubChips) + 4 * config.bodyPadLeft;
+    }
     var hubIdentityWidth = Math.round(hubIdentity.length * config.titleCharWidth) + 4 * config.bodyPadLeft;
     var hubWidth = Math.max(config.hubMinWidth, hubTitleWidth, hubIdentityWidth);
 
@@ -551,13 +563,22 @@ drawing.render = function(models, seedModel) {
     drawing.addPolyline(hub, [[config.hubX + 4, hubTop + 1], [config.hubX + hubWidth - 4, hubTop + 1]],
         'message-flow-rim');
 
-    if (hubIdentity === '') {
-        kit.draw.addText(hub, config.hubX + hubWidth / 2, hubCenterY + 5, hubTitle, 'message-flow-title', 'middle');
-    }
-    else {
-        kit.draw.addText(hub, config.hubX + hubWidth / 2, hubCenterY - 8, hubTitle, 'message-flow-title', 'middle');
+    // The title's baseline - alone in the middle, or above the identity
+    var hubTitleBaseline = hubCenterY + 5;
+
+    if (hubIdentity !== '') {
+        hubTitleBaseline = hubCenterY - 8;
+
         kit.draw.addText(hub, config.hubX + hubWidth / 2, hubCenterY + 14, hubIdentity,
             'message-flow-identity', 'middle');
+    }
+
+    if (hubChips.length > 0) {
+        var chipRowX = config.hubX + (hubWidth - drawing.chipRowWidth(hubChips)) / 2;
+        drawing.addChipRow(hub, chipRowX, hubTitleBaseline - config.chipTextBaseline, hubChips);
+    }
+    else {
+        kit.draw.addText(hub, config.hubX + hubWidth / 2, hubTitleBaseline, hubTitle, 'message-flow-title', 'middle');
     }
 
     // The connectors' words go on last, over everything - having already

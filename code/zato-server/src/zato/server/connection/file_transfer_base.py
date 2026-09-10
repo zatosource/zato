@@ -29,8 +29,9 @@ from zato.server.connection.file_transfer_verify import verify_store, FileTransf
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, dictlist, stranydict
     any_ = any_
+    dictlist = dictlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -170,10 +171,36 @@ class FileTransferConnection:
         self.cid = cid
         self.wrapper = wrapper
 
+        # What this connection said to the server and what the server said back, in order -
+        # a caller takes them to store as the request and response of the work it did.
+        self.exchanges:'dictlist' = []
+
 # ################################################################################################################################
 
     def ping(self) -> 'None':
         self.wrapper.ping()
+
+# ################################################################################################################################
+
+    def note_exchange(self, command:'str', reply:'str') -> 'None':
+        """ Remembers one command sent to the server along with what the server replied.
+        """
+        exchange = {
+            'command': command,
+            'reply': reply,
+        }
+        self.exchanges.append(exchange)
+
+# ################################################################################################################################
+
+    def take_exchanges(self) -> 'dictlist':
+        """ Hands over the exchanges noted so far and starts afresh, so the next piece of work
+        collects only its own.
+        """
+        out = self.exchanges
+        self.exchanges = []
+
+        return out
 
 # ################################################################################################################################
 

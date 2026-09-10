@@ -134,6 +134,7 @@ Default_View_Labels = {
     'endpoint':          'Remote path',
     'service':           'Service',
     'current_run':       'Run',
+    'result':            'Result',
     'files':             'Files',
     'entries':           'Seen',
     'candidates':        'Matching',

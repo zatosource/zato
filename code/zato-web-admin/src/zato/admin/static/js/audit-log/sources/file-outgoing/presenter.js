@@ -91,6 +91,15 @@ fileOutgoing.lineWord = function(row) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// What a run is called on the flow page, from the general to the particular - the kind of
+// event, the connection and the schedule, since a schedule's name alone names nothing.
+fileOutgoing.runTitle = function(row) {
+    var parts = [$.fn.zato.audit_log.sourceLabel(row.source), row.object_name, row.schedule];
+    return parts.join(fileOutgoing.config.chipSeparator);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
 
     eventWordAsChip: true,
@@ -252,12 +261,12 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // A run's card is its schedule and number, a file's is its name.
+    // A run's card is the run's title and its number, a file's is its name.
     cardTitle: function(row) {
         var config = fileOutgoing.config;
 
         if (fileOutgoing.isRun(row)) {
-            return row.schedule + config.chipSeparator + config.runWord.toLowerCase() + ' ' + row.current_run;
+            return fileOutgoing.runTitle(row) + config.chipSeparator + config.runWord.toLowerCase() + ' ' + row.current_run;
         }
 
         if (row.file_name !== '') {
@@ -321,6 +330,40 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
         }
 
         return '';
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // A run's flow is rooted in the run's title, a file's in its headline.
+    hubTitle: function(rowModel) {
+        if (fileOutgoing.isRun(rowModel.raw)) {
+            return fileOutgoing.runTitle(rowModel.raw);
+        }
+
+        return rowModel.headline;
+    },
+
+    // A file moving is no exchange - nothing answers a run or a delivery, so there is no reply side to show.
+    isExchange: function(_rowModel) {
+        return false;
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // A run's root wears its title as chips - the kind of event in its own ink, the connection and the schedule.
+    hubChips: function(rowModel) {
+        var config = fileOutgoing.config;
+        var row = rowModel.raw;
+
+        if (!fileOutgoing.isRun(row)) {
+            return [];
+        }
+
+        return [
+            {label: $.fn.zato.audit_log.sourceLabel(row.source), kind: config.transferRole},
+            {label: row.object_name, kind: config.hubChipKind},
+            {label: row.schedule, kind: config.hubChipKind}
+        ];
     },
 
     // ////////////////////////////////////////////////////////////////////////

@@ -62,7 +62,7 @@ detail.config = {
         'none': 'SYS',
         'view': 'VIEW',
         'job': 'SCHEDULER',
-        'transfer': 'File transfer',
+        'transfer': 'TRANSFER',
         'access': 'ACCESS'
     },
 
@@ -190,23 +190,10 @@ detail.show = function(nodeDetail) {
     time.textContent = nodeDetail.time;
     meta.appendChild(time);
 
-    // A source with a sentence for its exchange - what a file transfer run did, in one
-    // line - says it under the header, and a source with a panel of its own - a run's
-    // report, a file's journey - draws it before the bodies. The models arrive newest
-    // first, so the newest one is the one the sentence is about.
+    // A source with a panel of its own - a run's report, a file's journey - draws it before
+    // the bodies. The models arrive newest first, so the newest one is the one the panel is about.
     var newestModel = nodeDetail.models[nodeDetail.models.length - 1];
     var presenter = $.fn.zato.audit_log.presenterFor(newestModel.raw.source);
-
-    if (presenter.sentence !== undefined) {
-        var sentenceText = presenter.sentence(newestModel.raw);
-
-        if (sentenceText !== '') {
-            var sentence = document.createElement('div');
-            sentence.className = 'message-flow-detail-sentence';
-            sentence.textContent = sentenceText;
-            host.appendChild(sentence);
-        }
-    }
 
     if (presenter.detailPanel !== undefined) {
         var sourcePanel = document.createElement('div');
@@ -251,6 +238,18 @@ detail.show = function(nodeDetail) {
     var split = document.createElement('div');
     split.className = 'message-flow-detail-split';
     host.appendChild(split);
+
+    // A source whose events are no exchange - a file transfer, where nothing answers - has no
+    // reply side to show, so its bodies take the whole width. The root is the one node that
+    // keeps two sides whatever its source, its right side being the flow summed up.
+    var isExchange = presenter.isExchange(newestModel);
+
+    if (!isExchange && nodeDetail.flowSummary === null) {
+        split.classList.add('message-flow-detail-split-single');
+        detail.addSide(split, 'request', nodeDetail.models);
+        detail.updateCaption();
+        return;
+    }
 
     detail.addSide(split, 'request', requestModels);
 

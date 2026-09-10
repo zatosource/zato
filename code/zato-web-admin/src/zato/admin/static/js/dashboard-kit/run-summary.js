@@ -8,8 +8,16 @@
 
     kit.runSummary.config = {
 
-        // The ledger's columns, in reading order.
-        ledgerColumns: ['Name', 'Size', 'Modified', 'Decision', 'Reason', 'Duration'],
+        // The ledger's columns, in reading order - the key names the cell class of the column.
+        ledgerColumns: [
+            {key: 'number', label: '#'},
+            {key: 'name', label: 'Name'},
+            {key: 'size', label: 'Size'},
+            {key: 'modified', label: 'Modified'},
+            {key: 'decision', label: 'Decision'},
+            {key: 'reason', label: 'Reason'},
+            {key: 'duration', label: 'Duration'}
+        ],
 
         // What a cell with nothing to say reads as.
         emptyCell: '-',
@@ -101,9 +109,9 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // One ledger row of {name, sizeText, modifiedHTML, decision, decisionLabel, decisionTone, reason,
-    // reasonLabel, durationText, linkURL}, an empty linkURL renders the name as text.
-    kit.runSummary.ledgerRowHTML = function(entry, isHidden) {
+    // One ledger row of {name, sizeText, modifiedText, decision, decisionLabel, decisionTone, reason,
+    // reasonLabel, durationText, linkURL} at its place in the ledger, an empty linkURL renders the name as text.
+    kit.runSummary.ledgerRowHTML = function(entry, number, isHidden) {
         var out = '<tr class="dashboard-run-ledger-row" data-decision="' + kit._esc_html(entry.decision) + '"';
 
         if (isHidden) {
@@ -122,9 +130,10 @@
         var decisionChip = kit.chips.render_one({key: 'decision', label: '', value: entry.decision,
             text: entry.decisionLabel, tone: entry.decisionTone});
 
+        out += '<td class="dashboard-run-ledger-number">' + kit.format_number_full(number) + '</td>';
         out += '<td class="dashboard-run-ledger-name">' + nameHTML + '</td>';
         out += '<td class="dashboard-run-ledger-size">' + kit._esc_html(entry.sizeText) + '</td>';
-        out += '<td class="dashboard-run-ledger-modified">' + entry.modifiedHTML + '</td>';
+        out += '<td class="dashboard-run-ledger-modified">' + kit._esc_html(entry.modifiedText) + '</td>';
         out += '<td class="dashboard-run-ledger-decision">' + decisionChip + '</td>';
         out += '<td class="dashboard-run-ledger-reason">' + kit.runSummary.cellHTML(entry.reasonLabel) + '</td>';
         out += '<td class="dashboard-run-ledger-duration">' + kit.runSummary.cellHTML(entry.durationText) + '</td>';
@@ -155,29 +164,45 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
+    // The line the table says when no entry of it is on show - none at all, or none the filter lets through.
+    kit.runSummary.emptyRowHTML = function(isHidden) {
+        var config = kit.runSummary.config;
+
+        var out = '<tr class="dashboard-run-ledger-empty-row"';
+
+        if (isHidden) {
+            out += ' hidden';
+        }
+
+        out += '><td colspan="' + config.ledgerColumns.length + '" class="dashboard-run-ledger-empty">' +
+            config.emptyLabel + '</td></tr>';
+
+        return out;
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
     // The ledger table with its fold, overflow is how many entries the run saw past what it kept.
     kit.runSummary.ledgerHTML = function(entries, overflow, isUnfolded) {
         var config = kit.runSummary.config;
-
-        if (entries.length === 0) {
-            return '<div class="dashboard-run-ledger-empty">' + config.emptyLabel + '</div>';
-        }
 
         var ordered = kit.runSummary.leadFirst(entries);
 
         var out = '<table class="dashboard-run-ledger"><thead><tr>';
 
         for (var columnIndex = 0; columnIndex < config.ledgerColumns.length; columnIndex++) {
-            out += '<th>' + config.ledgerColumns[columnIndex] + '</th>';
+            var column = config.ledgerColumns[columnIndex];
+            out += '<th class="dashboard-run-ledger-' + column.key + '">' + column.label + '</th>';
         }
 
         out += '</tr></thead><tbody>';
 
         for (var entryIndex = 0; entryIndex < ordered.length; entryIndex++) {
             var isHidden = !isUnfolded && entryIndex >= config.foldAfter;
-            out += kit.runSummary.ledgerRowHTML(ordered[entryIndex], isHidden);
+            out += kit.runSummary.ledgerRowHTML(ordered[entryIndex], entryIndex + 1, isHidden);
         }
 
+        out += kit.runSummary.emptyRowHTML(ordered.length > 0);
         out += '</tbody></table>';
 
         if (overflow > 0) {
@@ -224,12 +249,28 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    kit.runSummary.fillLedger = function($summary, entries, overflow) {
+    // The ledger of a run that saw anything at all - a run that saw nothing has no table, not even an empty one.
+    kit.runSummary.fillLedger = function($summary, entries, overflow, seenCount) {
+        var $host = $summary.find('.dashboard-run-ledger-host');
+
+        if (seenCount === 0) {
+            $host.html('');
+            return;
+        }
+
         var foldKey = $summary.attr('data-fold-key');
         var isUnfolded = kit.runSummary.folds.isUnfolded(foldKey);
 
         var ledgerHTML = kit.runSummary.ledgerHTML(entries, overflow, isUnfolded);
-        $summary.find('.dashboard-run-ledger-host').html(ledgerHTML);
+        $host.html(ledgerHTML);
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // The empty line shows exactly when no entry row is on show.
+    kit.runSummary.syncEmptyRow = function($summary) {
+        var shownCount = $summary.find('.dashboard-run-ledger-row').not('[hidden]').length;
+        $summary.find('.dashboard-run-ledger-empty-row').prop('hidden', shownCount > 0);
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -349,6 +390,7 @@
             $row.prop('hidden', isFolded && !isUnfolded);
         });
 
+        kit.runSummary.syncEmptyRow($summary);
         $summary.find('.dashboard-run-ledger-fold').prop('hidden', false);
     };
 
@@ -383,6 +425,7 @@
             $row.prop('hidden', wanted[$row.attr('data-decision')] !== true);
         });
 
+        kit.runSummary.syncEmptyRow($summary);
         $summary.find('.dashboard-run-ledger-fold').prop('hidden', true);
     });
 })();
