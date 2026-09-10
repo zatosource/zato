@@ -182,12 +182,24 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     box-shadow: var(--dashboard-chosen-badge-shadow);
 }
 
-/* How many events the term led to and what it was found by */
+/* The way back to the audit log, at the head's right - the same badge the tabs are, in the
+   same amber the chosen tab reads in. The kit's anchor rules name the element and two classes,
+   so this one names as much to be the one that is heard. */
 
-.message-flow-status {
+.message-flow-head a.message-flow-back,
+.message-flow-head a.message-flow-back:visited,
+.message-flow-head a.message-flow-back:hover {
     margin-left: auto;
-    color: var(--message-flow-muted);
-    font-size: 11px;
+    padding: 4px 10px;
+    white-space: nowrap;
+    text-decoration: none;
+    color: var(--message-flow-selected-text);
+    background: var(--dashboard-unchosen-badge-fill);
+    box-shadow: var(--dashboard-unchosen-badge-shadow);
+}
+
+.message-flow-head a.message-flow-back:hover {
+    background: var(--dashboard-unchosen-badge-fill-hover);
 }
 
 /* ------------------------------------------------------------ */

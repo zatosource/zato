@@ -122,8 +122,9 @@ detail.roleOf = function(model) {
 
 // What one tab of the pane wears - the role in its own ink, the event's
 // id in amber, and an outcome in the outcome's own colour. The plain label
-// stays beside the markup, being what a tab is told apart by.
-detail.tabOf = function(model) {
+// stays beside the markup, being what a tab is told apart by. The kind is
+// which body of the event the tab opens - empty for the event's own data.
+detail.tabOf = function(model, kind) {
     var config = detail.config;
 
     var role = detail.roleOf(model);
@@ -145,10 +146,19 @@ detail.tabOf = function(model) {
     var out = {
         label: roleLabel + ' \u00b7 ' + model.id,
         label_html: labelHtml,
-        eventId: model.id
+        eventId: model.id,
+        kind: kind
     };
 
     return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// What a tab's body is remembered under - one event may stand on both sides
+// of the pane, each side holding a different body of it
+detail.bodyKey = function(tab) {
+    return String(tab.eventId) + ':' + tab.kind;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -210,14 +220,23 @@ detail.show = function(nodeDetail) {
     host.appendChild(attachments);
 
     // The events split between the two sides - a reply to the right, every
-    // other kind of line to the left with the request it belongs to
+    // other kind of line to the left with the request it belongs to. A source
+    // whose one event holds both what was sent and what came back - a file
+    // transfer run talking to its server - puts that same event on both sides,
+    // each side reading its own body of it.
+    var paneKinds = presenter.paneKinds(newestModel);
+
     var requestModels = [];
     var responseModels = [];
 
     for (var modelIndex = 0; modelIndex < nodeDetail.models.length; modelIndex++) {
         var model = nodeDetail.models[modelIndex];
 
-        if (detail.roleOf(model) === 'response') {
+        if (paneKinds !== null) {
+            requestModels.push(model);
+            responseModels.push(model);
+        }
+        else if (detail.roleOf(model) === 'response') {
             responseModels.push(model);
         }
         else {
@@ -239,19 +258,17 @@ detail.show = function(nodeDetail) {
     split.className = 'message-flow-detail-split';
     host.appendChild(split);
 
-    // A source whose events are no exchange - a file transfer, where nothing answers - has no
-    // reply side to show, so its bodies take the whole width. The root is the one node that
-    // keeps two sides whatever its source, its right side being the flow summed up.
-    var isExchange = presenter.isExchange(newestModel);
+    // Which body of an event each side reads - the event's own data unless the
+    // source names one body per side
+    var requestKind = '';
+    var responseKind = '';
 
-    if (!isExchange && nodeDetail.flowSummary === null) {
-        split.classList.add('message-flow-detail-split-single');
-        detail.addSide(split, 'request', nodeDetail.models);
-        detail.updateCaption();
-        return;
+    if (paneKinds !== null) {
+        requestKind = paneKinds.request;
+        responseKind = paneKinds.response;
     }
 
-    detail.addSide(split, 'request', requestModels);
+    detail.addSide(split, 'request', requestModels, requestKind);
 
     var splitBar = document.createElement('div');
     splitBar.className = 'message-flow-detail-split-bar';
@@ -260,7 +277,7 @@ detail.show = function(nodeDetail) {
     // The root stands for the message itself and has no reply of its own to
     // wait for - its right side sums the whole flow up instead
     if (nodeDetail.flowSummary === null) {
-        detail.addSide(split, 'response', responseModels);
+        detail.addSide(split, 'response', responseModels, responseKind);
     }
     else {
         detail.addSummarySide(split, nodeDetail.flowSummary);
@@ -275,8 +292,9 @@ detail.show = function(nodeDetail) {
 // One side of the pane - its events' badges always on top, each tab's body
 // fetched the first time it is opened, parsed when the source's reader made
 // sense of it, as it went down the wire otherwise. A side the exchange has
-// no events for says so.
-detail.addSide = function(split, role, models) {
+// no events for says so. The kind names which body of each event the side
+// reads - empty for the event's own data.
+detail.addSide = function(split, role, models, kind) {
     var listing = $.fn.zato.audit_log.listing;
 
     var side = document.createElement('div');
@@ -295,7 +313,7 @@ detail.addSide = function(split, role, models) {
     var tabs = [];
 
     for (var modelIndex = 0; modelIndex < models.length; modelIndex++) {
-        tabs.push(detail.tabOf(models[modelIndex]));
+        tabs.push(detail.tabOf(models[modelIndex], kind));
     }
 
     var panelHost = document.createElement('div');
@@ -307,14 +325,14 @@ detail.addSide = function(split, role, models) {
     side.appendChild(caption);
 
     kit.payload_panel.lazy($(panelHost), tabs, function(tab, onDone) {
-        listing.fetchDetails(tab.eventId, '', false, function(details) {
+        listing.fetchDetails(tab.eventId, tab.kind, false, function(details) {
             var text = details.data;
 
             if (details.parsed !== '') {
                 text = details.parsed;
             }
 
-            detail.bodyLengths[String(tab.eventId)] = text.length;
+            detail.bodyLengths[detail.bodyKey(tab)] = text.length;
             detail.updateCaption();
 
             onDone(text);
@@ -401,7 +419,7 @@ detail.updateCaption = function() {
         var tabs = $(side).find('.dashboard-payload').data('payload_tabs');
         var tab = tabs[parseInt($openTab.attr('data-tab-index'), 10)];
 
-        var length = detail.bodyLengths[String(tab.eventId)];
+        var length = detail.bodyLengths[detail.bodyKey(tab)];
 
         if (length === undefined) {
             caption.textContent = '';

@@ -27,7 +27,8 @@ from zato.common.util.file_transfer_scheduler import apply_schedule_defaults
 from zato.server.service.internal.outgoing.file_transfer.candidates import get_candidates, get_file_name, \
     keep_entries_past_backoff, keep_stable_entries
 from zato.server.service.internal.outgoing.file_transfer.run import add_delivered_today, close_interrupted_runs, \
-    close_run, close_run_list_failed, close_run_no_directory, error_summary, get_scheduler_context, note_listing, open_run
+    close_run, close_run_list_failed, close_run_no_directory, error_summary, get_scheduler_context, note_exchanges, \
+    note_listing, open_run
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -566,12 +567,16 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
     except Exception:
         error = format_exc()
         service.logger.warning('Could not list `%s` in `%s` -> `%s`', directory, conn_name, error)
+        note_exchanges(run, conn)
         close_run_list_failed(run, phase, error)
         raise
 
-    # A missing directory means nothing to do.
+    # What was said to the server and what it said back is the run's own request and response.
+    note_exchanges(run, conn)
+
+    # A missing directory is an error of the run - the schedule points to a place that is not there.
     if not directory_exists:
-        service.logger.info('Directory `%s` does not exist in `%s`, nothing to do', directory, conn_name)
+        service.logger.warning('Directory `%s` does not exist in `%s`', directory, conn_name)
         close_run_no_directory(run)
         return
 

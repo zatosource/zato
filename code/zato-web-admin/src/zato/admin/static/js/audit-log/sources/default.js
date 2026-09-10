@@ -166,9 +166,10 @@ $.fn.zato.audit_log.sources['default'] = {
         return [];
     },
 
-    // Whether the source's events are requests and replies, which is what the flow pane splits its bodies by.
-    isExchange: function(_rowModel) {
-        return true;
+    // Which body of one event each side of the flow pane reads, as {request, response} kinds - null for
+    // a source whose requests and replies are separate events, which the pane splits by their role.
+    paneKinds: function(_rowModel) {
+        return null;
     },
 
     lineNote: function(_model) {

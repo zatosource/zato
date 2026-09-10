@@ -126,9 +126,8 @@ var fileOutgoing = {
         },
         journeyLoadingLabel: 'Loading',
 
-        // Where the rows of one cid are read from and where the flow page is.
+        // Where the rows of one cid are read from.
         journeyURL: '/zato/message-flow/journey/',
-        flowPagePath: '/zato/message-flow/',
 
         // Whether the page holds a drawing a step can be selected on, set by the flow page.
         selectOnDrawing: false,
@@ -136,6 +135,13 @@ var fileOutgoing = {
         // The body kinds a run's ledger and a run's traceback are kept under.
         ledgerKind: 'run-ledger',
         errorBodyKind: 'error',
+
+        // The body kinds each side of the flow pane reads off one event - the commands sent to
+        // the server and what the server replied.
+        paneKinds: {
+            request: 'request',
+            response: 'response'
+        },
 
         // What the pane's facts say for the things they say of their own.
         deliveredBeforeLabel: 'Delivered before',

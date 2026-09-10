@@ -163,22 +163,12 @@ class FileInfo:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FileTransferConnection:
-    """ The shared public API of a single outgoing file transfer connection - the protocol-specific
-    subclasses build listing entries from what their client returns and everything else lives here.
+class ExchangeNotes:
+    """ What a connection said to its server and what the server said back, in order - a caller
+    takes them to store as the request and response of the work it did.
     """
-    def __init__(self, cid:'str', wrapper:'any_') -> 'None':
-        self.cid = cid
-        self.wrapper = wrapper
-
-        # What this connection said to the server and what the server said back, in order -
-        # a caller takes them to store as the request and response of the work it did.
+    def __init__(self) -> 'None':
         self.exchanges:'dictlist' = []
-
-# ################################################################################################################################
-
-    def ping(self) -> 'None':
-        self.wrapper.ping()
 
 # ################################################################################################################################
 
@@ -201,6 +191,23 @@ class FileTransferConnection:
         self.exchanges = []
 
         return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FileTransferConnection(ExchangeNotes):
+    """ The shared public API of a single outgoing file transfer connection - the protocol-specific
+    subclasses build listing entries from what their client returns and everything else lives here.
+    """
+    def __init__(self, cid:'str', wrapper:'any_') -> 'None':
+        super().__init__()
+        self.cid = cid
+        self.wrapper = wrapper
+
+# ################################################################################################################################
+
+    def ping(self) -> 'None':
+        self.wrapper.ping()
 
 # ################################################################################################################################
 

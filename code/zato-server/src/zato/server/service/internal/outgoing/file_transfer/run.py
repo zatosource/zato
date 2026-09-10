@@ -28,9 +28,10 @@ from zato.common.util.api import utcnow
 
 if 0:
     from zato.common.audit_log.api import AuditLog
-    from zato.common.typing_ import anylist, intnone, stranydict, strintdict, strlist
+    from zato.common.typing_ import any_, anylist, intnone, stranydict, strintdict, strlist
     from zato.server.service import Service
     AuditLog = AuditLog
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -37,8 +37,7 @@ listing.config = {
     dataTabLabel: 'Data',
     detailsTabLabel: 'Details',
 
-    // Where the event's whole flow is read, and what the doorway to it says
-    flowPagePath: '/zato/message-flow/',
+    // What the doorway to the event's whole flow says
     openFlowLabel: 'Open flow',
 
     // What stands in for a message body that could not be read

@@ -26,6 +26,7 @@ from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Move, Operation_Read, \
     Operation_Store
 from zato.common.util.logging_ import file_transfer_logger_name
+from zato.server.connection.file_transfer_base import ExchangeNotes
 from zato.server.connection.sftp_verify import record_sftp_store
 
 # ################################################################################################################################
@@ -204,10 +205,11 @@ class SFTPInfo:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SFTPConnection:
+class SFTPConnection(ExchangeNotes):
     """ The public API of a single outgoing SFTP connection, obtained via self.sftp['My Connection'] in services.
     """
     def __init__(self, cid:'str', wrapper:'OutconnSFTPWrapper') -> 'None':
+        super().__init__()
         self.cid = cid
         self.wrapper = wrapper
 

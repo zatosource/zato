@@ -37,7 +37,6 @@ fileOutgoing.ledgerReason = function(record) {
 // /////////////////////////////////////////////////////////////////////////////
 
 fileOutgoing.ledgerEntry = function(record) {
-    var config = fileOutgoing.config;
     var words = fileOutgoing.words();
 
     var durationText = '';
@@ -49,7 +48,7 @@ fileOutgoing.ledgerEntry = function(record) {
     var linkURL = '';
 
     if (record.file_cid !== '') {
-        linkURL = config.flowPagePath + '?term=' + encodeURIComponent(record.file_cid);
+        linkURL = $.fn.zato.audit_log.flowPageURL(record.file_cid);
     }
 
     return {

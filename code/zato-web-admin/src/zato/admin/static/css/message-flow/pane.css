@@ -173,12 +173,6 @@
     flex: 1 1 auto;
 }
 
-/* A pane with one side only - a source whose events nothing answers - gives it the whole width */
-
-.message-flow-detail-split-single .message-flow-detail-side-request {
-    flex: 1 1 auto;
-}
-
 /* A side with no events of its own kind says so where its badges would
    stand - the first row and column, not the middle of the room */
 

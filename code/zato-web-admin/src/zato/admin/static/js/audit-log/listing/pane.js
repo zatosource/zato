@@ -506,8 +506,8 @@ listing.paneHTML = function(rowModel) {
     html += '<div class="dashboard-tabs audit-log-pane-tabs" role="tablist">';
     html += listing.paneTabsHTML(rowModel);
     html += '</div>';
-    html += '<a class="audit-log-open-flow" href="' + config.flowPagePath + '?term=' + rowModel.id +
-        '">' + config.openFlowLabel + '</a>';
+    html += '<a class="audit-log-open-flow" data-event-id="' + rowModel.id + '" href="' +
+        $.fn.zato.audit_log.flowPageURL(rowModel.id) + '">' + config.openFlowLabel + '</a>';
     html += '</div>';
 
     // Only the panels scroll - the head and the tabs stand outside the scrolling body, so

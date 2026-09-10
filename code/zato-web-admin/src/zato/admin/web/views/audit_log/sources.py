@@ -19,7 +19,7 @@ from sqlalchemy import select
 from zato.admin.web.views.audit_log.columns import _source_event_label
 from zato.common.as2.mdn import describe_disposition
 from zato.common.audit_log.api import event_table
-from zato.common.audit_log.common import event_attr_table, event_body_table
+from zato.common.audit_log.common import event_attr_table, event_body_table, AuditBody
 from zato.common.audit_log.query import source_outstanding
 from zato.common.audit_log.resubmit import source_resubmit_actions
 from zato.common.audit_log.scheduler import format_duration_ms, Attr_Current_Run, Attr_Delay_Ms, Log_Kinds
@@ -292,11 +292,13 @@ def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str'
 
 # ################################################################################################################################
 
-def render_scheduler_record(engine:'any_', event_id:'int') -> 'str':
+def render_scheduler_record(engine:'any_', event_id:'int', kind:'str') -> 'str':
     """ Renders a scheduler run as the story it tells - which job ran what service, how it went
     and what the run said while it was going. The run's own row carries the outcome, duration
     and error, its attrs the run number and delay, and the log lines captured during the run
     are its event body rows, so everything renders here, where the engine is at hand.
+    The kind picks a half of the story - the request is what the scheduler asked for, the response
+    is how the run went and what it said, and no kind at all is the whole of it.
     """
 
     # The run's own row - what ran, when, and how it ended
@@ -331,45 +333,57 @@ def render_scheduler_record(engine:'any_', event_id:'int') -> 'str':
     for name, value in attr_rows:
         attrs[name] = value
 
-    lines = []
+    # What the scheduler asked for - the job, its service, which run this was and when it went off
+    request_lines = []
 
-    lines.append(f'Job:        {object_name}')
-    lines.append(f'Service:    {endpoint}')
-    lines.append(f'Outcome:    {outcome}')
+    request_lines.append(f'Job:        {object_name}')
+    request_lines.append(f'Service:    {endpoint}')
 
     if Attr_Current_Run in attrs:
-        lines.append(f'Run:        {attrs[Attr_Current_Run]}')
-
-    # A run still going has no duration yet, so the line only shows once there is one
-    if duration_ms is not None:
-        duration_human = format_duration_ms(duration_ms)
-        lines.append(f'Duration:   {duration_human}')
+        request_lines.append(f'Run:        {attrs[Attr_Current_Run]}')
 
     if Attr_Delay_Ms in attrs:
         delay_ms = int(attrs[Attr_Delay_Ms])
         delay_human = format_duration_ms(delay_ms)
-        lines.append(f'Delay:      {delay_human}')
+        request_lines.append(f'Delay:      {delay_human}')
 
     # When the run started is the event's own moment - trimmed of its microseconds
     # and offset, the way time reads everywhere on the page
     started = event_time_iso.replace('T', ' ').split('.')[0]
-    lines.append(f'Started:    {started} UTC')
+    request_lines.append(f'Started:    {started} UTC')
+
+    # How the run went and what it said while it was going
+    response_lines = []
+
+    response_lines.append(f'Outcome:    {outcome}')
+
+    # A run still going has no duration yet, so the line only shows once there is one
+    if duration_ms is not None:
+        duration_human = format_duration_ms(duration_ms)
+        response_lines.append(f'Duration:   {duration_human}')
 
     # An error the run ended with reads in full, traceback and all
     if error:
-        lines.append('')
-        lines.append('Error:')
-        lines.append(error)
+        response_lines.append('')
+        response_lines.append('Error:')
+        response_lines.append(error)
 
     # The captured log lines follow, one per line, each with its level and moment
     if log_rows:
-        lines.append('')
-        lines.append('Log:')
+        response_lines.append('')
+        response_lines.append('Log:')
 
         for (log_data,) in log_rows:
             entry = json.loads(log_data)
             when = entry['timestamp_iso'].replace('T', ' ').split('.')[0]
-            lines.append(f'{when} {entry["level"]:8} {entry["message"]}')
+            response_lines.append(f'{when} {entry["level"]:8} {entry["message"]}')
+
+    if kind == AuditBody.Request:
+        lines = request_lines
+    elif kind == AuditBody.Response:
+        lines = response_lines
+    else:
+        lines = request_lines + response_lines
 
     out = '\n'.join(lines)
     return out

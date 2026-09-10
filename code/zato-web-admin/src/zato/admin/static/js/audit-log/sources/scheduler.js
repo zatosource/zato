@@ -8,6 +8,16 @@
 
 (function($) {
 
+var presenterConfig = {
+
+    // The body kinds each side of the flow pane reads off one run - what the scheduler asked
+    // for and how the run went, both rendered from the run's own record
+    paneKinds: {
+        request: 'request',
+        response: 'response'
+    }
+};
+
 $.fn.zato.audit_log.sources['scheduler'] = $.extend({}, $.fn.zato.audit_log.sources['default'], {
 
     // The scheduler's rows already wear its name on the role tag, so the source
@@ -49,6 +59,14 @@ $.fn.zato.audit_log.sources['scheduler'] = $.extend({}, $.fn.zato.audit_log.sour
 
     identity: function(row) {
         return $.fn.zato.audit_log.sources['default'].identity(row);
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // One event is the whole run - what the scheduler asked for on one side,
+    // how the run went and what it said on the other
+    paneKinds: function(_rowModel) {
+        return presenterConfig.paneKinds;
     }
 });
 

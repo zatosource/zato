@@ -343,9 +343,10 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
         return rowModel.headline;
     },
 
-    // A file moving is no exchange - nothing answers a run or a delivery, so there is no reply side to show.
-    isExchange: function(_rowModel) {
-        return false;
+    // One event carries the whole conversation with the server - the commands the run sent on one side,
+    // what the server said back on the other.
+    paneKinds: function(_rowModel) {
+        return config.paneKinds;
     },
 
     // ////////////////////////////////////////////////////////////////////////

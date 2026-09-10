@@ -110,7 +110,57 @@ $.fn.zato.audit_log.config = {
     fileTransferWords: {},
 
     // What the object row is labelled with for a source the catalog does not know
-    defaultObjectLabel: 'Object'
+    defaultObjectLabel: 'Object',
+
+    // Where the audit log and the flow page live, what the flow page's term and
+    // its way back are called in the address bar
+    auditLogPagePath: '/zato/audit-log/',
+    flowPagePath: '/zato/message-flow/',
+    termURLKey: 'term',
+    backURLKey: 'back'
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The audit log address a flow page opened from here leads back to - the audit log page
+// itself with everything its address bar holds, filters and the open event alike, or the
+// way back the flow page was itself given, so a search on the flow page keeps it. A page
+// that is neither has no way back to offer.
+$.fn.zato.audit_log.backURL = function() {
+    var config = $.fn.zato.audit_log.config;
+    var kit = $.fn.zato.dashboard_kit;
+
+    var carried = kit.url_state.get(config.backURLKey);
+
+    // Only an audit log address is a way back - a link cannot send a reader anywhere else
+    if (carried !== null && carried.indexOf(config.auditLogPagePath) === 0) {
+        return carried;
+    }
+
+    if (window.location.pathname === config.auditLogPagePath) {
+        return window.location.pathname + window.location.search;
+    }
+
+    return '';
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The address of the flow page opened on one term, carrying the way back to the audit log
+// when there is one to carry
+$.fn.zato.audit_log.flowPageURL = function(term) {
+    var config = $.fn.zato.audit_log.config;
+
+    var params = new URLSearchParams();
+    params.set(config.termURLKey, term);
+
+    var backURL = $.fn.zato.audit_log.backURL();
+
+    if (backURL !== '') {
+        params.set(config.backURLKey, backURL);
+    }
+
+    return config.flowPagePath + '?' + params.toString();
 };
 
 // /////////////////////////////////////////////////////////////////////////////

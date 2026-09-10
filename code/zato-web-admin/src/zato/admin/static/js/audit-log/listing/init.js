@@ -154,6 +154,13 @@ listing.init = function(initConfig) {
         $.fn.zato.audit_log.search($(this).attr('data-search-value'));
     });
 
+    // The doorway to the flow carries the way back to this very screen - the address bar as it
+    // stands the moment the doorway is taken, the pane's own event and tab included, which it
+    // did not yet hold when the doorway was drawn
+    $(document).on('click', '.audit-log-open-flow', function() {
+        this.href = $.fn.zato.audit_log.flowPageURL($(this).attr('data-event-id'));
+    });
+
     // An event word narrows the list down to events of its kind, wherever it is worn -
     // on a row or in the pane. The click filters, it does not also select the row under it.
     $(document).on('click', '.audit-log-event-filter', function(event) {
