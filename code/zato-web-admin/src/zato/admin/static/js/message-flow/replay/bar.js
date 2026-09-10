@@ -352,6 +352,19 @@ replay.buildTicks = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The tick of the event the pass stands on wears the page's selection amber,
+// the way the node and the row it stands on do - no tick when nothing has
+// played yet
+replay.markCurrentTick = function(playedCount) {
+    var ticks = replay.bar().querySelectorAll('.message-flow-replay-tick');
+
+    for (var tickIndex = 0; tickIndex < ticks.length; tickIndex++) {
+        ticks[tickIndex].classList.toggle('message-flow-replay-tick-current', tickIndex === playedCount - 1);
+    }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // The keyboard - the keys are live whenever a journey is on the bar, and the
 // first of them starts the pass the way the buttons do
 replay.onKeyDown = function(event) {

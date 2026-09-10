@@ -225,6 +225,12 @@ replay.disarm = function() {
 
     state.svg.classList.remove('message-flow-replay');
 
+    replay.markCurrentTick(0);
+
+    // The pane the pass had open on its last event closes with the pass, and
+    // with it the marks on that event's row
+    $.fn.zato.message_flow.detail.hide();
+
     replay.setNote('');
     replay.updateBar();
 };

@@ -58,6 +58,8 @@ replay.applyState = function() {
         }
     }
 
+    replay.markCurrentTick(playedCount);
+
     for (var key in state.nodes) {
         var node = state.nodes[key];
 

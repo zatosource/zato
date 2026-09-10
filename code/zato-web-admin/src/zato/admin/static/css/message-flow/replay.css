@@ -239,6 +239,12 @@
     background: var(--message-flow-bad);
 }
 
+/* The tick the pass stands on - the same amber the node and the row wear */
+
+.message-flow-replay-tick-current {
+    background: var(--message-flow-selected);
+}
+
 .message-flow-replay-playhead {
     position: absolute;
     top: 0;

@@ -311,6 +311,7 @@ page.init = function() {
     $.fn.zato.message_flow.drawing.init();
     $.fn.zato.message_flow.detail.init();
     $.fn.zato.message_flow.keyboard.init();
+    $.fn.zato.message_flow.controls.init();
     $.fn.zato.message_flow.replay.init();
 
     // The list's lines and panels answer to the same handlers they answer to

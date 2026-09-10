@@ -214,6 +214,69 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     background: var(--dashboard-unchosen-badge-fill-hover);
 }
 
+/* The drawing's controls in the canvas's top-right corner - closer, further
+   off and full screen - the same stack, in the same corner, the sequence
+   diagrams in the docs wear */
+
+.message-flow-controls {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    background: var(--message-flow-canvas-surface);
+    overflow: hidden;
+}
+
+.message-flow-control {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    color: var(--message-flow-text);
+    background: var(--dashboard-unchosen-badge-fill);
+    box-shadow: none;
+    text-shadow: none;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.message-flow-control + .message-flow-control {
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.message-flow-control:hover {
+    background: var(--dashboard-unchosen-badge-fill-hover);
+}
+
+.message-flow-control:focus,
+.message-flow-control:active {
+    outline: none;
+    box-shadow: none;
+    background-image: none;
+}
+
+.message-flow-control-icon {
+    display: block;
+}
+
+/* Full screen - the browser shows the page alone, so the whole screen is its
+   room and there is no top bar to leave room for */
+
+.message-flow-page.message-flow-fullscreen {
+    width: 100%;
+    height: 100%;
+}
+
 /* ------------------------------------------------------------ */
 /* The two tab panels                                            */
 /* ------------------------------------------------------------ */

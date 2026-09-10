@@ -407,6 +407,15 @@ drawing.wireDrawing = function(svg) {
             node.addEventListener('click', function(event) {
                 event.stopPropagation();
 
+                // A hand on a node ends whatever pass was on - the pass's own marks,
+                // the amber on the node it last stood on among them, would otherwise
+                // stay on the drawing beside the selection
+                var replay = $.fn.zato.message_flow.replay;
+
+                if (replay.state.isActive) {
+                    replay.disarm();
+                }
+
                 // On a card of several events the click may be on one of its lines,
                 // which then is the event the pane opens on - a card of one event
                 // is picked as a whole, whichever of its parts was clicked
