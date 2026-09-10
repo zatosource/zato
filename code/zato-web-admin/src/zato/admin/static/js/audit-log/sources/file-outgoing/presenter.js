@@ -346,7 +346,7 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
     // One event carries the whole conversation with the server - the commands the run sent on one side,
     // what the server said back on the other.
     paneKinds: function(_rowModel) {
-        return config.paneKinds;
+        return fileOutgoing.config.paneKinds;
     },
 
     // ////////////////////////////////////////////////////////////////////////

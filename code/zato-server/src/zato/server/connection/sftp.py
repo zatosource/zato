@@ -53,6 +53,20 @@ _hash_chunk_size = 65536
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _request_text(data:'str', out:'SFTPOutput') -> 'str':
+    """ What was sent to the server as one piece of text - the sftp binary's own invocation
+    first, the commands fed to its prompt under it.
+    """
+    commands = data.rstrip('\n')
+
+    # The invocation is None when the binary's command line could not be built at all
+    if out.command:
+        return '{}\n{}'.format(out.command, commands)
+
+    return commands
+
+# ################################################################################################################################
+
 def _reply_text(out:'SFTPOutput') -> 'str':
     """ What the server said back to one command, as one piece of text - its regular output
     first, then anything it wrote to stderr, which is where the sftp binary explains a failure.
@@ -261,7 +275,7 @@ class SFTPConnection(ExchangeNotes):
 
         # .. what was sent and what came back is kept for the audit log, a failure included,
         # so a reader sees the server's own words on why a command did not work ..
-        self.note_exchange(data.rstrip('\n'), _reply_text(out))
+        self.note_exchange(_request_text(data, out), _reply_text(out))
 
         # .. perhaps we are to raise an exception on an error encountered ..
         if not out.is_ok:
