@@ -73,6 +73,10 @@ class AuditSource:
     LLM           = 'llm'
     Odoo          = 'odoo'
 
+    # One event per invocation of a user-defined service, whichever way it was invoked -
+    # the object name is the service, the endpoint is what invoked it.
+    Service       = 'service'
+
     # One source for all the Microsoft cloud services - 365, Teams, OneDrive,
     # SharePoint, Power Automate and Fabric - the object name says which connection spoke.
     Microsoft_Cloud = 'microsoft-cloud'
@@ -121,6 +125,7 @@ _source_label = {
     AuditSource.Scheduler: 'Scheduler',
     AuditSource.LLM: 'LLM',
     AuditSource.Odoo: 'Odoo',
+    AuditSource.Service: 'Service',
     AuditSource.Microsoft_Cloud: 'Microsoft cloud',
     AuditSource.Certificate: 'Certificate',
     AuditSource.Microsoft_Health: 'Microsoft health',
@@ -145,6 +150,9 @@ source_attr_names = {
     AuditSource.FHIR: ('resource_type', 'method'),
     AuditSource.Scheduler: ('current_run', 'delay_ms', 'job_id'),
     AuditSource.File_Outgoing: ('operation', 'schedule', 'file_name', 'service', 'checksum', 'current_run'),
+
+    # The channel type the invocation came in through - http-soap, scheduler, invoke and the like.
+    AuditSource.Service: ('channel',),
 
     # How many days the checked certificate had left at check time.
     AuditSource.Certificate: ('days_left',),
@@ -244,6 +252,12 @@ class AuditEvent:
     Content_Viewed       = 'content-viewed'
     Job_Executed         = 'job-executed'
 
+    # One invocation of a user-defined service, the request and the response as its bodies.
+    Service_Invoked      = 'service-invoked'
+
+    # A service writing down what it did, in its own words, through self.audit.write.
+    Note                 = 'note'
+
     # What a file transfer schedule writes about each file it takes and about
     # each of its runs - the claim rename, the move or delete after success
     # and the per-run summary with its counts.
@@ -296,6 +310,9 @@ class AuditBody:
 
     # The ledger of a file transfer run.
     Run_Ledger = 'run-ledger'
+
+    # The structured data a service attached to a note of its own.
+    Data       = 'data'
 
 # ################################################################################################################################
 

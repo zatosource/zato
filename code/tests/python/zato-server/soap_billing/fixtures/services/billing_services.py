@@ -347,7 +347,7 @@ class GetPaymentStatus(Service):
 
         # Get the data from the payload ..
         data = self.request.payload.decode('utf-8') # type: ignore
-        soap_action = str(self.request.http._wsgi_environ.get('HTTP_SOAPACTION', ''))
+        soap_action = str(self.request.http._request_ctx.get('HTTP_SOAPACTION', ''))
 
         # Services to Invoke
         forward_to_erp_service = 'test.soap.billing.erp.payment-status'

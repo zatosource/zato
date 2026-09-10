@@ -48,7 +48,7 @@ def serve_hit(ctx:'ResponseCacheContext', entry:'stranydict', outcome:'str') -> 
     """ Turns a stored entry into the response of the current request, setting the cache headers
     and short-circuiting to a bodyless 304 when the caller's ETag still matches.
     """
-    headers = ctx.wsgi_environ['zato.http.response.headers']
+    headers = ctx.request_ctx['zato.http.response.headers']
     headers[ModuleCtx.Header_Cache] = ModuleCtx.Cache_Hit
 
     # The Age header carries how long ago the entry was stored, in whole seconds
@@ -62,14 +62,14 @@ def serve_hit(ctx:'ResponseCacheContext', entry:'stranydict', outcome:'str') -> 
         # A matching ETag means the caller already has this body
         if ctx.if_none_match:
             if ctx.if_none_match == etag:
-                ctx.wsgi_environ['zato.http.response.status'] = _status_response[NOT_MODIFIED]
+                ctx.request_ctx['zato.http.response.status'] = _status_response[NOT_MODIFIED]
                 zato_rest_channel_cache_operations_total.labels(
                     ctx.channel_name, ModuleCtx.Outcome_Not_Modified).inc()
 
                 return ''
 
     headers['Content-Type'] = entry['content_type']
-    ctx.wsgi_environ['zato.http.response.status'] = _status_response[entry['status_code']]
+    ctx.request_ctx['zato.http.response.status'] = _status_response[entry['status_code']]
 
     zato_rest_channel_cache_operations_total.labels(ctx.channel_name, outcome).inc()
 
@@ -114,7 +114,7 @@ def store(ctx:'ResponseCacheContext', body:'any_', status_code:'int') -> 'None':
     only 200-class responses, never ones carrying Set-Cookie or a Cache-Control that excludes
     them from caches, size-capped, and behind the admission marker when cache-on-second-request is on.
     """
-    headers = ctx.wsgi_environ['zato.http.response.headers']
+    headers = ctx.request_ctx['zato.http.response.headers']
 
     # The response goes out uncached no matter what happens below
     headers[ModuleCtx.Header_Cache] = ModuleCtx.Cache_Miss

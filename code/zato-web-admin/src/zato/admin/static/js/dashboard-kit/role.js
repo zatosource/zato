@@ -20,12 +20,14 @@
            platform was told to do at a given time, so it reads by the scheduler's name,
            and a file transfer event reads by its own name too, a file moving being
            neither a request nor a reply. A log access record - a config change or
-           someone reading a message body - is named by the log it belongs to. */
+           someone reading a message body - is named by the log it belongs to, and a
+           service invocation by the service that ran. */
         labels: {
             'request': 'REQ',
             'response': 'REPLY',
             'none': 'SYS',
             'job': 'SCHEDULER',
+            'service': 'SERVICE',
             'transfer': 'File transfer',
             'access': 'Log access'
         },
@@ -35,6 +37,7 @@
             'response': 'dashboard-role-response',
             'none': 'dashboard-role-none',
             'job': 'dashboard-role-job',
+            'service': 'dashboard-role-service',
             'transfer': 'dashboard-role-transfer',
             'access': 'dashboard-role-access'
         },

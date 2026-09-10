@@ -53,7 +53,7 @@ _mcp_method_header = 'mcp-method'
 # The header naming the tool of a tools/call request in the stateless protocol revision
 _mcp_name_header = 'mcp-name'
 
-# WSGI environ key set by the Rust HTTP layer with the resolved client address
+# Request context key set by the Rust HTTP layer with the resolved client address
 _remote_addr_key = 'zato.http.remote_addr'
 
 # Origin header name (lowercase, as stored by HTTPRequestData._extract_headers)
@@ -265,7 +265,7 @@ class MCPEndpoint(AdminService):
         mcp_name_header = self.request.http.headers.get(_mcp_name_header)
 
         # .. get the remote address for session logging ..
-        remote_address = self.wsgi_environ[_remote_addr_key]
+        remote_address = self.request_ctx[_remote_addr_key]
 
         # .. get the sec_def id of the authenticated caller ..
         sec_def_id = channel_security.id
@@ -379,7 +379,7 @@ class MCPEndpoint(AdminService):
         if not wrapper.config.get('is_audit_log_active'):
             return
 
-        remote_address = self.wsgi_environ[_remote_addr_key]
+        remote_address = self.request_ctx[_remote_addr_key]
         session_id = self.request.http.headers.get(_session_header)
 
         mcp_response = MCPResponse()

@@ -220,6 +220,18 @@ _scheduler_columns = [
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
+# A service invocation is named by the service that ran and by what invoked it.
+_service_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'object_name', 'label': 'Service', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Invoked by', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'status', 'label': 'Status', 'type': 'text'},
+    {'key': 'duration_ms', 'label': 'Duration', 'type': 'text'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
 _fhir_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
@@ -352,6 +364,7 @@ _source_columns = {
     'mllp-outgoing': _mllp_columns,
     'fhir': _fhir_columns,
     'scheduler': _scheduler_columns,
+    'service': _service_columns,
     'llm': _llm_columns,
     'config': _config_columns,
     'odoo': _odoo_columns,
@@ -369,7 +382,7 @@ _source_columns = {
 _source_attr_columns = source_attr_names
 
 # The sources whose payloads live in the event_body table rather than the data column.
-_source_body_preview = {'mllp-channel', 'mllp-outgoing'}
+_source_body_preview = {'mllp-channel', 'mllp-outgoing', 'service'}
 
 # ################################################################################################################################
 # ################################################################################################################################

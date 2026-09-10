@@ -2134,8 +2134,17 @@ class Echo(Service):
     name = 'demo.echo'
 
     def handle(self):
+
+        # Whatever came in is what goes back out ..
         payload = self.request.payload
         self.logger.info(f'Received request: `{{payload}}`')
+
+        # .. the audit log gets a note of it under the same CID as the invocation itself,
+        # so the note reads in the message flow next to the channel that carried the request,
+        # the payload as the note's data and its size as a field to search by ..
+        self.audit.write('Echoed the request back', data=payload, item_count=len(payload))
+
+        # .. and the payload is returned unchanged.
         self.response.payload = payload
 
 # ################################################################################################################################
@@ -2148,12 +2157,20 @@ class Raise(Service):
     name = 'test.raise'
 
     def handle(self):
+
+        # The failure is announced to the audit log first, as a note that reports an error ..
+        self.audit.write('About to raise the test exception', is_ok=False, status='Test exception')
+
+        # .. and then it happens.
         raise Exception('Test exception')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Sleep(Service):
+    \"\"\" Sleeps for a number of seconds, give or take a random jitter. Used to verify
+    how callers behave when a service takes its time.
+    \"\"\"
 
     name = 'demo.sleep'
     input = '-seconds', '-jitter'
@@ -2161,17 +2178,33 @@ class Sleep(Service):
 
     def handle(self):
 
-        seconds = self.request.input.get('seconds') or _default_sleep_seconds
+        # How long to sleep is up to the caller, with a default for a caller who does not say ..
+        seconds = self.request.input.seconds
+
+        if not seconds:
+            seconds = _default_sleep_seconds
+
         seconds = float(seconds)
 
-        jitter_range = self.request.input.get('jitter') or _default_sleep_jitter
+        # .. and so is how much the sleep may deviate from that ..
+        jitter_range = self.request.input.jitter
+
+        if not jitter_range:
+            jitter_range = _default_sleep_jitter
+
         jitter_range = float(jitter_range)
 
+        # .. the jitter is drawn anew each time, never letting the total drop to nothing ..
         jitter = uniform(-jitter_range, jitter_range)
         total = max(0.1, seconds + jitter)
 
+        # .. the sleep itself is the whole work of this service ..
         sleep(total)
 
+        # .. what was slept is written down for the audit log, the numbers as fields to search by ..
+        self.audit.write('Slept as requested', seconds=total, jitter=jitter)
+
+        # .. and the caller is told the same.
         self.response.payload.message = f'OK, slept for {{total:.1f}}s (jitter={{jitter:+.1f}}s)'
 """.lstrip()
 

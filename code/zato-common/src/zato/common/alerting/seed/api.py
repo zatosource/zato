@@ -84,6 +84,7 @@ _alert_sources = [
     AuditSource.FHIR,
     AuditSource.Config,
     AuditSource.Scheduler,
+    AuditSource.Service,
     AuditSource.LLM,
     AuditSource.Odoo,
     AuditSource.Microsoft_Cloud,

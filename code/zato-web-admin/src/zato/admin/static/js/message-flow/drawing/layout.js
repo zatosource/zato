@@ -63,6 +63,7 @@ drawing.config = {
         'none': 'SYS',
         'view': 'VIEW',
         'job': 'SCHEDULER',
+        'service': 'SERVICE',
         'transfer': 'TRANSFER',
         'access': 'ACCESS'
     },

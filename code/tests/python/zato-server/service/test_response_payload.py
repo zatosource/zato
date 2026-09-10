@@ -250,11 +250,11 @@ class TestRESTChannelFreeFormPayload(unittest.TestCase):
             'params_pri': 'channel-params-over-msg',
         })
 
-        wsgi_environ = {
+        request_ctx = {
             'zato.http.response.headers': {},
         }
 
-        out = handler.handle(_test_cid, {}, channel_item, wsgi_environ, cast_('any_', raw_request),
+        out = handler.handle(_test_cid, {}, channel_item, request_ctx, cast_('any_', raw_request),
             MagicMock(), None, '/test/path', {}, {})
 
         return out

@@ -57,7 +57,7 @@ def dispatch_service(
     channel,       # type: str
     data_format,   # type: str
     transport=None,     # type: any_
-    wsgi_environ=None,  # type: stranydict | None
+    request_ctx=None,  # type: stranydict | None
     job_type='',        # type: str
     **response_kwargs   # type: any_
     ) -> 'tuple[any_, Service]':
@@ -72,7 +72,7 @@ def dispatch_service(
     response = service.update_handle(
         service.set_response_data, service, payload, channel, data_format, transport, server,
         None, MagicMock(), _test_cid, {},
-        job_type=job_type, wsgi_environ=wsgi_environ or {}, **response_kwargs)
+        job_type=job_type, request_ctx=request_ctx or {}, **response_kwargs)
 
     return response, service
 
@@ -140,12 +140,12 @@ class SchedulerBoundary(Boundary):
 
     def deliver(self, case:'PayloadCase') -> 'any_':
 
-        wsgi_environ = {
+        request_ctx = {
             'zato.request_ctx.async_msg': {'cid': _test_cid, 'service': case.service_class._Service__service_name},
         }
 
         out, _ = dispatch_service(case.service_class, case.request, CHANNEL.SCHEDULER, DATA_FORMAT.DICT,
-            wsgi_environ=wsgi_environ, job_type='interval_based')
+            request_ctx=request_ctx, job_type='interval_based')
 
         return out
 
@@ -189,10 +189,10 @@ class QueueBridgeBoundary(Boundary):
             data = case.request.encode('utf8')
 
         headers = {'MsgId': 'QMSG-0001', 'ReplyToQ': 'ORDERS.REPLY'}
-        wsgi_environ = {'zato.request.headers': headers}
+        request_ctx = {'zato.request.headers': headers}
 
         response, _ = dispatch_service(case.service_class, data, CHANNEL.INVOKE, DATA_FORMAT.DICT,
-            wsgi_environ=wsgi_environ)
+            request_ctx=request_ctx)
 
         # The reply travels the way the recv loop encodes it for the reply-to queue.
         if isinstance(response, bytes):

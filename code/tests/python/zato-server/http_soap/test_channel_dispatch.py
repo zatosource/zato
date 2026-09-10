@@ -93,7 +93,7 @@ def _make_response(
 
 # ################################################################################################################################
 
-def _make_wsgi_environ(overrides:'anydict | None'=None) -> 'anydict':
+def _make_request_ctx(overrides:'anydict | None'=None) -> 'anydict':
     """ Builds a minimal WSGI environ dict.
     """
     out = {
@@ -183,11 +183,11 @@ def _make_dispatcher(
 
 # ################################################################################################################################
 
-def _dispatch(ctx:'_DispatcherCtx', wsgi_environ:'anydict') -> 'any_':
+def _dispatch(ctx:'_DispatcherCtx', request_ctx:'anydict') -> 'any_':
     """ Shorthand to call dispatch with standard test parameters.
     """
     return ctx.dispatcher.dispatch(
-        _test_cid, _test_req_timestamp, wsgi_environ,
+        _test_cid, _test_req_timestamp, request_ctx,
         MagicMock(), _test_user_agent, _test_remote_addr)
 
 # ################################################################################################################################
@@ -203,12 +203,12 @@ class DispatchMethodCheckTestCase(unittest.TestCase):
         """ An HTTP method not in http_methods_allowed returns a JSON error and sets 405 status.
         """
         ctx = _make_dispatcher(http_methods_allowed=['GET', 'POST'])
-        wsgi_environ = _make_wsgi_environ({'REQUEST_METHOD': 'DELETE'})
+        request_ctx = _make_request_ctx({'REQUEST_METHOD': 'DELETE'})
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIn('Unsupported HTTP method', result)
-        self.assertIn('405', wsgi_environ['zato.http.response.status'])
+        self.assertIn('405', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
@@ -216,9 +216,9 @@ class DispatchMethodCheckTestCase(unittest.TestCase):
         """ A supported HTTP method does not trigger the 405 guard.
         """
         ctx = _make_dispatcher(http_methods_allowed=['GET'])
-        wsgi_environ = _make_wsgi_environ({'REQUEST_METHOD': 'GET'})
+        request_ctx = _make_request_ctx({'REQUEST_METHOD': 'GET'})
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertNotIn('Unsupported HTTP method', str(result))
 
@@ -237,13 +237,13 @@ class DispatchURLMatchTestCase(unittest.TestCase):
         ctx = _make_dispatcher()
         ctx.mock_url_data.match.return_value = (None, False)
         ctx.mock_url_data.get_allow_methods.return_value = set()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         expected_response = response_404.format(_test_cid)
         self.assertEqual(result, expected_response)
-        self.assertIn('404', wsgi_environ['zato.http.response.status'])
+        self.assertIn('404', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
@@ -254,40 +254,40 @@ class DispatchURLMatchTestCase(unittest.TestCase):
         ctx = _make_dispatcher()
         ctx.mock_url_data.match.return_value = (None, False)
         ctx.mock_url_data.get_allow_methods.return_value = {'POST', 'PATCH'}
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         expected_response = response_405.format(_test_cid)
         self.assertEqual(result, expected_response)
-        self.assertIn('405', wsgi_environ['zato.http.response.status'])
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['Allow'], 'PATCH, POST')
+        self.assertIn('405', request_ctx['zato.http.response.status'])
+        self.assertEqual(request_ctx['zato.http.response.headers']['Allow'], 'PATCH, POST')
 
 # ################################################################################################################################
 
     def test_url_match_sets_channel_item_in_environ(self) -> 'None':
-        """ A successful URL match stores channel_item in wsgi_environ.
+        """ A successful URL match stores channel_item in request_ctx.
         """
         channel_item = _make_channel_item()
         ctx = _make_dispatcher(channel_item=channel_item)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIs(wsgi_environ['zato.channel_item'], channel_item)
+        self.assertIs(request_ctx['zato.channel_item'], channel_item)
 
 # ################################################################################################################################
 
     def test_raw_request_stored_in_environ(self) -> 'None':
-        """ The raw request payload is stored in wsgi_environ['zato.http.raw_request'].
+        """ The raw request payload is stored in request_ctx['zato.http.raw_request'].
         """
         ctx = _make_dispatcher()
         payload_bytes = b'test-payload-data'
-        wsgi_environ = _make_wsgi_environ({'zato.http.raw_request': payload_bytes})
+        request_ctx = _make_request_ctx({'zato.http.raw_request': payload_bytes})
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertEqual(wsgi_environ['zato.http.raw_request'], payload_bytes)
+        self.assertEqual(request_ctx['zato.http.raw_request'], payload_bytes)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -303,11 +303,11 @@ class DispatchInactiveChannelTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'is_active': False})
         ctx = _make_dispatcher(channel_item=channel_item)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('404', wsgi_environ['zato.http.response.status'])
+        self.assertIn('404', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -323,9 +323,9 @@ class DispatchSecurityTestCase(unittest.TestCase):
         """
         sec = _make_sec(sec_def='basic_auth_def')
         ctx = _make_dispatcher(sec=sec)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         ctx.mock_check_security.assert_called_once()
 
@@ -336,9 +336,9 @@ class DispatchSecurityTestCase(unittest.TestCase):
         """
         sec = _make_sec(sec_def=ZATO_NONE)
         ctx = _make_dispatcher(sec=sec)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         ctx.mock_check_security.assert_not_called()
 
@@ -350,12 +350,12 @@ class DispatchSecurityTestCase(unittest.TestCase):
         sec = _make_sec(sec_def='basic_auth_def')
         ctx = _make_dispatcher(sec=sec)
         ctx.mock_check_security.side_effect = Unauthorized(_test_cid, 'Invalid credentials', 'Basic realm="test"')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('401', wsgi_environ['zato.http.response.status'])
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['WWW-Authenticate'], 'Basic realm="test"')
+        self.assertIn('401', request_ctx['zato.http.response.status'])
+        self.assertEqual(request_ctx['zato.http.response.headers']['WWW-Authenticate'], 'Basic realm="test"')
 
 # ################################################################################################################################
 
@@ -365,12 +365,12 @@ class DispatchSecurityTestCase(unittest.TestCase):
         sec = _make_sec(sec_def='basic_auth_def')
         ctx = _make_dispatcher(sec=sec)
         ctx.mock_check_security.side_effect = Unauthorized(_test_cid, 'Invalid credentials', None)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('401', wsgi_environ['zato.http.response.status'])
-        self.assertNotIn('WWW-Authenticate', wsgi_environ['zato.http.response.headers'])
+        self.assertIn('401', request_ctx['zato.http.response.status'])
+        self.assertNotIn('WWW-Authenticate', request_ctx['zato.http.response.headers'])
 
 # ################################################################################################################################
 
@@ -380,11 +380,11 @@ class DispatchSecurityTestCase(unittest.TestCase):
         sec = _make_sec(sec_def='basic_auth_def')
         ctx = _make_dispatcher(sec=sec)
         ctx.mock_check_security.side_effect = Forbidden(_test_cid, 'Not allowed')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('403', wsgi_environ['zato.http.response.status'])
+        self.assertIn('403', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -405,10 +405,10 @@ class DispatchSecurityGroupsTestCase(unittest.TestCase):
         sec = _make_sec()
         ctx = _make_dispatcher(channel_item=channel_item, sec=sec)
 
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
         with patch.object(ctx.dispatcher, 'check_security_via_groups') as mock_check:
-            _ = _dispatch(ctx, wsgi_environ)
+            _ = _dispatch(ctx, request_ctx)
             mock_check.assert_called_once()
 
 # ################################################################################################################################
@@ -423,10 +423,10 @@ class DispatchSecurityGroupsTestCase(unittest.TestCase):
         sec = _make_sec()
         ctx = _make_dispatcher(channel_item=channel_item, sec=sec)
 
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
         with patch.object(ctx.dispatcher, 'check_security_via_groups') as mock_check:
-            _ = _dispatch(ctx, wsgi_environ)
+            _ = _dispatch(ctx, request_ctx)
             mock_check.assert_not_called()
 
 # ################################################################################################################################
@@ -436,10 +436,10 @@ class DispatchSecurityGroupsTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'security_groups_ctx': None})
         ctx = _make_dispatcher(channel_item=channel_item)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
         with patch.object(ctx.dispatcher, 'check_security_via_groups') as mock_check:
-            _ = _dispatch(ctx, wsgi_environ)
+            _ = _dispatch(ctx, request_ctx)
             mock_check.assert_not_called()
 
 # ################################################################################################################################
@@ -458,12 +458,12 @@ class DispatchFormDataTestCase(unittest.TestCase):
         mock_get_form_data.return_value = {'field1': 'value1'}
         channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
         ctx = _make_dispatcher(channel_item=channel_item)
-        wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
+        request_ctx = _make_request_ctx({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         mock_get_form_data.assert_called_once()
-        self.assertEqual(wsgi_environ['zato.oauth.post_data'], {'field1': 'value1'})
+        self.assertEqual(request_ctx['zato.oauth.post_data'], {'field1': 'value1'})
 
 # ################################################################################################################################
 
@@ -473,9 +473,9 @@ class DispatchFormDataTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'data_format': DATA_FORMAT.JSON})
         ctx = _make_dispatcher(channel_item=channel_item)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         mock_get_form_data.assert_not_called()
 
@@ -493,9 +493,9 @@ class DispatchChannelParamsTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'merge_url_params_req': True})
         ctx = _make_dispatcher(channel_item=channel_item)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         ctx.mock_create_channel_params.assert_called_once()
 
@@ -506,9 +506,9 @@ class DispatchChannelParamsTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'merge_url_params_req': False})
         ctx = _make_dispatcher(channel_item=channel_item)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         ctx.mock_create_channel_params.assert_not_called()
 
@@ -526,12 +526,12 @@ class DispatchHappyPathTestCase(unittest.TestCase):
         """
         response = _make_response(payload=b'ok', content_type='application/json', status_code=200)
         ctx = _make_dispatcher(response=response)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['Content-Type'], 'application/json')
-        self.assertEqual(wsgi_environ['zato.http.response.status'], status_response[200])
+        self.assertEqual(request_ctx['zato.http.response.headers']['Content-Type'], 'application/json')
+        self.assertEqual(request_ctx['zato.http.response.status'], status_response[200])
 
 # ################################################################################################################################
 
@@ -540,9 +540,9 @@ class DispatchHappyPathTestCase(unittest.TestCase):
         """
         response = _make_response(payload=b'raw response body')
         ctx = _make_dispatcher(response=response)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertEqual(result, b'raw response body')
 
@@ -560,11 +560,11 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         ctx.mock_handle.side_effect = BadRequest(_test_cid, 'Bad input', needs_msg=True)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('400', wsgi_environ['zato.http.response.status'])
+        self.assertIn('400', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
@@ -575,9 +575,9 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         ctx = _make_dispatcher(channel_item=channel_item)
         error_msg = 'Detailed admin error info'
         ctx.mock_handle.side_effect = BadRequest(_test_cid, error_msg)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIn(error_msg, result)
 
@@ -589,9 +589,9 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         ctx = _make_dispatcher()
         error_msg = 'Validation failed for field X'
         ctx.mock_handle.side_effect = BadRequest(_test_cid, error_msg, needs_msg=True)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIn(error_msg, result)
 
@@ -602,9 +602,9 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         ctx.mock_handle.side_effect = BadRequest(_test_cid, 'secret details', needs_msg=False)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIn('Bad request', result)
         self.assertNotIn('secret details', result)
@@ -616,11 +616,11 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         ctx.mock_handle.side_effect = NotFound(_test_cid, 'Not here')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('404', wsgi_environ['zato.http.response.status'])
+        self.assertIn('404', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
@@ -629,11 +629,11 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         ctx.mock_handle.side_effect = MethodNotAllowed(_test_cid, 'Method not allowed')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('405', wsgi_environ['zato.http.response.status'])
+        self.assertIn('405', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
@@ -642,11 +642,11 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         ctx.mock_handle.side_effect = Forbidden(_test_cid, 'Forbidden access')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('403', wsgi_environ['zato.http.response.status'])
+        self.assertIn('403', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
@@ -655,11 +655,11 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         ctx.mock_handle.side_effect = TooManyRequests(_test_cid, 'Rate limited')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('429', wsgi_environ['zato.http.response.status'])
+        self.assertIn('429', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
@@ -668,11 +668,11 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         ctx.mock_handle.side_effect = ElementMissing('/request_id')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('400', wsgi_environ['zato.http.response.status'])
+        self.assertIn('400', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
@@ -681,11 +681,11 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         ctx.mock_handle.side_effect = BackendInvocationError(_test_cid, 'Backend failed', needs_msg=True)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('400', wsgi_environ['zato.http.response.status'])
+        self.assertIn('400', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
@@ -694,11 +694,11 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         ctx.mock_handle.side_effect = Exception('Test error message')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('500', wsgi_environ['zato.http.response.status'])
+        self.assertIn('500', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
@@ -708,11 +708,11 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'name': MISC.DefaultAdminInvokeChannel})
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = Exception('Admin error details')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('X-Zato-Message', wsgi_environ['zato.http.response.headers'])
+        self.assertIn('X-Zato-Message', request_ctx['zato.http.response.headers'])
 
 # ################################################################################################################################
 
@@ -721,9 +721,9 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher(return_tracebacks=False, default_error_message='Default error message')
         ctx.mock_handle.side_effect = Exception('Internal error details')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIn('Default error message', result)
 
@@ -734,9 +734,9 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher(return_tracebacks=True)
         ctx.mock_handle.side_effect = Exception('Test error details')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIn('Test error details', str(result))
 
@@ -747,10 +747,10 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         ctx.mock_handle.side_effect = ServiceMissingException(_test_cid, 'Service not deployed')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
         with patch('zato.server.connection.http_soap.channel.logger') as mock_logger:
-            _ = _dispatch(ctx, wsgi_environ)
+            _ = _dispatch(ctx, request_ctx)
 
             # .. the info-level traceback log must not be called for ServiceMissingException ..
             for call_item in mock_logger.info.call_args_list:
@@ -765,11 +765,11 @@ class DispatchErrorHandlingTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'data_format': DATA_FORMAT.JSON})
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = Exception('Test error message')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['Content-Type'], CONTENT_TYPE['JSON'])
+        self.assertEqual(request_ctx['zato.http.response.headers']['Content-Type'], CONTENT_TYPE['JSON'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -781,11 +781,11 @@ class DispatchFinallyBlockTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def test_response_headers_merged_on_success(self) -> 'None':
-        """ Response headers from the container are merged into wsgi_environ on success.
+        """ Response headers from the container are merged into request_ctx on success.
         """
         response = _make_response()
         ctx = _make_dispatcher(response=response)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
         original_handle = ctx.mock_handle
 
@@ -796,9 +796,9 @@ class DispatchFinallyBlockTestCase(unittest.TestCase):
 
         ctx.mock_handle.side_effect = handle_with_headers
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['X-Custom-Header'], 'custom-value')
+        self.assertEqual(request_ctx['zato.http.response.headers']['X-Custom-Header'], 'custom-value')
 
 # ################################################################################################################################
 
@@ -806,7 +806,7 @@ class DispatchFinallyBlockTestCase(unittest.TestCase):
         """ Response headers from the container are merged even when an exception occurs.
         """
         ctx = _make_dispatcher()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
         def handle_with_headers_and_error(*args:'any_', **kwargs:'any_') -> 'None':
             container = args[9]
@@ -815,9 +815,9 @@ class DispatchFinallyBlockTestCase(unittest.TestCase):
 
         ctx.mock_handle.side_effect = handle_with_headers_and_error
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['X-Error-Header'], 'error-value')
+        self.assertEqual(request_ctx['zato.http.response.headers']['X-Error-Header'], 'error-value')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -833,10 +833,10 @@ class DispatchLoggingTestCase(unittest.TestCase):
         """ When logger info is enabled and path is not in rest_log_ignore, logger.info is called.
         """
         ctx = _make_dispatcher(rest_log_ignore=set())
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
         with patch('zato.server.connection.http_soap.channel.logger') as mock_logger:
-            _ = _dispatch(ctx, wsgi_environ)
+            _ = _dispatch(ctx, request_ctx)
 
             info_calls = [str(call_item) for call_item in mock_logger.info.call_args_list]
             found = any('REST cha' in call_item for call_item in info_calls)
@@ -849,10 +849,10 @@ class DispatchLoggingTestCase(unittest.TestCase):
         """ When the path is in rest_log_ignore, the REST request log line is not emitted.
         """
         ctx = _make_dispatcher(rest_log_ignore={'/test/path'})
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
         with patch('zato.server.connection.http_soap.channel.logger') as mock_logger:
-            _ = _dispatch(ctx, wsgi_environ)
+            _ = _dispatch(ctx, request_ctx)
 
             info_calls = [str(call_item) for call_item in mock_logger.info.call_args_list]
             found = any('REST cha' in call_item for call_item in info_calls)
@@ -865,10 +865,10 @@ class DispatchLoggingTestCase(unittest.TestCase):
         """ When logger info is disabled, the REST request log line is not emitted.
         """
         ctx = _make_dispatcher()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
         with patch('zato.server.connection.http_soap.channel.logger') as mock_logger:
-            _ = _dispatch(ctx, wsgi_environ)
+            _ = _dispatch(ctx, request_ctx)
 
             info_calls = [str(call_item) for call_item in mock_logger.info.call_args_list]
             found = any('REST cha' in call_item for call_item in info_calls)
@@ -899,7 +899,7 @@ class DispatchLoggingContextTestCase(unittest.TestCase):
         the new request's cid and service name, not the previous request's.
         """
         ctx = _make_dispatcher(rest_log_ignore=set())
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
         observed = {}
 
@@ -909,7 +909,7 @@ class DispatchLoggingContextTestCase(unittest.TestCase):
 
         with patch('zato.server.connection.http_soap.channel.logger') as mock_logger:
             mock_logger.info.side_effect = capture_context
-            _ = _dispatch(ctx, wsgi_environ)
+            _ = _dispatch(ctx, request_ctx)
 
         self.assertEqual(observed['cid'], _test_cid)
         self.assertEqual(observed['service_name'], 'test.service')
@@ -921,9 +921,9 @@ class DispatchLoggingContextTestCase(unittest.TestCase):
         so an idle, pooled greenlet does not hold this request's context.
         """
         ctx = _make_dispatcher()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         self.assertEqual(current_cid.get(), 'zcid-previous-9999')
         self.assertEqual(current_service_name.get(), 'previous.service')
@@ -935,9 +935,9 @@ class DispatchLoggingContextTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         ctx.mock_handle.side_effect = Exception('Test error message')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         self.assertEqual(current_cid.get(), 'zcid-previous-9999')
         self.assertEqual(current_service_name.get(), 'previous.service')
@@ -955,9 +955,9 @@ class DispatchHTTPAcceptTestCase(unittest.TestCase):
         """ The '*' in HTTP_ACCEPT is replaced with the internal accept-any marker.
         """
         ctx = _make_dispatcher()
-        wsgi_environ = _make_wsgi_environ({'HTTP_ACCEPT': '*/*'})
+        request_ctx = _make_request_ctx({'HTTP_ACCEPT': '*/*'})
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         call_args = ctx.mock_url_data.match.call_args[0]
         http_accept_arg = call_args[2]
@@ -966,13 +966,13 @@ class DispatchHTTPAcceptTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def test_missing_http_accept_uses_default(self) -> 'None':
-        """ When HTTP_ACCEPT is missing from wsgi_environ, the default accept-any is used.
+        """ When HTTP_ACCEPT is missing from request_ctx, the default accept-any is used.
         """
         ctx = _make_dispatcher()
-        wsgi_environ = _make_wsgi_environ()
-        del wsgi_environ['HTTP_ACCEPT']
+        request_ctx = _make_request_ctx()
+        del request_ctx['HTTP_ACCEPT']
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         call_args = ctx.mock_url_data.match.call_args[0]
         http_accept_arg = call_args[2]
@@ -988,12 +988,12 @@ class DispatchRequestMethodTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def test_request_method_passed_to_match(self) -> 'None':
-        """ REQUEST_METHOD from wsgi_environ is passed to url_data.match as a str.
+        """ REQUEST_METHOD from request_ctx is passed to url_data.match as a str.
         """
         ctx = _make_dispatcher()
-        wsgi_environ = _make_wsgi_environ({'REQUEST_METHOD': 'POST'})
+        request_ctx = _make_request_ctx({'REQUEST_METHOD': 'POST'})
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         call_args = ctx.mock_url_data.match.call_args[0]
         self.assertEqual(call_args[1], 'POST')
@@ -1013,23 +1013,23 @@ class DispatchHypothesisTestCase(unittest.TestCase):
         http_accept=st.text(min_size=1, max_size=100),
     )
     @hypothesis_settings(max_examples=50, suppress_health_check=[HealthCheck.differing_executors])
-    def test_fuzz_wsgi_environ_values(
+    def test_fuzz_request_ctx_values(
         self,
         request_method:'str',
         path_info:'str',
         http_accept:'str',
     ) -> 'None':
-        """ Fuzz wsgi_environ values - dispatch never raises an unhandled exception.
+        """ Fuzz request_ctx values - dispatch never raises an unhandled exception.
         """
         ctx = _make_dispatcher()
-        wsgi_environ = _make_wsgi_environ({
+        request_ctx = _make_request_ctx({
             'REQUEST_METHOD': request_method,
             'PATH_INFO': path_info,
             'RAW_URI': path_info,
             'HTTP_ACCEPT': http_accept,
         })
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIsNotNone(result)
 
@@ -1041,9 +1041,9 @@ class DispatchHypothesisTestCase(unittest.TestCase):
         """ Fuzz the request payload - dispatch never raises an unhandled exception.
         """
         ctx = _make_dispatcher()
-        wsgi_environ = _make_wsgi_environ({'wsgi.input': BytesIO(payload)})
+        request_ctx = _make_request_ctx({'wsgi.input': BytesIO(payload)})
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIsNotNone(result)
 
@@ -1071,9 +1071,9 @@ class DispatchHypothesisTestCase(unittest.TestCase):
 
         response = _make_response(payload=b'ok')
         ctx = _make_dispatcher(channel_item=channel_item, response=response)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIsNotNone(result)
 
@@ -1103,10 +1103,10 @@ class DispatchHypothesisTestCase(unittest.TestCase):
 
         channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
         ctx = _make_dispatcher(channel_item=channel_item, sec=sec)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
         with patch.object(ctx.dispatcher, 'check_security_via_groups'):
-            result = _dispatch(ctx, wsgi_environ)
+            result = _dispatch(ctx, request_ctx)
 
         self.assertIsNotNone(result)
 
@@ -1136,9 +1136,9 @@ class DispatchHypothesisTestCase(unittest.TestCase):
 
         ctx = _make_dispatcher()
         ctx.mock_handle.side_effect = error_map[error_type]
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIsNotNone(result)
 
@@ -1158,9 +1158,9 @@ class DispatchDefaultAdminChannelTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'name': MISC.DefaultAdminInvokeChannel})
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = BadRequest(_test_cid, 'Admin error details')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIn('Admin error details', result)
 
@@ -1174,9 +1174,9 @@ class DispatchDefaultAdminChannelTestCase(unittest.TestCase):
         exc = BadRequest(_test_cid, 'Internal error details')
         exc.needs_msg = False
         ctx.mock_handle.side_effect = exc
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIn('Bad request', result)
         self.assertNotIn('Internal error details', result)
@@ -1191,9 +1191,9 @@ class DispatchDefaultAdminChannelTestCase(unittest.TestCase):
         exc = BadRequest(_test_cid, 'Visible error')
         exc.needs_msg = True
         ctx.mock_handle.side_effect = exc
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIn('Visible error', result)
 
@@ -1205,11 +1205,11 @@ class DispatchDefaultAdminChannelTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'name': MISC.DefaultAdminInvokeChannel})
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = Exception('Admin error details')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertIn('X-Zato-Message', wsgi_environ['zato.http.response.headers'])
+        self.assertIn('X-Zato-Message', request_ctx['zato.http.response.headers'])
 
 # ################################################################################################################################
 
@@ -1219,11 +1219,11 @@ class DispatchDefaultAdminChannelTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'name': 'regular.channel'})
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = Exception('Test error message')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertNotIn('X-Zato-Message', wsgi_environ['zato.http.response.headers'])
+        self.assertNotIn('X-Zato-Message', request_ctx['zato.http.response.headers'])
 
 # ################################################################################################################################
 
@@ -1236,9 +1236,9 @@ class DispatchDefaultAdminChannelTestCase(unittest.TestCase):
         exc = BadRequest(_test_cid, 'Internal error details')
         exc.needs_msg = False
         ctx.mock_handle.side_effect = exc
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertNotIn('Internal error details', result)
         self.assertIn('Bad request', result)
@@ -1252,11 +1252,11 @@ class DispatchDefaultAdminChannelTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'name': 'aaa.channel'})
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = Exception('Test error message')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertNotIn('X-Zato-Message', wsgi_environ['zato.http.response.headers'])
+        self.assertNotIn('X-Zato-Message', request_ctx['zato.http.response.headers'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1274,12 +1274,12 @@ class DispatchErrorHandlerJSONTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'data_format': DATA_FORMAT.JSON})
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = Exception('Test error message')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         self.assertEqual(
-            wsgi_environ['zato.http.response.headers']['Content-Type'], CONTENT_TYPE['JSON'])
+            request_ctx['zato.http.response.headers']['Content-Type'], CONTENT_TYPE['JSON'])
 
 # ################################################################################################################################
 
@@ -1290,12 +1290,12 @@ class DispatchErrorHandlerJSONTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'data_format': 'csv'})
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = Exception('Test error message')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         self.assertNotEqual(
-            wsgi_environ['zato.http.response.headers'].get('Content-Type'), CONTENT_TYPE['JSON'])
+            request_ctx['zato.http.response.headers'].get('Content-Type'), CONTENT_TYPE['JSON'])
 
 # ################################################################################################################################
 
@@ -1306,12 +1306,12 @@ class DispatchErrorHandlerJSONTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'data_format': 'xml'})
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = Exception('Test error message')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         self.assertNotEqual(
-            wsgi_environ['zato.http.response.headers'].get('Content-Type'), CONTENT_TYPE['JSON'])
+            request_ctx['zato.http.response.headers'].get('Content-Type'), CONTENT_TYPE['JSON'])
 
 # ################################################################################################################################
 
@@ -1321,9 +1321,9 @@ class DispatchErrorHandlerJSONTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'data_format': DATA_FORMAT.JSON, 'transport': 'plain_http'})
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = ValueError('Some error')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIsNotNone(result)
 
@@ -1336,10 +1336,10 @@ class DispatchErrorHandlerJSONTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'data_format': 'unknown-format', 'transport': 'unknown-transport'})
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = ValueError('err')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         mock_logger.isEnabledFor.return_value = True
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         mock_logger.isEnabledFor.assert_any_call(TRACE1)
 
@@ -1352,10 +1352,10 @@ class DispatchErrorHandlerJSONTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'data_format': 'unknown-format', 'transport': 'unknown-transport'})
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = ValueError('err')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         mock_logger.isEnabledFor.return_value = False
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         mock_logger.log.assert_not_called()
 
@@ -1374,12 +1374,12 @@ class DispatchExceptionFormattingTestCase(unittest.TestCase):
         channel_item = _make_channel_item()
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = ServiceMissingException(_test_cid, 'Service not deployed')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIsNotNone(result)
-        self.assertIn('500', wsgi_environ['zato.http.response.status'])
+        self.assertIn('500', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
@@ -1391,9 +1391,9 @@ class DispatchExceptionFormattingTestCase(unittest.TestCase):
         channel_item = _make_channel_item()
         ctx = _make_dispatcher(channel_item=channel_item)
         ctx.mock_handle.side_effect = Exception('Test error message')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
         mock_stack_format.assert_called_once()
         call_kwargs = mock_stack_format.call_args[1]
@@ -1409,9 +1409,9 @@ class DispatchExceptionFormattingTestCase(unittest.TestCase):
         channel_item = _make_channel_item()
         ctx = _make_dispatcher(channel_item=channel_item, return_tracebacks=True)
         ctx.mock_handle.side_effect = Exception('Test error details')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertIn('Test error details', str(result))
 
@@ -1423,9 +1423,9 @@ class DispatchExceptionFormattingTestCase(unittest.TestCase):
         channel_item = _make_channel_item()
         ctx = _make_dispatcher(channel_item=channel_item, return_tracebacks=False, default_error_message='Default error message')
         ctx.mock_handle.side_effect = Exception('Internal error details')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = _dispatch(ctx, wsgi_environ)
+        result = _dispatch(ctx, request_ctx)
 
         self.assertNotIn('Internal error details', str(result))
 
@@ -1442,11 +1442,11 @@ class DispatchExceptionFormattingTestCase(unittest.TestCase):
             raise Exception('Test error message')
 
         ctx.mock_handle.side_effect = side_effect
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = _dispatch(ctx, wsgi_environ)
+        _ = _dispatch(ctx, request_ctx)
 
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['X-Custom-Header'], 'custom-value')
+        self.assertEqual(request_ctx['zato.http.response.headers']['X-Custom-Header'], 'custom-value')
 
 # ################################################################################################################################
 # ################################################################################################################################

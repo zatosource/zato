@@ -18,6 +18,7 @@ from zato.admin.web.views.audit_log.columns import _data_preview_length, _row_nu
 from zato.admin.web.views.audit_log.sources import _source_resubmit, _source_row_enrich
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table
 from zato.common.audit_log.common import AuditEvent, AuditSource
+from zato.common.audit_log.service import Attr_Channel
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,6 +97,10 @@ def _hydrate_rows(connection:'any_', rows:'anylist') -> 'None':
         # .. a file transfer row carries how many deliveries share its checksum ..
         if source == AuditSource.File_Outgoing:
             _attach_checksum_counts(connection, source_rows)
+
+        # .. a service row carries the fields the service itself wrote down ..
+        if source == AuditSource.Service:
+            _attach_note_fields(connection, source_rows)
 
         # .. and a row can only carry the resubmitted marker on a source that has resubmits at all.
         if source in _source_resubmit:
@@ -259,6 +264,36 @@ def _attach_attr_columns(connection:'any_', source:'str', rows:'anylist') -> 'No
     for event_id, name, value in result:
         row = row_by_event_id[event_id]
         row[name] = value
+
+# ################################################################################################################################
+
+def _attach_note_fields(connection:'any_', rows:'anylist') -> 'None':
+    """ Fills the fields a service wrote down with each of its notes - every attr of the page's
+    service events except the channel the invocation itself records, one query for the page,
+    an empty list on a row that has none.
+    """
+    row_by_event_id:'anydict' = {}
+
+    for row in rows:
+        row['fields'] = []
+        row_by_event_id[row['id']] = row
+
+    if not row_by_event_id:
+        return
+
+    is_wanted_event = event_attr_table.c.event_id.in_(row_by_event_id)
+    is_note_field = event_attr_table.c.name != Attr_Channel
+
+    statement = select(event_attr_table.c.event_id, event_attr_table.c.name, event_attr_table.c.value)
+    statement = statement.where(is_wanted_event)
+    statement = statement.where(is_note_field)
+    statement = statement.order_by(event_attr_table.c.id)
+
+    result = connection.execute(statement)
+
+    for event_id, name, value in result:
+        row = row_by_event_id[event_id]
+        row['fields'].append({'name': name, 'value': value})
 
 # ################################################################################################################################
 

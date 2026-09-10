@@ -422,7 +422,7 @@ class ConfigManager(_ConfigManagerBase):
 
         # During a config reload, the previous URLData instance is still registered with the dispatcher,
         # so it needs to be unregistered first - otherwise each security event would be handled twice,
-        # e.g. API key headers would be transformed to their WSGI form two times ('HTTP_HTTP_X_API_KEY').
+        # e.g. API key headers would be transformed to their HTTP_ key form two times ('HTTP_HTTP_X_API_KEY').
         if self.request_dispatcher:
             dispatcher.unlisten(self.request_dispatcher.url_data.dispatcher_callback)
 
@@ -926,7 +926,7 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def update_apikeys(self) -> 'None':
-        """ API keys need to be upper-cased and in the format that WSGI environment will have them in.
+        """ API keys need to be upper-cased and in the HTTP_ key format the request context holds headers in.
         """
         for config_dict in self.config_store.apikey.values():
             config_dict.config.header = config_dict.config.get('header') or API_Key.Default_Header
@@ -2196,7 +2196,7 @@ class ConfigManager(_ConfigManagerBase):
             'is_async': kwargs.get('is_async'),
             'callback': kwargs.get('callback'),
             'zato_ctx': kwargs.get('zato_ctx'),
-            'wsgi_environ': kwargs.get('wsgi_environ'),
+            'request_ctx': kwargs.get('request_ctx'),
             'channel_item': kwargs.get('channel_item'),
         }, channel, '', needs_response=True, serialize=serialize, skip_response_elem=kwargs.get('skip_response_elem'))
 
@@ -2208,8 +2208,8 @@ class ConfigManager(_ConfigManagerBase):
         zato_ctx = msg.get('zato_ctx') or {}
         cid = msg['cid']
 
-        # The default WSGI environment that always exists ..
-        wsgi_environ = {
+        # The request context that always exists ..
+        request_ctx = {
             'zato.request_ctx.async_msg':msg,
             'zato.request_ctx.in_reply_to':msg.get('in_reply_to'),
             'zato.request_ctx.fanout_cid':zato_ctx.get('fanout_cid'),
@@ -2221,14 +2221,14 @@ class ConfigManager(_ConfigManagerBase):
             # Only channels that have one give us a channel item, e.g. the scheduler has none
             channel_item = zato_ctx.get('zato.channel_item')
             if channel_item is not None:
-                wsgi_environ['zato.channel_item'] = channel_item
+                request_ctx['zato.channel_item'] = channel_item
 
-            wsgi_environ['zato.zato_ctx'] = zato_ctx
+            request_ctx['zato.zato_ctx'] = zato_ctx
 
-        # Extra WSGI environ keys given by the caller, e.g. queue bridge message headers
-        extra_environ = msg.get('wsgi_environ')
-        if extra_environ:
-            wsgi_environ.update(extra_environ)
+        # Extra request context keys given by the caller, e.g. queue bridge message headers
+        extra_request_ctx = msg.get('request_ctx')
+        if extra_request_ctx:
+            request_ctx.update(extra_request_ctx)
 
         data_format = msg.get('data_format') or _data_format_dict
         transport = msg.get('transport')
@@ -2249,7 +2249,7 @@ class ConfigManager(_ConfigManagerBase):
 
         response = service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.config_dispatcher, self, cid,
-            job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
+            job_type=msg.get('job_type'), request_ctx=request_ctx,
             environ=msg.get('environ'))
 
         if skip_response_elem:

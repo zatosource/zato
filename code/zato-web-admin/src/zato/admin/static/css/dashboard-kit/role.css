@@ -28,6 +28,13 @@
     background: rgba(161, 103, 15, 0.1);
 }
 
+/* A service invocation - the service that ran, whichever way it was invoked */
+
+.dashboard-role-service {
+    color: #6a3fb5;
+    background: rgba(106, 63, 181, 0.1);
+}
+
 /* A file transfer event - a file moving, which asks for nothing and answers nothing */
 
 .dashboard-role-transfer {
@@ -67,6 +74,11 @@
 .dashboard-role-dark.dashboard-role-job {
     color: #e8c46f;
     background: rgba(232, 196, 111, 0.18);
+}
+
+.dashboard-role-dark.dashboard-role-service {
+    color: #b899f0;
+    background: rgba(184, 153, 240, 0.18);
 }
 
 .dashboard-role-dark.dashboard-role-transfer {

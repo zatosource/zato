@@ -72,7 +72,7 @@ def make_ctx(cache_api:'any_', key:'str', is_admitted:'bool', coalesce_timeout:'
     ctx.skip_lookup = False
     ctx.is_admitted = is_admitted
     ctx.if_none_match = ''
-    ctx.wsgi_environ = {'zato.http.response.headers': {}}
+    ctx.request_ctx = {'zato.http.response.headers': {}}
 
     return ctx
 

@@ -93,7 +93,7 @@ def _make_sec(sec_def:'any_'=ZATO_NONE) -> 'MagicMock':
 
 # ################################################################################################################################
 
-def _make_wsgi_environ(overrides:'anydict | None'=None) -> 'anydict':
+def _make_request_ctx(overrides:'anydict | None'=None) -> 'anydict':
     """ Builds a minimal WSGI environ dict.
     """
     out:'anydict' = {
@@ -207,9 +207,9 @@ class ExtractPostDataTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'data_format': DATA_FORMAT.JSON})
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
+        result = ctx.dispatcher._extract_post_data(channel_item, request_ctx)
 
         self.assertEqual(result, {})
 
@@ -220,9 +220,9 @@ class ExtractPostDataTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
-        wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'application/json'})
+        request_ctx = _make_request_ctx({'CONTENT_TYPE': 'application/json'})
 
-        result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
+        result = ctx.dispatcher._extract_post_data(channel_item, request_ctx)
 
         self.assertEqual(result, {})
 
@@ -235,9 +235,9 @@ class ExtractPostDataTestCase(unittest.TestCase):
         mock_get_form_data.return_value = {'key': 'value'}
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
-        wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
+        request_ctx = _make_request_ctx({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
 
-        result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
+        result = ctx.dispatcher._extract_post_data(channel_item, request_ctx)
 
         self.assertEqual(result, {'key': 'value'})
 
@@ -245,27 +245,27 @@ class ExtractPostDataTestCase(unittest.TestCase):
 
     @patch('zato.server.connection.http_soap.channel.util_get_form_data')
     def test_form_data_sets_oauth_post_data(self, mock_get_form_data:'MagicMock') -> 'None':
-        """ When form data is extracted, it is also stored in wsgi_environ under 'zato.oauth.post_data'.
+        """ When form data is extracted, it is also stored in request_ctx under 'zato.oauth.post_data'.
         """
         mock_get_form_data.return_value = {'token': 'abc'}
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
-        wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
+        request_ctx = _make_request_ctx({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
 
-        _ = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
+        _ = ctx.dispatcher._extract_post_data(channel_item, request_ctx)
 
-        self.assertEqual(wsgi_environ['zato.oauth.post_data'], {'token': 'abc'})
+        self.assertEqual(request_ctx['zato.oauth.post_data'], {'token': 'abc'})
 
 # ################################################################################################################################
 
     def test_form_data_no_content_type_header_returns_empty_dict(self) -> 'None':
-        """ When CONTENT_TYPE is missing from wsgi_environ, an empty dict is returned.
+        """ When CONTENT_TYPE is missing from request_ctx, an empty dict is returned.
         """
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
+        result = ctx.dispatcher._extract_post_data(channel_item, request_ctx)
 
         self.assertEqual(result, {})
 
@@ -278,9 +278,9 @@ class ExtractPostDataTestCase(unittest.TestCase):
         mock_get_form_data.return_value = {'file': 'data'}
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
-        wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'multipart/form-data; boundary=---abc'})
+        request_ctx = _make_request_ctx({'CONTENT_TYPE': 'multipart/form-data; boundary=---abc'})
 
-        result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
+        result = ctx.dispatcher._extract_post_data(channel_item, request_ctx)
 
         self.assertEqual(result, {'file': 'data'})
 
@@ -299,11 +299,11 @@ class CheckSecurityTestCase(unittest.TestCase):
         ctx = _make_dispatcher(sec=_make_sec(ZATO_NONE))
         channel_item = _make_channel_item()
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
 
         ctx.mock_check_security.assert_not_called()
 
@@ -317,15 +317,15 @@ class CheckSecurityTestCase(unittest.TestCase):
         ctx = _make_dispatcher(sec=sec)
         channel_item = _make_channel_item()
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
 
         ctx.mock_check_security.assert_called_once_with(
             sec, _test_cid, channel_item, meta.path_info,
-            b'payload', wsgi_environ, {}, worker_store, enforce_auth=True)
+            b'payload', request_ctx, {}, worker_store, enforce_auth=True)
 
 # ################################################################################################################################
 
@@ -337,12 +337,12 @@ class CheckSecurityTestCase(unittest.TestCase):
         ctx.mock_check_security.side_effect = Unauthorized(_test_cid, 'Bad creds', 'basic')
         channel_item = _make_channel_item()
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         with self.assertRaises(Unauthorized):
             ctx.dispatcher._check_security(
-                _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
+                _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
 
 # ################################################################################################################################
 
@@ -354,11 +354,11 @@ class CheckSecurityTestCase(unittest.TestCase):
         ctx.dispatcher.check_security_via_groups = mock_groups_check # type: ignore
         channel_item = _make_channel_item({'security_groups_ctx': None})
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
 
         mock_groups_check.assert_not_called()
 
@@ -376,11 +376,11 @@ class CheckSecurityTestCase(unittest.TestCase):
         ctx.dispatcher.check_security_via_groups = mock_groups_check # type: ignore
         channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
 
         mock_groups_check.assert_not_called()
 
@@ -397,14 +397,14 @@ class CheckSecurityTestCase(unittest.TestCase):
         ctx.dispatcher.check_security_via_groups = mock_groups_check # type: ignore
         channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
 
         mock_groups_check.assert_called_once_with(
-            _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+            _test_cid, 'test.channel', groups_ctx, request_ctx)
 
 # ################################################################################################################################
 
@@ -418,12 +418,12 @@ class CheckSecurityTestCase(unittest.TestCase):
         ctx.dispatcher.check_security_via_groups = MagicMock(side_effect=Forbidden(_test_cid, 'Denied')) # type: ignore
         channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         with self.assertRaises(Forbidden):
             ctx.dispatcher._check_security(
-                _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
+                _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
 
 # ################################################################################################################################
 
@@ -436,12 +436,12 @@ class CheckSecurityTestCase(unittest.TestCase):
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         with self.assertRaises(Forbidden):
             ctx.dispatcher._check_security(
-                _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
+                _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
 
 # ################################################################################################################################
 
@@ -455,11 +455,11 @@ class CheckSecurityTestCase(unittest.TestCase):
         ctx = _make_dispatcher(sec=sec)
         channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
 
         ctx.mock_check_security.assert_called_once()
 
@@ -478,11 +478,11 @@ class InvokeServiceTestCase(unittest.TestCase):
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'merge_url_params_req': True})
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
-            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
             b'payload', {}, worker_store, {})
 
         ctx.mock_create_channel_params.assert_called_once()
@@ -496,11 +496,11 @@ class InvokeServiceTestCase(unittest.TestCase):
         ctx = _make_dispatcher(response=response)
         channel_item = _make_channel_item({'merge_url_params_req': False})
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
-            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
             b'payload', {}, worker_store, {})
 
         call_args = ctx.mock_handle.call_args[0]
@@ -516,16 +516,16 @@ class InvokeServiceTestCase(unittest.TestCase):
         ctx = _make_dispatcher(response=response)
         channel_item = _make_channel_item()
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
         headers_container = {'x-custom': 'val'}
 
         _ = ctx.dispatcher._invoke_service(
-            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
             b'payload', {'key': 'val'}, worker_store, headers_container)
 
         ctx.mock_handle.assert_called_once_with(
-            _test_cid, '/test/path', channel_item, wsgi_environ,
+            _test_cid, '/test/path', channel_item, request_ctx,
             b'payload', worker_store,
             {'key': 'val'}, meta.path_info, {'param1': 'value1'}, headers_container)
 
@@ -538,11 +538,11 @@ class InvokeServiceTestCase(unittest.TestCase):
         ctx = _make_dispatcher(response=response)
         channel_item = _make_channel_item()
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         result = ctx.dispatcher._invoke_service(
-            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
             b'payload', {}, worker_store, {})
 
         self.assertIs(result, response)
@@ -550,20 +550,20 @@ class InvokeServiceTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def test_create_channel_params_called_with_correct_args(self) -> 'None':
-        """ create_channel_params is called with url_match, channel_item, wsgi_environ, payload, post_data.
+        """ create_channel_params is called with url_match, channel_item, request_ctx, payload, post_data.
         """
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'merge_url_params_req': True})
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
-            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
             b'payload', {'post': 'data'}, worker_store, {})
 
         ctx.mock_create_channel_params.assert_called_once_with(
-            '/test/path', channel_item, wsgi_environ, b'payload', {'post': 'data'})
+            '/test/path', channel_item, request_ctx, b'payload', {'post': 'data'})
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -579,24 +579,24 @@ class FormatResponseTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         response = _make_response(content_type='text/html')
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = ctx.dispatcher._format_response(_make_channel_item(), wsgi_environ, response)
+        _ = ctx.dispatcher._format_response(_make_channel_item(), request_ctx, response)
 
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['Content-Type'], 'text/html')
+        self.assertEqual(request_ctx['zato.http.response.headers']['Content-Type'], 'text/html')
 
 # ################################################################################################################################
 
     def test_merges_response_headers(self) -> 'None':
-        """ Response headers are merged into wsgi_environ response headers.
+        """ Response headers are merged into request_ctx response headers.
         """
         ctx = _make_dispatcher()
         response = _make_response(headers={'X-Custom': 'abc'})
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = ctx.dispatcher._format_response(_make_channel_item(), wsgi_environ, response)
+        _ = ctx.dispatcher._format_response(_make_channel_item(), request_ctx, response)
 
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['X-Custom'], 'abc')
+        self.assertEqual(request_ctx['zato.http.response.headers']['X-Custom'], 'abc')
 
 # ################################################################################################################################
 
@@ -605,11 +605,11 @@ class FormatResponseTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         response = _make_response(status_code=200)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = ctx.dispatcher._format_response(_make_channel_item(), wsgi_environ, response)
+        _ = ctx.dispatcher._format_response(_make_channel_item(), request_ctx, response)
 
-        self.assertEqual(wsgi_environ['zato.http.response.status'], status_response[200])
+        self.assertEqual(request_ctx['zato.http.response.status'], status_response[200])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -627,9 +627,9 @@ class HypothesisTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
-        wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': content_type})
+        request_ctx = _make_request_ctx({'CONTENT_TYPE': content_type})
 
-        result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
+        result = ctx.dispatcher._extract_post_data(channel_item, request_ctx)
 
         self.assertIsInstance(result, dict)
 
@@ -642,10 +642,10 @@ class HypothesisTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         channel_item = _make_channel_item()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         response = _make_response(payload=payload_str)
 
-        result = ctx.dispatcher._format_response(channel_item, wsgi_environ, response)
+        result = ctx.dispatcher._format_response(channel_item, request_ctx, response)
 
         self.assertEqual(result, payload_str)
 
@@ -659,11 +659,11 @@ class HypothesisTestCase(unittest.TestCase):
         ctx = _make_dispatcher(sec=_make_sec(ZATO_NONE))
         channel_item = _make_channel_item()
         meta = _make_meta(path_info=path_info)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, wsgi_environ, b'', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'', {}, worker_store)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -769,9 +769,9 @@ class CreateChannelParamsTestCase(unittest.TestCase):
         """
         handler = self._make_handler()
         item = self._make_item(URL_PARAMS_PRIORITY.QS_OVER_PATH)
-        wsgi_environ:'anydict' = {'QUERY_STRING': 'shared=qs_val', 'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'QUERY_STRING': 'shared=qs_val', 'zato.http.response.headers': {}}
 
-        result = handler.create_channel_params({'shared': 'path_val'}, item, wsgi_environ, b'', None)
+        result = handler.create_channel_params({'shared': 'path_val'}, item, request_ctx, b'', None)
 
         self.assertEqual(result['shared'], 'qs_val')
 
@@ -782,9 +782,9 @@ class CreateChannelParamsTestCase(unittest.TestCase):
         """
         handler = self._make_handler()
         item = self._make_item(URL_PARAMS_PRIORITY.PATH_OVER_QS)
-        wsgi_environ:'anydict' = {'QUERY_STRING': 'key=qs_val', 'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'QUERY_STRING': 'key=qs_val', 'zato.http.response.headers': {}}
 
-        result = handler.create_channel_params({'key': 'path_val'}, item, wsgi_environ, b'', None)
+        result = handler.create_channel_params({'key': 'path_val'}, item, request_ctx, b'', None)
 
         self.assertEqual(result['key'], 'path_val')
 
@@ -795,9 +795,9 @@ class CreateChannelParamsTestCase(unittest.TestCase):
         """
         handler = self._make_handler()
         item = self._make_item(URL_PARAMS_PRIORITY.QS_OVER_PATH)
-        wsgi_environ:'anydict' = {'QUERY_STRING': '', 'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'QUERY_STRING': '', 'zato.http.response.headers': {}}
 
-        result = handler.create_channel_params({'pk': 'pv'}, item, wsgi_environ, b'', None)
+        result = handler.create_channel_params({'pk': 'pv'}, item, request_ctx, b'', None)
 
         self.assertEqual(result, {'pk': 'pv'})
 
@@ -808,9 +808,9 @@ class CreateChannelParamsTestCase(unittest.TestCase):
         """
         handler = self._make_handler()
         item = self._make_item(URL_PARAMS_PRIORITY.PATH_OVER_QS)
-        wsgi_environ:'anydict' = {'QUERY_STRING': '', 'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'QUERY_STRING': '', 'zato.http.response.headers': {}}
 
-        result = handler.create_channel_params({'pk': 'pv'}, item, wsgi_environ, b'', None)
+        result = handler.create_channel_params({'pk': 'pv'}, item, request_ctx, b'', None)
 
         self.assertEqual(result, {'pk': 'pv'})
 
@@ -821,11 +821,11 @@ class CreateChannelParamsTestCase(unittest.TestCase):
         """
         handler = self._make_handler()
         item = self._make_item(URL_PARAMS_PRIORITY.QS_OVER_PATH)
-        wsgi_environ:'anydict' = {'QUERY_STRING': '', 'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'QUERY_STRING': '', 'zato.http.response.headers': {}}
 
-        _ = handler.create_channel_params({}, item, wsgi_environ, b'raw', {'post_key': 'post_val'})
+        _ = handler.create_channel_params({}, item, request_ctx, b'raw', {'post_key': 'post_val'})
 
-        self.assertEqual(wsgi_environ['zato.http.POST'], {'post_key': 'post_val'})
+        self.assertEqual(request_ctx['zato.http.POST'], {'post_key': 'post_val'})
 
 # ################################################################################################################################
 
@@ -834,11 +834,11 @@ class CreateChannelParamsTestCase(unittest.TestCase):
         """
         handler = self._make_handler()
         item = self._make_item(URL_PARAMS_PRIORITY.QS_OVER_PATH, data_format='')
-        wsgi_environ:'anydict' = {'QUERY_STRING': '', 'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'QUERY_STRING': '', 'zato.http.response.headers': {}}
 
-        _ = handler.create_channel_params({}, item, wsgi_environ, b'x=hello', None)
+        _ = handler.create_channel_params({}, item, request_ctx, b'x=hello', None)
 
-        self.assertEqual(wsgi_environ['zato.http.POST'], {'x': 'hello'})
+        self.assertEqual(request_ctx['zato.http.POST'], {'x': 'hello'})
 
 # ################################################################################################################################
 
@@ -847,24 +847,24 @@ class CreateChannelParamsTestCase(unittest.TestCase):
         """
         handler = self._make_handler()
         item = self._make_item(URL_PARAMS_PRIORITY.QS_OVER_PATH, data_format='json')
-        wsgi_environ:'anydict' = {'QUERY_STRING': '', 'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'QUERY_STRING': '', 'zato.http.response.headers': {}}
 
-        _ = handler.create_channel_params({}, item, wsgi_environ, b'ignored', None)
+        _ = handler.create_channel_params({}, item, request_ctx, b'ignored', None)
 
-        self.assertEqual(wsgi_environ['zato.http.POST'], {})
+        self.assertEqual(request_ctx['zato.http.POST'], {})
 
 # ################################################################################################################################
 
     def test_sets_zato_http_get(self) -> 'None':
-        """ wsgi_environ['zato.http.GET'] is set to the parsed query string.
+        """ request_ctx['zato.http.GET'] is set to the parsed query string.
         """
         handler = self._make_handler()
         item = self._make_item(URL_PARAMS_PRIORITY.QS_OVER_PATH)
-        wsgi_environ:'anydict' = {'QUERY_STRING': 'k=v', 'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'QUERY_STRING': 'k=v', 'zato.http.response.headers': {}}
 
-        _ = handler.create_channel_params({}, item, wsgi_environ, b'', None)
+        _ = handler.create_channel_params({}, item, request_ctx, b'', None)
 
-        self.assertEqual(wsgi_environ['zato.http.GET'], {'k': 'v'})
+        self.assertEqual(request_ctx['zato.http.GET'], {'k': 'v'})
 
 # ################################################################################################################################
 
@@ -873,9 +873,9 @@ class CreateChannelParamsTestCase(unittest.TestCase):
         """
         handler = self._make_handler()
         item = self._make_item(URL_PARAMS_PRIORITY.PATH_OVER_QS)
-        wsgi_environ:'anydict' = {'QUERY_STRING': 'shared=qs_val&only_qs=q', 'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'QUERY_STRING': 'shared=qs_val&only_qs=q', 'zato.http.response.headers': {}}
 
-        result = handler.create_channel_params({'shared': 'path_val', 'only_path': 'p'}, item, wsgi_environ, b'', None)
+        result = handler.create_channel_params({'shared': 'path_val', 'only_path': 'p'}, item, request_ctx, b'', None)
 
         self.assertEqual(result['shared'], 'path_val')
         self.assertEqual(result['only_qs'], 'q')
@@ -897,11 +897,11 @@ class InvokeServiceSecDefTestCase(unittest.TestCase):
         ctx = _make_dispatcher(sec=sec)
         channel_item = _make_channel_item({'merge_url_params_req': True})
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
-            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
             b'payload', {}, worker_store, {})
 
         ctx.mock_create_channel_params.assert_called_once()
@@ -914,11 +914,11 @@ class InvokeServiceSecDefTestCase(unittest.TestCase):
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'merge_url_params_req': False})
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         worker_store = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
-            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
             b'payload', {}, worker_store, {})
 
         ctx.mock_create_channel_params.assert_not_called()
@@ -939,7 +939,7 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         ctx.dispatcher.url_data.basic_auth_get_by_id = MagicMock()
         ctx.dispatcher.url_data.apikey_get_by_id = MagicMock()
 
-        wsgi_environ = _make_wsgi_environ({
+        request_ctx = _make_request_ctx({
             'HTTP_AUTHORIZATION': 'Basic dXNlcjpwYXNz',
             'HTTP_X_API_KEY': 'some-key',
         })
@@ -949,7 +949,7 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
 
         with self.assertRaises(BadRequest):
             ctx.dispatcher.check_security_via_groups(
-                _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+                _test_cid, 'test.channel', groups_ctx, request_ctx)
 
 # ################################################################################################################################
 
@@ -963,14 +963,14 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         groups_ctx.check_security_basic_auth.return_value = 123
         ctx.dispatcher.url_data.basic_auth_get_by_id.return_value = {'username': 'u', 'sec_type': 'basic_auth'}
 
-        wsgi_environ = _make_wsgi_environ({
+        request_ctx = _make_request_ctx({
             'HTTP_AUTHORIZATION': 'Basic dXNlcjpwYXNz',
         })
 
         with patch('zato.server.connection.http_soap.channel.extract_basic_auth', return_value=('user', 'pass')):
             with patch('zato.server.connection.http_soap.channel.enrich_with_sec_data') as mock_enrich:
                 ctx.dispatcher.check_security_via_groups(
-                    _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+                    _test_cid, 'test.channel', groups_ctx, request_ctx)
 
         groups_ctx.check_security_basic_auth.assert_called_once_with(_test_cid, 'test.channel', 'user', 'pass')
         mock_enrich.assert_called_once()
@@ -986,14 +986,14 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         groups_ctx.apikey_header = 'HTTP_X_API_KEY'
         groups_ctx.check_security_basic_auth.return_value = None
 
-        wsgi_environ = _make_wsgi_environ({
+        request_ctx = _make_request_ctx({
             'HTTP_AUTHORIZATION': 'Basic dXNlcjpwYXNz',
         })
 
         with patch('zato.server.connection.http_soap.channel.extract_basic_auth', return_value=('user', 'pass')):
             with self.assertRaises(Forbidden):
                 ctx.dispatcher.check_security_via_groups(
-                    _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+                    _test_cid, 'test.channel', groups_ctx, request_ctx)
 
 # ################################################################################################################################
 
@@ -1007,13 +1007,13 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         groups_ctx.check_security_apikey.return_value = 456
         ctx.dispatcher.url_data.apikey_get_by_id.return_value = {'api_key': 'k', 'sec_type': 'apikey'}
 
-        wsgi_environ = _make_wsgi_environ({
+        request_ctx = _make_request_ctx({
             'HTTP_X_API_KEY': 'my-api-key',
         })
 
         with patch('zato.server.connection.http_soap.channel.enrich_with_sec_data') as mock_enrich:
             ctx.dispatcher.check_security_via_groups(
-                _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+                _test_cid, 'test.channel', groups_ctx, request_ctx)
 
         groups_ctx.check_security_apikey.assert_called_once_with(_test_cid, 'test.channel', 'my-api-key')
         mock_enrich.assert_called_once()
@@ -1029,13 +1029,13 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         groups_ctx.apikey_header = 'HTTP_X_API_KEY'
         groups_ctx.check_security_apikey.return_value = None
 
-        wsgi_environ = _make_wsgi_environ({
+        request_ctx = _make_request_ctx({
             'HTTP_X_API_KEY': 'bad-key',
         })
 
         with self.assertRaises(Forbidden):
             ctx.dispatcher.check_security_via_groups(
-                _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+                _test_cid, 'test.channel', groups_ctx, request_ctx)
 
 # ################################################################################################################################
 
@@ -1046,11 +1046,11 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
 
         groups_ctx = MagicMock()
         groups_ctx.apikey_header = 'HTTP_X_API_KEY'
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
         with self.assertRaises(Forbidden):
             ctx.dispatcher.check_security_via_groups(
-                _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+                _test_cid, 'test.channel', groups_ctx, request_ctx)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1071,13 +1071,13 @@ class CheckSecurityGroupsCustomHeaderTestCase(unittest.TestCase):
         groups_ctx.check_security_apikey.return_value = 789
         ctx.dispatcher.url_data.apikey_get_by_id.return_value = {'api_key': 'k', 'sec_type': 'apikey'}
 
-        wsgi_environ = _make_wsgi_environ({
+        request_ctx = _make_request_ctx({
             'HTTP_X_CUSTOM_TOKEN': 'my-api-key',
         })
 
         with patch('zato.server.connection.http_soap.channel.enrich_with_sec_data') as mock_enrich:
             ctx.dispatcher.check_security_via_groups(
-                _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+                _test_cid, 'test.channel', groups_ctx, request_ctx)
 
         groups_ctx.check_security_apikey.assert_called_once_with(_test_cid, 'test.channel', 'my-api-key')
         mock_enrich.assert_called_once()
@@ -1093,13 +1093,13 @@ class CheckSecurityGroupsCustomHeaderTestCase(unittest.TestCase):
         groups_ctx = MagicMock()
         groups_ctx.apikey_header = 'HTTP_X_CUSTOM_TOKEN'
 
-        wsgi_environ = _make_wsgi_environ({
+        request_ctx = _make_request_ctx({
             'HTTP_X_API_KEY': 'my-api-key',
         })
 
         with self.assertRaises(Forbidden):
             ctx.dispatcher.check_security_via_groups(
-                _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+                _test_cid, 'test.channel', groups_ctx, request_ctx)
 
         groups_ctx.check_security_apikey.assert_not_called()
 
@@ -1115,14 +1115,14 @@ class CheckSecurityGroupsCustomHeaderTestCase(unittest.TestCase):
         groups_ctx.check_security_basic_auth.return_value = 123
         ctx.dispatcher.url_data.basic_auth_get_by_id.return_value = {'username': 'u', 'sec_type': 'basic_auth'}
 
-        wsgi_environ = _make_wsgi_environ({
+        request_ctx = _make_request_ctx({
             'HTTP_AUTHORIZATION': 'Basic dXNlcjpwYXNz',
         })
 
         with patch('zato.server.connection.http_soap.channel.extract_basic_auth', return_value=('user', 'pass')):
             with patch('zato.server.connection.http_soap.channel.enrich_with_sec_data') as mock_enrich:
                 ctx.dispatcher.check_security_via_groups(
-                    _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+                    _test_cid, 'test.channel', groups_ctx, request_ctx)
 
         groups_ctx.check_security_basic_auth.assert_called_once_with(_test_cid, 'test.channel', 'user', 'pass')
         mock_enrich.assert_called_once()
@@ -1141,9 +1141,9 @@ class MatchURLTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         ctx.mock_url_data.match.return_value = (None, None)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = ctx.dispatcher._match_url(_make_meta(), wsgi_environ)
+        result = ctx.dispatcher._match_url(_make_meta(), request_ctx)
 
         self.assertEqual(result.channel_name, '(None)')
 
@@ -1154,9 +1154,9 @@ class MatchURLTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item({'name': 'my.channel'})
         ctx = _make_dispatcher(channel_item=channel_item)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = ctx.dispatcher._match_url(_make_meta(), wsgi_environ)
+        result = ctx.dispatcher._match_url(_make_meta(), request_ctx)
 
         self.assertEqual(result.channel_name, 'my.channel')
 
@@ -1166,36 +1166,36 @@ class MatchURLTestCase(unittest.TestCase):
         """ The payload is read from zato.http.raw_request.
         """
         ctx = _make_dispatcher()
-        wsgi_environ = _make_wsgi_environ({'zato.http.raw_request': b'request-body'})
+        request_ctx = _make_request_ctx({'zato.http.raw_request': b'request-body'})
 
-        result = ctx.dispatcher._match_url(_make_meta(), wsgi_environ)
+        result = ctx.dispatcher._match_url(_make_meta(), request_ctx)
 
         self.assertEqual(result.payload, b'request-body')
 
 # ################################################################################################################################
 
     def test_sets_zato_channel_item(self) -> 'None':
-        """ wsgi_environ['zato.channel_item'] is set to the matched channel_item.
+        """ request_ctx['zato.channel_item'] is set to the matched channel_item.
         """
         channel_item = _make_channel_item()
         ctx = _make_dispatcher(channel_item=channel_item)
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        _ = ctx.dispatcher._match_url(_make_meta(), wsgi_environ)
+        _ = ctx.dispatcher._match_url(_make_meta(), request_ctx)
 
-        self.assertIs(wsgi_environ['zato.channel_item'], channel_item)
+        self.assertIs(request_ctx['zato.channel_item'], channel_item)
 
 # ################################################################################################################################
 
     def test_sets_zato_http_raw_request(self) -> 'None':
-        """ wsgi_environ['zato.http.raw_request'] is set to the raw payload.
+        """ request_ctx['zato.http.raw_request'] is set to the raw payload.
         """
         ctx = _make_dispatcher()
-        wsgi_environ = _make_wsgi_environ({'zato.http.raw_request': b'the-body'})
+        request_ctx = _make_request_ctx({'zato.http.raw_request': b'the-body'})
 
-        _ = ctx.dispatcher._match_url(_make_meta(), wsgi_environ)
+        _ = ctx.dispatcher._match_url(_make_meta(), request_ctx)
 
-        self.assertEqual(wsgi_environ['zato.http.raw_request'], b'the-body')
+        self.assertEqual(request_ctx['zato.http.raw_request'], b'the-body')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1286,12 +1286,12 @@ class ExtractPostDataMutantKillTestCase(unittest.TestCase):
         mock_get_form_data.return_value = {'field': 'val'}
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'data_format': IO.FORMAT.FORM_DATA})
-        wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
+        request_ctx = _make_request_ctx({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
 
-        result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
+        result = ctx.dispatcher._extract_post_data(channel_item, request_ctx)
 
         self.assertEqual(result, {'field': 'val'})
-        mock_get_form_data.assert_called_once_with(wsgi_environ)
+        mock_get_form_data.assert_called_once_with(request_ctx)
 
 # ################################################################################################################################
 
@@ -1301,9 +1301,9 @@ class ExtractPostDataMutantKillTestCase(unittest.TestCase):
         """
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'data_format': 'csv'})
-        wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
+        request_ctx = _make_request_ctx({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
 
-        result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
+        result = ctx.dispatcher._extract_post_data(channel_item, request_ctx)
 
         self.assertEqual(result, {})
 
@@ -1317,9 +1317,9 @@ class ExtractPostDataMutantKillTestCase(unittest.TestCase):
         mock_get_form_data.return_value = {'should_not': 'be_called'}
         ctx = _make_dispatcher()
         channel_item = _make_channel_item({'data_format': DATA_FORMAT.JSON})
-        wsgi_environ = _make_wsgi_environ({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
+        request_ctx = _make_request_ctx({'CONTENT_TYPE': 'application/x-www-form-urlencoded'})
 
-        result = ctx.dispatcher._extract_post_data(channel_item, wsgi_environ)
+        result = ctx.dispatcher._extract_post_data(channel_item, request_ctx)
 
         self.assertEqual(result, {})
         mock_get_form_data.assert_not_called()
@@ -1341,11 +1341,11 @@ class CheckSecurityNoDumpsTestCase(unittest.TestCase):
         ctx = _make_dispatcher(sec=sec)
         channel_item = _make_channel_item()
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ({'HTTP_AUTHORIZATION': 'Basic secret-material'})
+        request_ctx = _make_request_ctx({'HTTP_AUTHORIZATION': 'Basic secret-material'})
         worker_store = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
 
         logged = [str(item) for item in mock_logger.info.call_args_list]
 
@@ -1361,16 +1361,16 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def _call(self, e:'Exception', channel_item:'anydict | None'=None, wsgi_environ:'anydict | None'=None) -> 'tuple':
-        """ Helper that calls _handle_dispatch_error and returns (result, wsgi_environ).
+    def _call(self, e:'Exception', channel_item:'anydict | None'=None, request_ctx:'anydict | None'=None) -> 'tuple':
+        """ Helper that calls _handle_dispatch_error and returns (result, request_ctx).
         """
         ctx = _make_dispatcher()
         if channel_item is None:
             channel_item = _make_channel_item()
-        if wsgi_environ is None:
-            wsgi_environ = _make_wsgi_environ()
-        result = ctx.dispatcher._handle_dispatch_error(_test_cid, e, channel_item, wsgi_environ)
-        return result, wsgi_environ
+        if request_ctx is None:
+            request_ctx = _make_request_ctx()
+        result = ctx.dispatcher._handle_dispatch_error(_test_cid, e, channel_item, request_ctx)
+        return result, request_ctx
 
 # ################################################################################################################################
 
@@ -1475,9 +1475,9 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
         ctx = _make_dispatcher()
         ctx.dispatcher.return_tracebacks = True
         channel_item = _make_channel_item({'transport': 'unknown', 'data_format': 'unknown'})
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = ctx.dispatcher._handle_dispatch_error(_test_cid, RuntimeError('details'), channel_item, wsgi_environ)
+        result = ctx.dispatcher._handle_dispatch_error(_test_cid, RuntimeError('details'), channel_item, request_ctx)
 
         self.assertEqual(result[0], 'details')
 
@@ -1488,9 +1488,9 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
         ctx.dispatcher.return_tracebacks = False
         ctx.dispatcher.default_error_message = 'Oops'
         channel_item = _make_channel_item({'transport': 'unknown', 'data_format': 'unknown'})
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
 
-        result = ctx.dispatcher._handle_dispatch_error(_test_cid, RuntimeError('secret'), channel_item, wsgi_environ)
+        result = ctx.dispatcher._handle_dispatch_error(_test_cid, RuntimeError('secret'), channel_item, request_ctx)
 
         self.assertEqual(result, 'Oops')
 

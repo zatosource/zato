@@ -38,7 +38,7 @@ Internal_Actor = 'internal'
 # forwards its logged-in user this way while authenticating as its own API account.
 Original_Principal_Header = 'HTTP_X_ZATO_USER'
 
-# The environ key the service invoker propagates its channel's authenticated
+# The request context key the service invoker propagates its channel's authenticated
 # identity under - the inner service has no channel security of its own.
 Invoker_Security_Username = 'zato.channel_security_username'
 
@@ -74,20 +74,20 @@ def resolve_actors(service:'Service') -> 'tuple':
     or the one the service invoker propagated. The actor is the original principal
     when a caller forwarded one, otherwise the two are the same.
     """
-    wsgi_environ = service.wsgi_environ
+    request_ctx = service.request_ctx
 
     # The identity the call actually ran under
     effective = service.channel.security.username
 
     if not effective:
-        effective = wsgi_environ.get(Invoker_Security_Username)
+        effective = request_ctx.get(Invoker_Security_Username)
 
     if not effective:
         effective = Internal_Actor
 
     # The forwarded original principal - e.g. the Dashboard's logged-in user -
     # takes precedence as the actor when present
-    actor = wsgi_environ.get(Original_Principal_Header)
+    actor = request_ctx.get(Original_Principal_Header)
 
     if not actor:
         actor = effective

@@ -296,7 +296,7 @@ def _make_endpoint(gateway_name:'str', wrapper:'GatewayMCPWrapper', is_authentic
     endpoint.channel = cast_('any_', channel)
     endpoint.request = _MockRequest() # pyright: ignore[reportAttributeAccessIssue]
     endpoint.response = _MockResponse() # pyright: ignore[reportAttributeAccessIssue]
-    endpoint.wsgi_environ = {'zato.http.remote_addr': '127.0.0.1'}
+    endpoint.request_ctx = {'zato.http.remote_addr': '127.0.0.1'}
 
     server = _MockEndpointServer()
     gateway_config = _MockBunch({'conn': wrapper})

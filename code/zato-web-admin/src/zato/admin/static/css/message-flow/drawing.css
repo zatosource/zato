@@ -155,6 +155,16 @@
     fill: var(--message-flow-job);
 }
 
+/* A service invocation - the service that ran, whichever way it was invoked */
+
+.message-flow-chip-service {
+    fill: rgba(184, 153, 240, 0.18);
+}
+
+.message-flow-chip-text-service {
+    fill: var(--message-flow-service);
+}
+
 /* A file transfer event - a file moving, neither a request nor a reply */
 
 .message-flow-chip-transfer {

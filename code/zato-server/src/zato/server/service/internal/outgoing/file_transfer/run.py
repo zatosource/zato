@@ -42,7 +42,7 @@ _last_listing:'stranydict' = {}
 # The count of files each schedule delivered today, keyed by connection and schedule.
 _delivered_today:'stranydict' = {}
 
-# The key of the zato context in a service's WSGI environment.
+# The key of the zato context in a service's request context.
 _zato_ctx_key = 'zato.zato_ctx'
 
 # The scheduler context of a run not fired by the scheduler.
@@ -130,7 +130,7 @@ def error_summary(error:'str') -> 'str':
 def get_scheduler_context(service:'Service') -> 'stranydict':
     """ The scheduler's job id and run number, both zero when the scheduler did not fire the run.
     """
-    zato_ctx = service.wsgi_environ.get(_zato_ctx_key)
+    zato_ctx = service.request_ctx.get(_zato_ctx_key)
 
     if zato_ctx is None:
         out = dict(_no_scheduler_context)

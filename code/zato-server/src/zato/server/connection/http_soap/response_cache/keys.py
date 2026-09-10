@@ -38,7 +38,7 @@ _response_cache = HTTP_SOAP.ResponseCache
 def _build_key_material(
     config:'ResponseCacheConfig',
     channel_id:'int',
-    wsgi_environ:'stranydict',
+    request_ctx:'stranydict',
     payload:'bytes',
     ) -> 'anytuple':
     """ Assembles the composite string the cache key is hashed from, along with the human-readable
@@ -46,12 +46,12 @@ def _build_key_material(
     """
 
     # The HTTP method and the matched path vary the key for free ..
-    method = wsgi_environ['REQUEST_METHOD']
-    path = wsgi_environ['PATH_INFO']
+    method = request_ctx['REQUEST_METHOD']
+    path = request_ctx['PATH_INFO']
 
     # .. the query string is sorted by parameter name with the opted-out names stripped,
     # so parameter order never splits the cache and tracking junk never varies it ..
-    query_string = wsgi_environ.get('QUERY_STRING')
+    query_string = request_ctx.get('QUERY_STRING')
 
     if query_string is None:
         query_string = ''
@@ -71,7 +71,7 @@ def _build_key_material(
     if config.is_shared_across_callers:
         caller = ''
     else:
-        if sec_def_info := wsgi_environ.get('zato.sec_def'):
+        if sec_def_info := request_ctx.get('zato.sec_def'):
             caller = sec_def_info['name']
         else:
             caller = ''
@@ -80,8 +80,8 @@ def _build_key_material(
     vary_values:'strlist' = []
 
     for header_name in config.vary_by_headers:
-        wsgi_key = 'HTTP_' + header_name.upper().replace('-', '_')
-        header_value = wsgi_environ.get(wsgi_key)
+        header_key = 'HTTP_' + header_name.upper().replace('-', '_')
+        header_value = request_ctx.get(header_key)
 
         if header_value is None:
             header_value = ''
@@ -111,7 +111,7 @@ def _build_key_material(
 def get_context(
     cache_api:'CacheAPI',
     channel_item:'anydict',
-    wsgi_environ:'stranydict',
+    request_ctx:'stranydict',
     payload:'bytes',
     ) -> 'ResponseCacheContext | None':
     """ Returns the response cache context of one request, or None when caching does not apply -
@@ -129,13 +129,13 @@ def get_context(
     channel_name = channel_item['name']
 
     # Requests carrying cookies are cached only when the channel varies its entries by the Cookie header ..
-    if ModuleCtx.Cookie_Header in wsgi_environ:
+    if ModuleCtx.Cookie_Header in request_ctx:
         if ModuleCtx.Cookie_Header_Name not in config.vary_by_headers:
             zato_rest_channel_cache_operations_total.labels(channel_name, ModuleCtx.Outcome_Not_Cached).inc()
             return None
 
     # .. GET and HEAD are cacheable as they are, POST only when the body joins the key ..
-    method = wsgi_environ['REQUEST_METHOD']
+    method = request_ctx['REQUEST_METHOD']
 
     if method not in ModuleCtx.Safe_Methods:
         if method != ModuleCtx.Body_Method:
@@ -150,7 +150,7 @@ def get_context(
             return None
 
     channel_id = channel_item['id']
-    material, path_and_query = _build_key_material(config, channel_id, wsgi_environ, payload)
+    material, path_and_query = _build_key_material(config, channel_id, request_ctx, payload)
 
     material_hash = sha256(material.encode('utf8')).hexdigest()
     key_prefix = _response_cache.Key_Prefix.format(channel_id)
@@ -162,14 +162,14 @@ def get_context(
     out.channel_name = channel_name
     out.key = key_prefix + material_hash
     out.path_and_query = path_and_query
-    out.wsgi_environ = wsgi_environ
+    out.request_ctx = request_ctx
 
     # Whether the key has an admission marker or a full entry is only known after the lookup
     out.is_admitted = False
 
     # A no-cache request skips the lookup but still stores the fresh response -
     # standard refresh semantics, the only client-controlled behavior supported.
-    cache_control = wsgi_environ.get('HTTP_CACHE_CONTROL')
+    cache_control = request_ctx.get('HTTP_CACHE_CONTROL')
 
     if cache_control is None:
         cache_control = ''
@@ -177,7 +177,7 @@ def get_context(
     directives = parse_cache_control(cache_control)
     out.skip_lookup = ModuleCtx.Directive_No_Cache in directives
 
-    if_none_match = wsgi_environ.get('HTTP_IF_NONE_MATCH')
+    if_none_match = request_ctx.get('HTTP_IF_NONE_MATCH')
 
     if if_none_match is None:
         if_none_match = ''

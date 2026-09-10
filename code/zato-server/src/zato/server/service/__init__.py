@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, OK
 from inspect import isclass
 from re import findall
+from time import monotonic
 from traceback import format_exc
 
 # Bunch
@@ -34,6 +35,7 @@ from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIOR
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.audit_log.facade import AuditFacade
 from zato.common.audit_log.scheduler import append_job_log_entry
+from zato.common.audit_log.service import Invoking_Service_Key, record_service_invocation, resolve_caller
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import PubSubFacade, SecurityFacade
 from zato.common.json_internal import dumps
@@ -167,7 +169,7 @@ _publish_meta_keys = {
 
 # ################################################################################################################################
 
-_wsgi_channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
+_request_ctx_channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
 
 # ################################################################################################################################
 
@@ -222,7 +224,7 @@ internal_invoke_keys = {
     'set_response_func',
     'skip_response_elem',
     'target',
-    'wsgi_environ',
+    'request_ctx',
     'zato_response_headers_container',
 }
 
@@ -381,7 +383,6 @@ class Service:
     handles_auth_rejection:'bool' = False
 
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
-    audit = AuditFacade()
     aws = AWSFacade()
     cloud = Cloud()
     llm = LLMFacade()
@@ -460,11 +461,12 @@ class Service:
         self.in_reply_to = ''
         self.data_format = ''
         self.transport = ''
-        self.wsgi_environ = {} # type: anydict
+        self.request_ctx = {} # type: anydict
         self.job_type = ''     # type: str
         self.environ = Bunch()
         self.request = Request(self) # type: Request
         self.response = Response() # type: ignore
+        self.audit = AuditFacade(self)
 
         # This is where user configuration is kept
         self.config = Bunch()
@@ -616,7 +618,7 @@ class Service:
 
 # ################################################################################################################################
 
-    def _init(self, may_have_wsgi_environ:'bool'=False) -> 'None':
+    def _init(self, may_have_request_ctx:'bool'=False) -> 'None':
         """ Actually initializes the service.
         """
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
@@ -632,15 +634,15 @@ class Service:
             if Service.email is None or Service.email.imap is not self._config_manager.email_imap_api:
                 Service.email = EMailAPI(self._config_manager.email_smtp_api, self._config_manager.email_imap_api)
 
-        if may_have_wsgi_environ:
-            self.request.http.init(self.wsgi_environ)
+        if may_have_request_ctx:
+            self.request.http.init(self.request_ctx)
 
         # self.has_io attribute is set by ServiceStore during deployment. Without an I/O declaration
         # there is no processor but the request and response objects are still initialized,
         # which is what makes self.request.input and self.response.payload always available.
         io_processor = self._io if self.has_io else None
         self.request.init(
-            self.has_io, self.cid, io_processor, self.data_format, self.transport, self.wsgi_environ, self.server.encrypt)
+            self.has_io, self.cid, io_processor, self.data_format, self.transport, self.request_ctx, self.server.encrypt)
 
         # A dataclass-based I/O definition knows its output model class and the response
         # uses it to vivify a model instance on the payload's first access.
@@ -869,9 +871,9 @@ class Service:
         # .. now we can assign the logger to our request object.
         service.request.logger = service.logger
 
-        wsgi_environ = kwargs.get('wsgi_environ', {})
-        payload = wsgi_environ.get('zato.request.payload')
-        channel_item = wsgi_environ.get('zato.channel_item', {})
+        request_ctx = kwargs.get('request_ctx', {})
+        payload = request_ctx.get('zato.request.payload')
+        channel_item = request_ctx.get('zato.channel_item', {})
 
         zato_response_headers_container = kwargs.get('zato_response_headers_container')
 
@@ -887,12 +889,27 @@ class Service:
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
 
         service.update(service, channel, server, config_dispatcher, # type: ignore
-            config_manager, cid, payload, raw_request, transport, data_format, wsgi_environ,
+            config_manager, cid, payload, raw_request, transport, data_format, request_ctx,
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
-            in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
+            in_reply_to=request_ctx.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
+
+        # Only invocations of user-defined services are recorded in the audit log - the store knows which ones these are.
+        needs_audit = not server.service_store.services[service.impl_name]['is_internal']
+
+        def _record_invocation(error_traceback:'str') -> 'None':
+            """ Writes the invocation to the audit log once the response is known.
+            """
+            if not needs_audit:
+                return
+
+            duration_ms = int((monotonic() - invocation_start) * 1000)
+            caller = resolve_caller(request_ctx, channel_item)
+
+            record_service_invocation(server.service_audit_log, service.name, cid, channel, caller,
+                service.request.raw, service.response.payload, duration_ms, error_traceback)
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -905,6 +922,7 @@ class Service:
             try:
 
                 service.invocation_time = _utcnow()
+                invocation_start = monotonic()
 
                 # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
 
@@ -915,7 +933,7 @@ class Service:
                 # .. attach scheduler log capture handler if this is a scheduler-initiated invocation
                 # .. whose run has a record in the audit log - with the audit log off there is none ..
                 _scheduler_log_handler = None
-                _scheduler_zato_ctx = wsgi_environ.get('zato.zato_ctx')
+                _scheduler_zato_ctx = request_ctx.get('zato.zato_ctx')
                 if _scheduler_zato_ctx is not None and 'scheduler_job_id' in _scheduler_zato_ctx:
                     if _scheduler_audit_event_id := _scheduler_zato_ctx['scheduler_audit_event_id']:
                         _scheduler_log_handler = SchedulerLogCapture(_scheduler_audit_event_id)
@@ -948,6 +966,12 @@ class Service:
 
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
+                    # The response is known now, whichever way the service ended, so this is when the invocation is recorded.
+                    if e:
+                        _record_invocation(exc_formatted)
+                    else:
+                        _record_invocation('')
+
                     # If this was fan-out/fan-in we need to always notify our callbacks no matter the result
                     if channel in ModuleCtx.Pattern_Call_Channels:
 
@@ -975,6 +999,9 @@ class Service:
                             zato_response_headers_container.update(service.response.headers)
 
                 except Exception as resp_e:
+
+                    # A response that could not be built is still an invocation that ran, recorded as a failed one.
+                    _record_invocation(format_exc())
 
                     if e:
                         if isinstance(e, Reportable):
@@ -1070,8 +1097,14 @@ class Service:
 
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
+        # The invoked service learns who invoked it through its request context, the caller's own keys kept.
+        if 'request_ctx' in kwargs:
+            kwargs['request_ctx'][Invoking_Service_Key] = self.name
+        else:
+            kwargs['request_ctx'] = {Invoking_Service_Key: self.name}
+
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
-            self.config_dispatcher, self._config_manager, kwargs.pop('cid', self.cid), {})
+            self.config_dispatcher, self._config_manager, kwargs.pop('cid', self.cid))
 
         kwargs.update({
             'serialize':serialize,
@@ -1357,7 +1390,7 @@ class Service:
         raw_request,           # type: any_
         transport='',          # type: str
         data_format='',        # type: str
-        wsgi_environ=None,     # type: dictnone
+        request_ctx=None,     # type: dictnone
         job_type='',           # type: str
         channel_params=None,   # type: dictnone
         merge_channel_params=True, # type: bool
@@ -1371,7 +1404,7 @@ class Service:
     ) -> 'None':
         """ Takes a service instance and updates it with the current request's context data.
         """
-        wsgi_environ = wsgi_environ or {}
+        request_ctx = request_ctx or {}
 
         service.server = server
         service.config_dispatcher = config_dispatcher
@@ -1380,7 +1413,7 @@ class Service:
         service.request.raw = raw_request
         service.transport = transport
         service.data_format = data_format
-        service.wsgi_environ = wsgi_environ or {}
+        service.request_ctx = request_ctx or {}
         service.job_type = job_type
         service.config = server.user_config
         service.user_config = server.user_config
@@ -1398,16 +1431,16 @@ class Service:
         service.environ = environ or {}
 
         # SOAP channels put the protocol context of the request here - other channels have none.
-        service.request.soap = wsgi_environ.get('zato.request.soap')
+        service.request.soap = request_ctx.get('zato.request.soap')
 
         # Queue bridge channels (e.g. IBM MQ) put message headers here - other channels have none.
-        headers = wsgi_environ.get('zato.request.headers')
+        headers = request_ctx.get('zato.request.headers')
         if headers is not None:
             service.request.headers = headers
 
-        channel_item = wsgi_environ.get('zato.channel_item') or {}
+        channel_item = request_ctx.get('zato.channel_item') or {}
         channel_item = cast_('strdict', channel_item)
-        sec_def_info = wsgi_environ.get('zato.sec_def', {})
+        sec_def_info = request_ctx.get('zato.sec_def', {})
 
         if channel_type == _AMQP:
             service.request.amqp = AMQPRequestData(channel_item['amqp_msg'])
@@ -1432,7 +1465,7 @@ class Service:
         )
 
         if init:
-            service._init(channel_type in _wsgi_channels)
+            service._init(channel_type in _request_ctx_channels)
 
 # ################################################################################################################################
 
@@ -1444,7 +1477,7 @@ class Service:
             self.server.service_store.new_instance_by_name(service_name, *args, **kwargs)
 
         _ = service.update(service, CHANNEL.NEW_INSTANCE, self.server, config_dispatcher=self.config_dispatcher, _ignored=None,
-            cid=self.cid, payload=self.request.payload, raw_request=self.request.raw, wsgi_environ=self.wsgi_environ)
+            cid=self.cid, payload=self.request.payload, raw_request=self.request.raw, request_ctx=self.request_ctx)
 
         return service
 

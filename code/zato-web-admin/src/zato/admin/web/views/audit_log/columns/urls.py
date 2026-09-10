@@ -17,6 +17,7 @@ from zato.common.defaults import default_cluster_id
 # leads to. A source with no page of its own is not here and its name stays text.
 _source_page_url = {
     AuditSource.Scheduler: f'/zato/scheduler/dashboard/?cluster={default_cluster_id}&range=0',
+    AuditSource.Service: f'/zato/service/?cluster={default_cluster_id}',
     AuditSource.REST_Channel: f'/zato/http-soap/?cluster={default_cluster_id}&connection=channel&transport=plain_http',
     AuditSource.SOAP_Channel: f'/zato/http-soap/?cluster={default_cluster_id}&connection=channel&transport=soap',
     AuditSource.REST_Outgoing: f'/zato/http-soap/?cluster={default_cluster_id}&connection=outgoing&transport=plain_http',

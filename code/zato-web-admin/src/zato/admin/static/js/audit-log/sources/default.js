@@ -116,7 +116,7 @@ $.fn.zato.audit_log.sources['default'] = {
 
     // The ways the message can be read on the Data tab - parsed first, being what a message
     // is opened to be read as, the wire form there for whoever asks for it.
-    payloadTabs: function() {
+    payloadTabs: function(_rowModel) {
         var config = listing.config;
 
         var out = [

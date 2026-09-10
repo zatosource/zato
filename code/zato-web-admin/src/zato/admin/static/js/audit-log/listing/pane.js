@@ -153,7 +153,7 @@ listing.lineageFact = function(label, eventId) {
 // The ways the event's message can be read, which its source decides.
 listing.detailTabs = function(rowModel) {
     var presenter = $.fn.zato.audit_log.presenterFor(rowModel.raw.source);
-    return presenter.payloadTabs();
+    return presenter.payloadTabs(rowModel);
 };
 
 // /////////////////////////////////////////////////////////////////////////////

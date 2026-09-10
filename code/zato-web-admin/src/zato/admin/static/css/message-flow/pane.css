@@ -343,6 +343,10 @@
     color: var(--message-flow-job);
 }
 
+.message-flow-detail-tab-role-service {
+    color: var(--message-flow-service);
+}
+
 .message-flow-detail-tab-role-transfer {
     color: var(--message-flow-transfer);
 }

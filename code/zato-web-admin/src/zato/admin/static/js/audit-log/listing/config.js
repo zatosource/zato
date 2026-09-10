@@ -263,6 +263,8 @@ listing.roles = {
     'receipt-received': 'response',
     'receipt-sent': 'response',
     'job-executed': 'job',
+    'service-invoked': 'service',
+    'note': 'service',
 
     // The log access records - config changes and someone reading a message body -
     // read by the log they belong to rather than by a part they play in no exchange

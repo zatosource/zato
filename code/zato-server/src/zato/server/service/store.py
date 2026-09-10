@@ -803,6 +803,7 @@ class ServiceStore:
                 item_slow_threshold = item.slow_threshold
 
                 self.services[item.impl_name]['is_active'] = item_is_active
+                self.services[item.impl_name]['is_internal'] = item.is_internal
                 self.services[item.impl_name]['slow_threshold'] = item_slow_threshold
 
                 self.id_to_impl_name[service_id] = item.impl_name
