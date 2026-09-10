@@ -10,6 +10,10 @@
 .message-flow-page {
     --message-flow-glass-fill: rgba(16, 16, 26, 0.72);
     --message-flow-glass-border: rgba(255, 255, 255, 0.14);
+
+    /* The keys' overlay is the one glass nothing shows through - it is there
+       to be read, whatever stands behind it */
+    --message-flow-glass-fill-solid: rgb(16, 16, 26);
     --message-flow-glass-button-fill: rgba(255, 255, 255, 0.08);
     --message-flow-glass-button-fill-hover: rgba(255, 255, 255, 0.14);
 
@@ -202,7 +206,10 @@
     border-radius: 4px;
     background: var(--message-flow-glass-fill);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    z-index: 1;
+
+    /* Above the drawing's controls in the corner, so the keys' overlay
+       stands over them too */
+    z-index: 2;
 }
 
 .message-flow-replay-bar-active {
@@ -320,8 +327,9 @@
     padding: 10px 12px;
     border: 1px solid var(--message-flow-glass-border);
     border-radius: 4px;
-    background: var(--message-flow-glass-fill);
+    background: var(--message-flow-glass-fill-solid);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    z-index: 1;
 }
 
 .message-flow-replay-shortcuts-open {
@@ -479,16 +487,17 @@ svg.message-flow-replay.message-flow-focus .message-flow-connector-chip:not(.mes
     filter: none;
 }
 
-/* A node whose moment has not come yet stands dark - the fade rides on the
-   opacity, so a node lighting up comes up smoothly */
+/* A node whose moment has not come yet stands back - still readable, only
+   drained of colour and a shade quieter - and the fade rides on the opacity,
+   so a node lighting up comes up smoothly */
 
 svg.message-flow-replay .message-flow-node {
     transition: opacity 0.35s;
 }
 
 svg.message-flow-replay .message-flow-node.message-flow-replay-unplayed {
-    opacity: 0.3;
-    filter: grayscale(1) brightness(0.6);
+    opacity: 0.7;
+    filter: grayscale(0.8) brightness(0.85);
 }
 
 /* A node the reader picks by hand comes fully up whatever the clock says -
@@ -496,15 +505,20 @@ svg.message-flow-replay .message-flow-node.message-flow-replay-unplayed {
 
 svg.message-flow-replay .message-flow-node.message-flow-node-selected {
     opacity: 1;
-    filter: none;
+    filter: drop-shadow(5px 8px 12px var(--message-flow-selected-shadow));
 }
 
 /* The node the pass currently stands on wears the page's own selection
-   amber, the way a picked node does */
+   amber, its glow and its amber-tinted shadow, the way a picked node does */
 
 svg.message-flow-replay .message-flow-replay-current:not(.message-flow-replay-failed) .message-flow-box {
     stroke: var(--message-flow-selected);
     stroke-width: 1.6;
+    filter: drop-shadow(0 0 7px var(--message-flow-selected-glow));
+}
+
+svg.message-flow-replay .message-flow-node.message-flow-replay-current:not(.message-flow-replay-failed) {
+    filter: drop-shadow(5px 8px 12px var(--message-flow-selected-shadow));
 }
 
 /* A node mid-exchange - the message is in and the answer is not - wears the

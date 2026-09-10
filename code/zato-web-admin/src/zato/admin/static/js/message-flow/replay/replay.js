@@ -72,8 +72,9 @@ replay.config = {
         {
             title: 'With nothing picked',
             shortcuts: [
-                {keys: 'Down', label: 'Pick the first node, or the event a pass stands on'},
-                {keys: 'Up', label: 'Pick the last node\'s last row, or the event a pass stands on'}
+                {keys: 'Right / Down / Home', label: 'Pick the first node'},
+                {keys: 'Left / Up / End', label: 'Pick the last node\'s last row'},
+                {keys: 'Up / Down', label: 'During a pass - take over the event it stands on'}
             ]
         },
         {
@@ -213,7 +214,10 @@ replay.disarm = function() {
         element.classList.remove('message-flow-replay-waiting');
         element.classList.remove('message-flow-replay-failed');
         element.classList.remove('message-flow-replay-current');
+        element.classList.remove('message-flow-node-way');
     }
+
+    state.svg.querySelector('.message-flow-root').classList.remove('message-flow-node-way');
 
     for (var connectorIndex = 0; connectorIndex < state.connectors.length; connectorIndex++) {
         var connector = state.connectors[connectorIndex];

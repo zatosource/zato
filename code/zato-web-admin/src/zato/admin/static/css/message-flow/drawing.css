@@ -20,12 +20,22 @@
 
 /* The node the reader picked - amber says selection and nothing else - and
    the nodes the selection came by, the root included, wearing the same
-   border without holding the selection */
+   border without holding the selection. The picked one alone casts a soft
+   amber glow past its edge and throws its shadow down and to the right with
+   a little of the amber in it, which is what tells it from the way in. */
 
 .message-flow-node-selected .message-flow-box,
 .message-flow-node-way .message-flow-box {
     stroke: var(--message-flow-selected);
     stroke-width: 1.6;
+}
+
+.message-flow-node-selected .message-flow-box {
+    filter: drop-shadow(0 0 7px var(--message-flow-selected-glow));
+}
+
+.message-flow-node.message-flow-node-selected {
+    filter: drop-shadow(5px 8px 12px var(--message-flow-selected-shadow));
 }
 
 .message-flow-rim {

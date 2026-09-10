@@ -170,13 +170,30 @@ keyboard.position = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// With nothing picked by hand, up or down picks something first. A pass
-// standing on an event hands that event over - the pass ends and the pick
-// takes its place, and the key then walks on from there. With no pass, down
-// picks the first node and up the last node's last row, and that is the whole
-// of the step. Whether the key still has a step to make is what comes back.
-keyboard.pickStart = function(isDown) {
+// Whether a key is one of the walk's at all
+keyboard.isWalkKey = function(key) {
+    var keys = keyboard.config.keys;
+
+    for (var name in keys) {
+        if (keys[name] === key) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// With nothing picked by hand, a key of the walk picks something first. A
+// pass standing on an event hands that event over - the pass ends and the
+// pick takes its place, and the key then walks on from there. With no pass, a
+// key that goes forward picks the first node and one that goes back the last
+// node's last row, and that is the whole of the step. Whether the key still
+// has a step to make is what comes back.
+keyboard.pickStart = function(key) {
     var replay = $.fn.zato.message_flow.replay;
+    var keys = keyboard.config.keys;
     var state = replay.state;
 
     var order = keyboard.nodeOrder();
@@ -190,7 +207,9 @@ keyboard.pickStart = function(isDown) {
         return true;
     }
 
-    if (isDown) {
+    var isForward = key === keys.nextNode || key === keys.nextRow || key === keys.firstNode;
+
+    if (isForward) {
         keyboard.goTo(order[0], keyboard.modelsOf(order[0])[0]);
     }
     else {
@@ -220,16 +239,21 @@ keyboard.onKeyDown = function(event) {
         return;
     }
 
-    // Nothing picked yet - only up and down pick something, the other keys
-    // stay the pass's own
+    // Nothing picked yet - a key of the walk picks something first. During a
+    // pass only up and down take the pick over from it, the other keys stay
+    // the pass's own.
     if (drawing.selectedNode === null) {
-        var isDown = event.key === keys.nextRow;
-
-        if (!isDown && event.key !== keys.previousRow) {
+        if (!keyboard.isWalkKey(event.key)) {
             return;
         }
 
-        var hasStep = keyboard.pickStart(isDown);
+        var isRowKey = event.key === keys.nextRow || event.key === keys.previousRow;
+
+        if (replay.state.isActive && !isRowKey) {
+            return;
+        }
+
+        var hasStep = keyboard.pickStart(event.key);
 
         // The pick was the whole of the step, and the key is spent either way
         // so the pass never answers it too

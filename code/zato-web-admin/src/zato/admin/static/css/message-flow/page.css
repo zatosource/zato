@@ -32,6 +32,12 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     --message-flow-guide: rgba(255, 255, 255, 0.35);
     --message-flow-rim: rgba(255, 255, 255, 0.22);
     --message-flow-selected: rgb(246, 166, 5);
+
+    /* The glow the picked node casts past its border, and the shadow it
+       throws down and to the right - the room's black with a little of the
+       amber in it */
+    --message-flow-selected-glow: rgba(246, 166, 5, 0.5);
+    --message-flow-selected-shadow: rgba(58, 40, 6, 0.6);
     --message-flow-selected-text: #f6c66a;
 
     /* A node's lines - how strong the rim each chip wears in its own ink is, and

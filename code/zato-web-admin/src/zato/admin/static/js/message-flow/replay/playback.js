@@ -85,9 +85,6 @@ replay.applyState = function() {
         node.element.classList.toggle('message-flow-replay-waiting',
             playedOfNode > 0 && playedOfNode < node.eventIndexes.length);
         node.element.classList.toggle('message-flow-replay-failed', hasPlayedFailure);
-
-        // The node the pass stands on wears the page's own selection amber
-        node.element.classList.toggle('message-flow-replay-current', key === currentKey);
     }
 
     // The whole way from the root to the node the pass stands on wears the
@@ -100,6 +97,18 @@ replay.applyState = function() {
         wayKeys[wayKey] = true;
         wayKey = state.connectorByTo[wayKey].fromKey;
     }
+
+    // The node the pass stands on wears the selection amber and its glow, the
+    // nodes on the way to it the border alone, the root among them whenever
+    // the pass stands anywhere at all
+    for (var nodeKey in state.nodes) {
+        var wayNode = state.nodes[nodeKey].element;
+
+        wayNode.classList.toggle('message-flow-replay-current', nodeKey === currentKey);
+        wayNode.classList.toggle('message-flow-node-way', wayKeys[nodeKey] === true && nodeKey !== currentKey);
+    }
+
+    state.svg.querySelector('.message-flow-root').classList.toggle('message-flow-node-way', currentKey !== '');
 
     // A connector draws itself in the moment its node first speaks - seeking
     // back undraws it the same way

@@ -468,14 +468,9 @@ drawing.wireDrawing = function(svg) {
                 }
 
                 // The picked node's whole way from the root stays lit around
-                // it, and the root, standing outside every branch, keeps them
-                // all lit
-                if (drawing.selectedKey !== '') {
-                    setLitWay(drawing.selectedKey);
-                }
-                else {
-                    setLitAll();
-                }
+                // it and the rest of the room dims - the root's way is the
+                // root alone, so under it every exchange dims
+                setLitWay(drawing.selectedKey);
             });
         };
 
