@@ -263,12 +263,6 @@ listing.rowHTML = function(rowModel) {
 
     html += '>';
 
-    // Saying an event is a request next to a tag already reading REQUEST is saying it twice.
-    // An event whose tag does not say what it was - a platform record or a log access
-    // record, whose tag names the log and not the kind - says so itself, except a view
-    // record, whose chips already name the viewer and the viewed thing, so its row says
-    // nothing twice either. The words are read, not clicked - filtering by an event's
-    // kind is the pane's affair.
     var saysNothingOfKind = rowModel.role === 'none' || rowModel.role === 'access';
     var saysItsKind = saysNothingOfKind && rowModel.eventType !== listing.config.viewEventType;
 

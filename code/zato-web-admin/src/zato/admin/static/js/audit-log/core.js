@@ -122,24 +122,28 @@ $.fn.zato.audit_log.config = {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The audit log address to lead back to - the audit log page with its whole address bar,
-// or the way back this page was itself given, or none on any other page.
+// Only an audit log address is accepted as the way back
 $.fn.zato.audit_log.backURL = function() {
     var config = $.fn.zato.audit_log.config;
     var kit = $.fn.zato.dashboard_kit;
 
     var carried = kit.url_state.get(config.backURLKey);
+    var isCarriedAuditLog = false;
 
-    // Only an audit log address is a way back
-    if (carried !== null && carried.indexOf(config.auditLogPagePath) === 0) {
-        return carried;
+    if (carried !== null) {
+        isCarriedAuditLog = carried.indexOf(config.auditLogPagePath) === 0;
     }
 
-    if (window.location.pathname === config.auditLogPagePath) {
-        return window.location.pathname + window.location.search;
+    var out = '';
+
+    if (isCarriedAuditLog) {
+        out = carried;
+    }
+    else if (window.location.pathname === config.auditLogPagePath) {
+        out = window.location.pathname + window.location.search;
     }
 
-    return '';
+    return out;
 };
 
 // /////////////////////////////////////////////////////////////////////////////

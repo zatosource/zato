@@ -220,7 +220,7 @@ _scheduler_columns = [
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
-# A service invocation is named by the service that ran and by what invoked it.
+# Service invocations.
 _service_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},

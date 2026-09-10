@@ -285,14 +285,14 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // The traceback stands under the facts as it is, coloured the way every payload is.
     kit.runSummary.fillError = function($summary, traceback) {
 
         if (traceback === '') {
             return;
         }
 
-        var out = '<pre class="dashboard-run-traceback">' + kit.syntax_highlight(traceback) + '</pre>';
+        var highlighted = kit.syntax_highlight(traceback);
+        var out = '<pre class="dashboard-run-traceback">' + highlighted + '</pre>';
 
         $summary.find('.dashboard-run-traceback-host').html(out);
     };

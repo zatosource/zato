@@ -109,7 +109,6 @@ fileOutgoing.renderRunError = function(rowModel, $host, variant) {
         return;
     }
 
-    // On the flow page the traceback has a tab of its own beside the reply
     if (config.tracebackInPane) {
         return;
     }

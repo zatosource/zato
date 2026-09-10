@@ -343,7 +343,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             else:
                 raise Exception('No internal modules found to be imported')
 
-            # Invocations of user-defined services are recorded in the audit log the same way any other source's events are.
+            # The audit log for invocations of user-defined services.
             self.service_audit_log = AuditLog(self.name)
 
             internal = self.service_store.import_internal_services(internal_service_modules, self.base_dir, self.sync_internal)

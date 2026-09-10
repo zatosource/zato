@@ -298,6 +298,17 @@ page.search = function(term) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+page.placeReplayBar = function() {
+    var replay = $.fn.zato.message_flow.replay;
+    var hasJourney = replay.state.events.length > 0;
+
+    if (hasJourney) {
+        replay.applyFloat();
+    }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // Clear stands in the box only while there is a term in it to be cleared
 page.showSearchClear = function() {
     $('#message-flow-search-clear').toggle($('#message-flow-search-input').val() !== '');
@@ -337,6 +348,11 @@ page.init = function() {
         default_tab: config.flowTab,
         on_change: function(tab) {
             kit.url_state.replace({tab: tab});
+
+            // The bar is placed against the frame only once the frame is shown.
+            if (tab === config.flowTab) {
+                page.placeReplayBar();
+            }
         }
     });
 

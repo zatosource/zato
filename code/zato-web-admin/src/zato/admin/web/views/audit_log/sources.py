@@ -333,7 +333,7 @@ def render_scheduler_record(engine:'any_', event_id:'int', kind:'str') -> 'str':
     for name, value in attr_rows:
         attrs[name] = value
 
-    # What the scheduler asked for - the job, its service, which run this was and when it went off.
+    # The request side.
     request_lines = []
 
     request_lines.append(f'Job:        {object_name}')
@@ -352,7 +352,7 @@ def render_scheduler_record(engine:'any_', event_id:'int', kind:'str') -> 'str':
     started = event_time_iso.replace('T', ' ').split('.')[0]
     request_lines.append(f'Started:    {started} UTC')
 
-    # How the run went and what it said while it was going.
+    # The response side.
     response_lines = []
 
     response_lines.append(f'Outcome:    {outcome}')
@@ -362,11 +362,13 @@ def render_scheduler_record(engine:'any_', event_id:'int', kind:'str') -> 'str':
         duration_human = format_duration_ms(duration_ms)
         response_lines.append(f'Duration:   {duration_human}')
 
-    # The error is the last line of the traceback the scheduler stored, the raw data keeps the whole of it.
+    # Only the last line of the traceback is shown here, the stored data keeps all of it.
     if error:
-        error_lines = error.strip().splitlines()
+        error = error.strip()
+        error_lines = error.splitlines()
+        last_error_line = error_lines[-1]
         response_lines.append('')
-        response_lines.append(f'Error:      {error_lines[-1]}')
+        response_lines.append(f'Error:      {last_error_line}')
 
     # The captured log lines follow, one per line, each with its level and moment
     if log_rows:

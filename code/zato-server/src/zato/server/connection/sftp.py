@@ -54,21 +54,25 @@ _hash_chunk_size = 65536
 # ################################################################################################################################
 
 class SFTPConnectionError(Exception):
-    """ The sftp session itself failed - the server unreachable, the authentication rejected
-    or the binary not run - so no command was answered at all.
+    """ The sftp session itself failed and no command was answered.
     """
 
 # ################################################################################################################################
 
-def _reply_summary(out:'SFTPOutput') -> 'str':
-    """ What the server said, on one line - the last line of a run's error is what its record shows.
+def _reply_summary(sftp_output:'SFTPOutput') -> 'str':
+    """ The server's reply on one line.
     """
-    reply = _reply_text(out)
-    lines = [line for line in reply.splitlines() if line.strip()]
+    reply = _reply_text(sftp_output)
+    lines = []
 
-    out_text = ', '.join(lines)
+    for line in reply.splitlines():
+        stripped = line.strip()
+        if stripped:
+            lines.append(line)
 
-    return out_text
+    out = ', '.join(lines)
+
+    return out
 
 # ################################################################################################################################
 
@@ -292,12 +296,15 @@ class SFTPConnection(ExchangeNotes):
         # .. remove the echoed sftp> prompt lines from the output ..
         out.strip_stdout_prefix()
 
-        # .. what was sent and what came back is kept for the audit log, a failure included ..
-        self.note_exchange(_request_text(data, out), _reply_text(out))
+        # .. keep what was sent and what came back for the audit log ..
+        request_text = _request_text(data, out)
+        reply_text = _reply_text(out)
+        self.note_exchange(request_text, reply_text)
 
         # .. a session that never ran the commands is raised even with raise_on_error off ..
         if out.is_connection_failure():
-            raise SFTPConnectionError(_reply_summary(out))
+            reply_summary = _reply_summary(out)
+            raise SFTPConnectionError(reply_summary)
 
         # .. perhaps we are to raise an exception on an error encountered ..
         if not out.is_ok:

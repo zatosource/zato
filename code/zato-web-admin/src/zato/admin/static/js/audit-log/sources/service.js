@@ -1,65 +1,134 @@
 
 
-// /////////////////////////////////////////////////////////////////////////////
 
-// What a row of the service source shows. An invocation is two events named by
-// the service that ran - its request, written down before the service runs, and
-// its response, written after, the traceback beside the response when it failed.
-// A note is what a service wrote down about its own work through self.audit.write -
-// named by its message, wearing the fields the service gave it as chips, its data
-// beside the message when it attached any. All three share the invocation's card
-// in the flow. Everything else reads the way the default presenter reads it.
+// /////////////////////////////////////////////////////////////////////////////
 
 (function($) {
 
-var kit = $.fn.zato.dashboard_kit;
+var dashboardKit = $.fn.zato.dashboard_kit;
+var sources = $.fn.zato.audit_log.sources;
+var defaultPresenter = sources['default'];
 
 var presenterConfig = {
 
-    // The event types of the three things a service writes down
     requestEventType: 'service-request',
     responseEventType: 'service-response',
     noteEventType: 'note',
 
-    // How a request's line on a flow card reads - who invoked the service
     invokedByLabel: 'Invoked by',
 
-    // What the flow pane's tab of a failed response's traceback is called, and the body it opens
     tracebackLabel: 'Traceback',
     errorBodyKind: 'error',
 
-    // The body a note's attached data is kept as, and what the listing's tabs reading a note are called
     dataBodyKind: 'data',
     messageTabLabel: 'Message',
-    dataTabLabel: 'Data'
+    dataTabLabel: 'Data',
+
+    chipTone: 'neutral',
+    emptyChipLabel: '',
+
+    // A note field named after a unit of time holds a duration in that unit
+    durationUnitMilliseconds: {
+        'ms': 1,
+        'milliseconds': 1,
+        'seconds': 1000,
+        'minutes': 60000,
+        'hours': 3600000
+    },
+
+    // Shortest unit first, each used for durations below its bound
+    durationWords: [
+        {word: 'ms', unitMilliseconds: 1, below: 1000},
+        {word: 'sec', unitMilliseconds: 1000, below: 60000},
+        {word: 'min', unitMilliseconds: 60000, below: 3600000},
+        {word: 'h', unitMilliseconds: 3600000, below: Infinity}
+    ]
 };
 
-// Whether a raw row is a note rather than a request or a response
+// /////////////////////////////////////////////////////////////////////////////
+
+var durationText = function(milliseconds) {
+    var words = presenterConfig.durationWords;
+    var out = '';
+
+    for (var wordIndex = 0; wordIndex < words.length; wordIndex++) {
+        var entry = words[wordIndex];
+
+        if (milliseconds < entry.below) {
+            var units = milliseconds / entry.unitMilliseconds;
+            var rounded = Math.round(units);
+
+            out = rounded + ' ' + entry.word;
+            break;
+        }
+    }
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+var isDurationField = function(field) {
+    var unitMilliseconds = presenterConfig.durationUnitMilliseconds[field.name];
+    var out = unitMilliseconds !== undefined;
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The attr table stores every value as text
+var durationFieldMilliseconds = function(field) {
+    var value = Number(field.value);
+    var unitMilliseconds = presenterConfig.durationUnitMilliseconds[field.name];
+
+    var out = value * unitMilliseconds;
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 var isNote = function(row) {
-    return row.event_type === presenterConfig.noteEventType;
+    var out = row.event_type === presenterConfig.noteEventType;
+    return out;
 };
 
-// Whether a raw row is the request a service was given
+// /////////////////////////////////////////////////////////////////////////////
+
 var isRequest = function(row) {
-    return row.event_type === presenterConfig.requestEventType;
+    var out = row.event_type === presenterConfig.requestEventType;
+    return out;
 };
 
-// Whether a note carries data of its own beside its message
+// /////////////////////////////////////////////////////////////////////////////
+
 var hasData = function(row) {
-    return row.body_kinds.indexOf(presenterConfig.dataBodyKind) !== -1;
+    var dataIndex = row.body_kinds.indexOf(presenterConfig.dataBodyKind);
+    var out = dataIndex !== -1;
+
+    return out;
 };
 
-$.fn.zato.audit_log.sources['service'] = $.extend({}, $.fn.zato.audit_log.sources['default'], {
+// /////////////////////////////////////////////////////////////////////////////
 
-    // The source's rows already wear the source's name on the role tag, so the
-    // source chip saying it again is left out - every other chip reads the default way,
-    // and a note wears each field the service wrote down as a chip of its own
+var hasError = function(row) {
+    var errorIndex = row.body_kinds.indexOf(presenterConfig.errorBodyKind);
+    var out = errorIndex !== -1;
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+var servicePresenter = $.extend({}, defaultPresenter, {
+
     chips: function(row) {
-        var chips = $.fn.zato.audit_log.sources['default'].chips(row);
+        var defaultChips = defaultPresenter.chips(row);
         var out = [];
 
-        for (var chipIndex = 0; chipIndex < chips.length; chipIndex++) {
-            var chip = chips[chipIndex];
+        for (var chipIndex = 0; chipIndex < defaultChips.length; chipIndex++) {
+            var chip = defaultChips[chipIndex];
 
             if (chip.key === 'source') {
                 continue;
@@ -68,13 +137,25 @@ $.fn.zato.audit_log.sources['service'] = $.extend({}, $.fn.zato.audit_log.source
             out.push(chip);
         }
 
-        if (!isNote(row)) {
-            return out;
-        }
+        if (isNote(row)) {
+            for (var fieldIndex = 0; fieldIndex < row.fields.length; fieldIndex++) {
+                var field = row.fields[fieldIndex];
+                var fieldChip;
 
-        for (var fieldIndex = 0; fieldIndex < row.fields.length; fieldIndex++) {
-            var field = row.fields[fieldIndex];
-            out.push({key: field.name, label: field.name, value: field.value, tone: 'neutral'});
+                if (isDurationField(field)) {
+                    var milliseconds = durationFieldMilliseconds(field);
+                    var text = durationText(milliseconds);
+
+                    fieldChip = {key: field.name, label: presenterConfig.emptyChipLabel, value: text,
+                        tone: presenterConfig.chipTone};
+                }
+                else {
+                    fieldChip = {key: field.name, label: field.name, value: field.value,
+                        tone: presenterConfig.chipTone};
+                }
+
+                out.push(fieldChip);
+            }
         }
 
         return out;
@@ -82,115 +163,126 @@ $.fn.zato.audit_log.sources['service'] = $.extend({}, $.fn.zato.audit_log.source
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // An invocation is known by the service that ran, a note by what it says
     headline: function(row) {
+        var out;
+
         if (isNote(row)) {
-            return row.data;
+            out = row.data;
+        }
+        else {
+            out = row.object_name;
         }
 
-        return row.object_name;
+        return out;
     },
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // The Summary tab says everything the default says, and a note's fields after it
     summaryFacts: function(rowModel) {
         var listing = $.fn.zato.audit_log.listing;
+        var row = rowModel.raw;
         var out = listing.defaultSummaryFacts(rowModel);
-        var row = rowModel.raw;
-
-        if (!isNote(row)) {
-            return out;
-        }
-
-        for (var fieldIndex = 0; fieldIndex < row.fields.length; fieldIndex++) {
-            var field = row.fields[fieldIndex];
-            out.push(listing.paneFact(field.name, listing.escapeHTML(field.value), field.value, field.value));
-        }
-
-        return out;
-    },
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    // A note with data attached reads as its message and as that data, a request,
-    // a response and a bare note read the default way
-    payloadTabs: function(rowModel) {
-        var row = rowModel.raw;
-
-        if (!isNote(row) || !hasData(row)) {
-            return $.fn.zato.audit_log.sources['default'].payloadTabs(rowModel);
-        }
-
-        var out = [
-            {label: presenterConfig.messageTabLabel, kind: '', parsed: false},
-            {label: presenterConfig.dataTabLabel, kind: presenterConfig.dataBodyKind, parsed: true}
-        ];
-
-        return out;
-    },
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    // A request reports no outcome and its role chip already says it is a request,
-    // so its line writes no kind of its own
-    lineTypeLabel: function(model) {
-        if (isRequest(model.raw)) {
-            return '';
-        }
-
-        return model.eventLabel;
-    },
-
-    // A note's line on the card reads its message after the outcome chip, a
-    // request's line reads who invoked the service, a response's how long it took
-    lineNote: function(model) {
-        var row = model.raw;
 
         if (isNote(row)) {
-            return row.data;
-        }
+            for (var fieldIndex = 0; fieldIndex < row.fields.length; fieldIndex++) {
+                var field = row.fields[fieldIndex];
+                var valueHTML = listing.escapeHTML(field.value);
+                var fact = listing.paneFact(field.name, valueHTML, field.value, field.value);
 
-        if (isRequest(row)) {
-            if (row.endpoint === '') {
-                return '';
+                out.push(fact);
             }
-
-            return presenterConfig.invokedByLabel + ' ' + row.endpoint;
         }
 
-        if (row.duration_ms === null) {
-            return '';
-        }
-
-        return kit.format_duration_ms(row.duration_ms);
+        return out;
     },
 
-    lineTooltip: function(model) {
-        return $.fn.zato.audit_log.sources['service'].lineNote(model);
-    },
+    // ////////////////////////////////////////////////////////////////////////
 
-    // The pane's header names a note by its role alone, its message being the body
-    // under it, a request and a response by what their lines read
-    headerNote: function(model) {
-        if (isNote(model.raw)) {
-            return '';
-        }
-
-        return $.fn.zato.audit_log.sources['service'].lineNote(model);
-    },
-
-    // A failed response opens its traceback beside itself, a request and a note open nothing more
-    paneExtras: function(rowModel) {
+    payloadTabs: function(rowModel) {
         var row = rowModel.raw;
+        var isNoteWithData = false;
 
-        if (row.body_kinds.indexOf(presenterConfig.errorBodyKind) === -1) {
-            return [];
+        if (isNote(row)) {
+            if (hasData(row)) {
+                isNoteWithData = true;
+            }
         }
 
-        return [{label: presenterConfig.tracebackLabel, kind: presenterConfig.errorBodyKind}];
+        var out;
+
+        if (isNoteWithData) {
+            out = [
+                {label: presenterConfig.messageTabLabel, kind: '', parsed: false},
+                {label: presenterConfig.dataTabLabel, kind: presenterConfig.dataBodyKind, parsed: true}
+            ];
+        }
+        else {
+            out = defaultPresenter.payloadTabs(rowModel);
+        }
+
+        return out;
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    lineTypeLabel: function(model) {
+        var out = '';
+
+        if (!isRequest(model.raw)) {
+            out = model.eventLabel;
+        }
+
+        return out;
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    lineNote: function(model) {
+        var row = model.raw;
+        var out = '';
+
+        if (isNote(row)) {
+            out = row.data;
+        }
+        else if (isRequest(row)) {
+            if (row.endpoint !== '') {
+                out = presenterConfig.invokedByLabel + ' ' + row.endpoint;
+            }
+        }
+        else if (row.duration_ms !== null) {
+            out = dashboardKit.format_duration_ms(row.duration_ms);
+        }
+
+        return out;
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    headerNote: function(model) {
+        var out = '';
+
+        if (!isNote(model.raw)) {
+            out = servicePresenter.lineNote(model);
+        }
+
+        return out;
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    paneExtras: function(rowModel) {
+        var out = [];
+
+        if (hasError(rowModel.raw)) {
+            var tracebackTab = {label: presenterConfig.tracebackLabel, kind: presenterConfig.errorBodyKind};
+            out.push(tracebackTab);
+        }
+
+        return out;
     }
 });
+
+sources['service'] = servicePresenter;
 
 // /////////////////////////////////////////////////////////////////////////////
 

@@ -73,8 +73,7 @@ class AuditSource:
     LLM           = 'llm'
     Odoo          = 'odoo'
 
-    # One event per invocation of a user-defined service, whichever way it was invoked -
-    # the object name is the service, the endpoint is what invoked it.
+    # The object name is the service, the endpoint is what invoked it.
     Service       = 'service'
 
     # One source for all the Microsoft cloud services - 365, Teams, OneDrive,
@@ -151,7 +150,7 @@ source_attr_names = {
     AuditSource.Scheduler: ('current_run', 'delay_ms', 'job_id'),
     AuditSource.File_Outgoing: ('operation', 'schedule', 'file_name', 'service', 'checksum', 'current_run'),
 
-    # The channel type the invocation came in through - http-soap, scheduler, invoke and the like.
+    # The channel type the invocation came in through.
     AuditSource.Service: ('channel',),
 
     # How many days the checked certificate had left at check time.
@@ -252,12 +251,11 @@ class AuditEvent:
     Content_Viewed       = 'content-viewed'
     Job_Executed         = 'job-executed'
 
-    # One invocation of a user-defined service - the request written down before the service
-    # runs and the response after it, so a request outlives a server that dies mid-service.
+    # The request is recorded before the service runs and the response after it.
     Service_Request      = 'service-request'
     Service_Response     = 'service-response'
 
-    # A service writing down what it did, in its own words, through self.audit.write.
+    # Written by a service through self.audit.write.
     Note                 = 'note'
 
     # What a file transfer schedule writes about each file it takes and about
@@ -313,7 +311,7 @@ class AuditBody:
     # The ledger of a file transfer run.
     Run_Ledger = 'run-ledger'
 
-    # The structured data a service attached to a note of its own.
+    # The data a service attached to a note.
     Data       = 'data'
 
 # ################################################################################################################################

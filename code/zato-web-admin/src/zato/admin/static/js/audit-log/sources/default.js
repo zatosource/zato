@@ -116,7 +116,7 @@ $.fn.zato.audit_log.sources['default'] = {
 
     // The ways the message can be read on the Data tab - parsed first, being what a message
     // is opened to be read as, the wire form there for whoever asks for it.
-    payloadTabs: function(_rowModel) {
+    payloadTabs: function() {
         var config = listing.config;
 
         var out = [
@@ -172,28 +172,40 @@ $.fn.zato.audit_log.sources['default'] = {
         return null;
     },
 
-    // The further bodies of one event a side of the flow pane opens after the event's own, as
-    // {label, kind} each - a run's traceback beside its reply, none for most sources.
-    paneExtras: function(_rowModel, _role) {
-        return [];
+    // ////////////////////////////////////////////////////////////////////////
+
+    // Further bodies of one event, as {label, kind} each
+    paneExtras: function() {
+        var out = [];
+        return out;
     },
 
-    // What a line of a flow card reads in place of an outcome when its event reports none -
-    // the event's own kind, unless the role chip before it already says as much
+    // ////////////////////////////////////////////////////////////////////////
+
     lineTypeLabel: function(model) {
-        return model.eventLabel;
+        var out = model.eventLabel;
+        return out;
     },
 
-    lineNote: function(_model) {
-        return '';
+    // ////////////////////////////////////////////////////////////////////////
+
+    lineNote: function() {
+        var out = '';
+        return out;
     },
 
-    // What the flow pane's header says of an event after the event's role - what
-    // the event's own line on the card reads, unless the source has less to say there
+    // ////////////////////////////////////////////////////////////////////////
+
     headerNote: function(model) {
-        var presenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
-        return presenter.lineNote(model);
+        var raw = model.raw;
+        var presenter = $.fn.zato.audit_log.presenterFor(raw.source);
+
+        var out = presenter.lineNote(model);
+
+        return out;
     },
+
+    // ////////////////////////////////////////////////////////////////////////
 
     lineTooltip: function(_model) {
         return '';
