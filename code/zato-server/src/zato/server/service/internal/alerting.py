@@ -372,7 +372,7 @@ class AlertingRun(AdminService):
         finding_label    = pluralize(result.finding_count, 'finding')
         dispatched_count = len(result.dispatched)
 
-        self.logger.info('Alerting sweep ran %s over %s - %s, %d raised, %d deduplicated, %d dispatched',
+        self.logger.debug('Alerting sweep ran %s over %s - %s, %d raised, %d deduplicated, %d dispatched',
             rule_label, fact_label, finding_label, result.raised_count, result.deduplicated_count, dispatched_count)
 
 # ################################################################################################################################
