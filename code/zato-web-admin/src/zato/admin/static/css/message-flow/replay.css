@@ -17,11 +17,15 @@
        buttons' icons, there to be found when reached for and silent otherwise */
     --message-flow-replay-speed-accent: #767b88;
 
-    /* The playhead is a pale line and a toggle that is on a raised patch with
-       just a breath of the page's amber in it - a tint, not a lamp */
+    /* A toggle that is on sits on a raised patch with just a breath of the
+       page's amber in it - a tint, not a lamp - the band of the track already
+       walked is dimmer still, a wash the playhead pulls along, and the
+       playhead itself is a quieter amber than the ticks it passes */
     --message-flow-replay-chosen-fill: rgba(246, 166, 5, 0.16);
     --message-flow-replay-chosen-rim: rgba(246, 166, 5, 0.22);
-    --message-flow-replay-playhead-fill: #c6cad4;
+    --message-flow-replay-played-fill: rgba(246, 166, 5, 0.07);
+    --message-flow-replay-playhead-fill: rgba(246, 166, 5, 0.28);
+    --message-flow-replay-playhead-glow: rgba(246, 166, 5, 0.17);
 }
 
 /* The room the canvas and the bar share - whatever hangs off its edges is
@@ -225,6 +229,19 @@
     background: rgba(255, 255, 255, 0.22);
 }
 
+/* The band already walked - from the track's start to wherever the playhead
+   stands, moving with it rather than jumping from tick to tick */
+
+.message-flow-replay-played {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 100%;
+    background: var(--message-flow-replay-played-fill);
+    pointer-events: none;
+}
+
 .message-flow-replay-tick {
     position: absolute;
     top: 5px;
@@ -239,21 +256,21 @@
     background: var(--message-flow-bad);
 }
 
-/* The tick the pass stands on - the same amber the node and the row wear */
+/* Every tick the pass has walked past - the same amber the node and the row
+   the pass stands on wear, a failure keeping its own ink */
 
-.message-flow-replay-tick-current {
+.message-flow-replay-tick-played:not(.message-flow-replay-tick-bad) {
     background: var(--message-flow-selected);
 }
 
 .message-flow-replay-playhead {
     position: absolute;
     top: 0;
-    width: 2px;
+    width: 1px;
     height: 100%;
-    margin-left: -1px;
-    border-radius: 1px;
+    margin-left: -0.5px;
     background: var(--message-flow-replay-playhead-fill);
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 4px var(--message-flow-replay-playhead-glow);
 }
 
 /* The clock face - the wall time the playhead stands at and how far past the

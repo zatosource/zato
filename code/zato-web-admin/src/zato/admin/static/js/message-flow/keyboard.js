@@ -6,7 +6,9 @@
 // node in the order the message reached them, up and down from row to row
 // of one node and on past its ends into the neighbouring node, Home and End
 // to the first and the last node - so a reader who picked one node need not
-// reach for the mouse again. The replay's own keys take over while its clock runs.
+// reach for the mouse again. With nothing picked, up and down pick something
+// first - the event a standing pass is on, or the first or the last node when
+// there is no pass. The replay's own keys take over while its clock runs.
 
 $.fn.zato.message_flow.keyboard = {};
 
@@ -111,6 +113,24 @@ keyboard.modelsOf = function(element) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The row of one node an event stands on - the first row when the event is
+// none of the node's, which is the root's case, the seed being another node's
+keyboard.rowOf = function(models, eventId) {
+    var wanted = String(eventId);
+    var out = 0;
+
+    for (var modelIndex = 0; modelIndex < models.length; modelIndex++) {
+        if (String(models[modelIndex].id) === wanted) {
+            out = modelIndex;
+            break;
+        }
+    }
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // The pick brought to one row of one node - the node clicked the way a hand
 // would click it when it is not the picked one already, the pane then brought
 // to the row's event, and the room drifting so the node stands in view
@@ -136,22 +156,13 @@ keyboard.position = function() {
 
     var order = keyboard.nodeOrder();
     var nodeIndex = order.indexOf(drawing.selectedNode);
-
     var models = keyboard.modelsOf(drawing.selectedNode);
-    var rowIndex = 0;
-
-    for (var modelIndex = 0; modelIndex < models.length; modelIndex++) {
-        if (models[modelIndex].id === detail.currentEventId) {
-            rowIndex = modelIndex;
-            break;
-        }
-    }
 
     var out = {
         order: order,
         nodeIndex: nodeIndex,
         models: models,
-        rowIndex: rowIndex
+        rowIndex: keyboard.rowOf(models, detail.currentEventId)
     };
 
     return out;
@@ -159,14 +170,77 @@ keyboard.position = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// With nothing picked by hand, up or down picks something first. A pass
+// standing on an event hands that event over - the pass ends and the pick
+// takes its place, and the key then walks on from there. With no pass, down
+// picks the first node and up the last node's last row, and that is the whole
+// of the step. Whether the key still has a step to make is what comes back.
+keyboard.pickStart = function(isDown) {
+    var replay = $.fn.zato.message_flow.replay;
+    var state = replay.state;
+
+    var order = keyboard.nodeOrder();
+
+    if (state.isActive && state.detailKey !== '') {
+        var element = state.nodes[state.detailKey].element;
+        var models = keyboard.modelsOf(element);
+
+        keyboard.goTo(element, models[keyboard.rowOf(models, state.detailEventId)]);
+
+        return true;
+    }
+
+    if (isDown) {
+        keyboard.goTo(order[0], keyboard.modelsOf(order[0])[0]);
+    }
+    else {
+        var lastElement = order[order.length - 1];
+        var lastModels = keyboard.modelsOf(lastElement);
+
+        keyboard.goTo(lastElement, lastModels[lastModels.length - 1]);
+    }
+
+    return false;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // One key of the walk answered - a step past either end of the order stays
 // where it is, the drawing having nothing further to show that way
 keyboard.onKeyDown = function(event) {
-    if (!keyboard.isWalking(event)) {
+    var drawing = $.fn.zato.message_flow.drawing;
+    var replay = $.fn.zato.message_flow.replay;
+    var keys = keyboard.config.keys;
+
+    if (event.target.matches(keyboard.config.typingSelector)) {
         return;
     }
 
-    var keys = keyboard.config.keys;
+    if (replay.state.isPlaying) {
+        return;
+    }
+
+    // Nothing picked yet - only up and down pick something, the other keys
+    // stay the pass's own
+    if (drawing.selectedNode === null) {
+        var isDown = event.key === keys.nextRow;
+
+        if (!isDown && event.key !== keys.previousRow) {
+            return;
+        }
+
+        var hasStep = keyboard.pickStart(isDown);
+
+        // The pick was the whole of the step, and the key is spent either way
+        // so the pass never answers it too
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        if (!hasStep) {
+            return;
+        }
+    }
+
     var position = keyboard.position();
 
     var order = position.order;
@@ -222,8 +296,10 @@ keyboard.onKeyDown = function(event) {
         return;
     }
 
-    // The key was the walk's - the page must not scroll on it as well
+    // The key was the walk's - the page must not scroll on it, nor the pass
+    // answer it as well
     event.preventDefault();
+    event.stopImmediatePropagation();
 };
 
 // /////////////////////////////////////////////////////////////////////////////

@@ -70,6 +70,13 @@ replay.config = {
             ]
         },
         {
+            title: 'With nothing picked',
+            shortcuts: [
+                {keys: 'Down', label: 'Pick the first node, or the event a pass stands on'},
+                {keys: 'Up', label: 'Pick the last node\'s last row, or the event a pass stands on'}
+            ]
+        },
+        {
             title: 'During a pass',
             shortcuts: [
                 {keys: 'Space', label: 'Play and pause'},
@@ -225,7 +232,7 @@ replay.disarm = function() {
 
     state.svg.classList.remove('message-flow-replay');
 
-    replay.markCurrentTick(0);
+    replay.markPlayedTicks(0);
 
     // The pane the pass had open on its last event closes with the pass, and
     // with it the marks on that event's row

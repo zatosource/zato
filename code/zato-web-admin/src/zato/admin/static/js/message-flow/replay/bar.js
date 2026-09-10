@@ -89,8 +89,15 @@ replay.updateBar = function() {
     var state = replay.state;
     var bar = replay.bar();
 
+    var playheadPercent = (state.position / state.totalScaled * 100) + '%';
+
     var playhead = bar.querySelector('.message-flow-replay-playhead');
-    playhead.style.left = (state.position / state.totalScaled * 100) + '%';
+    playhead.style.left = playheadPercent;
+
+    // The walked band ends where the playhead stands, and there is none while
+    // the drawing stands still
+    var played = bar.querySelector('.message-flow-replay-played');
+    played.style.width = state.isActive ? playheadPercent : '0';
 
     // The one control that changes its face - the triangle while the clock
     // stands, the bars while it runs
@@ -196,6 +203,12 @@ replay.buildBar = function() {
     var track = document.createElement('div');
     track.className = 'message-flow-replay-track';
     bar.appendChild(track);
+
+    // The band of the track already walked - it grows with the playhead, under
+    // the ticks
+    var played = document.createElement('div');
+    played.className = 'message-flow-replay-played';
+    track.appendChild(played);
 
     var ticks = document.createElement('div');
     ticks.className = 'message-flow-replay-ticks';
@@ -352,14 +365,14 @@ replay.buildTicks = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The tick of the event the pass stands on wears the page's selection amber,
-// the way the node and the row it stands on do - no tick when nothing has
+// Every tick the pass has walked past wears the page's selection amber, the
+// way the node and the row the pass stands on do - none when nothing has
 // played yet
-replay.markCurrentTick = function(playedCount) {
+replay.markPlayedTicks = function(playedCount) {
     var ticks = replay.bar().querySelectorAll('.message-flow-replay-tick');
 
     for (var tickIndex = 0; tickIndex < ticks.length; tickIndex++) {
-        ticks[tickIndex].classList.toggle('message-flow-replay-tick-current', tickIndex === playedCount - 1);
+        ticks[tickIndex].classList.toggle('message-flow-replay-tick-played', tickIndex < playedCount);
     }
 };
 
