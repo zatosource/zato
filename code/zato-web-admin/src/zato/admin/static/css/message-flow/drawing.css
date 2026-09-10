@@ -234,6 +234,73 @@
     font-size: var(--dashboard-font-small);
 }
 
+/* ------------------------------------------------------------ */
+/* Message flow - the chips on a node's lines                    */
+/* ------------------------------------------------------------ */
+
+/* Every chip on a line wears a rim in its own ink, a shade above its fill */
+
+.message-flow-line rect {
+    stroke-width: 1;
+    stroke-opacity: var(--message-flow-chip-rim-opacity);
+}
+
+.message-flow-line .message-flow-chip-id {
+    stroke: var(--message-flow-selected-text);
+}
+
+.message-flow-line .message-flow-chip-request {
+    stroke: var(--message-flow-request);
+}
+
+.message-flow-line .message-flow-chip-response,
+.message-flow-line .message-flow-chip-good {
+    stroke: var(--message-flow-good);
+}
+
+.message-flow-line .message-flow-chip-none,
+.message-flow-line .message-flow-chip-access {
+    stroke: var(--message-flow-sys);
+}
+
+.message-flow-line .message-flow-chip-view {
+    stroke: var(--message-flow-view);
+}
+
+.message-flow-line .message-flow-chip-job {
+    stroke: var(--message-flow-job);
+}
+
+.message-flow-line .message-flow-chip-service {
+    stroke: var(--message-flow-service);
+}
+
+.message-flow-line .message-flow-chip-transfer {
+    stroke: var(--message-flow-transfer);
+}
+
+.message-flow-line .message-flow-chip-bad {
+    stroke: var(--message-flow-bad);
+}
+
+.message-flow-line .message-flow-chip-muted {
+    stroke: var(--message-flow-muted);
+}
+
+/* The line of the event the pane's tabs stand on - every chip wears its own rim
+   at full strength, the event number's amber among them, and every word after
+   the chips, the timestamp included, reads in white */
+
+.message-flow-line.message-flow-line-current rect {
+    stroke-opacity: 1;
+}
+
+.message-flow-line.message-flow-line-current .message-flow-line-note,
+.message-flow-line.message-flow-line-current .message-flow-band-type,
+.message-flow-line.message-flow-line-current .message-flow-timestamp {
+    fill: var(--message-flow-line-current-text);
+}
+
 /* The connector into the node currently standing out - picked by hand or
    stood on by the pass - draws in the selection amber */
 

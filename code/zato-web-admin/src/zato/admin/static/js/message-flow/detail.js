@@ -55,6 +55,10 @@ detail.config = {
     splitDefaultPercent: 50,
     splitMinPercent: 20,
 
+    // What stands between the exchange's name and the words of the event the
+    // pane is open on, the same dot the drawing's lines use
+    titleSeparator: ' \u00b7 ',
+
     // The word each kind of line wears, the same words the drawing writes
     roleLabels: {
         'request': 'REQ',
@@ -89,10 +93,69 @@ detail.config = {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What the pane is holding and how long each of its bodies turned out to be,
-// by tab index, which is what the caption under the body reads
+// What the pane is holding, which of its events the open tabs stand on, and how
+// long each of its bodies turned out to be, by tab index, which is what the
+// caption under the body reads
 detail.openDetail = null;
+detail.currentEventId = null;
 detail.bodyLengths = {};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The words the pane's header says about the event its tabs stand on - what the
+// event's own line on the card reads, the event's kind when the line has no
+// words of its own - so the header names both the exchange and the very event
+detail.eventWords = function(model) {
+    var presenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
+    var out = presenter.lineNote(model);
+
+    if (out === '') {
+        out = model.eventLabel;
+    }
+
+    return out;
+};
+
+// The drawing brought to the event the tabs stand on - that event's line on its
+// node wears the selection amber on its chips, every other line its own inks
+detail.markCurrentLine = function() {
+    var wanted = String(detail.currentEventId);
+    var lines = document.querySelectorAll('.message-flow-line');
+
+    for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        var line = lines[lineIndex];
+        var isCurrent = line.getAttribute('data-event-id') === wanted;
+
+        line.classList.toggle('message-flow-line-current', isCurrent);
+    }
+};
+
+// The header brought to the event the tabs stand on - the exchange's name, the
+// dot, the event's words - and the drawing with it
+detail.updateTitle = function() {
+    var nodeDetail = detail.openDetail;
+
+    if (nodeDetail === null) {
+        return;
+    }
+
+    var text = nodeDetail.title;
+    var wanted = String(detail.currentEventId);
+
+    for (var modelIndex = 0; modelIndex < nodeDetail.models.length; modelIndex++) {
+        var model = nodeDetail.models[modelIndex];
+
+        if (String(model.id) === wanted) {
+            text += detail.config.titleSeparator + detail.eventWords(model);
+            break;
+        }
+    }
+
+    var title = detail.host().querySelector('.message-flow-detail-title');
+    title.textContent = text;
+
+    detail.markCurrentLine();
+};
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -239,25 +302,30 @@ detail.show = function(nodeDetail) {
     // The events split between the two sides - a reply to the right, every
     // other kind of line to the left with the request it belongs to. A source
     // whose one event holds both what was sent and what came back - a file
-    // transfer run talking to its server - puts that same event on both sides,
-    // each side reading its own body of it.
-    var paneKinds = presenter.paneKinds(newestModel);
-
-    var requestModels = [];
-    var responseModels = [];
+    // transfer run talking to its server, a service's invocation - puts that
+    // same event on both sides, each side reading its own body of it. Each
+    // event says this for itself, so a card mixing such events with plain
+    // ones - an invocation and the notes its service wrote - reads each right.
+    // Each side holds {model, kind} entries, the kind naming which body of the
+    // event that side reads, empty for the event's own data.
+    var requestEntries = [];
+    var responseEntries = [];
 
     for (var modelIndex = 0; modelIndex < nodeDetail.models.length; modelIndex++) {
         var model = nodeDetail.models[modelIndex];
 
+        var modelPresenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
+        var paneKinds = modelPresenter.paneKinds(model);
+
         if (paneKinds !== null) {
-            requestModels.push(model);
-            responseModels.push(model);
+            requestEntries.push({model: model, kind: paneKinds.request});
+            responseEntries.push({model: model, kind: paneKinds.response});
         }
         else if (detail.roleOf(model) === 'response') {
-            responseModels.push(model);
+            responseEntries.push({model: model, kind: ''});
         }
         else {
-            requestModels.push(model);
+            requestEntries.push({model: model, kind: ''});
         }
 
         var attachmentsHost = document.createElement('div');
@@ -275,17 +343,7 @@ detail.show = function(nodeDetail) {
     split.className = 'message-flow-detail-split';
     host.appendChild(split);
 
-    // Which body of an event each side reads - the event's own data unless the
-    // source names one body per side
-    var requestKind = '';
-    var responseKind = '';
-
-    if (paneKinds !== null) {
-        requestKind = paneKinds.request;
-        responseKind = paneKinds.response;
-    }
-
-    detail.addSide(split, 'request', requestModels, requestKind);
+    detail.addSide(split, 'request', requestEntries);
 
     var splitBar = document.createElement('div');
     splitBar.className = 'message-flow-detail-split-bar';
@@ -294,13 +352,29 @@ detail.show = function(nodeDetail) {
     // The root stands for the message itself and has no reply of its own to
     // wait for - its right side sums the whole flow up instead
     if (nodeDetail.flowSummary === null) {
-        detail.addSide(split, 'response', responseModels, responseKind);
+        detail.addSide(split, 'response', responseEntries);
     }
     else {
         detail.addSummarySide(split, nodeDetail.flowSummary);
     }
 
     detail.applySplit(split);
+
+    // The tabs open on the first event of the request side, the reply side's when
+    // the request side has none, and the header says which event that is
+    var openEntries = requestEntries;
+
+    if (openEntries.length === 0) {
+        openEntries = responseEntries;
+    }
+
+    detail.currentEventId = null;
+
+    if (openEntries.length > 0) {
+        detail.currentEventId = openEntries[0].model.id;
+    }
+
+    detail.updateTitle();
     detail.updateCaption();
 };
 
@@ -309,16 +383,16 @@ detail.show = function(nodeDetail) {
 // One side of the pane - its events' badges always on top, each tab's body
 // fetched the first time it is opened, parsed when the source's reader made
 // sense of it, as it went down the wire otherwise. A side the exchange has
-// no events for says so. The kind names which body of each event the side
-// reads - empty for the event's own data.
-detail.addSide = function(split, role, models, kind) {
+// no events for says so. Each entry is {model, kind}, the kind naming which
+// body of that event the side reads - empty for the event's own data.
+detail.addSide = function(split, role, entries) {
     var listing = $.fn.zato.audit_log.listing;
 
     var side = document.createElement('div');
     side.className = 'message-flow-detail-side message-flow-detail-side-' + role;
     split.appendChild(side);
 
-    if (models.length === 0) {
+    if (entries.length === 0) {
         var hint = document.createElement('div');
         hint.className = 'message-flow-detail-side-hint';
         hint.textContent = detail.config.sideHints[role];
@@ -329,9 +403,9 @@ detail.addSide = function(split, role, models, kind) {
 
     var tabs = [];
 
-    for (var modelIndex = 0; modelIndex < models.length; modelIndex++) {
-        var model = models[modelIndex];
-        tabs.push(detail.tabOf(model, kind));
+    for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
+        var model = entries[entryIndex].model;
+        tabs.push(detail.tabOf(model, entries[entryIndex].kind));
 
         // The event's further bodies this side opens - a failed run's traceback beside its reply
         var presenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
@@ -458,89 +532,14 @@ detail.updateCaption = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// How the two sides share the pane - the remembered share put back on every
-// opening, the default an even split
-detail.applySplit = function(split) {
-    var kept = window.localStorage.getItem(detail.config.splitStorageKey);
-    var percent = detail.config.splitDefaultPercent;
-
-    if (kept !== null) {
-        percent = Number(kept);
-    }
-
-    split.style.setProperty('--message-flow-detail-split', percent + '%');
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// The bar between the two sides - a press and a pull shares the pane's width
-// between the request and the reply, neither side ever pushed below its least
-// share. Wired once, through the document, because the bar itself is built
-// anew with every opened node.
-detail.wireSplit = function() {
-    var config = detail.config;
-
-    var isPressed = false;
-    var split = null;
-    var splitBar = null;
-
-    document.addEventListener('mousedown', function(event) {
-
-        // Only the main button grabs the bar
-        if (event.button !== 0) {
-            return;
-        }
-
-        if (!event.target.classList.contains('message-flow-detail-split-bar')) {
-            return;
-        }
-
-        isPressed = true;
-        splitBar = event.target;
-        split = splitBar.parentElement;
-
-        splitBar.classList.add('message-flow-detail-splitting');
-
-        // The pull must not start selecting the page's text
-        event.preventDefault();
-    });
-
-    window.addEventListener('mousemove', function(event) {
-        if (!isPressed) {
-            return;
-        }
-
-        var rect = split.getBoundingClientRect();
-        var percent = (event.clientX - rect.left) / rect.width * 100;
-
-        if (percent < config.splitMinPercent) {
-            percent = config.splitMinPercent;
-        }
-
-        if (percent > 100 - config.splitMinPercent) {
-            percent = 100 - config.splitMinPercent;
-        }
-
-        split.style.setProperty('--message-flow-detail-split', percent + '%');
-        window.localStorage.setItem(config.splitStorageKey, String(Math.round(percent)));
-    });
-
-    window.addEventListener('mouseup', function() {
-        if (isPressed) {
-            isPressed = false;
-            splitBar.classList.remove('message-flow-detail-splitting');
-        }
-    });
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
 // With nothing picked, the pane stands where it always stands and says what
 // it is waiting for
 detail.hide = function() {
     var host = detail.host();
 
     detail.openDetail = null;
+    detail.currentEventId = null;
+    detail.markCurrentLine();
 
     host.textContent = '';
 
@@ -552,41 +551,8 @@ detail.hide = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The bar between the drawing and the pane - a press on it and a pull shares
-// the page between the two, neither side ever pushed below what it needs.
-// The pulling itself is the shared pane split bar, this is where the page's
-// own limits, its snap and its shut state meet it.
-detail.wireResize = function() {
-    var config = detail.config;
-
-    var page = document.querySelector(config.pageSelector);
-
-    paneSplit.init({
-        bar: document.getElementById(config.resizeBarId),
-        pane: detail.host(),
-        container: page,
-        axis: 'y',
-        minSize: config.detailMinHeight,
-        minOther: config.canvasMinHeight,
-        snapSize: config.detailSnapHeight,
-        activeClass: config.resizeActiveClass,
-
-        // The pane's height lives in the page's own variable, its stylesheet
-        // reads the layout out of it
-        apply: function(height) {
-            page.style.setProperty('--message-flow-detail-height', height + 'px');
-        },
-
-        // With no height the pane is fully gone, its border included - a shut
-        // pane must not linger as a seam over the page's bottom edge
-        onSnap: function(isShut) {
-            page.classList.toggle('message-flow-detail-shut', isShut);
-        },
-    });
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
+// The pane's own bars - the one between its sides and the one over it - are
+// wired in detail-resize.js
 detail.init = function() {
     detail.wireResize();
     detail.wireSplit();
@@ -595,9 +561,74 @@ detail.init = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The other side brought to the same event - the two sides read one exchange,
+// so a tab picked on one of them picks that event's own tab on the other, the
+// event's first tab there when it has several. A side with no tab for the
+// event is left as it stands.
+detail.followEvent = function($side, eventId) {
+    var $otherSide = $side.siblings('.message-flow-detail-side');
+    var $otherPanel = $otherSide.find('.dashboard-payload');
+
+    if ($otherPanel.length === 0) {
+        return;
+    }
+
+    var otherTabs = $otherPanel.data('payload_tabs');
+
+    for (var tabIndex = 0; tabIndex < otherTabs.length; tabIndex++) {
+        if (otherTabs[tabIndex].eventId === eventId) {
+            kit.payload_panel.open($otherSide, tabIndex);
+            return;
+        }
+    }
+};
+
+// Both sides of the open pane brought to one event - its own tab in front on
+// each side that has one, the way a click on either of them would do it
+detail.openEvent = function(eventId) {
+    var wanted = String(eventId);
+    var sides = detail.host().querySelectorAll('.message-flow-detail-side');
+
+    for (var sideIndex = 0; sideIndex < sides.length; sideIndex++) {
+        var $side = $(sides[sideIndex]);
+        var $panel = $side.find('.dashboard-payload');
+
+        if ($panel.length === 0) {
+            continue;
+        }
+
+        var tabs = $panel.data('payload_tabs');
+
+        for (var tabIndex = 0; tabIndex < tabs.length; tabIndex++) {
+            if (String(tabs[tabIndex].eventId) === wanted) {
+                kit.payload_panel.open($side, tabIndex);
+                break;
+            }
+        }
+    }
+
+    detail.currentEventId = eventId;
+    detail.updateTitle();
+    detail.updateCaption();
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // The panel's own handler has already put the clicked tab in front by the time
-// this one runs, so all that is left is saying how much text the tab holds
+// this one runs, so what is left is bringing the other side and the header to
+// the same event and saying how much text the open tabs hold
 $(document).on('click', '#message-flow-detail .dashboard-payload-tab', function() {
+    var $tab = $(this);
+    var $panel = $tab.closest('.dashboard-payload');
+    var $side = $tab.closest('.message-flow-detail-side');
+
+    var tabs = $panel.data('payload_tabs');
+    var tab = tabs[parseInt($tab.attr('data-tab-index'), 10)];
+
+    detail.followEvent($side, tab.eventId);
+
+    detail.currentEventId = tab.eventId;
+    detail.updateTitle();
     detail.updateCaption();
 });
 

@@ -7,15 +7,22 @@
 // flow pane, the response on the other, the traceback beside the response when it
 // failed. A note is what a service wrote down about its own work through
 // self.audit.write - named by its message, wearing the fields the service gave it
-// as chips, its data beside the message when it attached any. Everything else
-// reads the way the default presenter reads it.
+// as chips, its data beside the message when it attached any, and sharing the
+// invocation's card in the flow. Everything else reads the way the default
+// presenter reads it.
 
 (function($) {
+
+var kit = $.fn.zato.dashboard_kit;
 
 var presenterConfig = {
 
     // The event type of a note a service wrote itself
     noteEventType: 'note',
+
+    // How an invocation's line on a flow card reads - who invoked the service and how long it took
+    invokedByLabel: 'Invoked by',
+    lineSeparator: ' \u00b7 ',
 
     // The body kinds each side of the flow pane reads off one invocation
     paneKinds: {
@@ -134,42 +141,51 @@ $.fn.zato.audit_log.sources['service'] = $.extend({}, $.fn.zato.audit_log.source
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // A note is a card of its own in the flow, so it is not folded into the
-    // invocation of the same service under the same CID
-    cardKey: function(row) {
+    // One event is the whole invocation - what the service was given on one side,
+    // what it returned on the other. A note reads its message on one side and its
+    // data on the other, the data side standing empty for a note that attached none,
+    // so picking the note on either side brings both sides to it. The notes of an
+    // invocation share its card in the flow, each read by its own kinds.
+    paneKinds: function(rowModel) {
+        var row = rowModel.raw;
+
         if (isNote(row)) {
-            return row.cid + '|' + row.object_name + '|' + row.id;
+            return presenterConfig.notePaneKinds;
         }
 
-        return $.fn.zato.audit_log.sources['default'].cardKey(row);
+        return presenterConfig.paneKinds;
     },
 
-    // A note's card is titled by its message, an invocation's by its service
-    cardTitle: function(row) {
+    // A note's line on the card reads its message after the outcome chip, an
+    // invocation's line reads who invoked the service and how long it took
+    lineNote: function(model) {
+        var row = model.raw;
+
         if (isNote(row)) {
             return row.data;
         }
 
-        return row.object_name;
+        var parts = [];
+
+        if (row.endpoint !== '') {
+            parts.push(presenterConfig.invokedByLabel + ' ' + row.endpoint);
+        }
+
+        if (row.duration_ms !== null) {
+            parts.push(kit.format_duration_ms(row.duration_ms));
+        }
+
+        return parts.join(presenterConfig.lineSeparator);
     },
 
-    // ////////////////////////////////////////////////////////////////////////
+    lineTooltip: function(model) {
+        var row = model.raw;
 
-    // One event is the whole invocation - what the service was given on one side,
-    // what it returned on the other. A note with data reads its message on one side
-    // and its data on the other, a bare note has only its message to read.
-    paneKinds: function(rowModel) {
-        var row = rowModel.raw;
-
-        if (!isNote(row)) {
-            return presenterConfig.paneKinds;
+        if (isNote(row)) {
+            return row.data;
         }
 
-        if (hasData(row)) {
-            return presenterConfig.notePaneKinds;
-        }
-
-        return null;
+        return $.fn.zato.audit_log.sources['service'].lineNote(model);
     },
 
     // A failed invocation opens its traceback beside the response, a note opens nothing more

@@ -457,7 +457,8 @@ drawing.wireDrawing = function(svg) {
         }
     };
 
-    // Clicks the node whose exchange holds the event, false when no node holds it.
+    // Clicks the node whose exchange holds the event and brings the pane's tabs to that
+    // very event, false when no node holds it.
     drawing.selectEvent = function(eventId) {
         var wanted = String(eventId);
 
@@ -472,6 +473,8 @@ drawing.wireDrawing = function(svg) {
                     if (drawing.selectedNode !== candidate) {
                         candidate.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
                     }
+
+                    detail.openEvent(eventId);
 
                     return true;
                 }

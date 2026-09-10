@@ -217,6 +217,10 @@ page.showJourney = function(data) {
     flow.rows = models;
     flow.render();
     flow.panel.restoreStep();
+
+    // .. and the event the term resolved to stands picked on the drawing, its node
+    // selected and the pane open on that very event's own tabs.
+    drawing.selectEvent(data.seed_id);
 };
 
 // /////////////////////////////////////////////////////////////////////////////

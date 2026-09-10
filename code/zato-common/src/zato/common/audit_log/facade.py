@@ -39,6 +39,13 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# How many decimal places a note's real-number field keeps - a duration or a ratio is read
+# to the hundredth, the digits past it are noise to whoever reads the log.
+Field_Decimal_Places = 2
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class AuditFacade:
     """ The API through which services read and write the audit log, e.g. self.audit.search(query='ADT-A01')
     or self.audit.write('Order accepted', order_id=order_id).
@@ -64,6 +71,7 @@ class AuditFacade:
         The message is what the note says, is_ok whether it reports success, status a short
         word about it, data any structured value the note carries as its body, and every other
         keyword argument becomes a searchable attribute of the note, e.g. order_id='ABC-123'.
+        A note given fields but no data carries the fields as its body.
         """
         service = self.service
 
@@ -73,11 +81,19 @@ class AuditFacade:
         else:
             outcome = AuditOutcome.Error
 
-        # .. a value attached to the note travels as its body, in text form ..
+        # .. a real-number field is rounded to what a reader cares about ..
+        for name, value in fields.items():
+            if isinstance(value, float):
+                fields[name] = round(value, Field_Decimal_Places)
+
+        # .. a value attached to the note travels as its body, in text form, and a note
+        # with fields but no value has the fields to read as its body instead ..
         bodies:'stranydict' = {}
 
         if data is not None:
             bodies[AuditBody.Data] = to_body_text(data)
+        elif fields:
+            bodies[AuditBody.Data] = to_body_text(fields)
 
         # .. and the note goes to the same log the invocations of services go to,
         # the message as the event's own data so the list previews it as it is.

@@ -76,8 +76,13 @@ drawing.nodeHeight = function(node) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // One event of the exchange written on its own line
-drawing.addEventLine = function(group, x, lineY, width, line) {
+drawing.addEventLine = function(host, x, lineY, width, line) {
     var config = drawing.config;
+
+    // The line is a group of its own, named by its event, so the pane can mark
+    // the line of the event its tabs stand on
+    var group = drawing.addGroup(host, 'message-flow-line');
+    group.setAttribute('data-event-id', line.id);
 
     var cursor = x + config.bodyPadLeft;
 

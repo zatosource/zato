@@ -228,6 +228,21 @@
         kit.payload_panel._fill($panel, open_index);
     };
 
+    /* Opens one tab of a built panel the way a click on its badge would - lit, on the
+       screen and its text asked for if this is its first showing. A tab already open
+       is left as it stands. */
+    kit.payload_panel.open = function($host, tab_index) {
+        var $panel = $host.find('.dashboard-payload');
+        var $tab = $panel.find('.dashboard-payload-tab[data-tab-index="' + tab_index + '"]');
+
+        if ($tab.hasClass('dashboard-panel-action-badge-active')) {
+            return;
+        }
+
+        kit.payload_panel._activate($panel, tab_index);
+        kit.payload_panel._fill($panel, tab_index);
+    };
+
     /* Puts one tab in front - its badge lit and its pane the one on the screen. */
     kit.payload_panel._activate = function($panel, tab_index) {
         $panel.find('.dashboard-payload-tab').removeClass('dashboard-panel-action-badge-active');

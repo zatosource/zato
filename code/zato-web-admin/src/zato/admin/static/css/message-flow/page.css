@@ -34,6 +34,10 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     --message-flow-selected: rgb(246, 166, 5);
     --message-flow-selected-text: #f6c66a;
 
+    /* A node's lines - how strong the rim each chip wears in its own ink is, and
+       the white the words of the line the pane stands on read in */
+    --message-flow-chip-rim-opacity: 0.55;
+    --message-flow-line-current-text: #ffffff;
     /* The inks a role and an outcome are written in, on the nodes and on
        the detail pane's tabs alike */
     --message-flow-request: #6fb6e8;
