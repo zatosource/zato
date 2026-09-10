@@ -98,7 +98,7 @@ class AlertingRun(AdminService):
 
             # The email component may be disabled in server.conf.
             if not self.email:
-                self.logger.warning(
+                self.logger.info(
                     'Could not send an alerting email; is component_enabled.email set to True in server.conf?')
                 return
 
