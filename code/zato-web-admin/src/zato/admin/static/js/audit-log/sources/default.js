@@ -172,6 +172,12 @@ $.fn.zato.audit_log.sources['default'] = {
         return null;
     },
 
+    // The further bodies of one event a side of the flow pane opens after the event's own, as
+    // {label, kind} each - a run's traceback beside its reply, none for most sources.
+    paneExtras: function(_rowModel, _role) {
+        return [];
+    },
+
     lineNote: function(_model) {
         return '';
     },

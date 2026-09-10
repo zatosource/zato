@@ -154,9 +154,7 @@ listing.init = function(initConfig) {
         $.fn.zato.audit_log.search($(this).attr('data-search-value'));
     });
 
-    // The doorway to the flow carries the way back to this very screen - the address bar as it
-    // stands the moment the doorway is taken, the pane's own event and tab included, which it
-    // did not yet hold when the doorway was drawn
+    // The way back is the address bar as it stands when the link is taken, the open event included
     $(document).on('click', '.audit-log-open-flow', function() {
         this.href = $.fn.zato.audit_log.flowPageURL($(this).attr('data-event-id'));
     });

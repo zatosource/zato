@@ -228,7 +228,7 @@ def write_run_exchanges(event_id:'intnone', event_time_iso:'str', exchanges:'dic
     if event_id is None:
         return
 
-    # A run that never reached the server has nothing to store
+    # A run that never reached the server has nothing to store.
     if not exchanges:
         return
 

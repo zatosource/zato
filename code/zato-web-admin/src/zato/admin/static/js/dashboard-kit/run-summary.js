@@ -38,8 +38,6 @@
         // The decisions listed above the fold whatever their place in the ledger.
         leadDecisions: {'failed': true, 'quarantined': true},
 
-        tracebackLabel: 'Traceback',
-
         variantClasses: {
             'light': 'dashboard-run-summary-light',
             'dark': 'dashboard-run-summary-dark'
@@ -287,27 +285,14 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
+    // The traceback stands under the facts as it is, coloured the way every payload is.
     kit.runSummary.fillError = function($summary, traceback) {
-        var config = kit.runSummary.config;
 
         if (traceback === '') {
             return;
         }
 
-        var foldKey = $summary.attr('data-fold-key');
-        var isUnfolded = kit.runSummary.folds.isUnfolded(foldKey);
-
-        var out = '<div class="dashboard-run-ledger-fold"><span class="dashboard-panel-action-badge ' +
-            'dashboard-run-traceback-toggle" data-unfolded="' + (isUnfolded ? '1' : '0') + '">' +
-            config.tracebackLabel + '</span></div>';
-
-        out += '<pre class="dashboard-run-traceback"';
-
-        if (!isUnfolded) {
-            out += ' hidden';
-        }
-
-        out += '>' + kit._esc_html(traceback) + '</pre>';
+        var out = '<pre class="dashboard-run-traceback">' + kit.syntax_highlight(traceback) + '</pre>';
 
         $summary.find('.dashboard-run-traceback-host').html(out);
     };
@@ -340,21 +325,6 @@
             window.localStorage.setItem(kit.runSummary.folds.storageKey, JSON.stringify(folds));
         }
     };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    $(document).on('click', '.dashboard-run-traceback-toggle', function(event) {
-        event.stopPropagation();
-
-        var $toggle = $(this);
-        var $summary = $toggle.closest('.dashboard-run-summary');
-        var nowUnfolded = $toggle.attr('data-unfolded') !== '1';
-
-        $summary.find('.dashboard-run-traceback').prop('hidden', !nowUnfolded);
-        $toggle.attr('data-unfolded', nowUnfolded ? '1' : '0');
-
-        kit.runSummary.folds.set($summary.attr('data-fold-key'), nowUnfolded);
-    });
 
     // ////////////////////////////////////////////////////////////////////////
 

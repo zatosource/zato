@@ -53,13 +53,32 @@ _hash_chunk_size = 65536
 # ################################################################################################################################
 # ################################################################################################################################
 
+class SFTPConnectionError(Exception):
+    """ The sftp session itself failed - the server unreachable, the authentication rejected
+    or the binary not run - so no command was answered at all.
+    """
+
+# ################################################################################################################################
+
+def _reply_summary(out:'SFTPOutput') -> 'str':
+    """ What the server said, on one line - the last line of a run's error is what its record shows.
+    """
+    reply = _reply_text(out)
+    lines = [line for line in reply.splitlines() if line.strip()]
+
+    out_text = ', '.join(lines)
+
+    return out_text
+
+# ################################################################################################################################
+
 def _request_text(data:'str', out:'SFTPOutput') -> 'str':
     """ What was sent to the server as one piece of text - the sftp binary's own invocation
     first, the commands fed to its prompt under it.
     """
     commands = data.rstrip('\n')
 
-    # The invocation is None when the binary's command line could not be built at all
+    # The invocation is None when the binary's command line could not be built.
     if out.command:
         return '{}\n{}'.format(out.command, commands)
 
@@ -73,7 +92,7 @@ def _reply_text(out:'SFTPOutput') -> 'str':
     """
     parts = []
 
-    # Either stream is None when the binary could not be run at all
+    # Either stream is None when the binary could not be run.
     if out.stdout:
         parts.append(out.stdout)
 
@@ -273,9 +292,12 @@ class SFTPConnection(ExchangeNotes):
         # .. remove the echoed sftp> prompt lines from the output ..
         out.strip_stdout_prefix()
 
-        # .. what was sent and what came back is kept for the audit log, a failure included,
-        # so a reader sees the server's own words on why a command did not work ..
+        # .. what was sent and what came back is kept for the audit log, a failure included ..
         self.note_exchange(_request_text(data, out), _reply_text(out))
+
+        # .. a session that never ran the commands is raised even with raise_on_error off ..
+        if out.is_connection_failure():
+            raise SFTPConnectionError(_reply_summary(out))
 
         # .. perhaps we are to raise an exception on an error encountered ..
         if not out.is_ok:

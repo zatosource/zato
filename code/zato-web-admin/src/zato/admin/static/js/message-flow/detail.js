@@ -155,6 +155,22 @@ detail.tabOf = function(model, kind) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// A tab for one further body of an event, its word in amber
+detail.extraTabOf = function(model, extra) {
+    var labelHtml = '<span class="message-flow-detail-tab-extra">' + detail.escapeHTML(extra.label) + '</span>';
+
+    var out = {
+        label: extra.label + ' \u00b7 ' + model.id,
+        label_html: labelHtml,
+        eventId: model.id,
+        kind: extra.kind
+    };
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // What a tab's body is remembered under - one event may stand on both sides
 // of the pane, each side holding a different body of it
 detail.bodyKey = function(tab) {
@@ -313,7 +329,16 @@ detail.addSide = function(split, role, models, kind) {
     var tabs = [];
 
     for (var modelIndex = 0; modelIndex < models.length; modelIndex++) {
-        tabs.push(detail.tabOf(models[modelIndex], kind));
+        var model = models[modelIndex];
+        tabs.push(detail.tabOf(model, kind));
+
+        // The event's further bodies this side opens - a failed run's traceback beside its reply
+        var presenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
+        var extras = presenter.paneExtras(model, role);
+
+        for (var extraIndex = 0; extraIndex < extras.length; extraIndex++) {
+            tabs.push(detail.extraTabOf(model, extras[extraIndex]));
+        }
     }
 
     var panelHost = document.createElement('div');

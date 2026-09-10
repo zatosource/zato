@@ -53,8 +53,10 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     --message-flow-card-face-selected: linear-gradient(rgba(246, 166, 5, 0.28), rgba(246, 166, 5, 0.12)),
         linear-gradient(#3a3a5c, #2d2d48);
 
-    /* The pane under the drawing keeps one height whatever it is holding */
+    /* The pane under the drawing keeps one height, and its two body sides keep at least
+       this much of it */
     --message-flow-detail-height: 250px;
+    --message-flow-detail-split-min-height: 120px;
 
     /* The room above and below the canvas - the same measure on both sides */
     --message-flow-page-pad: 18px;
@@ -182,9 +184,8 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     box-shadow: var(--dashboard-chosen-badge-shadow);
 }
 
-/* The way back to the audit log, at the head's right - the same badge the tabs are, in the
-   same amber the chosen tab reads in. The kit's anchor rules name the element and two classes,
-   so this one names as much to be the one that is heard. */
+/* The way back to the audit log, at the head's right - the tabs' badge in the chosen tab's
+   amber. The selector outranks the kit's anchor rules. */
 
 .message-flow-head a.message-flow-back,
 .message-flow-head a.message-flow-back:visited,

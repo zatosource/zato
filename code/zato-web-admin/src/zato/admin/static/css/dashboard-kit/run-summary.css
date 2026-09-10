@@ -54,7 +54,7 @@
     background: var(--dashboard-tone-accent-dark-fill);
 }
 
-/* The chip narrowing the ledger down reads in amber on a slightly lighter fill, whatever its tone */
+/* The chip narrowing the ledger down reads in amber on a lighter fill in every tone */
 
 .dashboard-run-summary-light .dashboard-run-filter-chip.dashboard-run-filter-chip-active {
     color: #a1670f;
@@ -199,14 +199,12 @@
     margin-left: 0;
 }
 
-.dashboard-run-summary-light .dashboard-run-ledger-fold-toggle,
-.dashboard-run-summary-light .dashboard-run-traceback-toggle {
+.dashboard-run-summary-light .dashboard-run-ledger-fold-toggle {
     color: var(--dashboard-line-strong);
     background: var(--dashboard-frame-fill);
 }
 
-.dashboard-run-summary-dark .dashboard-run-ledger-fold-toggle,
-.dashboard-run-summary-dark .dashboard-run-traceback-toggle {
+.dashboard-run-summary-dark .dashboard-run-ledger-fold-toggle {
     color: var(--dashboard-badge-dark-text);
     background: var(--dashboard-badge-dark-fill);
 }
@@ -215,13 +213,11 @@
 /* Dashboard kit - the run summary traceback                     */
 /* ------------------------------------------------------------ */
 
-.dashboard-run-traceback-host {
-    padding: 0 10px;
-}
+/* The traceback stands under the facts, flush with the table's edges, a little air between the two */
 
 .dashboard-run-traceback {
     max-height: 240px;
-    margin: 4px 0 0;
+    margin: 10px 0 0;
     padding: 8px 10px;
     border-radius: 4px;
     overflow: auto;

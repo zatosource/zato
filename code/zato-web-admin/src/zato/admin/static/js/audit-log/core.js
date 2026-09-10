@@ -122,17 +122,15 @@ $.fn.zato.audit_log.config = {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The audit log address a flow page opened from here leads back to - the audit log page
-// itself with everything its address bar holds, filters and the open event alike, or the
-// way back the flow page was itself given, so a search on the flow page keeps it. A page
-// that is neither has no way back to offer.
+// The audit log address to lead back to - the audit log page with its whole address bar,
+// or the way back this page was itself given, or none on any other page.
 $.fn.zato.audit_log.backURL = function() {
     var config = $.fn.zato.audit_log.config;
     var kit = $.fn.zato.dashboard_kit;
 
     var carried = kit.url_state.get(config.backURLKey);
 
-    // Only an audit log address is a way back - a link cannot send a reader anywhere else
+    // Only an audit log address is a way back
     if (carried !== null && carried.indexOf(config.auditLogPagePath) === 0) {
         return carried;
     }

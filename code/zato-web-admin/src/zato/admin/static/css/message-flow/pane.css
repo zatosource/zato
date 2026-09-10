@@ -128,13 +128,24 @@
 /* Message flow - the source panel                               */
 /* ------------------------------------------------------------ */
 
+/* The panel scrolls on its own when the pane is too short for it */
+
 .message-flow-detail-source-panel {
-    flex: 0 0 auto;
-    padding: 0 12px;
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px 12px 0;
 }
 
 .message-flow-detail-source-panel:empty {
     padding: 0;
+}
+
+/* The panel scrolls, so a traceback in it does not scroll on its own */
+
+.message-flow-detail-source-panel .dashboard-run-traceback {
+    max-height: none;
+    overflow: visible;
 }
 
 /* The files the exchange's events carried, through the kit's own attachment
@@ -152,10 +163,12 @@
 /* The pane's body stands in two sides - the request's and the reply's - the
    bar between them sharing the width, each side's badges always on top of it */
 
+/* The sides take the room the panel above leaves, not the height of their open body */
+
 .message-flow-detail-split {
     display: flex;
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 1 1 0;
+    min-height: var(--message-flow-detail-split-min-height);
 }
 
 .message-flow-detail-side {
@@ -339,6 +352,12 @@
 }
 
 .message-flow-detail-tab-id {
+    color: var(--message-flow-selected-text);
+}
+
+/* A tab for a further body of an event - a traceback */
+
+.message-flow-detail-tab-extra {
     color: var(--message-flow-selected-text);
 }
 

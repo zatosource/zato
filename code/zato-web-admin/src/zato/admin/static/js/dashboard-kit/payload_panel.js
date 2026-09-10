@@ -14,6 +14,9 @@
     kit.payload_panel.config = {
         copy_label: 'Copy',
 
+        // The Copy badge stands at the bar's right edge, so its flash opens to its left
+        copy_flash_placement: 'left',
+
         // How long a pane waits for its text before it says it is waiting - a body read
         // from the server nearby usually arrives first, and then nothing is announced at all
         spinner_delay_ms: 150
@@ -342,6 +345,6 @@
             text = lines.join('\n');
         }
 
-        kit.copy_to_clipboard(this, text);
+        kit.copy_to_clipboard(this, text, kit.payload_panel.config.copy_flash_placement);
     });
 })();

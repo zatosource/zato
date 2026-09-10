@@ -91,10 +91,8 @@ page.showListHint = function(html) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The way back - the audit log screen this page was opened from, with every filter
-// and the open event its address carried, or the audit log page itself when this page
-// was reached some other way. The address bar keeps the way back through every search
-// made here, so it is read off the address bar and nowhere else.
+// The way back - the audit log screen this page was opened from, or the audit log
+// page itself. It is read off the address bar, which keeps it through every search.
 page.showBackLink = function() {
     var config = page.config;
     var auditLog = $.fn.zato.audit_log;
@@ -314,8 +312,10 @@ page.init = function() {
     // everywhere, bound once for the page
     $.fn.zato.audit_log.flow.init();
 
-    // A file transfer step clicked on this page is selected on the drawing.
+    // A file transfer step clicked on this page is selected on the drawing, and a failed
+    // run's traceback opens beside the reply rather than under the run's facts
     $.fn.zato.audit_log.fileOutgoing.config.selectOnDrawing = true;
+    $.fn.zato.audit_log.fileOutgoing.config.tracebackInPane = true;
 
     page.showBackLink();
 

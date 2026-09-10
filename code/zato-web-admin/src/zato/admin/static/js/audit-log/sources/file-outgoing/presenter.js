@@ -91,8 +91,7 @@ fileOutgoing.lineWord = function(row) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What a run is called on the flow page, from the general to the particular - the kind of
-// event, the connection and the schedule, since a schedule's name alone names nothing.
+// What a run is called on the flow page - the kind of event, the connection and the schedule.
 fileOutgoing.runTitle = function(row) {
     var parts = [$.fn.zato.audit_log.sourceLabel(row.source), row.object_name, row.schedule];
     return parts.join(fileOutgoing.config.chipSeparator);
@@ -347,6 +346,21 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
     // what the server said back on the other.
     paneKinds: function(_rowModel) {
         return fileOutgoing.config.paneKinds;
+    },
+
+    // A run that failed carries its traceback beside the server's reply.
+    paneExtras: function(rowModel, role) {
+        var config = fileOutgoing.config;
+
+        if (role !== config.paneTracebackRole) {
+            return [];
+        }
+
+        if (rowModel.raw.body_kinds.indexOf(config.errorBodyKind) === -1) {
+            return [];
+        }
+
+        return [{label: config.tracebackLabel, kind: config.errorBodyKind}];
     },
 
     // ////////////////////////////////////////////////////////////////////////

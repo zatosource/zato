@@ -15,10 +15,18 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# What the sftp binary exits with when one of the commands fed to its prompt failed,
+# and what an output carries before the binary was run at all.
+Exit_Code_Command_Failed = 1
+Exit_Code_Not_Run = -1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SFTPOutput:
     """ Represents output resulting from execution of SFTP command(s).
     """
-    __slots__ = 'is_ok', 'cid', 'command', 'command_no', 'stdout', 'stderr', 'details', 'response_time'
+    __slots__ = 'is_ok', 'cid', 'command', 'command_no', 'stdout', 'stderr', 'details', 'response_time', 'exit_code'
 
     def __init__(
         self,
@@ -29,7 +37,8 @@ class SFTPOutput:
         stdout:'strnone'=None,
         stderr:'strnone'=None,
         details:'strnone'=None,
-        response_time:'strnone'=None
+        response_time:'strnone'=None,
+        exit_code:'int'=Exit_Code_Not_Run,
         ) -> 'None':
 
         self.cid = cid
@@ -40,6 +49,21 @@ class SFTPOutput:
         self.stderr = stderr
         self.details = details
         self.response_time = response_time
+        self.exit_code = exit_code
+
+# ################################################################################################################################
+
+    def is_connection_failure(self) -> 'bool':
+        """ Whether the session itself failed rather than one of the commands fed to it - the binary
+        exits with 1 when a batch command fails and with anything else when it never got that far,
+        the connection refused, the authentication rejected, or the binary not run at all.
+        """
+        if self.is_ok:
+            return False
+
+        out = self.exit_code != Exit_Code_Command_Failed
+
+        return out
 
 # ################################################################################################################################
 
@@ -74,6 +98,7 @@ class SFTPOutput:
             'stderr': self.stderr,
             'details': self.details,
             'response_time': self.response_time,
+            'exit_code': self.exit_code,
         }
 
         return out
