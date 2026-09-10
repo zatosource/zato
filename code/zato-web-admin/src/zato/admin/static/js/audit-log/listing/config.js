@@ -199,6 +199,8 @@ listing.config = {
     // the source already declares a column of its own for it. `searchable` says whether Search is
     // offered beside it. When the event happened is not here - a moment in time reads last of
     // everything, so the pane adds it at the very end itself.
+    correlIdColumnKey: 'correl_id',
+
     paneFields: [
         {label: 'Correlation id', key: 'correlId', columnKey: 'correl_id', searchable: true},
         {label: 'Status', key: 'status', columnKey: 'status', searchable: true},

@@ -77,9 +77,21 @@
     transform: translateY(0);
 }
 
+/* The muted chip is a light-panel chip - on the dark one it reads in the panel's own ink on the badge fill */
+
+.dashboard-run-summary-dark .dashboard-run-skip-chip {
+    color: var(--dashboard-panel-text);
+    background: var(--dashboard-badge-dark-fill);
+}
+
 .dashboard-run-skip-chip-active {
     color: var(--dashboard-line-strong);
     background: var(--dashboard-tone-accent-fill);
+}
+
+.dashboard-run-summary-dark .dashboard-run-skip-chip-active {
+    color: var(--dashboard-panel-background);
+    background: var(--dashboard-tone-accent-dark);
 }
 
 /* ------------------------------------------------------------ */

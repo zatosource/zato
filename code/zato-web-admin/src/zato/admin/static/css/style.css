@@ -571,7 +571,7 @@ a:where(:not(.menu-link, .dashboard-panel-action-badge, .zato-link-unstyled)),
     padding-bottom: 2px;
 }
 
-a:where(:not(.menu-link):not(.chosen-single):not(.status-badge, .dashboard-panel-action-badge, .audit-log-pane-details a, .zato-link-unstyled)):hover,
+a:where(:not(.menu-link):not(.chosen-single):not(.status-badge, .dashboard-panel-action-badge, .audit-log-pane-frame a, .zato-link-unstyled)):hover,
 a:where(:not(.menu-link)):hover .zato-link-face {
     color: var(--zato-link-hover) !important;
     background-color: transparent;

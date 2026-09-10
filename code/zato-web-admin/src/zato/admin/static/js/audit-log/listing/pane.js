@@ -67,6 +67,13 @@ listing.paneAttrs = function(rowModel) {
 
         var fieldValue = rowModel[field.key];
 
+        // An event that is its own correlation, e.g. a file transfer run, has said its CID already.
+        if (field.columnKey === config.correlIdColumnKey) {
+            if (fieldValue === rowModel.cid) {
+                continue;
+            }
+        }
+
         if (fieldValue !== '') {
             var fieldSearch = '';
 
