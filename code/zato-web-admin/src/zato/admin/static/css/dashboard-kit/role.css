@@ -28,6 +28,13 @@
     background: rgba(161, 103, 15, 0.1);
 }
 
+/* A file transfer event - a file moving, which asks for nothing and answers nothing */
+
+.dashboard-role-transfer {
+    color: #0d7a73;
+    background: rgba(13, 122, 115, 0.1);
+}
+
 /* A log access record - a config change or someone reading a message body */
 
 .dashboard-role-access {
@@ -60,6 +67,11 @@
 .dashboard-role-dark.dashboard-role-job {
     color: #e8c46f;
     background: rgba(232, 196, 111, 0.18);
+}
+
+.dashboard-role-dark.dashboard-role-transfer {
+    color: #6fd3c9;
+    background: rgba(111, 211, 201, 0.18);
 }
 
 .dashboard-role-dark.dashboard-role-access {

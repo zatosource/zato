@@ -11,7 +11,7 @@ var fileOutgoing = $.fn.zato.audit_log.fileOutgoing;
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The reason column of a ledger entry, a taken entry reads its attempt instead.
+// The reason column of a ledger entry, a picked up entry reads its attempt instead.
 fileOutgoing.ledgerReason = function(record) {
     var words = fileOutgoing.words();
     var out = '';
@@ -40,10 +40,10 @@ fileOutgoing.ledgerEntry = function(record) {
     var config = fileOutgoing.config;
     var words = fileOutgoing.words();
 
-    var tookText = '';
+    var durationText = '';
 
     if (record.duration_ms) {
-        tookText = kit.format_duration_ms(record.duration_ms);
+        durationText = kit.format_duration_ms(record.duration_ms);
     }
 
     var linkURL = '';
@@ -61,7 +61,7 @@ fileOutgoing.ledgerEntry = function(record) {
         decisionTone: words.decision_tone[record.decision],
         reason: record.reason,
         reasonLabel: fileOutgoing.ledgerReason(record),
-        tookText: tookText,
+        durationText: durationText,
         linkURL: linkURL
     };
 };

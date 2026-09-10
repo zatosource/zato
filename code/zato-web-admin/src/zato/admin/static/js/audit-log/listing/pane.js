@@ -328,8 +328,8 @@ listing.paneAttrValueHTML = function(rowModel, attr) {
         return listing.linkHTML(url, attr.value);
     }
 
-    // A run of a scheduled job leads to its own page on the scheduler dashboard,
-    // keyed by the job's id and the run's number, both carried by the event itself
+    // A run leads to its own page, keyed by whatever of the job's id, the run's number
+    // and the CID its source's page is found by, all carried by the event itself
     if (attr.key === 'current_run') {
         var runTemplate = config.runLinks[rowModel.raw.source];
 
@@ -338,7 +338,8 @@ listing.paneAttrValueHTML = function(rowModel, attr) {
         }
 
         var runURL = runTemplate.replace('{job_id}', encodeURIComponent(rowModel.raw.job_id))
-            .replace('{run}', encodeURIComponent(attr.value));
+            .replace('{run}', encodeURIComponent(attr.value))
+            .replace('{cid}', encodeURIComponent(rowModel.cid));
 
         return listing.linkHTML(runURL, attr.value);
     }
@@ -387,7 +388,7 @@ listing.paneAttrLabel = function(rowModel, attr) {
 
 // Everything said about the event, which is what the Summary tab holds - one thing to a
 // line, read from the top down, rather than several of them side by side to be picked out
-listing.paneSummaryHTML = function(rowModel) {
+listing.defaultSummaryFacts = function(rowModel) {
     var config = listing.config;
     var attrs = listing.paneAttrs(rowModel);
     var facts = [];
@@ -429,6 +430,17 @@ listing.paneSummaryHTML = function(rowModel) {
     // with every unit on it, the year and the month included.
     facts.push(listing.paneFact(config.timeLabel, kit.time_scrub.stamp(rowModel.timeIso),
         rowModel.timeLocal, ''));
+
+    return facts;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The Summary tab - the facts the source has to say about the event, then the files it carried.
+listing.paneSummaryHTML = function(rowModel) {
+    var config = listing.config;
+    var presenter = $.fn.zato.audit_log.presenterFor(rowModel.raw.source);
+    var facts = presenter.summaryFacts(rowModel);
 
     var html = kit.fact_rows.render(facts, config.paneFactVariant);
 

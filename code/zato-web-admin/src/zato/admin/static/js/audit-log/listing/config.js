@@ -150,6 +150,8 @@ listing.config = {
     cidLabel: 'CID',
     durationLabel: 'Duration',
     sizeLabel: 'Size',
+    outcomeLabel: 'Outcome',
+    statusLabel: 'Status',
 
     lineageParentLabel: 'Repeat of',
     lineageChildLabel: 'Repeated as',

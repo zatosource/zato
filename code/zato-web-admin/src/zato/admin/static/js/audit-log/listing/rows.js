@@ -54,7 +54,7 @@ listing.buildRow = function(row) {
         children: row.children,
         bodyKinds: row.body_kinds,
         isResubmitted: row.is_resubmitted,
-        role: listing.roleOf(row.event_type)
+        role: presenter.role(row)
     };
 
     // The labels come keyed by source, so any row of any listing knows what its action

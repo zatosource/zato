@@ -61,13 +61,13 @@ _endpoint_page_url = {
     AuditSource.Scheduler: f'/zato/service/?cluster={default_cluster_id}&query={{name}}',
 }
 
-# Where one run of a scheduled job has its own page - `{job_id}` and `{run}` are
-# filled in on the frontend out of the event's own attrs.
+# Where one run has its own page - `{job_id}`, `{run}` and `{cid}` are filled in on the
+# frontend out of the event itself. A scheduled job's run is a page of the scheduler dashboard,
+# a file transfer run is its own flow - the scheduler that fired it is plumbing there.
 _run_page_url = {
     AuditSource.Scheduler:
         f'/zato/scheduler/dashboard/job/{{job_id}}/run/{{run}}/?cluster={default_cluster_id}&range=0&outcomes=all',
-    AuditSource.File_Outgoing:
-        f'/zato/scheduler/dashboard/job/{{job_id}}/run/{{run}}/?cluster={default_cluster_id}&range=0&outcomes=all',
+    AuditSource.File_Outgoing: '/zato/message-flow/?term={cid}',
 }
 
 # ################################################################################################################################

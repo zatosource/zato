@@ -41,6 +41,7 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     --message-flow-sys: #b9b9d4;
     --message-flow-view: #cfa9ea;
     --message-flow-job: #e8c46f;
+    --message-flow-transfer: #6fd3c9;
     --message-flow-good: #74cf92;
     --message-flow-bad: #ff8a94;
 

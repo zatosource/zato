@@ -92,6 +92,11 @@ $.fn.zato.audit_log.sources['default'] = {
     eventWordAsChip: false,
     rowChipLimit: listing.config.rowChipLimit,
 
+    // The part an event plays in its exchange, read off its type.
+    role: function(row) {
+        return listing.roleOf(row.event_type);
+    },
+
     eventChip: function(_rowModel, chip) {
         return chip;
     },
@@ -102,6 +107,11 @@ $.fn.zato.audit_log.sources['default'] = {
 
     detailFacts: function(_rowModel) {
         return [];
+    },
+
+    // Everything the Summary tab says, the same for every event unless the source says otherwise.
+    summaryFacts: function(rowModel) {
+        return listing.defaultSummaryFacts(rowModel);
     },
 
     // The ways the message can be read on the Data tab - parsed first, being what a message

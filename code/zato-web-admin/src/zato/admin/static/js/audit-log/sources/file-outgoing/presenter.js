@@ -12,23 +12,23 @@ var defaultPresenter = $.fn.zato.audit_log.sources['default'];
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The default chips with the schedule first and without the columns the pane reads.
+// The chips of a file past the connection and the schedule, without the columns the pane reads
+// and without the ones the row has already said - the tag names the source and the first chip the connection.
 fileOutgoing.fileChips = function(row, defaultChips) {
     var config = fileOutgoing.config;
     var out = [];
 
+    var saidAlready = {};
+    saidAlready[config.remotePathKey] = true;
+    saidAlready[config.scheduleKey] = true;
+    saidAlready[config.runKey] = true;
+    saidAlready[config.connectionKey] = true;
+    saidAlready[config.sourceKey] = true;
+
     for (var chipIndex = 0; chipIndex < defaultChips.length; chipIndex++) {
         var chip = defaultChips[chipIndex];
 
-        if (chip.key === config.remotePathKey) {
-            continue;
-        }
-
-        if (chip.key === config.scheduleKey) {
-            continue;
-        }
-
-        if (chip.key === config.runKey) {
+        if (saidAlready[chip.key] === true) {
             continue;
         }
 
@@ -36,6 +36,14 @@ fileOutgoing.fileChips = function(row, defaultChips) {
     }
 
     return out.concat(fileOutgoing.fileExtraChips(row));
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The connection the row belongs to, which every row of this source leads with.
+fileOutgoing.connectionChip = function(row) {
+    var config = fileOutgoing.config;
+    return {key: config.connectionKey, label: '', value: row.object_name, tone: 'neutral'};
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -91,10 +99,17 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
 
     // ////////////////////////////////////////////////////////////////////////
 
+    role: function(_row) {
+        return fileOutgoing.config.transferRole;
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // The row reads from the general to the particular - the connection, its schedule, then what happened.
     chips: function(row) {
         var config = fileOutgoing.config;
         var defaultChips = defaultPresenter.chips(row);
-        var out = [];
+        var out = [fileOutgoing.connectionChip(row)];
 
         for (var scheduleIndex = 0; scheduleIndex < defaultChips.length; scheduleIndex++) {
             var scheduleChip = defaultChips[scheduleIndex];
@@ -168,13 +183,18 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
     // ////////////////////////////////////////////////////////////////////////
 
     detailFacts: function(rowModel) {
-        var row = rowModel.raw;
+        return fileOutgoing.fileFacts(rowModel.raw);
+    },
 
-        if (fileOutgoing.isRun(row)) {
-            return fileOutgoing.runFacts(row);
+    // ////////////////////////////////////////////////////////////////////////
+
+    // A run's Summary is the run's own, a file's is the one every event has.
+    summaryFacts: function(rowModel) {
+        if (fileOutgoing.isRun(rowModel.raw)) {
+            return fileOutgoing.runSummaryFacts(rowModel);
         }
 
-        return fileOutgoing.fileFacts(row);
+        return defaultPresenter.summaryFacts(rowModel);
     },
 
     // ////////////////////////////////////////////////////////////////////////
@@ -253,7 +273,7 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // What a flow line says after its chip, the step, the size and the time it took.
+    // What a flow line says after its chip, the step, the size and its duration.
     lineNote: function(model) {
         var row = model.raw;
         var parts = [];

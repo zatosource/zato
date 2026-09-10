@@ -53,7 +53,7 @@ Skip_Reason_Name = {
     Skip_Claim_File:        'Claimed by a consumer',
     Skip_Marker_File:       'Marker file',
     Skip_Marker_Missing:    'Marker missing',
-    Skip_Pattern_Mismatch:  'Pattern mismatch',
+    Skip_Pattern_Mismatch:  'No pattern match',
     Skip_Vanished:          'Vanished',
     Skip_Size_Changed:      'Size changed',
     Skip_Mtime_Changed:     'Modified',
@@ -76,7 +76,7 @@ Skip_Reason_Label = {
 }
 
 # The decisions a run records about an entry in its ledger.
-Decision_Taken       = 'taken'
+Decision_Picked_Up   = 'picked-up'
 Decision_Skipped     = 'skipped'
 Decision_Failed      = 'failed'
 Decision_Quarantined = 'quarantined'

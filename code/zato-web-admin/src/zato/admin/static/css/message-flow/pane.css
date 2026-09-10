@@ -337,6 +337,10 @@
     color: var(--message-flow-job);
 }
 
+.message-flow-detail-tab-role-transfer {
+    color: var(--message-flow-transfer);
+}
+
 .message-flow-detail-tab-role-access {
     color: var(--message-flow-sys);
 }

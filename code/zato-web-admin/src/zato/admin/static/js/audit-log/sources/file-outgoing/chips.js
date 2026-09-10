@@ -16,8 +16,8 @@ fileOutgoing.progressHTML = function(row) {
     var text = fileOutgoing.runningSentence(row);
     var share = 0;
 
-    if (row.taken) {
-        share = row.taken_so_far / row.taken;
+    if (row.picked_up) {
+        share = row.picked_up_so_far / row.picked_up;
     }
 
     var widthEm = (share * config.progressBarWidthEm).toFixed(2);
@@ -51,7 +51,7 @@ fileOutgoing.runChip = function(row) {
     }
 
     if (row.failed > 0) {
-        var failedText = fileOutgoing.countPair(row.taken, config.takenLabel, row.failed, config.failedLabel);
+        var failedText = fileOutgoing.countPair(row.picked_up, config.pickedUpLabel, row.failed, config.failedLabel);
         return {key: 'summary', label: '', value: status, tone: 'bad', text: failedText};
     }
 
@@ -64,13 +64,14 @@ fileOutgoing.runChip = function(row) {
             text: words.run_status_label[status]};
     }
 
-    if (row.taken > 0) {
-        var takenText = fileOutgoing.countPair(row.taken, config.takenLabel, row.processed, config.deliveredLabel);
-        return {key: 'summary', label: '', value: status, tone: 'neutral', text: takenText};
+    if (row.picked_up > 0) {
+        var pickedUpText = fileOutgoing.countPair(row.picked_up, config.pickedUpLabel, row.processed, config.deliveredLabel);
+        return {key: 'summary', label: '', value: status, tone: 'neutral', text: pickedUpText};
     }
 
-    var seenText = fileOutgoing.countPair(row.entries, config.seenLabel, row.taken, config.takenLabel);
-    return {key: 'summary', label: '', value: status, tone: 'neutral', text: seenText};
+    // A run that picked nothing up says so and no more - what it saw is the Details tab's.
+    var noneText = row.picked_up + ' ' + config.pickedUpLabel;
+    return {key: 'summary', label: '', value: status, tone: 'neutral', text: noneText};
 };
 
 // /////////////////////////////////////////////////////////////////////////////

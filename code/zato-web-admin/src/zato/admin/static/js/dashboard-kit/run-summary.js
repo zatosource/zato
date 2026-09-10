@@ -9,12 +9,13 @@
     kit.runSummary.config = {
 
         // The ledger's columns, in reading order.
-        ledgerColumns: ['Name', 'Size', 'Modified', 'Decision', 'Reason', 'Took'],
+        ledgerColumns: ['Name', 'Size', 'Modified', 'Decision', 'Reason', 'Duration'],
 
         // What a cell with nothing to say reads as.
         emptyCell: '-',
 
-        clearFilterLabel: 'Show all',
+        // What separates the decisions a filter chip stands for, on the chip's data attribute.
+        decisionSeparator: ',',
 
         foldLabel: '{count} more',
         unfoldLabel: 'Fewer',
@@ -34,50 +35,28 @@
         variantClasses: {
             'light': 'dashboard-run-summary-light',
             'dark': 'dashboard-run-summary-dark'
-        },
-
-        // The ink a fact's value is written in, a neutral value in the panel's own.
-        toneClasses: {
-            'neutral': '',
-            'good': 'dashboard-run-value-good',
-            'bad': 'dashboard-run-value-bad',
-            'warn': 'dashboard-run-value-warning',
-            'muted': 'dashboard-run-value-muted',
-            'running': 'dashboard-run-value-running'
         }
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // A fact's value in its tone, ready to stand in a fact row.
-    kit.runSummary.valueHTML = function(value, tone) {
+    // The filter chips of {key, label, count, tone, decisions} as one fact's value, each narrows the ledger
+    // down to the entries decided its way, a second click on the same chip lets the whole ledger back.
+    kit.runSummary.filterChipsHTML = function(chips) {
         var config = kit.runSummary.config;
 
-        var out = '<span class="dashboard-run-value ' + config.toneClasses[tone] + '">' +
-            kit._esc_html(String(value)) + '</span>';
+        var out = '<span class="dashboard-run-filters">';
 
-        return out;
-    };
+        for (var chipIndex = 0; chipIndex < chips.length; chipIndex++) {
+            var chip = chips[chipIndex];
+            var decisions = chip.decisions.join(config.decisionSeparator);
 
-    // ////////////////////////////////////////////////////////////////////////
-
-    // The skip chips of {reason, label, count} as one fact's value, each narrows the ledger down to its reason.
-    kit.runSummary.skipsHTML = function(skips) {
-        var config = kit.runSummary.config;
-
-        var out = '<span class="dashboard-run-skips">';
-
-        for (var skipIndex = 0; skipIndex < skips.length; skipIndex++) {
-            var skip = skips[skipIndex];
-
-            out += '<span class="detail-tag dashboard-chip dashboard-tag-muted dashboard-run-skip-chip" ' +
-                'data-reason="' + kit._esc_html(skip.reason) + '">' +
-                '<span class="dashboard-chip-value">' + kit._esc_html(String(skip.count)) + '</span> ' +
-                kit._esc_html(skip.label) + '</span>';
+            out += '<span class="detail-tag dashboard-chip ' + kit.chips.tone_classes[chip.tone] +
+                ' dashboard-run-filter-chip" data-chip-key="' + kit._esc_html(chip.key) + '" ' +
+                'data-decisions="' + kit._esc_html(decisions) + '">' +
+                '<span class="dashboard-chip-value">' + kit._esc_html(String(chip.count)) + '</span> ' +
+                kit._esc_html(chip.label) + '</span>';
         }
-
-        out += '<span class="dashboard-panel-action-badge dashboard-run-skip-clear" hidden>' +
-            config.clearFilterLabel + '</span>';
 
         out += '</span>';
 
@@ -123,9 +102,9 @@
     // ////////////////////////////////////////////////////////////////////////
 
     // One ledger row of {name, sizeText, modifiedHTML, decision, decisionLabel, decisionTone, reason,
-    // reasonLabel, tookText, linkURL}, an empty linkURL renders the name as text.
+    // reasonLabel, durationText, linkURL}, an empty linkURL renders the name as text.
     kit.runSummary.ledgerRowHTML = function(entry, isHidden) {
-        var out = '<tr class="dashboard-run-ledger-row" data-reason="' + kit._esc_html(entry.reason) + '"';
+        var out = '<tr class="dashboard-run-ledger-row" data-decision="' + kit._esc_html(entry.decision) + '"';
 
         if (isHidden) {
             out += ' hidden data-folded="1"';
@@ -148,7 +127,7 @@
         out += '<td class="dashboard-run-ledger-modified">' + entry.modifiedHTML + '</td>';
         out += '<td class="dashboard-run-ledger-decision">' + decisionChip + '</td>';
         out += '<td class="dashboard-run-ledger-reason">' + kit.runSummary.cellHTML(entry.reasonLabel) + '</td>';
-        out += '<td class="dashboard-run-ledger-took">' + kit.runSummary.cellHTML(entry.tookText) + '</td>';
+        out += '<td class="dashboard-run-ledger-duration">' + kit.runSummary.cellHTML(entry.durationText) + '</td>';
         out += '</tr>';
 
         return out;
@@ -357,37 +336,12 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // A skip chip narrows the ledger down to its reason, every row of it shown whatever the fold.
-    $(document).on('click', '.dashboard-run-skip-chip', function(event) {
-        event.stopPropagation();
-
-        var $chip = $(this);
-        var $summary = $chip.closest('.dashboard-run-summary');
-        var reason = $chip.attr('data-reason');
-
-        $summary.find('.dashboard-run-skip-chip').removeClass('dashboard-run-skip-chip-active');
-        $chip.addClass('dashboard-run-skip-chip-active');
-
-        $summary.find('.dashboard-run-ledger-row').each(function() {
-            var $row = $(this);
-            $row.prop('hidden', $row.attr('data-reason') !== reason);
-        });
-
-        $summary.find('.dashboard-run-skip-clear').prop('hidden', false);
-        $summary.find('.dashboard-run-ledger-fold').prop('hidden', true);
-    });
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    $(document).on('click', '.dashboard-run-skip-clear', function(event) {
-        event.stopPropagation();
-
-        var $clear = $(this);
-        var $summary = $clear.closest('.dashboard-run-summary');
+    // The ledger back to how the fold leaves it, no chip narrowing it down.
+    kit.runSummary.clearFilter = function($summary) {
         var $toggle = $summary.find('.dashboard-run-ledger-fold-toggle');
         var isUnfolded = $toggle.attr('data-unfolded') === '1';
 
-        $summary.find('.dashboard-run-skip-chip').removeClass('dashboard-run-skip-chip-active');
+        $summary.find('.dashboard-run-filter-chip').removeClass('dashboard-run-filter-chip-active');
 
         $summary.find('.dashboard-run-ledger-row').each(function() {
             var $row = $(this);
@@ -395,7 +349,40 @@
             $row.prop('hidden', isFolded && !isUnfolded);
         });
 
-        $clear.prop('hidden', true);
         $summary.find('.dashboard-run-ledger-fold').prop('hidden', false);
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // A filter chip narrows the ledger down to the entries decided its way, every one of them shown
+    // whatever the fold, and the chip already narrowing it lets the whole ledger back.
+    $(document).on('click', '.dashboard-run-filter-chip', function(event) {
+        event.stopPropagation();
+
+        var config = kit.runSummary.config;
+        var $chip = $(this);
+        var $summary = $chip.closest('.dashboard-run-summary');
+
+        if ($chip.hasClass('dashboard-run-filter-chip-active')) {
+            kit.runSummary.clearFilter($summary);
+            return;
+        }
+
+        var wanted = {};
+        var decisions = $chip.attr('data-decisions').split(config.decisionSeparator);
+
+        for (var decisionIndex = 0; decisionIndex < decisions.length; decisionIndex++) {
+            wanted[decisions[decisionIndex]] = true;
+        }
+
+        $summary.find('.dashboard-run-filter-chip').removeClass('dashboard-run-filter-chip-active');
+        $chip.addClass('dashboard-run-filter-chip-active');
+
+        $summary.find('.dashboard-run-ledger-row').each(function() {
+            var $row = $(this);
+            $row.prop('hidden', wanted[$row.attr('data-decision')] !== true);
+        });
+
+        $summary.find('.dashboard-run-ledger-fold').prop('hidden', true);
     });
 })();

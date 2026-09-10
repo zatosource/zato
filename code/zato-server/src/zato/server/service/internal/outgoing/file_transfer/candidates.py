@@ -131,7 +131,7 @@ def get_candidates(schedule:'stranydict', entries:'anylist') -> 'Selection':
 
 def keep_stable_entries(conn:'any_', directory:'str', candidates:'anylist', stability_delay:'int') -> 'Selection':
     """ Keeps the candidates that did not change between the directory listing and a second look
-    taken after the configured delay - an unchanged size and modification time means the upload is complete.
+    picked up after the configured delay - an unchanged size and modification time means the upload is complete.
     """
 
     # Our response to produce
@@ -145,7 +145,7 @@ def keep_stable_entries(conn:'any_', directory:'str', candidates:'anylist', stab
         file_name = get_file_name(entry)
         full_path = f'{directory}/{file_name}'
 
-        # The file may be gone by now, e.g. another consumer took it
+        # The file may be gone by now, e.g. another consumer picked it up
         try:
             info = conn.get_info(full_path)
         except Exception:

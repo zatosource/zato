@@ -104,8 +104,8 @@ def _enrich_as4_row(row:'anydict') -> 'None':
 
 # The data keys a file transfer row lifts into columns of its own.
 _file_outgoing_data_keys = (
-    'entries', 'candidates', 'taken', 'processed', 'failed', 'skipped', 'acked', 'ack_failed', 'quarantined',
-    'taken_so_far', 'current_file', 'phase', 'note', 'error', 'job_id', 'current_run', 'remote_path', 'to_path',
+    'entries', 'candidates', 'picked_up', 'processed', 'failed', 'skipped', 'acked', 'ack_failed', 'quarantined',
+    'picked_up_so_far', 'current_file', 'phase', 'note', 'error', 'job_id', 'current_run', 'remote_path', 'to_path',
     'list_ms', 'stability_wait_ms', 'unchanged_since_event_id', 'unchanged_since_iso',
     'ledger_overflow', 'first_failed_file', 'first_failed_error',
     'expected_files', 'expected_by', 'delivered_today',
@@ -117,8 +117,8 @@ _file_outgoing_data_keys = (
 
 # The data keys that default to zero, the rest default to an empty string.
 _file_outgoing_count_keys = (
-    'entries', 'candidates', 'taken', 'processed', 'failed', 'skipped', 'acked', 'ack_failed', 'quarantined',
-    'taken_so_far', 'expected_files', 'delivered_today', 'read_ms', 'service_ms', 'ack_ms', 'list_ms',
+    'entries', 'candidates', 'picked_up', 'processed', 'failed', 'skipped', 'acked', 'ack_failed', 'quarantined',
+    'picked_up_so_far', 'expected_files', 'delivered_today', 'read_ms', 'service_ms', 'ack_ms', 'list_ms',
     'stability_wait_ms', 'attempt', 'max_attempts', 'attempts', 'verify_ms', 'ledger_overflow',
 )
 

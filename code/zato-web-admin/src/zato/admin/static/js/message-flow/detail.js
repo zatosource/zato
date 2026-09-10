@@ -62,6 +62,7 @@ detail.config = {
         'none': 'SYS',
         'view': 'VIEW',
         'job': 'SCHEDULER',
+        'transfer': 'File transfer',
         'access': 'ACCESS'
     },
 

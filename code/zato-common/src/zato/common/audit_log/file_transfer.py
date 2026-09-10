@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The one write every outgoing file transfer goes through - a file handed to an SMB share
 # or an SFTP server leaves one request-sent event saying which connection moved
-# which remote path, how big it was, how long it took and how it ended. The file's bytes
+# which remote path, how big it was, its duration and how it ended. The file's bytes
 # are not stored unless the connection asks for that, and then they travel as an attachment
 # envelope under the same size cap every attachment observes, so the file can be reread
 # and downloaded from the audit log the way any attachment can.
@@ -181,7 +181,7 @@ def record_schedule_event(
         summary['error'] = error
 
     # Whatever else this kind of event has to say, e.g. where a file was moved
-    # or how many files a run took.
+    # or how many files a run picked up.
     if extra:
         summary.update(extra)
 

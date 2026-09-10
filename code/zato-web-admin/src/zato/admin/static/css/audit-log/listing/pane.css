@@ -163,6 +163,47 @@
     white-space: nowrap;
 }
 
+/* The chips a run's Event row is made of, side by side. They stand on the dark frame, so
+   the neutral chip and the outcome badge take the lighter readings of their hues here -
+   the tag already has a dark reading of its own */
+
+.audit-log-pane-event-chips {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.audit-log-pane-event-chips .dashboard-tag-neutral {
+    color: var(--dashboard-badge-dark-text);
+    background: var(--dashboard-badge-dark-fill);
+}
+
+.audit-log-pane-event-chips .dashboard-outcome-ok {
+    color: #6fb6e8;
+    background: rgba(111, 182, 232, 0.18);
+}
+
+.audit-log-pane-event-chips .dashboard-outcome-error {
+    color: var(--dashboard-error-ink-dark);
+    background: rgba(255, 138, 128, 0.18);
+}
+
+.audit-log-pane-event-chips .dashboard-outcome-timeout {
+    color: #e8c46f;
+    background: rgba(232, 196, 111, 0.18);
+}
+
+.audit-log-pane-event-chips .dashboard-outcome-running {
+    color: var(--dashboard-tone-dim);
+    background: var(--dashboard-badge-dark-fill);
+}
+
+.audit-log-pane-event-chips .dashboard-outcome-skipped {
+    color: #cfa9ea;
+    background: rgba(207, 169, 234, 0.18);
+}
+
 /* What is known about the event and what its source shows of it are set out on the same
    dark frame the message itself is read on, so the tabs of the pane are ways of reading
    one thing rather than places */

@@ -11,7 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # Zato
-from zato.common.audit_log.file_transfer_run import Decision_Failed, Decision_Quarantined, Decision_Skipped, Decision_Taken, \
+from zato.common.audit_log.file_transfer_run import Decision_Failed, Decision_Picked_Up, Decision_Quarantined, Decision_Skipped, \
     Phase_Acking, Phase_Checking_Directory, Phase_Claiming, Phase_Connecting, Phase_Delivering, Phase_Done, Phase_Listing, \
     Phase_Reading, Phase_Waiting, Run_Status_Clean, Run_Status_Empty, Run_Status_Failed, Run_Status_Interrupted, \
     Run_Status_List_Failed, Run_Status_No_Directory, Run_Status_Partial, Run_Status_Running, Run_Status_Unchanged, \
@@ -33,8 +33,8 @@ Run_Status_Label = {
     Run_Status_Clean:        'Delivered',
     Run_Status_Partial:      'Partly delivered',
     Run_Status_Failed:       'Failed',
-    Run_Status_Empty:        'Nothing to take',
-    Run_Status_Unchanged:    'Nothing new',
+    Run_Status_Empty:        'No files to pick up',
+    Run_Status_Unchanged:    'No new files',
     Run_Status_No_Directory: 'No directory',
     Run_Status_List_Failed:  'Unreachable',
     Run_Status_Interrupted:  'Interrupted',
@@ -68,7 +68,7 @@ Phase_Label = {
 
 # The label of each ledger decision.
 Decision_Label = {
-    Decision_Taken:       'Taken',
+    Decision_Picked_Up:   'Picked up',
     Decision_Skipped:     'Skipped',
     Decision_Failed:      'Failed',
     Decision_Quarantined: 'Quarantined',
@@ -76,7 +76,7 @@ Decision_Label = {
 
 # The tone of each ledger decision.
 Decision_Tone = {
-    Decision_Taken:       'good',
+    Decision_Picked_Up:   'good',
     Decision_Skipped:     'muted',
     Decision_Failed:      'bad',
     Decision_Quarantined: 'bad',
@@ -94,21 +94,21 @@ List_Failed_Phase_Template = {
 
 # The sentence templates, filled from the run's data.
 Sentence_Template = {
-    'running_progress':      '{phase} {file}, {taken_so_far} of {taken}',
+    'running_progress':      '{phase} {file}, {picked_up_so_far} of {picked_up}',
     'running_file':          '{phase} {file}',
     'running_plain':         '{phase}',
     'no_directory':          'Directory {directory} does not exist',
     'interrupted_file':      'Interrupted while {phase} {file}',
     'interrupted_plain':     'Interrupted before any file was read',
-    'unchanged':             'Nothing new in {directory} since {since}',
-    'empty_directory':       'Nothing in {directory}',
-    'took_none':             'Saw {entries} in {directory}, took none - {skips}',
-    'clean':                 'Took {taken}, delivered {processed}',
-    'clean_with_skips':      'Took {taken}, delivered {processed}, {skipped} left behind',
-    'partial':               'Took {taken}, delivered {processed}, {failed} failed - {failed_file}',
-    'partial_with_error':    'Took {taken}, delivered {processed}, {failed} failed - {failed_file}, {error}',
-    'failed':                'Took {taken}, none delivered - {failed_file}',
-    'failed_with_error':     'Took {taken}, none delivered - {failed_file}, {error}',
+    'unchanged':             'No new files in {directory} since {since}',
+    'empty_directory':       'No files in {directory}',
+    'picked_up_none':        'Saw {entries} in {directory}, picked up none - {skips}',
+    'clean':                 'Picked up {picked_up}, delivered {processed}',
+    'clean_with_skips':      'Picked up {picked_up}, delivered {processed}, {skipped} left behind',
+    'partial':               'Picked up {picked_up}, delivered {processed}, {failed} failed - {failed_file}',
+    'partial_with_error':    'Picked up {picked_up}, delivered {processed}, {failed} failed - {failed_file}, {error}',
+    'failed':                'Picked up {picked_up}, none delivered - {failed_file}',
+    'failed_with_error':     'Picked up {picked_up}, none delivered - {failed_file}, {error}',
     'quarantined_suffix':    ', {quarantined} quarantined',
     'expected_suffix':       ', {delivered_today} of {expected_files} expected by {expected_by}',
     'overdue_suffix_one':    ', 1 minute overdue',
@@ -134,9 +134,10 @@ Default_View_Labels = {
     'endpoint':          'Remote path',
     'service':           'Service',
     'current_run':       'Run',
+    'files':             'Files',
     'entries':           'Seen',
     'candidates':        'Matching',
-    'taken':             'Taken',
+    'picked_up':         'Picked up',
     'processed':         'Delivered',
     'failed':            'Failed',
     'skipped':           'Skipped',

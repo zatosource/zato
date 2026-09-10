@@ -256,7 +256,7 @@ def open_run(
         'delivered_today': delivered_today,
         'entries': 0,
         'candidates': 0,
-        'taken': 0,
+        'picked_up': 0,
         'processed': 0,
         'failed': 0,
         'skipped': 0,
@@ -353,12 +353,12 @@ def close_run(run:'RunContext') -> 'None':
     data['skipped'] = sum(skip_counts)
 
     # A run that processed or failed a file is never unchanged ..
-    took_nothing = data['processed'] == 0
-    if took_nothing:
+    delivered_nothing = data['processed'] == 0
+    if delivered_nothing:
         if data['failed']:
-            took_nothing = False
+            delivered_nothing = False
 
-    if not took_nothing:
+    if not delivered_nothing:
         run.is_unchanged = False
         data.pop('unchanged_since_event_id', None)
         data.pop('unchanged_since_iso', None)
