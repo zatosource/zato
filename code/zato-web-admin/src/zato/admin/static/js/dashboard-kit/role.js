@@ -21,13 +21,16 @@
            and a file transfer event reads by its own name too, a file moving being
            neither a request nor a reply. A log access record - a config change or
            someone reading a message body - is named by the log it belongs to, and a
-           service invocation by the service that ran. */
+           service's request, response and note by the service, each saying which
+           of the three it is. */
         labels: {
-            'request': 'REQ',
-            'response': 'REPLY',
+            'request': 'REQUEST',
+            'response': 'RESPONSE',
             'none': 'SYS',
             'job': 'SCHEDULER',
-            'service': 'SERVICE',
+            'service': 'Audit write',
+            'service-request': 'SERVICE REQUEST',
+            'service-response': 'SERVICE RESPONSE',
             'transfer': 'File transfer',
             'access': 'Log access'
         },
@@ -38,6 +41,8 @@
             'none': 'dashboard-role-none',
             'job': 'dashboard-role-job',
             'service': 'dashboard-role-service',
+            'service-request': 'dashboard-role-service',
+            'service-response': 'dashboard-role-service',
             'transfer': 'dashboard-role-transfer',
             'access': 'dashboard-role-access'
         },

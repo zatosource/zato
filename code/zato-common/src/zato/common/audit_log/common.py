@@ -252,8 +252,10 @@ class AuditEvent:
     Content_Viewed       = 'content-viewed'
     Job_Executed         = 'job-executed'
 
-    # One invocation of a user-defined service, the request and the response as its bodies.
-    Service_Invoked      = 'service-invoked'
+    # One invocation of a user-defined service - the request written down before the service
+    # runs and the response after it, so a request outlives a server that dies mid-service.
+    Service_Request      = 'service-request'
+    Service_Response     = 'service-response'
 
     # A service writing down what it did, in its own words, through self.audit.write.
     Note                 = 'note'

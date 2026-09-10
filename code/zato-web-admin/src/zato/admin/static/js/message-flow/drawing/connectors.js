@@ -280,11 +280,9 @@ drawing.clearChipX = function(desiredX, chipWidth, chipTop, chipBottom, runFromX
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// A role chip - every one shares one width, so the lines of a node line up
-drawing.addRoleChip = function(host, x, y, label, kind) {
+// A role chip - every one in a node shares the width the node settled on, so its lines line up
+drawing.addRoleChip = function(host, x, y, label, kind, width) {
     var config = drawing.config;
-
-    var width = config.roleChipWidth;
 
     kit.draw.addRect(host, x, y, width, config.chipHeight, 'message-flow-chip-' + kind, 3);
     kit.draw.addText(host, x + width / 2, y + 12, label, 'message-flow-chip-text message-flow-chip-text-' + kind, 'middle');

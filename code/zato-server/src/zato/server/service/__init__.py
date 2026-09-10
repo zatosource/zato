@@ -35,7 +35,8 @@ from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIOR
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.audit_log.facade import AuditFacade
 from zato.common.audit_log.scheduler import append_job_log_entry
-from zato.common.audit_log.service import Invoking_Service_Key, record_service_invocation, resolve_caller
+from zato.common.audit_log.service import Invoking_Service_Key, record_service_request, record_service_response, \
+    resolve_caller
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import PubSubFacade, SecurityFacade
 from zato.common.json_internal import dumps
@@ -898,18 +899,26 @@ class Service:
 
         # Only invocations of user-defined services are recorded in the audit log - the store knows which ones these are.
         needs_audit = not server.service_store.services[service.impl_name]['is_internal']
+        caller = resolve_caller(request_ctx, channel_item)
 
-        def _record_invocation(error_traceback:'str') -> 'None':
-            """ Writes the invocation to the audit log once the response is known.
+        def _record_request() -> 'None':
+            """ Writes the request to the audit log before the service runs, so it is on record whatever happens next.
+            """
+            if not needs_audit:
+                return
+
+            record_service_request(server.service_audit_log, service.name, cid, channel, caller, service.request.raw)
+
+        def _record_response(error_traceback:'str') -> 'None':
+            """ Writes the response to the audit log once it is known.
             """
             if not needs_audit:
                 return
 
             duration_ms = int((monotonic() - invocation_start) * 1000)
-            caller = resolve_caller(request_ctx, channel_item)
 
-            record_service_invocation(server.service_audit_log, service.name, cid, channel, caller,
-                service.request.raw, service.response.payload, duration_ms, error_traceback)
+            record_service_response(server.service_audit_log, service.name, cid, channel, caller,
+                service.response.payload, duration_ms, error_traceback)
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -923,6 +932,9 @@ class Service:
 
                 service.invocation_time = _utcnow()
                 invocation_start = monotonic()
+
+                # The request goes on record before anything runs.
+                _record_request()
 
                 # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
 
@@ -966,11 +978,11 @@ class Service:
 
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
-                    # The response is known now, whichever way the service ended, so this is when the invocation is recorded.
+                    # The response is known now, whichever way the service ended, so this is when it is recorded.
                     if e:
-                        _record_invocation(exc_formatted)
+                        _record_response(exc_formatted)
                     else:
-                        _record_invocation('')
+                        _record_response('')
 
                     # If this was fan-out/fan-in we need to always notify our callbacks no matter the result
                     if channel in ModuleCtx.Pattern_Call_Channels:
@@ -1001,7 +1013,7 @@ class Service:
                 except Exception as resp_e:
 
                     # A response that could not be built is still an invocation that ran, recorded as a failed one.
-                    _record_invocation(format_exc())
+                    _record_response(format_exc())
 
                     if e:
                         if isinstance(e, Reportable):

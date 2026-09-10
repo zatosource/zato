@@ -1,90 +1,12 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Message flow - how the pane under the drawing shares its room. The bar between
-// the pane's two sides shares the pane's width between the request and the reply,
-// and the bar over the pane shares the page between the drawing and the pane.
+// Message flow - how the pane under the drawing shares the page with the drawing,
+// by the bar over it.
 
 (function($) {
 
 var detail = $.fn.zato.message_flow.detail;
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// How the two sides share the pane - the remembered share put back on every
-// opening, the default an even split
-detail.applySplit = function(split) {
-    var kept = window.localStorage.getItem(detail.config.splitStorageKey);
-    var percent = detail.config.splitDefaultPercent;
-
-    if (kept !== null) {
-        percent = Number(kept);
-    }
-
-    split.style.setProperty('--message-flow-detail-split', percent + '%');
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// The bar between the two sides - a press and a pull shares the pane's width
-// between the request and the reply, neither side ever pushed below its least
-// share. Wired once, through the document, because the bar itself is built
-// anew with every opened node.
-detail.wireSplit = function() {
-    var config = detail.config;
-
-    var isPressed = false;
-    var split = null;
-    var splitBar = null;
-
-    document.addEventListener('mousedown', function(event) {
-
-        // Only the main button grabs the bar
-        if (event.button !== 0) {
-            return;
-        }
-
-        if (!event.target.classList.contains('message-flow-detail-split-bar')) {
-            return;
-        }
-
-        isPressed = true;
-        splitBar = event.target;
-        split = splitBar.parentElement;
-
-        splitBar.classList.add('message-flow-detail-splitting');
-
-        // The pull must not start selecting the page's text
-        event.preventDefault();
-    });
-
-    window.addEventListener('mousemove', function(event) {
-        if (!isPressed) {
-            return;
-        }
-
-        var rect = split.getBoundingClientRect();
-        var percent = (event.clientX - rect.left) / rect.width * 100;
-
-        if (percent < config.splitMinPercent) {
-            percent = config.splitMinPercent;
-        }
-
-        if (percent > 100 - config.splitMinPercent) {
-            percent = 100 - config.splitMinPercent;
-        }
-
-        split.style.setProperty('--message-flow-detail-split', percent + '%');
-        window.localStorage.setItem(config.splitStorageKey, String(Math.round(percent)));
-    });
-
-    window.addEventListener('mouseup', function() {
-        if (isPressed) {
-            isPressed = false;
-            splitBar.classList.remove('message-flow-detail-splitting');
-        }
-    });
-};
 
 // /////////////////////////////////////////////////////////////////////////////
 

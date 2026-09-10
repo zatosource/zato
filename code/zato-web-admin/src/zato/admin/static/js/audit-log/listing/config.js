@@ -263,7 +263,8 @@ listing.roles = {
     'receipt-received': 'response',
     'receipt-sent': 'response',
     'job-executed': 'job',
-    'service-invoked': 'service',
+    'service-request': 'service-request',
+    'service-response': 'service-response',
     'note': 'service',
 
     // The log access records - config changes and someone reading a message body -

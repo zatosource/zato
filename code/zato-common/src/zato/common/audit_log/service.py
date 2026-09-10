@@ -105,25 +105,48 @@ def _last_line(text:'str') -> 'str':
 
 # ################################################################################################################################
 
-def record_service_invocation(
+def record_service_request(
     audit_log:'AuditLog',
     service_name:'str',
     cid:'str',
     channel:'str',
     caller:'str',
     request:'any_',
+    ) -> 'None':
+    """ Records what a service was given, before the service runs - the request is on record
+    even if the server never gets to write the response down.
+    """
+    request_text = to_body_text(request)
+
+    _ = audit_log.insert(
+        AuditSource.Service,
+        AuditEvent.Service_Request,
+        service_name,
+        cid=cid,
+        endpoint=caller,
+        size=len(request_text),
+        attrs={Attr_Channel: channel},
+        bodies={AuditBody.Request: request_text},
+    )
+
+# ################################################################################################################################
+
+def record_service_response(
+    audit_log:'AuditLog',
+    service_name:'str',
+    cid:'str',
+    channel:'str',
+    caller:'str',
     response:'any_',
     duration_ms:'int',
     error_traceback:'str',
     ) -> 'None':
-    """ Records one completed invocation of a service - what it was given and what it returned as bodies,
-    the traceback as a third body when it failed.
+    """ Records what a service returned, after it ran - the response as the body, the traceback
+    as a second body when it failed, and how long the whole invocation took.
     """
-    request_text = to_body_text(request)
     response_text = to_body_text(response)
 
     bodies = {
-        AuditBody.Request: request_text,
         AuditBody.Response: response_text,
     }
 
@@ -137,11 +160,11 @@ def record_service_invocation(
 
     _ = audit_log.insert(
         AuditSource.Service,
-        AuditEvent.Service_Invoked,
+        AuditEvent.Service_Response,
         service_name,
         cid=cid,
         endpoint=caller,
-        size=len(request_text),
+        size=len(response_text),
         outcome=outcome,
         status=status,
         duration_ms=duration_ms,

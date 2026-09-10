@@ -28,7 +28,7 @@
     background: rgba(161, 103, 15, 0.1);
 }
 
-/* A service invocation - the service that ran, whichever way it was invoked */
+/* A service's request, response or note - the service that ran, whichever way it was invoked */
 
 .dashboard-role-service {
     color: #6a3fb5;

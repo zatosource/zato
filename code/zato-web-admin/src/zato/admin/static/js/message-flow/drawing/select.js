@@ -407,8 +407,28 @@ drawing.wireDrawing = function(svg) {
             node.addEventListener('click', function(event) {
                 event.stopPropagation();
 
-                // A second click on the picked node lets everything go
+                // On a card of several events the click may be on one of its lines,
+                // which then is the event the pane opens on - a card of one event
+                // is picked as a whole, whichever of its parts was clicked
+                var lineEventId = null;
+
+                if (node.classList.contains('message-flow-node-multi')) {
+                    var line = event.target.closest('.message-flow-line');
+
+                    if (line !== null) {
+                        lineEventId = parseInt(line.getAttribute('data-event-id'), 10);
+                    }
+                }
+
                 if (drawing.selectedNode === node) {
+
+                    // Another line of the picked card brings the pane to its event ..
+                    if (lineEventId !== null && lineEventId !== detail.currentEventId) {
+                        detail.openEvent(lineEventId);
+                        return;
+                    }
+
+                    // .. and a second click on the same thing lets everything go
                     clearSelection();
                     clearLit();
                     return;
@@ -429,9 +449,14 @@ drawing.wireDrawing = function(svg) {
 
                 setConnectorCurrent(drawing.selectedKey, true);
 
-                // The picked node's exchange opens under the drawing
+                // The picked node's exchange opens under the drawing, on the line
+                // that was clicked when one was
                 var detailIndex = parseInt(node.getAttribute('data-node-index'), 10);
                 detail.show(drawing.nodeDetails[detailIndex]);
+
+                if (lineEventId !== null) {
+                    detail.openEvent(lineEventId);
+                }
 
                 // The picked node's whole way from the root stays lit around
                 // it, and the root, standing outside every branch, keeps them

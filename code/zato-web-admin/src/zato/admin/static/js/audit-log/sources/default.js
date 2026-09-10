@@ -178,6 +178,12 @@ $.fn.zato.audit_log.sources['default'] = {
         return [];
     },
 
+    // What a line of a flow card reads in place of an outcome when its event reports none -
+    // the event's own kind, unless the role chip before it already says as much
+    lineTypeLabel: function(model) {
+        return model.eventLabel;
+    },
+
     lineNote: function(_model) {
         return '';
     },

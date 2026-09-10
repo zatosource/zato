@@ -155,13 +155,17 @@
     fill: var(--message-flow-job);
 }
 
-/* A service invocation - the service that ran, whichever way it was invoked */
+/* A service's request, response and note - the service that ran, whichever way it was invoked */
 
-.message-flow-chip-service {
+.message-flow-chip-service,
+.message-flow-chip-service-request,
+.message-flow-chip-service-response {
     fill: rgba(184, 153, 240, 0.18);
 }
 
-.message-flow-chip-text-service {
+.message-flow-chip-text-service,
+.message-flow-chip-text-service-request,
+.message-flow-chip-text-service-response {
     fill: var(--message-flow-service);
 }
 
@@ -271,7 +275,9 @@
     stroke: var(--message-flow-job);
 }
 
-.message-flow-line .message-flow-chip-service {
+.message-flow-line .message-flow-chip-service,
+.message-flow-line .message-flow-chip-service-request,
+.message-flow-line .message-flow-chip-service-response {
     stroke: var(--message-flow-service);
 }
 
@@ -299,6 +305,27 @@
 .message-flow-line.message-flow-line-current .message-flow-band-type,
 .message-flow-line.message-flow-line-current .message-flow-timestamp {
     fill: var(--message-flow-line-current-text);
+}
+
+/* A line's backing across the card - nothing to see on a card of one event. On a
+   card of several, each line answers the pointer on its own and the line the
+   pane is open on keeps a quiet fill under its words */
+
+.message-flow-line-back {
+    fill: transparent;
+    stroke: none;
+}
+
+.message-flow-node-multi .message-flow-line {
+    cursor: pointer;
+}
+
+.message-flow-node-multi .message-flow-line:hover .message-flow-line-back {
+    fill: var(--message-flow-line-hover-fill);
+}
+
+.message-flow-node-multi .message-flow-line.message-flow-line-current .message-flow-line-back {
+    fill: var(--message-flow-line-current-fill);
 }
 
 /* The connector into the node currently standing out - picked by hand or
