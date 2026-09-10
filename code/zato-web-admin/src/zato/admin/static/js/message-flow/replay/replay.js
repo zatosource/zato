@@ -37,16 +37,13 @@ replay.config = {
     // clock runs this much past the last event before the pass is over
     eventBeat: 0.6,
 
-    // The two ways the playhead moves - auto-play walking the whole pass on
-    // its own, and step, no clock at all, the arrows alone moving it
-    modes: [
-        {key: 'auto', label: 'Auto-play', icon: 'autoplay'},
-        {key: 'step', label: 'Step', icon: 'step'}
-    ],
-
     // The words of the bar - each control says its own name natively
     playLabel: 'Play',
     pauseLabel: 'Pause',
+
+    // The control that lays the events out on the track by the real time between
+    // them - off, they stand an even step apart whatever the time between them was
+    actualTimeLabel: 'Actual time',
     speedLabel: 'Speed',
     speedUnit: 'x',
     shortcutsLabel: 'Keyboard shortcuts',
@@ -59,14 +56,29 @@ replay.config = {
     speedStep: 25,
     speedPlain: 100,
 
-    // What the keys do, read under the keyboard control
-    shortcuts: [
-        {keys: 'Space', label: 'Play and pause'},
-        {keys: 'Right', label: 'Next node'},
-        {keys: 'Left', label: 'Previous node'},
-        {keys: 'Home / End', label: 'Start / end'},
-        {keys: 'Up / Down', label: 'Playback mode'},
-        {keys: 'Esc', label: 'End the pass'}
+    // What the keys do, read under the keyboard control - one group for a node
+    // picked by hand, whose keys walk the drawing, one for the pass, whose keys
+    // drive the clock
+    shortcutGroups: [
+        {
+            title: 'With a node picked',
+            shortcuts: [
+                {keys: 'Left / Right', label: 'Previous / next node'},
+                {keys: 'Up / Down', label: 'Previous / next row, on past the node\'s ends'},
+                {keys: 'Home / End', label: 'First / last node'},
+                {keys: 'Esc', label: 'Let the node go'}
+            ]
+        },
+        {
+            title: 'During a pass',
+            shortcuts: [
+                {keys: 'Space', label: 'Play and pause'},
+                {keys: 'Left / Right', label: 'Previous / next event'},
+                {keys: 'Home / End', label: 'Start / end'},
+                {keys: 'T', label: 'Actual time on / off'},
+                {keys: 'Esc', label: 'End the pass'}
+            ]
+        }
     ],
 
     // The one outcome that is not a failure - an event reporting any other
@@ -81,7 +93,10 @@ replay.config = {
 replay.state = {
     isActive: false,
     isPlaying: false,
-    modeIndex: 0,
+
+    // Whether the events stand on the track by the real time between them
+    // rather than an even step apart - off until the reader asks for it
+    isActualTime: false,
 
     // How fast the clock runs against its own speed - one is the clock's own
     speed: 1,
@@ -111,8 +126,10 @@ replay.state = {
     // The event whose node the canvas last drifted toward
     cameraFocusIndex: -1,
 
-    // The node whose exchange the pass last opened under the drawing
+    // The node whose exchange the pass last opened under the drawing, and the
+    // event of it the pane's tabs were last brought to
     detailKey: '',
+    detailEventId: null,
 
     frameHandle: null,
     lastFrameMs: 0
@@ -180,6 +197,7 @@ replay.disarm = function() {
     state.playedCount = 0;
     state.cameraFocusIndex = -1;
     state.detailKey = '';
+    state.detailEventId = null;
 
     for (var key in state.nodes) {
         var element = state.nodes[key].element;
@@ -236,7 +254,6 @@ replay.onJourney = function() {
     // new journey finds it
     replay.applyFloat();
 
-    replay.setMode(0);
     replay.setNote('');
     replay.updateBar();
 };

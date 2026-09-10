@@ -170,6 +170,16 @@ $.fn.zato.audit_log.sources['service'] = $.extend({}, $.fn.zato.audit_log.source
         return $.fn.zato.audit_log.sources['service'].lineNote(model);
     },
 
+    // The pane's header names a note by its role alone, its message being the body
+    // under it, a request and a response by what their lines read
+    headerNote: function(model) {
+        if (isNote(model.raw)) {
+            return '';
+        }
+
+        return $.fn.zato.audit_log.sources['service'].lineNote(model);
+    },
+
     // A failed response opens its traceback beside itself, a request and a note open nothing more
     paneExtras: function(rowModel) {
         var row = rowModel.raw;

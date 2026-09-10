@@ -61,6 +61,20 @@ detail.config = {
         'access': 'ACCESS'
     },
 
+    // The word the header names an event's role by, before the event's own words
+    headerRoleWords: {
+        'request': 'Request',
+        'response': 'Response',
+        'none': 'System',
+        'view': 'View',
+        'job': 'Scheduler',
+        'service': 'Audit write',
+        'service-request': 'Request',
+        'service-response': 'Response',
+        'transfer': 'Transfer',
+        'access': 'Access'
+    },
+
     // The roles whose event is a response - what a source hangs a response's further bodies on
     responseRoles: {
         'response': true,
@@ -98,24 +112,35 @@ detail.bodyLengths = {};
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The words the pane's header says about the event its tabs stand on - what the
-// event's own line on the card reads, the event's kind when the line has no
-// words of its own - so the header names both the exchange and the very event
+// The words the pane's header says about the event its tabs stand on - the
+// event's role, and after a dot what the source has to say of the event - so
+// the header names both the exchange and the very event
 detail.eventWords = function(model) {
-    var presenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
-    var out = presenter.lineNote(model);
+    var config = detail.config;
 
-    if (out === '') {
-        out = model.eventLabel;
+    var presenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
+    var out = config.headerRoleWords[detail.roleOf(model)];
+
+    var note = presenter.headerNote(model);
+
+    if (note !== '') {
+        out += config.titleSeparator + note;
     }
 
     return out;
 };
 
 // The drawing brought to the event the tabs stand on - that event's line on its
-// node wears the selection amber on its chips, every other line its own inks
+// node wears the selection amber on its chips, every other line its own inks.
+// The root stands for the message and has no line of its own, so with the root
+// open no line is marked, though its pane reads the seed event.
 detail.markCurrentLine = function() {
     var wanted = String(detail.currentEventId);
+
+    if (detail.openDetail !== null && detail.openDetail.key === '') {
+        wanted = '';
+    }
+
     var lines = document.querySelectorAll('.message-flow-line');
 
     for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {

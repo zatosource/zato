@@ -28,16 +28,10 @@ replay.icons = {
         {d: 'M14 5h4v14h-4z', isFilled: true}
     ],
 
-    // Auto-play is the clock running on its own
-    autoplay: [
+    // Actual time is a clock face - the events standing where the time really put them
+    clock: [
         {d: 'M12 3a9 9 0 1 1-0.01 0'},
         {d: 'M12 7v5l3.5 2'}
-    ],
-
-    // Step mode is a chevron leaving a dot behind - one move at a time
-    step: [
-        {d: 'M5 12h0.01'},
-        {d: 'M10 7l5 5-5 5'}
     ],
 
     keyboard: [
@@ -185,30 +179,19 @@ replay.buildBar = function() {
         event.currentTarget.blur();
     });
 
-    var modes = document.createElement('div');
-    modes.className = 'message-flow-replay-modes';
-    bar.appendChild(modes);
+    // Whether the track spaces the events by the real time between them - a
+    // toggle, lit while on, standing off until asked
+    var actualButton = document.createElement('button');
+    actualButton.type = 'button';
+    actualButton.className = 'message-flow-replay-button message-flow-replay-actual';
+    actualButton.title = config.actualTimeLabel;
+    actualButton.appendChild(replay.newIcon('clock', 'message-flow-replay-icon'));
+    bar.appendChild(actualButton);
 
-    for (var modeIndex = 0; modeIndex < config.modes.length; modeIndex++) {
-
-        var wireModeButton = function(index) {
-            var mode = config.modes[index];
-
-            var modeButton = document.createElement('button');
-            modeButton.type = 'button';
-            modeButton.className = 'message-flow-replay-button message-flow-replay-mode';
-            modeButton.title = mode.label;
-            modeButton.appendChild(replay.newIcon(mode.icon, 'message-flow-replay-icon'));
-            modes.appendChild(modeButton);
-
-            modeButton.addEventListener('click', function(event) {
-                replay.setMode(index);
-                event.currentTarget.blur();
-            });
-        };
-
-        wireModeButton(modeIndex);
-    }
+    actualButton.addEventListener('click', function(event) {
+        replay.setActualTime(!replay.state.isActualTime);
+        event.currentTarget.blur();
+    });
 
     var track = document.createElement('div');
     track.className = 'message-flow-replay-track';
@@ -291,22 +274,31 @@ replay.buildBar = function() {
     shortcuts.className = 'message-flow-replay-shortcuts';
     bar.appendChild(shortcuts);
 
-    for (var shortcutIndex = 0; shortcutIndex < config.shortcuts.length; shortcutIndex++) {
-        var shortcut = config.shortcuts[shortcutIndex];
+    for (var groupIndex = 0; groupIndex < config.shortcutGroups.length; groupIndex++) {
+        var group = config.shortcutGroups[groupIndex];
 
-        var shortcutRow = document.createElement('div');
-        shortcutRow.className = 'message-flow-replay-shortcut';
-        shortcuts.appendChild(shortcutRow);
+        var groupTitle = document.createElement('div');
+        groupTitle.className = 'message-flow-replay-shortcut-group';
+        groupTitle.textContent = group.title;
+        shortcuts.appendChild(groupTitle);
 
-        var shortcutKeys = document.createElement('span');
-        shortcutKeys.className = 'message-flow-replay-shortcut-keys';
-        shortcutKeys.textContent = shortcut.keys;
-        shortcutRow.appendChild(shortcutKeys);
+        for (var shortcutIndex = 0; shortcutIndex < group.shortcuts.length; shortcutIndex++) {
+            var shortcut = group.shortcuts[shortcutIndex];
 
-        var shortcutLabel = document.createElement('span');
-        shortcutLabel.className = 'message-flow-replay-shortcut-label';
-        shortcutLabel.textContent = shortcut.label;
-        shortcutRow.appendChild(shortcutLabel);
+            var shortcutRow = document.createElement('div');
+            shortcutRow.className = 'message-flow-replay-shortcut';
+            shortcuts.appendChild(shortcutRow);
+
+            var shortcutKeys = document.createElement('span');
+            shortcutKeys.className = 'message-flow-replay-shortcut-keys';
+            shortcutKeys.textContent = shortcut.keys;
+            shortcutRow.appendChild(shortcutKeys);
+
+            var shortcutLabel = document.createElement('span');
+            shortcutLabel.className = 'message-flow-replay-shortcut-label';
+            shortcutLabel.textContent = shortcut.label;
+            shortcutRow.appendChild(shortcutLabel);
+        }
     }
 
     keyboardButton.addEventListener('click', function(event) {
@@ -373,6 +365,12 @@ replay.onKeyDown = function(event) {
         return;
     }
 
+    // With a node picked by hand and the clock standing, the keys walk the
+    // drawing instead - only the space bar still starts the clock
+    if ($.fn.zato.message_flow.keyboard.isWalking(event) && event.key !== ' ') {
+        return;
+    }
+
     if (event.key === ' ') {
         replay.togglePlay();
     }
@@ -391,12 +389,8 @@ replay.onKeyDown = function(event) {
     else if (event.key === 'End') {
         replay.seek(replay.state.totalScaled);
     }
-    else if (event.key === 'ArrowDown') {
-        replay.setMode((replay.state.modeIndex + 1) % replay.config.modes.length);
-    }
-    else if (event.key === 'ArrowUp') {
-        var modeCount = replay.config.modes.length;
-        replay.setMode((replay.state.modeIndex + modeCount - 1) % modeCount);
+    else if (event.key === 't' || event.key === 'T') {
+        replay.setActualTime(!replay.state.isActualTime);
     }
     else if (event.key === 'Escape') {
 

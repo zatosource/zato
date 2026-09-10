@@ -188,6 +188,13 @@ $.fn.zato.audit_log.sources['default'] = {
         return '';
     },
 
+    // What the flow pane's header says of an event after the event's role - what
+    // the event's own line on the card reads, unless the source has less to say there
+    headerNote: function(model) {
+        var presenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
+        return presenter.lineNote(model);
+    },
+
     lineTooltip: function(_model) {
         return '';
     }

@@ -3,7 +3,7 @@
 
 // Message flow replay - the playback. What the drawing shows at a given
 // playhead, the auto-play clock that moves it one frame at a time, and every
-// deliberate move of it - play, pause, a seek, a step, a change of mode.
+// deliberate move of it - play, pause, a seek, a step, the track laid out anew.
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -31,10 +31,12 @@ replay.applyState = function() {
         currentKey = state.events[playedCount - 1].key;
     }
 
-    // The pass's node opens its request and reply under the drawing the way
-    // a click would - once per node, not once per event of it
+    // The pass's node opens its exchange under the drawing the way a click
+    // would - once per node - and the pane's tabs then follow the pass from
+    // one event of the node to the next
     if (currentKey !== state.detailKey) {
         state.detailKey = currentKey;
+        state.detailEventId = null;
 
         if (currentKey === '') {
             detail.hide();
@@ -44,6 +46,15 @@ replay.applyState = function() {
             var detailIndex = parseInt(currentElement.getAttribute('data-node-index'), 10);
 
             detail.show(drawing.nodeDetails[detailIndex]);
+        }
+    }
+
+    if (playedCount > 0) {
+        var currentEventId = state.events[playedCount - 1].model.id;
+
+        if (currentEventId !== state.detailEventId) {
+            state.detailEventId = currentEventId;
+            detail.openEvent(currentEventId);
         }
     }
 
@@ -134,7 +145,7 @@ replay.applyState = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The clock - one frame at a time, on whichever of the two axes the mode says
+// The clock - one frame at a time along the scaled axis
 replay.tick = function(frameMs) {
     var state = replay.state;
 
@@ -272,25 +283,16 @@ replay.seek = function(position) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// A step is node to node, not event to event - an exchange's own further
-// events change nothing worth a keypress of their own, so the playhead lands
-// on the first moment of the next exchange, playing whatever the current one
-// still held on the way
+// A step is event to event - the playhead lands on the moment of the next
+// event, whichever node it is a line of, and past the last one on the end
+// of the pass
 replay.stepForward = function() {
     var state = replay.state;
     var events = state.events;
 
-    var currentKey = '';
-
-    if (state.playedCount > 0) {
-        currentKey = events[state.playedCount - 1].key;
-    }
-
-    for (var eventIndex = state.playedCount; eventIndex < events.length; eventIndex++) {
-        if (events[eventIndex].key !== currentKey) {
-            replay.seek(events[eventIndex].scaled);
-            return;
-        }
+    if (state.playedCount < events.length) {
+        replay.seek(events[state.playedCount].scaled);
+        return;
     }
 
     replay.seek(state.totalScaled);
@@ -298,60 +300,50 @@ replay.stepForward = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Back one node - past the current exchange's own events and onto the first
-// moment of the one before it, or into the dark room before the first event
+// Back one event - onto the moment of the one before the newest played, or
+// into the dark room before the first event
 replay.stepBack = function() {
     var state = replay.state;
     var events = state.events;
 
-    if (state.playedCount === 0) {
+    if (state.playedCount < 2) {
         replay.seek(0);
         return;
     }
 
-    var currentKey = events[state.playedCount - 1].key;
-
-    // Past the current exchange's own played events first ..
-    var eventIndex = state.playedCount - 1;
-
-    while (eventIndex >= 0 && events[eventIndex].key === currentKey) {
-        eventIndex -= 1;
-    }
-
-    // .. with nothing earlier, the pass stands before its first event
-    if (eventIndex < 0) {
-        replay.seek(0);
-        return;
-    }
-
-    // .. and to the first moment of the exchange right before this one
-    var previousKey = events[eventIndex].key;
-
-    while (eventIndex >= 0 && events[eventIndex].key === previousKey) {
-        eventIndex -= 1;
-    }
-
-    replay.seek(events[eventIndex + 1].scaled);
+    replay.seek(events[state.playedCount - 2].scaled);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-replay.setMode = function(modeIndex) {
+// The events laid out on the track anew, by the real time between them or an
+// even step apart - the playhead stays on the event it stood on, wherever that
+// event now stands, and the clock stops for the move
+replay.setActualTime = function(isActualTime) {
     var state = replay.state;
 
-    state.modeIndex = modeIndex;
+    state.isActualTime = isActualTime;
 
-    // No clock at all in step mode - the arrows alone move the playhead
-    if (replay.config.modes[modeIndex].key === 'step') {
-        replay.pause();
+    replay.bar().querySelector('.message-flow-replay-actual').classList.toggle(
+        'dashboard-panel-action-badge-active', isActualTime);
+
+    if (state.events.length === 0) {
+        return;
     }
 
-    var modeButtons = replay.bar().querySelectorAll('.message-flow-replay-mode');
+    var playedCount = state.playedCount;
 
-    for (var buttonIndex = 0; buttonIndex < modeButtons.length; buttonIndex++) {
-        modeButtons[buttonIndex].classList.toggle('dashboard-panel-action-badge-active',
-            buttonIndex === modeIndex);
+    replay.scaleTimeline();
+    replay.buildTicks();
+
+    // A playhead that never left the dark room before the first event stays there
+    if (playedCount === 0) {
+        state.position = 0;
+        replay.updateBar();
+        return;
     }
+
+    replay.seek(state.events[playedCount - 1].scaled);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
