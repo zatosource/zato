@@ -110,7 +110,55 @@ $.fn.zato.audit_log.config = {
     fileTransferWords: {},
 
     // What the object row is labelled with for a source the catalog does not know
-    defaultObjectLabel: 'Object'
+    defaultObjectLabel: 'Object',
+
+    // Where the audit log and the flow page live, what the flow page's term and
+    // its way back are called in the address bar
+    auditLogPagePath: '/zato/audit-log/',
+    flowPagePath: '/zato/message-flow/',
+    termURLKey: 'term',
+    backURLKey: 'back'
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The audit log address to lead back to - the audit log page with its whole address bar,
+// or the way back this page was itself given, or none on any other page.
+$.fn.zato.audit_log.backURL = function() {
+    var config = $.fn.zato.audit_log.config;
+    var kit = $.fn.zato.dashboard_kit;
+
+    var carried = kit.url_state.get(config.backURLKey);
+
+    // Only an audit log address is a way back
+    if (carried !== null && carried.indexOf(config.auditLogPagePath) === 0) {
+        return carried;
+    }
+
+    if (window.location.pathname === config.auditLogPagePath) {
+        return window.location.pathname + window.location.search;
+    }
+
+    return '';
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The address of the flow page opened on one term, carrying the way back to the audit log
+// when there is one to carry
+$.fn.zato.audit_log.flowPageURL = function(term) {
+    var config = $.fn.zato.audit_log.config;
+
+    var params = new URLSearchParams();
+    params.set(config.termURLKey, term);
+
+    var backURL = $.fn.zato.audit_log.backURL();
+
+    if (backURL !== '') {
+        params.set(config.backURLKey, backURL);
+    }
+
+    return config.flowPagePath + '?' + params.toString();
 };
 
 // /////////////////////////////////////////////////////////////////////////////

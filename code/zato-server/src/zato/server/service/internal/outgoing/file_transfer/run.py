@@ -20,7 +20,7 @@ from zato.common.audit_log.file_transfer import record_schedule_event
 from zato.common.audit_log.file_transfer_run import count_delivered_since, find_running_runs, Interrupted_Note, \
     Phase_Connecting, Phase_Done, Run_Ledger_Max_Entries, Run_Status_Clean, Run_Status_Empty, Run_Status_Failed, \
     Run_Status_Interrupted, Run_Status_List_Failed, Run_Status_No_Directory, Run_Status_Partial, Run_Status_Running, \
-    Run_Status_Unchanged, update_run_event, write_run_error, write_run_ledger
+    Run_Status_Unchanged, update_run_event, write_run_error, write_run_exchanges, write_run_ledger
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -28,9 +28,10 @@ from zato.common.util.api import utcnow
 
 if 0:
     from zato.common.audit_log.api import AuditLog
-    from zato.common.typing_ import anylist, intnone, stranydict, strintdict, strlist
+    from zato.common.typing_ import any_, anylist, intnone, stranydict, strintdict, strlist
     from zato.server.service import Service
     AuditLog = AuditLog
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,7 +42,7 @@ _last_listing:'stranydict' = {}
 # The count of files each schedule delivered today, keyed by connection and schedule.
 _delivered_today:'stranydict' = {}
 
-# The key of the zato context in a service's WSGI environment.
+# The key of the zato context in a service's request context.
 _zato_ctx_key = 'zato.zato_ctx'
 
 # The scheduler context of a run not fired by the scheduler.
@@ -129,7 +130,7 @@ def error_summary(error:'str') -> 'str':
 def get_scheduler_context(service:'Service') -> 'stranydict':
     """ The scheduler's job id and run number, both zero when the scheduler did not fire the run.
     """
-    zato_ctx = service.wsgi_environ.get(_zato_ctx_key)
+    zato_ctx = service.request_ctx.get(_zato_ctx_key)
 
     if zato_ctx is None:
         out = dict(_no_scheduler_context)
@@ -256,7 +257,7 @@ def open_run(
         'delivered_today': delivered_today,
         'entries': 0,
         'candidates': 0,
-        'taken': 0,
+        'picked_up': 0,
         'processed': 0,
         'failed': 0,
         'skipped': 0,
@@ -292,6 +293,18 @@ def note_listing(run:'RunContext', entries:'anylist', list_ms:'int') -> 'None':
 
     entry_count = len(entries)
     run.update(entries=entry_count, list_ms=list_ms)
+
+# ################################################################################################################################
+
+def note_exchanges(run:'RunContext', conn:'any_') -> 'None':
+    """ Stores what the run said to the server while checking and listing the directory
+    and what the server said back, as the run's request and response bodies.
+    """
+    exchanges = conn.take_exchanges()
+
+    now = utcnow()
+    now_iso = now.isoformat()
+    write_run_exchanges(run.event_id, now_iso, exchanges)
 
 # ################################################################################################################################
 
@@ -353,12 +366,12 @@ def close_run(run:'RunContext') -> 'None':
     data['skipped'] = sum(skip_counts)
 
     # A run that processed or failed a file is never unchanged ..
-    took_nothing = data['processed'] == 0
-    if took_nothing:
+    delivered_nothing = data['processed'] == 0
+    if delivered_nothing:
         if data['failed']:
-            took_nothing = False
+            delivered_nothing = False
 
-    if not took_nothing:
+    if not delivered_nothing:
         run.is_unchanged = False
         data.pop('unchanged_since_event_id', None)
         data.pop('unchanged_since_iso', None)
@@ -391,12 +404,12 @@ def close_run(run:'RunContext') -> 'None':
 # ################################################################################################################################
 
 def close_run_no_directory(run:'RunContext') -> 'None':
-    """ Closes the run's row with the no-directory status.
+    """ Closes the run's row with the no-directory status - a directory that is not there is an error of the run.
     """
     run.data['phase'] = Phase_Done
     duration_ms = run.elapsed_ms()
 
-    update_run_event(run.event_id, outcome=AuditOutcome.OK, status=Run_Status_No_Directory,
+    update_run_event(run.event_id, outcome=AuditOutcome.Error, status=Run_Status_No_Directory,
         duration_ms=duration_ms, data=run.data)
 
 # ################################################################################################################################

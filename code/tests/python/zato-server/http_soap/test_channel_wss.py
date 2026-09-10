@@ -98,7 +98,7 @@ class HandleSecurityWSSTestCase(unittest.TestCase):
         """ Runs enforcement the way the dispatcher does and returns the result along with the
         request context, so a test can see what enforcement recorded on it.
         """
-        wsgi_environ:'anydict' = {}
+        request_ctx:'anydict' = {}
         context = None
 
         if with_context:
@@ -109,12 +109,12 @@ class HandleSecurityWSSTestCase(unittest.TestCase):
                 'use_mtom': False,
             }
             context = parse_soap_request(_test_cid, body, Content_Type[SOAPVersion.V12], channel_item)
-            wsgi_environ['zato.request.soap'] = context
+            request_ctx['zato.request.soap'] = context
 
         url_data = _url_data()
 
         result = url_data._handle_security_wss(_test_cid, _username_token_definition(), _test_path,
-            body, wsgi_environ, enforce_auth=enforce_auth)
+            body, request_ctx, enforce_auth=enforce_auth)
 
         out:'anydict' = {'result': result, 'context': context}
         return out

@@ -12,9 +12,9 @@ use super::{ACCEPT_WATCHER, LISTEN_FD, PyObject};
 /// Binds a TCP listener and dispatches requests via gevent.
 #[pyclass]
 pub struct HTTPServer {
-    /// Python callable that receives `(environ_dict,)` and returns `(status, headers, body)`.
+    /// Python callable that receives `(request_ctx,)` and returns `(status, headers, body)`.
     request_handler: PyObject,
-    /// Value for the `SERVER_SOFTWARE` WSGI key.
+    /// Value for the `SERVER_SOFTWARE` request context key.
     server_software: String,
     /// Bind address.
     host: String,

@@ -149,7 +149,7 @@ def details(req:'any_') -> 'HttpResponse':
         if source == AuditSource.Config:
             parsed = render_view_record(engine, data, event_time_iso)
         elif event_renderer := _source_render_by_event_id.get(source):
-            parsed = event_renderer(engine, event_id)
+            parsed = event_renderer(engine, event_id, kind)
         elif renderer := _source_parse.get(source):
             parsed = renderer(data)
         else:

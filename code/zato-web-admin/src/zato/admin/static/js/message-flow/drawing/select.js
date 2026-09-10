@@ -407,8 +407,37 @@ drawing.wireDrawing = function(svg) {
             node.addEventListener('click', function(event) {
                 event.stopPropagation();
 
-                // A second click on the picked node lets everything go
+                // A hand on a node ends whatever pass was on - the pass's own marks,
+                // the amber on the node it last stood on among them, would otherwise
+                // stay on the drawing beside the selection
+                var replay = $.fn.zato.message_flow.replay;
+
+                if (replay.state.isActive) {
+                    replay.disarm();
+                }
+
+                // On a card of several events the click may be on one of its lines,
+                // which then is the event the pane opens on - a card of one event
+                // is picked as a whole, whichever of its parts was clicked
+                var lineEventId = null;
+
+                if (node.classList.contains('message-flow-node-multi')) {
+                    var line = event.target.closest('.message-flow-line');
+
+                    if (line !== null) {
+                        lineEventId = parseInt(line.getAttribute('data-event-id'), 10);
+                    }
+                }
+
                 if (drawing.selectedNode === node) {
+
+                    // Another line of the picked card brings the pane to its event ..
+                    if (lineEventId !== null && lineEventId !== detail.currentEventId) {
+                        detail.openEvent(lineEventId);
+                        return;
+                    }
+
+                    // .. and a second click on the same thing lets everything go
                     clearSelection();
                     clearLit();
                     return;
@@ -429,19 +458,19 @@ drawing.wireDrawing = function(svg) {
 
                 setConnectorCurrent(drawing.selectedKey, true);
 
-                // The picked node's exchange opens under the drawing
+                // The picked node's exchange opens under the drawing, on the line
+                // that was clicked when one was
                 var detailIndex = parseInt(node.getAttribute('data-node-index'), 10);
                 detail.show(drawing.nodeDetails[detailIndex]);
 
+                if (lineEventId !== null) {
+                    detail.openEvent(lineEventId);
+                }
+
                 // The picked node's whole way from the root stays lit around
-                // it, and the root, standing outside every branch, keeps them
-                // all lit
-                if (drawing.selectedKey !== '') {
-                    setLitWay(drawing.selectedKey);
-                }
-                else {
-                    setLitAll();
-                }
+                // it and the rest of the room dims - the root's way is the
+                // root alone, so under it every exchange dims
+                setLitWay(drawing.selectedKey);
             });
         };
 
@@ -457,7 +486,8 @@ drawing.wireDrawing = function(svg) {
         }
     };
 
-    // Clicks the node whose exchange holds the event, false when no node holds it.
+    // Clicks the node whose exchange holds the event and brings the pane's tabs to that
+    // very event, false when no node holds it.
     drawing.selectEvent = function(eventId) {
         var wanted = String(eventId);
 
@@ -472,6 +502,8 @@ drawing.wireDrawing = function(svg) {
                     if (drawing.selectedNode !== candidate) {
                         candidate.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
                     }
+
+                    detail.openEvent(eventId);
 
                     return true;
                 }

@@ -23,7 +23,7 @@ struct CachedServerAttrs {
     needs_access_log: bool,
     /// Whether to log all paths (true) or check `access_log_ignore` (false).
     needs_all_access_log: bool,
-    /// Ordered list of environ keys to check for the client IP (e.g. `HTTP_X_FORWARDED_FOR`).
+    /// Ordered list of request context keys to check for the client IP (e.g. `HTTP_X_FORWARDED_FOR`).
     client_address_headers: Vec<String>,
     /// Path prefixes excluded from access logging.
     access_log_ignore: Vec<String>,
@@ -105,7 +105,7 @@ fn chrono_to_py_datetime<'py>(
 /// logs access and REST summaries, collects Prometheus metrics if enabled,
 /// and returns `(status_str, headers_dict, body_bytes)`.
 #[pyfunction]
-#[pyo3(signature = (server, http_environ, new_cid_func, local_tz_offset_secs, **kwargs))]
+#[pyo3(signature = (server, request_ctx, new_cid_func, local_tz_offset_secs, **kwargs))]
 #[expect(
     clippy::too_many_lines,
     clippy::similar_names,
@@ -118,7 +118,7 @@ fn chrono_to_py_datetime<'py>(
 )]
 pub fn handle_http_request<'py>(
     server: &Bound<'py, PyAny>,
-    http_environ: &Bound<'py, PyDict>,
+    request_ctx: &Bound<'py, PyDict>,
     new_cid_func: &Bound<'py, PyAny>,
     local_tz_offset_secs: i32,
     kwargs: Option<&Bound<'py, PyDict>>,
@@ -129,7 +129,7 @@ pub fn handle_http_request<'py>(
 
     let cached = get_cached_attrs(server)?;
 
-    let user_agent: String = http_environ
+    let user_agent: String = request_ctx
         .get_item("HTTP_USER_AGENT")?
         .map_or_else(|| Ok("(None)".to_owned()), |val| val.extract())?;
 
@@ -155,12 +155,12 @@ pub fn handle_http_request<'py>(
     let py_ts_utc = chrono_to_py_datetime(py, &request_ts_utc.with_timezone(&zero_offset), &tz_utc)?;
     let py_ts_local = chrono_to_py_datetime(py, &request_ts_local, &tz_utc)?;
 
-    http_environ.set_item("zato.local_tz", &py_ts_local.getattr("tzinfo")?)?;
-    http_environ.set_item("zato.request_timestamp_utc", &py_ts_utc)?;
-    http_environ.set_item("zato.request_timestamp", &py_ts_local)?;
+    request_ctx.set_item("zato.local_tz", &py_ts_local.getattr("tzinfo")?)?;
+    request_ctx.set_item("zato.request_timestamp_utc", &py_ts_utc)?;
+    request_ctx.set_item("zato.request_timestamp", &py_ts_local)?;
 
     let response_headers = PyDict::new(py);
-    http_environ.set_item("zato.http.response.headers", &response_headers)?;
+    request_ctx.set_item("zato.http.response.headers", &response_headers)?;
 
     if cached.needs_x_zato_cid {
         let pub_cid = make_cid_public(&cid);
@@ -169,7 +169,7 @@ pub fn handle_http_request<'py>(
 
     let mut remote_addr = NO_REMOTE_ADDRESS.to_owned();
     for name in &cached.client_address_headers {
-        if let Some(val) = http_environ.get_item(name.as_str())? {
+        if let Some(val) = request_ctx.get_item(name.as_str())? {
             let addr_str: String = val.extract()?;
             if !addr_str.is_empty() {
                 remote_addr = addr_str;
@@ -177,14 +177,14 @@ pub fn handle_http_request<'py>(
             }
         }
     }
-    http_environ.set_item("zato.http.remote_addr", &remote_addr)?;
+    request_ctx.set_item("zato.http.remote_addr", &remote_addr)?;
 
     let config_manager = server.getattr("config_manager")?;
     let dispatcher = config_manager.getattr("request_dispatcher")?;
 
     let payload_result = dispatcher.call_method1(
         "dispatch",
-        (&cid, &py_ts_utc, http_environ, &config_manager, &user_agent, &remote_addr),
+        (&cid, &py_ts_utc, request_ctx, &config_manager, &user_agent, &remote_addr),
     );
 
     // Check whether the dispatch returned a streaming iterator or a regular payload ..
@@ -222,7 +222,7 @@ pub fn handle_http_request<'py>(
                 let logger = py.import("logging")?.call_method1("getLogger", ("zato_rest",))?;
                 logger.call_method1("error", (&error_msg,))?;
 
-                http_environ.set_item("zato.http.response.status", "500 Internal Server Error")?;
+                request_ctx.set_item("zato.http.response.status", "500 Internal Server Error")?;
 
                 let return_tracebacks: bool = server.getattr("return_tracebacks")?.extract()?;
                 let payload_str = if return_tracebacks {
@@ -236,7 +236,7 @@ pub fn handle_http_request<'py>(
         payload_bytes.into_any()
     };
 
-    let channel_item = http_environ.get_item("zato.channel_item")?;
+    let channel_item = request_ctx.get_item("zato.channel_item")?;
     let channel_name: String = channel_item
         .as_ref()
         .and_then(|chan_item| chan_item.call_method1("get", ("name", "-")).ok())
@@ -247,11 +247,11 @@ pub fn handle_http_request<'py>(
         .and_then(|chan_item| chan_item.call_method1("get", ("service_name", "-")).ok())
         .map_or_else(|| Ok("-".to_owned()), |val| val.extract())?;
 
-    let status: String = http_environ
+    let status: String = request_ctx
         .get_item("zato.http.response.status")?
         .map_or_else(|| Ok("200 OK".to_owned()), |val| val.extract())?;
 
-    let resp_headers_raw = http_environ.get_item("zato.http.response.headers")?;
+    let resp_headers_raw = request_ctx.get_item("zato.http.response.headers")?;
     let final_headers = PyDict::new(py);
     if let Some(raw_headers) = resp_headers_raw {
         let raw_dict: &Bound<'_, PyDict> = raw_headers.cast()?;
@@ -270,7 +270,7 @@ pub fn handle_http_request<'py>(
         payload_obj.bind(py).cast::<PyBytes>().map_or(0, |bytes| bytes.as_bytes().len())
     };
 
-    let path_info: String = http_environ
+    let path_info: String = request_ctx
         .get_item("PATH_INFO")?
         .map_or_else(|| Ok(String::new()), |val| val.extract())?;
 
@@ -291,10 +291,10 @@ pub fn handle_http_request<'py>(
 
             let req_ts_str = request_ts_local.format("%d/%b/%Y:%H:%M:%S %z").to_string();
 
-            let method: String = http_environ
+            let method: String = request_ctx
                 .get_item("REQUEST_METHOD")?
                 .map_or_else(|| Ok(String::new()), |val| val.extract())?;
-            let http_version: String = http_environ
+            let http_version: String = request_ctx
                 .get_item("SERVER_PROTOCOL")?
                 .map_or_else(|| Ok(String::new()), |val| val.extract())?;
 

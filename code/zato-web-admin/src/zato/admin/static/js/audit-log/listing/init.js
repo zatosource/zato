@@ -154,6 +154,11 @@ listing.init = function(initConfig) {
         $.fn.zato.audit_log.search($(this).attr('data-search-value'));
     });
 
+    // The way back is the address bar as it stands when the link is taken, the open event included
+    $(document).on('click', '.audit-log-open-flow', function() {
+        this.href = $.fn.zato.audit_log.flowPageURL($(this).attr('data-event-id'));
+    });
+
     // An event word narrows the list down to events of its kind, wherever it is worn -
     // on a row or in the pane. The click filters, it does not also select the row under it.
     $(document).on('click', '.audit-log-event-filter', function(event) {

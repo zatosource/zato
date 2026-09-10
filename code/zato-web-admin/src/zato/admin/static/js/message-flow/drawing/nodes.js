@@ -12,6 +12,25 @@ var drawing = $.fn.zato.message_flow.drawing;
 // The measures of one node
 // /////////////////////////////////////////////////////////////////////////////
 
+// How wide the role chips of one node stand - the widest of its lines' role words,
+// never under the least width, so every line's chips after it start in one column
+drawing.roleChipWidthOf = function(lines) {
+    var config = drawing.config;
+    var width = config.roleChipMinWidth;
+
+    for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        var labelWidth = drawing.chipWidth(config.roleLabels[lines[lineIndex].role]);
+
+        if (labelWidth > width) {
+            width = labelWidth;
+        }
+    }
+
+    return width;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // How wide one node has to be for its own words - the channel across the band
 // and the longest of its lines, each line being its chips, its label and its
 // timestamp with breathing room between them
@@ -25,17 +44,28 @@ drawing.nodeWidth = function(node) {
 
         var labelWidth;
 
+        // A line with no word of its own after the id chip takes no room for one
         if (line.kind === 'type') {
-            labelWidth = Math.round(line.label.length * config.typeCharWidth);
+            if (line.label === '') {
+                labelWidth = 0;
+            }
+            else {
+                labelWidth = 8 + Math.round(line.label.length * config.typeCharWidth);
+            }
         }
         else {
-            labelWidth = drawing.chipWidth(line.label);
+            labelWidth = 8 + drawing.chipWidth(line.label);
         }
 
         var timeWidth = Math.round(line.time.length * config.subCharWidth);
 
-        var lineWidth = config.bodyPadLeft + config.roleChipWidth + 6 + drawing.chipWidth(line.id) + 8 +
+        var lineWidth = config.bodyPadLeft + node.roleChipWidth + 6 + drawing.chipWidth(line.id) +
             labelWidth + config.lineMinGap + timeWidth + config.bodyPadLeft;
+
+        // The source's note after the chip takes its own room, or it runs into the time
+        if (line.note !== '') {
+            lineWidth += 8 + Math.round(line.note.length * config.subCharWidth);
+        }
 
         if (lineWidth > width) {
             width = lineWidth;
@@ -70,24 +100,40 @@ drawing.nodeHeight = function(node) {
 // Drawing the parts
 // /////////////////////////////////////////////////////////////////////////////
 
-// One event of the exchange written on its own line
-drawing.addEventLine = function(group, x, lineY, width, line) {
+// One event of the exchange written on its own line - the role chip as wide as
+// the node's role chips all are, so the lines' columns agree
+drawing.addEventLine = function(host, x, lineY, width, line, roleChipWidth) {
     var config = drawing.config;
+
+    // The line is a group of its own, named by its event, so the pane can mark
+    // the line of the event its tabs stand on
+    var group = drawing.addGroup(host, 'message-flow-line');
+    group.setAttribute('data-event-id', line.id);
+
+    // The line's own backing across the card, under its words - unseen until the
+    // line is under the pointer or is the one the pane is open on
+    var backTop = lineY - (config.lineStride - config.chipHeight) / 2;
+    kit.draw.addRect(group, x + config.lineBackInset, backTop, width - 2 * config.lineBackInset,
+        config.lineStride, 'message-flow-line-back', 3);
 
     var cursor = x + config.bodyPadLeft;
 
-    cursor += drawing.addRoleChip(group, cursor, lineY, config.roleLabels[line.role], line.role);
+    cursor += drawing.addRoleChip(group, cursor, lineY, config.roleLabels[line.role], line.role, roleChipWidth);
     cursor += 6;
     cursor += drawing.addChip(group, cursor, lineY, line.id, 'id', false);
-    cursor += 8;
 
-    // A plain event type is written as a tag, an outcome is worn as a chip
+    // A plain event type is written as a tag, an outcome is worn as a chip, and a
+    // line whose role chip already says what it was writes nothing more here
     if (line.kind === 'type') {
-        var typeLabel = line.label.toUpperCase();
-        kit.draw.addText(group, cursor, lineY + 12, typeLabel, 'message-flow-band-type', 'start');
-        cursor += Math.round(typeLabel.length * config.titleCharWidth);
+        if (line.label !== '') {
+            var typeLabel = line.label.toUpperCase();
+            cursor += 8;
+            kit.draw.addText(group, cursor, lineY + 12, typeLabel, 'message-flow-band-type', 'start');
+            cursor += Math.round(typeLabel.length * config.titleCharWidth);
+        }
     }
     else {
+        cursor += 8;
         cursor += drawing.addChip(group, cursor, lineY, line.label, line.kind, false);
     }
 
@@ -119,6 +165,12 @@ drawing.addNode = function(host, x, y, width, node) {
     var bandHeight = config.bandHeight;
 
     var group = drawing.addGroup(host, 'message-flow-node message-flow-node-selectable');
+
+    // A card of several events lets each of its lines be picked on its own,
+    // and says so, so the lines answer the pointer
+    if (node.lines.length > 1) {
+        group.classList.add('message-flow-node-multi');
+    }
 
     // Clicking the node opens its exchange under the drawing - the detail the
     // node stands for is remembered by its place in the register, and the key
@@ -154,7 +206,7 @@ drawing.addNode = function(host, x, y, width, node) {
     for (var lineIndex = 0; lineIndex < node.lines.length; lineIndex++) {
         var lineY = y + bandHeight + config.lineTop + lineIndex * config.lineStride;
 
-        drawing.addEventLine(group, x, lineY, width, node.lines[lineIndex]);
+        drawing.addEventLine(group, x, lineY, width, node.lines[lineIndex], node.roleChipWidth);
     }
 
     // The footer strip - how long after the flow's first moment this node's
@@ -178,9 +230,11 @@ drawing.render = function(models, seedModel) {
 
     drawing.clear();
 
-    // What the message is known by - the hub's own words, the headline above
-    // and the source's own identity for the message under it
-    var hubTitle = seedModel.headline;
+    // What the message is known by - the hub's own words, the title the source
+    // gives it above and the source's own identity for the message under it
+    var seedPresenter = $.fn.zato.audit_log.presenterFor(seedModel.raw.source);
+    var hubTitle = seedPresenter.hubTitle(seedModel);
+    var hubChips = seedPresenter.hubChips(seedModel);
     var hubIdentity = seedModel.identity;
 
     // A seed whose source has no message id of its own reads by its CID, and
@@ -245,6 +299,7 @@ drawing.render = function(models, seedModel) {
         nodeByKey[exchange.key] = {
             key: exchange.key,
             channel: exchange.title,
+            roleChipWidth: drawing.roleChipWidthOf(lines),
             isDotted: exchange.isDotted,
             connectorLabel: exchange.connectorLabel,
             footerLabel: '+' + kit.format_duration_ms(footerElapsedMs),
@@ -255,6 +310,11 @@ drawing.render = function(models, seedModel) {
 
     // The hub is as wide as its own words ask, and the fan starts past it
     var hubTitleWidth = Math.round(hubTitle.length * config.titleCharWidth) + 4 * config.bodyPadLeft;
+
+    // A root wearing chips is as wide as the chips ask
+    if (hubChips.length > 0) {
+        hubTitleWidth = drawing.chipRowWidth(hubChips) + 4 * config.bodyPadLeft;
+    }
     var hubIdentityWidth = Math.round(hubIdentity.length * config.titleCharWidth) + 4 * config.bodyPadLeft;
     var hubWidth = Math.max(config.hubMinWidth, hubTitleWidth, hubIdentityWidth);
 
@@ -304,13 +364,10 @@ drawing.render = function(models, seedModel) {
         }
     }
 
-    // Pass two - how tall every row stands and where its connector line runs.
-    // A connector aims at the centre of a node's main section, under the band.
-    // The rows pack like a skyline - a row only goes below the earlier rows it
-    // overlaps horizontally, so a branch stack on the right does not punch a
-    // hole through a column on the left.
+    // Pass two - how tall every row stands. The rows pack like a skyline - a row
+    // only goes below the earlier rows it overlaps horizontally, so a branch
+    // stack on the right does not punch a hole through a column on the left.
     var rowTops = [];
-    var rowCenters = [];
     var rowBottoms = [];
     var rowExtents = [];
 
@@ -358,8 +415,16 @@ drawing.render = function(models, seedModel) {
 
         rowExtents.push({left: extentLeft, right: extentRight});
         rowTops.push(rowTop);
-        rowCenters.push(rowTop + config.bandHeight + (rowHeight - config.bandHeight) / 2);
         rowBottoms.push(rowTop + rowHeight);
+
+        // A connector aims at the centre of its own node's main section, under the
+        // band - the nodes of one row share a top, not a height, so each has its own
+        for (var centerItemIndex = 0; centerItemIndex < heightRow.length; centerItemIndex++) {
+            var centerKey = heightRow[centerItemIndex].exchange.key;
+            var centerHeight = drawing.nodeHeight(nodeByKey[centerKey]);
+
+            placementByKey[centerKey].centerY = rowTop + config.bandHeight + (centerHeight - config.bandHeight) / 2;
+        }
     }
 
     // The drawing is as tall as the lowest row reaches
@@ -388,13 +453,13 @@ drawing.render = function(models, seedModel) {
 
     drawing.addDefs(svg);
 
-    // The message stands halfway down its own fan - only the rows hanging off
-    // the hub have a say in where that is
+    // The message stands halfway down its own fan - only the first nodes of the
+    // rows hanging off the hub have a say in where that is
     var hubRowCenters = [];
 
     for (var hubRowIndex = 0; hubRowIndex < layoutRows.length; hubRowIndex++) {
         if (layoutRows[hubRowIndex][0].fromKey === '') {
-            hubRowCenters.push(rowCenters[hubRowIndex]);
+            hubRowCenters.push(placementByKey[layoutRows[hubRowIndex][0].exchange.key].centerY);
         }
     }
 
@@ -433,7 +498,6 @@ drawing.render = function(models, seedModel) {
     for (var rowIndex = 0; rowIndex < layoutRows.length; rowIndex++) {
         var row = layoutRows[rowIndex];
         var y = rowTops[rowIndex];
-        var centerY = rowCenters[rowIndex];
 
         var branch = drawing.addGroup(svg, 'message-flow-branch');
         branch.setAttribute('data-branch-index', rowIndex);
@@ -442,6 +506,7 @@ drawing.render = function(models, seedModel) {
             var item = row[itemIndex];
             var node = nodeByKey[item.exchange.key];
             var placement = placementByKey[item.exchange.key];
+            var centerY = placement.centerY;
 
             if (itemIndex === 0) {
 
@@ -460,7 +525,7 @@ drawing.render = function(models, seedModel) {
                 }
                 else {
                     var parent = placementByKey[item.fromKey];
-                    var parentCenterY = rowCenters[parent.rowIndex];
+                    var parentCenterY = parent.centerY;
                     var branchElbowX = parent.right + config.branchElbowOffset;
 
                     var branchSet = drawing.addConnectorSet(connectorLayer, rowIndex, item.exchange.key,
@@ -499,16 +564,39 @@ drawing.render = function(models, seedModel) {
                 var chainSet = drawing.addConnectorSet(connectorLayer, rowIndex, item.exchange.key,
                     previousKey);
 
-                drawing.addPolyline(chainSet, [[previousPlacement.right, centerY], [placement.x, centerY]],
-                    drawing.connectorClass(node));
+                // Two stations of one row stand as tall as their own lines ask, so the
+                // run between them steps from the one's centre to the other's halfway across
+                var previousCenterY = previousPlacement.centerY;
+
+                // The words of the run stand on its last horizontal leg - the whole run
+                // when it is level, what is left past the step otherwise, the step
+                // standing as soon as the run has left the previous station
+                var chipRunFromX = previousPlacement.right;
+
+                if (previousCenterY === centerY) {
+                    drawing.addPolyline(chainSet, [[previousPlacement.right, centerY], [placement.x, centerY]],
+                        drawing.connectorClass(node));
+                }
+                else {
+                    var chainElbowX = previousPlacement.right + config.connectorLineReach;
+                    chipRunFromX = chainElbowX;
+
+                    drawing.addRoundedPath(chainSet, [
+                        [previousPlacement.right, previousCenterY],
+                        [chainElbowX, previousCenterY],
+                        [chainElbowX, centerY],
+                        [placement.x, centerY]
+                    ], drawing.connectorClass(node));
+                }
+
                 drawing.addArrow(chainSet, placement.x, centerY, 'message-flow-connector-arrow');
 
                 var chipWidth = drawing.chipWidth(node.connectorLabel);
-                var chipX = previousPlacement.right + (placement.x - previousPlacement.right - chipWidth) / 2;
+                var chipX = chipRunFromX + (placement.x - chipRunFromX - chipWidth) / 2;
 
                 chipX = drawing.clearChipX(chipX, chipWidth,
                     centerY - config.chipHeight / 2, centerY + config.chipHeight / 2,
-                    previousPlacement.right, placement.x);
+                    chipRunFromX, placement.x);
 
                 var chainChipGroup = drawing.addChipGroup(chipLayer, rowIndex, item.exchange.key);
 
@@ -551,13 +639,22 @@ drawing.render = function(models, seedModel) {
     drawing.addPolyline(hub, [[config.hubX + 4, hubTop + 1], [config.hubX + hubWidth - 4, hubTop + 1]],
         'message-flow-rim');
 
-    if (hubIdentity === '') {
-        kit.draw.addText(hub, config.hubX + hubWidth / 2, hubCenterY + 5, hubTitle, 'message-flow-title', 'middle');
-    }
-    else {
-        kit.draw.addText(hub, config.hubX + hubWidth / 2, hubCenterY - 8, hubTitle, 'message-flow-title', 'middle');
+    // The title's baseline - alone in the middle, or above the identity
+    var hubTitleBaseline = hubCenterY + 5;
+
+    if (hubIdentity !== '') {
+        hubTitleBaseline = hubCenterY - 8;
+
         kit.draw.addText(hub, config.hubX + hubWidth / 2, hubCenterY + 14, hubIdentity,
             'message-flow-identity', 'middle');
+    }
+
+    if (hubChips.length > 0) {
+        var chipRowX = config.hubX + (hubWidth - drawing.chipRowWidth(hubChips)) / 2;
+        drawing.addChipRow(hub, chipRowX, hubTitleBaseline - config.chipTextBaseline, hubChips);
+    }
+    else {
+        kit.draw.addText(hub, config.hubX + hubWidth / 2, hubTitleBaseline, hubTitle, 'message-flow-title', 'middle');
     }
 
     // The connectors' words go on last, over everything - having already

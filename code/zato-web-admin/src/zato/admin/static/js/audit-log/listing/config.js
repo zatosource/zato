@@ -37,8 +37,7 @@ listing.config = {
     dataTabLabel: 'Data',
     detailsTabLabel: 'Details',
 
-    // Where the event's whole flow is read, and what the doorway to it says
-    flowPagePath: '/zato/message-flow/',
+    // What the doorway to the event's whole flow says
     openFlowLabel: 'Open flow',
 
     // What stands in for a message body that could not be read
@@ -150,6 +149,8 @@ listing.config = {
     cidLabel: 'CID',
     durationLabel: 'Duration',
     sizeLabel: 'Size',
+    outcomeLabel: 'Outcome',
+    statusLabel: 'Status',
 
     lineageParentLabel: 'Repeat of',
     lineageChildLabel: 'Repeated as',
@@ -199,6 +200,8 @@ listing.config = {
     // the source already declares a column of its own for it. `searchable` says whether Search is
     // offered beside it. When the event happened is not here - a moment in time reads last of
     // everything, so the pane adds it at the very end itself.
+    correlIdColumnKey: 'correl_id',
+
     paneFields: [
         {label: 'Correlation id', key: 'correlId', columnKey: 'correl_id', searchable: true},
         {label: 'Status', key: 'status', columnKey: 'status', searchable: true},
@@ -260,6 +263,9 @@ listing.roles = {
     'receipt-received': 'response',
     'receipt-sent': 'response',
     'job-executed': 'job',
+    'service-request': 'service-request',
+    'service-response': 'service-response',
+    'note': 'service',
 
     // The log access records - config changes and someone reading a message body -
     // read by the log they belong to rather than by a part they play in no exchange

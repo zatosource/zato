@@ -6,7 +6,7 @@ mod accept;
 /// HTTP connection handler - reads requests, dispatches to Python, writes responses.
 mod connection;
 
-/// HTTP header parsing and WSGI environ key mapping.
+/// HTTP header parsing and request context key mapping.
 mod headers;
 
 #[allow(unsafe_code, reason = "libc read/write syscalls for non-blocking socket I/O")]

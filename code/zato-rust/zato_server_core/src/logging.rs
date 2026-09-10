@@ -154,11 +154,11 @@ pub fn format_access_line(entry: &AccessLogEntry<'_>) -> String {
     )
 }
 
-/// Converts a WSGI environ key back to HTTP header form.
+/// Converts a request context header key back to HTTP header form.
 ///
 /// E.g. `HTTP_USER_AGENT` becomes `user-agent`. Returns `None` if the key lacks the `HTTP_` prefix.
-pub fn transform_header_key(wsgi_key: &str) -> Option<String> {
-    let rest = wsgi_key.strip_prefix("HTTP_")?;
+pub fn transform_header_key(ctx_key: &str) -> Option<String> {
+    let rest = ctx_key.strip_prefix("HTTP_")?;
     let mut header = String::with_capacity(rest.len());
     for byte in rest.bytes() {
         header.push(if byte == b'_' { '-' } else { char::from(byte).to_ascii_lowercase() });

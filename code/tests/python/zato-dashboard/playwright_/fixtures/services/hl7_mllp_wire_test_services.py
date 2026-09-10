@@ -71,7 +71,7 @@ class HL7MLLPWireAckIdentity(Service):
         message = _get_message_text(self.request.raw_request)
 
         # The channel this service runs on behalf of
-        channel_item = self.wsgi_environ['zato.channel_item']
+        channel_item = self.request_ctx['zato.channel_item']
         channel_name = channel_item['name']
 
         # What the acknowledgment echoes back comes from the message's own MSH line
@@ -124,7 +124,7 @@ class HL7MLLPWirePopulate(Service):
         message = _get_message_text(self.request.raw_request)
 
         # The destinations this channel declares, by name and type
-        channel_item = self.wsgi_environ['zato.channel_item']
+        channel_item = self.request_ctx['zato.channel_item']
         entries = parse_entries(channel_item['destinations'])
 
         for entry in entries:

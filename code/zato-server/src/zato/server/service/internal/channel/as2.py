@@ -96,7 +96,7 @@ class AS2MDNEndpoint(AdminService):
         if isinstance(body, str):
             body = body.encode('utf8')
 
-        content_type = self.wsgi_environ.get('CONTENT_TYPE')
+        content_type = self.request_ctx.get('CONTENT_TYPE')
         if content_type is None:
             content_type = ''
 

@@ -1,4 +1,4 @@
-//! HTTP header parsing and WSGI environ key mapping.
+//! HTTP header parsing and request context key mapping.
 
 use pyo3::intern;
 use pyo3::prelude::*;
@@ -6,13 +6,13 @@ use pyo3::types::{PyDict, PyString};
 
 use crate::logging::transform_header_key;
 
-/// Converts a WSGI environ dict into a Zato-style HTTP headers dict
+/// Converts a request context dict into a Zato-style HTTP headers dict
 /// by stripping the `HTTP_` prefix and lowercasing.
 #[pyfunction]
-pub fn extract_headers(environ: &Bound<'_, PyDict>) -> PyResult<Py<PyDict>> {
-    let py = environ.py();
+pub fn extract_headers(request_ctx: &Bound<'_, PyDict>) -> PyResult<Py<PyDict>> {
+    let py = request_ctx.py();
     let headers = PyDict::new(py);
-    for (key, value) in environ.iter() {
+    for (key, value) in request_ctx.iter() {
         let key_str: &Bound<'_, PyString> = key.cast_exact()?;
         let key_text = key_str.to_str()?;
         if let Some(header) = transform_header_key(key_text) {
@@ -22,7 +22,7 @@ pub fn extract_headers(environ: &Bound<'_, PyDict>) -> PyResult<Py<PyDict>> {
     Ok(headers.unbind())
 }
 
-/// Maps a single HTTP header name/value pair into the WSGI environ dict format.
+/// Maps a single HTTP header name/value pair into the request context dict format.
 ///
 /// Well-known headers (Content-Type, Authorization, etc.) are mapped to their canonical keys,
 /// everything else becomes `HTTP_<UPPERCASED_UNDERSCORED>`.

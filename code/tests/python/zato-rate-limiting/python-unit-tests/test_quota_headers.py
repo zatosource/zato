@@ -45,7 +45,7 @@ def _make_dispatcher():
 
 # ################################################################################################################################
 
-def _make_wsgi_environ() -> 'stranydict':
+def _make_request_ctx() -> 'stranydict':
     """ Returns a minimal WSGI environ dict for testing dispatch.
     """
     environ:'stranydict' = {
@@ -99,8 +99,8 @@ def _make_check_result(is_allowed:'any_', limit:'any_' = 100, remaining:'any_' =
 
 # ################################################################################################################################
 
-def _dispatch(dispatcher:'any_', wsgi_environ:'any_'):
-    out = dispatcher.dispatch('cid123', '2026-01-01', wsgi_environ, MagicMock(), 'test-agent', '10.0.0.1')
+def _dispatch(dispatcher:'any_', request_ctx:'any_'):
+    out = dispatcher.dispatch('cid123', '2026-01-01', request_ctx, MagicMock(), 'test-agent', '10.0.0.1')
     return out
 
 # ################################################################################################################################
@@ -130,12 +130,12 @@ class QuotaHeadersAllowedTestCase(unittest.TestCase):
             is_allowed=True, limit=100, remaining=42)
         dispatcher.server.rate_limiting_manager.check.return_value = None
 
-        wsgi_environ = _make_wsgi_environ()
-        result = _dispatch(dispatcher, wsgi_environ)
+        request_ctx = _make_request_ctx()
+        result = _dispatch(dispatcher, request_ctx)
 
         self.assertEqual(result, 'OK')
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['X-RateLimit-Limit'], '100')
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['X-RateLimit-Remaining'], '42')
+        self.assertEqual(request_ctx['zato.http.response.headers']['X-RateLimit-Limit'], '100')
+        self.assertEqual(request_ctx['zato.http.response.headers']['X-RateLimit-Remaining'], '42')
 
     @patch.object(RequestDispatcher, '_format_response', return_value='OK')
     @patch.object(RequestDispatcher, '_invoke_service')
@@ -158,11 +158,11 @@ class QuotaHeadersAllowedTestCase(unittest.TestCase):
         dispatcher.server.rate_limiting_manager.check_sec_def.return_value = None
         dispatcher.server.rate_limiting_manager.check.return_value = None
 
-        wsgi_environ = _make_wsgi_environ()
-        _ = _dispatch(dispatcher, wsgi_environ)
+        request_ctx = _make_request_ctx()
+        _ = _dispatch(dispatcher, request_ctx)
 
-        self.assertNotIn('X-RateLimit-Limit', wsgi_environ['zato.http.response.headers'])
-        self.assertNotIn('X-RateLimit-Remaining', wsgi_environ['zato.http.response.headers'])
+        self.assertNotIn('X-RateLimit-Limit', request_ctx['zato.http.response.headers'])
+        self.assertNotIn('X-RateLimit-Remaining', request_ctx['zato.http.response.headers'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -187,14 +187,14 @@ class QuotaHeadersRateLimitedTestCase(unittest.TestCase):
         dispatcher.server.rate_limiting_manager.check_sec_def.return_value = _make_check_result(
             is_allowed=False, limit=100, remaining=0, retry_after_us=2_000_000)
 
-        wsgi_environ = _make_wsgi_environ()
-        result = _dispatch(dispatcher, wsgi_environ)
+        request_ctx = _make_request_ctx()
+        result = _dispatch(dispatcher, request_ctx)
 
         self.assertIn('Too many requests', result)
-        self.assertEqual(wsgi_environ['zato.http.response.status'], '429 Too Many Requests')
-        self.assertIn('Retry-After', wsgi_environ['zato.http.response.headers'])
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['X-RateLimit-Limit'], '100')
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['X-RateLimit-Remaining'], '0')
+        self.assertEqual(request_ctx['zato.http.response.status'], '429 Too Many Requests')
+        self.assertIn('Retry-After', request_ctx['zato.http.response.headers'])
+        self.assertEqual(request_ctx['zato.http.response.headers']['X-RateLimit-Limit'], '100')
+        self.assertEqual(request_ctx['zato.http.response.headers']['X-RateLimit-Remaining'], '0')
 
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
@@ -215,13 +215,13 @@ class QuotaHeadersRateLimitedTestCase(unittest.TestCase):
         dispatcher.server.rate_limiting_manager.check.return_value = _make_check_result(
             is_allowed=False, retry_after_us=2_000_000)
 
-        wsgi_environ = _make_wsgi_environ()
-        result = _dispatch(dispatcher, wsgi_environ)
+        request_ctx = _make_request_ctx()
+        result = _dispatch(dispatcher, request_ctx)
 
         self.assertIn('Too many requests', result)
-        self.assertIn('Retry-After', wsgi_environ['zato.http.response.headers'])
-        self.assertNotIn('X-RateLimit-Limit', wsgi_environ['zato.http.response.headers'])
-        self.assertNotIn('X-RateLimit-Remaining', wsgi_environ['zato.http.response.headers'])
+        self.assertIn('Retry-After', request_ctx['zato.http.response.headers'])
+        self.assertNotIn('X-RateLimit-Limit', request_ctx['zato.http.response.headers'])
+        self.assertNotIn('X-RateLimit-Remaining', request_ctx['zato.http.response.headers'])
 
 # ################################################################################################################################
 # ################################################################################################################################

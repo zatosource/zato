@@ -256,7 +256,7 @@ def parse_soap_request(
 
 # ################################################################################################################################
 
-def resolve_soap_payload(cid:'str', context:'SOAPRequestContext', wsgi_environ:'stranydict') -> 'None':
+def resolve_soap_payload(cid:'str', context:'SOAPRequestContext', request_ctx:'stranydict') -> 'None':
     """ Resolves the operation element into the context's payload and fills in the security
     information. Runs after security enforcement so an encrypted body is already decrypted
     and the credentials the message carried are already verified.
@@ -292,17 +292,17 @@ def resolve_soap_payload(cid:'str', context:'SOAPRequestContext', wsgi_environ:'
     context.payload = parse(operation_element, parts_map)
 
     # .. and whatever security enforcement established is surfaced too.
-    _fill_security_info(context, wsgi_environ)
+    _fill_security_info(context, request_ctx)
 
 # ################################################################################################################################
 
-def _fill_security_info(context:'SOAPRequestContext', wsgi_environ:'stranydict') -> 'None':
+def _fill_security_info(context:'SOAPRequestContext', request_ctx:'stranydict') -> 'None':
     """ Fills in the security information out of the security definition that
     enforcement ran against and out of the message itself.
     """
 
     # A channel may have no security definition at all.
-    sec_def_info = wsgi_environ.get('zato.sec_def')
+    sec_def_info = request_ctx.get('zato.sec_def')
 
     if not sec_def_info:
         return

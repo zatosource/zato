@@ -54,7 +54,7 @@ listing.buildRow = function(row) {
         children: row.children,
         bodyKinds: row.body_kinds,
         isResubmitted: row.is_resubmitted,
-        role: listing.roleOf(row.event_type)
+        role: presenter.role(row)
     };
 
     // The labels come keyed by source, so any row of any listing knows what its action
@@ -263,7 +263,7 @@ listing.rowHTML = function(rowModel) {
 
     html += '>';
 
-    // Saying an event is a request next to a tag already reading REQ is saying it twice.
+    // Saying an event is a request next to a tag already reading REQUEST is saying it twice.
     // An event whose tag does not say what it was - a platform record or a log access
     // record, whose tag names the log and not the kind - says so itself, except a view
     // record, whose chips already name the viewer and the viewed thing, so its row says

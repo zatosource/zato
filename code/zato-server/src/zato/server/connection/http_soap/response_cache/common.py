@@ -50,7 +50,7 @@ class ModuleCtx:
     Outcome_Not_Cached       = 'not_cached'
     Outcome_Not_Modified     = 'not_modified'
 
-    # The Cookie request header - its WSGI key and its HTTP name
+    # The Cookie request header - its request context key and its HTTP name
     Cookie_Header      = 'HTTP_COOKIE'
     Cookie_Header_Name = 'cookie'
 
@@ -119,7 +119,7 @@ class ResponseCacheContext:
     skip_lookup: 'bool'
     is_admitted: 'bool'
     if_none_match: 'str'
-    wsgi_environ: 'stranydict'
+    request_ctx: 'stranydict'
 
 # ################################################################################################################################
 # ################################################################################################################################

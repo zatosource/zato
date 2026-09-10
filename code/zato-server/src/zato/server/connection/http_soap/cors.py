@@ -77,28 +77,28 @@ def is_allowed_origin(origin:'str') -> 'bool':
 
 # ################################################################################################################################
 
-def add_cors_response_headers(origin:'str', wsgi_environ:'stranydict') -> 'None':
+def add_cors_response_headers(origin:'str', request_ctx:'stranydict') -> 'None':
     """ Adds the header that lets a browser expose our response to a page from an allowed origin.
     Note that the header may carry one origin only, which is why the matched origin is echoed back.
     """
-    wsgi_environ['zato.http.response.headers'][_header_allow_origin] = origin
+    request_ctx['zato.http.response.headers'][_header_allow_origin] = origin
 
 # ################################################################################################################################
 
-def handle_preflight_request(origin:'str', wsgi_environ:'stranydict') -> 'str':
+def handle_preflight_request(origin:'str', request_ctx:'stranydict') -> 'str':
     """ Answers a CORS preflight request. This runs before authentication because preflights never carry credentials,
     so letting them reach a channel would end in an authentication error and the browser would block the actual request.
     """
 
     # Tell the browser what the actual request may look like ..
-    headers = wsgi_environ['zato.http.response.headers']
+    headers = request_ctx['zato.http.response.headers']
     headers[_header_allow_origin]  = origin
     headers[_header_allow_methods] = _allow_methods
     headers[_header_allow_headers] = _allow_headers
     headers[_header_max_age]       = _max_age
 
     # .. a preflight response carries no body, which its status also indicates.
-    wsgi_environ['zato.http.response.status'] = _status_no_content
+    request_ctx['zato.http.response.status'] = _status_no_content
 
     out = ''
     return out

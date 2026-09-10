@@ -23,7 +23,7 @@ from zato.admin.web.views.audit_log.columns import _data_preview_length, _defaul
 from zato.admin.web.views.audit_log.query import _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.trace import attach_trace_lines
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditSource
-from zato.common.audit_log.flow import get_flow_ids, resolve_seed, Relation_Seed
+from zato.common.audit_log.flow import get_flow_ids, resolve_seed
 from zato.common.audit_log.search import build_search_conditions
 
 # ################################################################################################################################
@@ -381,11 +381,10 @@ def _read_flow_rows(connection:'any_', seed_id:'int') -> 'anylist':
             if data:
                 attach_trace_lines(row, data)
 
-        # Why this event is in the flow, and whether it is the one the flow was read from
-        relation = relation_by_id[row['id']]
-
-        row['relation'] = relation
-        row['is_seed'] = relation == Relation_Seed
+        # Why this event is in the flow, and whether it is the one the flow was read from -
+        # the seed is known by its id, as its relation may have been refined like any other event's
+        row['relation'] = relation_by_id[row['id']]
+        row['is_seed'] = row['id'] == seed_id
 
         # Which event this one was found through, zero when its relation is a shared one
         # that names no event in particular

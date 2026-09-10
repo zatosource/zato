@@ -2,7 +2,8 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The facts a file transfer row adds to the pane's Summary tab, and the facts a run's Details tab opens with.
+// The facts a file transfer row adds to the pane's Summary tab, the facts a run's Summary tab is made of
+// and the facts a run's Details tab opens with.
 
 (function($) {
 
@@ -59,150 +60,118 @@ fileOutgoing.yesNo = function(value) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-fileOutgoing.runningFact = function(row) {
-    var phaseWord = fileOutgoing.phaseWord(row);
+// The directory the run listed, in full.
+fileOutgoing.directoryFact = function(row) {
+    return fileOutgoing.textFact('remote_path', row.endpoint);
+};
 
-    if (row.current_file !== '') {
-        phaseWord += ' ' + row.current_file;
+// /////////////////////////////////////////////////////////////////////////////
+
+// The tone of one file count - a count of nothing is muted, a moving count is in the running ink,
+// and a settled one in the ink its kind has.
+fileOutgoing.fileFilterTone = function(filter, count, isRunning) {
+    if (count === 0) {
+        return 'muted';
     }
-
-    return fileOutgoing.textFact('phase', phaseWord);
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-fileOutgoing.repeatsFact = function(row) {
-    var text = fileOutgoing.fill(fileOutgoing.config.repeatsText, {
-        event_id: row.unchanged_since_event_id,
-        when: kit.format_local_time(row.unchanged_since_iso)});
-
-    return fileOutgoing.eventFact('note', text, row.unchanged_since_event_id);
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// A count in its tone, the tone carried by the value rather than said in words.
-fileOutgoing.countFact = function(key, count, tone) {
-    var valueHTML = kit.runSummary.valueHTML(count, tone);
-    return fileOutgoing.fact(key, valueHTML, String(count), '');
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// The day's count against the schedule's expectation, in warning once the deadline has passed short.
-fileOutgoing.expectedFact = function(row) {
-    var text = fileOutgoing.fill(fileOutgoing.config.expectedOfLabel, {
-        delivered_today: row.delivered_today, expected_files: row.expected_files, expected_by: row.expected_by});
-
-    var tone = 'muted';
-
-    if (fileOutgoing.overdueOf(row) > 0) {
-        tone = 'warn';
-    }
-
-    return fileOutgoing.fact('expected', kit.runSummary.valueHTML(text, tone), text, '');
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// The skip reasons of a run as chips, each narrowing the ledger to its reason.
-fileOutgoing.skippedFact = function(row) {
-    var skips = fileOutgoing.orderedSkips(row.skip_reasons);
-    var chips = [];
-
-    for (var index = 0; index < skips.length; index++) {
-        var skip = skips[index];
-        chips.push({reason: skip.reason, label: skip.name, count: skip.count});
-    }
-
-    var copyValue = fileOutgoing.skipsText(row.skip_reasons);
-
-    return fileOutgoing.fact('skipped', kit.runSummary.skipsHTML(chips), copyValue, '');
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// The counts of a run, which is what its Details tab opens with - a count is toned only when
-// there is something in it, and a running run's counts are still moving.
-fileOutgoing.countFacts = function(row) {
-    var config = fileOutgoing.config;
-    var isRunning = row.status === config.runningStatus;
-    var out = [];
-
-    var takenTone = 'neutral';
-    var deliveredTone = 'neutral';
 
     if (isRunning) {
-        takenTone = 'running';
-        deliveredTone = 'running';
-    }
-    else if (row.processed > 0) {
-        deliveredTone = 'good';
+        if (filter.movesWhileRunning) {
+            return 'running';
+        }
     }
 
-    var failedTone = 'muted';
-
-    if (row.failed > 0) {
-        failedTone = 'bad';
-    }
-
-    out.push(fileOutgoing.countFact('entries', row.entries, 'neutral'));
-    out.push(fileOutgoing.countFact('taken', row.taken, takenTone));
-    out.push(fileOutgoing.countFact('processed', row.processed, deliveredTone));
-    out.push(fileOutgoing.countFact('failed', row.failed, failedTone));
-
-    if (row.quarantined) {
-        out.push(fileOutgoing.countFact('quarantined', row.quarantined, 'bad'));
-    }
-
-    if (row.acked) {
-        out.push(fileOutgoing.countFact('acked', row.acked, 'neutral'));
-    }
-
-    if (row.ack_failed) {
-        out.push(fileOutgoing.countFact('ack_failed', row.ack_failed, 'bad'));
-    }
-
-    if (row.expected_files) {
-        out.push(fileOutgoing.expectedFact(row));
-    }
-
-    if (row.skipped > 0) {
-        out.push(fileOutgoing.skippedFact(row));
-    }
-
-    return out;
+    return filter.tone;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The facts of a run's Details tab - what it is doing while it runs, then its counts.
+// The files of a run as chips, one to a count, each narrowing the ledger down to the entries it counts.
+fileOutgoing.filesFact = function(row) {
+    var config = fileOutgoing.config;
+    var labels = fileOutgoing.words().default_view_labels;
+    var isRunning = row.status === config.runningStatus;
+    var chips = [];
+    var copyParts = [];
+
+    for (var filterIndex = 0; filterIndex < config.fileFilters.length; filterIndex++) {
+        var filter = config.fileFilters[filterIndex];
+        var count = row[filter.key];
+        var label = labels[filter.key];
+
+        chips.push({key: filter.key, label: label, count: count,
+            tone: fileOutgoing.fileFilterTone(filter, count, isRunning), decisions: filter.decisions});
+
+        copyParts.push(count + ' ' + label.toLowerCase());
+    }
+
+    var copyValue = copyParts.join(config.chipSeparator);
+
+    return fileOutgoing.fact('files', kit.runSummary.filterChipsHTML(chips), copyValue, '');
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// What the run came to in one line, the same line its row reads as.
+fileOutgoing.resultFact = function(row) {
+    return fileOutgoing.textFact('result', fileOutgoing.sentence(row));
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The facts of a run's Details tab - what it came to, where it looked and what it found there.
 fileOutgoing.runDetailFacts = function(row) {
-    var config = fileOutgoing.config;
     var out = [];
 
-    if (row.status === config.runningStatus) {
-        out.push(fileOutgoing.runningFact(row));
-    }
-
-    out = out.concat(fileOutgoing.countFacts(row));
+    out.push(fileOutgoing.resultFact(row));
+    out.push(fileOutgoing.directoryFact(row));
+    out.push(fileOutgoing.filesFact(row));
 
     return out;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The facts of a run's Summary tab - the counts are the Details tab's.
-fileOutgoing.runFacts = function(row) {
+// What a run is as one line of chips - the kind of event, the schedule it ran for and how it went.
+fileOutgoing.runEventFact = function(rowModel) {
     var config = fileOutgoing.config;
-    var out = [];
+    var listing = $.fn.zato.audit_log.listing;
+    var row = rowModel.raw;
 
-    if (row.status === config.runningStatus) {
-        out.push(fileOutgoing.runningFact(row));
-    }
+    var scheduleChip = kit.chips.render_one({key: config.scheduleKey, label: '', value: row.schedule, tone: 'neutral'});
 
-    if (row.status === config.unchangedStatus) {
-        out.push(fileOutgoing.repeatsFact(row));
+    // The row stands on the pane's dark frame, so the tag is drawn in its dark reading.
+    var roleTag = kit.role.tag(rowModel.role, rowModel.eventLabel, listing.config.paneFactVariant);
+
+    var valueHTML = '<span class="audit-log-pane-event-chips">' + roleTag + scheduleChip +
+        listing.outcomeBadgeHTML(rowModel) + '</span>';
+
+    var copyValue = [kit.role.config.labels[rowModel.role], row.schedule, rowModel.outcome].join(config.chipSeparator);
+
+    return listing.paneFact(listing.config.eventLabel, valueHTML, copyValue, '');
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The facts of a run's Summary tab - what it is, how it went, when, what state it ended in and its
+// duration, its note and its error only when it has them.
+fileOutgoing.runSummaryFacts = function(rowModel) {
+    var listing = $.fn.zato.audit_log.listing;
+    var listingConfig = listing.config;
+    var words = fileOutgoing.words();
+    var row = rowModel.raw;
+    var out = [fileOutgoing.runEventFact(rowModel)];
+
+    var outcomeHTML = listing.paneAttrValueHTML(rowModel, {key: 'outcome', value: rowModel.outcome});
+    out.push(listing.paneFact(listingConfig.outcomeLabel, outcomeHTML, rowModel.outcome, ''));
+
+    out.push(listing.paneFact(listingConfig.timeLabel, kit.time_scrub.stamp(rowModel.timeIso), rowModel.timeLocal, ''));
+
+    var statusLabel = words.run_status_label[row.status];
+    out.push(listing.paneFact(listingConfig.statusLabel, fileOutgoing.escapeHTML(statusLabel), statusLabel, row.status));
+
+    if (rowModel.durationMs > 0) {
+        var durationText = kit.format_duration_ms(rowModel.durationMs);
+        out.push(listing.paneFact(listingConfig.durationLabel, fileOutgoing.escapeHTML(durationText), durationText, ''));
     }
 
     if (row.list_ms) {

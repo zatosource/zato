@@ -22,7 +22,29 @@ var fileOutgoing = {
         runKey: 'current_run',
 
         // How many chips a row of this source carries.
-        rowChipLimit: 3,
+        rowChipLimit: 4,
+
+        // The part every event of this source plays - a file moving is neither a request nor a reply.
+        transferRole: 'transfer',
+
+        // The ink the connection and the schedule wear on a run's root node.
+        hubChipKind: 'muted',
+
+        // The connection the row belongs to, which is what leads every row.
+        connectionKey: 'object_name',
+        sourceKey: 'source',
+
+        // The file counts of a run's Details tab, each with the ledger decisions it counts - a picked up
+        // file is one the run picked up whatever became of it, a failed one is one it could not deliver or
+        // had to quarantine.
+        fileFilters: [
+            {key: 'entries', tone: 'neutral', movesWhileRunning: false,
+                decisions: ['picked-up', 'skipped', 'failed', 'quarantined']},
+            {key: 'picked_up', tone: 'neutral', movesWhileRunning: true, decisions: ['picked-up', 'failed', 'quarantined']},
+            {key: 'skipped', tone: 'muted', movesWhileRunning: false, decisions: ['skipped']},
+            {key: 'processed', tone: 'good', movesWhileRunning: true, decisions: ['picked-up']},
+            {key: 'failed', tone: 'bad', movesWhileRunning: false, decisions: ['failed', 'quarantined']}
+        ],
 
         // The event types this source writes.
         runEvent: 'run-completed',
@@ -63,7 +85,7 @@ var fileOutgoing = {
         listFailedStatus: 'list-failed',
         noDirectoryStatus: 'no-directory',
 
-        // The statuses of a run that ended before it took anything, read as their status word.
+        // The statuses of a run that ended before it picked anything up, read as their status word.
         endedEarlyStatuses: {'no-directory': true, 'list-failed': true, 'interrupted': true},
 
         // The statuses of a run that never listed its directory, drawn as their error.
@@ -79,10 +101,9 @@ var fileOutgoing = {
         attemptsLabel: 'attempts',
         verifiedLabel: 'verified',
         verifyFailedLabel: 'verify failed',
-        takenLabel: 'taken',
+        pickedUpLabel: 'picked up',
         failedLabel: 'failed',
         deliveredLabel: 'delivered',
-        seenLabel: 'seen',
         overdueLabel: 'overdue',
         runWord: 'Run',
         chipSeparator: ', ',
@@ -105,9 +126,8 @@ var fileOutgoing = {
         },
         journeyLoadingLabel: 'Loading',
 
-        // Where the rows of one cid are read from and where the flow page is.
+        // Where the rows of one cid are read from.
         journeyURL: '/zato/message-flow/journey/',
-        flowPagePath: '/zato/message-flow/',
 
         // Whether the page holds a drawing a step can be selected on, set by the flow page.
         selectOnDrawing: false,
@@ -116,12 +136,25 @@ var fileOutgoing = {
         ledgerKind: 'run-ledger',
         errorBodyKind: 'error',
 
+        // The body kinds each side of the flow pane reads off one event - the commands sent to
+        // the server and what the server replied.
+        paneKinds: {
+            request: 'request',
+            response: 'response'
+        },
+
+        // The side of the flow pane a failed run's traceback opens on, and what its tab says.
+        paneTracebackRole: 'response',
+        tracebackLabel: 'Traceback',
+
+        // Whether the traceback is shown beside the reply rather than under the run's facts,
+        // set by the flow page, which has a reply side to show it on.
+        tracebackInPane: false,
+
         // What the pane's facts say for the things they say of their own.
-        expectedOfLabel: '{delivered_today} of {expected_files} by {expected_by}',
         deliveredBeforeLabel: 'Delivered before',
         deliveredBeforeText: '{count} times, last at {when}',
         seenBeforeText: 'Same content delivered {when} as {file_name}',
-        repeatsText: 'run event {event_id}, listed {when}',
         yesText: 'yes',
         noText: 'no',
         bytesSuffix: ' B',
@@ -349,9 +382,9 @@ fileOutgoing.runningSentence = function(row) {
     var phaseWord = fileOutgoing.phaseWord(row);
 
     if (words.file_phases.indexOf(row.phase) !== -1) {
-        if (row.taken) {
+        if (row.picked_up) {
             return fileOutgoing.fill(templates.running_progress, {
-                phase: phaseWord, file: row.current_file, taken_so_far: row.taken_so_far, taken: row.taken});
+                phase: phaseWord, file: row.current_file, picked_up_so_far: row.picked_up_so_far, picked_up: row.picked_up});
         }
 
         return fileOutgoing.fill(templates.running_file, {phase: phaseWord, file: row.current_file});
@@ -381,7 +414,7 @@ fileOutgoing.deliveredSentence = function(row) {
     var templates = fileOutgoing.words().sentence_template;
     var hasError = row.first_failed_error !== '';
     var values = {
-        taken: row.taken,
+        picked_up: row.picked_up,
         processed: row.processed,
         failed: row.failed,
         skipped: row.skipped,
@@ -435,7 +468,7 @@ fileOutgoing.emptySentence = function(row) {
     var entries = fileOutgoing.entriesText(row.entries);
     var skips = fileOutgoing.skipsText(row.skip_reasons);
 
-    return fileOutgoing.fill(templates.took_none, {entries: entries, directory: directory, skips: skips});
+    return fileOutgoing.fill(templates.picked_up_none, {entries: entries, directory: directory, skips: skips});
 };
 
 // /////////////////////////////////////////////////////////////////////////////

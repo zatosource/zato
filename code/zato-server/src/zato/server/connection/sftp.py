@@ -26,6 +26,7 @@ from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Move, Operation_Read, \
     Operation_Store
 from zato.common.util.logging_ import file_transfer_logger_name
+from zato.server.connection.file_transfer_base import ExchangeNotes
 from zato.server.connection.sftp_verify import record_sftp_store
 
 # ################################################################################################################################
@@ -48,6 +49,59 @@ _pool_block_timeout = 60
 
 # How many bytes at a time a local file is read in when its digest is computed
 _hash_chunk_size = 65536
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SFTPConnectionError(Exception):
+    """ The sftp session itself failed - the server unreachable, the authentication rejected
+    or the binary not run - so no command was answered at all.
+    """
+
+# ################################################################################################################################
+
+def _reply_summary(out:'SFTPOutput') -> 'str':
+    """ What the server said, on one line - the last line of a run's error is what its record shows.
+    """
+    reply = _reply_text(out)
+    lines = [line for line in reply.splitlines() if line.strip()]
+
+    out_text = ', '.join(lines)
+
+    return out_text
+
+# ################################################################################################################################
+
+def _request_text(data:'str', out:'SFTPOutput') -> 'str':
+    """ What was sent to the server as one piece of text - the sftp binary's own invocation
+    first, the commands fed to its prompt under it.
+    """
+    commands = data.rstrip('\n')
+
+    # The invocation is None when the binary's command line could not be built.
+    if out.command:
+        return '{}\n{}'.format(out.command, commands)
+
+    return commands
+
+# ################################################################################################################################
+
+def _reply_text(out:'SFTPOutput') -> 'str':
+    """ What the server said back to one command, as one piece of text - its regular output
+    first, then anything it wrote to stderr, which is where the sftp binary explains a failure.
+    """
+    parts = []
+
+    # Either stream is None when the binary could not be run.
+    if out.stdout:
+        parts.append(out.stdout)
+
+    if out.stderr:
+        parts.append(out.stderr)
+
+    reply = '\n'.join(parts)
+
+    return reply
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -184,10 +238,11 @@ class SFTPInfo:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SFTPConnection:
+class SFTPConnection(ExchangeNotes):
     """ The public API of a single outgoing SFTP connection, obtained via self.sftp['My Connection'] in services.
     """
     def __init__(self, cid:'str', wrapper:'OutconnSFTPWrapper') -> 'None':
+        super().__init__()
         self.cid = cid
         self.wrapper = wrapper
 
@@ -234,13 +289,20 @@ class SFTPConnection:
         if log_level > 0:
             logger.info('Response received, cid:`%s`, data:`%s`', self.cid, out.to_dict())
 
+        # .. remove the echoed sftp> prompt lines from the output ..
+        out.strip_stdout_prefix()
+
+        # .. what was sent and what came back is kept for the audit log, a failure included ..
+        self.note_exchange(_request_text(data, out), _reply_text(out))
+
+        # .. a session that never ran the commands is raised even with raise_on_error off ..
+        if out.is_connection_failure():
+            raise SFTPConnectionError(_reply_summary(out))
+
         # .. perhaps we are to raise an exception on an error encountered ..
         if not out.is_ok:
             if raise_on_error:
                 raise Exception(out.to_dict())
-
-        # .. remove the echoed sftp> prompt lines from the output ..
-        out.strip_stdout_prefix()
 
         # .. and return the business response.
         return out

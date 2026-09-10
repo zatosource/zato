@@ -10,6 +10,10 @@
 .message-flow-page {
     --message-flow-glass-fill: rgba(16, 16, 26, 0.72);
     --message-flow-glass-border: rgba(255, 255, 255, 0.14);
+
+    /* The keys' overlay is the one glass nothing shows through - it is there
+       to be read, whatever stands behind it */
+    --message-flow-glass-fill-solid: rgb(16, 16, 26);
     --message-flow-glass-button-fill: rgba(255, 255, 255, 0.08);
     --message-flow-glass-button-fill-hover: rgba(255, 255, 255, 0.14);
 
@@ -17,11 +21,15 @@
        buttons' icons, there to be found when reached for and silent otherwise */
     --message-flow-replay-speed-accent: #767b88;
 
-    /* The playhead is a pale line and the chosen mode a raised patch with
-       just a breath of the page's amber in it - a tint, not a lamp */
+    /* A toggle that is on sits on a raised patch with just a breath of the
+       page's amber in it - a tint, not a lamp - the band of the track already
+       walked is dimmer still, a wash the playhead pulls along, and the
+       playhead itself is a quieter amber than the ticks it passes */
     --message-flow-replay-chosen-fill: rgba(246, 166, 5, 0.16);
     --message-flow-replay-chosen-rim: rgba(246, 166, 5, 0.22);
-    --message-flow-replay-playhead-fill: #c6cad4;
+    --message-flow-replay-played-fill: rgba(246, 166, 5, 0.07);
+    --message-flow-replay-playhead-fill: rgba(246, 166, 5, 0.28);
+    --message-flow-replay-playhead-glow: rgba(246, 166, 5, 0.17);
 }
 
 /* The room the canvas and the bar share - whatever hangs off its edges is
@@ -73,10 +81,11 @@
     display: block;
 }
 
-/* The chosen mode is a raised patch with a breath of amber in it */
+/* The actual-time toggle is a clock face, and while on a raised patch with a
+   breath of amber in it */
 
-.message-flow-replay-mode.dashboard-panel-action-badge-active,
-.message-flow-replay-mode.dashboard-panel-action-badge-active:hover {
+.message-flow-replay-actual.dashboard-panel-action-badge-active,
+.message-flow-replay-actual.dashboard-panel-action-badge-active:hover {
     color: var(--message-flow-text);
     background: var(--message-flow-replay-chosen-fill);
     box-shadow: inset 0 1px 0 var(--message-flow-replay-chosen-rim);
@@ -197,16 +206,14 @@
     border-radius: 4px;
     background: var(--message-flow-glass-fill);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    z-index: 1;
+
+    /* Above the drawing's controls in the corner, so the keys' overlay
+       stands over them too */
+    z-index: 2;
 }
 
 .message-flow-replay-bar-active {
     display: flex;
-}
-
-.message-flow-replay-modes {
-    display: flex;
-    gap: 6px;
 }
 
 /* The track - a hairline the events stand on and the playhead walks */
@@ -229,6 +236,19 @@
     background: rgba(255, 255, 255, 0.22);
 }
 
+/* The band already walked - from the track's start to wherever the playhead
+   stands, moving with it rather than jumping from tick to tick */
+
+.message-flow-replay-played {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 100%;
+    background: var(--message-flow-replay-played-fill);
+    pointer-events: none;
+}
+
 .message-flow-replay-tick {
     position: absolute;
     top: 5px;
@@ -243,15 +263,21 @@
     background: var(--message-flow-bad);
 }
 
+/* Every tick the pass has walked past - the same amber the node and the row
+   the pass stands on wear, a failure keeping its own ink */
+
+.message-flow-replay-tick-played:not(.message-flow-replay-tick-bad) {
+    background: var(--message-flow-selected);
+}
+
 .message-flow-replay-playhead {
     position: absolute;
     top: 0;
-    width: 2px;
+    width: 1px;
     height: 100%;
-    margin-left: -1px;
-    border-radius: 1px;
+    margin-left: -0.5px;
     background: var(--message-flow-replay-playhead-fill);
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 4px var(--message-flow-replay-playhead-glow);
 }
 
 /* The clock face - the wall time the playhead stands at and how far past the
@@ -301,12 +327,28 @@
     padding: 10px 12px;
     border: 1px solid var(--message-flow-glass-border);
     border-radius: 4px;
-    background: var(--message-flow-glass-fill);
+    background: var(--message-flow-glass-fill-solid);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    z-index: 1;
 }
 
 .message-flow-replay-shortcuts-open {
     display: flex;
+}
+
+/* The heading of one group of keys - a group after the first stands off from
+   the keys before it */
+
+.message-flow-replay-shortcut-group {
+    color: var(--message-flow-text);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.message-flow-replay-shortcut + .message-flow-replay-shortcut-group {
+    margin-top: 6px;
 }
 
 .message-flow-replay-shortcut {
@@ -445,16 +487,17 @@ svg.message-flow-replay.message-flow-focus .message-flow-connector-chip:not(.mes
     filter: none;
 }
 
-/* A node whose moment has not come yet stands dark - the fade rides on the
-   opacity, so a node lighting up comes up smoothly */
+/* A node whose moment has not come yet stands back - still readable, only
+   drained of colour and a shade quieter - and the fade rides on the opacity,
+   so a node lighting up comes up smoothly */
 
 svg.message-flow-replay .message-flow-node {
     transition: opacity 0.35s;
 }
 
 svg.message-flow-replay .message-flow-node.message-flow-replay-unplayed {
-    opacity: 0.3;
-    filter: grayscale(1) brightness(0.6);
+    opacity: 0.7;
+    filter: grayscale(0.8) brightness(0.85);
 }
 
 /* A node the reader picks by hand comes fully up whatever the clock says -
@@ -462,15 +505,20 @@ svg.message-flow-replay .message-flow-node.message-flow-replay-unplayed {
 
 svg.message-flow-replay .message-flow-node.message-flow-node-selected {
     opacity: 1;
-    filter: none;
+    filter: drop-shadow(5px 8px 12px var(--message-flow-selected-shadow));
 }
 
 /* The node the pass currently stands on wears the page's own selection
-   amber, the way a picked node does */
+   amber, its glow and its amber-tinted shadow, the way a picked node does */
 
 svg.message-flow-replay .message-flow-replay-current:not(.message-flow-replay-failed) .message-flow-box {
     stroke: var(--message-flow-selected);
     stroke-width: 1.6;
+    filter: drop-shadow(0 0 7px var(--message-flow-selected-glow));
+}
+
+svg.message-flow-replay .message-flow-node.message-flow-replay-current:not(.message-flow-replay-failed) {
+    filter: drop-shadow(5px 8px 12px var(--message-flow-selected-shadow));
 }
 
 /* A node mid-exchange - the message is in and the answer is not - wears the

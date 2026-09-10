@@ -327,6 +327,7 @@ class SFTPClient:
             out.stdout = result.stdout
             out.stderr = result.stderr
             out.response_time = result.total_time
+            out.exit_code = result.exit_code
 
             if not result.is_ok:
                 out.details = result.stderr

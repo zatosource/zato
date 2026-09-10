@@ -168,7 +168,7 @@ class ServiceStub:
         self.logger = getLogger('test-file-transfer-schedule')
         self.smb = {Connection_Name: conn}
         self.invoked:'anylist' = []
-        self.wsgi_environ:'stranydict' = {}
+        self.request_ctx:'stranydict' = {}
 
     def invoke(self, service_name:'str', item:'any_', cid:'str'='') -> 'None':
         self.invoked.append((service_name, item))

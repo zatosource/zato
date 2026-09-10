@@ -554,7 +554,7 @@ class ServiceInvoker(Service):
 
             # The IDE's payload-format selector may ask for channel-equivalent input,
             # e.g. ER7 text parsed into the same object an MLLP channel delivers.
-            ide_data_format = self.wsgi_environ.get('HTTP_X_ZATO_IDE_DATA_FORMAT', '')
+            ide_data_format = self.request_ctx.get('HTTP_X_ZATO_IDE_DATA_FORMAT', '')
 
             if ide_data_format == HL7.Const.Version.v2.id:
                 payload = self._parse_ide_hl7_payload(payload)
@@ -562,24 +562,24 @@ class ServiceInvoker(Service):
             # A dictionary of headers that the target service may want to produce
             zato_response_headers_container = {}
 
-            # Build the wsgi_environ for the target service ..
-            target_wsgi_environ = {'HTTP_METHOD':self.request.http.method}
+            # Build the request_ctx for the target service ..
+            target_request_ctx = {'HTTP_METHOD':self.request.http.method}
 
             # .. propagate context headers so the target service can read them ..
             for key in ('HTTP_X_ZATO_USER', 'HTTP_X_ZATO_CORRELATION_ID', 'HTTP_X_ZATO_FORWARDED_FOR'):
-                if value := self.wsgi_environ.get(key):
-                    target_wsgi_environ[key] = value
+                if value := self.request_ctx.get(key):
+                    target_request_ctx[key] = value
 
             # .. the authenticated identity travels with the invocation too,
             # so config-audit events record who actually made the call ..
             if self.channel.security.username:
-                target_wsgi_environ['zato.channel_security_username'] = self.channel.security.username
+                target_request_ctx['zato.channel_security_username'] = self.channel.security.username
 
             # Invoke the service now
             response = self.invoke(
                 service_name,
                 payload,
-                wsgi_environ=target_wsgi_environ,
+                request_ctx=target_request_ctx,
                 zato_response_headers_container=zato_response_headers_container
                 )
 

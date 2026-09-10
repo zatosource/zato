@@ -32,7 +32,23 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     --message-flow-guide: rgba(255, 255, 255, 0.35);
     --message-flow-rim: rgba(255, 255, 255, 0.22);
     --message-flow-selected: rgb(246, 166, 5);
+
+    /* The glow the picked node casts past its border, and the shadow it
+       throws down and to the right - the room's black with a little of the
+       amber in it */
+    --message-flow-selected-glow: rgba(246, 166, 5, 0.5);
+    --message-flow-selected-shadow: rgba(58, 40, 6, 0.6);
     --message-flow-selected-text: #f6c66a;
+
+    /* A node's lines - how strong the rim each chip wears in its own ink is, and
+       the white the words of the line the pane stands on read in */
+    --message-flow-chip-rim-opacity: 0.55;
+    --message-flow-line-current-text: #ffffff;
+
+    /* The fill a line of a card of several events wears under the pointer, and
+       the one the line the pane is open on keeps */
+    --message-flow-line-hover-fill: rgba(255, 255, 255, 0.07);
+    --message-flow-line-current-fill: rgba(246, 166, 5, 0.14);
 
     /* The inks a role and an outcome are written in, on the nodes and on
        the detail pane's tabs alike */
@@ -41,6 +57,8 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     --message-flow-sys: #b9b9d4;
     --message-flow-view: #cfa9ea;
     --message-flow-job: #e8c46f;
+    --message-flow-service: #b899f0;
+    --message-flow-transfer: #6fd3c9;
     --message-flow-good: #74cf92;
     --message-flow-bad: #ff8a94;
 
@@ -52,8 +70,10 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     --message-flow-card-face-selected: linear-gradient(rgba(246, 166, 5, 0.28), rgba(246, 166, 5, 0.12)),
         linear-gradient(#3a3a5c, #2d2d48);
 
-    /* The pane under the drawing keeps one height whatever it is holding */
+    /* The pane under the drawing keeps one height, and its body keeps at least
+       this much of it */
     --message-flow-detail-height: 250px;
+    --message-flow-detail-body-min-height: 120px;
 
     /* The room above and below the canvas - the same measure on both sides */
     --message-flow-page-pad: 18px;
@@ -181,12 +201,86 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     box-shadow: var(--dashboard-chosen-badge-shadow);
 }
 
-/* How many events the term led to and what it was found by */
+/* The way back to the audit log, at the head's right - the tabs' badge in the chosen tab's
+   amber. The selector outranks the kit's anchor rules. */
 
-.message-flow-status {
+.message-flow-head a.message-flow-back,
+.message-flow-head a.message-flow-back:visited,
+.message-flow-head a.message-flow-back:hover {
     margin-left: auto;
-    color: var(--message-flow-muted);
-    font-size: 11px;
+    padding: 4px 10px;
+    white-space: nowrap;
+    text-decoration: none;
+    color: var(--message-flow-selected-text);
+    background: var(--dashboard-unchosen-badge-fill);
+    box-shadow: var(--dashboard-unchosen-badge-shadow);
+}
+
+.message-flow-head a.message-flow-back:hover {
+    background: var(--dashboard-unchosen-badge-fill-hover);
+}
+
+/* The drawing's controls in the canvas's top-right corner - closer, further
+   off and full screen - the same stack, in the same corner, the sequence
+   diagrams in the docs wear */
+
+.message-flow-controls {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    background: var(--message-flow-canvas-surface);
+    overflow: hidden;
+}
+
+.message-flow-control {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    color: var(--message-flow-text);
+    background: var(--dashboard-unchosen-badge-fill);
+    box-shadow: none;
+    text-shadow: none;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.message-flow-control + .message-flow-control {
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.message-flow-control:hover {
+    background: var(--dashboard-unchosen-badge-fill-hover);
+}
+
+.message-flow-control:focus,
+.message-flow-control:active {
+    outline: none;
+    box-shadow: none;
+    background-image: none;
+}
+
+.message-flow-control-icon {
+    display: block;
+}
+
+/* Full screen - the browser shows the page alone, so the whole screen is its
+   room and there is no top bar to leave room for */
+
+.message-flow-page.message-flow-fullscreen {
+    width: 100%;
+    height: 100%;
 }
 
 /* ------------------------------------------------------------ */

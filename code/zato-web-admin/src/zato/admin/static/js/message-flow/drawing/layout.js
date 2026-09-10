@@ -49,16 +49,31 @@ drawing.config = {
     chipHeight: 16,
     chipPadX: 6,
     chipCharWidth: 6.4,
-    roleChipWidth: 70,
+
+    // The air between two chips standing in a row, and how far a chip's top stands above its text baseline
+    chipRowGap: 6,
+    chipTextBaseline: 12,
+
+    // How far in from the card's edges a line's backing stands
+    lineBackInset: 3,
+
+    // The least width a role chip stands at - the chips of one card all take the width
+    // of the widest word among them, so the columns after them line up
+    roleChipMinWidth: 70,
 
     // The word each kind of line wears - the part the event played in its exchange,
-    // and a pair of eyes reading a message after the fact
+    // and a pair of eyes reading a message after the fact. A service's request and
+    // response wear the plain words, the card already being the service's own.
     roleLabels: {
-        'request': 'REQ',
-        'response': 'REPLY',
+        'request': 'REQUEST',
+        'response': 'RESPONSE',
         'none': 'SYS',
         'view': 'VIEW',
         'job': 'SCHEDULER',
+        'service': 'AUDIT WRITE',
+        'service-request': 'REQUEST',
+        'service-response': 'RESPONSE',
+        'transfer': 'TRANSFER',
         'access': 'ACCESS'
     },
 

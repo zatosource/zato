@@ -10,76 +10,60 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Dashboard kit - the run summary values                        */
+/* Dashboard kit - the run summary filter chips                  */
 /* ------------------------------------------------------------ */
 
-/* The light tones are inks for a light panel - on the dark one each has a lighter reading of itself */
-
-.dashboard-run-value-good {
-    color: var(--dashboard-tone-good);
-}
-
-.dashboard-run-summary-dark .dashboard-run-value-good {
-    color: var(--dashboard-tone-good-dark);
-}
-
-.dashboard-run-value-bad {
-    color: var(--dashboard-tone-bad);
-}
-
-.dashboard-run-value-warning {
-    color: var(--dashboard-tone-warning);
-}
-
-.dashboard-run-summary-dark .dashboard-run-value-warning {
-    color: var(--dashboard-tone-warning-dark);
-}
-
-.dashboard-run-value-muted {
-    color: var(--dashboard-muted);
-}
-
-.dashboard-run-summary-dark .dashboard-run-value-muted {
-    color: var(--dashboard-tone-dim);
-}
-
-.dashboard-run-value-running {
-    color: var(--dashboard-tone-accent);
-}
-
-.dashboard-run-summary-dark .dashboard-run-value-running {
-    color: var(--dashboard-tone-accent-dark);
-}
-
-/* ------------------------------------------------------------ */
-/* Dashboard kit - the run summary skip chips                    */
-/* ------------------------------------------------------------ */
-
-.dashboard-run-skips {
+.dashboard-run-filters {
     display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
 }
 
-.dashboard-run-skip-chip {
+/* A chip is pressed, so it says so with the cursor alone - it never moves under the pointer */
+
+.dashboard-run-filter-chip {
     cursor: pointer;
-    transition: transform var(--dashboard-motion) ease, opacity var(--dashboard-motion) ease;
 }
 
-.dashboard-run-skip-chip:hover {
-    transform: translateY(-1px);
-    transition-delay: var(--dashboard-hover-delay);
+/* The tones are inks for a light panel - on the dark one each chip reads in the lighter reading
+   of its hue over a faint fill of the same hue, the way the dark role tags do */
+
+.dashboard-run-summary-dark .dashboard-run-filter-chip.dashboard-tag-neutral {
+    color: var(--dashboard-badge-dark-text);
+    background: var(--dashboard-badge-dark-fill);
 }
 
-.dashboard-run-skip-chip:active {
-    opacity: 0.8;
-    transform: translateY(0);
+.dashboard-run-summary-dark .dashboard-run-filter-chip.dashboard-tag-muted {
+    color: var(--dashboard-tone-dim);
+    background: var(--dashboard-badge-dark-fill);
 }
 
-.dashboard-run-skip-chip-active {
-    color: var(--dashboard-line-strong);
-    background: var(--dashboard-tone-accent-fill);
+.dashboard-run-summary-dark .dashboard-run-filter-chip.dashboard-tag-good {
+    color: #74cf92;
+    background: rgba(116, 207, 146, 0.18);
+}
+
+.dashboard-run-summary-dark .dashboard-run-filter-chip.dashboard-tag-bad {
+    color: var(--dashboard-error-ink-dark);
+    background: rgba(255, 138, 128, 0.18);
+}
+
+.dashboard-run-summary-dark .dashboard-run-filter-chip.dashboard-tag-running {
+    color: var(--dashboard-tone-accent-dark);
+    background: var(--dashboard-tone-accent-dark-fill);
+}
+
+/* The chip narrowing the ledger down reads in amber on a lighter fill in every tone */
+
+.dashboard-run-summary-light .dashboard-run-filter-chip.dashboard-run-filter-chip-active {
+    color: #a1670f;
+    background: rgba(161, 103, 15, 0.12);
+}
+
+.dashboard-run-summary-dark .dashboard-run-filter-chip.dashboard-run-filter-chip-active {
+    color: #e8c46f;
+    background: var(--dashboard-badge-dark-fill-hover);
 }
 
 /* ------------------------------------------------------------ */
@@ -150,11 +134,22 @@
     word-break: break-all;
 }
 
+/* The counted columns - the place, the size and the duration - are centred, header and cells alike */
+
+.dashboard-run-ledger-number,
 .dashboard-run-ledger-size,
-.dashboard-run-ledger-took {
+.dashboard-run-ledger-duration {
     font-family: var(--dashboard-mono);
-    text-align: right;
+    text-align: center;
     white-space: nowrap;
+}
+
+.dashboard-run-ledger-number {
+    color: var(--dashboard-muted);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger-number {
+    color: var(--dashboard-tone-dim);
 }
 
 .dashboard-run-ledger-modified {
@@ -175,7 +170,6 @@
 }
 
 .dashboard-run-ledger-loading,
-.dashboard-run-ledger-empty,
 .dashboard-run-ledger-overflow {
     padding: 6px 0;
     font-size: var(--dashboard-font-body);
@@ -183,8 +177,17 @@
 }
 
 .dashboard-run-summary-dark .dashboard-run-ledger-loading,
-.dashboard-run-summary-dark .dashboard-run-ledger-empty,
 .dashboard-run-summary-dark .dashboard-run-ledger-overflow {
+    color: var(--dashboard-tone-dim);
+}
+
+/* The empty line is a cell of the table, so it outranks the cell rules above it */
+
+.dashboard-run-summary-light .dashboard-run-ledger td.dashboard-run-ledger-empty {
+    color: var(--dashboard-muted);
+}
+
+.dashboard-run-summary-dark .dashboard-run-ledger td.dashboard-run-ledger-empty {
     color: var(--dashboard-tone-dim);
 }
 
@@ -196,16 +199,12 @@
     margin-left: 0;
 }
 
-.dashboard-run-summary-light .dashboard-run-ledger-fold-toggle,
-.dashboard-run-summary-light .dashboard-run-skip-clear,
-.dashboard-run-summary-light .dashboard-run-traceback-toggle {
+.dashboard-run-summary-light .dashboard-run-ledger-fold-toggle {
     color: var(--dashboard-line-strong);
     background: var(--dashboard-frame-fill);
 }
 
-.dashboard-run-summary-dark .dashboard-run-ledger-fold-toggle,
-.dashboard-run-summary-dark .dashboard-run-skip-clear,
-.dashboard-run-summary-dark .dashboard-run-traceback-toggle {
+.dashboard-run-summary-dark .dashboard-run-ledger-fold-toggle {
     color: var(--dashboard-badge-dark-text);
     background: var(--dashboard-badge-dark-fill);
 }
@@ -214,13 +213,11 @@
 /* Dashboard kit - the run summary traceback                     */
 /* ------------------------------------------------------------ */
 
-.dashboard-run-traceback-host {
-    padding: 0 10px;
-}
+/* The traceback stands under the facts, flush with the table's edges, a little air between the two */
 
 .dashboard-run-traceback {
     max-height: 240px;
-    margin: 4px 0 0;
+    margin: 10px 0 0;
     padding: 8px 10px;
     border-radius: 4px;
     overflow: auto;
@@ -236,10 +233,4 @@
 .dashboard-run-summary-dark .dashboard-run-traceback {
     color: var(--dashboard-panel-text);
     background: var(--dashboard-frame-dark-fill-strong);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .dashboard-run-skip-chip {
-        transition: none;
-    }
 }

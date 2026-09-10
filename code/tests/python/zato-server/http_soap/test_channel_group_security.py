@@ -109,13 +109,13 @@ class MatchedCredentialWithoutADefinitionTestCase(TestCase):
         dispatcher.url_data.basic_auth_get_by_id.return_value = None
 
         ctx = _make_ctx()
-        wsgi_environ:'stranydict' = {'HTTP_AUTHORIZATION': _make_basic_auth_header()}
+        request_ctx:'stranydict' = {'HTTP_AUTHORIZATION': _make_basic_auth_header()}
 
         with self.assertRaises(Forbidden):
-            dispatcher.check_security_via_groups(_cid, _channel_name, ctx, wsgi_environ)
+            dispatcher.check_security_via_groups(_cid, _channel_name, ctx, request_ctx)
 
         # Nothing about the caller reached the WSGI environment
-        self.assertNotIn('zato.sec_def', wsgi_environ)
+        self.assertNotIn('zato.sec_def', request_ctx)
 
 # ################################################################################################################################
 
@@ -124,12 +124,12 @@ class MatchedCredentialWithoutADefinitionTestCase(TestCase):
         dispatcher.url_data.apikey_get_by_id.return_value = None
 
         ctx = _make_ctx(apikey_header=_apikey_header)
-        wsgi_environ:'stranydict' = {_apikey_header: _apikey}
+        request_ctx:'stranydict' = {_apikey_header: _apikey}
 
         with self.assertRaises(Forbidden):
-            dispatcher.check_security_via_groups(_cid, _channel_name, ctx, wsgi_environ)
+            dispatcher.check_security_via_groups(_cid, _channel_name, ctx, request_ctx)
 
-        self.assertNotIn('zato.sec_def', wsgi_environ)
+        self.assertNotIn('zato.sec_def', request_ctx)
 
 # ################################################################################################################################
 
@@ -138,12 +138,12 @@ class MatchedCredentialWithoutADefinitionTestCase(TestCase):
         dispatcher.url_data.oauth_get_by_id.return_value = None
 
         ctx = _make_ctx()
-        wsgi_environ:'stranydict' = {'HTTP_AUTHORIZATION': 'Bearer test-token-0001'}
+        request_ctx:'stranydict' = {'HTTP_AUTHORIZATION': 'Bearer test-token-0001'}
 
         with self.assertRaises(Forbidden):
-            dispatcher.check_security_via_groups(_cid, _channel_name, ctx, wsgi_environ)
+            dispatcher.check_security_via_groups(_cid, _channel_name, ctx, request_ctx)
 
-        self.assertNotIn('zato.sec_def', wsgi_environ)
+        self.assertNotIn('zato.sec_def', request_ctx)
 
 # ################################################################################################################################
 
@@ -152,12 +152,12 @@ class MatchedCredentialWithoutADefinitionTestCase(TestCase):
         dispatcher.url_data.basic_auth_get_by_id.return_value = _make_sec_def()
 
         ctx = _make_ctx()
-        wsgi_environ:'stranydict' = {'HTTP_AUTHORIZATION': _make_basic_auth_header()}
+        request_ctx:'stranydict' = {'HTTP_AUTHORIZATION': _make_basic_auth_header()}
 
-        dispatcher.check_security_via_groups(_cid, _channel_name, ctx, wsgi_environ)
+        dispatcher.check_security_via_groups(_cid, _channel_name, ctx, request_ctx)
 
-        self.assertIn('zato.sec_def', wsgi_environ)
-        self.assertEqual(wsgi_environ['zato.sec_def']['id'], _security_id)
+        self.assertIn('zato.sec_def', request_ctx)
+        self.assertEqual(request_ctx['zato.sec_def']['id'], _security_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

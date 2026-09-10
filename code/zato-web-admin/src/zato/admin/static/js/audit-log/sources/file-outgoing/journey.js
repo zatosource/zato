@@ -359,7 +359,7 @@ $(document).on('click', '.dashboard-journey-step-selectable', function(event) {
         }
     }
 
-    window.location.href = config.flowPagePath + '?term=' + encodeURIComponent(eventId);
+    window.location.href = $.fn.zato.audit_log.flowPageURL(eventId);
 });
 
 // /////////////////////////////////////////////////////////////////////////////

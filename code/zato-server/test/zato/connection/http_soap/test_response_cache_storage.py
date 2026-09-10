@@ -46,7 +46,7 @@ class StorageRulesTestCase(TestCase):
 
     def test_store_and_lookup_round_trip(self) -> 'None':
         ctx = self.get_ctx()
-        ctx.wsgi_environ['zato.http.response.headers']['Content-Type'] = 'application/json'
+        ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
 
         store(ctx, '{"result":"ok"}', OK)
 
@@ -56,11 +56,11 @@ class StorageRulesTestCase(TestCase):
 
         self.assertEqual(out, '{"result":"ok"}')
 
-        headers = ctx2.wsgi_environ['zato.http.response.headers']
+        headers = ctx2.request_ctx['zato.http.response.headers']
         self.assertEqual(headers['X-Cache'], 'Hit')
         self.assertIn('Age', headers)
         self.assertEqual(headers['Content-Type'], 'application/json')
-        self.assertEqual(ctx2.wsgi_environ['zato.http.response.status'], f'{OK} OK')
+        self.assertEqual(ctx2.request_ctx['zato.http.response.status'], f'{OK} OK')
 
 # ################################################################################################################################
 
@@ -73,7 +73,7 @@ class StorageRulesTestCase(TestCase):
 
     def test_non_2xx_responses_are_never_stored(self) -> 'None':
         ctx = self.get_ctx()
-        ctx.wsgi_environ['zato.http.response.headers']['Content-Type'] = 'application/json'
+        ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
 
         store(ctx, '{"error":"not found"}', NOT_FOUND)
 
@@ -83,7 +83,7 @@ class StorageRulesTestCase(TestCase):
 
     def test_set_cookie_responses_are_never_stored(self) -> 'None':
         ctx = self.get_ctx()
-        headers = ctx.wsgi_environ['zato.http.response.headers']
+        headers = ctx.request_ctx['zato.http.response.headers']
         headers['Content-Type'] = 'application/json'
         headers['Set-Cookie'] = 'session=abc'
 
@@ -96,7 +96,7 @@ class StorageRulesTestCase(TestCase):
     def test_responses_with_uncacheable_directives_are_never_stored(self) -> 'None':
         for value in ('no-store', 'No-Store', 'Private', 'NO-CACHE', 'max-age=60, no-store'):
             ctx = self.get_ctx()
-            headers = ctx.wsgi_environ['zato.http.response.headers']
+            headers = ctx.request_ctx['zato.http.response.headers']
             headers['Content-Type'] = 'application/json'
             headers['Cache-Control'] = value
 
@@ -108,7 +108,7 @@ class StorageRulesTestCase(TestCase):
 
     def test_cacheable_directives_never_block_storage(self) -> 'None':
         ctx = self.get_ctx()
-        headers = ctx.wsgi_environ['zato.http.response.headers']
+        headers = ctx.request_ctx['zato.http.response.headers']
         headers['Content-Type'] = 'application/json'
         headers['Cache-Control'] = 'max-age=60, public'
 
@@ -121,7 +121,7 @@ class StorageRulesTestCase(TestCase):
     def test_responses_above_the_size_cap_are_never_stored(self) -> 'None':
         raw_config = make_raw_config(max_body_size=10)
         ctx = self.get_ctx(raw_config)
-        ctx.wsgi_environ['zato.http.response.headers']['Content-Type'] = 'application/json'
+        ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
 
         store(ctx, 'x' * 11, OK)
 
@@ -131,11 +131,11 @@ class StorageRulesTestCase(TestCase):
 
     def test_store_sets_the_miss_header(self) -> 'None':
         ctx = self.get_ctx()
-        ctx.wsgi_environ['zato.http.response.headers']['Content-Type'] = 'application/json'
+        ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
 
         store(ctx, '{"result":"ok"}', OK)
 
-        headers = ctx.wsgi_environ['zato.http.response.headers']
+        headers = ctx.request_ctx['zato.http.response.headers']
         self.assertEqual(headers['X-Cache'], 'Miss')
 
 # ################################################################################################################################
@@ -143,7 +143,7 @@ class StorageRulesTestCase(TestCase):
     def test_entry_ttl_matches_the_config(self) -> 'None':
         raw_config = make_raw_config(ttl=2, ttl_unit='minutes')
         ctx = self.get_ctx(raw_config)
-        ctx.wsgi_environ['zato.http.response.headers']['Content-Type'] = 'application/json'
+        ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
 
         store(ctx, '{"result":"ok"}', OK)
 
@@ -155,7 +155,7 @@ class StorageRulesTestCase(TestCase):
 
         # An entry goes in first
         ctx = self.get_ctx()
-        ctx.wsgi_environ['zato.http.response.headers']['Content-Type'] = 'application/json'
+        ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
         store(ctx, '{"result":"stale"}', OK)
 
         # A no-cache request never reads it ..
@@ -166,7 +166,7 @@ class StorageRulesTestCase(TestCase):
         self.assertIsNone(out)
 
         # .. but its fresh response replaces the entry.
-        ctx2.wsgi_environ['zato.http.response.headers']['Content-Type'] = 'application/json'
+        ctx2.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
         store(ctx2, '{"result":"fresh"}', OK)
 
         ctx3 = self.get_ctx()
@@ -177,7 +177,7 @@ class StorageRulesTestCase(TestCase):
 
     def test_purge_channel_empties_the_prefix(self) -> 'None':
         ctx = self.get_ctx()
-        ctx.wsgi_environ['zato.http.response.headers']['Content-Type'] = 'application/json'
+        ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
         store(ctx, '{"result":"ok"}', OK)
 
         self.assertEqual(len(self.cache.data), 1)
@@ -202,7 +202,7 @@ class AdmissionTestCase(TestCase):
         environ = make_environ()
         ctx = get_context(self.cache, channel_item, environ, b'')
         assert ctx is not None
-        ctx.wsgi_environ['zato.http.response.headers']['Content-Type'] = 'application/json'
+        ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
 
         return ctx
 
@@ -258,7 +258,7 @@ class ETagTestCase(TestCase):
         environ = make_environ(**environ_kwargs)
         ctx = get_context(self.cache, channel_item, environ, b'')
         assert ctx is not None
-        ctx.wsgi_environ['zato.http.response.headers']['Content-Type'] = 'application/json'
+        ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
 
         return ctx
 
@@ -275,14 +275,14 @@ class ETagTestCase(TestCase):
         out = lookup(ctx2)
         self.assertEqual(out, '{"result":"ok"}')
 
-        etag = ctx2.wsgi_environ['zato.http.response.headers']['ETag']
+        etag = ctx2.request_ctx['zato.http.response.headers']['ETag']
         self.assertTrue(etag)
 
         # A request carrying the matching ETag gets a bodyless 304
         ctx3 = self.get_ctx(HTTP_IF_NONE_MATCH=etag)
         out = lookup(ctx3)
         self.assertEqual(out, '')
-        self.assertTrue(ctx3.wsgi_environ['zato.http.response.status'].startswith(f'{NOT_MODIFIED}'))
+        self.assertTrue(ctx3.request_ctx['zato.http.response.status'].startswith(f'{NOT_MODIFIED}'))
 
         # A request with a stale ETag gets the full body
         ctx4 = self.get_ctx(HTTP_IF_NONE_MATCH='"stale"')

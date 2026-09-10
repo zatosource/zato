@@ -52,7 +52,7 @@ def _make_dispatcher():
 
 # ################################################################################################################################
 
-def _make_wsgi_environ() -> 'stranydict':
+def _make_request_ctx() -> 'stranydict':
     """ Returns a minimal WSGI environ dict for testing dispatch.
     """
     environ:'stranydict' = {
@@ -132,10 +132,10 @@ class DispatchPassthroughTestCase(unittest.TestCase):
         dispatcher.server.rate_limiting_manager.check_sec_def.return_value = None
         dispatcher.server.rate_limiting_manager.check.return_value = None
 
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         self.assertEqual(result, 'OK')
         mock_invoke.assert_called_once()
@@ -161,10 +161,10 @@ class DispatchPassthroughTestCase(unittest.TestCase):
         dispatcher.server.rate_limiting_manager.check_sec_def.return_value = None
         dispatcher.server.rate_limiting_manager.check.return_value = _make_check_result(is_allowed=True)
 
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         self.assertEqual(result, 'OK')
         mock_invoke.assert_called_once()
@@ -200,12 +200,12 @@ class DispatchDisallowedTestCase(unittest.TestCase):
         mock_socket = MagicMock()
         mock_fromfd.return_value = mock_socket
 
-        wsgi_environ = _make_wsgi_environ()
-        wsgi_environ['zato.socket_fd'] = test_socket_fd
+        request_ctx = _make_request_ctx()
+        request_ctx['zato.socket_fd'] = test_socket_fd
 
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         self.assertEqual(result, b'')
 
@@ -241,12 +241,12 @@ class DispatchRateLimitedTestCase(unittest.TestCase):
         dispatcher.server.rate_limiting_manager.check.return_value = _make_check_result(
             is_allowed=False, retry_after_us=2_500_000)
 
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
-        self.assertEqual(wsgi_environ['zato.http.response.status'], '429 Too Many Requests')
+        self.assertEqual(request_ctx['zato.http.response.status'], '429 Too Many Requests')
         self.assertIn('Too many requests', result)
 
 # ################################################################################################################################
@@ -276,12 +276,12 @@ class DispatchRetryAfterTestCase(unittest.TestCase):
         dispatcher.server.rate_limiting_manager.check.return_value = _make_check_result(
             is_allowed=False, retry_after_us=2_500_000)
 
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
+        dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['Retry-After'], 'Sun, 15 Jun 2025 12:00:03 GMT')
+        self.assertEqual(request_ctx['zato.http.response.headers']['Retry-After'], 'Sun, 15 Jun 2025 12:00:03 GMT')
 
     @patch('zato.server.connection.http_soap.channel._datetime_utcnow')
     @patch.object(RequestDispatcher, '_check_security')
@@ -305,12 +305,12 @@ class DispatchRetryAfterTestCase(unittest.TestCase):
         dispatcher.server.rate_limiting_manager.check.return_value = _make_check_result(
             is_allowed=False, retry_after_us=5_000_000)
 
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
+        dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['Retry-After'], 'Sun, 15 Jun 2025 12:00:05 GMT')
+        self.assertEqual(request_ctx['zato.http.response.headers']['Retry-After'], 'Sun, 15 Jun 2025 12:00:05 GMT')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -340,10 +340,10 @@ class DispatchLoggingTestCase(unittest.TestCase):
         dispatcher.server.rate_limiting_manager.check.return_value = _make_check_result(
             is_allowed=False, retry_after_us=3_000_000)
 
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
+        dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         mock_logger.info.assert_any_call(
             'Rate limiting 429; cid:%s, channel:%s, remote_addr:%s, retry_after:%s',
@@ -376,10 +376,10 @@ class DispatchNoMatchTestCase(unittest.TestCase):
         result.payload = ''
         mock_match_url.return_value = result
 
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
+        dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         dispatcher.server.rate_limiting_manager.check.assert_not_called()
 
@@ -416,12 +416,12 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
         mock_socket = MagicMock()
         mock_fromfd.return_value = mock_socket
 
-        wsgi_environ = _make_wsgi_environ()
-        wsgi_environ['zato.socket_fd'] = test_socket_fd
+        request_ctx = _make_request_ctx()
+        request_ctx['zato.socket_fd'] = test_socket_fd
 
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         # The request was dropped by the channel check
         self.assertEqual(result, b'')
@@ -451,12 +451,12 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
         dispatcher.server.rate_limiting_manager.check.return_value = _make_check_result(
             is_allowed=False, retry_after_us=1_000_000)
 
-        wsgi_environ = _make_wsgi_environ()
+        request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
-        self.assertEqual(wsgi_environ['zato.http.response.status'], '429 Too Many Requests')
+        self.assertEqual(request_ctx['zato.http.response.status'], '429 Too Many Requests')
         self.assertIn('Too many requests', result)
 
         dispatcher.server.rate_limiting_manager.check.assert_called_once()
@@ -486,13 +486,13 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
         dispatcher.server.rate_limiting_manager.check_sec_def.return_value = _make_check_result(
             is_allowed=False, retry_after_us=1_000_000)
 
-        wsgi_environ = _make_wsgi_environ()
-        wsgi_environ['zato.sec_def'] = {'type': 'basic_auth', 'id': 99}
+        request_ctx = _make_request_ctx()
+        request_ctx['zato.sec_def'] = {'type': 'basic_auth', 'id': 99}
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
-        self.assertEqual(wsgi_environ['zato.http.response.status'], '429 Too Many Requests')
+        self.assertEqual(request_ctx['zato.http.response.status'], '429 Too Many Requests')
         self.assertIn('Too many requests', result)
 
         # Both checks were called
@@ -521,11 +521,11 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
         dispatcher.server.rate_limiting_manager.check_sec_def.return_value = _make_check_result(is_allowed=True)
         dispatcher.server.rate_limiting_manager.check.return_value = _make_check_result(is_allowed=True)
 
-        wsgi_environ = _make_wsgi_environ()
-        wsgi_environ['zato.sec_def'] = {'type': 'basic_auth', 'id': 99}
+        request_ctx = _make_request_ctx()
+        request_ctx['zato.sec_def'] = {'type': 'basic_auth', 'id': 99}
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         self.assertEqual(result, 'OK')
         mock_invoke.assert_called_once()

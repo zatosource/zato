@@ -286,12 +286,12 @@ class ParseSOAPRequestTestCase(unittest.TestCase):
         body = _make_envelope_bytes(SOAPVersion.V11)
         context = parse_soap_request(_test_cid, body, Content_Type[SOAPVersion.V11], _make_channel_item())
 
-        wsgi_environ = {
+        request_ctx = {
             'zato.sec_def': {
                 'impl': {'mode': Mode.UsernameToken, 'username': 'MYUSER'},
             },
         }
-        resolve_soap_payload(_test_cid, context, wsgi_environ)
+        resolve_soap_payload(_test_cid, context, request_ctx)
 
         self.assertEqual(context.security.mode, Mode.UsernameToken)
         self.assertEqual(context.security.username, 'MYUSER')
@@ -310,12 +310,12 @@ class ParseSOAPRequestTestCase(unittest.TestCase):
         body = to_bytes(envelope)
         context = parse_soap_request(_test_cid, body, Content_Type[SOAPVersion.V12], _make_channel_item())
 
-        wsgi_environ = {
+        request_ctx = {
             'zato.sec_def': {
                 'impl': {'mode': Mode.SAML, 'issuer': 'urn:qhin:example'},
             },
         }
-        resolve_soap_payload(_test_cid, context, wsgi_environ)
+        resolve_soap_payload(_test_cid, context, request_ctx)
 
         self.assertEqual(context.security.mode, Mode.SAML)
         self.assertEqual(context.security.issuer, 'urn:qhin:example')
@@ -582,7 +582,7 @@ class DispatchErrorSOAPTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def _dispatch_error(self, exception:'Exception', wsgi_environ:'anydict',
+    def _dispatch_error(self, exception:'Exception', request_ctx:'anydict',
         soap_version:'strnone'=SOAPVersion.V11) -> 'any_':
         """ Runs _handle_dispatch_error through a dispatcher with mocked dependencies.
         """
@@ -597,59 +597,59 @@ class DispatchErrorSOAPTestCase(unittest.TestCase):
 
         channel_item = _make_channel_item({'soap_version': soap_version})
 
-        out = dispatcher._handle_dispatch_error(_test_cid, exception, channel_item, wsgi_environ)
+        out = dispatcher._handle_dispatch_error(_test_cid, exception, channel_item, request_ctx)
         return out
 
 # ################################################################################################################################
 
     def test_client_error_returns_sender_fault(self) -> 'None':
-        wsgi_environ:'anydict' = {'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'zato.http.response.headers': {}}
 
-        result = self._dispatch_error(BadRequest(_test_cid, 'facilityID is required'), wsgi_environ)
+        result = self._dispatch_error(BadRequest(_test_cid, 'facilityID is required'), request_ctx)
 
         self.assertIn(b'soap:Client', result)
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['Content-Type'], Content_Type[SOAPVersion.V11])
+        self.assertEqual(request_ctx['zato.http.response.headers']['Content-Type'], Content_Type[SOAPVersion.V11])
 
         # The exception is a 400 one, but a 1.1 fault leaves on 500 whatever raised it - the status
         # belongs to the fault, and a 1.1 client reads anything else as a transport failure.
-        self.assertIn('500', wsgi_environ['zato.http.response.status'])
+        self.assertIn('500', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
     def test_client_error_returns_sender_fault_12(self) -> 'None':
-        wsgi_environ:'anydict' = {'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'zato.http.response.headers': {}}
 
-        result = self._dispatch_error(BadRequest(_test_cid, 'facilityID is required'), wsgi_environ, SOAPVersion.V12)
+        result = self._dispatch_error(BadRequest(_test_cid, 'facilityID is required'), request_ctx, SOAPVersion.V12)
 
         self.assertIn(b'soap:Sender', result)
 
         # 1.2 does put a Sender fault on 400.
-        self.assertIn('400', wsgi_environ['zato.http.response.status'])
+        self.assertIn('400', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
     def test_unauthorized_keeps_its_own_status(self) -> 'None':
-        wsgi_environ:'anydict' = {'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'zato.http.response.headers': {}}
 
-        result = self._dispatch_error(Unauthorized(_test_cid, 'Invalid credentials', 'Basic realm="Zato"'), wsgi_environ)
+        result = self._dispatch_error(Unauthorized(_test_cid, 'Invalid credentials', 'Basic realm="Zato"'), request_ctx)
 
         self.assertIn(b'soap:Client', result)
 
         # The fault code would say 500, but a WWW-Authenticate challenge only means anything on a
         # 401, so the transport status wins here.
-        self.assertIn('401', wsgi_environ['zato.http.response.status'])
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['WWW-Authenticate'], 'Basic realm="Zato"')
+        self.assertIn('401', request_ctx['zato.http.response.status'])
+        self.assertEqual(request_ctx['zato.http.response.headers']['WWW-Authenticate'], 'Basic realm="Zato"')
 
 # ################################################################################################################################
 
     def test_server_error_hides_details_even_with_tracebacks_enabled(self) -> 'None':
-        wsgi_environ:'anydict' = {'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'zato.http.response.headers': {}}
 
-        result = self._dispatch_error(Exception('Sensitive database details'), wsgi_environ)
+        result = self._dispatch_error(Exception('Sensitive database details'), request_ctx)
 
         self.assertIn(b'soap:Server', result)
         self.assertNotIn(b'Sensitive database details', result)
-        self.assertIn('500', wsgi_environ['zato.http.response.status'])
+        self.assertIn('500', request_ctx['zato.http.response.status'])
 
 # ################################################################################################################################
 
@@ -658,35 +658,35 @@ class DispatchErrorSOAPTestCase(unittest.TestCase):
         # The channel is configured for 1.1 but the request arrived as 1.2 -
         # the fault follows the request.
         context = _parse_context(SOAPVersion.V12)
-        wsgi_environ:'anydict' = {
+        request_ctx:'anydict' = {
             'zato.http.response.headers': {},
             'zato.request.soap': context,
         }
 
-        result = self._dispatch_error(BadRequest(_test_cid, 'facilityID is required'), wsgi_environ)
+        result = self._dispatch_error(BadRequest(_test_cid, 'facilityID is required'), request_ctx)
 
         self.assertIn(b'soap:Sender', result)
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['Content-Type'], Content_Type[SOAPVersion.V12])
+        self.assertEqual(request_ctx['zato.http.response.headers']['Content-Type'], Content_Type[SOAPVersion.V12])
 
 # ################################################################################################################################
 
     def test_version_defaults_to_channel_config_when_parsing_failed(self) -> 'None':
-        wsgi_environ:'anydict' = {'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'zato.http.response.headers': {}}
 
-        result = self._dispatch_error(BadRequest(_test_cid, 'Invalid SOAP request'), wsgi_environ, SOAPVersion.V12)
+        result = self._dispatch_error(BadRequest(_test_cid, 'Invalid SOAP request'), request_ctx, SOAPVersion.V12)
 
         self.assertIn(b'soap:Sender', result)
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['Content-Type'], Content_Type[SOAPVersion.V12])
+        self.assertEqual(request_ctx['zato.http.response.headers']['Content-Type'], Content_Type[SOAPVersion.V12])
 
 # ################################################################################################################################
 
     def test_version_defaults_to_11_without_channel_config(self) -> 'None':
-        wsgi_environ:'anydict' = {'zato.http.response.headers': {}}
+        request_ctx:'anydict' = {'zato.http.response.headers': {}}
 
-        result = self._dispatch_error(BadRequest(_test_cid, 'Invalid SOAP request'), wsgi_environ, None)
+        result = self._dispatch_error(BadRequest(_test_cid, 'Invalid SOAP request'), request_ctx, None)
 
         self.assertIn(b'soap:Client', result)
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['Content-Type'], Content_Type[SOAPVersion.V11])
+        self.assertEqual(request_ctx['zato.http.response.headers']['Content-Type'], Content_Type[SOAPVersion.V11])
 
 # ################################################################################################################################
 # ################################################################################################################################

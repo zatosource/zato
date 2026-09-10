@@ -104,7 +104,7 @@
 }
 
 .message-flow-detail-title {
-    color: var(--message-flow-text);
+    color: var(--message-flow-selected-text);
     font-size: 11px;
     font-weight: 700;
 }
@@ -116,7 +116,7 @@
 }
 
 .message-flow-detail-identity {
-    color: var(--message-flow-selected-text);
+    color: var(--message-flow-text);
     font-weight: 700;
 }
 
@@ -125,23 +125,27 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Message flow - the detail sentence and the source panel       */
+/* Message flow - the source panel                               */
 /* ------------------------------------------------------------ */
 
-.message-flow-detail-sentence {
-    flex: 0 0 auto;
-    padding: 8px 12px 0;
-    font-size: var(--dashboard-font-body);
-    color: var(--message-flow-text);
-}
+/* The panel scrolls on its own when the pane is too short for it */
 
 .message-flow-detail-source-panel {
-    flex: 0 0 auto;
-    padding: 0 12px;
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px 12px 0;
 }
 
 .message-flow-detail-source-panel:empty {
     padding: 0;
+}
+
+/* The panel scrolls, so a traceback in it does not scroll on its own */
+
+.message-flow-detail-source-panel .dashboard-run-traceback {
+    max-height: none;
+    overflow: visible;
 }
 
 /* The files the exchange's events carried, through the kit's own attachment
@@ -156,50 +160,30 @@
     margin: 6px 0;
 }
 
-/* The pane's body stands in two sides - the request's and the reply's - the
-   bar between them sharing the width, each side's badges always on top of it */
+/* The pane's body - one tab per event, the badges always on top of it. It takes
+   the room the panel above leaves, not the height of its open body */
 
-.message-flow-detail-split {
+.message-flow-detail-body {
     display: flex;
-    flex: 1 1 auto;
-    min-height: 0;
-}
-
-.message-flow-detail-side {
-    display: flex;
+    flex: 1 1 0;
     flex-direction: column;
     min-width: 0;
-    min-height: 0;
+    min-height: var(--message-flow-detail-body-min-height);
 }
 
-.message-flow-detail-side-request {
-    flex: 0 0 var(--message-flow-detail-split);
-}
+/* The root's own strip - the message's whole flow summed up on one line, its
+   badge first and one measure after another, the error count in the bad ink
+   when there is anything to say. */
 
-.message-flow-detail-side-response {
-    flex: 1 1 auto;
-}
-
-/* A side with no events of its own kind says so where its badges would
-   stand - the first row and column, not the middle of the room */
-
-.message-flow-detail-side-hint {
-    flex: 0 0 auto;
-    padding: 8px 10px;
-    color: var(--message-flow-muted);
-    font-size: 11px;
-}
-
-/* The root's own right side - the message's whole flow summed up. Its badge
-   bar stands where the reply side's badges stand, and under it one quiet row
-   per measure, the error row in the bad ink when there is anything to say. */
-
-.message-flow-detail-summary-bar {
+.message-flow-detail-summary {
     flex: 0 0 auto;
     display: flex;
     align-items: center;
-    padding: 4px 6px;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    padding: 5px 10px;
     border-bottom: 1px solid var(--dashboard-panel-border);
+    font-size: 11px;
 }
 
 .message-flow-detail-summary-badge {
@@ -214,24 +198,10 @@
     box-shadow: var(--dashboard-unchosen-badge-shadow);
 }
 
-.message-flow-detail-summary {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: auto;
-    padding: 8px 12px;
-    font-size: 11px;
-}
-
-.message-flow-detail-summary-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 4px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.message-flow-detail-summary-row:last-child {
-    border-bottom: none;
+.message-flow-detail-summary-item {
+    display: inline-flex;
+    gap: 6px;
+    white-space: nowrap;
 }
 
 .message-flow-detail-summary-label {
@@ -245,31 +215,6 @@
 
 .message-flow-detail-summary-value-bad {
     color: var(--message-flow-bad);
-}
-
-/* The bar between the sides - a hairline with room around it to grab, lit a
-   little under the pointer and while pulled */
-
-.message-flow-detail-split-bar {
-    position: relative;
-    flex: 0 0 auto;
-    width: 7px;
-    cursor: col-resize;
-}
-
-.message-flow-detail-split-bar::before {
-    content: '';
-    position: absolute;
-    top: 6px;
-    bottom: 6px;
-    left: 3px;
-    width: 1px;
-    background: rgba(255, 255, 255, 0.12);
-}
-
-.message-flow-detail-split-bar:hover::before,
-.message-flow-detail-splitting::before {
-    background: rgba(255, 255, 255, 0.3);
 }
 
 /* The bodies are read through the kit's payload panel - the pane itself is the
@@ -337,11 +282,27 @@
     color: var(--message-flow-job);
 }
 
+.message-flow-detail-tab-role-service,
+.message-flow-detail-tab-role-service-request,
+.message-flow-detail-tab-role-service-response {
+    color: var(--message-flow-service);
+}
+
+.message-flow-detail-tab-role-transfer {
+    color: var(--message-flow-transfer);
+}
+
 .message-flow-detail-tab-role-access {
     color: var(--message-flow-sys);
 }
 
 .message-flow-detail-tab-id {
+    color: var(--message-flow-selected-text);
+}
+
+/* A tab for a further body of an event - a traceback */
+
+.message-flow-detail-tab-extra {
     color: var(--message-flow-selected-text);
 }
 

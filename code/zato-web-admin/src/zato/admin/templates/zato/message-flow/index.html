@@ -43,19 +43,21 @@
         <div class="message-flow-tabs" role="tablist">
             <button type="button"
                 class="dashboard-panel-action-badge dashboard-panel-action-badge-dark message-flow-tab" role="tab"
-                data-tab="flow">Message flow</button>
+                data-tab="flow">Show as message flow</button>
             <button type="button"
                 class="dashboard-panel-action-badge dashboard-panel-action-badge-dark message-flow-tab" role="tab"
-                data-tab="list">List</button>
+                data-tab="list">Show as list</button>
         </div>
 
-        <span class="message-flow-status" id="message-flow-status"></span>
+        <a class="dashboard-panel-action-badge dashboard-panel-action-badge-dark message-flow-back"
+            id="message-flow-back"></a>
     </div>
 
     <div class="dashboard-tab-panel message-flow-panel message-flow-panel-tab-flow" id="message-flow-panel-flow"
         role="tabpanel">
         <div class="message-flow-canvas-frame">
             <div id="message-flow-canvas" class="message-flow-canvas"></div>
+            <div id="message-flow-controls" class="message-flow-controls"></div>
             <div id="message-flow-replay-bar" class="message-flow-replay-bar"></div>
         </div>
         <div id="message-flow-resize" class="message-flow-resize"></div>
@@ -100,6 +102,7 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/default.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/config.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/scheduler.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/service.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/mllp.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/file-outgoing/words.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/file-outgoing/chips.js"></script>
@@ -115,6 +118,9 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/drawing/nodes.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/drawing/select.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/detail.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/detail-resize.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/keyboard.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/controls.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/replay/replay.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/replay/timeline.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/replay/playback.js"></script>

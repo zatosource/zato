@@ -12,23 +12,23 @@ var defaultPresenter = $.fn.zato.audit_log.sources['default'];
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The default chips with the schedule first and without the columns the pane reads.
+// The chips of a file past the connection and the schedule, without the columns the pane reads
+// and without the ones the row has already said - the tag names the source and the first chip the connection.
 fileOutgoing.fileChips = function(row, defaultChips) {
     var config = fileOutgoing.config;
     var out = [];
 
+    var saidAlready = {};
+    saidAlready[config.remotePathKey] = true;
+    saidAlready[config.scheduleKey] = true;
+    saidAlready[config.runKey] = true;
+    saidAlready[config.connectionKey] = true;
+    saidAlready[config.sourceKey] = true;
+
     for (var chipIndex = 0; chipIndex < defaultChips.length; chipIndex++) {
         var chip = defaultChips[chipIndex];
 
-        if (chip.key === config.remotePathKey) {
-            continue;
-        }
-
-        if (chip.key === config.scheduleKey) {
-            continue;
-        }
-
-        if (chip.key === config.runKey) {
+        if (saidAlready[chip.key] === true) {
             continue;
         }
 
@@ -36,6 +36,14 @@ fileOutgoing.fileChips = function(row, defaultChips) {
     }
 
     return out.concat(fileOutgoing.fileExtraChips(row));
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The connection the row belongs to, which every row of this source leads with.
+fileOutgoing.connectionChip = function(row) {
+    var config = fileOutgoing.config;
+    return {key: config.connectionKey, label: '', value: row.object_name, tone: 'neutral'};
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -83,6 +91,14 @@ fileOutgoing.lineWord = function(row) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// What a run is called on the flow page - the kind of event, the connection and the schedule.
+fileOutgoing.runTitle = function(row) {
+    var parts = [$.fn.zato.audit_log.sourceLabel(row.source), row.object_name, row.schedule];
+    return parts.join(fileOutgoing.config.chipSeparator);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
 
     eventWordAsChip: true,
@@ -91,10 +107,17 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
 
     // ////////////////////////////////////////////////////////////////////////
 
+    role: function(_row) {
+        return fileOutgoing.config.transferRole;
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // The row reads from the general to the particular - the connection, its schedule, then what happened.
     chips: function(row) {
         var config = fileOutgoing.config;
         var defaultChips = defaultPresenter.chips(row);
-        var out = [];
+        var out = [fileOutgoing.connectionChip(row)];
 
         for (var scheduleIndex = 0; scheduleIndex < defaultChips.length; scheduleIndex++) {
             var scheduleChip = defaultChips[scheduleIndex];
@@ -168,13 +191,18 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
     // ////////////////////////////////////////////////////////////////////////
 
     detailFacts: function(rowModel) {
-        var row = rowModel.raw;
+        return fileOutgoing.fileFacts(rowModel.raw);
+    },
 
-        if (fileOutgoing.isRun(row)) {
-            return fileOutgoing.runFacts(row);
+    // ////////////////////////////////////////////////////////////////////////
+
+    // A run's Summary is the run's own, a file's is the one every event has.
+    summaryFacts: function(rowModel) {
+        if (fileOutgoing.isRun(rowModel.raw)) {
+            return fileOutgoing.runSummaryFacts(rowModel);
         }
 
-        return fileOutgoing.fileFacts(row);
+        return defaultPresenter.summaryFacts(rowModel);
     },
 
     // ////////////////////////////////////////////////////////////////////////
@@ -232,12 +260,12 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // A run's card is its schedule and number, a file's is its name.
+    // A run's card is the run's title and its number, a file's is its name.
     cardTitle: function(row) {
         var config = fileOutgoing.config;
 
         if (fileOutgoing.isRun(row)) {
-            return row.schedule + config.chipSeparator + config.runWord.toLowerCase() + ' ' + row.current_run;
+            return fileOutgoing.runTitle(row) + config.chipSeparator + config.runWord.toLowerCase() + ' ' + row.current_run;
         }
 
         if (row.file_name !== '') {
@@ -253,7 +281,7 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // What a flow line says after its chip, the step, the size and the time it took.
+    // What a flow line says after its chip, the step, the size and its duration.
     lineNote: function(model) {
         var row = model.raw;
         var parts = [];
@@ -301,6 +329,56 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
         }
 
         return '';
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // A run's flow is rooted in the run's title, a file's in its headline.
+    hubTitle: function(rowModel) {
+        if (fileOutgoing.isRun(rowModel.raw)) {
+            return fileOutgoing.runTitle(rowModel.raw);
+        }
+
+        return rowModel.headline;
+    },
+
+    // One event carries the whole conversation with the server - the commands the run sent on one side,
+    // what the server said back on the other.
+    paneKinds: function(_rowModel) {
+        return fileOutgoing.config.paneKinds;
+    },
+
+    // A run that failed carries its traceback beside the server's reply.
+    paneExtras: function(rowModel, role) {
+        var config = fileOutgoing.config;
+
+        if (role !== config.paneTracebackRole) {
+            return [];
+        }
+
+        if (rowModel.raw.body_kinds.indexOf(config.errorBodyKind) === -1) {
+            return [];
+        }
+
+        return [{label: config.tracebackLabel, kind: config.errorBodyKind}];
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // A run's root wears its title as chips - the kind of event in its own ink, the connection and the schedule.
+    hubChips: function(rowModel) {
+        var config = fileOutgoing.config;
+        var row = rowModel.raw;
+
+        if (!fileOutgoing.isRun(row)) {
+            return [];
+        }
+
+        return [
+            {label: $.fn.zato.audit_log.sourceLabel(row.source), kind: config.transferRole},
+            {label: row.object_name, kind: config.hubChipKind},
+            {label: row.schedule, kind: config.hubChipKind}
+        ];
     },
 
     // ////////////////////////////////////////////////////////////////////////

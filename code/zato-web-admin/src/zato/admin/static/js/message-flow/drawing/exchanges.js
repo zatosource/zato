@@ -30,11 +30,13 @@ drawing.lineOf = function(model) {
         time: kit.time_ago_label(model.timeIso) + config.labelSeparator + model.timeLocal.slice(11)
     };
 
-    // An event that reports no outcome is read by what it was, one that does
-    // is read by how it went
+    // An event that reports no outcome is read by what it was, in the source's
+    // words, one that does is read by how it went
+    var presenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
+
     if (model.outcome === '') {
         line.kind = 'type';
-        line.label = model.eventLabel;
+        line.label = presenter.lineTypeLabel(model);
     }
     else if (model.outcome === config.goodOutcome) {
         line.kind = 'good';
@@ -46,7 +48,6 @@ drawing.lineOf = function(model) {
     }
 
     // The source says what the line reads after its chip and on hover.
-    var presenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
     line.note = presenter.lineNote(model);
     line.tooltip = presenter.lineTooltip(model);
 

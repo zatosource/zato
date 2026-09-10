@@ -162,11 +162,11 @@ def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
             out['data'] = ''
             return out
 
-    # .. build the payload and invoke the target service - the method travels in the WSGI environment
+    # .. build the payload and invoke the target service - the method travels in the request context
     # so that services with per-verb handlers, e.g. handle_GET, dispatch the same way they do over HTTP ..
     payload = _build_payload(fields, path_params)
-    wsgi_environ = {'REQUEST_METHOD': fields['http_method']}
-    response = server.invoke(channel_item['service_name'], payload, wsgi_environ=wsgi_environ)
+    request_ctx = {'REQUEST_METHOD': fields['http_method']}
+    response = server.invoke(channel_item['service_name'], payload, request_ctx=request_ctx)
 
     # .. and relay the response back to the console.
     data = _serialize_response(response)

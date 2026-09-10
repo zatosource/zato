@@ -126,12 +126,12 @@ class ZatoApplication:
 
     def __init__(
         self,
-        zato_wsgi_app:'ParallelServer',
+        zato_server:'ParallelServer',
         repo_location:'str',
         config_main:'Bunch',
         crypto_config:'Bunch',
     ) -> 'None':
-        self.zato_wsgi_app = zato_wsgi_app
+        self.zato_server = zato_server
         self.repo_location = repo_location
         self.config_main = config_main
         self.crypto_config = crypto_config
@@ -185,9 +185,9 @@ class ZatoApplication:
             self.zato_port = int(bind_port)
 
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
-            setattr(self.zato_wsgi_app, name, self.zato_config[name])
+            setattr(self.zato_server, name, self.zato_config[name])
 
-        self.zato_wsgi_app.has_gevent = True
+        self.zato_server.has_gevent = True
 
 # ################################################################################################################################
 
@@ -196,7 +196,7 @@ class ZatoApplication:
         # tzlocal
         from tzlocal import get_localzone
 
-        server = self.zato_wsgi_app
+        server = self.zato_server
 
         # Generate the deployment key
         from uuid import uuid4
@@ -211,8 +211,8 @@ class ZatoApplication:
         utc_offset = local_tz.utcoffset(datetime.now(timezone.utc))
         local_tz_offset_secs = int(utc_offset.total_seconds())
 
-        def request_handler(environ:'dict') -> 'tuple':
-            return handle_http_request(server, environ, new_cid_server, local_tz_offset_secs)
+        def request_handler(request_ctx:'dict') -> 'tuple':
+            return handle_http_request(server, request_ctx, new_cid_server, local_tz_offset_secs)
 
         # Build server software header
         server_software = server.fs_server_config.misc.get('http_server_header', 'Apache')

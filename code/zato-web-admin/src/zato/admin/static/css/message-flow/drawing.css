@@ -20,12 +20,22 @@
 
 /* The node the reader picked - amber says selection and nothing else - and
    the nodes the selection came by, the root included, wearing the same
-   border without holding the selection */
+   border without holding the selection. The picked one alone casts a soft
+   amber glow past its edge and throws its shadow down and to the right with
+   a little of the amber in it, which is what tells it from the way in. */
 
 .message-flow-node-selected .message-flow-box,
 .message-flow-node-way .message-flow-box {
     stroke: var(--message-flow-selected);
     stroke-width: 1.6;
+}
+
+.message-flow-node-selected .message-flow-box {
+    filter: drop-shadow(0 0 7px var(--message-flow-selected-glow));
+}
+
+.message-flow-node.message-flow-node-selected {
+    filter: drop-shadow(5px 8px 12px var(--message-flow-selected-shadow));
 }
 
 .message-flow-rim {
@@ -155,6 +165,30 @@
     fill: var(--message-flow-job);
 }
 
+/* A service's request, response and note - the service that ran, whichever way it was invoked */
+
+.message-flow-chip-service,
+.message-flow-chip-service-request,
+.message-flow-chip-service-response {
+    fill: rgba(184, 153, 240, 0.18);
+}
+
+.message-flow-chip-text-service,
+.message-flow-chip-text-service-request,
+.message-flow-chip-text-service-response {
+    fill: var(--message-flow-service);
+}
+
+/* A file transfer event - a file moving, neither a request nor a reply */
+
+.message-flow-chip-transfer {
+    fill: rgba(111, 211, 201, 0.18);
+}
+
+.message-flow-chip-text-transfer {
+    fill: var(--message-flow-transfer);
+}
+
 /* A log access record - a config change or someone reading a message body -
    in the same inks the platform's own records wear */
 
@@ -212,6 +246,96 @@
 
 .message-flow-line-note {
     font-size: var(--dashboard-font-small);
+}
+
+/* ------------------------------------------------------------ */
+/* Message flow - the chips on a node's lines                    */
+/* ------------------------------------------------------------ */
+
+/* Every chip on a line wears a rim in its own ink, a shade above its fill */
+
+.message-flow-line rect {
+    stroke-width: 1;
+    stroke-opacity: var(--message-flow-chip-rim-opacity);
+}
+
+.message-flow-line .message-flow-chip-id {
+    stroke: var(--message-flow-selected-text);
+}
+
+.message-flow-line .message-flow-chip-request {
+    stroke: var(--message-flow-request);
+}
+
+.message-flow-line .message-flow-chip-response,
+.message-flow-line .message-flow-chip-good {
+    stroke: var(--message-flow-good);
+}
+
+.message-flow-line .message-flow-chip-none,
+.message-flow-line .message-flow-chip-access {
+    stroke: var(--message-flow-sys);
+}
+
+.message-flow-line .message-flow-chip-view {
+    stroke: var(--message-flow-view);
+}
+
+.message-flow-line .message-flow-chip-job {
+    stroke: var(--message-flow-job);
+}
+
+.message-flow-line .message-flow-chip-service,
+.message-flow-line .message-flow-chip-service-request,
+.message-flow-line .message-flow-chip-service-response {
+    stroke: var(--message-flow-service);
+}
+
+.message-flow-line .message-flow-chip-transfer {
+    stroke: var(--message-flow-transfer);
+}
+
+.message-flow-line .message-flow-chip-bad {
+    stroke: var(--message-flow-bad);
+}
+
+.message-flow-line .message-flow-chip-muted {
+    stroke: var(--message-flow-muted);
+}
+
+/* The line of the event the pane's tabs stand on - every chip wears its own rim
+   at full strength, the event number's amber among them, and every word after
+   the chips, the timestamp included, reads in white */
+
+.message-flow-line.message-flow-line-current rect {
+    stroke-opacity: 1;
+}
+
+.message-flow-line.message-flow-line-current .message-flow-line-note,
+.message-flow-line.message-flow-line-current .message-flow-band-type,
+.message-flow-line.message-flow-line-current .message-flow-timestamp {
+    fill: var(--message-flow-line-current-text);
+}
+
+/* A line's backing across the card - nothing to see on a card of one event. On a
+   card of several, each line answers the pointer on its own and the line the
+   pane is open on keeps a quiet fill under its words */
+
+.message-flow-line-back {
+    fill: transparent;
+    stroke: none;
+}
+
+.message-flow-node-multi .message-flow-line {
+    cursor: pointer;
+}
+
+.message-flow-node-multi .message-flow-line:hover .message-flow-line-back {
+    fill: var(--message-flow-line-hover-fill);
+}
+
+.message-flow-node-multi .message-flow-line.message-flow-line-current .message-flow-line-back {
+    fill: var(--message-flow-line-current-fill);
 }
 
 /* The connector into the node currently standing out - picked by hand or

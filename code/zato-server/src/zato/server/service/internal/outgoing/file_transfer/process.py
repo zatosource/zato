@@ -17,8 +17,8 @@ from traceback import format_exc
 from zato.common.api import FileTransfer
 from zato.common.audit_log.common import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_schedule_event
-from zato.common.audit_log.file_transfer_run import build_ledger_record, Decision_Failed, Decision_Quarantined, \
-    Decision_Skipped, Decision_Taken, find_seen_before, iso_days_ago, load_attempt_memory, Phase_Acking, \
+from zato.common.audit_log.file_transfer_run import build_ledger_record, Decision_Failed, Decision_Picked_Up, \
+    Decision_Quarantined, Decision_Skipped, find_seen_before, iso_days_ago, load_attempt_memory, Phase_Acking, \
     Phase_Checking_Directory, Phase_Claiming, Phase_Delivering, Phase_Listing, Phase_Reading, Phase_Waiting, \
     Retry_Memory_Days, Seen_Before_Window_Days, Skip_Claimed_Elsewhere
 from zato.common.model.file_transfer_ import FileTransferItem
@@ -27,7 +27,8 @@ from zato.common.util.file_transfer_scheduler import apply_schedule_defaults
 from zato.server.service.internal.outgoing.file_transfer.candidates import get_candidates, get_file_name, \
     keep_entries_past_backoff, keep_stable_entries
 from zato.server.service.internal.outgoing.file_transfer.run import add_delivered_today, close_interrupted_runs, \
-    close_run, close_run_list_failed, close_run_no_directory, error_summary, get_scheduler_context, note_listing, open_run
+    close_run, close_run_list_failed, close_run_no_directory, error_summary, get_scheduler_context, note_exchanges, \
+    note_listing, open_run
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,7 +54,7 @@ _status_quarantined = 'quarantined'
 
 # The ledger decision of each file status.
 _decision_for_status = {
-    _status_processed:   Decision_Taken,
+    _status_processed:   Decision_Picked_Up,
     _status_failed:      Decision_Failed,
     _status_skipped:     Decision_Skipped,
     _status_quarantined: Decision_Quarantined,
@@ -386,7 +387,7 @@ def _process_one_file(
     except Exception:
         ack_ms = _elapsed_ms(ack_start)
         error = format_exc()
-        service.logger.warning('Could not put file `%s` out of the way after `%s` took it -> `%s`',
+        service.logger.warning('Could not put file `%s` out of the way after `%s` picked it up -> `%s`',
             full_path, service_name, error)
         _ = record_schedule_event(audit_log, conn_name, AuditEvent.File_Acked, full_path,
             cid=file_cid, correl_id=run_cid, schedule=schedule_name, outcome=AuditOutcome.Error,
@@ -508,8 +509,8 @@ def _select_files(
     else:
         out = []
 
-    taken_count = len(out)
-    run.update(candidates=candidate_count, taken=taken_count)
+    picked_up_count = len(out)
+    run.update(candidates=candidate_count, picked_up=picked_up_count)
 
     return out
 
@@ -566,12 +567,16 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
     except Exception:
         error = format_exc()
         service.logger.warning('Could not list `%s` in `%s` -> `%s`', directory, conn_name, error)
+        note_exchanges(run, conn)
         close_run_list_failed(run, phase, error)
         raise
 
-    # A missing directory means nothing to do.
+    # What was said to the server and what it said back is the run's own request and response.
+    note_exchanges(run, conn)
+
+    # A missing directory is an error of the run - the schedule points to a place that is not there.
     if not directory_exists:
-        service.logger.info('Directory `%s` does not exist in `%s`, nothing to do', directory, conn_name)
+        service.logger.warning('Directory `%s` does not exist in `%s`', directory, conn_name)
         close_run_no_directory(run)
         return
 
@@ -583,12 +588,12 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
         return
 
     # .. otherwise each file is handled on its own, a failed file does not end the run.
-    taken = _select_files(conn, schedule, directory, entries, run)
+    picked_up = _select_files(conn, schedule, directory, entries, run)
 
-    for index, (entry, attempt, first_failed_iso) in enumerate(taken, 1):
+    for index, (entry, attempt, first_failed_iso) in enumerate(picked_up, 1):
 
         file_name = get_file_name(entry)
-        run.update(taken_so_far=index, current_file=file_name)
+        run.update(picked_up_so_far=index, current_file=file_name)
         file_start = monotonic()
 
         try:

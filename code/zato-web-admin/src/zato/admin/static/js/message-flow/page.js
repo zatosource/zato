@@ -46,16 +46,11 @@ page.config = {
     // How long the page waits for a journey before saying it is waiting
     spinnerDelayMs: 150,
 
-    // How the status line says what the term turned out to name
-    resolvedLabels: {
-        'event-id': 'event id',
-        'cid': 'CID',
-        'msg-id': 'control id'
-    },
-
-    eventWord: 'event',
-    eventsWord: 'events',
-    foundByLabel: 'found by'
+    // The link at the head's right - back to the very audit log screen this page was
+    // opened from when it was opened from one, the audit log page otherwise
+    backLinkId: 'message-flow-back',
+    backLabel: 'Back to audit log',
+    auditLogLabel: 'Audit log'
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -96,8 +91,23 @@ page.showListHint = function(html) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-page.showStatus = function(text) {
-    $('#message-flow-status').text(text);
+// The way back - the audit log screen this page was opened from, or the audit log
+// page itself. It is read off the address bar, which keeps it through every search.
+page.showBackLink = function() {
+    var config = page.config;
+    var auditLog = $.fn.zato.audit_log;
+
+    var link = document.getElementById(config.backLinkId);
+    var backURL = auditLog.backURL();
+
+    if (backURL !== '') {
+        link.href = backURL;
+        link.textContent = config.backLabel;
+    }
+    else {
+        link.href = auditLog.config.auditLogPagePath;
+        link.textContent = config.auditLogLabel;
+    }
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -119,7 +129,6 @@ page.showIdle = function() {
 
     page.showCanvasHint(kit._esc_html(config.idleHint));
     page.showListHint(kit._esc_html(config.idleHint));
-    page.showStatus('');
 
     detail.hide();
 };
@@ -144,7 +153,6 @@ page.showNotFound = function(term) {
 
     page.showCanvasHint(hint);
     page.showListHint(hint);
-    page.showStatus('');
 
     detail.hide();
 };
@@ -169,7 +177,6 @@ page.showError = function(statusCode) {
 
     page.showCanvasHint(hint);
     page.showListHint(hint);
-    page.showStatus('');
 
     detail.hide();
 };
@@ -179,7 +186,6 @@ page.showError = function(statusCode) {
 // One journey on both tabs - the models are built once and the drawing and the
 // list read the same rows, so what one shows is what the other says
 page.showJourney = function(data) {
-    var config = page.config;
     var detail = $.fn.zato.message_flow.detail;
     var drawing = $.fn.zato.message_flow.drawing;
     var flow = $.fn.zato.audit_log.flow;
@@ -212,11 +218,9 @@ page.showJourney = function(data) {
     flow.render();
     flow.panel.restoreStep();
 
-    // The status line says what the term turned out to name
-    var eventWord = models.length === 1 ? config.eventWord : config.eventsWord;
-
-    page.showStatus(models.length + ' ' + eventWord + ' ' + config.foundByLabel + ' ' +
-        config.resolvedLabels[data.resolved_by]);
+    // .. and the event the term resolved to stands picked on the drawing, its node
+    // selected and the pane open on that very event's own tabs.
+    drawing.selectEvent(data.seed_id);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -306,14 +310,20 @@ page.init = function() {
 
     $.fn.zato.message_flow.drawing.init();
     $.fn.zato.message_flow.detail.init();
+    $.fn.zato.message_flow.keyboard.init();
+    $.fn.zato.message_flow.controls.init();
     $.fn.zato.message_flow.replay.init();
 
     // The list's lines and panels answer to the same handlers they answer to
     // everywhere, bound once for the page
     $.fn.zato.audit_log.flow.init();
 
-    // A file transfer step clicked on this page is selected on the drawing.
+    // A file transfer step clicked on this page is selected on the drawing, and a failed
+    // run's traceback opens beside the reply rather than under the run's facts
     $.fn.zato.audit_log.fileOutgoing.config.selectOnDrawing = true;
+    $.fn.zato.audit_log.fileOutgoing.config.tracebackInPane = true;
+
+    page.showBackLink();
 
     // The two tabs - which one is open goes into the address bar, so a link
     // is a link to the very reading its sender had in front of them

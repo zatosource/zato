@@ -3,10 +3,9 @@
 
 // Message flow - the pane under the drawing. One constant size whatever it is
 // holding, so opening, switching and closing nodes never moves anything around
-// it. A clicked node's exchange opens here in two sides - the request's and
-// the reply's, sharing the pane by the bar between them - one tab per event,
-// each body fetched from the audit log the first time its tab is opened, the
-// files an event carried offered over the bodies.
+// it. A clicked node's exchange opens here as one body with one tab per event,
+// in the order the card reads them, each body fetched from the audit log the
+// first time its tab is opened, the files an event carried offered over it.
 
 $.fn.zato.message_flow.detail = {};
 
@@ -29,15 +28,11 @@ detail.config = {
     hint: 'No node selected',
     charactersLabel: 'characters',
 
-    // What either side of the pane says when the exchange has no events
-    // of its own kind for it
-    sideHints: {
-        'request': '(Empty request)',
-        'response': '(Empty reply)'
-    },
+    // What the tab of an event's second body says - the reply of a source whose
+    // one event holds both what was sent and what came back
+    responseTabLabel: 'Response',
 
-    // The words of the root's own right side - the message's whole flow
-    // summed up, where a reply side would have nothing truthful to say
+    // The words of the root's own strip - the message's whole flow summed up
     summaryLabel: 'FLOW',
     summaryWords: {
         exchanges: 'Exchanges',
@@ -48,21 +43,42 @@ detail.config = {
         errors: 'Errors'
     },
 
-    // How the two sides share the pane - where the browser keeps the share,
-    // what it is before anyone pulls the bar, and the least share either
-    // side keeps
-    splitStorageKey: 'zato.message-flow.detail-split',
-    splitDefaultPercent: 50,
-    splitMinPercent: 20,
+    // What stands between the exchange's name and the words of the event the
+    // pane is open on, the same dot the drawing's lines use
+    titleSeparator: ' \u00b7 ',
 
     // The word each kind of line wears, the same words the drawing writes
     roleLabels: {
-        'request': 'REQ',
-        'response': 'REPLY',
+        'request': 'REQUEST',
+        'response': 'RESPONSE',
         'none': 'SYS',
         'view': 'VIEW',
         'job': 'SCHEDULER',
+        'service': 'AUDIT WRITE',
+        'service-request': 'REQUEST',
+        'service-response': 'RESPONSE',
+        'transfer': 'TRANSFER',
         'access': 'ACCESS'
+    },
+
+    // The word the header names an event's role by, before the event's own words
+    headerRoleWords: {
+        'request': 'Request',
+        'response': 'Response',
+        'none': 'System',
+        'view': 'View',
+        'job': 'Scheduler',
+        'service': 'Audit write',
+        'service-request': 'Request',
+        'service-response': 'Response',
+        'transfer': 'Transfer',
+        'access': 'Access'
+    },
+
+    // The roles whose event is a response - what a source hangs a response's further bodies on
+    responseRoles: {
+        'response': true,
+        'service-response': true
     },
 
     // The one event type that is a person reading rather than a message moving
@@ -87,10 +103,80 @@ detail.config = {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What the pane is holding and how long each of its bodies turned out to be,
-// by tab index, which is what the caption under the body reads
+// What the pane is holding, which of its events the open tabs stand on, and how
+// long each of its bodies turned out to be, by tab index, which is what the
+// caption under the body reads
 detail.openDetail = null;
+detail.currentEventId = null;
 detail.bodyLengths = {};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The words the pane's header says about the event its tabs stand on - the
+// event's role, and after a dot what the source has to say of the event - so
+// the header names both the exchange and the very event
+detail.eventWords = function(model) {
+    var config = detail.config;
+
+    var presenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
+    var out = config.headerRoleWords[detail.roleOf(model)];
+
+    var note = presenter.headerNote(model);
+
+    if (note !== '') {
+        out += config.titleSeparator + note;
+    }
+
+    return out;
+};
+
+// The drawing brought to the event the tabs stand on - that event's line on its
+// node wears the selection amber on its chips, every other line its own inks.
+// The root stands for the message and has no line of its own, so with the root
+// open no line is marked, though its pane reads the seed event.
+detail.markCurrentLine = function() {
+    var wanted = String(detail.currentEventId);
+
+    if (detail.openDetail !== null && detail.openDetail.key === '') {
+        wanted = '';
+    }
+
+    var lines = document.querySelectorAll('.message-flow-line');
+
+    for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        var line = lines[lineIndex];
+        var isCurrent = line.getAttribute('data-event-id') === wanted;
+
+        line.classList.toggle('message-flow-line-current', isCurrent);
+    }
+};
+
+// The header brought to the event the tabs stand on - the exchange's name, the
+// dot, the event's words - and the drawing with it
+detail.updateTitle = function() {
+    var nodeDetail = detail.openDetail;
+
+    if (nodeDetail === null) {
+        return;
+    }
+
+    var text = nodeDetail.title;
+    var wanted = String(detail.currentEventId);
+
+    for (var modelIndex = 0; modelIndex < nodeDetail.models.length; modelIndex++) {
+        var model = nodeDetail.models[modelIndex];
+
+        if (String(model.id) === wanted) {
+            text += detail.config.titleSeparator + detail.eventWords(model);
+            break;
+        }
+    }
+
+    var title = detail.host().querySelector('.message-flow-detail-title');
+    title.textContent = text;
+
+    detail.markCurrentLine();
+};
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -121,8 +207,9 @@ detail.roleOf = function(model) {
 
 // What one tab of the pane wears - the role in its own ink, the event's
 // id in amber, and an outcome in the outcome's own colour. The plain label
-// stays beside the markup, being what a tab is told apart by.
-detail.tabOf = function(model) {
+// stays beside the markup, being what a tab is told apart by. The kind is
+// which body of the event the tab opens - empty for the event's own data.
+detail.tabOf = function(model, kind) {
     var config = detail.config;
 
     var role = detail.roleOf(model);
@@ -144,7 +231,8 @@ detail.tabOf = function(model) {
     var out = {
         label: roleLabel + ' \u00b7 ' + model.id,
         label_html: labelHtml,
-        eventId: model.id
+        eventId: model.id,
+        kind: kind
     };
 
     return out;
@@ -152,9 +240,67 @@ detail.tabOf = function(model) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// A tab for one further body of an event, its word in amber
+detail.extraTabOf = function(model, extra) {
+    var labelHtml = '<span class="message-flow-detail-tab-extra">' + detail.escapeHTML(extra.label) + '</span>';
+
+    var out = {
+        label: extra.label + ' \u00b7 ' + model.id,
+        label_html: labelHtml,
+        eventId: model.id,
+        kind: extra.kind
+    };
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// What a tab's body is remembered under - one event may have several tabs,
+// each holding a different body of it
+detail.bodyKey = function(tab) {
+    return String(tab.eventId) + ':' + tab.kind;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The pane's entries for one exchange - one per event in the order the card
+// reads them, as {model, kind, role, isSecond}, the kind naming which body of
+// the event the entry opens, empty for the event's own data. A source whose one
+// event holds both what was sent and what came back - a file transfer run
+// talking to its server - gives that event two entries, the second one the
+// reply's body. The role is the part the entry plays, which is what a source
+// hangs its further bodies on.
+detail.entriesOf = function(models) {
+    var config = detail.config;
+    var out = [];
+
+    for (var modelIndex = 0; modelIndex < models.length; modelIndex++) {
+        var model = models[modelIndex];
+
+        var presenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
+        var paneKinds = presenter.paneKinds(model);
+
+        if (paneKinds !== null) {
+            out.push({model: model, kind: paneKinds.request, role: 'request', isSecond: false});
+            out.push({model: model, kind: paneKinds.response, role: 'response', isSecond: true});
+        }
+        else if (config.responseRoles[detail.roleOf(model)] === true) {
+            out.push({model: model, kind: '', role: 'response', isSecond: false});
+        }
+        else {
+            out.push({model: model, kind: '', role: 'request', isSecond: false});
+        }
+    }
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // The pane brought to one exchange - the header, the files its events carried,
-// and the body in two sides, the request's and the reply's, each with one tab
-// per event, each body asked for the first time its tab is opened
+// and the body with one tab per event, each body asked for the first time its
+// tab is opened
 detail.show = function(nodeDetail) {
     var listing = $.fn.zato.audit_log.listing;
     var page = $.fn.zato.message_flow.page;
@@ -189,23 +335,10 @@ detail.show = function(nodeDetail) {
     time.textContent = nodeDetail.time;
     meta.appendChild(time);
 
-    // A source with a sentence for its exchange - what a file transfer run did, in one
-    // line - says it under the header, and a source with a panel of its own - a run's
-    // report, a file's journey - draws it before the bodies. The models arrive newest
-    // first, so the newest one is the one the sentence is about.
+    // A source with a panel of its own - a run's report, a file's journey - draws it before
+    // the bodies. The models arrive newest first, so the newest one is the one the panel is about.
     var newestModel = nodeDetail.models[nodeDetail.models.length - 1];
     var presenter = $.fn.zato.audit_log.presenterFor(newestModel.raw.source);
-
-    if (presenter.sentence !== undefined) {
-        var sentenceText = presenter.sentence(newestModel.raw);
-
-        if (sentenceText !== '') {
-            var sentence = document.createElement('div');
-            sentence.className = 'message-flow-detail-sentence';
-            sentence.textContent = sentenceText;
-            host.appendChild(sentence);
-        }
-    }
 
     if (presenter.detailPanel !== undefined) {
         var sourcePanel = document.createElement('div');
@@ -215,26 +348,20 @@ detail.show = function(nodeDetail) {
         presenter.detailPanel(nodeDetail.models, $(sourcePanel), 'dark');
     }
 
+    // The root stands for the message itself, so its pane sums the whole flow
+    // up in a strip before the message's own body
+    if (nodeDetail.flowSummary !== null) {
+        detail.addSummary(host, nodeDetail.flowSummary);
+    }
+
     // The files the events carried are asked about the moment the pane holds
     // them - an event carrying none keeps its strip's place empty
     var attachments = document.createElement('div');
     attachments.className = 'message-flow-detail-attachments';
     host.appendChild(attachments);
 
-    // The events split between the two sides - a reply to the right, every
-    // other kind of line to the left with the request it belongs to
-    var requestModels = [];
-    var responseModels = [];
-
     for (var modelIndex = 0; modelIndex < nodeDetail.models.length; modelIndex++) {
         var model = nodeDetail.models[modelIndex];
-
-        if (detail.roleOf(model) === 'response') {
-            responseModels.push(model);
-        }
-        else {
-            requestModels.push(model);
-        }
 
         var attachmentsHost = document.createElement('div');
         attachmentsHost.className = 'message-flow-detail-attachments-host';
@@ -247,74 +374,70 @@ detail.show = function(nodeDetail) {
         listing.loadAttachments(model, $(attachmentsHost));
     }
 
-    var split = document.createElement('div');
-    split.className = 'message-flow-detail-split';
-    host.appendChild(split);
+    var entries = detail.entriesOf(nodeDetail.models);
 
-    detail.addSide(split, 'request', requestModels);
+    detail.addBody(host, entries);
 
-    var splitBar = document.createElement('div');
-    splitBar.className = 'message-flow-detail-split-bar';
-    split.appendChild(splitBar);
+    // The tabs open on the first event, and the header says which event that is
+    detail.currentEventId = entries[0].model.id;
 
-    // The root stands for the message itself and has no reply of its own to
-    // wait for - its right side sums the whole flow up instead
-    if (nodeDetail.flowSummary === null) {
-        detail.addSide(split, 'response', responseModels);
-    }
-    else {
-        detail.addSummarySide(split, nodeDetail.flowSummary);
-    }
-
-    detail.applySplit(split);
+    detail.updateTitle();
     detail.updateCaption();
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One side of the pane - its events' badges always on top, each tab's body
-// fetched the first time it is opened, parsed when the source's reader made
-// sense of it, as it went down the wire otherwise. A side the exchange has
-// no events for says so.
-detail.addSide = function(split, role, models) {
+// The pane's body - its events' badges always on top, each tab's body fetched
+// the first time it is opened, parsed when the source's reader made sense of
+// it, as it went down the wire otherwise
+detail.addBody = function(host, entries) {
+    var config = detail.config;
     var listing = $.fn.zato.audit_log.listing;
 
-    var side = document.createElement('div');
-    side.className = 'message-flow-detail-side message-flow-detail-side-' + role;
-    split.appendChild(side);
-
-    if (models.length === 0) {
-        var hint = document.createElement('div');
-        hint.className = 'message-flow-detail-side-hint';
-        hint.textContent = detail.config.sideHints[role];
-        side.appendChild(hint);
-
-        return;
-    }
+    var body = document.createElement('div');
+    body.className = 'message-flow-detail-body';
+    host.appendChild(body);
 
     var tabs = [];
 
-    for (var modelIndex = 0; modelIndex < models.length; modelIndex++) {
-        tabs.push(detail.tabOf(models[modelIndex]));
+    for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
+        var entry = entries[entryIndex];
+        var model = entry.model;
+
+        // An event's second body wears the reply's word, its first the event's own
+        if (entry.isSecond) {
+            tabs.push(detail.extraTabOf(model, {label: config.responseTabLabel, kind: entry.kind}));
+        }
+        else {
+            tabs.push(detail.tabOf(model, entry.kind));
+        }
+
+        // The event's further bodies after that one - a failed run's traceback beside its response
+        var presenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
+        var extras = presenter.paneExtras(model, entry.role);
+
+        for (var extraIndex = 0; extraIndex < extras.length; extraIndex++) {
+            tabs.push(detail.extraTabOf(model, extras[extraIndex]));
+        }
     }
 
     var panelHost = document.createElement('div');
     panelHost.className = 'message-flow-detail-panel';
-    side.appendChild(panelHost);
+    body.appendChild(panelHost);
 
     var caption = document.createElement('div');
     caption.className = 'message-flow-detail-caption';
-    side.appendChild(caption);
+    body.appendChild(caption);
 
     kit.payload_panel.lazy($(panelHost), tabs, function(tab, onDone) {
-        listing.fetchDetails(tab.eventId, '', false, function(details) {
+        listing.fetchDetails(tab.eventId, tab.kind, false, function(details) {
             var text = details.data;
 
             if (details.parsed !== '') {
                 text = details.parsed;
             }
 
-            detail.bodyLengths[String(tab.eventId)] = text.length;
+            detail.bodyLengths[detail.bodyKey(tab)] = text.length;
             detail.updateCaption();
 
             onDone(text);
@@ -324,30 +447,21 @@ detail.addSide = function(split, role, models) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The root's own right side - the message's whole flow summed up, its badge
-// standing where the reply side's badges stand and one row per measure under
-// it, the error row wearing the bad ink the moment there is anything to wear
-// it for
-detail.addSummarySide = function(split, summary) {
+// The root's own strip - the message's whole flow summed up, one measure after
+// another on a single line, the error count wearing the bad ink the moment
+// there is anything to wear it for
+detail.addSummary = function(host, summary) {
     var config = detail.config;
     var words = config.summaryWords;
 
-    var side = document.createElement('div');
-    side.className = 'message-flow-detail-side message-flow-detail-side-response';
-    split.appendChild(side);
-
-    var bar = document.createElement('div');
-    bar.className = 'message-flow-detail-summary-bar';
-    side.appendChild(bar);
+    var strip = document.createElement('div');
+    strip.className = 'message-flow-detail-summary';
+    host.appendChild(strip);
 
     var badge = document.createElement('span');
     badge.className = 'message-flow-detail-summary-badge';
     badge.textContent = config.summaryLabel;
-    bar.appendChild(badge);
-
-    var rows = document.createElement('div');
-    rows.className = 'message-flow-detail-summary';
-    side.appendChild(rows);
+    strip.appendChild(badge);
 
     var entries = [
         [words.exchanges, String(summary.exchangeCount), false],
@@ -361,14 +475,14 @@ detail.addSummarySide = function(split, summary) {
     for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
         var entry = entries[entryIndex];
 
-        var row = document.createElement('div');
-        row.className = 'message-flow-detail-summary-row';
-        rows.appendChild(row);
+        var item = document.createElement('span');
+        item.className = 'message-flow-detail-summary-item';
+        strip.appendChild(item);
 
         var label = document.createElement('span');
         label.className = 'message-flow-detail-summary-label';
         label.textContent = entry[0];
-        row.appendChild(label);
+        item.appendChild(label);
 
         var value = document.createElement('span');
         value.className = 'message-flow-detail-summary-value';
@@ -378,115 +492,38 @@ detail.addSummarySide = function(split, summary) {
         }
 
         value.textContent = entry[1];
-        row.appendChild(value);
+        item.appendChild(value);
     }
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The words under each side's body - how much of it there is, in the same dim
-// ink the list's captions use, and nothing while the open body is still on
-// its way. The pane may have been emptied while a body was coming, in which
-// case there are simply no captions to bring up.
+// The words under the body - how much of it there is, in the same dim ink the
+// list's captions use, and nothing while the open body is still on its way.
+// The pane may have been emptied while a body was coming, in which case there
+// is simply no caption to bring up.
 detail.updateCaption = function() {
     var host = detail.host();
-    var captions = host.querySelectorAll('.message-flow-detail-caption');
+    var caption = host.querySelector('.message-flow-detail-caption');
 
-    for (var captionIndex = 0; captionIndex < captions.length; captionIndex++) {
-        var caption = captions[captionIndex];
-        var side = caption.parentElement;
-
-        var $openTab = $(side).find('.dashboard-payload-tab.dashboard-panel-action-badge-active');
-
-        var tabs = $(side).find('.dashboard-payload').data('payload_tabs');
-        var tab = tabs[parseInt($openTab.attr('data-tab-index'), 10)];
-
-        var length = detail.bodyLengths[String(tab.eventId)];
-
-        if (length === undefined) {
-            caption.textContent = '';
-            continue;
-        }
-
-        caption.textContent = length.toLocaleString('en-US') + ' ' + detail.config.charactersLabel;
-    }
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// How the two sides share the pane - the remembered share put back on every
-// opening, the default an even split
-detail.applySplit = function(split) {
-    var kept = window.localStorage.getItem(detail.config.splitStorageKey);
-    var percent = detail.config.splitDefaultPercent;
-
-    if (kept !== null) {
-        percent = Number(kept);
+    if (caption === null) {
+        return;
     }
 
-    split.style.setProperty('--message-flow-detail-split', percent + '%');
-};
+    var $body = $(caption.parentElement);
+    var $openTab = $body.find('.dashboard-payload-tab.dashboard-panel-action-badge-active');
 
-// /////////////////////////////////////////////////////////////////////////////
+    var tabs = $body.find('.dashboard-payload').data('payload_tabs');
+    var tab = tabs[parseInt($openTab.attr('data-tab-index'), 10)];
 
-// The bar between the two sides - a press and a pull shares the pane's width
-// between the request and the reply, neither side ever pushed below its least
-// share. Wired once, through the document, because the bar itself is built
-// anew with every opened node.
-detail.wireSplit = function() {
-    var config = detail.config;
+    var length = detail.bodyLengths[detail.bodyKey(tab)];
 
-    var isPressed = false;
-    var split = null;
-    var splitBar = null;
+    if (length === undefined) {
+        caption.textContent = '';
+        return;
+    }
 
-    document.addEventListener('mousedown', function(event) {
-
-        // Only the main button grabs the bar
-        if (event.button !== 0) {
-            return;
-        }
-
-        if (!event.target.classList.contains('message-flow-detail-split-bar')) {
-            return;
-        }
-
-        isPressed = true;
-        splitBar = event.target;
-        split = splitBar.parentElement;
-
-        splitBar.classList.add('message-flow-detail-splitting');
-
-        // The pull must not start selecting the page's text
-        event.preventDefault();
-    });
-
-    window.addEventListener('mousemove', function(event) {
-        if (!isPressed) {
-            return;
-        }
-
-        var rect = split.getBoundingClientRect();
-        var percent = (event.clientX - rect.left) / rect.width * 100;
-
-        if (percent < config.splitMinPercent) {
-            percent = config.splitMinPercent;
-        }
-
-        if (percent > 100 - config.splitMinPercent) {
-            percent = 100 - config.splitMinPercent;
-        }
-
-        split.style.setProperty('--message-flow-detail-split', percent + '%');
-        window.localStorage.setItem(config.splitStorageKey, String(Math.round(percent)));
-    });
-
-    window.addEventListener('mouseup', function() {
-        if (isPressed) {
-            isPressed = false;
-            splitBar.classList.remove('message-flow-detail-splitting');
-        }
-    });
+    caption.textContent = length.toLocaleString('en-US') + ' ' + detail.config.charactersLabel;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -497,6 +534,8 @@ detail.hide = function() {
     var host = detail.host();
 
     detail.openDetail = null;
+    detail.currentEventId = null;
+    detail.markCurrentLine();
 
     host.textContent = '';
 
@@ -508,52 +547,53 @@ detail.hide = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The bar between the drawing and the pane - a press on it and a pull shares
-// the page between the two, neither side ever pushed below what it needs.
-// The pulling itself is the shared pane split bar, this is where the page's
-// own limits, its snap and its shut state meet it.
-detail.wireResize = function() {
-    var config = detail.config;
-
-    var page = document.querySelector(config.pageSelector);
-
-    paneSplit.init({
-        bar: document.getElementById(config.resizeBarId),
-        pane: detail.host(),
-        container: page,
-        axis: 'y',
-        minSize: config.detailMinHeight,
-        minOther: config.canvasMinHeight,
-        snapSize: config.detailSnapHeight,
-        activeClass: config.resizeActiveClass,
-
-        // The pane's height lives in the page's own variable, its stylesheet
-        // reads the layout out of it
-        apply: function(height) {
-            page.style.setProperty('--message-flow-detail-height', height + 'px');
-        },
-
-        // With no height the pane is fully gone, its border included - a shut
-        // pane must not linger as a seam over the page's bottom edge
-        onSnap: function(isShut) {
-            page.classList.toggle('message-flow-detail-shut', isShut);
-        },
-    });
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
+// The bar over the pane is wired in detail-resize.js
 detail.init = function() {
     detail.wireResize();
-    detail.wireSplit();
     detail.hide();
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The open pane brought to one event - its first tab in front, the way a click
+// on it would do it, the header and the drawing following
+detail.openEvent = function(eventId) {
+    var wanted = String(eventId);
+    var $body = $(detail.host()).find('.message-flow-detail-body');
+    var $panel = $body.find('.dashboard-payload');
+
+    if ($panel.length === 0) {
+        return;
+    }
+
+    var tabs = $panel.data('payload_tabs');
+
+    for (var tabIndex = 0; tabIndex < tabs.length; tabIndex++) {
+        if (String(tabs[tabIndex].eventId) === wanted) {
+            kit.payload_panel.open($body, tabIndex);
+            break;
+        }
+    }
+
+    detail.currentEventId = eventId;
+    detail.updateTitle();
+    detail.updateCaption();
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // The panel's own handler has already put the clicked tab in front by the time
-// this one runs, so all that is left is saying how much text the tab holds
+// this one runs, so what is left is bringing the header and the drawing to the
+// tab's event and saying how much text the open tab holds
 $(document).on('click', '#message-flow-detail .dashboard-payload-tab', function() {
+    var $tab = $(this);
+    var $panel = $tab.closest('.dashboard-payload');
+
+    var tabs = $panel.data('payload_tabs');
+    var tab = tabs[parseInt($tab.attr('data-tab-index'), 10)];
+
+    detail.currentEventId = tab.eventId;
+    detail.updateTitle();
     detail.updateCaption();
 });
 

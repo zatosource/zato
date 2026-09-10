@@ -142,8 +142,8 @@ SOAP_Max_Body_Size = 10 * 1024 * 1024
 # since it is not something an unauthenticated caller needs to know.
 _body_too_large_reason = 'SOAP request is too large'
 
-# The SOAPAction header as WSGI spells it.
-_wsgi_soap_action_header = 'HTTP_{}'.format(SOAP_Action_Header.upper())
+# The SOAPAction header as the request context spells it.
+_soap_action_header_key = 'HTTP_{}'.format(SOAP_Action_Header.upper())
 
 # The statuses a SOAP fault does not override. A fault's status normally belongs to its fault code,
 # but these four carry HTTP-level meaning of their own that a client acts on before it looks at any
@@ -280,8 +280,8 @@ class _RequestMeta(NamedTuple):
     http_method: 'str'
     http_accept: 'str'
     path_info: 'str'
-    wsgi_raw_uri: 'str'
-    wsgi_remote_port: 'str'
+    raw_uri: 'str'
+    remote_port: 'str'
 
 # ################################################################################################################################
 
@@ -333,24 +333,24 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
-    def _extract_request_meta(self, wsgi_environ:'stranydict') -> '_RequestMeta':
-        """ Extracts HTTP method, accept header, path and port from the WSGI environment.
+    def _extract_request_meta(self, request_ctx:'stranydict') -> '_RequestMeta':
+        """ Extracts HTTP method, accept header, path and port from the request context.
         """
-        http_method = wsgi_environ['REQUEST_METHOD']
+        http_method = request_ctx['REQUEST_METHOD']
 
-        http_accept = to_internal_accept(wsgi_environ.get('HTTP_ACCEPT'))
+        http_accept = to_internal_accept(request_ctx.get('HTTP_ACCEPT'))
 
         # Everything downstream works with the path in its canonical form, and the URI
         # exactly as it arrived stays available under RAW_URI.
-        path_info = normalize_path_info(wsgi_environ['PATH_INFO'])
-        wsgi_environ['PATH_INFO'] = path_info
+        path_info = normalize_path_info(request_ctx['PATH_INFO'])
+        request_ctx['PATH_INFO'] = path_info
 
         out = _RequestMeta(
             http_method=http_method,
             http_accept=http_accept,
             path_info=path_info,
-            wsgi_raw_uri=wsgi_environ['RAW_URI'],
-            wsgi_remote_port=wsgi_environ['REMOTE_PORT'],
+            raw_uri=request_ctx['RAW_URI'],
+            remote_port=request_ctx['REMOTE_PORT'],
         )
 
         return out
@@ -375,23 +375,23 @@ class RequestDispatcher:
             service_name = channel_item['service_name'] if channel_item else '<no-channel>'
             payload_len = len(payload)
 
-            request_part = f'REST cha \u2192 cid={cid}; {meta.http_method} {meta.wsgi_raw_uri} name={channel_name};'
+            request_part = f'REST cha \u2192 cid={cid}; {meta.http_method} {meta.raw_uri} name={channel_name};'
             details_part = f' service={service_name}; len={payload_len}; agent={user_agent};'
-            remote_part = f' remote-addr={remote_addr}:{meta.wsgi_remote_port}'
+            remote_part = f' remote-addr={remote_addr}:{meta.remote_port}'
 
             logger.info(request_part + details_part + remote_part)
 
 # ################################################################################################################################
 
-    def _extract_post_data(self, channel_item:'anydict', wsgi_environ:'stranydict') -> 'anydict':
-        """ Extracts form/POST data from the WSGI environment if the channel expects it.
+    def _extract_post_data(self, channel_item:'anydict', request_ctx:'stranydict') -> 'anydict':
+        """ Extracts form/POST data from the request context if the channel expects it.
         """
         post_data:'anydict' = {}
 
         if channel_item['data_format'] == ModuleCtx.IO_FORM_DATA:
-            if wsgi_environ.get('CONTENT_TYPE', '').startswith(ModuleCtx.Form_Data_Content_Type):
-                post_data = util_get_form_data(wsgi_environ)
-                wsgi_environ['zato.oauth.post_data'] = post_data
+            if request_ctx.get('CONTENT_TYPE', '').startswith(ModuleCtx.Form_Data_Content_Type):
+                post_data = util_get_form_data(request_ctx)
+                request_ctx['zato.oauth.post_data'] = post_data
 
         return post_data
 
@@ -402,7 +402,7 @@ class RequestDispatcher:
         cid:'str',
         meta:'_RequestMeta',
         channel_item:'anydict',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         payload:'bytes',
         post_data:'anydict',
         config_manager:'ConfigManager',
@@ -427,7 +427,7 @@ class RequestDispatcher:
                     channel_item,
                     meta.path_info,
                     payload,
-                    wsgi_environ,
+                    request_ctx,
                     post_data,
                     config_manager,
                     enforce_auth=True
@@ -437,7 +437,7 @@ class RequestDispatcher:
                 if security_groups_ctx.has_members():
 
                     # .. this will raise an exception if the group check fails ..
-                    self.check_security_via_groups(cid, channel_item['name'], security_groups_ctx, wsgi_environ)
+                    self.check_security_via_groups(cid, channel_item['name'], security_groups_ctx, request_ctx)
 
                 # .. a channel protected by groups alone, whose groups have no members, has no credentials
                 # .. to check the caller against, so no caller passes - this is the same default deny
@@ -490,7 +490,7 @@ class RequestDispatcher:
         meta:'_RequestMeta',
         url_match:'stranydict',
         channel_item:'anydict',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         payload:'bytes',
         post_data:'anydict',
         config_manager:'ConfigManager',
@@ -502,14 +502,14 @@ class RequestDispatcher:
             channel_params = self.request_handler.create_channel_params(
                 url_match,
                 channel_item,
-                wsgi_environ,
+                request_ctx,
                 payload,
                 post_data
             )
         else:
             channel_params = {}
 
-        out = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
+        out = self.request_handler.handle(cid, url_match, channel_item, request_ctx,
             payload, config_manager, post_data, meta.path_info, channel_params,
             zato_response_headers_container)
 
@@ -517,12 +517,12 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
-    def _format_response(self, channel_item:'anydict', wsgi_environ:'stranydict', response:'any_') -> 'any_':
+    def _format_response(self, channel_item:'anydict', request_ctx:'stranydict', response:'any_') -> 'any_':
         """ Sets response headers and unwraps I/O payload.
         """
-        wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
-        wsgi_environ['zato.http.response.headers'].update(response.headers)
-        wsgi_environ['zato.http.response.status'] = status_response[response.status_code]
+        request_ctx['zato.http.response.headers']['Content-Type'] = response.content_type
+        request_ctx['zato.http.response.headers'].update(response.headers)
+        request_ctx['zato.http.response.status'] = status_response[response.status_code]
 
         # SSE streaming responses bypass serialization entirely ..
         if response.content_type == _content_type_sse:
@@ -539,7 +539,7 @@ class RequestDispatcher:
             out = response.payload
 
         # A channel with response caching stores what is going out, subject to the storage rules
-        if cache_ctx := wsgi_environ.get('zato.response_cache.ctx'):
+        if cache_ctx := request_ctx.get('zato.response_cache.ctx'):
             response_cache.store(cache_ctx, out, response.status_code)
 
         return out
@@ -552,7 +552,7 @@ class RequestDispatcher:
         meta:'_RequestMeta',
         url_match:'stranydict',
         channel_item:'anydict',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         payload:'bytes',
         post_data:'anydict',
         config_manager:'ConfigManager',
@@ -562,10 +562,10 @@ class RequestDispatcher:
         caching coalesces across concurrent requests for the same cache key.
         """
         response = self._invoke_service(
-            cid, meta, url_match, channel_item, wsgi_environ,
+            cid, meta, url_match, channel_item, request_ctx,
             payload, post_data, config_manager, zato_response_headers_container)
 
-        out = self._format_response(channel_item, wsgi_environ, response)
+        out = self._format_response(channel_item, request_ctx, response)
         return out
 
 # ################################################################################################################################
@@ -608,7 +608,7 @@ class RequestDispatcher:
         cid:'str',
         payload:'bytes',
         channel_item:'anydict',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
     ) -> 'SOAPRequestContext':
         """ Parses a SOAP channel's envelope and records it for the rest of the request to read.
 
@@ -617,16 +617,16 @@ class RequestDispatcher:
         having them passed in. They used to be read in the first branch and read again in the
         second, which left the names bound only on the path that happened to run first.
         """
-        content_type = wsgi_environ.get('CONTENT_TYPE')
+        content_type = request_ctx.get('CONTENT_TYPE')
 
         if content_type is None:
             content_type = ''
 
-        # SOAP 1.1 declares the action in a header of its own, which WSGI spells with a prefix.
-        soap_action_header = wsgi_environ.get(_wsgi_soap_action_header)
+        # SOAP 1.1 declares the action in a header of its own, which the request context spells with the HTTP_ prefix.
+        soap_action_header = request_ctx.get(_soap_action_header_key)
 
         out = parse_soap_request(cid, payload, content_type, channel_item, soap_action_header)
-        wsgi_environ['zato.request.soap'] = out
+        request_ctx['zato.request.soap'] = out
 
         return out
 
@@ -638,7 +638,7 @@ class RequestDispatcher:
         meta:'_RequestMeta',
         url_match:'stranydict',
         channel_item:'anydict',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         payload:'bytes',
         config_manager:'ConfigManager',
         zato_response_headers_container:'anydict',
@@ -660,10 +660,10 @@ class RequestDispatcher:
         if channel_rate_limit_result:
             if not channel_rate_limit_result.is_allowed:
                 out = self._handle_rate_limit_result(
-                    cid, channel_rate_limit_result, wsgi_environ, remote_addr, channel_item)
+                    cid, channel_rate_limit_result, request_ctx, remote_addr, channel_item)
                 return out
 
-        post_data = self._extract_post_data(channel_item, wsgi_environ)
+        post_data = self._extract_post_data(channel_item, request_ctx)
 
         is_soap = channel_item['transport'] == _transport_soap
         soap_context = None
@@ -680,51 +680,51 @@ class RequestDispatcher:
             # else authenticates from headers alone, and for those the parse waits until the caller
             # has proven who it is - which keeps the XML parser out of reach of anonymous callers.
             if self._needs_soap_parse_before_auth(channel_item):
-                soap_context = self._parse_soap_envelope(cid, payload, channel_item, wsgi_environ)
+                soap_context = self._parse_soap_envelope(cid, payload, channel_item, request_ctx)
 
         # .. this will raise an exception if credentials are invalid ..
-        self._check_security(cid, meta, channel_item, wsgi_environ, payload, post_data, config_manager)
+        self._check_security(cid, meta, channel_item, request_ctx, payload, post_data, config_manager)
 
         # .. an authenticated caller's envelope is parsed now, which is every SOAP channel whose
         # .. envelope was not needed to authenticate in the first place ..
         if is_soap and (soap_context is None):
-            soap_context = self._parse_soap_envelope(cid, payload, channel_item, wsgi_environ)
+            soap_context = self._parse_soap_envelope(cid, payload, channel_item, request_ctx)
 
         # .. with security enforced, the operation element becomes the service's payload ..
         if soap_context:
-            resolve_soap_payload(cid, soap_context, wsgi_environ)
-            wsgi_environ['zato.request.payload'] = soap_context.payload
+            resolve_soap_payload(cid, soap_context, request_ctx)
+            request_ctx['zato.request.payload'] = soap_context.payload
 
         # .. a definition's own limit needs to know which definition authenticated the caller,
         # .. so this one can only run once authentication has succeeded ..
-        sec_def_rate_limit_result = self._check_sec_def_rate_limiting(wsgi_environ, remote_addr, now_us)
+        sec_def_rate_limit_result = self._check_sec_def_rate_limiting(request_ctx, remote_addr, now_us)
 
         if sec_def_rate_limit_result:
             if not sec_def_rate_limit_result.is_allowed:
                 out = self._handle_rate_limit_result(
-                    cid, sec_def_rate_limit_result, wsgi_environ, remote_addr, channel_item, needs_quota_headers=True)
+                    cid, sec_def_rate_limit_result, request_ctx, remote_addr, channel_item, needs_quota_headers=True)
                 return out
 
             # .. the request is allowed, so tell the caller how much of its quota remains ..
-            response_headers = wsgi_environ['zato.http.response.headers']
+            response_headers = request_ctx['zato.http.response.headers']
             response_headers[_header_rate_limit_limit] = str(sec_def_rate_limit_result.limit)
             response_headers[_header_rate_limit_remaining] = str(sec_def_rate_limit_result.remaining)
 
         # .. AS4 channels run the AS4 inbound pipeline instead of invoking a service directly -
         # the pipeline itself routes accepted payloads to the channel's topic or service ..
         if channel_item['transport'] == _transport_as4:
-            out = self._handle_as4_channel(cid, channel_item, wsgi_environ, payload)
+            out = self._handle_as4_channel(cid, channel_item, request_ctx, payload)
             return out
 
         # .. and so do AS2 channels with the AS2 inbound pipeline ..
         if channel_item['transport'] == _transport_as2:
-            out = self._handle_as2_channel(cid, channel_item, wsgi_environ, payload)
+            out = self._handle_as2_channel(cid, channel_item, request_ctx, payload)
             return out
 
         # .. a channel with response caching may have the response ready ..
-        cache_ctx = response_cache.get_context(config_manager.cache_api, channel_item, wsgi_environ, payload)
+        cache_ctx = response_cache.get_context(config_manager.cache_api, channel_item, request_ctx, payload)
 
-        invoke_args = (cid, meta, url_match, channel_item, wsgi_environ,
+        invoke_args = (cid, meta, url_match, channel_item, request_ctx,
             payload, post_data, config_manager, zato_response_headers_container)
 
         if cache_ctx:
@@ -738,7 +738,7 @@ class RequestDispatcher:
 
             # .. it is a miss, so the fresh response will be stored in _format_response
             # and concurrent requests for the same key are coalesced into one invocation ..
-            wsgi_environ['zato.response_cache.ctx'] = cache_ctx
+            request_ctx['zato.response_cache.ctx'] = cache_ctx
 
             out = response_cache.invoke_coalesced(cache_ctx, self._invoke_and_format, invoke_args)
             return out
@@ -754,7 +754,7 @@ class RequestDispatcher:
         self,
         cid:'str',
         channel_item:'anydict',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         payload:'bytes',
     ) -> 'bytes':
         """ Runs one incoming request through the AS4 inbound pipeline of the matched channel,
@@ -774,7 +774,7 @@ class RequestDispatcher:
         if isinstance(payload, str):
             payload = payload.encode('utf8')
 
-        content_type = wsgi_environ.get('CONTENT_TYPE')
+        content_type = request_ctx.get('CONTENT_TYPE')
         if content_type is None:
             content_type = ''
 
@@ -782,8 +782,8 @@ class RequestDispatcher:
 
         # What goes back is a signal for a delivery and a whole user message with its attachments
         # for a pull request, so the pipeline is what says how the response is packaged.
-        wsgi_environ['zato.http.response.headers']['Content-Type'] = result.content_type
-        wsgi_environ['zato.http.response.status'] = status_response[result.status_code]
+        request_ctx['zato.http.response.headers']['Content-Type'] = result.content_type
+        request_ctx['zato.http.response.status'] = status_response[result.status_code]
 
         out = result.body
         return out
@@ -794,7 +794,7 @@ class RequestDispatcher:
         self,
         cid:'str',
         channel_item:'anydict',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         payload:'bytes',
     ) -> 'bytes':
         """ Runs one incoming request through the AS2 inbound pipeline of the matched channel,
@@ -814,16 +814,16 @@ class RequestDispatcher:
             payload = payload.encode('utf8')
 
         # The AS2 identities and the MIME headers of the top-level entity
-        # all travel as HTTP headers, which WSGI spells with the HTTP_ prefix ..
+        # all travel as HTTP headers, which the request context spells with the HTTP_ prefix ..
         headers:'stranydict' = {}
 
-        for key, value in wsgi_environ.items():
+        for key, value in request_ctx.items():
             if key.startswith('HTTP_'):
                 header_name = key[5:].replace('_', '-').lower()
                 headers[header_name] = value
 
-        # .. except for Content-Type, which WSGI keeps under its own key.
-        if content_type := wsgi_environ.get('CONTENT_TYPE'):
+        # .. except for Content-Type, which the request context keeps under its own key.
+        if content_type := request_ctx.get('CONTENT_TYPE'):
             headers['content-type'] = content_type
 
         result = runtime.handle(cid, payload, headers)
@@ -831,9 +831,9 @@ class RequestDispatcher:
         # What goes back is the MDN's own headers and body - or an empty response
         # when no MDN was requested or an asynchronous one is to follow.
         for name, value in result.headers.items():
-            wsgi_environ['zato.http.response.headers'][name] = value
+            request_ctx['zato.http.response.headers'][name] = value
 
-        wsgi_environ['zato.http.response.status'] = status_response[result.status_code]
+        request_ctx['zato.http.response.status'] = status_response[result.status_code]
 
         out = result.body
         return out
@@ -845,11 +845,11 @@ class RequestDispatcher:
         cid:'str',
         e:'Exception',
         channel_item:'anydict',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
     ) -> '_ErrorClassification':
         """ Determines HTTP status and response body based on exception type.
         """
-        headers = wsgi_environ['zato.http.response.headers']
+        headers = request_ctx['zato.http.response.headers']
 
         if isinstance(e, (ClientHTTPError, ModelValidationError)):
 
@@ -940,19 +940,19 @@ class RequestDispatcher:
         cid:'str',
         e:'Exception',
         channel_item:'anydict',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
     ) -> 'any_':
         """ Handles all exceptions raised during _authenticate_and_invoke.
         Determines the HTTP status, formats the response, and sets response headers.
         """
         _exc_formatted = format_exc()
-        headers = wsgi_environ['zato.http.response.headers']
+        headers = request_ctx['zato.http.response.headers']
 
-        err = self._classify_error(cid, e, channel_item, wsgi_environ)
+        err = self._classify_error(cid, e, channel_item, request_ctx)
 
         # SOAP channels answer with well-formed faults of the request's version.
         if channel_item['transport'] == _transport_soap:
-            out = self._handle_soap_dispatch_error(cid, e, err, wsgi_environ, channel_item, _exc_formatted)
+            out = self._handle_soap_dispatch_error(cid, e, err, request_ctx, channel_item, _exc_formatted)
             return out
 
         if channel_item['data_format'] == DATA_FORMAT.JSON:
@@ -962,7 +962,7 @@ class RequestDispatcher:
 
         response = self._wrap_error_response(cid, err.response, channel_item)
 
-        wsgi_environ['zato.http.response.status'] = err.status
+        request_ctx['zato.http.response.status'] = err.status
 
         out = response
         return out
@@ -974,7 +974,7 @@ class RequestDispatcher:
         cid:'str',
         e:'Exception',
         err:'_ErrorClassification',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         channel_item:'anydict',
         _exc_formatted:'str',
     ) -> 'any_':
@@ -983,7 +983,7 @@ class RequestDispatcher:
 
         # The version comes from the parsed request when there is one - when parsing itself
         # failed, the channel's configured version is all there is to go by.
-        if soap_context := wsgi_environ.get('zato.request.soap'):
+        if soap_context := request_ctx.get('zato.request.soap'):
             soap_version = soap_context.soap_version
         else:
             soap_version = channel_item['soap_version'] or _default_soap_version
@@ -999,16 +999,16 @@ class RequestDispatcher:
         else:
             status = status_response[fault_status_code]
 
-        wsgi_environ['zato.http.response.headers']['Content-Type'] = content_type
-        wsgi_environ['zato.http.response.status'] = status
+        request_ctx['zato.http.response.headers']['Content-Type'] = content_type
+        request_ctx['zato.http.response.status'] = status
 
         out = body
         return out
 
 # ################################################################################################################################
 
-    def _match_url(self, meta:'_RequestMeta', wsgi_environ:'stranydict') -> '_URLMatchResult':
-        """ Matches the request URL, reads the raw payload and stores preliminary data in wsgi_environ.
+    def _match_url(self, meta:'_RequestMeta', request_ctx:'stranydict') -> '_URLMatchResult':
+        """ Matches the request URL, reads the raw payload and stores preliminary data in request_ctx.
         """
         url_match, channel_item = self.url_data.match(meta.path_info, meta.http_method, meta.http_accept)
 
@@ -1021,10 +1021,10 @@ class RequestDispatcher:
             channel_name = '(None)'
 
         # .. this is needed by the request handler ..
-        wsgi_environ['zato.channel_item'] = channel_item
+        request_ctx['zato.channel_item'] = channel_item
 
         # .. read the raw data ..
-        payload = wsgi_environ['zato.http.raw_request']
+        payload = request_ctx['zato.http.raw_request']
 
         out = _URLMatchResult(
             url_match=url_match,
@@ -1041,7 +1041,7 @@ class RequestDispatcher:
         self,
         cid:'str',
         req_timestamp:'str',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         config_manager:'ConfigManager',
         user_agent:'str',
         remote_addr:'str',
@@ -1053,7 +1053,7 @@ class RequestDispatcher:
         service_name_token = current_service_name.set('')
 
         try:
-            out = self._dispatch(cid, wsgi_environ, config_manager, user_agent, remote_addr)
+            out = self._dispatch(cid, request_ctx, config_manager, user_agent, remote_addr)
             return out
 
         finally:
@@ -1066,7 +1066,7 @@ class RequestDispatcher:
     def _dispatch(
         self,
         cid:'str',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         config_manager:'ConfigManager',
         user_agent:'str',
         remote_addr:'str',
@@ -1075,32 +1075,32 @@ class RequestDispatcher:
         # Reusable
         _has_log_info = _logger_is_enabled_for(_logging_info)
 
-        # Extract core request metadata from the WSGI environment
-        meta = self._extract_request_meta(wsgi_environ)
+        # Extract core request metadata from the request context
+        meta = self._extract_request_meta(request_ctx)
 
         # Cross-origin browser requests carry the Origin header - anything else, e.g. curl or server-to-server calls,
         # skips this block at the cost of a single dictionary lookup ..
-        if origin := wsgi_environ.get('HTTP_ORIGIN'):
+        if origin := request_ctx.get('HTTP_ORIGIN'):
             if is_allowed_origin(origin):
 
                 # .. a preflight request is answered right away, before authentication,
                 # because preflights never carry credentials ..
                 if meta.http_method == _http_options:
-                    out = handle_preflight_request(origin, wsgi_environ)
+                    out = handle_preflight_request(origin, request_ctx)
                     return out
 
                 # .. and an actual request gets the header that lets the browser expose our response to the page.
                 else:
-                    add_cors_response_headers(origin, wsgi_environ)
+                    add_cors_response_headers(origin, request_ctx)
 
         # Immediately reject the request if it is not a support HTTP method, no matter what channel
         # it would have otherwise matched.
         if meta.http_method not in self.http_methods_allowed:
-            wsgi_environ['zato.http.response.status'] = _status_method_not_allowed
+            request_ctx['zato.http.response.status'] = _status_method_not_allowed
             return client_json_error(cid, 'Unsupported HTTP method')
 
-        # Match the URL, read the raw payload and store preliminary data in wsgi_environ
-        url_match_result = self._match_url(meta, wsgi_environ)
+        # Match the URL, read the raw payload and store preliminary data in request_ctx
+        url_match_result = self._match_url(meta, request_ctx)
         url_match = url_match_result.url_match
         channel_item = url_match_result.channel_item
         channel_name = url_match_result.channel_name
@@ -1143,17 +1143,17 @@ class RequestDispatcher:
             # including error and rate-limited ones ..
             if channel_item.get('is_deprecated'):
                 deprecation_headers = _get_deprecation_headers(channel_item)
-                wsgi_environ['zato.http.response.headers'].update(deprecation_headers)
+                request_ctx['zato.http.response.headers'].update(deprecation_headers)
 
             # .. record the incoming request in the audit log ..
             if needs_audit:
-                self._insert_audit_event(cid, channel_item, AuditEvent.Request_Received, AuditOutcome.OK, payload, wsgi_environ)
+                self._insert_audit_event(cid, channel_item, AuditEvent.Request_Received, AuditOutcome.OK, payload, request_ctx)
 
             try:
 
                 # .. this will raise an exception on auth error ..
                 out = self._authenticate_and_invoke(
-                    cid, meta, url_match, channel_item, wsgi_environ,
+                    cid, meta, url_match, channel_item, request_ctx,
                     payload, config_manager, zato_response_headers_container,
                     remote_addr, now_us,
                 )
@@ -1162,26 +1162,26 @@ class RequestDispatcher:
                 if needs_audit:
                     duration_ms = self._get_duration_ms(now_us)
                     self._insert_audit_event(
-                        cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.OK, out, wsgi_environ,
+                        cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.OK, out, request_ctx,
                         duration_ms=duration_ms)
 
                 return out
 
             except Exception as e:
-                out = self._handle_dispatch_error(cid, e, channel_item, wsgi_environ)
+                out = self._handle_dispatch_error(cid, e, channel_item, request_ctx)
 
                 # .. record the error response in the audit log ..
                 if needs_audit:
                     duration_ms = self._get_duration_ms(now_us)
                     self._insert_audit_event(
-                        cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.Error, out, wsgi_environ,
+                        cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.Error, out, request_ctx,
                         duration_ms=duration_ms)
 
                 return out
 
             finally:
                 if zato_response_headers_container:
-                    wsgi_environ['zato.http.response.headers'].update(zato_response_headers_container)
+                    request_ctx['zato.http.response.headers'].update(zato_response_headers_container)
 
         # No channel matched, which is either a path no channel is at or a method none of the
         # channels at that path accepts.
@@ -1194,8 +1194,8 @@ class RequestDispatcher:
 
                 allow_header = ', '.join(sorted(allow_methods))
 
-                wsgi_environ['zato.http.response.status'] = _status_method_not_allowed
-                wsgi_environ['zato.http.response.headers'][_header_allow] = allow_header
+                request_ctx['zato.http.response.status'] = _status_method_not_allowed
+                request_ctx['zato.http.response.headers'][_header_allow] = allow_header
 
                 response = response_405.format(cid)
 
@@ -1207,7 +1207,7 @@ class RequestDispatcher:
             else:
 
                 # Indicate HTTP 404
-                wsgi_environ['zato.http.response.status'] = _status_not_found
+                request_ctx['zato.http.response.status'] = _status_not_found
 
                 # This is returned to the caller - note that it does not echo back the URL requested ..
                 response = response_404.format(cid)
@@ -1237,7 +1237,7 @@ class RequestDispatcher:
         event_type:'str',
         outcome:'str',
         data:'any_',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         *,
         duration_ms:'int' = 0,
     ) -> 'None':
@@ -1289,7 +1289,7 @@ class RequestDispatcher:
 
         # .. the caller is the security definition that authenticated the request - requests audited
         # before authentication have no caller yet, so only response events carry one ..
-        if sec_def_info := wsgi_environ.get('zato.sec_def'):
+        if sec_def_info := request_ctx.get('zato.sec_def'):
             ext_client_id = sec_def_info['name']
         else:
             ext_client_id = ''
@@ -1297,7 +1297,7 @@ class RequestDispatcher:
         # .. a request event carries no HTTP status - a response event carries the one
         # the response is leaving with, which is 200 OK unless something set it explicitly ..
         if event_type == AuditEvent.Response_Sent:
-            if status := wsgi_environ.get('zato.http.response.status'):
+            if status := request_ctx.get('zato.http.response.status'):
                 pass
             else:
                 status = _status_ok
@@ -1325,7 +1325,7 @@ class RequestDispatcher:
 
     def _check_sec_def_rate_limiting(
         self,
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         remote_addr:'str',
         now_us:'int',
     ) -> 'SlottedCheckResult | None':
@@ -1334,7 +1334,7 @@ class RequestDispatcher:
         """
 
         # Check if a security definition was resolved during authentication ..
-        sec_def_info = wsgi_environ.get('zato.sec_def')
+        sec_def_info = request_ctx.get('zato.sec_def')
 
         if not sec_def_info:
             return None
@@ -1357,7 +1357,7 @@ class RequestDispatcher:
         self,
         cid:'str',
         rate_limit_result:'SlottedCheckResult',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         remote_addr:'str',
         channel_item:'stranydict',
         *,
@@ -1373,14 +1373,14 @@ class RequestDispatcher:
         # Disallowed traffic - silent TCP drop, as if a firewall discarded the packet ..
         if rate_limit_result.is_disallowed:
 
-            fd = wsgi_environ['zato.socket_fd']
+            fd = request_ctx['zato.socket_fd']
             raw_socket = socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM)
             raw_socket.setsockopt(_socket_SOL_SOCKET, _socket_SO_LINGER, _so_linger_on)
             raw_socket.close()
             os.close(fd)
 
             # Tell the caller to skip all response processing
-            wsgi_environ['zato.http.rate_limit.dropped'] = True
+            request_ctx['zato.http.rate_limit.dropped'] = True
 
             out = b''
 
@@ -1401,13 +1401,13 @@ class RequestDispatcher:
         logger.info('Rate limiting 429; cid:%s, channel:%s, remote_addr:%s, retry_after:%s',
             cid, channel_name, remote_addr, retry_after_date)
 
-        wsgi_environ['zato.http.response.status'] = _status_too_many_requests
-        wsgi_environ['zato.http.response.headers']['Retry-After'] = retry_after_date
+        request_ctx['zato.http.response.status'] = _status_too_many_requests
+        request_ctx['zato.http.response.headers']['Retry-After'] = retry_after_date
 
         # Quota headers accompany 429s from security definition checks only.
         if needs_quota_headers:
-            wsgi_environ['zato.http.response.headers'][_header_rate_limit_limit] = str(rate_limit_result.limit)
-            wsgi_environ['zato.http.response.headers'][_header_rate_limit_remaining] = str(rate_limit_result.remaining)
+            request_ctx['zato.http.response.headers'][_header_rate_limit_limit] = str(rate_limit_result.limit)
+            request_ctx['zato.http.response.headers'][_header_rate_limit_remaining] = str(rate_limit_result.remaining)
 
         out = client_json_error(cid, 'Too many requests')
 
@@ -1420,14 +1420,14 @@ class RequestDispatcher:
         cid:'str',
         channel_name:'str',
         security_groups_ctx:'SecurityGroupsCtx',
-        wsgi_environ:'stranydict'
+        request_ctx:'stranydict'
     ) -> 'None':
 
         # Local variables
         sec_def = None
 
         # Extract Basic Auth information from input ..
-        basic_auth_info = wsgi_environ.get('HTTP_AUTHORIZATION')
+        basic_auth_info = request_ctx.get('HTTP_AUTHORIZATION')
 
         # .. the same header may carry a bearer token instead ..
         bearer_token = extract_bearer_token(basic_auth_info or '')
@@ -1440,7 +1440,7 @@ class RequestDispatcher:
         # .. that this channel's group members are configured with ..
         apikey_header_value = None
         if security_groups_ctx.apikey_header:
-            apikey_header_value = wsgi_environ.get(security_groups_ctx.apikey_header)
+            apikey_header_value = request_ctx.get(security_groups_ctx.apikey_header)
 
         # .. we cannot have both on input ..
         if basic_auth_info and apikey_header_value:
@@ -1492,9 +1492,9 @@ class RequestDispatcher:
                 channel_name, cid)
             raise Forbidden(cid)
 
-        # Now we can enrich the WSGI environment with information
+        # Now we can enrich the request context with information
         # that will become self.channel.security for services.
-        enrich_with_sec_data(wsgi_environ, sec_def, sec_def['sec_type'])
+        enrich_with_sec_data(request_ctx, sec_def, sec_def['sec_type'])
 
 # ################################################################################################################################
 
@@ -1541,14 +1541,14 @@ class RequestHandler:
         self,
         path_params:'strstrdict',
         channel_item:'any_',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         raw_request:'bytes',
         post_data:'dictnone'=None,
     ) -> 'strstrdict':
-        """ Collects parameters specific to this channel (HTTP) and updates wsgi_environ
+        """ Collects parameters specific to this channel (HTTP) and updates request_ctx
         with HTTP-specific data.
         """
-        _qs = self._get_flattened(wsgi_environ.get('QUERY_STRING', ''))
+        _qs = self._get_flattened(request_ctx.get('QUERY_STRING', ''))
 
         # Our caller has already parsed POST for us so we just use it as is
         if post_data:
@@ -1569,8 +1569,8 @@ class RequestHandler:
                 channel_params = {}
             channel_params.update(path_params)
 
-        wsgi_environ['zato.http.GET'] = _qs
-        wsgi_environ['zato.http.POST'] = post
+        request_ctx['zato.http.GET'] = _qs
+        request_ctx['zato.http.POST'] = post
 
         return channel_params
 
@@ -1581,7 +1581,7 @@ class RequestHandler:
         cid:'str',
         url_match:'any_',
         channel_item:'any_',
-        wsgi_environ:'stranydict',
+        request_ctx:'stranydict',
         raw_request:'bytes',
         config_manager:'ConfigManager',
         post_data:'dictnone',
@@ -1595,14 +1595,14 @@ class RequestHandler:
         if not is_active:
             logger.warning('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
             raise NotFound(cid, response_404.format(
-                path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid))
+                path_info, request_ctx.get('REQUEST_METHOD'), request_ctx.get('HTTP_ACCEPT'), cid))
 
-        # Add any path params matched to WSGI environment so it can be easily accessible later on
-        wsgi_environ['zato.http.path_params'] = url_match
+        # Add any path params matched to the request context so it can be easily accessible later on
+        request_ctx['zato.http.path_params'] = url_match
 
         # If this is a POST / form submission then it becomes our payload
         if channel_item['data_format'] == ModuleCtx.IO_FORM_DATA:
-            wsgi_environ['zato.request.payload'] = post_data
+            request_ctx['zato.request.payload'] = post_data
 
         # An HL7 channel hands its service the message as text, the same as an MLLP channel does
         if channel_item['data_format'] == _data_format_hl7_v2:
@@ -1612,7 +1612,7 @@ class RequestHandler:
         response = service.update_handle(self._set_response_data, service, raw_request,
             CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server,
             cast_('ConfigDispatcher', config_manager.config_dispatcher),
-            config_manager, cid, wsgi_environ=wsgi_environ,
+            config_manager, cid, request_ctx=request_ctx,
             url_match=url_match, channel_item=channel_item, channel_params=channel_params,
             merge_channel_params=channel_item.merge_url_params_req,
             params_priority=channel_item.params_pri,

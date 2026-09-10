@@ -78,7 +78,7 @@ class InvalidationTestCase(TestCase):
         environ = make_environ(path=path, query=query)
         ctx = get_context(self.cache_api, channel_item, environ, b'')
         assert ctx is not None
-        ctx.wsgi_environ['zato.http.response.headers']['Content-Type'] = 'application/json'
+        ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
         store(ctx, '{"result":"ok"}', OK)
 
         return ctx

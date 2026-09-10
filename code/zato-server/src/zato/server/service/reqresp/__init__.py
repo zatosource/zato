@@ -99,7 +99,7 @@ direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
 class HTTPRequestData:
     """ Data regarding an HTTP request.
     """
-    __slots__ = 'method', 'GET', 'POST', 'path', 'params', 'user_agent', 'headers', '_wsgi_environ'
+    __slots__ = 'method', 'GET', 'POST', 'path', 'params', 'user_agent', 'headers', '_request_ctx'
 
     def __init__(self, _Bunch=Bunch):
         self.method = None # type: str
@@ -109,26 +109,26 @@ class HTTPRequestData:
         self.params = _Bunch()
         self.user_agent = ''
         self.headers = _Bunch()
-        self._wsgi_environ = None # type: dict
+        self._request_ctx = None # type: dict
 
-    def init(self, wsgi_environ=None):
-        self._wsgi_environ = wsgi_environ or {}
-        self.method = wsgi_environ.get('REQUEST_METHOD') # type: str
-        self.GET.update(wsgi_environ.get('zato.http.GET', {})) # type: dict
-        self.POST.update(wsgi_environ.get('zato.http.POST', {}))
-        self.path = wsgi_environ.get('PATH_INFO') # type: str
-        self.params.update(wsgi_environ.get('zato.http.path_params', {}))
-        self.user_agent = wsgi_environ.get('HTTP_USER_AGENT')
+    def init(self, request_ctx=None):
+        self._request_ctx = request_ctx or {}
+        self.method = request_ctx.get('REQUEST_METHOD') # type: str
+        self.GET.update(request_ctx.get('zato.http.GET', {})) # type: dict
+        self.POST.update(request_ctx.get('zato.http.POST', {}))
+        self.path = request_ctx.get('PATH_INFO') # type: str
+        self.params.update(request_ctx.get('zato.http.path_params', {}))
+        self.user_agent = request_ctx.get('HTTP_USER_AGENT')
         self._extract_headers()
 
     def _extract_headers(self):
-        for key, value in self._wsgi_environ.items():
+        for key, value in self._request_ctx.items():
             if key.startswith('HTTP_'):
                 header_name = key[5:].replace('_', '-').lower()
                 self.headers[header_name] = value
 
     def get_form_data(self) -> 'stranydict':
-        return util_get_form_data(self._wsgi_environ)
+        return util_get_form_data(self._request_ctx)
 
     def __repr__(self):
         return make_repr(self)
@@ -166,7 +166,7 @@ class Request:
     raw: 'any_'
 
     __slots__ = ('service', 'logger', 'payload', 'raw', 'input', 'cid', 'data_format', 'transport',
-        'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_wsgi_environ', 'channel_params',
+        'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_request_ctx', 'channel_params',
         'merge_channel_params', 'http', 'amqp', 'soap', 'enforce_string_encoding', 'headers')
 
     def __init__(
@@ -184,7 +184,7 @@ class Request:
         self.data_format = cast_('str', data_format)
         self.transport = cast_('str', transport)
         self.http = HTTPRequestData()
-        self._wsgi_environ = cast_('stranydict', None)
+        self._request_ctx = cast_('stranydict', None)
         self.channel_params = cast_('stranydict', {})
         self.merge_channel_params = True
         self.amqp = cast_('AMQPRequestData', None)
@@ -205,7 +205,7 @@ class Request:
         io_processor,          # type: IOProcessor | None
         data_format,  # type: str
         transport,    # type: str
-        wsgi_environ, # type: stranydict
+        request_ctx, # type: stranydict
         encrypt_func  # type: callable_
     ) -> 'None':
         """ Initializes the object with an invocation-specific data.

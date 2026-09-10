@@ -119,7 +119,15 @@
 
             event.preventDefault();
 
-            var isCloser = event.deltaY < 0;
+            zoom.step(event.deltaY < 0);
+        };
+
+        /* ------------------------------------------------------------ */
+
+        /* One step closer to the drawing or one step further off, whichever
+           way it was asked for - a turn of the wheel and a press on a button
+           are the same step. */
+        zoom.step = function(isCloser) {
             var step = isCloser ? defaults.step : 1 / defaults.step;
             var level = zoom.clamp(zoom.state.level * step);
 
@@ -132,7 +140,7 @@
             window.localStorage.setItem(config.storage_key, String(level));
 
             if(config.log) {
-                config.log('draw_zoom.onWheel', {
+                config.log('draw_zoom.step', {
                     isCloser: isCloser,
                     level: level,
                     baseWidth: zoom.state.baseWidth,

@@ -83,7 +83,7 @@ def _make_service(
     credentials = f'{auth_username}:{auth_password}'.encode('utf8')
     encoded = b64encode(credentials).decode('utf8')
 
-    out.wsgi_environ = {'HTTP_AUTHORIZATION': 'Basic ' + encoded} # type: ignore[misc]
+    out.request_ctx = {'HTTP_AUTHORIZATION': 'Basic ' + encoded} # type: ignore[misc]
 
     server = MagicMock()
     server.pubsub_subscriptions.get_sec_name_by_username.side_effect = registered.get

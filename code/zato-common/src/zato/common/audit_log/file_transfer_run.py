@@ -26,9 +26,10 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist, intnone, stranydict
+    from zato.common.typing_ import anydict, anylist, dictlist, intnone, stranydict
     anydict = anydict
     anylist = anylist
+    dictlist = dictlist
     intnone = intnone
     stranydict = stranydict
 
@@ -53,7 +54,7 @@ Skip_Reason_Name = {
     Skip_Claim_File:        'Claimed by a consumer',
     Skip_Marker_File:       'Marker file',
     Skip_Marker_Missing:    'Marker missing',
-    Skip_Pattern_Mismatch:  'Pattern mismatch',
+    Skip_Pattern_Mismatch:  'No pattern match',
     Skip_Vanished:          'Vanished',
     Skip_Size_Changed:      'Size changed',
     Skip_Mtime_Changed:     'Modified',
@@ -76,7 +77,7 @@ Skip_Reason_Label = {
 }
 
 # The decisions a run records about an entry in its ledger.
-Decision_Taken       = 'taken'
+Decision_Picked_Up   = 'picked-up'
 Decision_Skipped     = 'skipped'
 Decision_Failed      = 'failed'
 Decision_Quarantined = 'quarantined'
@@ -105,6 +106,9 @@ Phase_Done               = 'done'
 
 # How many entries a ledger records in full.
 Run_Ledger_Max_Entries = 500
+
+# What separates consecutive exchanges with the server in a run's request and response bodies.
+Run_Exchange_Separator = '\n\n'
 
 # How far back a run looks for earlier failures of the same file name.
 Retry_Memory_Days = 7
@@ -214,6 +218,25 @@ def write_run_ledger(event_id:'intnone', event_time_iso:'str', records:'anylist'
     data = dumps(kept)
 
     _write_body(event_id, AuditBody.Run_Ledger, event_time_iso, data)
+
+# ################################################################################################################################
+
+def write_run_exchanges(event_id:'intnone', event_time_iso:'str', exchanges:'dictlist') -> 'None':
+    """ Stores what the run said to the server as its request body and what the server
+    said back as its response body - one block per exchange on either side.
+    """
+    if event_id is None:
+        return
+
+    # A run that never reached the server has nothing to store.
+    if not exchanges:
+        return
+
+    commands = [exchange['command'] for exchange in exchanges]
+    replies = [exchange['reply'] for exchange in exchanges]
+
+    _write_body(event_id, AuditBody.Request, event_time_iso, Run_Exchange_Separator.join(commands))
+    _write_body(event_id, AuditBody.Response, event_time_iso, Run_Exchange_Separator.join(replies))
 
 # ################################################################################################################################
 

@@ -83,7 +83,7 @@ class SecurityGroupsCtx(BearerTokenCtx):
     # Maps index keys, as built by _apikey_index_key, to _APIKeySecDef objects
     apikey_credentials: 'dict_[str, _APIKeySecDef]'
 
-    # The environ key of the one header that all API key definitions of this channel use,
+    # The request context key of the one header that all API key definitions of this channel use,
     # e.g. HTTP_X_API_KEY. It is None until the first API key definition is added.
     apikey_header: 'strnone'
 

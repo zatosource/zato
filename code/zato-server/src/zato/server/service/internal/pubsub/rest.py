@@ -48,10 +48,10 @@ _status_forbidden = PubSub.Status.Forbidden
 # ################################################################################################################################
 # ################################################################################################################################
 
-def extract_basic_auth_credentials(wsgi_environ:'anydict') -> 'tuple':
+def extract_basic_auth_credentials(request_ctx:'anydict') -> 'tuple':
     """ Extracts username and password from HTTP Basic Auth header.
     """
-    auth_header = wsgi_environ.get('HTTP_AUTHORIZATION', '')
+    auth_header = request_ctx.get('HTTP_AUTHORIZATION', '')
     if not auth_header.startswith('Basic '):
         return None, None
 
@@ -81,7 +81,7 @@ class PubSubRESTService(Service):
     def authenticate(self) -> 'tuple':
         """ Extract and validate credentials. Returns (username, error_response) tuple.
         """
-        username, _ = extract_basic_auth_credentials(self.wsgi_environ)
+        username, _ = extract_basic_auth_credentials(self.request_ctx)
 
         if not username:
             return None, ('Authentication required', _status_unauthorized, UNAUTHORIZED)
@@ -136,7 +136,7 @@ class PubSubRESTService(Service):
             logger.info('Pub/sub client `%s` has no credentials, cid:`%s`', config['name'], self.cid)
             return False
 
-        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+        auth_header = self.request_ctx.get('HTTP_AUTHORIZATION', '')
         result = check_basic_auth(self.cid, auth_header, expected_username, expected_password)
 
         out = result is True

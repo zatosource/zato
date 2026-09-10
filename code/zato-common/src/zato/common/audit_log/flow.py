@@ -507,8 +507,13 @@ def _read_flow_events(connection:'any_', flow_ids:'FlowIds') -> 'anylist':
 
 def _repoint(flow_ids:'FlowIds', item:'_FlowEvent', relation:'str', via_id:'int') -> 'None':
     """ Changes the relation of a same-cid event to the given one, pointing at the given event.
+    The seed is repointed the same way - the event the flow was read from is triggered by a firing
+    or handed a file just as much as any other event under that cid, and which event is the seed
+    is said by its id rather than by its relation.
     """
-    if flow_ids.relation_by_id[item.id] != Relation_Same_Cid:
+    relation_now = flow_ids.relation_by_id[item.id]
+
+    if relation_now not in (Relation_Same_Cid, Relation_Seed):
         return
 
     flow_ids.relation_by_id[item.id] = relation

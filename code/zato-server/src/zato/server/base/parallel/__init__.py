@@ -162,6 +162,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     cluster: 'ClusterModel'
     config_manager: 'ConfigManager'
     service_store: 'ServiceStore'
+    service_audit_log: 'AuditLog'
 
     rpc: 'ServerRPC'
     config_dispatcher: 'ConfigDispatcher'
@@ -265,7 +266,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.enforce_service_invokes = False
         self.json_parser = BasicParser()
         self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
-        self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
+        self.api_key_header_key = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
         self.needs_x_zato_cid = False
         self._queue_bridge = cast_('QueueBridgeClient', None)
         self._queue_bridge_started = False
@@ -341,6 +342,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     internal_service_modules.append(module_name)
             else:
                 raise Exception('No internal modules found to be imported')
+
+            # Invocations of user-defined services are recorded in the audit log the same way any other source's events are.
+            self.service_audit_log = AuditLog(self.name)
 
             internal = self.service_store.import_internal_services(internal_service_modules, self.base_dir, self.sync_internal)
             locally_deployed.extend(internal)
@@ -1496,8 +1500,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """ Invoked by the recv listener greenlet when a message is received
         from an external queue (Kafka, IBM MQ, etc.) via the queue bridge binary.
         """
-        wsgi_environ = {'zato.request.headers': headers}
-        response = self.invoke(service_name, data, wsgi_environ=wsgi_environ)
+        request_ctx = {'zato.request.headers': headers}
+        response = self.invoke(service_name, data, request_ctx=request_ctx)
         return response
 
 # ################################################################################################################################
@@ -2405,7 +2409,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # .. now, we can set it for later use.
         self.api_key_header = api_key_header
-        self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
+        self.api_key_header_key = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
 
 # ################################################################################################################################
 

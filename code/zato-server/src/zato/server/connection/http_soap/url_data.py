@@ -52,7 +52,7 @@ _oauth_inbound_keys = ('is_static_token', 'static_token', 'issuer', 'jwks_url', 
 _mtls_inbound_keys = ('client_cert_fingerprint', 'client_cert_subject_dn')
 
 # Headers injected by the TLS-terminating proxy once it has verified the client certificate -
-# they arrive in their WSGI form, i.e. upper-cased, with dashes turned into underscores.
+# they arrive in their request context form, i.e. upper-cased, with dashes turned into underscores.
 _mtls_header_verify      = 'HTTP_X_ZATO_SSL_CLIENT_VERIFY'
 _mtls_header_fingerprint = 'HTTP_X_ZATO_SSL_CLIENT_SHA256'
 _mtls_header_subject_dn  = 'HTTP_X_ZATO_SSL_CLIENT_SUBJECT_DN'
@@ -214,11 +214,11 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def _handle_security_apikey(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
+    def _handle_security_apikey(self, cid, sec_def, path_info, body, request_ctx, ignored_post_data=None, enforce_auth=True):
         """ Performs the authentication against an API key in a specified HTTP header.
         """
         # Find out if the header was provided at all
-        if sec_def['header'] not in wsgi_environ:
+        if sec_def['header'] not in request_ctx:
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
                 error_msg = '401 Unauthorized'
@@ -238,7 +238,7 @@ class URLData(PyURLData):
             else:
                 return False
 
-        if not is_string_equal(wsgi_environ[sec_def['header']], expected_key):
+        if not is_string_equal(request_ctx[sec_def['header']], expected_key):
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
                 error_msg = '401 Unauthorized'
@@ -251,11 +251,11 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def _handle_security_basic_auth(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None,
+    def _handle_security_basic_auth(self, cid, sec_def, path_info, body, request_ctx, ignored_post_data=None,
         enforce_auth=True):
         """ Performs the authentication using HTTP Basic Auth.
         """
-        env = {'HTTP_AUTHORIZATION':wsgi_environ.get('HTTP_AUTHORIZATION')}
+        env = {'HTTP_AUTHORIZATION':request_ctx.get('HTTP_AUTHORIZATION')}
         url_config = {'basic-auth-username':sec_def.username, 'basic-auth-password':sec_def.password}
         result = on_basic_auth(cid, env, url_config, False)
 
@@ -273,12 +273,12 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def _handle_security_mtls(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
+    def _handle_security_mtls(self, cid, sec_def, path_info, body, request_ctx, ignored_post_data=None, enforce_auth=True):
         """ Performs the authentication against the client certificate details that the TLS-terminating proxy
         reports in its injected headers after it has verified the certificate against the client CA.
         """
         # Local aliases
-        verify_result = wsgi_environ.get(_mtls_header_verify)
+        verify_result = request_ctx.get(_mtls_header_verify)
 
         # Assume the request will not be let through until proven otherwise.
         is_valid = False
@@ -293,7 +293,7 @@ class URLData(PyURLData):
             # .. a configured fingerprint must match what the proxy reports - fingerprints are hex strings
             # .. that may arrive with colon separators and in either case, so both sides are normalized first ..
             if expected_fingerprint:
-                given_fingerprint = wsgi_environ.get(_mtls_header_fingerprint) or ''
+                given_fingerprint = request_ctx.get(_mtls_header_fingerprint) or ''
                 expected_fingerprint = expected_fingerprint.replace(':', '').lower()
                 given_fingerprint = given_fingerprint.replace(':', '').lower()
 
@@ -304,7 +304,7 @@ class URLData(PyURLData):
 
             # .. otherwise, a configured subject DN must match the one from the certificate ..
             elif expected_subject_dn:
-                given_subject_dn = wsgi_environ.get(_mtls_header_subject_dn) or ''
+                given_subject_dn = request_ctx.get(_mtls_header_subject_dn) or ''
 
                 if is_string_equal(expected_subject_dn, given_subject_dn):
                     is_valid = True
@@ -339,11 +339,11 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def _handle_security_oauth(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
+    def _handle_security_oauth(self, cid, sec_def, path_info, body, request_ctx, ignored_post_data=None, enforce_auth=True):
         """ Performs the authentication against an inbound bearer token, either a static one or a JWT.
         """
         # Extract the token from the Authorization header ..
-        auth_header = wsgi_environ.get('HTTP_AUTHORIZATION') or ''
+        auth_header = request_ctx.get('HTTP_AUTHORIZATION') or ''
         token = extract_bearer_token(auth_header)
 
         # .. and verify it against the one definition attached to this channel.
@@ -365,10 +365,10 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
+    def _handle_security_wss(self, cid, sec_def, path_info, body, request_ctx, ignored_post_data=None, enforce_auth=True):
         """ Enforces the channel's WS-Security definition on the incoming SOAP envelope.
         """
-        soap_context = wsgi_environ.get('zato.request.soap')
+        soap_context = request_ctx.get('zato.request.soap')
 
         try:
             # A SOAP channel has already parsed the envelope, so enforcement runs against
@@ -402,7 +402,7 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, config_manager, *,
+    def check_security(self, sec, cid, channel_item, path_info, payload, request_ctx, post_data, config_manager, *,
         enforce_auth=True):
         """ Authenticates and authorizes a given request. Returns None on success
         """
@@ -418,11 +418,11 @@ class URLData(PyURLData):
 
         handler_name = '_handle_security_%s' % sec_def_type.replace('-', '_')
 
-        auth_result = getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ, post_data, enforce_auth)
+        auth_result = getattr(self, handler_name)(cid, sec_def, path_info, payload, request_ctx, post_data, enforce_auth)
         if not auth_result:
             return False
 
-        enrich_with_sec_data(wsgi_environ, sec_def, sec_def_type)
+        enrich_with_sec_data(request_ctx, sec_def, sec_def_type)
 
         return auth_result
 

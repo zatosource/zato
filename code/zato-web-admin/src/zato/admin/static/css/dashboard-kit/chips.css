@@ -1,6 +1,19 @@
 /* Dashboard kit - chips.
-   The tones a chip can be given, and the value it carries next to its label.
-   The shape of a chip itself comes from .detail-tag. */
+   The shape of a chip, the tones it can be given, and the value it carries next to its label. */
+
+/* The shape is the detail kit's tag, spelled out here too so a chip keeps it on a page that
+   loads the kit without the detail kit */
+
+.dashboard-chip {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-right: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+}
 
 /* The gap between a label and its value is a space in the chip's own markup,
    so the value here only takes its weight and face */

@@ -722,7 +722,7 @@ class OpenAPIHandler(Service):
         from zato.server.connection.http_soap import BadRequest
 
         # Credentials are required - reject immediately if missing
-        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+        auth_header = self.request_ctx.get('HTTP_AUTHORIZATION', '')
         if not auth_header:
             raise Forbidden(self.cid)
 

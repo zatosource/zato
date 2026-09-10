@@ -51,7 +51,7 @@ _soap_operation = 'getOrderStatus'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _invoke_http_channel(service_class:'any_', channel_item:'Bunch', wsgi_environ:'anydict', raw_request:'any_') -> 'any_':
+def _invoke_http_channel(service_class:'any_', channel_item:'Bunch', request_ctx:'anydict', raw_request:'any_') -> 'any_':
     """ Runs one service through RequestHandler.handle, the way HTTP channels do it.
     """
     server = MagicMock()
@@ -62,7 +62,7 @@ def _invoke_http_channel(service_class:'any_', channel_item:'Bunch', wsgi_enviro
 
     handler = RequestHandler(server)
 
-    out = handler.handle(_test_cid, {}, channel_item, wsgi_environ, raw_request,
+    out = handler.handle(_test_cid, {}, channel_item, request_ctx, raw_request,
         MagicMock(), None, '/test/path', {}, {})
 
     return out
@@ -95,11 +95,11 @@ class RESTBoundary(Boundary):
             'params_pri': 'channel-params-over-msg',
         })
 
-        wsgi_environ = {
+        request_ctx = {
             'zato.http.response.headers': {},
         }
 
-        response = _invoke_http_channel(case.service_class, channel_item, wsgi_environ, raw_request)
+        response = _invoke_http_channel(case.service_class, channel_item, request_ctx, raw_request)
 
         out = response.payload
         return out
@@ -157,14 +157,14 @@ class SOAPBoundary(Boundary):
         soap_context = parse_soap_request(_test_cid, request_body, Content_Type[SOAPVersion.V11], channel_item)
         resolve_soap_payload(_test_cid, soap_context, {})
 
-        wsgi_environ = {
+        request_ctx = {
             'zato.http.response.headers': {},
             'zato.request.soap': soap_context,
             'zato.request.payload': soap_context.payload,
         }
 
         # .. and run the service the way any HTTP channel runs it.
-        response = _invoke_http_channel(case.service_class, channel_item, wsgi_environ, request_body)
+        response = _invoke_http_channel(case.service_class, channel_item, request_ctx, request_body)
 
         out = response.payload
         return out

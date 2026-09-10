@@ -64,31 +64,11 @@ replay.buildTimeline = function() {
     state.startMs = state.events[0].ms;
     state.endMs = state.events[state.events.length - 1].ms;
 
-    // The scaled axis the auto-play clock walks - every event holds it for at
-    // least a beat, and a real gap adds its logarithm, so a 2ms hop still
-    // reads next to a 3s one and a view days later does not push the pass
-    // into next week
-    var scaled = 0;
-
     for (var eventIndex = 0; eventIndex < state.events.length; eventIndex++) {
-        var event = state.events[eventIndex];
-
-        var gapMs = 0;
-
-        if (eventIndex > 0) {
-            gapMs = event.ms - state.events[eventIndex - 1].ms;
-        }
-
-        scaled += replay.config.eventBeat + Math.log1p(gapMs);
-        event.scaled = scaled;
-
-        var node = state.nodes[event.key];
-
-        node.eventIndexes.push(eventIndex);
+        state.nodes[state.events[eventIndex].key].eventIndexes.push(eventIndex);
     }
 
-    // A tail beat past the last event, so the end of the pass is not abrupt
-    state.totalScaled = scaled + replay.config.eventBeat;
+    replay.scaleTimeline();
 
     // The connectors - each one drawn in when the node it leads into first
     // plays, its line hidden until then by its own full dash offset, and its
@@ -137,6 +117,34 @@ replay.buildTimeline = function() {
         // goes connector by connector along this map
         state.connectorByTo[toKey] = connector;
     }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Where every event stands on the axis the clock walks. With actual time off,
+// every event stands one beat past the one before it, whatever the time
+// between them was, so the pass reads them at an even pace. With it on, a
+// real gap adds its logarithm to the beat, so a 2ms hop still reads next to a
+// 3s one and a view days later does not push the pass into next week.
+replay.scaleTimeline = function() {
+    var state = replay.state;
+    var scaled = 0;
+
+    for (var eventIndex = 0; eventIndex < state.events.length; eventIndex++) {
+        var event = state.events[eventIndex];
+
+        var gapMs = 0;
+
+        if (state.isActualTime && eventIndex > 0) {
+            gapMs = event.ms - state.events[eventIndex - 1].ms;
+        }
+
+        scaled += replay.config.eventBeat + Math.log1p(gapMs);
+        event.scaled = scaled;
+    }
+
+    // A tail beat past the last event, so the end of the pass is not abrupt
+    state.totalScaled = scaled + replay.config.eventBeat;
 };
 
 // /////////////////////////////////////////////////////////////////////////////

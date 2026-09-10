@@ -92,6 +92,11 @@ $.fn.zato.audit_log.sources['default'] = {
     eventWordAsChip: false,
     rowChipLimit: listing.config.rowChipLimit,
 
+    // The part an event plays in its exchange, read off its type.
+    role: function(row) {
+        return listing.roleOf(row.event_type);
+    },
+
     eventChip: function(_rowModel, chip) {
         return chip;
     },
@@ -104,9 +109,14 @@ $.fn.zato.audit_log.sources['default'] = {
         return [];
     },
 
+    // Everything the Summary tab says, the same for every event unless the source says otherwise.
+    summaryFacts: function(rowModel) {
+        return listing.defaultSummaryFacts(rowModel);
+    },
+
     // The ways the message can be read on the Data tab - parsed first, being what a message
     // is opened to be read as, the wire form there for whoever asks for it.
-    payloadTabs: function() {
+    payloadTabs: function(_rowModel) {
         var config = listing.config;
 
         var out = [
@@ -146,8 +156,43 @@ $.fn.zato.audit_log.sources['default'] = {
         return row.object_name;
     },
 
+    // What the flow's root node is called - the message's headline unless the source says otherwise.
+    hubTitle: function(rowModel) {
+        return rowModel.headline;
+    },
+
+    // The chips of {label, kind} the root node wears in place of its title, none for a root written as words.
+    hubChips: function(_rowModel) {
+        return [];
+    },
+
+    // Which body of one event each side of the flow pane reads, as {request, response} kinds - null for
+    // a source whose requests and replies are separate events, which the pane splits by their role.
+    paneKinds: function(_rowModel) {
+        return null;
+    },
+
+    // The further bodies of one event a side of the flow pane opens after the event's own, as
+    // {label, kind} each - a run's traceback beside its reply, none for most sources.
+    paneExtras: function(_rowModel, _role) {
+        return [];
+    },
+
+    // What a line of a flow card reads in place of an outcome when its event reports none -
+    // the event's own kind, unless the role chip before it already says as much
+    lineTypeLabel: function(model) {
+        return model.eventLabel;
+    },
+
     lineNote: function(_model) {
         return '';
+    },
+
+    // What the flow pane's header says of an event after the event's role - what
+    // the event's own line on the card reads, unless the source has less to say there
+    headerNote: function(model) {
+        var presenter = $.fn.zato.audit_log.presenterFor(model.raw.source);
+        return presenter.lineNote(model);
     },
 
     lineTooltip: function(_model) {
