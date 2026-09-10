@@ -143,12 +143,10 @@ var fileOutgoing = {
             response: 'response'
         },
 
-        // The side of the flow pane a failed run's traceback opens on, and what its tab says.
         paneTracebackRole: 'response',
         tracebackLabel: 'Traceback',
 
-        // Whether the traceback is shown beside the reply rather than under the run's facts,
-        // set by the flow page, which has a reply side to show it on.
+        // Set by the flow page.
         tracebackInPane: false,
 
         // What the pane's facts say for the things they say of their own.

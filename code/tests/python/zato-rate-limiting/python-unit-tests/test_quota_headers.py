@@ -25,6 +25,12 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The correlation ID every dispatched request carries
+_test_cid = 'K05TZ0HBKTN0QGPJ3MSGEZYGXVX0'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _make_dispatcher():
     """ Builds a minimal RequestDispatcher with mocked dependencies.
     """
@@ -99,8 +105,10 @@ def _make_check_result(is_allowed:'any_', limit:'any_' = 100, remaining:'any_' =
 
 # ################################################################################################################################
 
-def _dispatch(dispatcher:'any_', request_ctx:'any_'):
-    out = dispatcher.dispatch('cid123', '2026-01-01', request_ctx, MagicMock(), 'test-agent', '10.0.0.1')
+def _dispatch(dispatcher:'any_', request_ctx:'any_') -> 'any_':
+    config_manager = MagicMock()
+
+    out = dispatcher.dispatch(_test_cid, '2026-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
     return out
 
 # ################################################################################################################################
@@ -133,9 +141,13 @@ class QuotaHeadersAllowedTestCase(unittest.TestCase):
         request_ctx = _make_request_ctx()
         result = _dispatch(dispatcher, request_ctx)
 
+        headers = request_ctx['zato.http.response.headers']
+        limit = headers['X-RateLimit-Limit']
+        remaining = headers['X-RateLimit-Remaining']
+
         self.assertEqual(result, 'OK')
-        self.assertEqual(request_ctx['zato.http.response.headers']['X-RateLimit-Limit'], '100')
-        self.assertEqual(request_ctx['zato.http.response.headers']['X-RateLimit-Remaining'], '42')
+        self.assertEqual(limit, '100')
+        self.assertEqual(remaining, '42')
 
     @patch.object(RequestDispatcher, '_format_response', return_value='OK')
     @patch.object(RequestDispatcher, '_invoke_service')
@@ -161,8 +173,10 @@ class QuotaHeadersAllowedTestCase(unittest.TestCase):
         request_ctx = _make_request_ctx()
         _ = _dispatch(dispatcher, request_ctx)
 
-        self.assertNotIn('X-RateLimit-Limit', request_ctx['zato.http.response.headers'])
-        self.assertNotIn('X-RateLimit-Remaining', request_ctx['zato.http.response.headers'])
+        headers = request_ctx['zato.http.response.headers']
+
+        self.assertNotIn('X-RateLimit-Limit', headers)
+        self.assertNotIn('X-RateLimit-Remaining', headers)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -190,11 +204,16 @@ class QuotaHeadersRateLimitedTestCase(unittest.TestCase):
         request_ctx = _make_request_ctx()
         result = _dispatch(dispatcher, request_ctx)
 
+        status = request_ctx['zato.http.response.status']
+        headers = request_ctx['zato.http.response.headers']
+        limit = headers['X-RateLimit-Limit']
+        remaining = headers['X-RateLimit-Remaining']
+
         self.assertIn('Too many requests', result)
-        self.assertEqual(request_ctx['zato.http.response.status'], '429 Too Many Requests')
-        self.assertIn('Retry-After', request_ctx['zato.http.response.headers'])
-        self.assertEqual(request_ctx['zato.http.response.headers']['X-RateLimit-Limit'], '100')
-        self.assertEqual(request_ctx['zato.http.response.headers']['X-RateLimit-Remaining'], '0')
+        self.assertEqual(status, '429 Too Many Requests')
+        self.assertIn('Retry-After', headers)
+        self.assertEqual(limit, '100')
+        self.assertEqual(remaining, '0')
 
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
@@ -218,10 +237,12 @@ class QuotaHeadersRateLimitedTestCase(unittest.TestCase):
         request_ctx = _make_request_ctx()
         result = _dispatch(dispatcher, request_ctx)
 
+        headers = request_ctx['zato.http.response.headers']
+
         self.assertIn('Too many requests', result)
-        self.assertIn('Retry-After', request_ctx['zato.http.response.headers'])
-        self.assertNotIn('X-RateLimit-Limit', request_ctx['zato.http.response.headers'])
-        self.assertNotIn('X-RateLimit-Remaining', request_ctx['zato.http.response.headers'])
+        self.assertIn('Retry-After', headers)
+        self.assertNotIn('X-RateLimit-Limit', headers)
+        self.assertNotIn('X-RateLimit-Remaining', headers)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -1,12 +1,7 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Message flow - the drawing's controls, the same three the sequence diagrams
-// in the docs wear, standing in the canvas's top-right corner the way they do
-// there: closer, further off, and the whole screen given to the page. Full
-// screen is the browser's own - the page alone fills the screen, the top menu,
-// the logo and the navigation all gone with the browser's chrome - and the
-// same button, or Escape, brings everything back.
+// Message flow - the zoom and full screen controls over the canvas.
 
 $.fn.zato.message_flow.controls = {};
 
@@ -14,27 +9,28 @@ $.fn.zato.message_flow.controls = {};
 
 (function($) {
 
-var kit = $.fn.zato.dashboard_kit;
+var dashboardKit = $.fn.zato.dashboard_kit;
 var controls = $.fn.zato.message_flow.controls;
 
 // /////////////////////////////////////////////////////////////////////////////
 
 controls.config = {
 
-    hostId: 'message-flow-controls',
+    hostIdentifier: 'message-flow-controls',
     pageSelector: '.message-flow-page',
+    fullscreenButtonSelector: '.message-flow-control-fullscreen',
 
-    // The class the page wears while it has the whole screen
     fullscreenClass: 'message-flow-fullscreen',
 
-    // What each control says of itself on hover
+    buttonClass: 'message-flow-control',
+    fullscreenButtonClass: 'message-flow-control message-flow-control-fullscreen',
+    iconClass: 'message-flow-control-icon',
+
     closerLabel: 'Closer',
     furtherLabel: 'Further off',
     fullscreenLabel: 'Full screen',
     leaveFullscreenLabel: 'Leave full screen',
 
-    // The strokes of the icons, drawn in a 16 by 16 box the way the docs draw them -
-    // a plus, a minus, four corners reaching out and the same four corners reaching in
     iconViewBox: '0 0 16 16',
     iconSize: 16,
     iconStrokeWidth: 1.5,
@@ -54,69 +50,72 @@ controls.isFullscreen = false;
 // /////////////////////////////////////////////////////////////////////////////
 
 controls.host = function() {
-    return document.getElementById(controls.config.hostId);
+    var out = document.getElementById(controls.config.hostIdentifier);
+    return out;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One icon of the controls, its stroke in the button's own colour
 controls.newIcon = function(pathData) {
     var config = controls.config;
 
-    var icon = kit.draw.createElement('svg');
+    var icon = dashboardKit.draw.createElement('svg');
     icon.setAttribute('viewBox', config.iconViewBox);
-    icon.setAttribute('width', String(config.iconSize));
-    icon.setAttribute('height', String(config.iconSize));
-    icon.setAttribute('class', 'message-flow-control-icon');
+    icon.setAttribute('width', config.iconSize);
+    icon.setAttribute('height', config.iconSize);
+    icon.setAttribute('class', config.iconClass);
 
-    var path = kit.draw.createElement('path');
+    var path = dashboardKit.draw.createElement('path');
     path.setAttribute('d', pathData);
     path.setAttribute('fill', 'none');
     path.setAttribute('stroke', 'currentColor');
-    path.setAttribute('stroke-width', String(config.iconStrokeWidth));
+    path.setAttribute('stroke-width', config.iconStrokeWidth);
     path.setAttribute('stroke-linecap', 'round');
     path.setAttribute('stroke-linejoin', 'round');
     icon.appendChild(path);
 
-    return icon;
+    var out = icon;
+    return out;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One button of the controls - its icon and what it says of itself
-controls.newButton = function(pathData, label) {
+controls.newButton = function(className, pathData, label) {
+    var icon = controls.newIcon(pathData);
+
     var button = document.createElement('button');
     button.type = 'button';
-    button.className = 'message-flow-control';
-    button.title = label;
-    button.appendChild(controls.newIcon(pathData));
+    button.className = className;
+    button.setAttribute('aria-label', label);
+    button.appendChild(icon);
 
-    return button;
+    var out = button;
+    return out;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The full screen control brought to the state the page is in - reaching out
-// with the page in its place, reaching in with the page over everything
 controls.updateFullscreenButton = function(button) {
     var config = controls.config;
 
-    button.textContent = '';
+    var label = config.fullscreenLabel;
+    var pathData = config.icons.fullscreen;
 
     if (controls.isFullscreen) {
-        button.title = config.leaveFullscreenLabel;
-        button.appendChild(controls.newIcon(config.icons.leaveFullscreen));
+        label = config.leaveFullscreenLabel;
+        pathData = config.icons.leaveFullscreen;
     }
-    else {
-        button.title = config.fullscreenLabel;
-        button.appendChild(controls.newIcon(config.icons.fullscreen));
-    }
+
+    var icon = controls.newIcon(pathData);
+
+    button.textContent = '';
+    button.setAttribute('aria-label', label);
+    button.appendChild(icon);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The page asked to fill the screen, or the screen given back - the browser
-// answers with a fullscreenchange either way, which is where the page follows
+// Both branches end in a fullscreenchange event, which is where the page's own state follows.
 controls.setFullscreen = function(isFullscreen) {
     var page = document.querySelector(controls.config.pageSelector);
 
@@ -130,16 +129,18 @@ controls.setFullscreen = function(isFullscreen) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The page brought to whatever the browser says of the screen - the button
-// and the page's own class alike - whether the button or Escape asked for it
 controls.onFullscreenChange = function() {
     var config = controls.config;
+
     var page = document.querySelector(config.pageSelector);
+    var host = controls.host();
+    var fullscreenButton = host.querySelector(config.fullscreenButtonSelector);
 
-    controls.isFullscreen = document.fullscreenElement === page;
+    var isFullscreen = document.fullscreenElement === page;
+    controls.isFullscreen = isFullscreen;
 
-    page.classList.toggle(config.fullscreenClass, controls.isFullscreen);
-    controls.updateFullscreenButton(controls.host().querySelector('.message-flow-control-fullscreen'));
+    page.classList.toggle(config.fullscreenClass, isFullscreen);
+    controls.updateFullscreenButton(fullscreenButton);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -149,18 +150,19 @@ controls.init = function() {
     var drawing = $.fn.zato.message_flow.drawing;
     var host = controls.host();
 
-    var fullscreen = controls.newButton(config.icons.fullscreen, config.fullscreenLabel);
-    fullscreen.classList.add('message-flow-control-fullscreen');
+    var fullscreen = controls.newButton(config.fullscreenButtonClass, config.icons.fullscreen, config.fullscreenLabel);
     host.appendChild(fullscreen);
 
     fullscreen.addEventListener('click', function(event) {
-        controls.setFullscreen(!controls.isFullscreen);
+        var wantsFullscreen = !controls.isFullscreen;
+
+        controls.setFullscreen(wantsFullscreen);
         event.currentTarget.blur();
     });
 
     document.addEventListener('fullscreenchange', controls.onFullscreenChange);
 
-    var closer = controls.newButton(config.icons.closer, config.closerLabel);
+    var closer = controls.newButton(config.buttonClass, config.icons.closer, config.closerLabel);
     host.appendChild(closer);
 
     closer.addEventListener('click', function(event) {
@@ -168,7 +170,7 @@ controls.init = function() {
         event.currentTarget.blur();
     });
 
-    var further = controls.newButton(config.icons.further, config.furtherLabel);
+    var further = controls.newButton(config.buttonClass, config.icons.further, config.furtherLabel);
     host.appendChild(further);
 
     further.addEventListener('click', function(event) {

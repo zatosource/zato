@@ -158,6 +158,7 @@ _async_callback = CHANNEL.INVOKE_ASYNC_CALLBACK
 
 _default_priority = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration
+_milliseconds_per_second = 1000
 
 _publish_meta_keys = {
     'priority',
@@ -897,28 +898,27 @@ class Service:
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
 
-        # Only invocations of user-defined services are recorded in the audit log - the store knows which ones these are.
-        needs_audit = not server.service_store.services[service.impl_name]['is_internal']
+        # Only invocations of user-defined services are recorded in the audit log.
+        service_info = server.service_store.services[service.impl_name]
+        needs_audit = not service_info['is_internal']
         caller = resolve_caller(request_ctx, channel_item)
 
         def _record_request() -> 'None':
-            """ Writes the request to the audit log before the service runs, so it is on record whatever happens next.
-            """
             if not needs_audit:
                 return
 
             record_service_request(server.service_audit_log, service.name, cid, channel, caller, service.request.raw)
 
         def _record_response(error_traceback:'str') -> 'None':
-            """ Writes the response to the audit log once it is known.
-            """
             if not needs_audit:
                 return
 
-            duration_ms = int((monotonic() - invocation_start) * 1000)
+            now = monotonic()
+            elapsed_seconds = now - invocation_start
+            duration_milliseconds = int(elapsed_seconds * _milliseconds_per_second)
 
             record_service_response(server.service_audit_log, service.name, cid, channel, caller,
-                service.response.payload, duration_ms, error_traceback)
+                service.response.payload, duration_milliseconds, error_traceback)
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -1012,8 +1012,8 @@ class Service:
 
                 except Exception as resp_e:
 
-                    # A response that could not be built is still an invocation that ran, recorded as a failed one.
-                    _record_response(format_exc())
+                    response_traceback = format_exc()
+                    _record_response(response_traceback)
 
                     if e:
                         if isinstance(e, Reportable):
@@ -1109,14 +1109,16 @@ class Service:
 
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
-        # The invoked service learns who invoked it through its request context, the caller's own keys kept.
-        if 'request_ctx' in kwargs:
-            kwargs['request_ctx'][Invoking_Service_Key] = self.name
+        # The invoking service leaves its name in the request context.
+        if request_ctx := kwargs.get('request_ctx'):
+            request_ctx[Invoking_Service_Key] = self.name
         else:
             kwargs['request_ctx'] = {Invoking_Service_Key: self.name}
 
+        cid = kwargs.pop('cid', self.cid)
+
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
-            self.config_dispatcher, self._config_manager, kwargs.pop('cid', self.cid))
+            self.config_dispatcher, self._config_manager, cid)
 
         kwargs.update({
             'serialize':serialize,

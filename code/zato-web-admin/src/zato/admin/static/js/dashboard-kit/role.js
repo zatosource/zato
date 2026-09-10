@@ -21,8 +21,7 @@
            and a file transfer event reads by its own name too, a file moving being
            neither a request nor a reply. A log access record - a config change or
            someone reading a message body - is named by the log it belongs to, and a
-           service's request, response and note by the service, each saying which
-           of the three it is. */
+           service's request, response and note by the service. */
         labels: {
             'request': 'REQUEST',
             'response': 'RESPONSE',

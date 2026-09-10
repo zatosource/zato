@@ -348,19 +348,22 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
         return fileOutgoing.config.paneKinds;
     },
 
-    // A run that failed carries its traceback beside the server's reply.
+    // ////////////////////////////////////////////////////////////////////////
+
     paneExtras: function(rowModel, role) {
         var config = fileOutgoing.config;
+        var out = [];
 
-        if (role !== config.paneTracebackRole) {
-            return [];
+        if (role === config.paneTracebackRole) {
+            var errorIndex = rowModel.raw.body_kinds.indexOf(config.errorBodyKind);
+
+            if (errorIndex !== -1) {
+                var tracebackTab = {label: config.tracebackLabel, kind: config.errorBodyKind};
+                out.push(tracebackTab);
+            }
         }
 
-        if (rowModel.raw.body_kinds.indexOf(config.errorBodyKind) === -1) {
-            return [];
-        }
-
-        return [{label: config.tracebackLabel, kind: config.errorBodyKind}];
+        return out;
     },
 
     // ////////////////////////////////////////////////////////////////////////

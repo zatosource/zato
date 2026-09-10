@@ -6,10 +6,6 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The audit log as services read and write it - self.audit is an instance of AuditFacade,
-# answering what messages arrived, what failed and per-object newest event times,
-# and writing down what the service itself has to say about its own work.
-
 # SQLAlchemy
 from sqlalchemy import select
 
@@ -24,11 +20,12 @@ from zato.common.audit_log.service import to_body_text
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, dictlist, stranydict, strnone, strorlist, strstrdict
+    from zato.common.typing_ import any_, anynone, dictlist, stranydict, strnone, strorlist, strstrdict
     from zato.server.service import Service
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
+    anynone = anynone
     dictlist = dictlist
     Service = Service
     stranydict = stranydict
@@ -39,16 +36,14 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many decimal places a note's real-number field keeps - a duration or a ratio is read
-# to the hundredth, the digits past it are noise to whoever reads the log.
-Field_Decimal_Places = 2
+# How many decimal places a note's real-number field keeps.
+_field_decimal_places = 2
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class AuditFacade:
-    """ The API through which services read and write the audit log, e.g. self.audit.search(query='ADT-A01')
-    or self.audit.write('Order accepted', order_id=order_id).
+    """ The API through which services read and write the audit log, e.g. self.audit.search(query='ADT-A01').
     """
     __slots__ = ('service',)
 
@@ -63,31 +58,26 @@ class AuditFacade:
         *,
         is_ok:'bool' = True,
         status:'str' = '',
-        data:'any_' = None,
+        data:'anynone' = None,
         **fields:'any_',
         ) -> 'None':
-        """ Writes one note about what the service is doing, under the service's own name and CID,
-        so it reads in the audit log and in the message flow next to the invocation itself.
-        The message is what the note says, is_ok whether it reports success, status a short
-        word about it, data any structured value the note carries as its body, and every other
-        keyword argument becomes a searchable attribute of the note, e.g. order_id='ABC-123'.
-        A note given fields but no data carries the fields as its body.
+        """ Writes a note under the service's name and CID. Keyword arguments become searchable attributes,
+        data becomes the note's body, and without data the fields do.
         """
         service = self.service
 
-        # The note is a success unless the service says otherwise ..
+        # Resolve the outcome ..
         if is_ok:
             outcome = AuditOutcome.OK
         else:
             outcome = AuditOutcome.Error
 
-        # .. a real-number field is rounded to what a reader cares about ..
+        # .. round real-number fields ..
         for name, value in fields.items():
             if isinstance(value, float):
-                fields[name] = round(value, Field_Decimal_Places)
+                fields[name] = round(value, _field_decimal_places)
 
-        # .. a value attached to the note travels as its body, in text form, and a note
-        # with fields but no value has the fields to read as its body instead ..
+        # .. build the body ..
         bodies:'stranydict' = {}
 
         if data is not None:
@@ -95,14 +85,15 @@ class AuditFacade:
         elif fields:
             bodies[AuditBody.Data] = to_body_text(fields)
 
-        # .. and the note goes to the same log the invocations of services go to,
-        # the message as the event's own data so the list previews it as it is.
-        service.server.service_audit_log.insert(
+        # .. and record the note with the message as the event's data.
+        message_size = len(message)
+
+        _ = service.server.service_audit_log.insert(
             AuditSource.Service,
             AuditEvent.Note,
             service.name,
             cid=service.cid,
-            size=len(message),
+            size=message_size,
             outcome=outcome,
             status=status,
             data=message,

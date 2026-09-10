@@ -29,6 +29,9 @@ if 0:
 # A stand-in file descriptor number for the client socket, socket.fromfd and os.close are mocked so it is never used for real IO
 test_socket_fd = 123
 
+# The correlation ID every dispatched request carries
+_test_cid = 'K05TZ0HBKTN0QGPJ3MSGEZYGXVX0'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -135,7 +138,7 @@ class DispatchPassthroughTestCase(unittest.TestCase):
         request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         self.assertEqual(result, 'OK')
         mock_invoke.assert_called_once()
@@ -164,7 +167,7 @@ class DispatchPassthroughTestCase(unittest.TestCase):
         request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         self.assertEqual(result, 'OK')
         mock_invoke.assert_called_once()
@@ -205,7 +208,7 @@ class DispatchDisallowedTestCase(unittest.TestCase):
 
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         self.assertEqual(result, b'')
 
@@ -244,9 +247,11 @@ class DispatchRateLimitedTestCase(unittest.TestCase):
         request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
-        self.assertEqual(request_ctx['zato.http.response.status'], '429 Too Many Requests')
+        status = request_ctx['zato.http.response.status']
+
+        self.assertEqual(status, '429 Too Many Requests')
         self.assertIn('Too many requests', result)
 
 # ################################################################################################################################
@@ -279,9 +284,12 @@ class DispatchRetryAfterTestCase(unittest.TestCase):
         request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
+        _ = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
-        self.assertEqual(request_ctx['zato.http.response.headers']['Retry-After'], 'Sun, 15 Jun 2025 12:00:03 GMT')
+        headers = request_ctx['zato.http.response.headers']
+        retry_after = headers['Retry-After']
+
+        self.assertEqual(retry_after, 'Sun, 15 Jun 2025 12:00:03 GMT')
 
     @patch('zato.server.connection.http_soap.channel._datetime_utcnow')
     @patch.object(RequestDispatcher, '_check_security')
@@ -308,9 +316,12 @@ class DispatchRetryAfterTestCase(unittest.TestCase):
         request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
+        _ = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
-        self.assertEqual(request_ctx['zato.http.response.headers']['Retry-After'], 'Sun, 15 Jun 2025 12:00:05 GMT')
+        headers = request_ctx['zato.http.response.headers']
+        retry_after = headers['Retry-After']
+
+        self.assertEqual(retry_after, 'Sun, 15 Jun 2025 12:00:05 GMT')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -343,11 +354,11 @@ class DispatchLoggingTestCase(unittest.TestCase):
         request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
+        _ = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         mock_logger.info.assert_any_call(
             'Rate limiting 429; cid:%s, channel:%s, remote_addr:%s, retry_after:%s',
-            'cid123', 'test.channel', '10.0.0.1', 'Sun, 15 Jun 2025 12:00:03 GMT',
+            _test_cid, 'test.channel', '10.0.0.1', 'Sun, 15 Jun 2025 12:00:03 GMT',
         )
 
 # ################################################################################################################################
@@ -379,7 +390,7 @@ class DispatchNoMatchTestCase(unittest.TestCase):
         request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
+        _ = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         dispatcher.server.rate_limiting_manager.check.assert_not_called()
 
@@ -421,7 +432,7 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
 
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         # The request was dropped by the channel check
         self.assertEqual(result, b'')
@@ -454,9 +465,11 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
         request_ctx = _make_request_ctx()
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
-        self.assertEqual(request_ctx['zato.http.response.status'], '429 Too Many Requests')
+        status = request_ctx['zato.http.response.status']
+
+        self.assertEqual(status, '429 Too Many Requests')
         self.assertIn('Too many requests', result)
 
         dispatcher.server.rate_limiting_manager.check.assert_called_once()
@@ -490,9 +503,11 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
         request_ctx['zato.sec_def'] = {'type': 'basic_auth', 'id': 99}
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
-        self.assertEqual(request_ctx['zato.http.response.status'], '429 Too Many Requests')
+        status = request_ctx['zato.http.response.status']
+
+        self.assertEqual(status, '429 Too Many Requests')
         self.assertIn('Too many requests', result)
 
         # Both checks were called
@@ -525,7 +540,7 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
         request_ctx['zato.sec_def'] = {'type': 'basic_auth', 'id': 99}
         config_manager = MagicMock()
 
-        result = dispatcher.dispatch('cid123', '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
+        result = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
 
         self.assertEqual(result, 'OK')
         mock_invoke.assert_called_once()
@@ -535,3 +550,6 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     _ = unittest.main()
+
+# ################################################################################################################################
+# ################################################################################################################################

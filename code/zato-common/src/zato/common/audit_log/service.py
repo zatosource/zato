@@ -6,11 +6,6 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# What one invocation of a user-defined service writes to the audit log - a single event under
-# the invocation's cid, so it sits in the same flow as the channel that carried the request and
-# the connections the service went on to use, with the request, the response and a traceback
-# as its bodies.
-
 from __future__ import annotations
 
 # Zato
@@ -35,71 +30,77 @@ if 0:
 Invoking_Service_Key = 'zato.request_ctx.invoking_service'
 
 # The request context key under which the config manager leaves the message that triggered the invocation.
-Async_Msg_Key = 'zato.request_ctx.async_msg'
+_async_message_key = 'zato.request_ctx.async_msg'
 
 # The attribute holding the channel type the invocation came in through.
-Attr_Channel = 'channel'
+Attribute_Channel = 'channel'
+
+# What is recorded when there is no caller, no body or no error line to record.
+_empty = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def to_body_text(value:'any_') -> 'str':
-    """ Returns the text form of a request or a response, whatever a service was given or produced.
+    """ Returns the text form of a request or a response.
     """
     if value is None:
-        return ''
+        out = _empty
 
-    if isinstance(value, str):
-        return value
+    elif isinstance(value, str):
+        out = value
 
-    if isinstance(value, bytes):
+    elif isinstance(value, bytes):
         out = value.decode('utf8')
-        return out
 
     # An output payload or a stream serializes itself.
-    if hasattr(value, 'getvalue'):
-        out = to_body_text(value.getvalue())
-        return out
+    elif hasattr(value, 'getvalue'):
+        payload = value.getvalue()
+        out = to_body_text(payload)
 
-    out = dumps(value)
+    else:
+        out = dumps(value)
+
     return out
 
 # ################################################################################################################################
 
 def resolve_caller(request_ctx:'stranydict', channel_item:'stranydict') -> 'str':
-    """ Returns the name of what invoked a service - the invoking service, the channel or the scheduler job.
+    """ Returns the name of what invoked a service - the invoking service, the channel or the triggering message.
     """
-    if Invoking_Service_Key in request_ctx:
-        out = request_ctx[Invoking_Service_Key]
-        return out
+    if invoking_service := request_ctx.get(Invoking_Service_Key):
+        out = invoking_service
 
-    if channel_item:
+    elif channel_item:
         out = channel_item['name']
-        return out
 
-    if Async_Msg_Key in request_ctx:
-        async_msg = request_ctx[Async_Msg_Key]
-        if 'name' in async_msg:
-            out = async_msg['name']
-            return out
+    elif async_message := request_ctx.get(_async_message_key):
+        if message_name := async_message.get('name'):
+            out = message_name
+        else:
+            out = _empty
 
-    return ''
+    else:
+        out = _empty
+
+    return out
 
 # ################################################################################################################################
 
 def _last_line(text:'str') -> 'str':
-    """ Returns the last non-empty line of a traceback, which is the exception itself.
+    """ Returns the last non-empty line of a traceback.
     """
     lines:'strlist' = []
 
     for line in text.splitlines():
-        if line.strip():
+        stripped = line.strip()
+        if stripped:
             lines.append(line)
 
     if lines:
         out = lines[-1]
     else:
-        out = ''
+        out = _empty
 
     return out
 
@@ -113,10 +114,13 @@ def record_service_request(
     caller:'str',
     request:'any_',
     ) -> 'None':
-    """ Records what a service was given, before the service runs - the request is on record
-    even if the server never gets to write the response down.
+    """ Records the request a service was given, before the service runs.
     """
     request_text = to_body_text(request)
+    request_size = len(request_text)
+
+    attrs  = {Attribute_Channel: channel}
+    bodies = {AuditBody.Request: request_text}
 
     _ = audit_log.insert(
         AuditSource.Service,
@@ -124,9 +128,9 @@ def record_service_request(
         service_name,
         cid=cid,
         endpoint=caller,
-        size=len(request_text),
-        attrs={Attr_Channel: channel},
-        bodies={AuditBody.Request: request_text},
+        size=request_size,
+        attrs=attrs,
+        bodies=bodies,
     )
 
 # ################################################################################################################################
@@ -138,17 +142,16 @@ def record_service_response(
     channel:'str',
     caller:'str',
     response:'any_',
-    duration_ms:'int',
+    duration_milliseconds:'int',
     error_traceback:'str',
     ) -> 'None':
-    """ Records what a service returned, after it ran - the response as the body, the traceback
-    as a second body when it failed, and how long the whole invocation took.
+    """ Records the response a service returned, with the traceback as a second body if it failed.
     """
     response_text = to_body_text(response)
+    response_size = len(response_text)
 
-    bodies = {
-        AuditBody.Response: response_text,
-    }
+    attrs  = {Attribute_Channel: channel}
+    bodies = {AuditBody.Response: response_text}
 
     if error_traceback:
         outcome = AuditOutcome.Error
@@ -156,7 +159,7 @@ def record_service_response(
         bodies[AuditBody.Error] = error_traceback
     else:
         outcome = AuditOutcome.OK
-        status = ''
+        status = _empty
 
     _ = audit_log.insert(
         AuditSource.Service,
@@ -164,11 +167,11 @@ def record_service_response(
         service_name,
         cid=cid,
         endpoint=caller,
-        size=len(response_text),
+        size=response_size,
         outcome=outcome,
         status=status,
-        duration_ms=duration_ms,
-        attrs={Attr_Channel: channel},
+        duration_ms=duration_milliseconds,
+        attrs=attrs,
         bodies=bodies,
     )
 

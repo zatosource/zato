@@ -381,8 +381,7 @@ def _read_flow_rows(connection:'any_', seed_id:'int') -> 'anylist':
             if data:
                 attach_trace_lines(row, data)
 
-        # Why this event is in the flow, and whether it is the one the flow was read from -
-        # the seed is known by its id, as its relation may have been refined like any other event's
+        # The relation and the seed marker are separate fields.
         row['relation'] = relation_by_id[row['id']]
         row['is_seed'] = row['id'] == seed_id
 

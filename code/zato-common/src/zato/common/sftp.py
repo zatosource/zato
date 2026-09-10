@@ -15,10 +15,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# What the sftp binary exits with when one of the commands fed to its prompt failed,
-# and what an output carries before the binary was run at all.
-Exit_Code_Command_Failed = 1
-Exit_Code_Not_Run = -1
+# The exit code of the sftp binary when a batch command failed, and the exit code before the binary was run.
+_exit_code_command_failed = 1
+_exit_code_not_run = -1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,7 +37,7 @@ class SFTPOutput:
         stderr:'strnone'=None,
         details:'strnone'=None,
         response_time:'strnone'=None,
-        exit_code:'int'=Exit_Code_Not_Run,
+        exit_code:'int' = _exit_code_not_run,
         ) -> 'None':
 
         self.cid = cid
@@ -54,14 +53,12 @@ class SFTPOutput:
 # ################################################################################################################################
 
     def is_connection_failure(self) -> 'bool':
-        """ Whether the session itself failed rather than one of the commands fed to it - the binary
-        exits with 1 when a batch command fails and with anything else when it never got that far,
-        the connection refused, the authentication rejected, or the binary not run at all.
+        """ Whether the session itself failed rather than one of the commands fed to it.
         """
         if self.is_ok:
-            return False
-
-        out = self.exit_code != Exit_Code_Command_Failed
+            out = False
+        else:
+            out = self.exit_code != _exit_code_command_failed
 
         return out
 

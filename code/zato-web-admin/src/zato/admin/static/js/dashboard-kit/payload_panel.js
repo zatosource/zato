@@ -13,9 +13,7 @@
 
     kit.payload_panel.config = {
         copy_label: 'Copy',
-
-        // The Copy badge stands at the bar's right edge, so its flash opens to its left
-        copy_flash_placement: 'left',
+        copyFlashPlacement: 'left',
 
         // How long a pane waits for its text before it says it is waiting - a body read
         // from the server nearby usually arrives first, and then nothing is announced at all
@@ -228,20 +226,23 @@
         kit.payload_panel._fill($panel, open_index);
     };
 
-    /* Opens one tab of a built panel the way a click on its badge would - lit, on the
-       screen and its text asked for if this is its first showing. A tab already open
-       is left as it stands. */
-    kit.payload_panel.open = function($host, tab_index) {
-        var $panel = $host.find('.dashboard-payload');
-        var $tab = $panel.find('.dashboard-payload-tab[data-tab-index="' + tab_index + '"]');
+    // ////////////////////////////////////////////////////////////////////////
 
-        if ($tab.hasClass('dashboard-panel-action-badge-active')) {
+    kit.payload_panel.open = function(host, tabIndex) {
+        var panel = host.find('.dashboard-payload');
+        var tabSelector = '.dashboard-payload-tab[data-tab-index="' + tabIndex + '"]';
+        var tab = panel.find(tabSelector);
+        var isActive = tab.hasClass('dashboard-panel-action-badge-active');
+
+        if (isActive) {
             return;
         }
 
-        kit.payload_panel._activate($panel, tab_index);
-        kit.payload_panel._fill($panel, tab_index);
+        kit.payload_panel._activate(panel, tabIndex);
+        kit.payload_panel._fill(panel, tabIndex);
     };
+
+    // ////////////////////////////////////////////////////////////////////////
 
     /* Puts one tab in front - its badge lit and its pane the one on the screen. */
     kit.payload_panel._activate = function($panel, tab_index) {
@@ -360,6 +361,8 @@
             text = lines.join('\n');
         }
 
-        kit.copy_to_clipboard(this, text, kit.payload_panel.config.copy_flash_placement);
+        var placement = kit.payload_panel.config.copyFlashPlacement;
+
+        kit.copy_to_clipboard(this, text, placement);
     });
 })();
