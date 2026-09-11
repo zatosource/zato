@@ -18,7 +18,7 @@ from json import loads
 from sqlalchemy import and_, func, select
 
 # Zato
-from zato.common.alerting.collectors.common import new_fact, Default_Window_Seconds_By_Source
+from zato.common.alerting.collectors.common import new_fact, Default_Window_Seconds
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.file_transfer_run import Run_Status_Interrupted, Run_Status_List_Failed
 
@@ -42,20 +42,14 @@ if 0:
 # The attr each schedule-level event carries its schedule's name under.
 Attr_Schedule = 'schedule'
 
-# The attr each schedule-level event carries its schedule's name under.
-Attr_Schedule = 'schedule'
-
 # How far back a connection's quarantines and failed verifications are counted.
 Quarantine_Window_Seconds = 86400
 
 # How many of a schedule's newest runs the list-failed streak is counted over.
 Run_Streak_Depth = 20
 
-# How far back run rows are read.
+# How far back run rows are read - at least this far, and as far as the run window when that is longer.
 Run_Facts_Window_Seconds = 3600
-
-# The window the in-window run counts cover.
-Run_Window_Seconds = Default_Window_Seconds_By_Source[AuditSource.File_Outgoing]
 
 # The format of a schedule's expected-by time, e.g. 08:00.
 _expected_by_format = '%H:%M'
@@ -68,9 +62,10 @@ def collect_file_transfer_facts(
     now:'datetime',
     arrival_windows:'strintdict',
     schedule_expectations:'anydict | None' = None,
+    run_window_seconds:'int' = Default_Window_Seconds,
     ) -> 'dictlist':
     """ The arrival, expectation and run facts of each schedule and the quarantine and verification facts
-    of each connection.
+    of each connection. The in-window run counts cover run_window_seconds, the window the type's failure rules carry.
     """
 
     # Our response to produce
@@ -81,7 +76,7 @@ def collect_file_transfer_facts(
 
     arrival_facts = _collect_arrival_facts(engine, now, arrival_windows)
     expectation_facts = _collect_expectation_facts(engine, now, schedule_expectations)
-    run_facts = _collect_run_facts(engine, now)
+    run_facts = _collect_run_facts(engine, now, run_window_seconds)
     connection_facts = _collect_connection_facts(engine, now)
 
     out.extend(arrival_facts)
@@ -228,7 +223,7 @@ def _collect_expectation_facts(engine:'Engine', now:'datetime', schedule_expecta
 
 # ################################################################################################################################
 
-def _collect_run_facts(engine:'Engine', now:'datetime') -> 'dictlist':
+def _collect_run_facts(engine:'Engine', now:'datetime', run_window_seconds:'int') -> 'dictlist':
     """ The newest run's status, the list-failed streak and the in-window counts of failed runs, failed files
     and interrupted runs, per schedule.
     """
@@ -236,10 +231,13 @@ def _collect_run_facts(engine:'Engine', now:'datetime') -> 'dictlist':
     # Our response to produce
     out:'dictlist' = []
 
-    since = now - timedelta(seconds=Run_Facts_Window_Seconds)
+    # The rows read must reach back as far as the counted window does
+    read_window_seconds = max(Run_Facts_Window_Seconds, run_window_seconds)
+
+    since = now - timedelta(seconds=read_window_seconds)
     since_iso = since.isoformat()
 
-    window_start = now - timedelta(seconds=Run_Window_Seconds)
+    window_start = now - timedelta(seconds=run_window_seconds)
     window_start_iso = window_start.isoformat()
 
     # The run rows of every schedule, newest first.

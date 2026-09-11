@@ -32,17 +32,13 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The window the error-rate measures cover.
+# The window a source with no window rule of its own is measured over - each type's
+# rules carry their own window_seconds default and the sweep hands those to the collectors.
 Default_Window_Seconds = 300
 
-# Sources measured over a window of their own - file transfer moves fewer, larger
-# messages, so five minutes would rarely hold enough traffic to mean anything, and a
-# health check runs on an interval a person chose, which reaches into the hours.
-Default_Window_Seconds_By_Source = {
-    AuditSource.File_Outgoing: 600,
-    AuditSource.REST_Outgoing_Health: 3600,
-    AuditSource.SOAP_Outgoing_Health: 3600,
-}
+# A health check runs on an interval a person chose, which reaches into the hours,
+# so the health sources are measured over an hour unless the sweep says otherwise.
+Health_Window_Seconds = 3600
 
 # The event types the outstanding measures pair up - sent-not-acked is the canonical absence check.
 Default_Begin_Event_Type = AuditEvent.Message_Sent

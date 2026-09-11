@@ -23,7 +23,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The keys a diagnosis's opaque document carries.
+# The keys an explanation's opaque document carries.
 _detail_keys = (
     'object_name',
     'source',
@@ -34,7 +34,7 @@ _detail_keys = (
     'message',
     'link',
     'evidence',
-    'diagnosis',
+    'explanation',
     'confidence',
     'remediation',
     'is_parsed',
@@ -45,8 +45,8 @@ _detail_keys = (
 # ################################################################################################################################
 
 class IncidentStore:
-    """ Reads and writes diagnosed alerts - generic objects of the zato-incident type
-    with everything in the opaque document. There is no lifecycle here - a diagnosis
+    """ Reads and writes explained alerts - generic objects of the zato-incident type
+    with everything in the opaque document. There is no lifecycle here - an explanation
     is written once, next to the alert it explains, and only ever read back.
     """
 
@@ -65,7 +65,7 @@ class IncidentStore:
 # ################################################################################################################################
 
     def _row_to_incident(self, row:'stranydict') -> 'stranydict':
-        """ Normalizes a generic_object row, with its opaque keys merged in, to a diagnosis dict.
+        """ Normalizes a generic_object row, with its opaque keys merged in, to an explanation dict.
         """
 
         # Our response to produce
@@ -83,7 +83,7 @@ class IncidentStore:
 # ################################################################################################################################
 
     def create(self, name:'str', details:'stranydict') -> 'None':
-        """ Stores a new diagnosis under the given name.
+        """ Stores a new explanation under the given name.
         """
         opaque = dumps(details)
 
@@ -98,7 +98,7 @@ class IncidentStore:
 # ################################################################################################################################
 
     def get(self, name:'str') -> 'stranydict | None':
-        """ Returns one diagnosis by its name, or None if there is no such diagnosis.
+        """ Returns one explanation by its name, or None if there is no such explanation.
         """
 
         with closing(self.session()) as session:
@@ -115,7 +115,7 @@ class IncidentStore:
 # ################################################################################################################################
 
     def get_list(self) -> 'dictlist':
-        """ Returns all diagnoses, newest first.
+        """ Returns all explanations, newest first.
         """
 
         # Our response to produce
@@ -138,8 +138,8 @@ class IncidentStore:
 # ################################################################################################################################
 
     def exists(self, name:'str') -> 'bool':
-        """ Whether a diagnosis is already stored under the given name -
-        one alert produces one diagnosis, not one per sweep.
+        """ Whether an explanation is already stored under the given name -
+        one alert produces one explanation, not one per sweep.
         """
         out = self.get(name) is not None
         return out
@@ -148,7 +148,7 @@ class IncidentStore:
 # ################################################################################################################################
 
 def _by_created(incident:'stranydict') -> 'str':
-    """ The sort key ordering diagnoses by their creation time.
+    """ The sort key ordering explanations by their creation time.
     """
     out = incident['created_iso']
     return out

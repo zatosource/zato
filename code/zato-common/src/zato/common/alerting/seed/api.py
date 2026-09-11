@@ -20,6 +20,7 @@ from __future__ import annotations
 from logging import getLogger
 
 # Zato
+from zato.common.alerting.config_map import Explain_With_LLM_Key
 from zato.common.alerting.seed.rules_common import channels_rules, common_rules, scheduler_rules
 from zato.common.alerting.seed.rules_connections import email_rules, file_transfer_rules, llm_rules, mcp_rules, \
     microsoft_rules, odoo_rules, rest_rules, sql_rules
@@ -95,7 +96,6 @@ _alert_sources = [
 
 # The actions an outcome may name - the value list behind `outcome.action`.
 _outcome_actions = [
-    'diagnose',
     'email',
     'slack',
     'teams',
@@ -108,7 +108,7 @@ _outcome_actions = [
 _outcome_severities = [
     'info',
     'warning',
-    'critical',
+    'error',
 ]
 
 # The health states a remote service may report about itself - the value list
@@ -217,7 +217,6 @@ def alerting_vocabulary() -> 'anydict':
     outcome_terms = [
         _term('action',               TermType.Choice, 'what happens when the rule fires', values=_outcome_actions),
         _term('severity',             TermType.Choice, 'how severe the alert is', values=_outcome_severities),
-        _term('llm_connection',       TermType.Text,   'the LLM connection an alert diagnosis goes through'),
         _term('dashboard_url',        TermType.Text,   'the dashboard address notification links point to'),
         _term('addresses',            TermType.Text,   'the comma-separated addresses an email alert goes to'),
         _term('slack_channel',        TermType.Text,   'the channel a Slack alert posts to'),
@@ -252,6 +251,11 @@ def build_ruleset_document(ruleset_name:'str', zrules_contents:'str') -> 'anydic
     for full_name in _inactive_rule_full_names:
         if full_name in documents:
             documents[full_name]['is_active'] = False
+
+    # Every rule carries the type's Use LLM answer, on out of the box - the LLM explains
+    # the alerts as soon as the default LLM connection is pointed at a real model
+    for rule_document in documents.values():
+        rule_document[Explain_With_LLM_Key] = True
 
     out = {Documents_Key: documents}
     return out

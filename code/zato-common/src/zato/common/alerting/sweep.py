@@ -9,9 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # One alerting sweep - the scheduler-driven run that measures the audit database
 # and live channel metrics into per-object facts and routes each fact through every
 # alert ruleset the rule engine keeps. A rule that fires names its action in its
-# `then` outcomes - `outcome.action = 'diagnose'` invokes the diagnosis service,
-# with the remaining outcome keys travelling as the action config. Deduplication,
-# the audit trace and the dispatch transports all key off the rule that fired.
+# `then` outcomes - `outcome.action = 'email'` sends an email - with the remaining
+# outcome keys travelling as the action config, and a ruleset whose documents say
+# the LLM explains its alerts has each of them explained before the action delivers
+# it. Deduplication, the audit trace and the dispatch transports all key off the rule that fired.
 
 from __future__ import annotations
 
@@ -23,9 +24,10 @@ from urllib.parse import quote
 
 # Zato
 from zato.common.alerting.collectors import collect_facts
+from zato.common.alerting.config_map import read_window_seconds, type_sources, type_to_ruleset, Explain_With_LLM_Key
 from zato.common.alerting.engine import process_findings
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, Default_Dedup_Window_Seconds
-from zato.common.api import Alerting, Incidents
+from zato.common.api import Alerting
 from zato.common.audit_log.common import get_source_label, health_sources
 from zato.common.defaults import default_cluster_id
 from zato.common.rule_engine.loading import documents_from_version, load_documents
@@ -75,10 +77,8 @@ Fact_Entity = 'alert'
 # The prefix a rule's then targets carry - `outcome.action`, `outcome.severity` and so on.
 Outcome_Prefix = 'outcome.'
 
-# What each outcome.action value means in engine terms - `diagnose` is invoke-service
-# pointed at the diagnosis service, everything else maps one to one.
+# What each outcome.action value means in engine terms.
 _action_by_outcome = {
-    'diagnose':         AlertAction.Invoke_Service,
     'email':            AlertAction.Email_Digest,
     'invoke-service':   AlertAction.Invoke_Service,
     'publish-to-topic': AlertAction.Publish_To_Topic,
@@ -88,7 +88,7 @@ _action_by_outcome = {
 }
 
 # The severities an outcome may carry.
-_severities = (AlertSeverity.Info, AlertSeverity.Warning, AlertSeverity.Critical)
+_severities = (AlertSeverity.Info, AlertSeverity.Warning, AlertSeverity.Error)
 
 # Where a finding's link leads when the rule names none of its own - the audit log page,
 # the one existing screen every dashboard URL already wraps in login_required.
@@ -157,6 +157,43 @@ def load_alert_rules(backend:'RuleSQLBackend') -> 'rule_engine_rule_list':
         for full_name in loaded.rule_names:
             rule = loaded.manager[full_name]
             out.append(rule)
+
+    return out
+
+# ################################################################################################################################
+
+def build_window_seconds_by_source(rules:'rule_engine_rule_list') -> 'strintdict':
+    """ The measuring window of each audit source, read off the window_seconds default of the rules
+    of the type that matches on it - a person changes the type's window on the config screen and
+    the collectors measure the type's sources over it. A source whose type has no window rule is absent.
+    """
+
+    # Our response to produce
+    out:'strintdict' = {}
+
+    # The documents of each ruleset, keyed the way the config map reads them
+    documents_by_ruleset:'dict[str, stranydict]' = {}
+
+    for rule in rules:
+        if rule.ruleset_name not in documents_by_ruleset:
+            documents_by_ruleset[rule.ruleset_name] = {}
+        documents_by_ruleset[rule.ruleset_name][rule.full_name] = rule.document
+
+    for type_name, sources in type_sources.items():
+
+        ruleset_name = type_to_ruleset[type_name]
+
+        # A type nothing published has no window to speak of
+        if ruleset_name not in documents_by_ruleset:
+            continue
+
+        window_seconds = read_window_seconds(documents_by_ruleset[ruleset_name], type_name)
+
+        if window_seconds is None:
+            continue
+
+        for source in sources:
+            out[source] = window_seconds
 
     return out
 
@@ -340,13 +377,13 @@ def build_dispatch(
     if link.startswith('/') and dashboard_url:
         link = dashboard_url.rstrip('/') + link
 
-    # The diagnose action is invoke-service pointed at the diagnosis service ..
-    if action_name == 'diagnose':
-        outcome['service'] = Incidents.Service_Diagnose
-
-    # .. and an email outcome's addresses arrive as one comma-separated string.
+    # An email outcome's addresses arrive as one comma-separated string.
     if addresses := outcome.pop('addresses', None):
         outcome['addresses'] = [item.strip() for item in addresses.split(',')]
+
+    # Whether the LLM explains the alert is the ruleset's answer, stamped on every
+    # rule document - a rule a person wrote by hand without the key is not explained.
+    explain_with_llm = rule.document.get(Explain_With_LLM_Key) is True
 
     alert_rule = new_rule(
         rule.name,
@@ -354,6 +391,7 @@ def build_dispatch(
         action=action,
         action_config=outcome,
         dedup_window_seconds=dedup_window_seconds,
+        explain_with_llm=explain_with_llm,
     )
 
     message = build_fact_message(rule.name, fact)
@@ -393,8 +431,10 @@ def run_sweep(
     out = SweepResult()
     out.dispatched = []
 
-    facts = collect_facts(engine, metrics_by_name, metrics_source, now, job_intervals=job_intervals,
-        arrival_windows=arrival_windows, schedule_expectations=schedule_expectations)
+    window_seconds_by_source = build_window_seconds_by_source(rules)
+
+    facts = collect_facts(engine, metrics_by_name, metrics_source, now, window_seconds_by_source=window_seconds_by_source,
+        job_intervals=job_intervals, arrival_windows=arrival_windows, schedule_expectations=schedule_expectations)
     out.fact_count = len(facts)
 
     for rule in rules:

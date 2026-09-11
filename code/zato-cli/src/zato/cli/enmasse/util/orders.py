@@ -228,9 +228,9 @@ _object_order['pubsub_subscription'] = 'security', 'delivery_type', 'push_rest_e
 
 _object_order['channel_openapi'] = 'name', 'is_active', 'url_path', 'rest_channel_list:list'
 
-_object_order['alert_rules'] = 'type', 'is_active', 'consecutive_failures', 'error_rate', 'alert_threshold', \
-    'max_latency', 'max_query_time', 'warning_latency', 'critical_latency', 'max_tool_call_time', \
-    'max_call_time', 'health_alerts', 'auth_failures', 'warning_failures', 'critical_failures', \
+_object_order['alert_rules'] = 'type', 'is_active', 'consecutive_failures', 'error_rate', \
+    'max_latency', 'max_query_time', 'warning_latency', 'error_latency', 'max_tool_call_time', \
+    'max_call_time', 'health_alerts', 'auth_failures', 'warning_failures', 'error_failures', 'window', \
     'test_transfers', 'arrival_overdue', 'overdue_multiplier', 'start_delay', 'certificate_warning', \
     'outstanding_backlog', 'feed_silence', 'use_llm',
 _object_order['alert_notifications'] = 'slack_webhook', 'teams_webhook', 'webhook_url', 'email_connection', \

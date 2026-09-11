@@ -69,8 +69,10 @@ $.fn.zato.alerts_tab.config = {
     // The link under a group's list opening the page a new connection is made on
     add_link_class: 'alerts-tab-add-link',
 
-    // The summary of a popover line - how a field's value and the noun after it are written
-    summary_token: /\{([a-z_]+)(?:\|([^|}]+)\|([^}]+))?\}/g
+    // The summary of a popover line - `{field}` is a value, `{field|singular|plural}` a
+    // value with the right noun after it and `{unit_field@count_field}` a count with the
+    // unit select's noun after it, the option's value being the singular and its label the plural
+    summary_token: /\{([a-z_]+)(?:@([a-z_]+))?(?:\|([^|}]+)\|([^}]+))?\}/g
 };
 
 // What the Django side told us about the page's alert fields
@@ -136,7 +138,8 @@ $.fn.zato.alerts_tab.element_id = function(part, line_name) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // One micro-form per popover line - the fields of a line share one row, so
-// a warning and a critical count are read side by side
+// a warning and an error count are read side by side, and a line with a
+// unit select has it right after the last of its numbers
 $.fn.zato.alerts_tab.build_descriptors = function() {
 
     var settings = $.fn.zato.alerts_tab.settings;
@@ -152,10 +155,14 @@ $.fn.zato.alerts_tab.build_descriptors = function() {
             var spec = {
                 field: field_name,
                 label: settings.field_labels[field_name],
-                kind: settings.field_kinds[field_name] === 'toggle' ? 'checkbox' : 'number'
+                kind: settings.toggle_kinds.indexOf(settings.field_kinds[field_name]) !== -1 ? 'checkbox' : 'number'
             };
             return spec;
         });
+
+        if(line.unit_field) {
+            specs[specs.length - 1].unitField = line.unit_field;
+        }
 
         var entry = specs.length === 1 ? specs[0] : specs;
 
@@ -216,15 +223,25 @@ $.fn.zato.alerts_tab.descriptions = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Writes a line's summary from its fields - `{field}` is the field's value and
+// Writes a line's summary from its fields - `{field}` is the field's value,
 // `{field|singular|plural}` the value with the right one of the two nouns after it
+// and `{unit_field@count_field}` the count with the unit select's noun after it
 $.fn.zato.alerts_tab.format_summary = function(template) {
 
     var tab = $.fn.zato.alerts_tab;
 
-    var out = template.replace(tab.config.summary_token, function(ignored, field_name, singular, plural) {
+    var out = template.replace(tab.config.summary_token, function(ignored, field_name, count_field_name, singular, plural) {
 
-        var value = tab.field(field_name).val();
+        var field = tab.field(field_name);
+        var value = field.val();
+
+        // A unit select spells its noun both ways - the value is the singular, the label the plural
+        if(count_field_name !== undefined) {
+            var count = parseInt(tab.field(count_field_name).val());
+            var option = field.find('option:selected');
+            var unit_text = $.fn.zato.count_text(count, option.val(), option.text());
+            return unit_text;
+        }
 
         if(singular === undefined) {
             return value;

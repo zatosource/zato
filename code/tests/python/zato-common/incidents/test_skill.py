@@ -16,7 +16,7 @@ from zato.common.incidents.skill import load_skill, parse_skill
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Every audit source that ships with a diagnostic skill of its own.
+# Every audit source that ships with an explanation skill of its own.
 _shipped_sources = (
     AuditSource.REST_Outgoing,
     AuditSource.SQL_Outgoing,
@@ -34,11 +34,11 @@ _shipped_sources = (
 # ################################################################################################################################
 
 _skill_document = """---
-name: test-diagnostics
-description: Diagnoses test connections
+name: test-explanation
+description: Explains test connections
 ---
 
-# Test diagnostics
+# Test explanation
 
 The instructions of the skill.
 """
@@ -52,13 +52,13 @@ class TestParseSkill:
         skill = parse_skill('test-source', _skill_document)
 
         assert skill.source == 'test-source'
-        assert skill.name == 'test-diagnostics'
-        assert skill.description == 'Diagnoses test connections'
+        assert skill.name == 'test-explanation'
+        assert skill.description == 'Explains test connections'
 
     def test_everything_after_the_frontmatter_is_the_instructions(self) -> 'None':
         skill = parse_skill('test-source', _skill_document)
 
-        assert skill.instructions.startswith('# Test diagnostics')
+        assert skill.instructions.startswith('# Test explanation')
         assert 'The instructions of the skill.' in skill.instructions
 
 # ################################################################################################################################
@@ -70,7 +70,7 @@ class TestLoadSkill:
         skill = load_skill(AuditSource.REST_Outgoing)
 
         assert skill is not None
-        assert skill.name == 'rest-outgoing-diagnostics'
+        assert skill.name == 'rest-outgoing-explanation'
         assert 'resubmit' in skill.instructions
 
     def test_a_source_without_a_skill_returns_none(self) -> 'None':
@@ -94,7 +94,7 @@ class TestShippedSkills:
         skill = load_skill(source)
 
         assert skill is not None
-        assert skill.name == f'{source}-diagnostics'
+        assert skill.name == f'{source}-explanation'
         assert skill.description != ''
         assert skill.instructions != ''
 

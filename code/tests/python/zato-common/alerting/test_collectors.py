@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import timedelta
+from json import dumps
 
 # SQLAlchemy
 from sqlalchemy import update
@@ -16,8 +17,9 @@ from sqlalchemy import update
 from zato.common.alerting.collectors import collect_auth_failure_facts, collect_certificate_facts, \
     collect_consecutive_failure_facts, collect_error_rate_facts, collect_facts, collect_feed_silent_facts, \
     collect_file_transfer_facts, collect_health_facts, collect_latency_facts, collect_outstanding_facts, \
-    collect_scheduler_facts, collect_test_transfer_facts, new_fact, Attr_Days_Left
+    collect_scheduler_facts, collect_test_transfer_facts, new_fact, Attr_Days_Left, Health_Window_Seconds
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.file_transfer_run import Run_Status_Failed
 from zato.common.audit_log.scheduler import Attr_Delay_Ms
 from zato.common.monitoring.health import EndpointMetrics
 from zato.common.util.api import utcnow
@@ -809,7 +811,7 @@ class TestFileTransferArrivalFacts:
         _backdate(event_id, now - timedelta(seconds=900))
 
         facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now,
-            arrival_windows={self._schedule_name: 300})
+            window_seconds_by_source={AuditSource.File_Outgoing: 86400}, arrival_windows={self._schedule_name: 300})
 
         by_name = {fact['object_name']: fact for fact in facts}
 
@@ -839,6 +841,72 @@ class TestPerSourceWindows:
 
         assert by_name['sftp.backups']['error_count'] == 1
         assert by_name['sftp.backups']['window_seconds'] == 600
+
+# ################################################################################################################################
+
+    def test_a_source_without_a_window_of_its_own_is_measured_over_the_default(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, 'sftp.default-window',
+            cid='window-2', outcome=AuditOutcome.Error)
+        _backdate(event_id, now - timedelta(seconds=400))
+
+        # No per-source windows at all, so every source is measured over the one default
+        facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now, window_seconds=300)
+
+        by_name = {fact['object_name']: fact for fact in facts}
+
+        assert by_name['sftp.default-window']['error_count'] == 0
+        assert by_name['sftp.default-window']['window_seconds'] == 0
+
+# ################################################################################################################################
+
+    def test_the_health_sources_keep_their_hour_unless_a_rule_names_them(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A failed health check older than the default window but within the hour
+        event_id = audit_log.insert(AuditSource.REST_Outgoing_Health, AuditEvent.Message_Sent, 'crm.health',
+            cid='window-3', outcome=AuditOutcome.Error)
+        _backdate(event_id, now - timedelta(seconds=1800))
+
+        facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now, window_seconds=300)
+
+        by_name = {fact['object_name']: fact for fact in facts}
+
+        assert by_name['crm.health']['error_count'] == 1
+        assert by_name['crm.health']['window_seconds'] == Health_Window_Seconds
+
+# ################################################################################################################################
+
+    def test_the_run_counts_of_a_schedule_cover_the_file_transfer_window(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A failed run half an hour back
+        run_data = dumps({'schedule': 'sched.window', 'failed': 2})
+        event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Run_Completed, 'sftp.runs',
+            cid='window-4', outcome=AuditOutcome.Error, status=Run_Status_Failed, data=run_data)
+        _backdate(event_id, now - timedelta(seconds=1800))
+
+        # Over a day it counts ..
+        facts = collect_file_transfer_facts(engine, now, {}, None, 86400)
+        by_name = {fact['object_name']: fact for fact in facts}
+
+        assert by_name['sched.window']['runs_failed_in_window'] == 1
+        assert by_name['sched.window']['failed_files_in_window'] == 2
+
+        # .. over ten minutes it does not, while the newest status still speaks.
+        facts = collect_file_transfer_facts(engine, now, {}, None, 600)
+        by_name = {fact['object_name']: fact for fact in facts}
+
+        assert by_name['sched.window']['runs_failed_in_window'] == 0
+        assert by_name['sched.window']['failed_files_in_window'] == 0
+        assert by_name['sched.window']['last_run_status'] == Run_Status_Failed
 
 # ################################################################################################################################
 # ################################################################################################################################

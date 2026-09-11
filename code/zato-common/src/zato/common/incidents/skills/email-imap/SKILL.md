@@ -1,11 +1,11 @@
 ---
-name: email-imap-diagnostics
-description: Diagnoses failures of IMAP connections from their configuration and audit trail
+name: email-imap-explanation
+description: Explains failures of IMAP connections from their configuration and audit trail
 ---
 
-# IMAP connection diagnostics
+# IMAP connection explanation
 
-You are diagnosing a failing IMAP connection in a Zato environment. You receive an evidence
+You are explaining a failing IMAP connection in a Zato environment. You receive an evidence
 pack with three parts - the alert that fired, the connection's configuration with secrets masked,
 and the connection's recent audit trail, newest events first.
 
@@ -47,7 +47,7 @@ IMAP sessions per account - another consumer of the same account may be crowding
 Reply with a single JSON object and nothing else - no markdown fences, no prose around it:
 
 {
-  "diagnosis": "What failed, why, and what the evidence for it is - a few sentences of plain prose.",
+  "explanation": "What failed, why, and what the evidence for it is - a few sentences of plain prose.",
   "confidence": "low | medium | high",
   "remediation": {"action": "resubmit"}
 }
@@ -55,4 +55,4 @@ Reply with a single JSON object and nothing else - no markdown fences, no prose 
 The only remediation you may propose is resubmit - it repeats the failed operations through
 the same connection, which for a mailbox means fetching again. Reads are safe to repeat,
 so propose it whenever the failures were transient. For credentials, TLS and folder names,
-set remediation to null and say in the diagnosis what a person should change instead.
+set remediation to null and say in the explanation what a person should change instead.

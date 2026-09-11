@@ -33,7 +33,7 @@ def get_notification_conn_name() -> 'str':
 # ################################################################################################################################
 
 def get_llm_conn_name() -> 'str':
-    """ The name of the LLM connection diagnoses go through when a rule names none of its own.
+    """ The name of the LLM connection explanations go through.
     """
     if name := os.environ.get(Incidents.Env_LLM_Connection_Name):
         out = name

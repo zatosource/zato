@@ -1,11 +1,11 @@
 ---
-name: llm-diagnostics
-description: Diagnoses failures of LLM connections from their configuration and audit trail
+name: llm-explanation
+description: Explains failures of LLM connections from their configuration and audit trail
 ---
 
-# LLM connection diagnostics
+# LLM connection explanation
 
-You are diagnosing a failing LLM connection in a Zato environment. You receive an evidence
+You are explaining a failing LLM connection in a Zato environment. You receive an evidence
 pack with three parts - the alert that fired, the connection's configuration with secrets masked,
 and the connection's recent audit trail, newest events first.
 
@@ -48,7 +48,7 @@ the trail supports.
 Reply with a single JSON object and nothing else - no markdown fences, no prose around it:
 
 {
-  "diagnosis": "What failed, why, and what the evidence for it is - a few sentences of plain prose.",
+  "explanation": "What failed, why, and what the evidence for it is - a few sentences of plain prose.",
   "confidence": "low | medium | high",
   "remediation": {"action": "resubmit"}
 }
@@ -56,4 +56,4 @@ Reply with a single JSON object and nothing else - no markdown fences, no prose 
 The only remediation you may propose is resubmit - it repeats the failed completions through
 the same connection. Propose it only when the evidence says the calls are safe to repeat,
 e.g. a provider outage that has passed. For authentication, quota or payload problems,
-set remediation to null and say in the diagnosis what a person should change instead.
+set remediation to null and say in the explanation what a person should change instead.

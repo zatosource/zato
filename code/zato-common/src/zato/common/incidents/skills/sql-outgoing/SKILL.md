@@ -1,11 +1,11 @@
 ---
-name: sql-outgoing-diagnostics
-description: Diagnoses failures of SQL connection pools from their configuration and audit trail
+name: sql-outgoing-explanation
+description: Explains failures of SQL connection pools from their configuration and audit trail
 ---
 
-# SQL connection diagnostics
+# SQL connection explanation
 
-You are diagnosing a failing SQL connection pool in a Zato environment. You receive an evidence
+You are explaining a failing SQL connection pool in a Zato environment. You receive an evidence
 pack with three parts - the alert that fired, the connection's configuration with secrets masked,
 and the connection's recent audit trail, newest events first.
 
@@ -50,7 +50,7 @@ repeating them unchanged will fail again.
 Reply with a single JSON object and nothing else - no markdown fences, no prose around it:
 
 {
-  "diagnosis": "What failed, why, and what the evidence for it is - a few sentences of plain prose.",
+  "explanation": "What failed, why, and what the evidence for it is - a few sentences of plain prose.",
   "confidence": "low | medium | high",
   "remediation": {"action": "resubmit"}
 }
@@ -58,5 +58,5 @@ Reply with a single JSON object and nothing else - no markdown fences, no prose 
 The only remediation you may propose is resubmit - it repeats the failed operations through
 the same connection. Propose it only when the evidence says the statements are safe to repeat,
 e.g. the database was briefly unreachable. When the failures are about credentials, constraints
-or statements themselves, set remediation to null and say in the diagnosis what a person
+or statements themselves, set remediation to null and say in the explanation what a person
 should change instead.

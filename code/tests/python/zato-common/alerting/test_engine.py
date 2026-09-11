@@ -10,8 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import select
 
 # Zato
-from zato.common.alerting.engine import build_digest, process_findings, AlertDefaults, AlertTransports
+from zato.common.alerting.engine import build_digest, dispatch_action, process_findings, AlertDefaults, AlertTransports
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, FindingKind
+from zato.common.api import Incidents
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditSource
 from zato.common.json_internal import loads
 from zato.common.util.api import utcnow
@@ -208,6 +209,65 @@ class TestActions:
 
 # ################################################################################################################################
 
+    def test_a_rule_the_llm_explains_goes_to_the_explain_service_first(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        recorder = _TransportRecorder()
+
+        rule = new_rule('slack-ops', FindingKind.Feed_Silent,
+            action=AlertAction.Slack, action_config={'slack_channel': _slack_channel}, explain_with_llm=True)
+
+        defaults = AlertDefaults()
+        defaults.email_to = ['ops@example.com']
+        defaults.email_from = 'alerts@example.com'
+
+        result = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-explain', utcnow(),
+            defaults=defaults)
+
+        # The dispatch is reported under the rule's own action ..
+        assert result.dispatched == [('slack-ops', AlertAction.Slack)]
+
+        # .. yet Slack heard nothing - the alert went to the explain service instead ..
+        assert recorder.slack_messages == []
+        assert len(recorder.invocations) == 1
+
+        service, payload = recorder.invocations[0]
+        assert service == Incidents.Service_Explain
+
+        # .. with everything the service needs to run the Slack action itself afterwards.
+        assert payload['action'] == AlertAction.Slack
+        assert payload['action_config'] == {'slack_channel': _slack_channel}
+        assert payload['dedup_window_seconds'] == rule.dedup_window_seconds
+        assert payload['defaults'] == {'email_to': ['ops@example.com'], 'email_from': 'alerts@example.com', 'webhook_url': ''}
+        assert payload['explanation'] == ''
+
+# ################################################################################################################################
+
+    def test_the_explained_alert_delivers_with_the_explanation_in_the_message(self) -> 'None':
+        recorder = _TransportRecorder()
+
+        rule = new_rule('slack-ops', FindingKind.Feed_Silent,
+            action=AlertAction.Slack, action_config={'slack_channel': _slack_channel}, explain_with_llm=True)
+
+        explanation = {
+            'explanation': 'The upstream feed was stopped for maintenance',
+            'confidence': 'high',
+            'remediation': None,
+        }
+
+        # The explain service calls back with the explanation filled in - the rule's
+        # own action runs now, and nothing goes to the explain service again
+        dispatch_action(rule, _new_finding(), 123, 1, recorder.make(), explanation=explanation)
+
+        assert recorder.invocations == []
+        assert len(recorder.slack_messages) == 1
+
+        channel, text = recorder.slack_messages[0]
+        assert channel == _slack_channel
+        assert text == ('Feed on `hl7.test.channel` silent for 400s\n'
+            'Explanation (high): The upstream feed was stopped for maintenance\n/zato/hl7/channels/')
+
+# ################################################################################################################################
+
     def test_the_publish_action_carries_the_same_payload_to_a_topic(self) -> 'None':
         audit_log = AuditLog(_server_name)
         recorder = _TransportRecorder()
@@ -354,7 +414,7 @@ class TestDefaultTargets:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestDedupAndCriticalFloor:
+class TestDedupAndErrorFloor:
 
     def test_a_repetition_is_not_dispatched_but_is_still_counted(self) -> 'None':
         audit_log = AuditLog(_server_name)
@@ -379,7 +439,7 @@ class TestDedupAndCriticalFloor:
 
 # ################################################################################################################################
 
-    def test_a_critical_finding_is_never_suppressed(self) -> 'None':
+    def test_an_error_finding_is_never_suppressed(self) -> 'None':
         audit_log = AuditLog(_server_name)
         recorder = _TransportRecorder()
         transports = recorder.make()
@@ -388,10 +448,10 @@ class TestDedupAndCriticalFloor:
         rule = new_rule('slack-ops', FindingKind.Feed_Silent,
             action=AlertAction.Slack, action_config={'slack_channel': _slack_channel})
 
-        critical = _new_finding(severity=AlertSeverity.Critical)
+        error = _new_finding(severity=AlertSeverity.Error)
 
-        _ = process_findings([rule], [critical], transports, audit_log, 'cid-critical-1', now)
-        second = process_findings([rule], [critical], transports, audit_log, 'cid-critical-2', now)
+        _ = process_findings([rule], [error], transports, audit_log, 'cid-error-1', now)
+        second = process_findings([rule], [error], transports, audit_log, 'cid-error-2', now)
 
         # Deduplicated in the store - dispatched anyway, with the count prefix
         assert second.deduplicated_count == 1

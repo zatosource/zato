@@ -6,11 +6,11 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The diagnosed alert path end to end - a rule outcome saying diagnose invokes the
-# diagnosis service, which collects evidence from the audit log, has the LLM diagnose
-# it over real HTTP against a threaded simulator, stores the diagnosis next to the
-# alert and notifies through Slack, Microsoft Teams and email, each one a real
-# simulated server of its own.
+# The explained alert path end to end - the alerting engine hands an alert of a ruleset
+# with the Use LLM switch on to the explain service, which collects evidence from the
+# audit log, has the LLM explain it over real HTTP against a threaded simulator, stores
+# the explanation next to the alert and then runs the rule's own action - Slack,
+# Microsoft Teams or email, each one a real simulated server of its own.
 
 # stdlib
 import json
@@ -37,6 +37,7 @@ from sqlalchemy.orm import sessionmaker
 import urllib3
 
 # Zato
+from zato.common.alerting.model import AlertAction, Default_Dedup_Window_Seconds
 from zato.common.alerting.rendering import get_default_template_dir, Template_Dir_Name
 from zato.common.api import Incidents, SMTPMessage
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
@@ -44,7 +45,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.incidents.skill import load_skill
 from zato.common.incidents.store import IncidentStore
 from zato.common.odb.model import Base, GenericObject
-from zato.server.service.internal.incidents import Diagnose
+from zato.server.service.internal.incidents import Explain
 
 # Test helpers
 from chat_simulators import find_free_port, SlackTestHandler, start_slack_server
@@ -68,24 +69,24 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # The cluster and server the tests run under
 _cluster_id = 1
-_server_name = 'test-diagnosis-server'
+_server_name = 'test-explanation-server'
 
-# The correlation id the diagnosis runs under
-_cid = 'cid-diagnosis-1'
+# The correlation id the explanation runs under
+_cid = 'cid-explanation-1'
 
 # The connection the alerts are about
 _conn_name = 'CRM API'
 
-# The alert the payloads carry
+# The alert the payloads carry - the sweep already made the link absolute
 _alert_id = 1234
-_rule_name = 'alerts_rest_Error_Rate_Diagnose'
+_rule_name = 'Error_Rate'
 _alert_message = 'error rate 100% (12 of 12 over 300s) on `CRM API`'
-_alert_link = '/zato/audit-log/?object=CRM+API'
+_alert_link = 'https://dashboard.example.com/zato/audit-log/?object=CRM+API'
 
 # What the simulated LLM answers with
-_diagnosis_text = 'The remote server replied with HTTP 503 for every call.'
+_explanation_text = 'The remote server replied with HTTP 503 for every call.'
 _llm_reply = json.dumps({
-    'diagnosis': _diagnosis_text,
+    'explanation': _explanation_text,
     'confidence': 'high',
     'remediation': {'action': 'resubmit'},
 })
@@ -104,12 +105,9 @@ _teams_client_secret = 'secret-' + CryptoManager.generate_hex_string()
 _teams_team_id = 'team-001'
 _teams_channel_id = 'channel-001'
 
-# The email addressing the rules configure
-_email_to = 'ops@example.com, oncall@example.com'
+# The deployment-level email addressing the sweep job's extra carries
+_email_to = ['ops@example.com', 'oncall@example.com']
 _email_from = 'zato@example.com'
-
-# Where the notification links point to
-_dashboard_url = 'https://dashboard.example.com'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -174,7 +172,7 @@ class _LLMClient:
 
 class _LLMFacade:
     """ A self.llm stand-in - the same conn_dict shape and lookup the real facade keeps,
-    remembering which connection each diagnosis went through.
+    remembering which connection each explanation went through.
     """
     def __init__(self, conn_dict:'anydict', address:'str') -> 'None':
         self.conn_dict = conn_dict
@@ -282,7 +280,7 @@ class _EmailAPI:
 
 @pytest.fixture()
 def llm_address() -> 'any_':
-    """ A running simulated LLM API answering every prompt with the canned diagnosis.
+    """ A running simulated LLM API answering every prompt with the canned explanation.
     """
     port = find_free_port()
     server = start_llm_server(port, _llm_reply)
@@ -368,21 +366,37 @@ def _new_session() -> 'any_':
 
 # ################################################################################################################################
 
-def _new_payload(action_config:'anydict', source:'str'=AuditSource.REST_Outgoing) -> 'stranydict':
-    """ The payload the alerting engine's invoke-service transport carries
-    when a diagnose outcome fires.
+def _new_payload(
+    action:'str',
+    action_config:'anydict',
+    source:'str'=AuditSource.REST_Outgoing,
+    *,
+    email_to:'list | None'=None,
+    ) -> 'stranydict':
+    """ The payload the alerting engine hands the explain service - the alert, the rule's
+    own action and the deployment-level targets to deliver with.
     """
     out = {
         'alert_id': _alert_id,
         'rule': _rule_name,
-        'kind': 'Error_Rate_Diagnose',
+        'kind': _rule_name,
         'source': source,
         'object_name': _conn_name,
         'message': _alert_message,
         'link': _alert_link,
-        'severity': 'critical',
+        'severity': 'error',
         'count': 3,
+        'action': action,
         'action_config': action_config,
+        'dedup_window_seconds': Default_Dedup_Window_Seconds,
+        'defaults': {
+            'email_to': email_to,
+            'email_from': _email_from,
+            'webhook_url': '',
+        },
+        'explanation': '',
+        'confidence': '',
+        'remediation': None,
     }
 
     return out
@@ -409,7 +423,7 @@ def _new_service(
     teams:'_TeamsFacade | None' = None,
     email:'_EmailAPI | None' = None,
     ) -> 'any_':
-    """ The diagnosis service with its collaborators in place - the connectors it
+    """ The explanation service with its collaborators in place - the connectors it
     speaks through are the simulator-backed stand-ins the test hands it.
     """
     rest_config = {
@@ -428,13 +442,14 @@ def _new_service(
 
     # The service is built without __init__ and typed as any_ so the test doubles
     # can stand where the runtime collaborators would
-    service:'any_' = Diagnose.__new__(Diagnose)
+    service:'any_' = Explain.__new__(Explain)
 
     service.cid = _cid
-    service.logger = logging.getLogger('test-alert-diagnosis')
+    service.logger = logging.getLogger('test-alert-explanation')
     service.request = SimpleNamespace(payload=payload)
     service.odb = SimpleNamespace(session=session)
-    service.server = SimpleNamespace(cluster_id=_cluster_id, name=_server_name, repo_location=repo_dir)
+    service.server = SimpleNamespace(cluster_id=_cluster_id, name=_server_name, repo_location=repo_dir,
+        invoke=None, pubsub_backend=None)
     service.out = SimpleNamespace(rest={_conn_name: SimpleNamespace(config=rest_config)})
     service.llm = llm
     service.slack = slack
@@ -445,12 +460,12 @@ def _new_service(
 
 # ################################################################################################################################
 
-def _get_diagnosed_events() -> 'list':
-    """ Every alert-diagnosed event the audit log holds.
+def _get_explained_events() -> 'list':
+    """ Every alert-explained event the audit log holds.
     """
     engine = get_audit_engine()
 
-    query = select(event_table).where(event_table.c.event_type == AuditEvent.Alert_Diagnosed)
+    query = select(event_table).where(event_table.c.event_type == AuditEvent.Alert_Explained)
 
     with engine.connect() as connection:
         out = [dict(row._mapping) for row in connection.execute(query)]
@@ -460,114 +475,19 @@ def _get_diagnosed_events() -> 'list':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestDiagnosePath:
+class TestExplainPath:
 
-    def test_a_rule_named_connection_diagnoses_and_every_channel_hears_about_it(
+    def test_an_explained_alert_delivers_through_slack_with_the_explanation(
         self,
         llm_address:'any_',
         slack_address:'any_',
-        teams_address:'any_',
-        smtp_receiver:'any_',
         repo_dir:'str',
         ) -> 'None':
 
         _seed_error_events()
-
-        # The rule names its own LLM connection and every notification target
-        action_config = {
-            'llm_connection': 'CRM Diagnostics LLM',
-            'slack_channel': _slack_channel,
-            'teams_to': 'Alerts',
-            'email_to': _email_to,
-            'email_from': _email_from,
-            'dashboard_url': _dashboard_url,
-        }
 
         conn_name = Incidents.Notification_Conn_Name
         active = {conn_name: {'is_active': True}}
-
-        session = _new_session()
-
-        service = _new_service(
-            _new_payload(action_config),
-            session,
-            repo_dir,
-            llm=_LLMFacade({}, llm_address),
-            slack=_SlackFacade(active, slack_address, _slack_token),
-            teams=_TeamsFacade(active, teams_address),
-            email=_EmailAPI(smtp_receiver.port),
-        )
-
-        service.handle()
-
-        # The diagnosis went through the connection the rule named ..
-        assert service.llm.invoked_names == ['CRM Diagnostics LLM']
-
-        # .. with the evidence pack in the prompt - the errors' own text included ..
-        assert len(LLMTestHandler.prompts) == 1
-        assert _error_data in LLMTestHandler.prompts[0]
-        assert '# Evidence' in LLMTestHandler.prompts[0]
-
-        # .. the diagnosis is stored next to the alert ..
-        store = IncidentStore(session, _cluster_id)
-        diagnosis = store.get(f'alert.{_alert_id}')
-
-        assert diagnosis is not None
-        assert diagnosis['alert_id'] == _alert_id
-        assert diagnosis['diagnosis'] == _diagnosis_text
-        assert diagnosis['confidence'] == 'high'
-        assert diagnosis['remediation'] == {'action': 'resubmit'}
-        assert diagnosis['is_parsed'] is True
-
-        # .. the audit log says the alert was diagnosed ..
-        events = _get_diagnosed_events()
-        assert len(events) == 1
-        assert events[0]['object_name'] == _conn_name
-        assert events[0]['data'] == _alert_message
-
-        # .. Slack heard about it, diagnosis and dashboard link included ..
-        assert len(SlackTestHandler.messages) == 1
-
-        slack_message = SlackTestHandler.messages[0]
-        assert slack_message['channel'] == _slack_channel
-        assert _alert_message in slack_message['text']
-        assert _diagnosis_text in slack_message['text']
-        assert _dashboard_url + _alert_link in slack_message['text']
-
-        # .. so did Teams, as HTML ..
-        assert len(TeamsGraphTestHandler.messages) == 1
-
-        teams_content = TeamsGraphTestHandler.messages[0]['payload']['body']['content']
-        assert _diagnosis_text in teams_content
-        assert '<br/>' in teams_content
-
-        # .. and so did email, one message to both addresses.
-        assert len(smtp_receiver.messages) == 1
-
-        received = smtp_receiver.messages[0]
-        assert received.sender == _email_from
-        assert received.recipients == ['ops@example.com', 'oncall@example.com']
-        assert received.subject == _alert_message
-        assert _diagnosis_text in received.body
-        assert _dashboard_url + _alert_link in received.body
-
-# ################################################################################################################################
-
-    def test_the_default_connection_answers_when_the_rule_names_none(
-        self,
-        llm_address:'any_',
-        slack_address:'any_',
-        repo_dir:'str',
-        ) -> 'None':
-
-        _seed_error_events()
-
-        # The rule names no LLM connection of its own, only where Slack delivers
-        action_config = {
-            'slack_channel': _slack_channel,
-        }
-
-        conn_name = Incidents.Notification_Conn_Name
 
         # The default LLM connection exists and a person already activated it
         llm_connections = {Incidents.LLM_Connection_Name: {'is_active': True}}
@@ -575,29 +495,120 @@ class TestDiagnosePath:
         session = _new_session()
 
         service = _new_service(
-            _new_payload(action_config),
+            _new_payload(AlertAction.Slack, {'slack_channel': _slack_channel}),
             session,
             repo_dir,
             llm=_LLMFacade(llm_connections, llm_address),
-            slack=_SlackFacade({conn_name: {'is_active': True}}, slack_address, _slack_token),
+            slack=_SlackFacade(active, slack_address, _slack_token),
         )
 
         service.handle()
 
-        # The diagnosis went through the default connection ..
+        # The explanation went through the default LLM connection ..
         assert service.llm.invoked_names == [Incidents.LLM_Connection_Name]
 
-        # .. and it reads back parsed in full.
-        store = IncidentStore(session, _cluster_id)
-        diagnosis = store.get(f'alert.{_alert_id}')
+        # .. with the evidence pack in the prompt - the errors' own text included ..
+        assert len(LLMTestHandler.prompts) == 1
+        assert _error_data in LLMTestHandler.prompts[0]
+        assert '# Evidence' in LLMTestHandler.prompts[0]
 
-        assert diagnosis is not None
-        assert diagnosis['diagnosis'] == _diagnosis_text
-        assert diagnosis['is_parsed'] is True
+        # .. the explanation is stored next to the alert ..
+        store = IncidentStore(session, _cluster_id)
+        explanation = store.get(f'alert.{_alert_id}')
+
+        assert explanation is not None
+        assert explanation['alert_id'] == _alert_id
+        assert explanation['explanation'] == _explanation_text
+        assert explanation['confidence'] == 'high'
+        assert explanation['remediation'] == {'action': 'resubmit'}
+        assert explanation['is_parsed'] is True
+
+        # .. the audit log says the alert was explained ..
+        events = _get_explained_events()
+        assert len(events) == 1
+        assert events[0]['object_name'] == _conn_name
+        assert events[0]['data'] == _alert_message
+
+        # .. and the rule's own action ran - Slack heard about it, explanation and link included.
+        assert len(SlackTestHandler.messages) == 1
+
+        slack_message = SlackTestHandler.messages[0]
+        assert slack_message['channel'] == _slack_channel
+        assert slack_message['text'] == f'[3x] {_alert_message}\nExplanation (high): {_explanation_text}\n{_alert_link}'
 
 # ################################################################################################################################
 
-    def test_an_inactive_default_stores_the_alert_undiagnosed(
+    def test_an_explained_alert_delivers_through_teams_as_html(
+        self,
+        llm_address:'any_',
+        teams_address:'any_',
+        repo_dir:'str',
+        ) -> 'None':
+
+        _seed_error_events()
+
+        conn_name = Incidents.Notification_Conn_Name
+        active = {conn_name: {'is_active': True}}
+        llm_connections = {Incidents.LLM_Connection_Name: {'is_active': True}}
+
+        session = _new_session()
+
+        service = _new_service(
+            _new_payload(AlertAction.Teams, {'teams_to': 'Alerts'}),
+            session,
+            repo_dir,
+            llm=_LLMFacade(llm_connections, llm_address),
+            teams=_TeamsFacade(active, teams_address),
+        )
+
+        service.handle()
+
+        assert len(TeamsGraphTestHandler.messages) == 1
+
+        teams_content = TeamsGraphTestHandler.messages[0]['payload']['body']['content']
+        assert _alert_message in teams_content
+        assert _explanation_text in teams_content
+        assert _alert_link in teams_content
+        assert '<br/>' in teams_content
+
+# ################################################################################################################################
+
+    def test_an_explained_alert_delivers_through_email_to_the_default_addresses(
+        self,
+        llm_address:'any_',
+        smtp_receiver:'any_',
+        repo_dir:'str',
+        ) -> 'None':
+
+        _seed_error_events()
+
+        llm_connections = {Incidents.LLM_Connection_Name: {'is_active': True}}
+
+        session = _new_session()
+
+        # The seeded email rules name no addresses of their own - the deployment-level ones answer
+        service = _new_service(
+            _new_payload(AlertAction.Email_Digest, {}, email_to=_email_to),
+            session,
+            repo_dir,
+            llm=_LLMFacade(llm_connections, llm_address),
+            email=_EmailAPI(smtp_receiver.port),
+        )
+
+        service.handle()
+
+        assert len(smtp_receiver.messages) == 1
+
+        received = smtp_receiver.messages[0]
+        assert received.sender == _email_from
+        assert received.recipients == _email_to
+        assert received.subject == f'[3x] {_alert_message}'
+        assert _explanation_text in received.body
+        assert _alert_link in received.body
+
+# ################################################################################################################################
+
+    def test_an_inactive_default_delivers_the_alert_unexplained(
         self,
         llm_address:'any_',
         slack_address:'any_',
@@ -605,10 +616,6 @@ class TestDiagnosePath:
         ) -> 'None':
 
         _seed_error_events()
-
-        action_config = {
-            'slack_channel': _slack_channel,
-        }
 
         conn_name = Incidents.Notification_Conn_Name
 
@@ -618,7 +625,7 @@ class TestDiagnosePath:
         session = _new_session()
 
         service = _new_service(
-            _new_payload(action_config),
+            _new_payload(AlertAction.Slack, {'slack_channel': _slack_channel}),
             session,
             repo_dir,
             llm=_LLMFacade(llm_connections, llm_address),
@@ -631,22 +638,58 @@ class TestDiagnosePath:
         assert service.llm.invoked_names == []
         assert LLMTestHandler.prompts == []
 
-        # .. the alert is stored without a diagnosis ..
+        # .. the alert is stored without an explanation ..
         store = IncidentStore(session, _cluster_id)
-        diagnosis = store.get(f'alert.{_alert_id}')
+        explanation = store.get(f'alert.{_alert_id}')
 
-        assert diagnosis is not None
-        assert diagnosis['diagnosis'] == ''
-        assert diagnosis['is_parsed'] is False
+        assert explanation is not None
+        assert explanation['explanation'] == ''
+        assert explanation['is_parsed'] is False
 
-        # .. and the notification still went out, just without a diagnosis line.
+        # .. and the notification still went out, just without an explanation line.
         assert len(SlackTestHandler.messages) == 1
         assert _alert_message in SlackTestHandler.messages[0]['text']
-        assert 'Diagnosis' not in SlackTestHandler.messages[0]['text']
+        assert 'Explanation' not in SlackTestHandler.messages[0]['text']
 
 # ################################################################################################################################
 
-    def test_one_alert_produces_one_diagnosis(
+    def test_a_source_without_a_skill_is_delivered_unexplained(
+        self,
+        llm_address:'any_',
+        slack_address:'any_',
+        repo_dir:'str',
+        ) -> 'None':
+
+        conn_name = Incidents.Notification_Conn_Name
+        llm_connections = {Incidents.LLM_Connection_Name: {'is_active': True}}
+
+        session = _new_session()
+
+        # No explanation skill ships for MLLP channels
+        service = _new_service(
+            _new_payload(AlertAction.Slack, {'slack_channel': _slack_channel}, AuditSource.MLLP_Channel),
+            session,
+            repo_dir,
+            llm=_LLMFacade(llm_connections, llm_address),
+            slack=_SlackFacade({conn_name: {'is_active': True}}, slack_address, _slack_token),
+        )
+
+        service.handle()
+
+        # Nothing was asked of the LLM and nothing was stored ..
+        assert service.llm.invoked_names == []
+
+        store = IncidentStore(session, _cluster_id)
+        assert store.get_list() == []
+
+        # .. while the alert itself went out all the same.
+        assert len(SlackTestHandler.messages) == 1
+        assert _alert_message in SlackTestHandler.messages[0]['text']
+        assert 'Explanation' not in SlackTestHandler.messages[0]['text']
+
+# ################################################################################################################################
+
+    def test_one_alert_produces_one_explanation_and_every_delivery_carries_it(
         self,
         llm_address:'any_',
         slack_address:'any_',
@@ -655,40 +698,40 @@ class TestDiagnosePath:
 
         _seed_error_events()
 
-        action_config = {
-            'llm_connection': 'CRM Diagnostics LLM',
-            'slack_channel': _slack_channel,
-        }
-
         conn_name = Incidents.Notification_Conn_Name
+        llm_connections = {Incidents.LLM_Connection_Name: {'is_active': True}}
 
         session = _new_session()
 
         service = _new_service(
-            _new_payload(action_config),
+            _new_payload(AlertAction.Slack, {'slack_channel': _slack_channel}),
             session,
             repo_dir,
-            llm=_LLMFacade({}, llm_address),
+            llm=_LLMFacade(llm_connections, llm_address),
             slack=_SlackFacade({conn_name: {'is_active': True}}, slack_address, _slack_token),
         )
 
-        # The same alert arrives twice - e.g. a critical finding is dispatched
-        # on every sweep - and only the first one is diagnosed
+        # The same alert arrives twice - an error finding is dispatched on every
+        # sweep - and only the first one spends tokens, the second reuses the explanation
         service.handle()
         service.handle()
 
         store = IncidentStore(session, _cluster_id)
         assert len(store.get_list()) == 1
 
-        assert service.llm.invoked_names == ['CRM Diagnostics LLM']
-        assert len(SlackTestHandler.messages) == 1
+        assert service.llm.invoked_names == [Incidents.LLM_Connection_Name]
+
+        assert len(SlackTestHandler.messages) == 2
+
+        for slack_message in SlackTestHandler.messages:
+            assert _explanation_text in slack_message['text']
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The sources that ship a diagnostic skill of their own - each one produces
-# a diagnosis instead of being skipped for having no skill.
-_diagnosable_sources = (
+# The sources that ship an explanation skill of their own - each one produces
+# an explanation instead of being delivered unexplained for having no skill.
+_explainable_sources = (
     AuditSource.SQL_Outgoing,
     AuditSource.LLM,
     AuditSource.MCP,
@@ -703,10 +746,10 @@ _diagnosable_sources = (
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestDiagnosePerSource:
+class TestExplainPerSource:
 
-    @pytest.mark.parametrize('source', _diagnosable_sources)
-    def test_a_non_rest_source_produces_a_diagnosis(
+    @pytest.mark.parametrize('source', _explainable_sources)
+    def test_a_non_rest_source_produces_an_explanation(
         self,
         source:'str',
         llm_address:'any_',
@@ -715,20 +758,19 @@ class TestDiagnosePerSource:
 
         _seed_error_events(source)
 
-        # The rule names its own LLM connection and no notification targets -
-        # this test is about the diagnosis itself, not the delivery.
-        action_config = {
-            'llm_connection': 'Diagnostics LLM',
-        }
-
         session = _new_session()
 
-        # The llm source's own config lookup reads the facade's conn_dict,
-        # so the connection under diagnosis is in there too.
-        llm_connections = {_conn_name: {'name': _conn_name, 'is_active': True}}
+        # The llm source's own config lookup reads the facade's conn_dict, so the connection
+        # under explanation is in there next to the default LLM connection.
+        llm_connections = {
+            _conn_name: {'name': _conn_name, 'is_active': True},
+            Incidents.LLM_Connection_Name: {'is_active': True},
+        }
 
+        # An email action with no addresses anywhere - this test is about the explanation
+        # itself, not the delivery, and such an email is skipped with a log line.
         service = _new_service(
-            _new_payload(action_config, source),
+            _new_payload(AlertAction.Email_Digest, {}, source),
             session,
             repo_dir,
             llm=_LLMFacade(llm_connections, llm_address),
@@ -736,8 +778,8 @@ class TestDiagnosePerSource:
 
         service.handle()
 
-        # The diagnosis went through the connection the rule named ..
-        assert service.llm.invoked_names == ['Diagnostics LLM']
+        # The explanation went through the default LLM connection ..
+        assert service.llm.invoked_names == [Incidents.LLM_Connection_Name]
 
         # .. with the source's own skill leading the prompt and the errors' text in the evidence ..
         skill = load_skill(source)
@@ -747,17 +789,17 @@ class TestDiagnosePerSource:
         assert LLMTestHandler.prompts[0].startswith(skill.instructions)
         assert _error_data in LLMTestHandler.prompts[0]
 
-        # .. the diagnosis is stored next to the alert ..
+        # .. the explanation is stored next to the alert ..
         store = IncidentStore(session, _cluster_id)
-        diagnosis = store.get(f'alert.{_alert_id}')
+        explanation = store.get(f'alert.{_alert_id}')
 
-        assert diagnosis is not None
-        assert diagnosis['source'] == source
-        assert diagnosis['diagnosis'] == _diagnosis_text
-        assert diagnosis['is_parsed'] is True
+        assert explanation is not None
+        assert explanation['source'] == source
+        assert explanation['explanation'] == _explanation_text
+        assert explanation['is_parsed'] is True
 
-        # .. and the audit log says the alert was diagnosed.
-        events = _get_diagnosed_events()
+        # .. and the audit log says the alert was explained.
+        events = _get_explained_events()
         assert len(events) == 1
         assert events[0]['source'] == source
         assert events[0]['object_name'] == _conn_name

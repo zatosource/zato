@@ -35,15 +35,15 @@ if 0:
 _message = '[3x] REST outgoing connection billing.api is failing - 3 failures in a row in the last 5 minutes'
 _link = 'https://dashboard.example.com/zato/audit-log/?object=billing.api'
 
-# What a diagnosed alert adds to the context
-_diagnosis = 'The remote endpoint answers with HTTP 503 - the service behind it is restarting'
+# What an explained alert adds to the context
+_explanation = 'The remote endpoint answers with HTTP 503 - the service behind it is restarting'
 _confidence = 'high'
 _remediation = 'Wait for the restart to finish, then resubmit the failed calls'
 
 # ################################################################################################################################
 
 def _context() -> 'stranydict':
-    """ The full template context of one undiagnosed alert.
+    """ The full template context of one unexplained alert.
     """
     out = {
         'alert_id': 1234,
@@ -56,7 +56,7 @@ def _context() -> 'stranydict':
         'severity': 'warning',
         'count': 3,
         'action_config': {},
-        'diagnosis': '',
+        'explanation': '',
         'confidence': '',
         'remediation': None,
     }
@@ -65,11 +65,11 @@ def _context() -> 'stranydict':
 
 # ################################################################################################################################
 
-def _diagnosed_context() -> 'stranydict':
-    """ The same alert once the LLM's diagnosis is attached.
+def _explained_context() -> 'stranydict':
+    """ The same alert once the LLM's explanation is attached.
     """
     out = _context()
-    out['diagnosis'] = _diagnosis
+    out['explanation'] = _explanation
     out['confidence'] = _confidence
     out['remediation'] = _remediation
 
@@ -204,41 +204,41 @@ class TestShippedTemplates:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestDiagnosisContext:
-    """ An alert with a diagnosis says more - the diagnosis, its confidence and
+class TestExplanationContext:
+    """ An alert with an explanation says more - the explanation, its confidence and
     the proposed remediation travel through the same templates.
     """
 
-    def test_slack_carries_the_diagnosis_line(self, template_dir:'str') -> 'None':
+    def test_slack_carries_the_explanation_line(self, template_dir:'str') -> 'None':
 
-        text = render_alert_template(Template_Slack, _diagnosed_context(), template_dir)
+        text = render_alert_template(Template_Slack, _explained_context(), template_dir)
 
-        assert text == f'{_message}\nDiagnosis ({_confidence}): {_diagnosis}\n{_link}'
-
-# ################################################################################################################################
-
-    def test_teams_carries_the_diagnosis_line(self, template_dir:'str') -> 'None':
-
-        text = render_alert_template(Template_Teams, _diagnosed_context(), template_dir)
-
-        assert text == f'{_message}\n\nDiagnosis ({_confidence}): {_diagnosis}\n\n{_link}'
+        assert text == f'{_message}\nExplanation ({_confidence}): {_explanation}\n{_link}'
 
 # ################################################################################################################################
 
-    def test_the_email_body_carries_the_diagnosis_line(self, template_dir:'str') -> 'None':
+    def test_teams_carries_the_explanation_line(self, template_dir:'str') -> 'None':
 
-        body = render_alert_template(Template_Email_Body, _diagnosed_context(), template_dir)
+        text = render_alert_template(Template_Teams, _explained_context(), template_dir)
 
-        assert body == f'{_message}\nDiagnosis ({_confidence}): {_diagnosis}\n{_link}'
+        assert text == f'{_message}\n\nExplanation ({_confidence}): {_explanation}\n\n{_link}'
 
 # ################################################################################################################################
 
-    def test_the_webhook_carries_the_diagnosis_keys(self, template_dir:'str') -> 'None':
+    def test_the_email_body_carries_the_explanation_line(self, template_dir:'str') -> 'None':
 
-        rendered = render_alert_template(Template_Webhook, _diagnosed_context(), template_dir)
+        body = render_alert_template(Template_Email_Body, _explained_context(), template_dir)
+
+        assert body == f'{_message}\nExplanation ({_confidence}): {_explanation}\n{_link}'
+
+# ################################################################################################################################
+
+    def test_the_webhook_carries_the_explanation_keys(self, template_dir:'str') -> 'None':
+
+        rendered = render_alert_template(Template_Webhook, _explained_context(), template_dir)
         payload = json.loads(rendered)
 
-        assert payload['diagnosis'] == _diagnosis
+        assert payload['explanation'] == _explanation
         assert payload['confidence'] == _confidence
         assert payload['remediation'] == _remediation
 

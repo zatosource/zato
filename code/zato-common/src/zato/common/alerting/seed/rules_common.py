@@ -58,7 +58,6 @@ then
     outcome.severity = 'warning'
 """.strip()
 
-
 # ################################################################################################################################
 
 channels_rules = """
@@ -70,6 +69,7 @@ docs
 defaults
     error_rate_threshold = 0.1
     min_events = 10
+    window_seconds = 300
 when
     alert.source in ['rest-channel', 'soap-channel', 'mllp-channel'] and
     alert.total_count is at least default.min_events and
@@ -78,7 +78,6 @@ then
     outcome.action = 'email'
     outcome.severity = 'warning'
 """.strip()
-
 
 # ################################################################################################################################
 
@@ -90,6 +89,7 @@ docs
 defaults
     error_rate_threshold = 0.1
     min_events = 10
+    window_seconds = 300
 when
     alert.source is 'scheduler' and
     alert.total_count is at least default.min_events and
@@ -97,21 +97,6 @@ when
 then
     outcome.action = 'email'
     outcome.severity = 'warning'
-
-rule
-    Job_Error_Rate_Diagnose
-docs
-    Scheduled jobs whose error share reached a quarter of their recent runs have their alert diagnosed by the LLM.
-defaults
-    error_rate_threshold = 0.25
-    min_events = 10
-when
-    alert.source is 'scheduler' and
-    alert.total_count is at least default.min_events and
-    alert.error_rate is at least default.error_rate_threshold
-then
-    outcome.action = 'diagnose'
-    outcome.severity = 'critical'
 
 rule
     Missed_Run
@@ -140,7 +125,6 @@ then
     outcome.action = 'email'
     outcome.severity = 'warning'
 """.strip()
-
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -70,7 +70,7 @@ class LLMExporter:
 
         exported = []
 
-        # The default alert diagnosis connection is a built-in placeholder
+        # The default alert explanation connection is a built-in placeholder
         # seeded with every environment, so it never travels.
         excluded_name = get_llm_conn_name()
 

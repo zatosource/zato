@@ -34,6 +34,7 @@ from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Defin
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.common.rule_engine.webapi import BadRequestError, DocumentInvalidError
 from zato.common.typing_ import any_
+from zato.common.util.api import pluralize
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,17 +109,17 @@ _type_titles = {
 _field_display = {
     'consecutive_failures': ('Consecutive failures', ''),
     'error_rate':           ('Error rate', '%'),
-    'alert_threshold':      ('Alert threshold', '%'),
     'max_latency':          ('Max latency', ' ms'),
     'max_query_time':       ('Max query time', ' ms'),
     'warning_latency':      ('Warning latency', ' ms'),
-    'critical_latency':     ('Critical latency', ' ms'),
+    'error_latency':        ('Error latency', ' ms'),
     'max_tool_call_time':   ('Max tool-call time', ' ms'),
     'health_alerts':        ('Health alerts', ''),
     'max_call_time':        ('Max call time', ' ms'),
     'auth_failures':        ('Auth failures', ''),
     'warning_failures':     ('Warning failures', ''),
-    'critical_failures':    ('Critical failures', ''),
+    'error_failures':       ('Error failures', ''),
+    'window':               ('Window', ''),
     'arrival_overdue':      ('Arrival overdue', ''),
     'test_transfers':       ('Test transfers', ''),
     'overdue_multiplier':   ('Overdue multiplier', ''),
@@ -132,23 +133,24 @@ _field_display = {
 # The five cell slots of each type's row - the columns line up across the rows,
 # so a type without a value in some column carries a placeholder there.
 _type_cells = {
-    'rest':          ['consecutive_failures', 'error_rate', 'alert_threshold', 'max_latency', 'use_llm'],
-    'sql':           ['consecutive_failures', 'error_rate', 'alert_threshold', 'max_query_time', 'use_llm'],
-    'llm':           ['consecutive_failures', 'error_rate', 'warning_latency', 'critical_latency', 'use_llm'],
-    'mcp':           ['consecutive_failures', 'error_rate', 'alert_threshold', 'max_tool_call_time', 'use_llm'],
-    'microsoft':     ['consecutive_failures', 'error_rate', 'health_alerts', 'max_call_time', 'use_llm'],
-    'email':         ['consecutive_failures', 'error_rate', 'auth_failures', 'alert_threshold', 'use_llm'],
-    'odoo':          ['consecutive_failures', 'error_rate', 'auth_failures', 'max_call_time', 'use_llm'],
-    'file_transfer': ['consecutive_failures', 'warning_failures', 'critical_failures', 'test_transfers', 'use_llm',
+    'rest':          ['consecutive_failures', 'error_rate', 'window', 'max_latency', 'use_llm'],
+    'sql':           ['consecutive_failures', 'error_rate', 'window', 'max_query_time', 'use_llm'],
+    'llm':           ['consecutive_failures', 'error_rate', 'window', 'warning_latency', 'error_latency', 'use_llm'],
+    'mcp':           ['consecutive_failures', 'error_rate', 'window', 'max_tool_call_time', 'use_llm'],
+    'microsoft':     ['consecutive_failures', 'error_rate', 'window', 'health_alerts', 'max_call_time', 'use_llm'],
+    'email':         ['consecutive_failures', 'error_rate', 'window', 'auth_failures', 'use_llm'],
+    'odoo':          ['consecutive_failures', 'error_rate', 'window', 'auth_failures', 'max_call_time', 'use_llm'],
+    'file_transfer': ['consecutive_failures', 'warning_failures', 'error_failures', 'window', 'test_transfers', 'use_llm',
         'arrival_overdue'],
-    'scheduler':     ['error_rate', 'alert_threshold', 'overdue_multiplier', 'start_delay', 'use_llm'],
-    'channels':      [None, 'error_rate', None, None, None],
+    'scheduler':     ['error_rate', 'window', 'overdue_multiplier', 'start_delay', 'use_llm'],
+    'channels':      [None, 'error_rate', 'window', None, None],
     'common':        ['certificate_warning', 'outstanding_backlog', 'feed_silence', None, None],
 }
 
 # What a toggle cell's value reads as
 _toggle_on_label  = 'On'
 _toggle_off_label = 'Off'
+
 
 # What each cell of the notifications row calls its value
 _notification_display = {
@@ -163,6 +165,15 @@ _notification_display = {
 
 # What a notification cell without a value reads as
 _not_set_label = 'Not set'
+
+# ################################################################################################################################
+
+def _format_duration(seconds:'int') -> 'str':
+    """ What a duration cell reads as - the count with the largest unit dividing the seconds evenly, e.g. 1 day.
+    """
+    count, unit_name = config_map.split_duration(seconds)
+    out = pluralize(count, unit_name)
+    return out
 
 # ################################################################################################################################
 
@@ -183,10 +194,14 @@ def _build_config_cell(field_name:'str', kind:'str', values:'stranydict') -> 'st
         'suffix': suffix,
     }
 
-    if kind == config_map.Kind_Toggle:
+    if kind in (config_map.Kind_Toggle, config_map.Kind_Ruleset_Toggle):
         out['kind'] = 'checkbox'
         out['value'] = 'true' if value else 'false'
         out['display'] = _toggle_on_label if value else _toggle_off_label
+    elif kind == config_map.Kind_Duration:
+        out['kind'] = 'duration'
+        out['value'] = value
+        out['display'] = _format_duration(value)
     else:
         out['kind'] = 'number'
         out['value'] = value

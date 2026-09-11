@@ -1479,45 +1479,41 @@ class Alerting:
 # ################################################################################################################################
 
 class Incidents:
-    """ Diagnosed alerts - diagnoses of failing connections, produced by an LLM guided
-    by a per-connection diagnostic skill and stored next to the alerts they explain.
-    There is no lifecycle here - the diagnosis travels out with the alert's
+    """ Explained alerts - explanations of failing connections, produced by an LLM guided
+    by a per-connection explanation skill and stored next to the alerts they explain.
+    There is no lifecycle here - the explanation travels out with the alert's
     notifications and whatever happens next lives in the receiving system.
     """
 
-    # The generic-object type diagnoses are stored under.
+    # The generic-object type explanations are stored under.
     class Type:
         Incident = 'zato-incident'
 
-    # The service a rule outcome's diagnose action points at to turn its findings
-    # into diagnosed alerts.
-    Service_Diagnose = 'zato.alerting.diagnose'
+    # The service the alerting engine hands an alert to when the alert's ruleset has
+    # the LLM explain its alerts - the service delivers the explained alert itself,
+    # through the rule's own action.
+    Service_Explain = 'zato.alerting.explain'
 
     # The name shared by the notification connections - one Slack, one Microsoft Teams, one SMTP,
     # all created when the environment is, inactive and with placeholder details.
     Notification_Conn_Name = 'default.alerts.notifications'
 
-    # The default LLM connection diagnoses go through when a rule names none of its own -
-    # created when the environment is, inactive and with placeholder details.
+    # The LLM connection explanations go through - created when the environment is,
+    # inactive and with placeholder details.
     LLM_Connection_Name = 'default.alerts.llm'
 
     # The environment variables that rename the default connections.
     Env_Notification_Conn_Name = 'Zato_Alerts_Connection'
     Env_LLM_Connection_Name    = 'Zato_Alerts_LLM_Connection'
 
-    # The keys a diagnose rule's action_config may carry - which LLM connection diagnoses,
-    # where the notification links point to and where each transport delivers.
-    Config_LLM_Connection = 'llm_connection'
-    Config_Dashboard_URL  = 'dashboard_url'
+    # The keys a rule's action_config may carry to say where the Slack and Teams actions deliver.
     Config_Slack_Channel  = 'slack_channel'
     Config_Teams_To       = 'teams_to'
-    Config_Email_To       = 'email_to'
-    Config_Email_From     = 'email_from'
 
-    # The one remediation the diagnosis may propose for REST outgoing connections.
+    # The one remediation the explanation may propose for REST outgoing connections.
     Remediation_Resubmit = 'resubmit'
 
-    # How many recent audit events go into a diagnosis's evidence pack.
+    # How many recent audit events go into an explanation's evidence pack.
     Evidence_Max_Events = 20
 
 # ################################################################################################################################

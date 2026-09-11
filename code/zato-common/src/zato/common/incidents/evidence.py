@@ -101,7 +101,7 @@ def collect_audit_trail(
 # ################################################################################################################################
 
 def build_evidence(alert:'stranydict', conn_config:'stranydict', audit_trail:'dictlist') -> 'stranydict':
-    """ Assembles the pack the diagnosis works from - the alert that fired, the connection's
+    """ Assembles the pack the explanation works from - the alert that fired, the connection's
     configuration reduced to its non-secret keys, and the audit trail.
     """
 

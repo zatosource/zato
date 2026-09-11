@@ -59,12 +59,12 @@ class AlertAction:
 # ################################################################################################################################
 
 class AlertSeverity:
-    """ The severity of a finding - critical findings are always dispatched,
+    """ The severity of a finding - error findings are always dispatched,
     regardless of dedup and digest settings.
     """
     Info     = 'info'
     Warning  = 'warning'
-    Critical = 'critical'
+    Error    = 'error'
 
 # ################################################################################################################################
 
@@ -165,6 +165,9 @@ class AlertRule:
     # the existing alert's count instead of raising a new one.
     dedup_window_seconds: int = Default_Dedup_Window_Seconds
 
+    # Whether the LLM explains every alert the rule raises before the action delivers it.
+    explain_with_llm: bool = False
+
 # ################################################################################################################################
 
 def new_rule(
@@ -178,6 +181,7 @@ def new_rule(
     config:'stranydict | None' = None,
     dedup_window_seconds:'int' = Default_Dedup_Window_Seconds,
     is_active:'bool' = True,
+    explain_with_llm:'bool' = False,
     ) -> 'AlertRule':
     """ Builds one alerting rule.
     """
@@ -199,6 +203,7 @@ def new_rule(
     out.action_config = action_config
     out.config = config
     out.dedup_window_seconds = dedup_window_seconds
+    out.explain_with_llm = explain_with_llm
 
     return out
 

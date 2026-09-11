@@ -295,7 +295,7 @@ class Create(ZatoCommand):
 
     def add_alert_notification_connections(self, session, cluster):
         """ Adds the default alert notification connections - one Slack, one Microsoft Teams,
-        one SMTP and one LLM connection for alert diagnoses, all inactive
+        one SMTP and one LLM connection for alert explanations, all inactive
         with placeholder details for people to fill in.
         """
 

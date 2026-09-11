@@ -14,6 +14,7 @@ from sqlalchemy import update
 
 # Zato
 from zato.common.alerting.collectors import new_fact
+from zato.common.alerting.config_map import Explain_With_LLM_Key
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.model import AlertAction
 from zato.common.alerting.sweep import build_fact_message, build_finding_link, read_outcome, run_sweep
@@ -54,19 +55,19 @@ _addresses = ['ops@example.com']
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The ruleset the sweep tests match through - one diagnose rule with its config in the
+# The ruleset the sweep tests match through - one invoke-service rule with its config in the
 # outcome keys and one email rule, both written the way the builder writes them.
 _rules_text = """
 rule
-    test_diagnose_on_errors
+    test_restart_on_errors
 docs
-    A channel erroring on at least half its traffic has its alert diagnosed.
+    A channel erroring on at least half its traffic has its restart service invoked.
 when
     alert.source is 'mllp-channel' and
     alert.error_rate is at least 0.5
 then
-    outcome.action = 'diagnose'
-    outcome.llm_connection = 'default.llm'
+    outcome.action = 'invoke-service'
+    outcome.service = 'test.channel.restart'
 
 rule
     test_email_on_silence
@@ -76,7 +77,7 @@ when
     alert.silent_seconds is at least 600
 then
     outcome.action = 'email'
-    outcome.severity = 'critical'
+    outcome.severity = 'error'
 """.strip()
 
 # The rule an outgoing connection and its own health check are both judged by - one condition,
@@ -91,7 +92,7 @@ when
     alert.consecutive_failures is at least 3
 then
     outcome.action = 'email'
-    outcome.severity = 'critical'
+    outcome.severity = 'error'
 """.strip()
 
 # ################################################################################################################################
@@ -130,10 +131,10 @@ class _TransportRecorder:
 
 # ################################################################################################################################
 
-def _load_rules(text:'str') -> 'rule_engine_rule_list':
+def _load_rules(text:'str', ruleset_name:'str'=Alerting.Ruleset_Name) -> 'rule_engine_rule_list':
     """ Builds runtime rules out of zrules text, the same way a stored version loads.
     """
-    documents, errors = parse_data_details(text, Alerting.Ruleset_Name)
+    documents, errors = parse_data_details(text, ruleset_name)
     assert errors == []
 
     loaded = load_documents(documents)
@@ -167,14 +168,14 @@ class TestReadOutcome:
 
     def test_only_prefixed_targets_come_through_stripped(self) -> 'None':
         then = {
-            'outcome.action': 'diagnose',
-            'outcome.llm_connection': 'default.llm',
+            'outcome.action': 'invoke-service',
+            'outcome.service': 'test.channel.restart',
             'something.else': 'ignored',
         }
 
         outcome = read_outcome(then)
 
-        assert outcome == {'action': 'diagnose', 'llm_connection': 'default.llm'}
+        assert outcome == {'action': 'invoke-service', 'service': 'test.channel.restart'}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -188,7 +189,7 @@ class TestBuildFactMessage:
         fact['total_count'] = 4
         fact['window_seconds'] = 300
 
-        message = build_fact_message('test_diagnose_on_errors', fact)
+        message = build_fact_message('test_restart_on_errors', fact)
 
         assert 'error rate 75% (3 of 4 over 300s)' in message
         assert _channel_name in message
@@ -285,7 +286,7 @@ class TestSourceLabels:
 
 class TestRunSweep:
 
-    def test_a_matching_fact_dispatches_the_diagnosis_with_the_outcome_config(self) -> 'None':
+    def test_a_matching_fact_dispatches_the_action_with_the_outcome_config(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         recorder = _TransportRecorder()
@@ -304,18 +305,61 @@ class TestRunSweep:
         assert result.finding_count == 1
         assert result.raised_count == 1
         assert result.deduplicated_count == 0
-        assert result.dispatched == [('test_diagnose_on_errors', AlertAction.Invoke_Service)]
+        assert result.dispatched == [('test_restart_on_errors', AlertAction.Invoke_Service)]
 
-        # The diagnose outcome invokes the diagnosis service with the remaining
+        # The invoke-service outcome invokes the service it names with the remaining
         # outcome keys travelling as the action config
         assert len(recorder.invocations) == 1
 
         service, payload = recorder.invocations[0]
-        assert service == Incidents.Service_Diagnose
+        assert service == 'test.channel.restart'
         assert payload['object_name'] == _channel_name
         assert payload['source'] == AuditSource.MLLP_Channel
-        assert payload['action_config']['llm_connection'] == 'default.llm'
+        assert payload['action_config']['service'] == 'test.channel.restart'
         assert 'error rate 100% (2 of 2' in payload['message']
+
+# ################################################################################################################################
+
+    def test_a_ruleset_the_llm_explains_hands_its_alerts_to_the_explain_service(self) -> 'None':
+        """ With the ruleset's explain_with_llm key on, the match goes to the explain service
+        instead of the rule's own action - the payload carries the action and the deployment
+        defaults so the service can run that action itself once the LLM has spoken.
+        """
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        recorder = _TransportRecorder()
+        now = utcnow()
+
+        _seed_outcome(audit_log, 'sweep-explain-1', AuditOutcome.Error)
+
+        rules = _load_rules(_rules_text)
+
+        # The config screen writes the key onto every rule document of the type
+        for rule in rules:
+            rule.document[Explain_With_LLM_Key] = True
+
+        defaults = AlertDefaults()
+        defaults.email_to = _addresses
+        defaults.email_from = 'alerts@example.com'
+
+        result = run_sweep(engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-explain-1', now,
+            defaults=defaults)
+
+        # The rule's own action is what the sweep reports as dispatched ..
+        assert result.dispatched == [('test_restart_on_errors', AlertAction.Invoke_Service)]
+
+        # .. while the one invocation went to the explain service, not to the restart service ..
+        assert len(recorder.invocations) == 1
+
+        service, payload = recorder.invocations[0]
+        assert service == Incidents.Service_Explain
+
+        # .. with everything the service needs to deliver the alert itself.
+        assert payload['action'] == AlertAction.Invoke_Service
+        assert payload['action_config'] == {'service': 'test.channel.restart'}
+        assert payload['defaults'] == {'email_to': _addresses, 'email_from': 'alerts@example.com', 'webhook_url': ''}
+        assert payload['object_name'] == _channel_name
+        assert payload['explanation'] == ''
 
 # ################################################################################################################################
 
@@ -381,7 +425,7 @@ class TestRunSweep:
 
         # The listing screen writes the flag into the rule's own document
         for rule in rules:
-            if rule.name == 'test_diagnose_on_errors':
+            if rule.name == 'test_restart_on_errors':
                 rule.document['is_active'] = False
 
         result = run_sweep(engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-off-1', now)
@@ -417,15 +461,15 @@ class TestRunSweep:
         assert result.fact_count == 2
         assert result.raised_count == 2
         assert sorted(result.dispatched) == [
-            ('test_diagnose_on_errors', AlertAction.Invoke_Service),
             ('test_email_on_silence', AlertAction.Email_Digest),
+            ('test_restart_on_errors', AlertAction.Invoke_Service),
         ]
 
         # The email rule went out through the email transport with the default addresses
         assert len(recorder.emails) == 1
         assert recorder.emails[0][0] == _addresses
 
-        # The diagnose rule went out through the service transport
+        # The invoke-service rule went out through the service transport
         assert len(recorder.invocations) == 1
         assert recorder.invocations[0][1]['object_name'] == _channel_name
 
@@ -509,6 +553,73 @@ class TestRunSweep:
 
         assert schedule_name in body
         assert 'no file for 600s' in body
+
+# ################################################################################################################################
+
+    def test_the_window_of_a_ruleset_reaches_the_collectors(self) -> 'None':
+        """ A ruleset's window_seconds default is the window its type's sources are measured over -
+        a failure two hours back counts within a day's window and not within ten minutes.
+        """
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, 'sftp.window',
+            cid='sweep-window-1', outcome=AuditOutcome.Error)
+
+        statement = update(event_table)
+        statement = statement.where(event_table.c.id == event_id)
+        statement = statement.values(event_time_iso=(now - timedelta(seconds=7200)).isoformat())
+
+        with engine.begin() as connection:
+            _ = connection.execute(statement)
+
+        defaults = AlertDefaults()
+        defaults.email_to = _addresses
+
+        # Over a day the failure is in the window ..
+        recorder = _TransportRecorder()
+        rules = _load_rules(_window_rules_text.format(window_seconds=86400), 'alerts_file_transfer')
+
+        result = run_sweep(engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-window-1', now,
+            defaults=defaults)
+
+        assert result.raised_count == 1
+        assert len(recorder.emails) == 1
+
+        _, _, body = recorder.emails[0]
+        assert 'over 86400s' in body
+
+        # .. over ten minutes it is not.
+        recorder = _TransportRecorder()
+        rules = _load_rules(_window_rules_text.format(window_seconds=600), 'alerts_file_transfer')
+
+        result = run_sweep(engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-window-2', now,
+            defaults=defaults)
+
+        assert result.raised_count == 0
+        assert recorder.emails == []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The ruleset the window test matches through - the seeded Transfer_Failures rule's shape under
+# the file transfer ruleset's name, so the config map reads its window the way the sweep does.
+_window_rules_text = """
+rule
+    Transfer_Failures
+docs
+    A file transfer connection with any failed transfer within the window raises an email alert.
+defaults
+    warning_failure_count = 1
+    window_seconds = {window_seconds}
+when
+    alert.source is 'file-outgoing' and
+    alert.error_count is at least default.warning_failure_count
+then
+    outcome.action = 'email'
+    outcome.severity = 'warning'
+""".strip()
 
 # ################################################################################################################################
 # ################################################################################################################################

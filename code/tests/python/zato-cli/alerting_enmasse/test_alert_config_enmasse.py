@@ -29,7 +29,7 @@ from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.exporters.alert_config import AlertConfigExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.alert_config import AlertConfigImporter
-from zato.common.alerting.config_map import is_rule_active
+from zato.common.alerting.config_map import is_rule_active, Explain_With_LLM_Key
 from zato.common.alerting.config_store import get_type_definition
 from zato.common.alerting.notification_config import parse_extra
 from zato.common.alerting.sweep import load_alert_rules
@@ -67,16 +67,17 @@ alert_rules:
     is_active: true
     consecutive_failures: 5
     error_rate: 20
-    alert_threshold: 40
+    window: 3600
     max_latency: 7000
-    use_llm: true
+    use_llm: false
   - type: file_transfer
     is_active: true
     consecutive_failures: 4
     warning_failures: 12
-    alert_threshold: 25
-    critical_failures: 24
+    error_failures: 24
+    window: 43200
     test_transfers: false
+    arrival_overdue: 2
     use_llm: true
 
 alert_notifications:
@@ -199,15 +200,24 @@ class TestAlertRulesImport:
         error_rule = rules_by_full_name['alerts_rest_Error_Rate']
         assert error_rule.defaults['error_rate_threshold'] == 0.2
 
-        diagnose_rule = rules_by_full_name['alerts_rest_Error_Rate_Diagnose']
-        assert diagnose_rule.defaults['error_rate_threshold'] == 0.4
+        # The window travels in seconds, straight into the rule default the sweep measures over
+        assert error_rule.defaults['window_seconds'] == 3600
+
+        # The Use LLM switch landed on every rule of the type
+        for rule in rules:
+            if rule.full_name.startswith('alerts_rest_'):
+                assert rule.document[Explain_With_LLM_Key] is False, rule.full_name
 
         slow_rule = rules_by_full_name['alerts_rest_Slow_Responses']
         assert slow_rule.defaults['max_avg_duration_ms'] == 7000
 
         transfer_rule = rules_by_full_name['alerts_file_transfer_Transfer_Failures']
         assert transfer_rule.defaults['warning_failure_count'] == 12
-        assert transfer_rule.defaults['critical_failure_count'] == 24
+        assert transfer_rule.defaults['error_failure_count'] == 24
+        assert transfer_rule.defaults['window_seconds'] == 43200
+
+        transfer_error_rule = rules_by_full_name['alerts_file_transfer_Transfer_Failures_Error']
+        assert transfer_error_rule.defaults['window_seconds'] == 43200
 
         # The test transfers toggle turned its test transfer rule off while the type
         # itself stays active - the entry's is_active did not overwrite the toggle
@@ -333,9 +343,13 @@ class TestAlertConfigExport:
         assert rest_entry['is_active'] is True
         assert rest_entry['consecutive_failures'] == 3
         assert rest_entry['error_rate'] == 10
-        assert rest_entry['alert_threshold'] == 25
+        assert rest_entry['window'] == 300
         assert rest_entry['max_latency'] == 5000
         assert rest_entry['use_llm'] is True
+
+        # The file transfer window ships as one day, in seconds
+        file_transfer_entry = exported_by_type['file_transfer']
+        assert file_transfer_entry['window'] == 86400
 
 # ################################################################################################################################
 # ################################################################################################################################

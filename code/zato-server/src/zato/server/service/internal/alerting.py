@@ -10,13 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from contextlib import closing
 
-# requests
-import requests
-
 # Zato
-from zato.common.api import Alerting, EMAIL, FileTransfer, SMTPMessage
-from zato.common.alerting.engine import AlertDefaults, AlertTransports
-from zato.common.alerting.names import get_notification_conn_name
+from zato.common.api import Alerting, EMAIL, FileTransfer
+from zato.common.alerting.engine import AlertDefaults
 from zato.common.alerting.notification_config import read_notification_config, set_notification_config
 from zato.common.alerting.probes import parse_tls_target, run_certificate_probe, run_health_probe, run_test_transfer_probe
 from zato.common.alerting.rendering import Template_Dir_Name
@@ -27,6 +23,7 @@ from zato.common.odb.model import GenericConn, IntervalBasedJob, Job
 from zato.common.util.api import pluralize, utcnow
 from zato.common.util.file_transfer_scheduler import get_schedule_list
 from zato.common.util.scheduler import set_job_active
+from zato.server.alerting_transports import build_alert_transports
 from zato.server.generic.api.channel_hl7_mllp import get_current_metrics
 from zato.server.rule_engine_api import get_backend
 from zato.server.service.internal import AdminService
@@ -35,13 +32,10 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist, dictlist, stranydict, strintdict, strlist
+    from zato.common.typing_ import anydict, anylist, dictlist, strintdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# How long a webhook post may take before it is abandoned, in seconds.
-_webhook_timeout = 10
 
 # How many seconds each unit of an interval-based job's definition is worth.
 _seconds_per_week   = 7 * 24 * 3600
@@ -79,99 +73,6 @@ class AlertingRun(AdminService):
             out = value
         else:
             out = ''
-
-        return out
-
-# ################################################################################################################################
-
-    def _build_transports(self, context:'anydict') -> 'AlertTransports':
-        """ Wires the real delivery callables the engine dispatches through - email,
-        Slack and Microsoft Teams ride on the connections that share the default
-        notification name, next to the server's own invoker, pub/sub and HTTP
-        for plain webhooks. Each callable returns without delivering when its
-        connection does not exist or is inactive.
-        """
-        conn_name = get_notification_conn_name()
-        from_ = self._get_extra(Alerting.Extra_From, context)
-
-        def send_email(addresses:'strlist', subject:'str', body:'str') -> 'None':
-
-            # The email component may be disabled in server.conf.
-            if not self.email:
-                self.logger.info(
-                    'Could not send an alerting email; is component_enabled.email set to True in server.conf?')
-                return
-
-            # A connection that does not exist sends nothing ..
-            try:
-                smtp_item = self.email.smtp.get(conn_name, True)
-            except KeyError:
-                self.logger.info('No SMTP connection `%s` exists, skipping an email to `%s`', conn_name, addresses)
-                return
-
-            # .. and neither does an inactive one.
-            if not smtp_item.config['is_active']:
-                self.logger.info('SMTP connection `%s` is inactive, skipping an email to `%s`', conn_name, addresses)
-                return
-
-            message = SMTPMessage()
-            message.from_ = from_
-            message.to = addresses
-            message.subject = subject
-            message.body = body
-
-            smtp_item.conn.send(message)
-
-        def invoke_service(service_name:'str', payload:'stranydict') -> 'None':
-            _ = self.server.invoke(service_name, payload)
-
-        def publish(topic_name:'str', payload:'stranydict') -> 'None':
-            _ = self.server.pubsub_backend.publish(topic_name, payload, cid=self.cid, correl_id=self.cid)
-
-        def send_slack(channel:'str', text:'str') -> 'None':
-
-            # A connection that does not exist or is inactive sends nothing.
-            if conn_name not in self.slack.conn_dict:
-                self.logger.info('No Slack connection `%s` exists, skipping the notification', conn_name)
-                return
-
-            item = self.slack.conn_dict[conn_name]
-
-            if not item['is_active']:
-                self.logger.info('Slack connection `%s` is inactive, skipping the notification', conn_name)
-                return
-
-            _ = self.slack.send(conn_name, channel, text)
-
-        def send_teams(to:'str', html:'str') -> 'None':
-
-            # A connection that does not exist or is inactive sends nothing.
-            if conn_name not in self.microsoft.teams.conn_dict:
-                self.logger.info('No Microsoft Teams connection `%s` exists, skipping the notification', conn_name)
-                return
-
-            item = self.microsoft.teams.conn_dict[conn_name]
-
-            if not item['is_active']:
-                self.logger.info('Microsoft Teams connection `%s` is inactive, skipping the notification', conn_name)
-                return
-
-            _ = self.microsoft.teams.send(conn_name, to, html)
-
-        def http_post(url:'str', payload:'stranydict') -> 'None':
-            response = requests.post(url, json=payload, timeout=_webhook_timeout)
-            if not response.ok:
-                self.logger.warning('Alert webhook `%s` returned %s - %s', url, response.status_code, response.text)
-
-        # Our response to produce
-        out = AlertTransports()
-
-        out.send_email = send_email
-        out.invoke_service = invoke_service
-        out.publish = publish
-        out.send_slack = send_slack
-        out.send_teams = send_teams
-        out.http_post = http_post
 
         return out
 
@@ -333,6 +234,7 @@ class AlertingRun(AdminService):
         # The deployment-level targets a rule without its own delivers through.
         defaults = AlertDefaults()
         defaults.webhook_url = self._get_extra(Alerting.Extra_Webhook_URL, context)
+        defaults.email_from = self._get_extra(Alerting.Extra_From, context)
 
         if default_to:
             email_to:'strlist' = []
@@ -342,7 +244,7 @@ class AlertingRun(AdminService):
 
             defaults.email_to = email_to
 
-        transports = self._build_transports(context)
+        transports = build_alert_transports(self, defaults.email_from)
         audit_log = AuditLog(self.server.name)
         engine = get_audit_engine()
 

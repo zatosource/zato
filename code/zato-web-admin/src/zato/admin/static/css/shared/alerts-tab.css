@@ -115,8 +115,10 @@
    and the count field stretches to that same width, so label, field and the
    OK button under them share both edges. The width of 0 keeps the field out
    of the popover's max-content measure, which the label alone then sets, and
-   the min-width of 100% fills the field out to the label once that is known. */
-.alerts-tab-micro-form .micro-form-field input.micro-form-number {
+   the min-width of 100% fills the field out to the label once that is known.
+   A number with a unit select after it stays its own width, the two together
+   being wider than the label anyway. */
+.alerts-tab-micro-form .micro-form-field > input.micro-form-number {
     width: 0;
     min-width: 100%;
 }

@@ -236,7 +236,7 @@ class AuditEvent:
     Receipt_Sent         = 'receipt-sent'
     Receipt_Received     = 'receipt-received'
     Alert_Raised         = 'alert-raised'
-    Alert_Diagnosed      = 'alert-diagnosed'
+    Alert_Explained      = 'alert-explained'
     MCP_Initialize       = 'mcp-initialize'
     MCP_Tools_List       = 'mcp-tools-list'
     MCP_Tools_Call       = 'mcp-tools-call'

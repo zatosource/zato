@@ -15,6 +15,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import annotations
 
+# Zato
+from zato.common.audit_log.common import AuditSource
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -26,10 +29,32 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The kinds a screen field comes in - a number backed by rule defaults
-# or a toggle backed by the active flags of whole rules.
+# The kinds a screen field comes in - a number backed by rule defaults, a duration backed
+# by a rule default counted in seconds and shown as a count with a unit, a toggle backed
+# by the active flags of whole rules, or a ruleset toggle backed by one key every rule
+# document of the ruleset carries, which is how a setting of the whole type is kept.
 Kind_Number = 'number'
+Kind_Duration = 'duration'
 Kind_Toggle = 'toggle'
+Kind_Ruleset_Toggle = 'ruleset_toggle'
+
+# The rule default a type's window field reads and writes - how far back the
+# error-rate and failure-count facts of the type's sources are measured over.
+Window_Seconds_Default = 'window_seconds'
+Window_Field_Name = 'window'
+
+# The units a duration is shown in, smallest first - the noun in the singular and its seconds.
+# A screen picks the largest unit dividing the seconds evenly, so 86400 reads as one day.
+Duration_Units = [
+    ('minute', 60),
+    ('hour', 3600),
+    ('day', 86400),
+]
+Duration_Unit_Smallest = Duration_Units[0][0]
+
+# The rule document key saying whether the LLM explains every alert the ruleset raises -
+# the Use LLM switch of a type reads and writes it on every rule of the type.
+Explain_With_LLM_Key = 'explain_with_llm'
 
 # Percent fields are stored as fractions - the screen says 10, the rule says 0.1.
 Percent_Multiplier = 100
@@ -54,122 +79,144 @@ type_to_ruleset = {
 
 # ################################################################################################################################
 
+# The audit sources each screen type's rules match on - what the type's window
+# is the measuring window of. A source no type names, the health checks above all,
+# is measured over the collectors' own default window.
+type_sources:'dict[str, strlist]' = {
+    'rest':          [AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing],
+    'sql':           [AuditSource.SQL_Outgoing],
+    'llm':           [AuditSource.LLM],
+    'mcp':           [AuditSource.MCP],
+    'microsoft':     [AuditSource.Microsoft_Cloud],
+    'email':         [AuditSource.Email_SMTP, AuditSource.Email_IMAP],
+    'odoo':          [AuditSource.Odoo],
+    'file_transfer': [AuditSource.File_Outgoing],
+    'scheduler':     [AuditSource.Scheduler],
+    'channels':      [AuditSource.REST_Channel, AuditSource.SOAP_Channel, AuditSource.MLLP_Channel],
+}
+
+# ################################################################################################################################
+
 # The fields of each type, in their screen order. A number field names the rules
 # whose defaults it is tied to - the first rule that holds the default answers a read,
 # every rule that holds it takes a write, which is how a threshold shared by a warning
-# rule and its critical sibling stays consistent. A toggle field names the rules
-# whose active flags it reads and writes whole.
+# rule and its error sibling stays consistent. A duration field is a number of seconds
+# the screen shows as a count with a unit. A toggle field names the rules
+# whose active flags it reads and writes whole, and a ruleset toggle names the
+# document key it reads off the first rule and writes onto every rule of the type.
 type_fields:'dict[str, list[stranydict]]' = {
     'rest': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
             'default': 'max_consecutive_failures', 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
-        {'name': 'alert_threshold', 'kind': Kind_Number, 'rules': ['Error_Rate_Diagnose'],
-            'default': 'error_rate_threshold', 'is_percent': True},
+        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
+            'default': Window_Seconds_Default, 'is_percent': False},
         {'name': 'max_latency', 'kind': Kind_Number, 'rules': ['Slow_Responses'],
             'default': 'max_avg_duration_ms', 'is_percent': False},
-        {'name': 'use_llm', 'kind': Kind_Toggle, 'rules': ['Error_Rate_Diagnose']},
+        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
     'sql': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
             'default': 'max_consecutive_failures', 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
-        {'name': 'alert_threshold', 'kind': Kind_Number, 'rules': ['Error_Rate_Diagnose'],
-            'default': 'error_rate_threshold', 'is_percent': True},
+        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
+            'default': Window_Seconds_Default, 'is_percent': False},
         {'name': 'max_query_time', 'kind': Kind_Number, 'rules': ['Slow_Queries'],
             'default': 'max_avg_duration_ms', 'is_percent': False},
-        {'name': 'use_llm', 'kind': Kind_Toggle, 'rules': ['Error_Rate_Diagnose']},
+        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
     'llm': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
             'default': 'max_consecutive_failures', 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
-        {'name': 'alert_threshold', 'kind': Kind_Number, 'rules': ['Error_Rate_Diagnose'],
-            'default': 'error_rate_threshold', 'is_percent': True},
+        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
+            'default': Window_Seconds_Default, 'is_percent': False},
         {'name': 'warning_latency', 'kind': Kind_Number, 'rules': ['Slow_Completions'],
             'default': 'warning_avg_duration_ms', 'is_percent': False},
-        {'name': 'critical_latency', 'kind': Kind_Number, 'rules': ['Slow_Completions_Critical', 'Slow_Completions'],
-            'default': 'critical_avg_duration_ms', 'is_percent': False},
-        {'name': 'use_llm', 'kind': Kind_Toggle, 'rules': ['Error_Rate_Diagnose']},
+        {'name': 'error_latency', 'kind': Kind_Number, 'rules': ['Slow_Completions_Error', 'Slow_Completions'],
+            'default': 'error_avg_duration_ms', 'is_percent': False},
+        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
     'mcp': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Server_Down'],
             'default': 'max_consecutive_failures', 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
-        {'name': 'alert_threshold', 'kind': Kind_Number, 'rules': ['Error_Rate_Diagnose'],
-            'default': 'error_rate_threshold', 'is_percent': True},
+        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
+            'default': Window_Seconds_Default, 'is_percent': False},
         {'name': 'max_tool_call_time', 'kind': Kind_Number, 'rules': ['Slow_Tool_Calls'],
             'default': 'max_avg_duration_ms', 'is_percent': False},
-        {'name': 'use_llm', 'kind': Kind_Toggle, 'rules': ['Error_Rate_Diagnose']},
+        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
     'microsoft': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
             'default': 'max_consecutive_failures', 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
-        {'name': 'alert_threshold', 'kind': Kind_Number, 'rules': ['Error_Rate_Diagnose'],
-            'default': 'error_rate_threshold', 'is_percent': True},
+        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
+            'default': Window_Seconds_Default, 'is_percent': False},
         {'name': 'health_alerts', 'kind': Kind_Toggle, 'rules': ['Service_Degraded', 'Service_Interrupted']},
         {'name': 'max_call_time', 'kind': Kind_Number, 'rules': ['Slow_API_Calls'],
             'default': 'max_avg_duration_ms', 'is_percent': False},
-        {'name': 'use_llm', 'kind': Kind_Toggle, 'rules': ['Error_Rate_Diagnose']},
+        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
     'email': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
             'default': 'max_consecutive_failures', 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
-        {'name': 'alert_threshold', 'kind': Kind_Number, 'rules': ['Error_Rate_Diagnose'],
-            'default': 'error_rate_threshold', 'is_percent': True},
+        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
+            'default': Window_Seconds_Default, 'is_percent': False},
         {'name': 'auth_failures', 'kind': Kind_Number, 'rules': ['Auth_Failures'],
             'default': 'auth_failure_threshold', 'is_percent': False},
-        {'name': 'use_llm', 'kind': Kind_Toggle, 'rules': ['Error_Rate_Diagnose']},
+        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
     'odoo': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
             'default': 'max_consecutive_failures', 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
-        {'name': 'alert_threshold', 'kind': Kind_Number, 'rules': ['Error_Rate_Diagnose'],
-            'default': 'error_rate_threshold', 'is_percent': True},
+        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
+            'default': Window_Seconds_Default, 'is_percent': False},
         {'name': 'auth_failures', 'kind': Kind_Number, 'rules': ['Auth_Failures'],
             'default': 'auth_failure_threshold', 'is_percent': False},
         {'name': 'max_call_time', 'kind': Kind_Number, 'rules': ['Slow_Calls'],
             'default': 'max_avg_duration_ms', 'is_percent': False},
-        {'name': 'use_llm', 'kind': Kind_Toggle, 'rules': ['Error_Rate_Diagnose']},
+        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
     'file_transfer': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
             'default': 'max_consecutive_failures', 'is_percent': False},
         {'name': 'warning_failures', 'kind': Kind_Number, 'rules': ['Transfer_Failures'],
             'default': 'warning_failure_count', 'is_percent': False},
-        {'name': 'alert_threshold', 'kind': Kind_Number, 'rules': ['Error_Rate_Diagnose'],
-            'default': 'error_rate_threshold', 'is_percent': True},
-        {'name': 'critical_failures', 'kind': Kind_Number, 'rules': ['Transfer_Failures_Critical', 'Transfer_Failures'],
-            'default': 'critical_failure_count', 'is_percent': False},
+        {'name': 'error_failures', 'kind': Kind_Number, 'rules': ['Transfer_Failures_Error', 'Transfer_Failures'],
+            'default': 'error_failure_count', 'is_percent': False},
+        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Transfer_Failures', 'Transfer_Failures_Error'],
+            'default': Window_Seconds_Default, 'is_percent': False},
         {'name': 'arrival_overdue', 'kind': Kind_Number, 'rules': ['Arrival_Overdue'],
             'default': 'arrival_overdue_multiplier', 'is_percent': False},
         {'name': 'test_transfers', 'kind': Kind_Toggle, 'rules': ['Test_Transfer_Failing']},
-        {'name': 'use_llm', 'kind': Kind_Toggle, 'rules': ['Error_Rate_Diagnose']},
+        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
     'scheduler': [
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Job_Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
-        {'name': 'alert_threshold', 'kind': Kind_Number, 'rules': ['Job_Error_Rate_Diagnose'],
-            'default': 'error_rate_threshold', 'is_percent': True},
+        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Job_Error_Rate'],
+            'default': Window_Seconds_Default, 'is_percent': False},
         {'name': 'overdue_multiplier', 'kind': Kind_Number, 'rules': ['Missed_Run'],
             'default': 'overdue_multiplier', 'is_percent': False},
         {'name': 'start_delay', 'kind': Kind_Number, 'rules': ['Start_Delay'],
             'default': 'max_start_delay_ms', 'is_percent': False},
-        {'name': 'use_llm', 'kind': Kind_Toggle, 'rules': ['Job_Error_Rate_Diagnose']},
+        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
     'channels': [
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Channel_Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
+        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Channel_Error_Rate'],
+            'default': Window_Seconds_Default, 'is_percent': False},
     ],
     'common': [
         {'name': 'certificate_warning', 'kind': Kind_Number, 'rules': ['Certificate_Expiring'],
@@ -226,6 +273,41 @@ def to_rule_value(value:'float', is_percent:'bool') -> 'float | int':
     return value
 
 # ################################################################################################################################
+
+def split_duration(seconds:'int') -> 'tuple[int | float, str]':
+    """ A number of seconds as a count and the largest unit dividing it evenly - 86400 is one day,
+    600 is ten minutes. Seconds no unit divides evenly are a fraction of the smallest unit.
+    """
+
+    # Our response to produce - the smallest unit unless a larger one divides evenly
+    unit_seconds = Duration_Units[0][1]
+    out_unit = Duration_Unit_Smallest
+
+    for unit_name, candidate_seconds in Duration_Units:
+        if seconds % candidate_seconds == 0:
+            unit_seconds = candidate_seconds
+            out_unit = unit_name
+
+    out_count = to_screen_value(seconds / unit_seconds, False)
+
+    return out_count, out_unit
+
+# ################################################################################################################################
+
+def join_duration(count:'float', unit_name:'str') -> 'int':
+    """ A count of one unit back as seconds - what split_duration took apart.
+    """
+
+    # Our response to produce
+    out = 0
+
+    for candidate_name, unit_seconds in Duration_Units:
+        if candidate_name == unit_name:
+            out = int(count * unit_seconds)
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def read_number(documents:'stranydict', ruleset_name:'str', field:'stranydict') -> 'float | int | None':
@@ -277,9 +359,45 @@ def read_toggle(documents:'stranydict', ruleset_name:'str', field:'stranydict') 
 
 # ################################################################################################################################
 
+def read_ruleset_toggle(documents:'stranydict', field:'stranydict') -> 'bool':
+    """ One ruleset toggle's state - the key's value on the first rule of the type,
+    every rule carrying the same one. A ruleset with no rules or a rule that never
+    had the key, e.g. one a person wrote by hand, reads as off.
+    """
+
+    # Our response to produce
+    out = False
+
+    for rule_document in documents.values():
+        out = rule_document.get(field['key']) is True
+        break
+
+    return out
+
+# ################################################################################################################################
+
+def read_window_seconds(documents:'stranydict', type_name:'str') -> 'int | None':
+    """ How many seconds one type's window rules measure over - None when the type has
+    no window field or the rule holding the default is gone.
+    """
+
+    # Our response to produce
+    out = None
+
+    ruleset_name = type_to_ruleset[type_name]
+
+    for field in type_fields[type_name]:
+        if field['kind'] == Kind_Duration:
+            out = read_number(documents, ruleset_name, field)
+            break
+
+    return out
+
+# ################################################################################################################################
+
 def read_type_values(type_name:'str', documents:'stranydict') -> 'stranydict':
     """ Every screen value of one type, keyed by field name - numbers in screen units,
-    toggles as booleans. A field whose rule is gone is absent rather than invented.
+    durations in seconds, toggles as booleans. A field whose rule is gone is absent rather than invented.
     """
 
     # Our response to produce
@@ -291,6 +409,8 @@ def read_type_values(type_name:'str', documents:'stranydict') -> 'stranydict':
 
         if field['kind'] == Kind_Toggle:
             out[field['name']] = read_toggle(documents, ruleset_name, field)
+        elif field['kind'] == Kind_Ruleset_Toggle:
+            out[field['name']] = read_ruleset_toggle(documents, field)
         else:
             value = read_number(documents, ruleset_name, field)
 
@@ -367,6 +487,23 @@ def write_toggle(documents:'stranydict', ruleset_name:'str', field:'stranydict',
 
 # ################################################################################################################################
 
+def write_ruleset_toggle(documents:'stranydict', field:'stranydict', value:'bool') -> 'bool':
+    """ Writes one ruleset toggle's key onto every rule of the type, so whichever rule
+    fires carries the type's answer. Returns whether anything actually changed.
+    """
+
+    # Our response to produce
+    out = False
+
+    for rule_document in documents.values():
+        if rule_document.get(field['key']) is not value:
+            rule_document[field['key']] = value
+            out = True
+
+    return out
+
+# ################################################################################################################################
+
 def write_type_values(type_name:'str', documents:'stranydict', values:'stranydict') -> 'bool':
     """ Writes the given screen values of one type into its documents - only the fields
     present in the input are touched. Returns whether anything actually changed.
@@ -386,6 +523,8 @@ def write_type_values(type_name:'str', documents:'stranydict', values:'stranydic
 
         if field['kind'] == Kind_Toggle:
             changed = write_toggle(documents, ruleset_name, field, value)
+        elif field['kind'] == Kind_Ruleset_Toggle:
+            changed = write_ruleset_toggle(documents, field, value)
         else:
             changed = write_number(documents, ruleset_name, field, value)
 

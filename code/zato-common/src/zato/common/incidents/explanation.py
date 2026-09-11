@@ -26,10 +26,10 @@ if 0:
 _fence_json = '```json'
 _fence_plain = '```'
 
-# The confidence levels a diagnosis may carry.
+# The confidence levels an explanation may carry.
 _confidence_levels = ('low', 'medium', 'high')
 
-# The remediation actions a diagnosis may propose - the closed catalog the approval executes from.
+# The remediation actions an explanation may propose - the closed catalog the approval executes from.
 _allowed_actions = (Incidents.Remediation_Resubmit,)
 
 # ################################################################################################################################
@@ -69,15 +69,15 @@ def _strip_fences(text:'str') -> 'str':
 
 # ################################################################################################################################
 
-def parse_diagnosis(text:'str') -> 'stranydict':
-    """ Parses an LLM reply into a diagnosis. A reply that is not the expected JSON document
-    still becomes a diagnosis - its full text is the diagnosis, with no confidence
+def parse_explanation(text:'str') -> 'stranydict':
+    """ Parses an LLM reply into an explanation. A reply that is not the expected JSON document
+    still becomes an explanation - its full text is the explanation, with no confidence
     and no remediation, so a person can always read what the model said.
     """
 
     # Our response to produce
     out:'stranydict' = {
-        'diagnosis': text,
+        'explanation': text,
         'confidence': '',
         'remediation': None,
         'is_parsed': False,
@@ -96,13 +96,13 @@ def parse_diagnosis(text:'str') -> 'stranydict':
     if not isinstance(parsed, dict):
         return out
 
-    # .. the diagnosis prose is the one required field ..
-    diagnosis = parsed.get('diagnosis')
+    # .. the explanation prose is the one required field ..
+    explanation = parsed.get('explanation')
 
-    if not diagnosis:
+    if not explanation:
         return out
 
-    out['diagnosis'] = diagnosis
+    out['explanation'] = explanation
     out['is_parsed'] = True
 
     # .. an unrecognized confidence level is dropped rather than passed through ..

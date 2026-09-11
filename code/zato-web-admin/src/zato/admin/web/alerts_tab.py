@@ -26,9 +26,7 @@ from django.urls import reverse
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.collectors.common import Default_Window_Seconds_By_Source
 from zato.common.alerting.seed.api import build_ruleset_document, default_rulesets
-from zato.common.audit_log.api import AuditSource
 from zato.common.defaults import default_cluster_id
 from zato.common.rule_engine.sql.constants import Documents_Key
 
@@ -54,6 +52,29 @@ Field_Prefix = 'alert_'
 Is_Active_Field = 'is_active'
 Email_Connection_Field = 'email_connection'
 
+# The units a time is given in - a select that sits right after the number in its popover.
+# An option's value is the noun in the singular and its label the plural, which is how
+# the summary reads "1 hour" and "2 hours" off the select.
+duration_unit_choices = []
+
+for _unit_name, _ignored_seconds in config_map.Duration_Units:
+    duration_unit_choices.append((_unit_name, _unit_name + 's'))
+
+# The unit of the time a file may fail to arrive for
+Arrival_Overdue_Unit_Field = 'arrival_overdue_unit'
+Arrival_Overdue_Unit_Default = 'hour'
+
+# The unit of the window the failure counts are measured over - a duration field's unit
+# select is named after the field, and its default comes from the seeded rules with the count.
+Unit_Field_Suffix = '_unit'
+Window_Unit_Field = config_map.Window_Field_Name + Unit_Field_Suffix
+
+# The unit selects of the tab, by name - what each offers and what a new object starts with
+unit_fields = {
+    Arrival_Overdue_Unit_Field: {'choices': duration_unit_choices, 'initial': Arrival_Overdue_Unit_Default},
+    Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
+}
+
 # What the tab is called in the tab strip
 Tab_Label = 'Alerts'
 
@@ -65,13 +86,6 @@ Edit_Hint = 'Click to edit'
 
 # Which alert type each object type's settings follow
 alert_type_file_transfer = 'file_transfer'
-
-# The window the failure counts of a type are measured over - it is the collectors' own
-# window, said in minutes on the tab so that a reader knows how long "in a window" is.
-Seconds_Per_Minute = 60
-window_minutes = {
-    alert_type_file_transfer: Default_Window_Seconds_By_Source[AuditSource.File_Outgoing] // Seconds_Per_Minute,
-}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -121,18 +135,18 @@ _placeholder_email_connections = {
 field_display = {
     'consecutive_failures': ('Consecutive failures', ''),
     'error_rate':           ('Error rate', '%'),
-    'alert_threshold':      ('Alert threshold', '%'),
     'max_latency':          ('Max latency', 'ms'),
     'max_query_time':       ('Max query time', 'ms'),
     'warning_latency':      ('Warning latency', 'ms'),
-    'critical_latency':     ('Critical latency', 'ms'),
+    'error_latency':        ('Error latency', 'ms'),
     'max_tool_call_time':   ('Max tool-call time', 'ms'),
     'health_alerts':        ('Health alerts', ''),
     'max_call_time':        ('Max call time', 'ms'),
     'auth_failures':        ('Auth failures', ''),
     'warning_failures':     ('Warning failures', ''),
-    'critical_failures':    ('Critical failures', ''),
-    'arrival_overdue':      ('Arrival overdue', 'windows'),
+    'error_failures':       ('Error failures', ''),
+    'window':               ('In the last', ''),
+    'arrival_overdue':      ('Alert after', ''),
     'test_transfers':       ('Test transfers', ''),
     'overdue_multiplier':   ('Overdue multiplier', ''),
     'start_delay':          ('Start delay', 'ms'),
@@ -147,25 +161,27 @@ field_how_it_works = {
     Is_Active_Field:        'Whether alerts are raised for this object at all. Off means nothing below is measured.',
     'consecutive_failures': 'How many failures in a row raise an alert.',
     'error_rate':           'The share of failed calls, in percent, that raises an alert.',
-    'alert_threshold':      'The error rate, in percent, at which an alert is escalated.',
     'max_latency':          'Calls slower than this many milliseconds count as slow.',
     'max_query_time':       'Queries slower than this many milliseconds count as slow.',
     'warning_latency':      'Completions slower than this many milliseconds raise a warning.',
-    'critical_latency':     'Completions slower than this many milliseconds are critical.',
+    'error_latency':        'Completions slower than this many milliseconds are errors.',
     'max_tool_call_time':   'Tool calls slower than this many milliseconds count as slow.',
     'health_alerts':        'Whether the Microsoft service health feed raises alerts of its own.',
     'max_call_time':        'Calls slower than this many milliseconds count as slow.',
     'auth_failures':        'How many authentication failures in a row raise an alert.',
-    'warning_failures':     f'How many failures in {window_minutes[alert_type_file_transfer]} minutes raise a warning.',
-    'critical_failures':    f'How many failures in {window_minutes[alert_type_file_transfer]} minutes count as critical.',
-    'arrival_overdue':      'How many arrival windows may pass without a file before an alert.',
+    'warning_failures':     'How many failures in the window raise a warning.',
+    'error_failures':       'How many failures in the window count as errors.',
+    'window':               'How long the window is, in minutes, hours or days.',
+    Window_Unit_Field:      'Whether the window is in minutes, hours or days.',
+    'arrival_overdue':      'How long a file may fail to arrive before an alert is raised.',
+    Arrival_Overdue_Unit_Field: 'Whether the time a file may fail to arrive for is in minutes, hours or days.',
     'test_transfers':       'Whether periodic test transfers run against this connection.',
     'overdue_multiplier':   'How many intervals late a job may run before an alert.',
     'start_delay':          'How many milliseconds late a job may start before an alert.',
     'certificate_warning':  'How many days before expiry a certificate raises an alert.',
     'outstanding_backlog':  'How many outstanding messages raise an alert.',
     'feed_silence':         'How many seconds of silence from a feed raise an alert.',
-    'use_llm':              'Whether alerts above the alert threshold are diagnosed by the LLM.',
+    'use_llm':              'Whether the LLM explains every alert raised for this type.',
     Email_Connection_Field: 'The SMTP or Microsoft 365 connection that sends the alert emails.',
 }
 
@@ -179,8 +195,11 @@ Section_Thresholds = 'Thresholds'
 
 # The lines of the tab for each alert type, in the order they are read. A line names the
 # question, the fields answering it and, for a popover line, the title of its micro-form and
-# the sentence its summary link reads as - `{field}` is the field's value and
-# `{field|singular|plural}` the value with the right one of the two nouns after it.
+# the sentence its summary link reads as - `{field}` is the field's value,
+# `{field|singular|plural}` the value with the right one of the two nouns after it and
+# `{unit_field@count_field}` the count with the unit select's noun after it, in the singular
+# or the plural as the count says. A popover line with a `unit_field` shows that select
+# right after the last of its numbers.
 # The Active line is a toggle like any other, only it is the one that dims the rest when off.
 type_lines = {
     alert_type_file_transfer: [
@@ -224,30 +243,21 @@ type_lines = {
             'label': 'Failures in a row',
             'title': 'Failures in a row',
             'fields': ['consecutive_failures'],
-            'summary': '{consecutive_failures|failure|failures} one after another',
+            'summary': 'Alert after {consecutive_failures|failure|failures} in a row',
             'how_it_works': 'How many transfers may fail one after another before an alert is raised.',
         },
         {
-            'name': 'failures_in_a_window',
+            'name': 'failures_over_time',
             'section': Section_Thresholds,
             'kind': Line_Kind_Popover,
-            'label': f'Failures in {window_minutes[alert_type_file_transfer]} minutes',
-            'title': f'Failures in {window_minutes[alert_type_file_transfer]} minutes',
-            'fields': ['warning_failures', 'critical_failures'],
-            'summary': 'warning at {warning_failures}, critical at {critical_failures}',
-            'how_it_works': f'How many failures within {window_minutes[alert_type_file_transfer]} minutes ' + \
-                'raise a warning and how many count as critical.',
-        },
-        {
-            'name': 'escalation',
-            'section': Section_Thresholds,
-            'kind': Line_Kind_Popover,
-            'label': 'Escalation',
-            'title': 'Escalation',
-            'fields': ['alert_threshold'],
-            'summary': f'above {{alert_threshold}}% failed in {window_minutes[alert_type_file_transfer]} minutes',
-            'how_it_works': f'The share of transfers failed in {window_minutes[alert_type_file_transfer]} minutes, ' + \
-                'in percent, above which an alert is escalated.',
+            'label': 'Failures over time',
+            'title': 'Failures over time',
+            'fields': ['warning_failures', 'error_failures', 'window'],
+            'unit_field': Window_Unit_Field,
+            'summary': 'Warning at {warning_failures|failure|failures}, error at {error_failures}, ' + \
+                f'in the last {{{Window_Unit_Field}@window}}',
+            'how_it_works': 'How many failures in the window raise a warning, how many count as errors ' + \
+                'and how long the window is, in minutes, hours or days.',
         },
         {
             'name': 'overdue_files',
@@ -256,8 +266,9 @@ type_lines = {
             'label': 'Overdue files',
             'title': 'Overdue files',
             'fields': ['arrival_overdue'],
-            'summary': 'after {arrival_overdue|missed arrival window|missed arrival windows}',
-            'how_it_works': 'How many arrival windows may pass without a file before it counts as overdue.',
+            'unit_field': Arrival_Overdue_Unit_Field,
+            'summary': f'Alert after {{{Arrival_Overdue_Unit_Field}@arrival_overdue}} without a file',
+            'how_it_works': 'How long a file may fail to arrive, in minutes, hours or days, before an alert is raised.',
         },
     ],
 }
@@ -277,6 +288,19 @@ def get_type_fields(alert_type:'str') -> 'anylist':
     """ The number and toggle fields of an alert type, in the order the rule definition lists them.
     """
     out = config_map.type_fields[alert_type]
+    return out
+
+# ################################################################################################################################
+
+def get_unit_field_names(alert_type:'str') -> 'strlist':
+    """ The unit selects the lines of an alert type name, in the order the lines do.
+    """
+    out:'strlist' = []
+
+    for line in type_lines[alert_type]:
+        if 'unit_field' in line:
+            out.append(line['unit_field'])
+
     return out
 
 # ################################################################################################################################
@@ -323,10 +347,17 @@ def get_defaults(alert_type:'str') -> 'anydict':
     document = build_ruleset_document(ruleset_name, zrules_contents)
     documents = document[Documents_Key]
 
-    # .. and the screen values are read from them the way the alert rules screen reads them.
+    # .. and the screen values are read from them the way the alert rules screen reads them ..
     out = config_map.read_type_values(alert_type, documents)
     out[Is_Active_Field] = True
     out[Email_Connection_Field] = Email_No_Selection_Value
+
+    # .. except that a duration is a count and a unit on the tab, not a number of seconds.
+    for field in get_type_fields(alert_type):
+        if field['kind'] == config_map.Kind_Duration:
+            count, unit_name = config_map.split_duration(out[field['name']])
+            out[field['name']] = count
+            out[field['name'] + Unit_Field_Suffix] = unit_name
 
     return out
 
@@ -415,7 +446,7 @@ class EmailConnectionSelect(forms.Select):
 
 def add_alerts_fields(form:'forms.Form', alert_type:'str') -> 'None':
     """ Adds the fields of the Alerts tab to a form - the active toggle first, then the type's
-    own numbers and toggles, then the email connection select.
+    own numbers and toggles, the unit selects its lines name, then the email connection select.
     """
     defaults = get_defaults(alert_type)
 
@@ -427,12 +458,24 @@ def add_alerts_fields(form:'forms.Form', alert_type:'str') -> 'None':
         name = field['name']
         default = defaults[name]
 
-        if field['kind'] == config_map.Kind_Toggle:
+        if field['kind'] in (config_map.Kind_Toggle, config_map.Kind_Ruleset_Toggle):
             form_field = forms.BooleanField(required=False, initial=default, widget=forms.CheckboxInput())
         else:
             form_field = forms.IntegerField(required=False, initial=default, min_value=1, widget=forms.NumberInput())
 
         form.fields[form_field_name(name)] = form_field
+
+    for unit_field_name in get_unit_field_names(alert_type):
+        unit_field = unit_fields[unit_field_name]
+
+        # A duration's unit starts where the seeded rules put it, any other unit where its own table says
+        if unit_field_name in defaults:
+            initial = defaults[unit_field_name]
+        else:
+            initial = unit_field['initial']
+
+        form.fields[form_field_name(unit_field_name)] = forms.ChoiceField(
+            required=False, choices=unit_field['choices'], initial=initial, widget=forms.Select())
 
     form.fields[form_field_name(Email_Connection_Field)] = forms.ChoiceField(
         required=False, choices=get_email_connection_choices(), widget=EmailConnectionSelect())
@@ -473,6 +516,10 @@ def get_alerts_tab_context(form:'forms.Form', alert_type:'str') -> 'anydict':
             for field_name in line['fields']:
                 hidden_fields.append(form[form_field_name(field_name)])
 
+            # The unit select of a line waits hidden alongside its number
+            if 'unit_field' in line:
+                hidden_fields.append(form[form_field_name(line['unit_field'])])
+
         section_by_label[section_label]['lines'].append(row)
 
     out = {
@@ -501,6 +548,9 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
         field_labels[name] = get_field_label(name)
         how_it_works_by_field[name] = field_how_it_works[name]
 
+    for unit_field_name in get_unit_field_names(alert_type):
+        how_it_works_by_field[unit_field_name] = field_how_it_works[unit_field_name]
+
     lines:'anylist' = []
 
     for line in type_lines[alert_type]:
@@ -517,6 +567,9 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
             entry['title'] = line['title']
             entry['summary'] = line['summary']
 
+            if 'unit_field' in line:
+                entry['unit_field'] = line['unit_field']
+
         if line['kind'] == Line_Kind_Email:
             entry['title'] = line['title']
 
@@ -530,6 +583,7 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
         'email_field': Email_Connection_Field,
         'lines': lines,
         'field_kinds': field_kinds,
+        'toggle_kinds': [config_map.Kind_Toggle, config_map.Kind_Ruleset_Toggle],
         'field_labels': field_labels,
         'field_how_it_works': how_it_works_by_field,
         'edit_hint': Edit_Hint,

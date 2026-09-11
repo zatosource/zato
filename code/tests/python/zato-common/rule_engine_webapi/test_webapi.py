@@ -135,7 +135,7 @@ class TestCompletion:
         # .. and a choice term carries its closed pick list.
         action = by_path['outcome.action']
         assert action['type'] == 'choice'
-        assert 'diagnose' in action['values']
+        assert 'slack' in action['values']
         assert 'email' in action['values']
 
 # ################################################################################################################################

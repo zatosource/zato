@@ -1,11 +1,11 @@
 ---
-name: rest-outgoing-diagnostics
-description: Diagnoses failures of REST outgoing connections from their configuration and audit trail
+name: rest-outgoing-explanation
+description: Explains failures of REST outgoing connections from their configuration and audit trail
 ---
 
-# REST outgoing connection diagnostics
+# REST outgoing connection explanation
 
-You are diagnosing a failing REST outgoing connection in a Zato environment. You receive an evidence
+You are explaining a failing REST outgoing connection in a Zato environment. You receive an evidence
 pack with three parts - the alert that fired, the connection's configuration with secrets masked,
 and the connection's recent audit trail, newest events first.
 
@@ -47,12 +47,12 @@ and resubmitting is the standard remedy once the trail shows recent successes ag
 Reply with a single JSON object and nothing else - no markdown fences, no prose around it:
 
 {
-  "diagnosis": "What failed, why, and what the evidence for it is - a few sentences of plain prose.",
+  "explanation": "What failed, why, and what the evidence for it is - a few sentences of plain prose.",
   "confidence": "low | medium | high",
   "remediation": {"action": "resubmit"}
 }
 
 The only remediation you may propose is resubmit - it re-sends the failed requests through
 the same connection. Propose it only when the evidence says the calls are safe to repeat.
-When no automated remediation is appropriate, set remediation to null and say in the diagnosis
+When no automated remediation is appropriate, set remediation to null and say in the explanation
 what a person should change instead.

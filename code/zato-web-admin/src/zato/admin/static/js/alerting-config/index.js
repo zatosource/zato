@@ -67,17 +67,17 @@ config.orderStorageKey = 'zato.alert-rules.order';
 config.fields = {
     consecutive_failures: {label: 'Consecutive failures', kind: 'number'},
     error_rate: {label: 'Error rate (%)', kind: 'number'},
-    alert_threshold: {label: 'Alert threshold (%)', kind: 'number'},
     max_latency: {label: 'Max latency (ms)', kind: 'number'},
     max_query_time: {label: 'Max query time (ms)', kind: 'number'},
     warning_latency: {label: 'Warning latency (ms)', kind: 'number'},
-    critical_latency: {label: 'Critical latency (ms)', kind: 'number'},
+    error_latency: {label: 'Error latency (ms)', kind: 'number'},
     max_tool_call_time: {label: 'Max tool-call time (ms)', kind: 'number'},
     health_alerts: {label: 'Health alerts', kind: 'checkbox'},
     max_call_time: {label: 'Max call time (ms)', kind: 'number'},
     auth_failures: {label: 'Auth failures', kind: 'number'},
     warning_failures: {label: 'Warning failures', kind: 'number'},
-    critical_failures: {label: 'Critical failures', kind: 'number'},
+    error_failures: {label: 'Error failures', kind: 'number'},
+    window: {label: 'Window', kind: 'duration'},
     arrival_overdue: {label: 'Arrival overdue', kind: 'number'},
     test_transfers: {label: 'Test transfers', kind: 'checkbox'},
     overdue_multiplier: {label: 'Overdue multiplier', kind: 'number'},
@@ -95,21 +95,32 @@ config.fields = {
     dashboard_url: {label: 'Dashboard URL', kind: 'text'}
 };
 
+// The units a duration is edited and shown in, smallest first - a cell picks the
+// largest one dividing its seconds evenly, so 86400 seconds read as 1 day
+config.durationUnits = [
+    {value: 'minute', singular: 'minute', plural: 'minutes', seconds: 60},
+    {value: 'hour', singular: 'hour', plural: 'hours', seconds: 3600},
+    {value: 'day', singular: 'day', plural: 'days', seconds: 86400}
+];
+
+// The hidden select a duration's unit is edited through sits next to its number under this suffix
+config.unitFieldSuffix = '_unit';
+
 // What a field means, said once and shown wherever the field is edited
 config.fieldHelp = {
     consecutive_failures: 'How many failures in a row raise an alert.',
     error_rate: 'The share of failed calls, in percent, that raises an alert.',
-    alert_threshold: 'The error rate, in percent, at which an alert is escalated.',
     max_latency: 'Calls slower than this many milliseconds count as slow.',
     max_query_time: 'Queries slower than this many milliseconds count as slow.',
     warning_latency: 'Completions slower than this many milliseconds raise a warning.',
-    critical_latency: 'Completions slower than this many milliseconds are critical.',
+    error_latency: 'Completions slower than this many milliseconds are errors.',
     max_tool_call_time: 'Tool calls slower than this many milliseconds count as slow.',
     health_alerts: 'Whether the Microsoft service health feed raises alerts of its own.',
     max_call_time: 'Calls slower than this many milliseconds count as slow.',
     auth_failures: 'How many authentication failures in a row raise an alert.',
     warning_failures: 'How many failures in the window raise a warning.',
-    critical_failures: 'How many failures in the window count as critical.',
+    error_failures: 'How many failures in the window count as errors.',
+    window: 'How long the window is, in minutes, hours or days.',
     arrival_overdue: 'How many arrival windows may pass without a file before an alert.',
     test_transfers: 'Whether periodic test transfers run against each connection.',
     overdue_multiplier: 'How many intervals late a job may run before an alert.',
@@ -117,7 +128,7 @@ config.fieldHelp = {
     certificate_warning: 'How many days before expiry a certificate raises an alert.',
     outstanding_backlog: 'How many outstanding messages raise an alert.',
     feed_silence: 'How many seconds of silence from a feed raise an alert.',
-    use_llm: 'Whether alerts above the alert threshold are diagnosed by the LLM.',
+    use_llm: 'Whether the LLM explains every alert raised for this type.',
     slack_webhook: 'The Slack webhook alerts are posted to when a rule names none of its own.',
     teams_webhook: 'The Microsoft Teams webhook alerts are posted to when a rule names none of its own.',
     webhook_url: 'The webhook alerts are posted to as JSON - Jira and other workflow backends read it.',
@@ -130,16 +141,16 @@ config.fieldHelp = {
 // One row per rule type, in the order they are rendered, each naming
 // the fields its popover edits
 config.types = {
-    rest: {title: 'REST and SOAP', fields: ['consecutive_failures', 'error_rate', 'alert_threshold', 'max_latency', 'use_llm']},
-    sql: {title: 'SQL', fields: ['consecutive_failures', 'error_rate', 'alert_threshold', 'max_query_time', 'use_llm']},
-    llm: {title: 'LLM', fields: ['consecutive_failures', 'error_rate', 'warning_latency', 'critical_latency', 'use_llm']},
-    mcp: {title: 'MCP', fields: ['consecutive_failures', 'error_rate', 'alert_threshold', 'max_tool_call_time', 'use_llm']},
-    microsoft: {title: 'Microsoft cloud', fields: ['consecutive_failures', 'error_rate', 'health_alerts', 'max_call_time', 'use_llm']},
-    email: {title: 'Email', fields: ['consecutive_failures', 'error_rate', 'auth_failures', 'alert_threshold', 'use_llm']},
-    odoo: {title: 'Odoo', fields: ['consecutive_failures', 'error_rate', 'auth_failures', 'max_call_time', 'use_llm']},
-    file_transfer: {title: 'File transfer', fields: ['consecutive_failures', 'warning_failures', 'critical_failures', 'test_transfers', 'use_llm', 'arrival_overdue']},
-    scheduler: {title: 'Scheduler', fields: ['error_rate', 'alert_threshold', 'overdue_multiplier', 'start_delay', 'use_llm']},
-    channels: {title: 'Channels', fields: ['error_rate']},
+    rest: {title: 'REST and SOAP', fields: ['consecutive_failures', 'error_rate', 'window', 'max_latency', 'use_llm']},
+    sql: {title: 'SQL', fields: ['consecutive_failures', 'error_rate', 'window', 'max_query_time', 'use_llm']},
+    llm: {title: 'LLM', fields: ['consecutive_failures', 'error_rate', 'window', 'warning_latency', 'error_latency', 'use_llm']},
+    mcp: {title: 'MCP', fields: ['consecutive_failures', 'error_rate', 'window', 'max_tool_call_time', 'use_llm']},
+    microsoft: {title: 'Microsoft cloud', fields: ['consecutive_failures', 'error_rate', 'window', 'health_alerts', 'max_call_time', 'use_llm']},
+    email: {title: 'Email', fields: ['consecutive_failures', 'error_rate', 'window', 'auth_failures', 'use_llm']},
+    odoo: {title: 'Odoo', fields: ['consecutive_failures', 'error_rate', 'window', 'auth_failures', 'max_call_time', 'use_llm']},
+    file_transfer: {title: 'File transfer', fields: ['consecutive_failures', 'warning_failures', 'error_failures', 'window', 'test_transfers', 'use_llm', 'arrival_overdue']},
+    scheduler: {title: 'Scheduler', fields: ['error_rate', 'window', 'overdue_multiplier', 'start_delay', 'use_llm']},
+    channels: {title: 'Channels', fields: ['error_rate', 'window']},
     common: {title: 'Common', fields: ['certificate_warning', 'outstanding_backlog', 'feed_silence']}
 };
 
@@ -151,16 +162,16 @@ config.notificationFields = [
 
 // What each type's rules watch, shown at the type's own row header
 config.typeHelp = {
-    rest: 'Alert rules for REST and SOAP outgoing connections - failures in a row, error rates, escalations and slow calls.',
+    rest: 'Alert rules for REST and SOAP outgoing connections - failures in a row, error rates and slow calls.',
     sql: 'Alert rules for SQL connection pools - failures in a row, error rates and slow queries.',
     llm: 'Alert rules for LLM connections - failures in a row, error rates and slow completions.',
     mcp: 'Alert rules for MCP servers - failures in a row, error rates and slow tool calls.',
     microsoft: 'Alert rules for Microsoft cloud connections - failures in a row, error rates, service health and slow calls.',
     email: 'Alert rules for SMTP and IMAP connections - failures in a row, error rates and authentication failures.',
     odoo: 'Alert rules for Odoo connections - failures in a row, error rates, authentication failures and slow calls.',
-    file_transfer: 'Alert rules for SMB and SFTP connections - failure counts and periodic test transfers.',
-    scheduler: 'Alert rules for scheduler jobs - error rates, overdue runs and late starts.',
-    channels: 'Alert rules for channels of every kind - the share of failed requests.',
+    file_transfer: 'Alert rules for SMB and SFTP connections - failures in a row, failures over time and periodic test transfers.',
+    scheduler: 'Alert rules for scheduler jobs - error rates over time, overdue runs and late starts.',
+    channels: 'Alert rules for channels of every kind - the share of failed requests over time.',
     common: 'Alert rules that watch the environment as a whole - expiring certificates, backlogs and silent feeds.',
     notifications: 'Where alerts go by default - the webhooks, the email connection and its addressing, and the Dashboard address the links point to. A rule naming its own target overrides these.'
 };
@@ -176,6 +187,71 @@ var card = function(setName) {
     var out = document.getElementById('alert-rules-card-' + setName);
     return out;
 };
+
+// ////////////////////////////////////////////////////////////////////////
+//
+// Durations - a number of seconds the screen shows as a count with a unit
+//
+// ////////////////////////////////////////////////////////////////////////
+
+// The hidden select a duration field's unit is edited through
+var unitFieldName = function(fieldName) {
+    var out = fieldName + config.unitFieldSuffix;
+    return out;
+};
+
+// The unit a select value stands for
+var durationUnit = function(unitValue) {
+
+    var out = config.durationUnits[0];
+
+    config.durationUnits.forEach(function(unit) {
+        if(unit.value === unitValue) {
+            out = unit;
+        }
+    });
+
+    return out;
+};
+
+// A number of seconds as a count and the largest unit dividing it evenly -
+// seconds no unit divides evenly are a fraction of the smallest one
+var splitDuration = function(seconds) {
+
+    var out = {count: seconds / config.durationUnits[0].seconds, unit: config.durationUnits[0]};
+
+    config.durationUnits.forEach(function(unit) {
+        if(seconds % unit.seconds === 0) {
+            out = {count: seconds / unit.seconds, unit: unit};
+        }
+    });
+
+    return out;
+};
+
+// A count of one unit back as seconds
+var joinDuration = function(count, unitValue) {
+    var out = Math.round(count * durationUnit(unitValue).seconds);
+    return out;
+};
+
+// What a duration cell reads as - 1 day, 10 minutes
+var formatDuration = function(seconds) {
+    var parts = splitDuration(seconds);
+    var out = $.fn.zato.count_text(parts.count, parts.unit.singular, parts.unit.plural);
+    return out;
+};
+
+// The hidden unit selects offer the same units, in the same words, as the cells show
+document.querySelectorAll('#alert-rules-row-fields select.alert-rules-unit').forEach(function(select) {
+
+    config.durationUnits.forEach(function(unit) {
+        var option = document.createElement('option');
+        option.value = unit.value;
+        option.textContent = unit.plural;
+        select.appendChild(option);
+    });
+});
 
 // Where a failed change explains itself, at the heading of the screen
 var errorElement = document.getElementById('alert-rules-error');
@@ -299,7 +375,14 @@ $.each(config.types, function(typeName, typeConfig) {
 
     $.each(typeConfig.fields, function(_ignored, fieldName) {
         var fieldConfig = config.fields[fieldName];
-        entries.push({field: fieldName, label: fieldConfig.label, kind: fieldConfig.kind});
+
+        // A duration is edited as a count with the unit select right after it
+        if(fieldConfig.kind === 'duration') {
+            entries.push({field: fieldName, label: fieldConfig.label, kind: 'number', unitField: unitFieldName(fieldName)});
+        }
+        else {
+            entries.push({field: fieldName, label: fieldConfig.label, kind: fieldConfig.kind});
+        }
     });
 
     descriptors[typeName] = {title: typeConfig.title, width: config.popupWidth, pages: [entries]};
@@ -336,6 +419,11 @@ var openEditor = function(link) {
         if(edit.dataset.kind === 'checkbox') {
             fieldInput.prop('checked', edit.dataset.value === 'true');
         }
+        else if(edit.dataset.kind === 'duration') {
+            var parts = splitDuration(parseInt(edit.dataset.value));
+            fieldInput.val(parts.count);
+            editor.field(unitFieldName(edit.dataset.field)).val(parts.unit.value);
+        }
         else {
             fieldInput.val(edit.dataset.value);
         }
@@ -368,6 +456,10 @@ var saveRow = function() {
         else if(edit.dataset.kind === 'text') {
             values[edit.dataset.field] = fieldInput.val().trim();
         }
+        else if(edit.dataset.kind === 'duration') {
+            var unitValue = editor.field(unitFieldName(edit.dataset.field)).val();
+            values[edit.dataset.field] = joinDuration(parseFloat(fieldInput.val()), unitValue);
+        }
         else {
             values[edit.dataset.field] = parseFloat(fieldInput.val());
         }
@@ -387,6 +479,10 @@ var saveRow = function() {
             else if(edit.dataset.kind === 'text') {
                 edit.dataset.value = value;
                 summary.textContent = value === '' ? config.notSetLabel : value;
+            }
+            else if(edit.dataset.kind === 'duration') {
+                edit.dataset.value = value;
+                summary.textContent = formatDuration(value);
             }
             else {
                 edit.dataset.value = value;

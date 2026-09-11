@@ -21,7 +21,9 @@ from typing_extensions import TypeAlias
 
 # Zato
 from zato.common.alerting.collectors import new_fact
+from zato.common.alerting.config_map import Explain_With_LLM_Key
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
+from zato.common.alerting.model import AlertAction
 from zato.common.alerting.seed import alerting_vocabulary, build_ruleset_document, default_rulesets, \
     ensure_alerting_definitions
 from zato.common.alerting.sweep import load_alert_rules, run_sweep, Fact_Entity
@@ -58,7 +60,7 @@ _conn_name = 'CRM'
 
 # The ruleset the sweep test's rule lives in and the rule it expects to fire
 _rest_ruleset_name = 'alerts_rest'
-_diagnose_rule_name = 'Error_Rate_Diagnose'
+_error_rate_rule_name = 'Error_Rate'
 
 # The rule that ships inactive - the test transfer writes to remote systems, activating it is the opt-in
 _test_transfer_full_name = 'alerts_file_transfer_Test_Transfer_Failing'
@@ -159,7 +161,7 @@ class TestEnsureAlertingDefinitions:
         document = deserialize_document(ruleset.document)
         documents = document[Documents_Key]
 
-        kept_key = f'{_rest_ruleset_name}_{_diagnose_rule_name}'
+        kept_key = f'{_rest_ruleset_name}_{_error_rate_rule_name}'
         edited = {kept_key: documents[kept_key]}
 
         _ = backend.versions.create(
@@ -189,6 +191,18 @@ class TestEnsureAlertingDefinitions:
 
         test_transfer = document[Documents_Key][_test_transfer_full_name]
         assert test_transfer['is_active'] is False
+
+# ################################################################################################################################
+
+    def test_every_seeded_rule_has_the_llm_explain_its_alerts(self, backend:'RuleSQLBackend') -> 'None':
+        ensure_alerting_definitions(backend)
+
+        for ruleset_name, _ in default_rulesets:
+            ruleset = _get_ruleset(backend, ruleset_name)
+            document = deserialize_document(ruleset.document)
+
+            for full_name, rule_document in document[Documents_Key].items():
+                assert rule_document[Explain_With_LLM_Key] is True, full_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -225,7 +239,7 @@ class TestSweepOverSeededRules:
         # The seeded rules load straight from the live versions of every default ruleset
         rules = load_alert_rules(backend)
         rule_names = [rule.name for rule in rules]
-        assert _diagnose_rule_name in rule_names
+        assert _error_rate_rule_name in rule_names
 
         audit_log = AuditLog(_server_name)
         audit_engine = get_audit_engine()
@@ -233,7 +247,7 @@ class TestSweepOverSeededRules:
         now = utcnow()
 
         # A REST outgoing connection erroring on all its traffic, with enough of it
-        # to clear the thin-traffic guard - above the default quarter threshold
+        # to clear the thin-traffic guard - above the default tenth threshold
         for index in range(12):
             _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Response_Received, _conn_name,
                 cid=f'seed-sweep-{index}', outcome=AuditOutcome.Error)
@@ -245,16 +259,20 @@ class TestSweepOverSeededRules:
             audit_engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-seed-1', now,
             defaults=defaults)
 
-        # The diagnose rule fired and dispatched the diagnosis
+        # The error rate rule fired and, the seeded rules having the LLM explain their alerts,
+        # its email went to the explain service first rather than straight out
         assert result.raised_count >= 1
+        assert recorder.emails == []
 
-        diagnose_invocations = [item for item in recorder.invocations if item[0] == Incidents.Service_Diagnose]
-        assert len(diagnose_invocations) == 1
+        explain_invocations = [item for item in recorder.invocations if item[0] == Incidents.Service_Explain]
+        assert len(explain_invocations) == 2
 
-        service, payload = diagnose_invocations[0]
-        assert service == Incidents.Service_Diagnose
-        assert payload['rule'] == _diagnose_rule_name
-        assert payload['object_name'] == _conn_name
+        invoked_rules = sorted(payload['rule'] for _, payload in explain_invocations)
+        assert invoked_rules == ['Connection_Down', _error_rate_rule_name]
+
+        for _, payload in explain_invocations:
+            assert payload['object_name'] == _conn_name
+            assert payload['action'] == AlertAction.Email_Digest
 
 # ################################################################################################################################
 # ################################################################################################################################

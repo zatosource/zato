@@ -124,6 +124,27 @@ class TestUnitConversion:
         assert isinstance(value, int)
 
 # ################################################################################################################################
+
+    def test_a_duration_splits_into_the_largest_even_unit(self) -> 'None':
+        assert config_map.split_duration(86400) == (1, 'day')
+        assert config_map.split_duration(172800) == (2, 'day')
+        assert config_map.split_duration(3600) == (1, 'hour')
+        assert config_map.split_duration(600) == (10, 'minute')
+        assert config_map.split_duration(300) == (5, 'minute')
+
+# ################################################################################################################################
+
+    def test_a_duration_no_unit_divides_is_a_fraction_of_the_smallest(self) -> 'None':
+        assert config_map.split_duration(90) == (1.5, 'minute')
+
+# ################################################################################################################################
+
+    def test_a_duration_joins_back_into_seconds(self) -> 'None':
+        assert config_map.join_duration(1, 'day') == 86400
+        assert config_map.join_duration(10, 'minute') == 600
+        assert config_map.join_duration(1.5, 'hour') == 5400
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestReadHelpers:
@@ -142,6 +163,26 @@ class TestReadHelpers:
 
         value = config_map.read_number({}, _rest_ruleset, field)
         assert value is None
+
+# ################################################################################################################################
+
+    def test_a_duration_reads_its_seconds_off_the_rule_default(self) -> 'None':
+        field = _field(_rest_type, 'window')
+        assert field['kind'] == config_map.Kind_Duration
+
+        documents = _number_documents('Error_Rate', 'window_seconds', 300)
+
+        value = config_map.read_number(documents, _rest_ruleset, field)
+        assert value == 300
+
+        window_seconds = config_map.read_window_seconds(documents, _rest_type)
+        assert window_seconds == 300
+
+# ################################################################################################################################
+
+    def test_a_type_without_a_window_rule_has_no_window(self) -> 'None':
+        assert config_map.read_window_seconds({}, _rest_type) is None
+        assert config_map.read_window_seconds({}, 'common') is None
 
 # ################################################################################################################################
 
@@ -180,6 +221,26 @@ class TestReadHelpers:
 
 # ################################################################################################################################
 
+    def test_a_ruleset_toggle_reads_the_key_off_the_first_rule(self) -> 'None':
+        field = _field(_rest_type, 'use_llm')
+
+        documents = {
+            'alerts_rest_A': {'name': 'A', config_map.Explain_With_LLM_Key: True},
+            'alerts_rest_B': {'name': 'B', config_map.Explain_With_LLM_Key: True},
+        }
+        assert config_map.read_ruleset_toggle(documents, field) is True
+
+# ################################################################################################################################
+
+    def test_a_ruleset_toggle_without_the_key_reads_as_off(self) -> 'None':
+        field = _field(_rest_type, 'use_llm')
+
+        # A rule a person wrote by hand never had the key, and an empty ruleset has nothing to read
+        assert config_map.read_ruleset_toggle({'alerts_rest_A': {'name': 'A'}}, field) is False
+        assert config_map.read_ruleset_toggle({}, field) is False
+
+# ################################################################################################################################
+
     def test_a_type_is_active_when_any_rule_is(self) -> 'None':
         documents = {
             'alerts_rest_A': {'name': 'A', 'is_active': False},
@@ -202,22 +263,22 @@ class TestReadHelpers:
 class TestWriteHelpers:
 
     def test_a_number_writes_into_every_rule_holding_the_default(self) -> 'None':
-        field = _field('llm', 'critical_latency')
+        field = _field('llm', 'error_latency')
 
-        # Both LLM slowness rules hold the critical threshold, so both take the write
+        # Both LLM slowness rules hold the error threshold, so both take the write
         documents = {}
         for rule_name in field['rules']:
             full_name = config_map.rule_full_name('alerts_llm', rule_name)
             documents[full_name] = {
                 'name': rule_name,
-                'defaults': {'critical_avg_duration_ms': {'value': 15000}},
+                'defaults': {'error_avg_duration_ms': {'value': 15000}},
             }
 
         changed = config_map.write_number(documents, 'alerts_llm', field, 20000)
         assert changed is True
 
         for rule_document in documents.values():
-            assert rule_document['defaults']['critical_avg_duration_ms']['value'] == 20000
+            assert rule_document['defaults']['error_avg_duration_ms']['value'] == 20000
 
 # ################################################################################################################################
 
@@ -242,6 +303,30 @@ class TestWriteHelpers:
 
 # ################################################################################################################################
 
+    def test_a_duration_writes_its_seconds_into_every_window_rule(self) -> 'None':
+        field = _field('file_transfer', 'window')
+
+        documents = {
+            'alerts_file_transfer_Transfer_Failures': {
+                'name': 'Transfer_Failures',
+                'defaults': {'window_seconds': {'value': 86400}},
+            },
+            'alerts_file_transfer_Transfer_Failures_Error': {
+                'name': 'Transfer_Failures_Error',
+                'defaults': {'window_seconds': {'value': 86400}},
+            },
+        }
+
+        changed = config_map.write_number(documents, 'alerts_file_transfer', field, 3600)
+        assert changed is True
+
+        assert documents['alerts_file_transfer_Transfer_Failures']['defaults']['window_seconds']['value'] == 3600
+        assert documents['alerts_file_transfer_Transfer_Failures_Error']['defaults']['window_seconds']['value'] == 3600
+
+        assert config_map.read_window_seconds(documents, 'file_transfer') == 3600
+
+# ################################################################################################################################
+
     def test_a_toggle_flips_all_its_rules(self) -> 'None':
         field = _field(_microsoft_type, 'health_alerts')
 
@@ -255,6 +340,26 @@ class TestWriteHelpers:
 
         for rule_document in documents.values():
             assert rule_document['is_active'] is False
+
+# ################################################################################################################################
+
+    def test_a_ruleset_toggle_writes_the_key_onto_every_rule(self) -> 'None':
+        field = _field(_rest_type, 'use_llm')
+
+        documents = {
+            'alerts_rest_A': {'name': 'A', config_map.Explain_With_LLM_Key: True},
+            'alerts_rest_B': {'name': 'B'},
+        }
+
+        changed = config_map.write_ruleset_toggle(documents, field, False)
+        assert changed is True
+
+        for rule_document in documents.values():
+            assert rule_document[config_map.Explain_With_LLM_Key] is False
+
+        # Writing what is already there changes nothing
+        changed = config_map.write_ruleset_toggle(documents, field, False)
+        assert changed is False
 
 # ################################################################################################################################
 
@@ -311,7 +416,7 @@ class TestRoundTripOverSeededRules:
 
                 value = values[field['name']]
 
-                if field['kind'] == config_map.Kind_Toggle:
+                if field['kind'] in (config_map.Kind_Toggle, config_map.Kind_Ruleset_Toggle):
                     assert isinstance(value, bool), f'{type_name}.{field["name"]} -> {value}'
                 else:
                     assert isinstance(value, (int, float)), f'{type_name}.{field["name"]} -> {value}'
@@ -330,10 +435,12 @@ class TestRoundTripOverSeededRules:
         # The seeded fractions arrive as percentages and the plain numbers as they are
         assert values['consecutive_failures'] == 3
         assert values['error_rate'] == 10
-        assert values['alert_threshold'] == 25
         assert values['max_latency'] == 5000
 
-        # The diagnose rule ships active, so the Use LLM toggle reads on out of the box
+        # The window arrives in seconds, five minutes out of the box
+        assert values['window'] == 300
+
+        # The seeded rules carry the explain key on, so the Use LLM toggle reads on out of the box
         assert values['use_llm'] is True
 
 # ################################################################################################################################
@@ -366,6 +473,20 @@ class TestRoundTripOverSeededRules:
 
 # ################################################################################################################################
 
+    def test_the_file_transfer_window_ships_as_one_day(self, backend:'RuleSQLBackend') -> 'None':
+        ensure_alerting_definitions(backend)
+
+        matches = backend.definitions.find_by_name(name='alerts_file_transfer', object_type=Definition_Type_Ruleset)
+        document = deserialize_document(matches[0].document)
+        documents = document[Documents_Key]
+
+        values = config_map.read_type_values('file_transfer', documents)
+
+        assert values['window'] == 86400
+        assert config_map.split_duration(values['window']) == (1, 'day')
+
+# ################################################################################################################################
+
     def test_a_write_read_round_trip_over_the_seeded_documents(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
 
@@ -376,7 +497,7 @@ class TestRoundTripOverSeededRules:
         new_values = {
             'consecutive_failures': 5,
             'error_rate': 20,
-            'alert_threshold': 50,
+            'window': 3600,
             'max_latency': 9000,
             'use_llm': False,
         }

@@ -47,13 +47,15 @@ from sqlalchemy.engine import Engine
 from typing_extensions import TypeAlias
 
 # Zato
+from zato.common.alerting.config_map import type_to_ruleset, Explain_With_LLM_Key
+from zato.common.alerting.config_store import apply_type_config
 from zato.common.alerting.engine import process_findings, AlertDefaults, AlertTransports
 from zato.common.alerting.model import new_finding, new_rule, AlertAction
 from zato.common.alerting.seed import build_ruleset_document, ensure_alerting_definitions
 from zato.common.alerting.sweep import load_alert_rules, run_sweep
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
-from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset
+from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
 from zato.common.util.api import utcnow
 
 # Test helpers
@@ -122,7 +124,7 @@ then
 rule
     Teams_On_Errors
 docs
-    A REST outgoing connection erroring on at least half its traffic is posted to Teams as critical.
+    A REST outgoing connection erroring on at least half its traffic is posted to Teams as an error.
 defaults
     error_rate_threshold = 0.5
 when
@@ -130,7 +132,7 @@ when
     alert.error_rate is at least default.error_rate_threshold
 then
     outcome.action = 'teams'
-    outcome.severity = 'critical'
+    outcome.severity = 'error'
     outcome.teams_to = 'Zato Ops/Alerts'
 
 rule
@@ -268,12 +270,21 @@ def rule_database_engine(tmp_path:'Path') -> 'engine_generator':
 def backend(rule_database_engine:'Engine') -> 'RuleSQLBackend':
     """ Returns the complete backend over the isolated test database, with the default
     alerting definitions seeded and the full loop's own webhook ruleset next to them.
+    The Use LLM switch of every type is off, the way a person turns it off on the config
+    screen, so the alerts deliver straight through the transports this suite watches.
     """
     out = RuleSQLBackend.from_engine(rule_database_engine)
     ensure_alerting_definitions(out)
 
+    for type_name in type_to_ruleset:
+        _ = apply_type_config(out, type_name, actor=_actor, values={'use_llm': False})
+
     # The extra ruleset goes live the same way the seeded ones do
     document = build_ruleset_document(_extra_ruleset_name, _extra_rules_text)
+
+    for rule_document in document[Documents_Key].values():
+        rule_document[Explain_With_LLM_Key] = False
+
     definition = out.definitions.create(
         name=_extra_ruleset_name,
         object_type=Definition_Type_Ruleset,
@@ -395,17 +406,16 @@ class TestFullLoop:
         result = run_sweep(engine, rules, {}, AuditSource.REST_Outgoing, transports, audit_log, 'cid-loop-1', now,
             defaults=defaults)
 
-        # Two facts - the failing REST connection and the slow database - and seven
-        # matches between them: four seeded rules and the three webhook-riding ones
+        # Two facts - the failing REST connection and the slow database - and six
+        # matches between them: three seeded rules and the three webhook-riding ones
         assert result.fact_count == 2
-        assert result.finding_count == 7
-        assert result.raised_count == 7
+        assert result.finding_count == 6
+        assert result.raised_count == 6
         assert result.deduplicated_count == 0
 
         assert sorted(result.dispatched) == [
             ('Connection_Down', AlertAction.Email_Digest),
             ('Error_Rate', AlertAction.Email_Digest),
-            ('Error_Rate_Diagnose', AlertAction.Invoke_Service),
             ('Slack_On_Errors', AlertAction.Slack),
             ('Slow_Queries', AlertAction.Email_Digest),
             ('Teams_On_Errors', AlertAction.Teams),
@@ -481,24 +491,19 @@ class TestFullLoop:
             assert message.sender == _email_from
             assert message.recipients == _addresses
 
-        # The diagnose outcome went to the diagnosis service with its payload whole
-        assert len(recorder.invocations) == 1
-
-        service_name, payload = recorder.invocations[0]
-        assert service_name == 'zato.alerting.diagnose'
-        assert payload['object_name'] == _rest_conn_name
-        assert payload['severity'] == 'critical'
+        # With the Use LLM switch off nothing went to the explain service
+        assert recorder.invocations == []
 
         # And every occurrence landed in the audit trail as an alert-raised event
         raised = _get_raised_events()
-        assert len(raised) == 7
+        assert len(raised) == 6
 
         raised_objects = {event['object_name'] for event in raised}
         assert raised_objects == {_rest_conn_name, _sql_conn_name}
 
 # ################################################################################################################################
 
-    def test_a_second_sweep_in_the_window_delivers_only_the_critical_findings(
+    def test_a_second_sweep_in_the_window_delivers_only_the_error_findings(
         self,
         backend:'RuleSQLBackend',
         webhook_server:'any_',
@@ -521,19 +526,18 @@ class TestFullLoop:
         result = run_sweep(engine, rules, {}, AuditSource.REST_Outgoing, transports, audit_log, 'cid-window-1', now,
             defaults=defaults)
 
-        assert result.raised_count == 7
+        assert result.raised_count == 6
 
         # .. and the second one, still inside the dedup window, deduplicates every
-        # finding and delivers only the critical ones - those are never suppressed.
+        # finding and delivers only the error ones - those are never suppressed.
         result_2 = run_sweep(engine, rules, {}, AuditSource.REST_Outgoing, transports, audit_log, 'cid-window-2', now,
             defaults=defaults)
 
         assert result_2.raised_count == 0
-        assert result_2.deduplicated_count == 7
+        assert result_2.deduplicated_count == 6
 
         assert sorted(result_2.dispatched) == [
             ('Connection_Down', AlertAction.Email_Digest),
-            ('Error_Rate_Diagnose', AlertAction.Invoke_Service),
             ('Teams_On_Errors', AlertAction.Teams),
         ]
 
@@ -541,10 +545,8 @@ class TestFullLoop:
         assert len(recorder.slack_messages) == 1
         assert len(webhook_server.received) == 1
 
-        # .. while the critical ones delivered again - Teams, the connection-down
-        # email and the diagnosis service.
+        # .. while the error ones delivered again - Teams and the connection-down email.
         assert len(recorder.teams_messages) == 2
-        assert len(recorder.invocations) == 2
         assert len(smtp_receiver.messages) == 4
 
         # A repetition speaks with its count
@@ -552,7 +554,69 @@ class TestFullLoop:
 
         # Every occurrence landed in the audit trail, deduplicated or not
         raised = _get_raised_events()
-        assert len(raised) == 14
+        assert len(raised) == 12
+
+# ################################################################################################################################
+
+    def test_the_use_llm_switch_sends_a_types_alerts_through_the_explain_service(
+        self,
+        backend:'RuleSQLBackend',
+        webhook_server:'any_',
+        smtp_receiver:'any_',
+        ) -> 'None':
+
+        _seed_events()
+
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        recorder = _ServiceRecorder()
+        transports = build_transports(smtp_receiver.port, recorder)
+        defaults = _build_defaults(webhook_server)
+
+        # A person turns the REST type's Use LLM switch back on - the other types stay off
+        _ = apply_type_config(backend, 'rest', actor=_actor, values={'use_llm': True})
+
+        rules = load_alert_rules(backend)
+
+        result = run_sweep(engine, rules, {}, AuditSource.REST_Outgoing, transports, audit_log, 'cid-llm-1', now,
+            defaults=defaults)
+
+        # The same six matches as before, reported under their own actions ..
+        assert result.raised_count == 6
+
+        assert sorted(result.dispatched) == [
+            ('Connection_Down', AlertAction.Email_Digest),
+            ('Error_Rate', AlertAction.Email_Digest),
+            ('Slack_On_Errors', AlertAction.Slack),
+            ('Slow_Queries', AlertAction.Email_Digest),
+            ('Teams_On_Errors', AlertAction.Teams),
+            ('Webhook_On_Errors', AlertAction.Webhook),
+        ]
+
+        # .. but the two REST emails went to the explain service instead of out through SMTP,
+        # each carrying the action and the deployment targets the service delivers with ..
+        assert len(recorder.invocations) == 2
+
+        for service_name, payload in recorder.invocations:
+            assert service_name == 'zato.alerting.explain'
+            assert payload['object_name'] == _rest_conn_name
+            assert payload['action'] == AlertAction.Email_Digest
+            assert payload['defaults']['email_to'] == _addresses
+            assert payload['defaults']['webhook_url'] == defaults.webhook_url
+
+        invoked_rules = sorted(payload['rule'] for _, payload in recorder.invocations)
+        assert invoked_rules == ['Connection_Down', 'Error_Rate']
+
+        # .. while the SQL type, its switch off, emailed as before and the extra
+        # ruleset's channels delivered as before.
+        assert len(smtp_receiver.messages) == 1
+        assert 'Slow_Queries' in smtp_receiver.messages[0].subject
+
+        assert len(recorder.slack_messages) == 1
+        assert len(recorder.teams_messages) == 1
+        assert len(webhook_server.received) == 1
 
 # ################################################################################################################################
 

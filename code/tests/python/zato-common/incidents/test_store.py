@@ -23,7 +23,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The cluster all the test diagnoses belong to.
+# The cluster all the test explanations belong to.
 _cluster_id = 1
 
 # ################################################################################################################################
@@ -53,7 +53,7 @@ def _new_details(object_name:'str'='CRM API', created_iso:'str'='2026-08-09T10:0
         'message': 'Error rate on `CRM API` is 80% over the last 300s',
         'link': '',
         'evidence': {'alert': {}, 'connection': {}, 'audit_trail': []},
-        'diagnosis': 'The remote server replied with HTTP 503 for every call.',
+        'explanation': 'The remote server replied with HTTP 503 for every call.',
         'confidence': 'high',
         'remediation': {'action': 'resubmit'},
         'is_parsed': True,
@@ -67,26 +67,26 @@ def _new_details(object_name:'str'='CRM API', created_iso:'str'='2026-08-09T10:0
 
 class TestIncidentStore:
 
-    def test_a_created_diagnosis_reads_back_in_full(self) -> 'None':
+    def test_a_created_explanation_reads_back_in_full(self) -> 'None':
         store = _new_store()
         details = _new_details()
 
         store.create('alert.123', details)
-        diagnosis = store.get('alert.123')
+        explanation = store.get('alert.123')
 
-        assert diagnosis is not None
-        assert diagnosis['name'] == 'alert.123'
-        assert diagnosis['object_name'] == 'CRM API'
-        assert diagnosis['diagnosis'] == details['diagnosis']
-        assert diagnosis['remediation'] == {'action': 'resubmit'}
-        assert diagnosis['alert_id'] == 123
+        assert explanation is not None
+        assert explanation['name'] == 'alert.123'
+        assert explanation['object_name'] == 'CRM API'
+        assert explanation['explanation'] == details['explanation']
+        assert explanation['remediation'] == {'action': 'resubmit'}
+        assert explanation['alert_id'] == 123
 
     def test_an_unknown_name_reads_back_as_none(self) -> 'None':
         store = _new_store()
 
-        diagnosis = store.get('alert.no-such-alert')
+        explanation = store.get('alert.no-such-alert')
 
-        assert diagnosis is None
+        assert explanation is None
 
     def test_the_listing_is_newest_first(self) -> 'None':
         store = _new_store()
@@ -94,13 +94,13 @@ class TestIncidentStore:
         store.create('alert.older', _new_details(created_iso='2026-08-09T10:00:00'))
         store.create('alert.newer', _new_details(created_iso='2026-08-09T11:00:00'))
 
-        diagnoses = store.get_list()
+        explanations = store.get_list()
 
-        assert len(diagnoses) == 2
-        assert diagnoses[0]['name'] == 'alert.newer'
-        assert diagnoses[1]['name'] == 'alert.older'
+        assert len(explanations) == 2
+        assert explanations[0]['name'] == 'alert.newer'
+        assert explanations[1]['name'] == 'alert.older'
 
-    def test_exists_sees_only_stored_diagnoses(self) -> 'None':
+    def test_exists_sees_only_stored_explanations(self) -> 'None':
         store = _new_store()
 
         store.create('alert.123', _new_details())

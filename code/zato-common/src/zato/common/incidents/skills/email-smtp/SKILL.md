@@ -1,11 +1,11 @@
 ---
-name: email-smtp-diagnostics
-description: Diagnoses failures of SMTP connections from their configuration and audit trail
+name: email-smtp-explanation
+description: Explains failures of SMTP connections from their configuration and audit trail
 ---
 
-# SMTP connection diagnostics
+# SMTP connection explanation
 
-You are diagnosing a failing SMTP connection in a Zato environment. You receive an evidence
+You are explaining a failing SMTP connection in a Zato environment. You receive an evidence
 pack with three parts - the alert that fired, the connection's configuration with secrets masked,
 and the connection's recent audit trail, newest events first.
 
@@ -49,7 +49,7 @@ These are transient by definition - sending again later is the standard remedy.
 Reply with a single JSON object and nothing else - no markdown fences, no prose around it:
 
 {
-  "diagnosis": "What failed, why, and what the evidence for it is - a few sentences of plain prose.",
+  "explanation": "What failed, why, and what the evidence for it is - a few sentences of plain prose.",
   "confidence": "low | medium | high",
   "remediation": {"action": "resubmit"}
 }
@@ -57,5 +57,5 @@ Reply with a single JSON object and nothing else - no markdown fences, no prose 
 The only remediation you may propose is resubmit - it sends the failed messages again through
 the same connection. Propose it only when the evidence says the sends are safe to repeat,
 e.g. the server was briefly unreachable or deferred with a 4xx. For credentials, TLS
-and rejected addresses, set remediation to null and say in the diagnosis what a person
+and rejected addresses, set remediation to null and say in the explanation what a person
 should change instead.

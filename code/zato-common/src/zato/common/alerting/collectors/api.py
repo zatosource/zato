@@ -15,13 +15,14 @@ from __future__ import annotations
 # Zato
 from zato.common.alerting.collectors.backlogs import collect_feed_silent_facts, collect_outstanding_facts
 from zato.common.alerting.collectors.common import Default_Begin_Event_Type, Default_End_Event_Type, \
-    Default_Window_Seconds, Default_Window_Seconds_By_Source
+    Default_Window_Seconds, Health_Window_Seconds
 from zato.common.alerting.collectors.file_transfer import collect_file_transfer_facts
 from zato.common.alerting.collectors.probes import collect_certificate_facts, collect_health_facts, \
     collect_test_transfer_facts
 from zato.common.alerting.collectors.rates import collect_auth_failure_facts, collect_consecutive_failure_facts, \
     collect_error_rate_facts, collect_latency_facts
 from zato.common.alerting.collectors.scheduler import collect_scheduler_facts
+from zato.common.audit_log.common import health_sources, AuditSource
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,10 +56,12 @@ def collect_facts(
     schedule_expectations:'anydict | None' = None,
     ) -> 'dictlist':
     """ Runs every fact producer and merges their measures into one fact
-    per (source, object) pair - the input the alert rules match over.
+    per (source, object) pair - the input the alert rules match over. The per-source
+    windows come from the rules' window_seconds defaults, a source without one
+    is measured over window_seconds, the health sources over their own hour.
     """
     if window_seconds_by_source is None:
-        window_seconds_by_source = Default_Window_Seconds_By_Source
+        window_seconds_by_source = {}
 
     if job_intervals is None:
         job_intervals = {}
@@ -69,6 +72,24 @@ def collect_facts(
     if schedule_expectations is None:
         schedule_expectations = {}
 
+    # The health sources keep their hour unless a rule names them
+    window_seconds_by_source = dict(window_seconds_by_source)
+
+    for health_source in health_sources:
+        if health_source not in window_seconds_by_source:
+            window_seconds_by_source[health_source] = Health_Window_Seconds
+
+    # The counters that measure one source each take that source's window
+    if AuditSource.Scheduler in window_seconds_by_source:
+        scheduler_window_seconds = window_seconds_by_source[AuditSource.Scheduler]
+    else:
+        scheduler_window_seconds = window_seconds
+
+    if AuditSource.File_Outgoing in window_seconds_by_source:
+        run_window_seconds = window_seconds_by_source[AuditSource.File_Outgoing]
+    else:
+        run_window_seconds = window_seconds
+
     error_rate_facts = collect_error_rate_facts(engine, window_seconds, now)
     latency_facts = collect_latency_facts(engine, window_seconds, now)
     consecutive_facts = collect_consecutive_failure_facts(engine, now)
@@ -78,8 +99,8 @@ def collect_facts(
     certificate_facts = collect_certificate_facts(engine, now)
     health_facts = collect_health_facts(engine, now)
     test_transfer_facts = collect_test_transfer_facts(engine, now)
-    scheduler_facts = collect_scheduler_facts(engine, window_seconds, now, job_intervals)
-    file_transfer_facts = collect_file_transfer_facts(engine, now, arrival_windows, schedule_expectations)
+    scheduler_facts = collect_scheduler_facts(engine, scheduler_window_seconds, now, job_intervals)
+    file_transfer_facts = collect_file_transfer_facts(engine, now, arrival_windows, schedule_expectations, run_window_seconds)
 
     # A source with a window of its own is measured again over that window,
     # and its own measures replace the default-window ones below.

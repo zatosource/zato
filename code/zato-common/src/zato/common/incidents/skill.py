@@ -24,7 +24,7 @@ _skills_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'skills')
 
 @dataclass(init=False)
 class Skill:
-    """ One diagnostic skill - the name and description from its frontmatter
+    """ One explanation skill - the name and description from its frontmatter
     and the markdown instructions that follow it.
     """
     source: str = ''
@@ -35,7 +35,7 @@ class Skill:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Skills already read from disk, keyed by the audit source they diagnose.
+# Skills already read from disk, keyed by the audit source they explain.
 _skill_cache:'dict[str, Skill]' = {}
 
 # ################################################################################################################################
@@ -60,7 +60,7 @@ def parse_skill(source:'str', data:'str') -> 'Skill':
 # ################################################################################################################################
 
 def load_skill(source:'str') -> 'Skill | None':
-    """ Returns the diagnostic skill for an audit source, reading it from disk on first use.
+    """ Returns the explanation skill for an audit source, reading it from disk on first use.
     Sources without a skill of their own return None - not every connection type has one yet.
     """
 

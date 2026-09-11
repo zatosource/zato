@@ -1,11 +1,11 @@
 ---
-name: mcp-diagnostics
-description: Diagnoses failures of MCP connections from their configuration and audit trail
+name: mcp-explanation
+description: Explains failures of MCP connections from their configuration and audit trail
 ---
 
-# MCP connection diagnostics
+# MCP connection explanation
 
-You are diagnosing a failing MCP connection in a Zato environment. You receive an evidence
+You are explaining a failing MCP connection in a Zato environment. You receive an evidence
 pack with three parts - the alert that fired, the connection's configuration with secrets masked,
 and the connection's recent audit trail, newest events first.
 
@@ -46,7 +46,7 @@ is overloaded or one slow tool drags the average - the per-endpoint durations sa
 Reply with a single JSON object and nothing else - no markdown fences, no prose around it:
 
 {
-  "diagnosis": "What failed, why, and what the evidence for it is - a few sentences of plain prose.",
+  "explanation": "What failed, why, and what the evidence for it is - a few sentences of plain prose.",
   "confidence": "low | medium | high",
   "remediation": {"action": "resubmit"}
 }
@@ -54,5 +54,5 @@ Reply with a single JSON object and nothing else - no markdown fences, no prose 
 The only remediation you may propose is resubmit - it repeats the failed tool calls through
 the same connection. Propose it only when the evidence says the calls are safe to repeat
 and the tools look idempotent. When the failures point at protocol versions, credentials
-or one broken tool, set remediation to null and say in the diagnosis what a person
+or one broken tool, set remediation to null and say in the explanation what a person
 should change instead.
