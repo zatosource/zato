@@ -31,8 +31,10 @@ a failed one opens when its details are asked for {% endcomment %}
 <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
-<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
 <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
 <link rel="stylesheet" type="text/css" href="/static/css/outgoing/file-transfer-schedule-wizard.css">
 {% endblock %}
@@ -43,8 +45,8 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/core.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/lines.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/decision-lines.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/review.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/file-transfer-schedule-descriptions.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/file-transfer-schedule-interval.js"></script>
@@ -129,17 +131,17 @@ $(document).ready(function() {
                     <!-- One decision per line - the segments say the pick, the link
                          beside them says its parameter and opens the popover editing it -->
                     <div class="wizard-section">
-                        <div class="wizard-lines">
+                        <div class="decision-lines">
 
-                            <div class="wizard-line" id="file-transfer-wizard-line-ready">
-                                <label class="wizard-line-label" for="file-transfer-wizard-edit-ready">A file is ready</label>
-                                <span class="wizard-line-slot" id="file-transfer-wizard-slot-ready"></span>
-                                <a href="javascript:void(0)" class="wizard-toggle-edit" id="file-transfer-wizard-edit-ready"><span class="zato-link-face wizard-toggle-summary" id="file-transfer-wizard-summary-ready"></span><span class="zato-soft-hint">Click to edit</span></a>
+                            <div class="decision-line" id="file-transfer-wizard-line-ready">
+                                <label class="decision-line-label" for="file-transfer-wizard-edit-ready">A file is ready</label>
+                                <span class="decision-line-slot" id="file-transfer-wizard-slot-ready"></span>
+                                <a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-ready"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-ready"></span><span class="zato-soft-hint">Click to edit</span></a>
                             </div>
 
-                            <div class="wizard-line" id="file-transfer-wizard-line-claim">
-                                <label class="wizard-line-label" for="id_should_claim">Claim before processing</label>
-                                <span class="wizard-line-slot">{{ form.should_claim }}</span>
+                            <div class="decision-line" id="file-transfer-wizard-line-claim">
+                                <label class="decision-line-label" for="id_should_claim">Claim before processing</label>
+                                <span class="decision-line-slot">{{ form.should_claim }}</span>
                             </div>
 
                         </div>
@@ -158,32 +160,32 @@ $(document).ready(function() {
                     </div>
 
                     <div class="wizard-section">
-                        <div class="wizard-lines">
+                        <div class="decision-lines">
 
-                            <div class="wizard-line" id="file-transfer-wizard-line-success">
-                                <label class="wizard-line-label" for="file-transfer-wizard-edit-success">After a file is processed</label>
-                                <span class="wizard-line-slot" id="file-transfer-wizard-slot-success"></span>
-                                <a href="javascript:void(0)" class="wizard-toggle-edit" id="file-transfer-wizard-edit-success"><span class="zato-link-face wizard-toggle-summary" id="file-transfer-wizard-summary-success"></span><span class="zato-soft-hint">Click to edit</span></a>
+                            <div class="decision-line" id="file-transfer-wizard-line-success">
+                                <label class="decision-line-label" for="file-transfer-wizard-edit-success">After a file is processed</label>
+                                <span class="decision-line-slot" id="file-transfer-wizard-slot-success"></span>
+                                <a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-success"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-success"></span><span class="zato-soft-hint">Click to edit</span></a>
                             </div>
 
-                            <div class="wizard-line" id="file-transfer-wizard-line-run-every">
-                                <label class="wizard-line-label" for="file-transfer-wizard-edit-run-every">Runs</label>
-                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="file-transfer-wizard-edit-run-every"><span class="zato-link-face wizard-toggle-summary" id="file-transfer-wizard-summary-run-every"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            <div class="decision-line" id="file-transfer-wizard-line-run-every">
+                                <label class="decision-line-label" for="file-transfer-wizard-edit-run-every">Runs</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-run-every"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-run-every"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
-                            <div class="wizard-line" id="file-transfer-wizard-line-arrival-window">
-                                <label class="wizard-line-label" for="file-transfer-wizard-edit-arrival-window">Expects a file</label>
-                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="file-transfer-wizard-edit-arrival-window"><span class="zato-link-face wizard-toggle-summary" id="file-transfer-wizard-summary-arrival-window"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            <div class="decision-line" id="file-transfer-wizard-line-arrival-window">
+                                <label class="decision-line-label" for="file-transfer-wizard-edit-arrival-window">Expects a file</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-arrival-window"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-arrival-window"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
-                            <div class="wizard-line" id="file-transfer-wizard-line-expectation">
-                                <label class="wizard-line-label" for="file-transfer-wizard-edit-expectation">Expects a day</label>
-                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="file-transfer-wizard-edit-expectation"><span class="zato-link-face wizard-toggle-summary" id="file-transfer-wizard-summary-expectation"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            <div class="decision-line" id="file-transfer-wizard-line-expectation">
+                                <label class="decision-line-label" for="file-transfer-wizard-edit-expectation">Expects a day</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-expectation"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-expectation"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
-                            <div class="wizard-line" id="file-transfer-wizard-line-retries">
-                                <label class="wizard-line-label" for="file-transfer-wizard-edit-retries">A failing file</label>
-                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="file-transfer-wizard-edit-retries"><span class="zato-link-face wizard-toggle-summary" id="file-transfer-wizard-summary-retries"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            <div class="decision-line" id="file-transfer-wizard-line-retries">
+                                <label class="decision-line-label" for="file-transfer-wizard-edit-retries">A failing file</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-retries"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-retries"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
                         </div>

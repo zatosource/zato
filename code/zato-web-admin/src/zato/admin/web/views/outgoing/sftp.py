@@ -20,6 +20,7 @@ from django.template.response import TemplateResponse
 from django.urls import reverse
 
 # Zato
+from zato.admin.web import alerts_tab
 from zato.admin.web.forms.outgoing.sftp import CommandShellForm, CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection, slugify, \
      SKIP_VALUE
@@ -90,10 +91,15 @@ class Index(_Index):
         return return_data
 
     def handle(self):
+        create_form = CreateForm(req=self.req)
+        edit_form = EditForm(prefix='edit', req=self.req)
+
         return {
             'show_search_form': True,
-            'create_form': CreateForm(req=self.req),
-            'edit_form': EditForm(prefix='edit', req=self.req),
+            'create_form': create_form,
+            'edit_form': edit_form,
+            'create_alerts_tab': alerts_tab.get_alerts_tab_context(create_form, alerts_tab.alert_type_file_transfer),
+            'alerts_tab_config': alerts_tab.get_alerts_tab_config(alerts_tab.alert_type_file_transfer),
         }
 
 # ################################################################################################################################

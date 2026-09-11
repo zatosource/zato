@@ -100,7 +100,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // header with the wizard-wide overview, then anything on a step
     // body holding a labeled field
     helpRowSelector: '.dashboard-card-header, .wizard-name-row, .wizard-toggle-row, ' +
-        '.wizard-section-title, .wizard-line, .mllp-wizard-tolerance-grid',
+        '.wizard-section-title, .decision-line, .mllp-wizard-tolerance-grid',
 
     // Fields that must not be empty on submit - the service is not among them
     // because the destinations may take the messages instead

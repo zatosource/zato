@@ -54,6 +54,9 @@ config.idPrefix = 'alert-rules-row';
 // How wide a row's popover editor stands
 config.popupWidth = '290px';
 
+// The class the popover editors wear, under which index.css sizes their switches
+config.popupClass = 'alert-rules-micro-form';
+
 // Where the hand-picked row order is kept between visits
 config.orderStorageKey = 'zato.alert-rules.order';
 
@@ -413,8 +416,9 @@ var saveRow = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.wizard_kit.forms.setup(editor, {
+$.fn.zato.micro_forms.setup(editor, {
     descriptors: descriptors,
+    popupClass: config.popupClass,
     showCancel: true,
     doneLabel: 'OK',
     labelsLeft: true,
@@ -503,7 +507,7 @@ var renderCard = function(setName) {
     // whose hover offers the same soft hint the value cells give
     var toggle = document.createElement('a');
     toggle.href = 'javascript:void(0)';
-    toggle.className = 'wizard-toggle-edit alert-rules-state-toggle';
+    toggle.className = 'summary-link alert-rules-state-toggle';
     toggle.appendChild(statusBadge);
 
     var hint = document.createElement('span');

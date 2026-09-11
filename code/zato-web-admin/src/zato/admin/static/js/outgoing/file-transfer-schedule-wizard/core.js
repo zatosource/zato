@@ -63,7 +63,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // header with the wizard-wide overview, then anything on a step
     // body holding a labeled field
     helpRowSelector: '.dashboard-card-header, .wizard-name-row, .wizard-field-row, ' +
-        '.wizard-section-title, .wizard-line',
+        '.wizard-section-title, .decision-line',
 
     // Fields that must not be empty on submit - the ones edited only in
     // popovers always carry their defaults, so they are safe to require outright

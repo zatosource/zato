@@ -1,0 +1,57 @@
+{% comment %}
+The Alerts tab of a create or edit form - one page of settings inside a dialog.
+
+Include it right after the panel of the Main tab, inside the same form:
+
+    {% include "zato/shared/alerts-tab.html" with panel_id="out-sftp-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
+
+`alerts_tab` comes from zato.admin.web.alerts_tab.get_alerts_tab_context. The tab is
+written as decision lines (shared/decision-lines.css) - a question and one answer per
+line. A switch is answered on the line itself, a popover line carries a summary link
+(shared/summary-link.css) the tab's JavaScript fills in and a panel line an empty slot it
+puts a chip into. The numbers and the email select the popovers and the panel read and
+write sit hidden under the lines, so the Django form stays the single source of every
+value. The Active switch is the first line of the first section and the one line that
+stays lit when it is off, everything else being dimmed then.
+
+The body wears form-data, the very surface the Main tab's table stands on, so the two
+tabs read as one dialog.
+
+`panel_id` is the id the form-tabs kit switches to when the Alerts tab is clicked, and
+every element the JavaScript looks up is named after it.
+{% endcomment %}
+<div class="dashboard-tab-panel alerts-tab-panel" id="{{ panel_id }}" role="tabpanel" hidden>
+    <div class="form-data alerts-tab-body">
+
+        <div class="alerts-tab-sections">
+        {% for section in alerts_tab.sections %}
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">{{ section.label }}</div>
+                <div class="decision-lines">
+                {% for line in section.lines %}
+                    <div class="decision-line alerts-tab-line alerts-tab-line-{{ line.kind }}{% if line.is_active_line %} alerts-tab-active-line{% endif %}" id="{{ panel_id }}-line-{{ line.name }}">
+                    {% if line.kind == 'toggle' %}
+                        <label class="decision-line-label" for="{{ line.field.id_for_label }}">{{ line.label }}</label>
+                        <span class="decision-line-slot">{{ line.field }}</span>
+                    {% elif line.kind == 'popover' %}
+                        <label class="decision-line-label" for="{{ panel_id }}-edit-{{ line.name }}">{{ line.label }}</label>
+                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-{{ line.name }}"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-{{ line.name }}"></span><span class="zato-soft-hint">{{ alerts_tab.edit_hint }}</span></a></span>
+                    {% else %}
+                        <label class="decision-line-label" for="{{ panel_id }}-slot-{{ line.name }}-chip">{{ line.label }}</label>
+                        <span class="decision-line-slot" id="{{ panel_id }}-slot-{{ line.name }}"></span>
+                    {% endif %}
+                    </div>
+                {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+
+        <div class="alerts-tab-hidden-fields" hidden>
+        {% for field in alerts_tab.hidden_fields %}
+            {{ field }}
+        {% endfor %}
+        </div>
+
+    </div>
+</div>

@@ -113,6 +113,8 @@ $.namespace('zato.config_files.url');
 $.namespace('zato.config_files.wash');
 $.namespace('zato.config_files.zoom');
 $.namespace('zato.dashboard_kit');
+$.namespace('zato.decision_lines');
+$.namespace('zato.micro_forms');
 $.namespace('zato.wizard_kit');
 $.namespace('zato.data_table');
 $.namespace('zato.data_table.multirow');
@@ -2981,7 +2983,7 @@ $.fn.zato.inline_edit.config = {
     'tippy_placement': 'top',
 
     // The look every inline form shares with the micro-form popovers
-    'tippy_theme': 'wizard',
+    'tippy_theme': 'micro-form',
     'tippy_max_width': 480,
 
     // The saved confirmation shows to the left of the edited link,
@@ -3290,7 +3292,7 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
 
     // Build the popover, starting with its header - the shared grip glyph plus
     // the title, acting as the drag handle every popup shares ..
-    var container = $('<div class="wizard-tippy-form zato-popup"></div>');
+    var container = $('<div class="micro-form zato-popup"></div>');
 
     var header = $('<div class="zato-popup-header"></div>');
     header.append($.fn.zato.popup.build_grip());
@@ -3304,15 +3306,15 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
 
     // .. the body holds one field per row, the label above its input,
     // the same layout the micro-forms lay their pages out in ..
-    var body = $('<div class="wizard-tippy-body"></div>');
+    var body = $('<div class="micro-form-body"></div>');
     container.append(body);
 
     // The rows validated for uniqueness, wired up once the popover is on the page
     var unique_rows = [];
 
     $.each(opts.rows, function(ignored, row) {
-        var field = $('<div class="wizard-tippy-field"></div>');
-        field.append($('<label class="wizard-tippy-label"></label>').text(row.label));
+        var field = $('<div class="micro-form-field"></div>');
+        field.append($('<label class="micro-form-label"></label>').text(row.label));
 
         var input = $('<input />');
         input.attr('type', input_type);
@@ -3344,7 +3346,7 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
     });
 
     // .. with its Cancel and OK buttons, the way out first and the answer last ..
-    var buttons = $('<div class="wizard-tippy-buttons"></div>');
+    var buttons = $('<div class="micro-form-buttons"></div>');
     var cancel_button = $('<button type="button" class="secondary-button"></button>').text(config.cancel_label);
     var ok_button = $('<button type="button" class="action-button"></button>').text(config.ok_label);
     buttons.append(cancel_button);

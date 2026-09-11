@@ -95,7 +95,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // with the wizard-wide overview, then anything on a step body holding a
     // labeled field
     helpRowSelector: '.dashboard-card-header, .wizard-name-row, .wizard-field-row, ' +
-        '.wizard-toggle-row, .wizard-line, .wizard-option-header',
+        '.wizard-toggle-row, .decision-line, .wizard-option-header',
 
     // Fields that must not be empty on submit - the same list the popup form
     // held the connection to, an endpoint with no address being the one

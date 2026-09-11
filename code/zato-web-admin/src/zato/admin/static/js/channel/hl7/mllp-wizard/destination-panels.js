@@ -142,7 +142,7 @@ panels._buildPickerFilter = function(action) {
 
     var text = document.createElement('input');
     text.type = 'text';
-    text.className = 'wizard-panel-filter';
+    text.className = 'decision-pick-panel-filter';
     text.id = 'badge-filter-text-' + action;
     text.autocomplete = 'off';
     text.placeholder = labels.filterDestinations;
@@ -468,7 +468,7 @@ panels.servicePanel = function() {
 
 panels._buildService = function(body) {
 
-    var lines = $.fn.zato.wizard_kit.lines;
+    var lines = $.fn.zato.decision_lines;
     var labels = panels.config.labels;
 
     var nameList = [];
@@ -480,7 +480,7 @@ panels._buildService = function(body) {
     });
 
     var list = document.createElement('div');
-    list.className = 'wizard-panel-list';
+    list.className = 'decision-pick-panel-list';
 
     var fill = function(filterText) {
         panels._fillServiceList(list, nameList, filterText);
@@ -490,7 +490,7 @@ panels._buildService = function(body) {
     body.appendChild(filter.field);
 
     var label = document.createElement('span');
-    label.className = 'wizard-tippy-label';
+    label.className = 'micro-form-label';
     label.textContent = labels.services;
     body.appendChild(label);
 
@@ -517,7 +517,7 @@ panels._buildService = function(body) {
 // it in the list, so the caller can bring it into view.
 panels._fillServiceList = function(list, nameList, filterText) {
 
-    var lines = $.fn.zato.wizard_kit.lines;
+    var lines = $.fn.zato.decision_lines;
     var current = wizard.field('service').val();
     var picked = null;
 
@@ -539,10 +539,10 @@ panels._fillServiceList = function(list, nameList, filterText) {
             // Clicking the service the channel runs is what leaves it without one, which
             // the name says right after itself rather than through a control of its own
             var remove = document.createElement('span');
-            remove.className = 'wizard-pick-remove';
+            remove.className = 'decision-pick-remove';
             remove.textContent = panels.config.labels.removeService;
 
-            row.querySelector('.wizard-pick-name').appendChild(remove);
+            row.querySelector('.decision-pick-name').appendChild(remove);
 
             picked = row;
         }
@@ -568,7 +568,7 @@ panels._pickService = function(name) {
             field.val(name);
         }
 
-        $.fn.zato.wizard_kit.lines.closePanel();
+        $.fn.zato.decision_lines.closePanel();
         destinations.render();
     };
 
@@ -597,17 +597,17 @@ panels.replyPanel = function() {
 // destination messages go to, in the order they were picked in.
 panels._buildReply = function(body) {
 
-    var lines = $.fn.zato.wizard_kit.lines;
+    var lines = $.fn.zato.decision_lines;
     var labels = panels.config.labels;
     var destinationsConfig = destinations.config;
 
     var label = document.createElement('span');
-    label.className = 'wizard-tippy-label';
+    label.className = 'micro-form-label';
     label.textContent = labels.replyFrom;
     body.appendChild(label);
 
     var list = document.createElement('div');
-    list.className = 'wizard-panel-list';
+    list.className = 'decision-pick-panel-list';
 
     var serviceName = wizard.field('service').val();
 
@@ -636,7 +636,7 @@ panels._buildReply = function(body) {
     if(!list.childNodes.length) {
 
         var empty = document.createElement('div');
-        empty.className = 'wizard-panel-empty';
+        empty.className = 'decision-pick-panel-empty';
         empty.textContent = labels.nothingToReply;
         list.appendChild(empty);
     }
@@ -655,7 +655,7 @@ panels._pickReply = function(name) {
 
         wizard.state.respondFrom = name;
 
-        $.fn.zato.wizard_kit.lines.closePanel();
+        $.fn.zato.decision_lines.closePanel();
         destinations.render();
     };
 

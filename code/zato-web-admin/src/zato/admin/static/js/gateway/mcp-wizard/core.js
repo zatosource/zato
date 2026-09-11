@@ -83,7 +83,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // header with the wizard-wide overview, then anything on a step
     // body holding a labeled field
     helpRowSelector: '.dashboard-card-header, .wizard-name-row, .wizard-field-row, ' +
-        '.wizard-option-header, .wizard-line, .mcp-wizard-field-grid, .mcp-wizard-pii-selects',
+        '.wizard-option-header, .decision-line, .mcp-wizard-field-grid, .mcp-wizard-pii-selects',
 
     // Fields that must not be empty on submit
     requiredFields: [

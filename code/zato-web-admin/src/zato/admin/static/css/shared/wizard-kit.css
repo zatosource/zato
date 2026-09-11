@@ -2,25 +2,23 @@
  * Wizard kit - the shared look of every multi-step wizard page.
  *
  * A wizard page is one dashboard card holding the step strip, the step
- * bodies with their answer cards, the review and the footer, plus the
- * popover micro-forms the cards open. This file carries everything the
- * wizards share - an instance stylesheet adds only what is truly its own,
- * e.g. the MLLP tolerance grid.
+ * bodies with their answer cards, the review and the footer. This file
+ * carries only what is the wizards' own - an instance stylesheet adds what
+ * is truly its own on top, e.g. the MLLP tolerance grid.
  *
- * Parameterization runs through the --wizard-* tokens below. They sit on
- * :root because the popover micro-forms are appended to document.body,
- * outside any page container - an instance recolors itself by overriding
- * the tokens in its own stylesheet, also on :root, since one page carries
- * one wizard.
+ * What a wizard shares with the rest of the web admin lives in kits of
+ * their own, loaded next to this file:
  *
- *    --wizard-accent           - the step strip, links and focus color
- *    --wizard-done             - the green of summaries and success
- *    --wizard-error            - the red of alerts and failures
- *    --wizard-border           - hairlines inside the card
- *    --wizard-border-strong    - input borders and off sliders
- *    --wizard-text             - the main text color
- *    --wizard-text-muted       - secondary text
- *    --wizard-text-faint       - hints and placeholders
+ *    shared/tokens.css          - the --zato-ui-* palette every kit reads
+ *    shared/popup.css           - the popup chrome the popovers and panels wear
+ *    shared/micro-forms.css     - the popover micro-forms, .micro-form-*
+ *    shared/decision-lines.css  - the decision lines, chips and pick panels
+ *    shared/summary-link.css    - the summary link of a toggle row
+ *
+ * Parameterization runs through the --wizard-* tokens below, which sit on
+ * :root since one page carries one wizard. The tokens of the kits above
+ * are overridden on .wizard-card, and on .wizard-micro-form for the
+ * popovers, which are appended to document.body.
  */
 
 /* ------------------------------------------------------------ */
@@ -49,33 +47,11 @@
 /* ------------------------------------------------------------ */
 
 :root {
-    /* Every button anywhere in a wizard - the footer, the panels, the
-       filter rows - reads at this one size */
-    --wizard-button-font-size: 11px;
-
-    /* How much room the question on a decision line gets. Every line of a
-       page shares it, so the values line up in a column, and a wizard whose
-       questions are longer sets it higher on its own card. */
-    --wizard-line-label-width: 14.5em;
-
-    /* The step's vertical rhythm - how far apart the lines of one group
-       sit and how much wider the break before a new section is. A step
-       whose lines read as one list rather than as groups sets the two
-       to one value on its own card or step body. */
-    --wizard-lines-gap: 12px;
+    /* How much wider the break before a new section of a step is than the
+       gap between the decision lines of one group. A step whose lines read
+       as one list rather than as groups sets it to the lines gap on its
+       own card or step body. */
     --wizard-section-space: 22px;
-
-    --wizard-accent: var(--zato-seablue-light2);
-    /* What a picked option wears - the lighter of the two dashboard blues,
-       so a choice made reads as a choice made and not as an alarm */
-    --wizard-accent-soft: var(--zato-seablue-light3);
-    --wizard-done: #28a745;
-    --wizard-error: #dc3545;
-    --wizard-border: #d9dee3;
-    --wizard-border-strong: #b8c0c7;
-    --wizard-text: #1a1a2e;
-    --wizard-text-muted: #71717a;
-    --wizard-text-faint: #9ca3af;
 
     /* One line of the review, the unit a scrolling list is given its height in */
     --wizard-review-row-height: 26px;
@@ -104,23 +80,28 @@
 
     /* What a label reads as while the switch it names is off - the text
        stepped back a notch, never so far as to read as disabled */
-    --wizard-text-off: color-mix(in srgb, var(--wizard-text) 68%, #fff);
+    --wizard-text-off: color-mix(in srgb, var(--zato-ui-text) 68%, #fff);
     --wizard-text-off-transition: color 150ms ease;
 
     /* One step further back still, for the two switches riding along the
        name row, which are the quietest thing a step shows */
-    --wizard-text-off-more: color-mix(in srgb, var(--wizard-text-faint) 87%, #fff);
+    --wizard-text-off-more: color-mix(in srgb, var(--zato-ui-text-faint) 87%, #fff);
+}
 
-    /* Every checkbox on a wizard page - the card, the step bodies and all
-       the popover micro-forms - renders as the smaller slider, in the
-       wizard accent, through the site-wide checkbox slider tokens. */
+/* Every checkbox of a wizard - on the card, in the step bodies and in the
+   popover micro-forms the card opens - renders as the smaller slider, in
+   the wizard accent, through the site-wide checkbox slider tokens. The
+   popovers are appended to document.body, hence their own class, the one
+   a wizard passes to micro_forms.setup as popupClass. */
+.wizard-card,
+.wizard-micro-form {
     --toggle-width: 27.2px;
     --toggle-height: 15.2px;
     --toggle-knob-size: 12px;
     --toggle-knob-offset: 1.6px;
     --toggle-travel: 12px;
-    --toggle-off-background: var(--wizard-border-strong);
-    --toggle-on-background: var(--wizard-accent);
+    --toggle-off-background: var(--zato-ui-border-strong);
+    --toggle-on-background: var(--zato-ui-accent);
 }
 
 .wizard-card {
@@ -129,16 +110,12 @@
 }
 
 /* The one button size the whole wizard uses - the footer's Back, Next and
-   Cancel, a panel's OK and Cancel and the filter row's Clear all take it.
-   Chips, step tabs and option segments are <button> elements too but read
-   as fields and tabs, so they are left out. */
+   Cancel take it, the way a panel's and a popover's buttons do through
+   their own kits. Chips, step tabs and option segments are <button>
+   elements too but read as fields and tabs, so they are left out. */
 .wizard-card .action-button,
-.wizard-card .secondary-button,
-.wizard-panel .action-button,
-.wizard-panel .secondary-button,
-.tippy-box[data-theme~='wizard'] .action-button,
-.tippy-box[data-theme~='wizard'] .secondary-button {
-    font-size: var(--wizard-button-font-size);
+.wizard-card .secondary-button {
+    font-size: var(--zato-ui-button-font-size);
 }
 
 .wizard-card form {
@@ -180,7 +157,7 @@
    right edge of the header and wears the accent instead of the green. */
 .wizard-badge-context {
     margin-left: auto;
-    color: var(--wizard-accent);
+    color: var(--zato-ui-accent);
     background: rgba(20, 87, 138, 0.08);
     border-color: rgba(20, 87, 138, 0.25);
 }
@@ -275,8 +252,8 @@
    no first row needs a margin of its own. Only the wizard's tabs -
    the shared dashboard tabs elsewhere keep their own spacing. */
 .wizard-steps {
-    --tab-active-color: var(--wizard-accent);
-    --tab-active-border-color: var(--wizard-accent);
+    --tab-active-color: var(--zato-ui-accent);
+    --tab-active-border-color: var(--zato-ui-accent);
     margin: 6px 0 29px;
 }
 
@@ -311,14 +288,14 @@
     margin-bottom: 10px;
     font-size: 13px;
     font-weight: 700;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
 }
 
 /* A dimmed note right under a section title */
 .wizard-section-hint {
     margin: -6px 0 10px;
     font-size: 11.5px;
-    color: var(--wizard-text-faint);
+    color: var(--zato-ui-text-faint);
 }
 
 /* ------------------------------------------------------------ */
@@ -347,16 +324,16 @@
     flex: 0 0 auto;
     width: 4em;
     font-size: 13px;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
 }
 
 /* One weight for every label that names a row of a step, wherever the row
-   comes from - the name, the transports, the decision lines and the folded
-   sections under them. The switches riding along the name row are not one
-   of those, they name themselves and stay in the regular weight. */
+   comes from - the name, the transports and the folded sections under
+   them, the decision lines reading in that weight through their own
+   default. The switches riding along the name row are not one of those,
+   they name themselves and stay in the regular weight. */
 .wizard-name-field label,
-.wizard-toggle-label,
-.wizard-line-label {
+.wizard-toggle-label {
     font-weight: 600;
 }
 
@@ -366,7 +343,7 @@
     box-sizing: border-box;
     height: 24px;
     padding: 0 10px;
-    border: 1px solid var(--wizard-border-strong);
+    border: 1px solid var(--zato-ui-border-strong);
     border-radius: 3px;
     font-size: 13px;
 }
@@ -379,24 +356,18 @@
     gap: 6px;
     height: 32px;
     font-size: 12px;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
     cursor: pointer;
 }
 
-/* A label naming a switch that is off steps back with it, wherever the
-   switch is - beside the name, inside a micro-form or in a grid of them */
-.wizard-active-field,
-.wizard-tippy-checkbox {
+/* A label naming a switch that is off steps back with it, the way the
+   micro-form checkboxes do through their own kit. Off takes these two one
+   step further back than the rest, since they are the quietest thing a
+   step shows - on, they read as everything else does. */
+.wizard-active-field {
     transition: var(--wizard-text-off-transition);
 }
 
-.wizard-active-field:has(input[type="checkbox"]:not(:checked)),
-.wizard-tippy-checkbox:has(input[type="checkbox"]:not(:checked)) {
-    color: var(--wizard-text-off);
-}
-
-/* Off takes these two one step further back than the rest, since they are
-   the quietest thing a step shows - on, they read as everything else does */
 .wizard-active-field:has(input[type="checkbox"]:not(:checked)) {
     color: var(--wizard-text-off-more);
 }
@@ -435,7 +406,7 @@
     width: 7em;
     font-size: 13px;
     font-weight: 600;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
 }
 
 .wizard-field-row input[type="text"] {
@@ -443,7 +414,7 @@
     box-sizing: border-box;
     height: 24px;
     padding: 0 10px;
-    border: 1px solid var(--wizard-border-strong);
+    border: 1px solid var(--zato-ui-border-strong);
     border-radius: 3px;
     font-size: 13px;
 }
@@ -451,7 +422,7 @@
 .wizard-field-row select {
     height: 24px;
     padding: 0 6px;
-    border: 1px solid var(--wizard-border-strong);
+    border: 1px solid var(--zato-ui-border-strong);
     border-radius: 3px;
     font-size: 12.5px;
     background: #fff;
@@ -459,7 +430,7 @@
 
 .wizard-field-hint {
     font-size: 11px;
-    color: var(--wizard-text-faint);
+    color: var(--zato-ui-text-faint);
     white-space: nowrap;
 }
 
@@ -483,7 +454,7 @@
     width: 4em;
     font-size: 13px;
     line-height: var(--toggle-height);
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
     cursor: pointer;
 
     /* Geometrically the text is dead centered against the slider, but the
@@ -495,44 +466,15 @@
     transition: none;
 }
 
-/* One link is the way into a row's options popup - inside it the
-   summary wears the site-wide dashed-underline link face while the hint
-   stays a dimmed note, and everything in between is clickable too.
-   The font size sits on the link itself so its line box is built from
-   the 12px text rather than the page's 16px strut, which used to hang
-   the text a pixel or two below the slider midline. */
-a.wizard-toggle-edit {
-    background-image: none;
-    padding-bottom: 0;
-    font-size: 12px;
+/* The summary link of shared/summary-link.css is the way into a row's
+   options popup. The union of the link's inline boxes runs past the
+   slider height by a fraction of a pixel, which used to make the link the
+   tallest thing in its row - the whole row then grew and shrank as a
+   slider toggled the link on and off, nudging everything below. The clamp
+   keeps every row the same height whether or not its link is on screen. */
+.wizard-toggle-row a.summary-link {
+    --summary-link-height: var(--toggle-height);
     line-height: var(--toggle-height);
-
-    /* The union of the link's inline boxes runs past the slider height by
-       a fraction of a pixel, which used to make the link the tallest thing
-       in its row - the whole row then grew and shrank as a slider toggled
-       the link on and off, nudging everything below. The clamp keeps every
-       row the same height whether or not its link is on screen. */
-    height: var(--toggle-height);
-}
-
-.wizard-toggle-summary {
-    font-size: 12px;
-}
-
-/* The hint waits for a hover over the link - opacity keeps its space
-   reserved, so nothing around it moves when it fades in */
-.wizard-toggle-edit .zato-soft-hint {
-    opacity: 0;
-    transition: opacity 150ms ease;
-}
-
-.wizard-toggle-edit:hover .zato-soft-hint {
-    opacity: 1;
-}
-
-/* Nothing to edit while a row is off, so the whole link goes away */
-.wizard-toggle-edit:has(.wizard-toggle-summary:empty) {
-    display: none;
 }
 
 /* Barely there - the text softens for a moment while the new value
@@ -575,7 +517,7 @@ a.wizard-toggle-edit {
     box-sizing: border-box;
     height: 24px;
     padding: 4px 8px;
-    border: 1px solid var(--wizard-border-strong);
+    border: 1px solid var(--zato-ui-border-strong);
     border-radius: 3px;
     background: #fff;
     font-size: 12px;
@@ -592,7 +534,7 @@ a.wizard-toggle-edit {
 
 .wizard-select-row select:focus,
 .wizard-select-row input[type="text"]:focus {
-    border-color: var(--wizard-accent);
+    border-color: var(--zato-ui-accent);
 }
 
 /* The add link keeps to its own width under the rows */
@@ -610,7 +552,7 @@ a.wizard-select-add {
    the rows inside a popover, where the link face of the tooltip content
    would otherwise paint its own underline over the icon. */
 a.wizard-select-delete,
-.tippy-box[data-theme~='wizard'] .tippy-content a.wizard-select-delete {
+.tippy-box[data-theme~='micro-form'] .tippy-content a.wizard-select-delete {
     background-image: none;
     display: flex;
     align-items: center;
@@ -624,7 +566,7 @@ a.wizard-select-delete::before {
     display: block;
     width: 8px;
     height: 8px;
-    background-color: var(--wizard-text-muted);
+    background-color: var(--zato-ui-text-muted);
     -webkit-mask-image: url('/static/gfx/close.svg');
     mask-image: url('/static/gfx/close.svg');
     -webkit-mask-size: 8px 8px;
@@ -637,7 +579,7 @@ a.wizard-select-delete::before {
 }
 
 a.wizard-select-delete:hover::before {
-    background-color: var(--wizard-error);
+    background-color: var(--zato-ui-error);
 }
 
 /* ------------------------------------------------------------ */
@@ -658,20 +600,20 @@ a.wizard-select-delete:hover::before {
 .wizard-service-row .chosen-container-single .chosen-single {
     height: 24px;
     padding: 0 8px;
-    border: 1px solid var(--wizard-border-strong);
+    border: 1px solid var(--zato-ui-border-strong);
     border-radius: 3px;
     background: #fff;
     box-shadow: none;
     font-size: 12px;
     line-height: 22px;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
 }
 
 /* An open or focused picker keeps the wizard accent instead of the stock
    chosen blue, and its gradient stays off as well */
 .wizard-service-row .chosen-container-active .chosen-single,
 .wizard-service-row .chosen-container-active.chosen-with-drop .chosen-single {
-    border-color: var(--wizard-accent);
+    border-color: var(--zato-ui-accent);
     background-image: none;
 }
 
@@ -688,13 +630,13 @@ a.wizard-select-delete:hover::before {
     max-width: 560px;
     padding: 10px 14px;
     margin-bottom: 8px;
-    border: 1px solid var(--wizard-border);
+    border: 1px solid var(--zato-ui-border);
     border-radius: 5px;
     transition: border-color 150ms ease;
 }
 
 .wizard-option-card:hover {
-    border-color: var(--wizard-border-strong);
+    border-color: var(--zato-ui-border-strong);
 }
 
 .wizard-option-card-clickable {
@@ -712,19 +654,19 @@ a.wizard-select-delete:hover::before {
 .wizard-option-label {
     font-size: 13px;
     font-weight: 600;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
 }
 
 .wizard-option-summary {
     margin-left: auto;
     font-size: 12px;
     font-weight: 500;
-    color: var(--wizard-done);
+    color: var(--zato-ui-done);
 }
 
 .wizard-chevron {
     flex-shrink: 0;
-    color: var(--wizard-text-muted);
+    color: var(--zato-ui-text-muted);
     transition: transform 150ms ease;
 }
 
@@ -787,7 +729,7 @@ a.wizard-select-delete:hover::before {
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
     cursor: pointer;
     user-select: none;
 }
@@ -832,7 +774,7 @@ a.wizard-select-delete:hover::before {
     padding-left: var(--wizard-review-inset);
     padding-right: var(--wizard-review-inset);
     margin-bottom: var(--wizard-review-heading-margin);
-    border-bottom: 1px solid var(--wizard-border);
+    border-bottom: 1px solid var(--zato-ui-border);
 }
 
 .wizard-review-group-label {
@@ -840,13 +782,13 @@ a.wizard-select-delete:hover::before {
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
 }
 
 .wizard-review-edit {
     font-size: 12px;
     font-weight: 500;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
     cursor: pointer;
 }
 
@@ -871,11 +813,11 @@ a.wizard-select-delete:hover::before {
 .wizard-review-key {
     width: 220px;
     flex-shrink: 0;
-    color: var(--wizard-text-muted);
+    color: var(--zato-ui-text-muted);
 }
 
 .wizard-review-value {
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
 }
 
 /* A review value carrying a path or a pattern wears the inline code look */
@@ -893,7 +835,7 @@ a.wizard-select-delete:hover::before {
 
 /* One of them in the review, where a create reads the whole list of them */
 .wizard-review-missing {
-    color: var(--wizard-error);
+    color: var(--zato-ui-error);
     font-weight: 700;
 }
 
@@ -903,7 +845,7 @@ a.wizard-select-delete:hover::before {
    The class is named twice on purpose - the rows above color their labels
    through a class and an element, which one class alone does not outrank. */
 .wizard-missing.wizard-missing {
-    color: var(--wizard-error);
+    color: var(--zato-ui-error);
 }
 
 /* The field itself is not styled here at all. The shared validator marks it, the
@@ -931,12 +873,12 @@ a.wizard-select-delete:hover::before {
     height: 24px;
     padding: 0 10px;
     font-family: inherit;
-    font-size: var(--wizard-button-font-size);
+    font-size: var(--zato-ui-button-font-size);
     font-weight: 400;
-    color: var(--wizard-text-muted);
+    color: var(--zato-ui-text-muted);
     background: #fff;
     background-image: none;
-    border: 1px solid var(--wizard-border-strong);
+    border: 1px solid var(--zato-ui-border-strong);
     border-radius: 3px;
     box-shadow: none;
     text-shadow: none;
@@ -944,15 +886,15 @@ a.wizard-select-delete:hover::before {
 }
 
 .wizard-card .wizard-probe-button:hover {
-    color: var(--wizard-text);
-    border-color: var(--wizard-accent);
+    color: var(--zato-ui-text);
+    border-color: var(--zato-ui-accent);
 }
 
 /* A check on its way is not pressed again */
 .wizard-card .wizard-probe-button:disabled,
 .wizard-card .wizard-probe-button:disabled:hover {
-    color: var(--wizard-text-faint);
-    border-color: var(--wizard-border);
+    color: var(--zato-ui-text-faint);
+    border-color: var(--zato-ui-border);
     cursor: not-allowed;
 }
 
@@ -962,15 +904,15 @@ a.wizard-select-delete:hover::before {
 .wizard-probe-result {
     margin-left: 10px;
     font-size: 12px;
-    color: var(--wizard-text-muted);
+    color: var(--zato-ui-text-muted);
 }
 
 .wizard-probe-ok {
-    color: var(--wizard-done);
+    color: var(--zato-ui-done);
 }
 
 .wizard-probe-error {
-    color: var(--wizard-error);
+    color: var(--zato-ui-error);
 }
 
 /* ------------------------------------------------------------ */
@@ -986,7 +928,7 @@ a.wizard-select-delete:hover::before {
     align-items: center;
     margin-top: 8px;
     padding: 16px 0 4px;
-    border-top: 1px solid var(--wizard-border);
+    border-top: 1px solid var(--zato-ui-border);
 }
 
 /* A touch larger than the shared badge - this one sits next to the
@@ -1019,7 +961,7 @@ a.wizard-select-delete:hover::before {
 /* Leaving is not an action the page pushes, so it is a link like every other
    one on a wizard, reading at the size the buttons beside it do */
 a.wizard-cancel {
-    font-size: var(--wizard-button-font-size);
+    font-size: var(--zato-ui-button-font-size);
 }
 
 .wizard-footer button:disabled {
@@ -1048,240 +990,4 @@ a.wizard-cancel {
 
 .wizard-save-spinner.active {
     display: inline-block;
-}
-
-/* ------------------------------------------------------------ */
-/* Wizard - popover micro-forms                                  */
-/* ------------------------------------------------------------ */
-
-/* The chrome - the surface, the dark draggable header and the drag
-   cursors - comes from the shared popup look in shared/popup.css,
-   the same one the IDE's right-click menus wear. The tippy box only
-   positions the popup, so it paints nothing of its own. */
-.tippy-box[data-theme~='wizard'] {
-    background-color: transparent;
-    color: var(--wizard-text);
-}
-
-/* Only the popover's own content box - the help tooltips nested inside
-   the popover bring tippy boxes of their own and keep their padding */
-.tippy-box[data-theme~='wizard'] > .tippy-content {
-    padding: 0;
-}
-
-.tippy-box[data-theme~='wizard'] input:focus,
-.tippy-box[data-theme~='wizard'] select:focus,
-.tippy-box[data-theme~='wizard'] textarea:focus,
-.tippy-box[data-theme~='wizard'] button:focus {
-    outline: none;
-    box-shadow: none;
-}
-
-/* The per-field help tooltips live inside the popover they explain, so
-   clicking them does not close it - and in there the stock tippy 14px
-   towers over the popover's own 11-13px text, so they match it instead */
-.wizard-tippy-form .tippy-box {
-    font-size: 12px;
-    line-height: 1.5;
-}
-
-.wizard-tippy-form {
-    display: flex;
-    flex-direction: column;
-    min-width: 260px;
-    box-sizing: border-box;
-}
-
-/* A popover no wider than its content */
-.wizard-tippy-form.wizard-tippy-fit {
-    min-width: 0;
-    width: max-content;
-}
-
-/* The fields under the popup header, on the same sandy panel
-   the IDE's right-click menus use for their action lists */
-.wizard-tippy-body {
-    padding: 12px 14px 10px;
-    background: var(--zato-popup-sand);
-    border-radius: 0 0 5px 5px;
-}
-
-/* Several short fields share one row instead of stacking full-width */
-.wizard-tippy-row {
-    display: flex;
-    gap: 10px;
-}
-
-.wizard-tippy-row .wizard-tippy-field {
-    flex: 1 1 0;
-    min-width: 0;
-}
-
-/* A checkbox sharing a row with labeled inputs takes only the room it
-   needs and drops to their baseline, level with the inputs themselves */
-.wizard-tippy-row .wizard-tippy-field:has(.wizard-tippy-checkbox) {
-    flex: 0 0 auto;
-    justify-content: flex-end;
-    padding-bottom: 5px;
-}
-
-.wizard-tippy-field {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    margin-bottom: 8px;
-}
-
-.wizard-tippy-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--wizard-text-muted);
-}
-
-/* A host may ask for its labels in a column of their own, to the left of
-   the inputs - every row then reads as one line of a table of keys and
-   values, the labels sharing one width and the controls closing every
-   line at the popup's right edge, level with the buttons below them */
-.wizard-tippy-labels-left {
-    --wizard-tippy-label-width: 130px;
-}
-
-.wizard-tippy-labels-left .wizard-tippy-field {
-    display: grid;
-    grid-template-columns: var(--wizard-tippy-label-width) 1fr;
-    align-items: center;
-    column-gap: 12px;
-}
-
-/* A short control, like a number field, keeps to the right edge - the
-   full-width ones already reach it on their own */
-.wizard-tippy-labels-left .wizard-tippy-field > input,
-.wizard-tippy-labels-left .wizard-tippy-field > select {
-    justify-self: end;
-}
-
-/* A checkbox row keeps to the same two columns - its text where the other
-   labels stand and its switch on the shared right edge */
-.wizard-tippy-labels-left .wizard-tippy-checkbox {
-    display: grid;
-    grid-template-columns: var(--wizard-tippy-label-width) 1fr;
-    column-gap: 12px;
-    align-items: center;
-}
-
-.wizard-tippy-labels-left .wizard-tippy-checkbox > input {
-    justify-self: end;
-}
-
-.wizard-tippy-labels-left .wizard-tippy-checkbox-text {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--wizard-text-muted);
-}
-
-/* One explicit height keeps rows mixing inputs and selects even */
-.wizard-tippy-field input[type="text"],
-.wizard-tippy-field input[type="number"],
-.wizard-tippy-field select {
-    width: 100%;
-    box-sizing: border-box;
-    height: 24px;
-    padding: 5px 8px;
-    border: 1px solid var(--wizard-border-strong);
-    border-radius: 3px;
-    font-size: 13px;
-}
-
-/* The picked values read as data, not as headings - a notch smaller than
-   the free-text inputs next to them, in the same face the inputs wear.
-   The formalize height of 1.8em squeezed the select's line box out through
-   the bottom edge, sitting the text low - the explicit height above plus
-   paddings sized to the line box recenter it. */
-.wizard-tippy-field select {
-    font-size: 12px;
-    font-family: Arial, "Liberation Sans", FreeSans, sans-serif;
-    line-height: normal;
-    padding-top: 4px;
-    padding-bottom: 4px;
-}
-
-.wizard-tippy-field input[type="text"]:focus,
-.wizard-tippy-field input[type="number"]:focus,
-.wizard-tippy-field select:focus {
-    border-color: var(--wizard-accent);
-    outline: none;
-    box-shadow: none;
-}
-
-.wizard-tippy-input-row {
-    display: flex;
-    gap: 6px;
-}
-
-.wizard-tippy-input-row .wizard-tippy-unit {
-    width: auto;
-    flex-shrink: 0;
-}
-
-/* The switch ends the line the label takes, so a page of them reads as one
-   column of switches rather than as one switch per length of text */
-.wizard-tippy-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 12px;
-    color: var(--wizard-text);
-    cursor: pointer;
-}
-
-.wizard-tippy-checkbox-text {
-    flex: 1;
-}
-
-/* A count is entered with the arrows the browser draws on a number field,
-   so the field is only as wide as the arrows and a few digits need */
-.wizard-tippy-field input.wizard-tippy-number {
-    width: 5.5em;
-    flex: 0 0 auto;
-    padding-right: 2px;
-}
-
-/* The site-wide tippy link colors are meant for dark tooltips - this
-   popover is light, so its links wear the standard link face. The theme
-   attribute keeps the selector ahead of the .tippy-box .tippy-content
-   rule in style.css, which would otherwise paint the links light. */
-.tippy-box[data-theme~='wizard'] .tippy-content a:not(.menu-link) {
-    color: rgb(17, 17, 17);
-    --zato-link-dash: rgba(0, 0, 0, 0.35);
-}
-
-.tippy-box[data-theme~='wizard'] .tippy-content a:not(.menu-link):hover {
-    color: var(--zato-link-hover) !important;
-    --zato-link-dash: rgba(0, 0, 0, 0.35);
-}
-
-.wizard-tippy-hint {
-    font-size: 11px;
-    color: var(--wizard-text-faint);
-}
-
-/* The rule above the buttons mirrors the one the wizard footer draws */
-.wizard-tippy-buttons {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--wizard-border);
-}
-
-/* The help badge keeps to the left, away from the OK button */
-.wizard-tippy-buttons .how-it-works-badge {
-    margin-right: auto;
-}
-
-.wizard-tippy-buttons .secondary-button {
-    box-shadow: none !important;
-    text-shadow: none !important;
 }

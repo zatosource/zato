@@ -8,6 +8,13 @@
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -25,6 +32,15 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+
+    {% comment %} Form tabs and the Alerts tab {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/decision-lines.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
+    {{ alerts_tab_config|json_script:"out-sftp-alerts-tab-config" }}
 
     {% comment %} SFTP {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/sftp.js"></script>
@@ -188,6 +204,13 @@
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "out-sftp-create" %}" method="post" id="create-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-sftp-create-tab-panel-main" role="tabpanel">
                     <table class="form-data">
 
                         <tr>
@@ -284,6 +307,12 @@
                             </td>
                         </tr>
 
+                    </table>
+                    </div>
+
+                    {% include "zato/shared/alerts-tab.html" with panel_id="out-sftp-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
+
+                    <table class="form-data">
                         <tr>
                             <td style="text-align:left;vertical-align:middle">
                                 <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
@@ -293,8 +322,8 @@
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>
-
                     </table>
+
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>

@@ -6,7 +6,8 @@
 <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
-<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
 <link rel="stylesheet" type="text/css" href="/static/css/alerting-config/index.css">
 {% endblock %}
 
@@ -14,7 +15,7 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/sortable/Sortable.min.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/index.js"></script>
 {% endblock %}
 
@@ -49,7 +50,7 @@
                         {% for cell in type.cells %}
                         {% if cell %}
                         <div class="alert-rules-param">
-                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="{{ cell.name }}" data-kind="{{ cell.kind }}" data-value="{{ cell.value }}" data-suffix="{{ cell.suffix }}"><span class="alert-rules-param-label">{{ cell.label }}</span><span class="alert-rules-param-value">{{ cell.display }}</span><span class="zato-soft-hint">Click to edit</span></a>
+                            <a href="javascript:void(0)" class="summary-link alert-rules-param-edit" data-field="{{ cell.name }}" data-kind="{{ cell.kind }}" data-value="{{ cell.value }}" data-suffix="{{ cell.suffix }}"><span class="alert-rules-param-label">{{ cell.label }}</span><span class="alert-rules-param-value">{{ cell.display }}</span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                         {% else %}
                         <div class="alert-rules-param"><span class="form_hint">---</span></div>
@@ -70,7 +71,7 @@
                 <div class="alert-rules-set-body alert-rules-notifications-body" id="alert-rules-body-notifications">
                     {% for cell in notification_cells %}
                     <div class="alert-rules-param">
-                        <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="{{ cell.name }}" data-kind="text" data-value="{{ cell.value }}" data-suffix=""><span class="alert-rules-param-label">{{ cell.label }}</span><span class="alert-rules-param-value">{{ cell.display }}</span><span class="zato-soft-hint">Click to edit</span></a>
+                        <a href="javascript:void(0)" class="summary-link alert-rules-param-edit" data-field="{{ cell.name }}" data-kind="text" data-value="{{ cell.value }}" data-suffix=""><span class="alert-rules-param-label">{{ cell.label }}</span><span class="alert-rules-param-value">{{ cell.display }}</span><span class="zato-soft-hint">Click to edit</span></a>
                     </div>
                     {% endfor %}
                 </div>

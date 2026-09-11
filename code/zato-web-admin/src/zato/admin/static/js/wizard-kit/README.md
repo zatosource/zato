@@ -19,12 +19,19 @@ Three instances exist today:
 | Module | Namespace | What it does |
 |---|---|---|
 | `core.js` | `kit.core` | The step engine and page state machine - step walking, the name badge, submit plumbing, the "How does it work?" wiring |
-| `forms.js` | `kit.forms` | The popover micro-form engine - descriptor-driven tippy forms that seed from and write back to the Django form |
 | `review.js` | `kit.review` | Card summaries with the fade replay and the review step's grouped-rows renderer with Edit links |
 | `select-rows.js` | `kit.selectRows` | A column of rows, each with its own selects and a delete link, plus the add link under the list |
-| `lines.js` | `kit.lines` | Decision lines - a step body written as sentences, each line one label and one value, the value a chip opening a panel or a strip of options |
 | `collapse.js` | `kit.collapse` | Collapsibles - a section folded behind one line of the step, and the groups a section or a card folds inside itself |
 | `probe.js` | `kit.probe` | The live check - a button that posts what has been filled in so far to an endpoint and paints the verdict, before anything is saved |
+
+Two kits a wizard builds on are not the wizard's own, since dialog tabs and listing pages host them too. Each carries its own contract in the header comment of its file:
+
+| Kit | Files | What it does |
+|---|---|---|
+| Micro-forms | `static/js/common/micro-forms.js`, `static/css/shared/micro-forms.css`, namespace `$.fn.zato.micro_forms` | The popover micro-form engine - descriptor-driven tippy forms that seed from and write back to the Django form |
+| Decision lines | `static/js/common/decision-lines.js`, `static/css/shared/decision-lines.css`, namespace `$.fn.zato.decision_lines` | Settings written as sentences, one decision per line - a question on the left and its answer on the right, the answer a chip opening a pick panel, a strip of options, a switch or a summary link |
+
+The summary link a toggle row opens its popover through is `static/css/shared/summary-link.css`, and the palette every one of these reads is the `--zato-ui-*` tokens of `static/css/shared/tokens.css`.
 
 An instance uses whichever modules its config declares - MLLP uses toggle rows and popovers, the schedule wizard uses decision lines and the context badge, both use the name badge, the help badges and the review renderer from the same code.
 
@@ -47,7 +54,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     beforeSave: function(form) { /* write hidden fields */ }
 });
 
-$.fn.zato.wizard_kit.forms.setup(wizard, {descriptors: {...}});
+$.fn.zato.micro_forms.setup(wizard, {popupClass: 'wizard-micro-form', descriptors: {...}});
 $.fn.zato.wizard_kit.review.setup(wizard);
 ```
 
@@ -101,26 +108,9 @@ The namespace must provide:
 - `wizard.review.render()` - renders the review step, usually through `review.renderGroups`
 - `wizard.review.refreshSummaries()` - recomputes the card summaries
 
-## Micro-form descriptors
+## Micro-forms in a wizard
 
-Each micro-form is described by a descriptor - `{title, width, pages}`, each page a list of entries. An entry is either one field spec, shown on its own line, or a list of field specs, shown side by side in one row. A field spec points at one of the hidden Django form inputs by name, so opening a micro-form seeds its inputs from the form and pressing OK writes the answers back. Selects clone their choices from the underlying Django select, which keeps the wizard and the matching full-page editor on the same single list of options.
-
-A spec's keys: `field` (the Django form field name), `label`, `kind` - one of `text`, `number`, `select`, `checkbox` or a kind the instance registered - plus the optional `unitField`, `width`, `placeholder` and `hint`.
-
-`forms.setup` asks its host for `config.idPrefix`, `field(name)`, `helpDescriptions()` and, unless the host says otherwise, a review to refresh. A page that is no wizard at all can therefore host one of these popovers on a few hidden inputs of its own. The HL7 MLLP channel list opens the wizard's Message matchers from its Match column that way, and the file transfer schedule list opens the wizard's How often to look from its Interval column, with the descriptor shared by both pages in `static/js/outgoing/file-transfer-schedule-interval.js`.
-
-Such a host passes `onDone`, what accepting the last page comes to, and `showCancel: true`, which puts a Cancel next to the button that accepts the popover. A popover of one field passes `showHelp: false` and carries no help badge, and its host then provides no `helpDescriptions` and loads none of the help machinery. The host posts what the popover answered through `$.fn.zato.inline_edit.post` of `common.js`, which runs the save on the link that was clicked and flashes the shared saved confirmation beside it. `forms.helpDescriptions(shared)` says the host's field help again under the ids the popover inputs take.
-
-A `number` field is stepped with the arrows the browser draws on it and is only as wide as a count needs, whatever the label above it says. A `checkbox` puts its switch at the end of the line its label takes, so a page of them reads as one column of switches rather than as one switch per length of text.
-
-Field kinds beyond the built-in ones come from the instance:
-
-```javascript
-wizard.forms.registerKind('securityList', {
-    build: function(fieldSpec, row) { ... },
-    save: function(popper, fieldSpec) { ... }
-});
-```
+The descriptors, the field kinds and the host contract are the micro-forms kit's own and are written up in the header of `static/js/common/micro-forms.js`. What is the wizard's here is the class its popovers wear - `popupClass: 'wizard-micro-form'` - under which `wizard-kit.css` sizes the switches inside a popover the way it sizes the ones on the card. The HL7 MLLP channel list opens the wizard's Message matchers from its Match column through the same kit, and the file transfer schedule list opens the wizard's How often to look from its Interval column, with the descriptor shared by both pages in `static/js/outgoing/file-transfer-schedule-interval.js`.
 
 ## Select rows
 
@@ -137,31 +127,21 @@ $.fn.zato.wizard_kit.selectRows.appendRow(list,
 list.after($.fn.zato.wizard_kit.selectRows.buildAddLink('Add security', function() { ... }));
 ```
 
-## Decision lines
+## Decision lines in a wizard
 
-A step whose answers are few but consequential reads better as sentences than as a form. A line is a label and one value, the value either a chip that opens a panel or a strip of options with the picked one in the accent:
+A step whose answers are few but consequential reads better as sentences than as a form, and the decision lines kit - `static/js/common/decision-lines.js`, written up in its header - is how a step does that. The template holds the labels and one empty slot per line, the instance fills the slots on every render:
 
 ```javascript
-$.fn.zato.wizard_kit.lines.setChip('mllp-wizard-slot-destinations', {
+$.fn.zato.decision_lines.setChip('mllp-wizard-slot-destinations', {
     text: '3 destinations',
     note: '1 paused',
     panel: {title: 'destinations', width: 980, minWidth: 700, build: buildDestinationsPanel}
 });
 
-$.fn.zato.wizard_kit.lines.setSegments('mllp-wizard-slot-delivery', modeList, currentMode, onPick);
+$.fn.zato.decision_lines.setSegments('mllp-wizard-slot-delivery', modeList, currentMode, onPick);
 ```
 
-The template holds the labels and one empty slot per line, the instance fills the slots on every render. A chip is solid once its line has an answer and dashed while it is still waiting for one, which is the only difference between them - an unanswered line reads as unanswered, never as a fault.
-
-A strip of options is the shared tab component of `shared/tabs.css`, the same one the step headers use, with its tokens repointed - no border, nothing rounded, no capitals, and the picked option in the lighter of the two dashboard blues so a strip inside a step never reads as the step strip above it.
-
-Every option carries `is_active`, and one that is off is not put on screen. An option not yet ready to be offered is turned off rather than deleted, so turning it back on is all it takes to have it again.
-
-A panel wears the shared popup chrome of `shared/popup.css` - the dark header with the grip, the sandy body, the buttons row with OK - so it is the same popup the micro-forms and the IDE menus open, and `$.fn.zato.popup.install_drag` makes its header the handle. `$.fn.zato.popup.install_resize` adds the grip in each bottom corner, so a panel is dragged wider and taller from either side, never below the `minWidth` its own spec names by the kit's `panelMinHeight`. Where a panel is left is where it opens next time - `save_geometry` writes it under the chip's id when a drag or a resize ends and `restore_geometry` reads it back, clamped to the window in case the window is smaller now, and only a panel that was never moved hangs under its chip. One panel is open at a time, a press outside it or Escape closes it.
-
-The `build` function fills the body and may return a function to run when the panel closes, which is how a panel that edits the DOM directly - a badge picker, say - writes its answers back into the state. It runs while the panel is still on the page, so it can read the answers out of it. Inside a panel the kit offers `buildFilter` and `buildPickRow`, so a panel is a filter above a list of rows, and the row under it holds nothing but OK.
-
-A list in a panel keeps its height with the scrollbar always in view, which is what makes a filter over hundreds of entries feel steady - nothing resizes as the matches narrow. The panel runs one flex column from itself down to the lists, so the room a corner adds or takes away lands on the lists alone and the filter, the headings and the buttons row stay exactly where they are.
+Every option a strip offers carries `is_active`, and one that is off is not put on screen. An option not yet ready to be offered is turned off rather than deleted, so turning it back on is all it takes to have it again. A wizard whose questions are longer than the default widens `--decision-line-label-width` on its own card, and a step whose lines read as one list rather than as groups sets `--decision-lines-gap` and `--wizard-section-space` to one value.
 
 ## Collapsibles
 
@@ -252,17 +232,6 @@ Which questions a save waits on follows what the page is. A create is one walk e
 
 ## CSS
 
-The shared stylesheet is `static/css/shared/wizard-kit.css` - the card, the step strip, the badges, the name row, sections, toggle rows, select rows, the service picker, option cards, choice cards, the review, the popover micro-forms (tippy theme `wizard`), the live check, the footer and the save spinner (`.wizard-save-spinner`, turning on the global `zato-spin` keyframes of `style.css`). The decision lines have one of their own, `static/css/shared/wizard-lines.css` - the lines, the chips, the options strip and the panels, including how a badge picker sits inside a panel. An instance stylesheet adds only what is truly its own, e.g. the MLLP tolerance grid.
+The wizard's own stylesheet is `static/css/shared/wizard-kit.css` - the card, the step strip, the badges, the name row, sections, toggle rows, select rows, the service picker, option cards, the review, the live check, the footer and the save spinner (`.wizard-save-spinner`, turning on the global `zato-spin` keyframes of `style.css`). A wizard page loads it after the kits it builds on - `shared/popup.css`, `shared/micro-forms.css`, `shared/decision-lines.css` and `shared/summary-link.css` - and an instance stylesheet adds only what is truly its own, e.g. the MLLP tolerance grid.
 
-Parameterization runs through the `--wizard-*` tokens, declared with defaults on `:root` because the popover micro-forms are appended to `document.body`, outside any page container. An instance recolors itself by overriding the tokens in its own stylesheet, also on `:root`, since one page carries one wizard.
-
-| Token | Meaning |
-|---|---|
-| `--wizard-accent` | The step strip, links and focus color |
-| `--wizard-done` | The green of summaries and success |
-| `--wizard-error` | The red of alerts and failures |
-| `--wizard-border` | Hairlines inside the card |
-| `--wizard-border-strong` | Input borders and off sliders |
-| `--wizard-text` | The main text color |
-| `--wizard-text-muted` | Secondary text |
-| `--wizard-text-faint` | Hints and placeholders |
+The palette is the `--zato-ui-*` tokens of `static/css/shared/tokens.css`, which every page already has through `style.css`. The `--wizard-*` tokens of `wizard-kit.css` are the wizard's own metrics - the section spacing, the review rows, the collapse indent, the stepped-back text of an off switch - and sit on `:root` since one page carries one wizard. The tokens of the kits are overridden on `.wizard-card`, and on `.wizard-micro-form` for the popovers, which are appended to `document.body`.

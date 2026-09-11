@@ -3,7 +3,7 @@
  * tolerance grid, the head above the REST security rows and what a
  * destination badge carries inside the picker. The badges themselves come
  * from multi-select.css, the decision lines and their panels from
- * shared/wizard-lines.css, the rest of the card chrome from
+ * shared/decision-lines.css, the rest of the card chrome from
  * shared/wizard-kit.css.
  */
 
@@ -37,7 +37,7 @@
     width: var(--mllp-tolerance-fixup-width);
     gap: 12px;
     font-size: 12px;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
     cursor: pointer;
     transition: var(--wizard-text-off-transition);
 }
@@ -70,7 +70,7 @@
 }
 
 /* The label caps sit optically low against the small pill */
-.mllp-wizard-security-head .wizard-tippy-label {
+.mllp-wizard-security-head .micro-form-label {
     position: relative;
     top: -1.5px;
 }
@@ -113,7 +113,7 @@
     font-size: 9.5px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--wizard-text-faint);
+    color: var(--zato-ui-text-faint);
 }
 
 /* The switch and the options of a destination only mean something once
@@ -140,9 +140,9 @@
     height: 24px;
     padding: 0 6px;
     font-size: 12px;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
     background: #fff;
-    border: 1px solid var(--wizard-border-strong);
+    border: 1px solid var(--zato-ui-border-strong);
     border-radius: 3px;
 }
 
@@ -168,5 +168,5 @@
 }
 
 .wizard-destination-controls .wizard-destination-option:focus {
-    border-color: var(--wizard-accent);
+    border-color: var(--zato-ui-accent);
 }

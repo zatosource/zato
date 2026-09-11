@@ -1,4 +1,13 @@
-// Wizard kit - the popover micro-form engine.
+// Micro-forms - the popover forms of a few fields that open off a link or
+// a chip and read and write the hidden inputs of the page's own Django form.
+//
+// A micro-form is a tippy popover wearing the shared popup chrome - the dark
+// draggable header, the sandy body - with its fields under the header and
+// a buttons row at the end. Wizards open them off their summary links,
+// listing pages off their inline-edit links, dialog tabs off the summary
+// links of their decision lines. The look is static/css/shared/micro-forms.css,
+// loaded next to shared/popup.css, and a host tunes it through the
+// --micro-form-* tokens under the popupClass it passes to setup.
 //
 // Each micro-form is described by a descriptor - a list of pages, each page
 // a list of entries. An entry is either one field spec, shown on its own
@@ -6,20 +15,24 @@
 // spec points at one of the hidden Django form inputs by name, so opening
 // a micro-form seeds its inputs from the form and pressing OK writes the
 // answers back. Selects clone their choices from the underlying Django
-// select, which keeps the wizard and the matching full-page editor on the
+// select, which keeps the popover and the matching full-page editor on the
 // same single list of options.
 //
 // A spec's keys: field (the Django form field name), label, kind - one of
-// text, select, checkbox or a kind the instance registered - plus the
+// text, number, select, checkbox or a kind the host registered - plus the
 // optional unitField, width, placeholder and hint.
+//
+// A descriptor's keys: title, pages, plus the optional width (a CSS width
+// for the popover) and fitContent (a popover no wider than its one field).
 //
 // ---------------------------------------------------------------
 // How to use
 // ---------------------------------------------------------------
 //
-// The instance hands its namespace over after core.setup ran:
+// The host hands itself over, a wizard after its core.setup ran:
 //
-//      $.fn.zato.wizard_kit.forms.setup(wizard, {
+//      $.fn.zato.micro_forms.setup(wizard, {
+//          popupClass: 'wizard-micro-form',
 //          descriptors: {
 //              'logging': {
 //                  title: 'Logging and errors',
@@ -30,48 +43,54 @@
 //          }
 //      });
 //
-// Field kinds beyond text, select and checkbox come from the instance:
+// Field kinds beyond the built-in ones come from the host:
 //
 //      wizard.forms.registerKind('securityList', {
 //          build: function(fieldSpec, row) { ... },
 //          save: function(popper, fieldSpec) { ... }
 //      });
 //
-// setup installs on wizard.forms: config, descriptors, registerKind,
+// setup installs on host.forms: config, descriptors, registerKind,
 // showTippy, close, buildTitle, buildHelpBadge, initHelp, helpDescriptions,
-// open, plus the internal builders the instance's own popovers may reuse.
+// inputId, open, plus the internal builders the host's own popovers may reuse.
 //
 // ---------------------------------------------------------------
-// Hosts that are not wizards
+// The host contract
 // ---------------------------------------------------------------
 //
-// setup asks its host for config.idPrefix, field(name), helpDescriptions()
-// and, unless the host says otherwise, a review to refresh - so any page
-// with a few hidden inputs can host one of these popovers. Such a page
-// hands over onDone, what accepting the last page comes to, and turns on
-// showCancel, its popover being the whole of the save rather than one
-// answer on a page saved later on:
+// setup asks its host for config.idPrefix, field(name) returning the jQuery
+// input of a Django form field, helpDescriptions() returning the per-input
+// help texts, an empty forms object to install into and, unless the host
+// says otherwise, a review to refresh - so any page with a few hidden inputs
+// can host one of these popovers. A page that is not a wizard hands over
+// onDone, what accepting the last page comes to, and turns on showCancel
+// when its popover is the whole of the save rather than one answer on a
+// page saved later on:
 //
-//      $.fn.zato.wizard_kit.forms.setup(host, {
+//      $.fn.zato.micro_forms.setup(host, {
 //          descriptors: {'routing': sharedDescriptor},
+//          popupClass: 'schedule-micro-form',
 //          showCancel: true,
 //          doneLabel: 'Save',
 //          onDone: host.save
 //      });
+//
+// The popover's id is idPrefix + '-popup' and each input's id is
+// idPrefix + '-tippy-' + field, which is what a host's help descriptions
+// are keyed by.
 
 (function($) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-var kit = $.fn.zato.wizard_kit;
-kit.forms = {};
+var microForms = $.fn.zato.micro_forms;
 
 // ////////////////////////////////////////////////////////////////////////
 
-kit.forms.defaults = {
+microForms.defaults = {
 
     // The tippy theme all the micro-forms share
-    theme: 'wizard',
+    theme: 'micro-form',
 
     // How wide a popover may grow
     maxWidth: 480,
@@ -99,18 +118,22 @@ kit.forms.defaults = {
     // page render, so one id can serve every micro-form
     helpBadgeLabel: 'How does it work?',
 
-    // Whether the popover carries the help badge
-    showHelp: true
+    // Whether the popover carries the How does it work? badge
+    showHowItWorks: true,
+
+    // A class of the host's own put on every popover it opens - the place
+    // for its overrides of the --micro-form-* tokens of micro-forms.css
+    popupClass: ''
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-kit.forms.setup = function(wizard, config) {
+microForms.setup = function(host, config) {
 
-    var forms = wizard.forms;
-    var idPrefix = wizard.config.idPrefix;
+    var forms = host.forms;
+    var idPrefix = host.config.idPrefix;
 
-    forms.config = $.extend({}, kit.forms.defaults, {
+    forms.config = $.extend({}, microForms.defaults, {
 
         // One popover is open at a time, so one id serves them all
         helpBadgeId: idPrefix + '-popup-how-it-works',
@@ -121,10 +144,10 @@ kit.forms.setup = function(wizard, config) {
     forms.descriptors = config.descriptors ? config.descriptors : {};
 
     // What accepting the last page comes to, once the answers are back in the form -
-    // a wizard shows them on its cards, a page that hosts one popover of its own
+    // a wizard shows them on its review cards, a page that hosts one popover of its own
     // saves them where they belong instead
     forms.onDone = config.onDone ? config.onDone : function() {
-        wizard.review.refreshSummaries();
+        host.review.refreshSummaries();
     };
 
     // The currently open popover, if any
@@ -211,7 +234,7 @@ kit.forms.setup = function(wizard, config) {
 // ////////////////////////////////////////////////////////////////////////
 
     // Shows the given content element in a popover anchored to the target.
-    // This is the one place all the wizard's popovers come from, so they all
+    // This is the one place all the host's popovers come from, so they all
     // close on Escape and on clicks outside, and only one is open at a time.
     forms.showTippy = function(targetElement, contentElement, onHidden) {
 
@@ -235,14 +258,18 @@ kit.forms.setup = function(wizard, config) {
 
             onShow: function(tippyInstance) {
 
-                // Escape closes the popover ..
+                // Escape closes the popover and nothing else - it is caught on the way
+                // down, before the dialog a host may sit in gets to close itself on the
+                // same key, jQuery UI listening for it on the document and on the dialog ..
                 var handleEscape = function(event) {
                     if(event.key === 'Escape') {
+                        event.preventDefault();
+                        event.stopPropagation();
                         forms.close();
                     }
                 };
                 tippyInstance.handleEscape = handleEscape;
-                document.addEventListener('keydown', handleEscape);
+                document.addEventListener('keydown', handleEscape, true);
 
                 // .. and so does a click anywhere outside of it.
                 var handleOutsideMousedown = function(event) {
@@ -257,7 +284,7 @@ kit.forms.setup = function(wizard, config) {
             },
 
             onHide: function(tippyInstance) {
-                document.removeEventListener('keydown', tippyInstance.handleEscape);
+                document.removeEventListener('keydown', tippyInstance.handleEscape, true);
                 document.removeEventListener('mousedown', tippyInstance.handleOutsideMousedown);
 
                 if(onHidden) {
@@ -360,7 +387,7 @@ kit.forms.setup = function(wizard, config) {
 
         var formsConfig = forms.config;
 
-        if(!formsConfig.showHelp) {
+        if(!formsConfig.showHowItWorks) {
             return;
         }
 
@@ -377,13 +404,13 @@ kit.forms.setup = function(wizard, config) {
         $.fn.zato.how_it_works.init({
             badgeId: formsConfig.helpBadgeId,
             divId: '#' + formsConfig.popupId,
-            containerSelector: '.wizard-tippy-form',
-            fieldSelector: '.wizard-tippy-field',
+            containerSelector: '.micro-form',
+            fieldSelector: '.micro-form-field',
 
             // Several fields share one row, so a tooltip on the left would
             // cover the neighbor - above the field nothing is in the way
             placement: 'top',
-            descriptions: wizard.helpDescriptions()
+            descriptions: host.helpDescriptions()
         });
     };
 
@@ -430,7 +457,7 @@ kit.forms.setup = function(wizard, config) {
     forms._buildFieldRow = function(fieldSpec) {
 
         var row = document.createElement('div');
-        row.className = 'wizard-tippy-field';
+        row.className = 'micro-form-field';
 
         // The kinds the instance registered come first - e.g. composite
         // rows like MLLP's security list
@@ -442,14 +469,14 @@ kit.forms.setup = function(wizard, config) {
             return out;
         }
 
-        var formField = wizard.field(fieldSpec.field);
+        var formField = host.field(fieldSpec.field);
         var inputId = forms.inputId(fieldSpec.field);
 
         // A checkbox carries its slider at the end of the line the label
         // takes, so a column of switches lines up whatever the labels say ..
         if(fieldSpec.kind === 'checkbox') {
             var checkboxLabel = document.createElement('label');
-            checkboxLabel.className = 'wizard-tippy-checkbox';
+            checkboxLabel.className = 'micro-form-checkbox';
             checkboxLabel.setAttribute('for', inputId);
 
             var checkbox = document.createElement('input');
@@ -458,7 +485,7 @@ kit.forms.setup = function(wizard, config) {
             checkbox.checked = formField.prop('checked');
 
             var checkboxText = document.createElement('span');
-            checkboxText.className = 'wizard-tippy-checkbox-text';
+            checkboxText.className = 'micro-form-checkbox-text';
             checkboxText.textContent = fieldSpec.label;
 
             checkboxLabel.appendChild(checkboxText);
@@ -471,7 +498,7 @@ kit.forms.setup = function(wizard, config) {
 
         // .. everything else has the label above the input.
         var label = document.createElement('label');
-        label.className = 'wizard-tippy-label';
+        label.className = 'micro-form-label';
         label.setAttribute('for', inputId);
         label.textContent = fieldSpec.label;
         row.appendChild(label);
@@ -501,7 +528,7 @@ kit.forms.setup = function(wizard, config) {
             // number field, and it is only ever as wide as a count needs
             if(fieldSpec.kind === 'number') {
                 input.type = 'number';
-                input.className = 'wizard-tippy-number';
+                input.className = 'micro-form-number';
                 input.min = forms.config.numberMin;
             }
             else {
@@ -516,13 +543,13 @@ kit.forms.setup = function(wizard, config) {
         // Fields like max message size keep their unit select right next to the value
         if(fieldSpec.unitField) {
             var inputRow = document.createElement('div');
-            inputRow.className = 'wizard-tippy-input-row';
+            inputRow.className = 'micro-form-input-row';
             inputRow.appendChild(input);
 
-            var unitFormField = wizard.field(fieldSpec.unitField);
+            var unitFormField = host.field(fieldSpec.unitField);
             var unitSelect = document.createElement('select');
             unitSelect.id = forms.inputId(fieldSpec.unitField);
-            unitSelect.className = 'wizard-tippy-unit';
+            unitSelect.className = 'micro-form-unit';
 
             unitFormField.find('option').each(function() {
                 var unitOption = document.createElement('option');
@@ -541,7 +568,7 @@ kit.forms.setup = function(wizard, config) {
 
         if(fieldSpec.hint) {
             var hint = document.createElement('div');
-            hint.className = 'wizard-tippy-hint';
+            hint.className = 'micro-form-hint';
             hint.textContent = fieldSpec.hint;
             row.appendChild(hint);
         }
@@ -591,7 +618,7 @@ kit.forms.setup = function(wizard, config) {
 
             // .. everything else maps straight onto a form field.
             var input = popper.querySelector('#' + forms.inputId(fieldSpec.field));
-            var formField = wizard.field(fieldSpec.field);
+            var formField = host.field(fieldSpec.field);
 
             if(fieldSpec.kind === 'checkbox') {
                 formField.prop('checked', input.checked);
@@ -602,7 +629,7 @@ kit.forms.setup = function(wizard, config) {
 
             if(fieldSpec.unitField) {
                 var unitInput = popper.querySelector('#' + forms.inputId(fieldSpec.unitField));
-                wizard.field(fieldSpec.unitField).val(unitInput.value);
+                host.field(fieldSpec.unitField).val(unitInput.value);
             }
         }
     };
@@ -621,11 +648,18 @@ kit.forms.setup = function(wizard, config) {
         forms._focusInputId = focusFieldName ? forms.inputId(focusFieldName) : null;
 
         var container = document.createElement('div');
-        container.className = 'wizard-tippy-form zato-popup';
+        container.className = 'micro-form zato-popup';
         container.id = formsConfig.popupId;
 
+        // The host's own class, which is where it overrides the micro-form
+        // tokens - the popover is appended to document.body, so no container
+        // of the host's page is above it
+        if(formsConfig.popupClass) {
+            container.classList.add(formsConfig.popupClass);
+        }
+
         if(formsConfig.labelsLeft) {
-            container.classList.add('wizard-tippy-labels-left');
+            container.classList.add('micro-form-labels-left');
         }
 
         if(descriptor.width) {
@@ -634,13 +668,13 @@ kit.forms.setup = function(wizard, config) {
 
         // A form of one short field is only as wide as that field
         if(descriptor.fitContent) {
-            container.classList.add('wizard-tippy-fit');
+            container.classList.add('micro-form-fit');
         }
 
         container.appendChild(forms.buildTitle(descriptor.title));
 
         var pageContainer = document.createElement('div');
-        pageContainer.className = 'wizard-tippy-body';
+        pageContainer.className = 'micro-form-body';
         container.appendChild(pageContainer);
 
         var pageIndex = 0;
@@ -678,7 +712,7 @@ kit.forms.setup = function(wizard, config) {
                 // A list entry is several fields sharing one row ..
                 if(Array.isArray(entry)) {
                     var rowContainer = document.createElement('div');
-                    rowContainer.className = 'wizard-tippy-row';
+                    rowContainer.className = 'micro-form-row';
 
                     for(var fieldIdx = 0; fieldIdx < entry.length; fieldIdx++) {
                         var rowField = forms._buildFieldRow(entry[fieldIdx]);
@@ -701,10 +735,10 @@ kit.forms.setup = function(wizard, config) {
             }
 
             var buttons = document.createElement('div');
-            buttons.className = 'wizard-tippy-buttons';
+            buttons.className = 'micro-form-buttons';
 
             // The per-field help sits to the left of the buttons ..
-            if(formsConfig.showHelp) {
+            if(formsConfig.showHowItWorks) {
                 buttons.appendChild(forms.buildHelpBadge());
             }
 

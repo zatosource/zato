@@ -13,6 +13,7 @@ $.fn.zato.data_table.SFTP = new Class({
 // /////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
+    $.fn.zato.alerts_tab.init({config_id: 'out-sftp-alerts-tab-config'});
     $.fn.zato.time_ago.init_table('#data-table');
     $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.SFTP;
@@ -66,13 +67,39 @@ $.fn.zato.outgoing.sftp.collapse_more_options = function(form_type) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The tabs of the create dialog - the connection itself and its alert settings
+$.fn.zato.outgoing.sftp.tab_labels = function() {
+    var out = {
+        main:   'Main',
+        alerts: $.fn.zato.alerts_tab.tab_label()
+    };
+    return out;
+}
+
+$.fn.zato.outgoing.sftp._reset_tabs = function(action) {
+    $.fn.zato.form_tabs.reset({
+        div_id:       '#' + action + '-div',
+        panel_prefix: 'out-sftp-' + action + '-tab-panel-',
+        default_tab:  'main',
+        tab_labels:   $.fn.zato.outgoing.sftp.tab_labels()
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.sftp.create = function() {
+    $.fn.zato.outgoing.sftp._reset_tabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing SFTP connection', null);
     $.fn.zato.outgoing.sftp.collapse_more_options('create');
+    $.fn.zato.alerts_tab.bind({
+        panel_id: 'out-sftp-create-tab-panel-alerts',
+        field_prefix: ''
+    });
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
         divId: '#create-div',
-        descriptions: $.fn.zato.outgoing.sftp.field_descriptions
+        fieldSelector: 'table.form-data tr, .decision-line',
+        descriptions: $.extend({}, $.fn.zato.outgoing.sftp.field_descriptions, $.fn.zato.alerts_tab.descriptions())
     });
 }
 

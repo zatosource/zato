@@ -1,0 +1,340 @@
+/*
+ * Micro-forms - the popover forms of a few fields that open off a link or
+ * a chip, hosted on the hidden inputs of the page's own Django form.
+ *
+ * A micro-form is a tippy popover wearing the shared popup chrome of
+ * shared/popup.css - the dark draggable header with the grip, the sandy
+ * body - with its fields under the header and a buttons row at the end.
+ * The engine is static/js/common/micro-forms.js, and whoever hosts one -
+ * a wizard, a listing page, a dialog tab - loads this file next to it:
+ *
+ *     <link rel="stylesheet" href="/static/css/shared/popup.css">
+ *     <link rel="stylesheet" href="/static/css/shared/micro-forms.css">
+ *
+ * ---------------------------------------------------------------
+ * Customisation
+ * ---------------------------------------------------------------
+ *
+ * A popover is appended to document.body, outside any page container, so
+ * the tokens below sit on :root. A host that wants its popovers to read
+ * differently passes a popupClass to micro_forms.setup and overrides the
+ * tokens under that class:
+ *
+ *     .alerts-tab-micro-form {
+ *         --micro-form-label-weight: 400;
+ *     }
+ *
+ * Token                          Purpose
+ * --micro-form-min-width         How narrow a popover may be
+ * --micro-form-max-width         How wide a popover may grow
+ * --micro-form-body-bg           The surface under the fields, declared on .zato-popup
+ * --micro-form-body-padding      The room around the fields
+ * --micro-form-label-size        The label above or beside an input
+ * --micro-form-label-weight      Its weight
+ * --micro-form-label-width       The label column when labels stand left
+ * --micro-form-input-height      Every input and select
+ * --micro-form-font-size         Text typed into an input
+ * --micro-form-select-font-size  The picked value of a select
+ * --micro-form-checkbox-font-size The text beside a switch
+ * --micro-form-number-width      How wide a count field is
+ * --micro-form-hint-size         The note under a field
+ * --micro-form-help-font-size    The help tooltips nested in a popover
+ */
+
+:root {
+    --micro-form-min-width: 260px;
+    --micro-form-max-width: 480px;
+    --micro-form-body-padding: 12px 14px 10px;
+    --micro-form-label-size: 11px;
+    --micro-form-label-weight: 600;
+    --micro-form-label-width: 130px;
+    --micro-form-input-height: 24px;
+    --micro-form-font-size: 13px;
+    --micro-form-select-font-size: 12px;
+    --micro-form-checkbox-font-size: 12px;
+    --micro-form-number-width: 5.5em;
+    --micro-form-hint-size: 11px;
+    --micro-form-help-font-size: 12px;
+}
+
+/* The sand is a token of the popup chrome, declared on .zato-popup rather
+   than on :root, so the body colour is read there - a popover and a pick
+   panel are both popups */
+.zato-popup {
+    --micro-form-body-bg: var(--zato-popup-sand);
+}
+
+/* ------------------------------------------------------------ */
+/* The tippy box - positioning only                              */
+/* ------------------------------------------------------------ */
+
+/* The chrome - the surface, the dark draggable header and the drag
+   cursors - comes from the shared popup look in shared/popup.css,
+   the same one the IDE's right-click menus wear. The tippy box only
+   positions the popup, so it paints nothing of its own. */
+.tippy-box[data-theme~='micro-form'] {
+    background-color: transparent;
+    color: var(--zato-ui-text);
+}
+
+/* Only the popover's own content box - the help tooltips nested inside
+   the popover bring tippy boxes of their own and keep their padding */
+.tippy-box[data-theme~='micro-form'] > .tippy-content {
+    padding: 0;
+}
+
+.tippy-box[data-theme~='micro-form'] input:focus,
+.tippy-box[data-theme~='micro-form'] select:focus,
+.tippy-box[data-theme~='micro-form'] textarea:focus,
+.tippy-box[data-theme~='micro-form'] button:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Every button of a popover reads at the one size the kits share */
+.tippy-box[data-theme~='micro-form'] .action-button,
+.tippy-box[data-theme~='micro-form'] .secondary-button {
+    font-size: var(--zato-ui-button-font-size);
+}
+
+/* The site-wide tippy link colors are meant for dark tooltips - this
+   popover is light, so its links wear the standard link face. The theme
+   attribute keeps the selector ahead of the .tippy-box .tippy-content
+   rule in style.css, which would otherwise paint the links light. */
+.tippy-box[data-theme~='micro-form'] .tippy-content a:not(.menu-link) {
+    color: rgb(17, 17, 17);
+    --zato-link-dash: rgba(0, 0, 0, 0.35);
+}
+
+.tippy-box[data-theme~='micro-form'] .tippy-content a:not(.menu-link):hover {
+    color: var(--zato-link-hover) !important;
+    --zato-link-dash: rgba(0, 0, 0, 0.35);
+}
+
+/* The per-field help tooltips live inside the popover they explain, so
+   clicking them does not close it - and in there the stock tippy 14px
+   towers over the popover's own 11-13px text, so they match it instead */
+.micro-form .tippy-box {
+    font-size: var(--micro-form-help-font-size);
+    line-height: 1.5;
+}
+
+/* ------------------------------------------------------------ */
+/* The popover                                                   */
+/* ------------------------------------------------------------ */
+
+.micro-form {
+    display: flex;
+    flex-direction: column;
+    min-width: var(--micro-form-min-width);
+    max-width: var(--micro-form-max-width);
+    box-sizing: border-box;
+}
+
+/* A popover no wider than its content */
+.micro-form.micro-form-fit {
+    min-width: 0;
+    width: max-content;
+}
+
+/* In a popover sized to its content, each field of a row is as wide as its
+   own label and input ask for and no label wraps - with the fields sharing
+   the width equally instead, the longer label of two wrapped onto a second
+   line and its input dropped below its neighbour's */
+.micro-form-fit .micro-form-row .micro-form-field {
+    flex: 0 0 auto;
+}
+
+.micro-form-fit .micro-form-label {
+    white-space: nowrap;
+}
+
+/* The fields under the popup header, on the same sandy panel
+   the IDE's right-click menus use for their action lists */
+.micro-form-body {
+    padding: var(--micro-form-body-padding);
+    background: var(--micro-form-body-bg);
+    border-radius: 0 0 5px 5px;
+}
+
+/* Several short fields share one row instead of stacking full-width */
+.micro-form-row {
+    display: flex;
+    gap: 10px;
+}
+
+.micro-form-row .micro-form-field {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* A checkbox sharing a row with labeled inputs takes only the room it
+   needs and drops to their baseline, level with the inputs themselves */
+.micro-form-row .micro-form-field:has(.micro-form-checkbox) {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    padding-bottom: 5px;
+}
+
+.micro-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 8px;
+}
+
+.micro-form-label {
+    font-size: var(--micro-form-label-size);
+    font-weight: var(--micro-form-label-weight);
+    color: var(--zato-ui-text-muted);
+}
+
+/* ------------------------------------------------------------ */
+/* Labels in a column of their own                               */
+/* ------------------------------------------------------------ */
+
+/* A host may ask for its labels in a column of their own, to the left of
+   the inputs - every row then reads as one line of a table of keys and
+   values, the labels sharing one width and the controls closing every
+   line at the popup's right edge, level with the buttons below them */
+.micro-form-labels-left .micro-form-field {
+    display: grid;
+    grid-template-columns: var(--micro-form-label-width) 1fr;
+    align-items: center;
+    column-gap: 12px;
+}
+
+/* A short control, like a number field, keeps to the right edge - the
+   full-width ones already reach it on their own */
+.micro-form-labels-left .micro-form-field > input,
+.micro-form-labels-left .micro-form-field > select {
+    justify-self: end;
+}
+
+/* A checkbox row keeps to the same two columns - its text where the other
+   labels stand and its switch on the shared right edge */
+.micro-form-labels-left .micro-form-checkbox {
+    display: grid;
+    grid-template-columns: var(--micro-form-label-width) 1fr;
+    column-gap: 12px;
+    align-items: center;
+}
+
+.micro-form-labels-left .micro-form-checkbox > input {
+    justify-self: end;
+}
+
+.micro-form-labels-left .micro-form-checkbox-text {
+    font-size: var(--micro-form-label-size);
+    font-weight: var(--micro-form-label-weight);
+    color: var(--zato-ui-text-muted);
+}
+
+/* ------------------------------------------------------------ */
+/* The inputs                                                    */
+/* ------------------------------------------------------------ */
+
+/* One explicit height keeps rows mixing inputs and selects even */
+.micro-form-field input[type="text"],
+.micro-form-field input[type="number"],
+.micro-form-field select {
+    width: 100%;
+    box-sizing: border-box;
+    height: var(--micro-form-input-height);
+    padding: 5px 8px;
+    border: 1px solid var(--zato-ui-border-strong);
+    border-radius: 3px;
+    font-size: var(--micro-form-font-size);
+}
+
+/* The picked values read as data, not as headings - a notch smaller than
+   the free-text inputs next to them, in the same face the inputs wear.
+   The formalize height of 1.8em squeezed the select's line box out through
+   the bottom edge, sitting the text low - the explicit height above plus
+   paddings sized to the line box recenter it. */
+.micro-form-field select {
+    font-size: var(--micro-form-select-font-size);
+    font-family: Arial, "Liberation Sans", FreeSans, sans-serif;
+    line-height: normal;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.micro-form-field input[type="text"]:focus,
+.micro-form-field input[type="number"]:focus,
+.micro-form-field select:focus {
+    border-color: var(--zato-ui-accent);
+    outline: none;
+    box-shadow: none;
+}
+
+.micro-form-input-row {
+    display: flex;
+    gap: 6px;
+}
+
+.micro-form-input-row .micro-form-unit {
+    width: auto;
+    flex-shrink: 0;
+}
+
+/* The switch ends the line the label takes, so a page of them reads as one
+   column of switches rather than as one switch per length of text */
+.micro-form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--micro-form-checkbox-font-size);
+    color: var(--zato-ui-text);
+    cursor: pointer;
+}
+
+/* A label naming a switch that is off steps back with it */
+.micro-form-checkbox {
+    transition: color 150ms ease;
+}
+
+.micro-form-checkbox:has(input[type="checkbox"]:not(:checked)) {
+    color: color-mix(in srgb, var(--zato-ui-text) 68%, #fff);
+}
+
+.micro-form-checkbox-text {
+    flex: 1;
+}
+
+/* A count is entered with the arrows the browser draws on a number field,
+   so the field is only as wide as the arrows and a few digits need */
+.micro-form-field input.micro-form-number {
+    width: var(--micro-form-number-width);
+    flex: 0 0 auto;
+    padding-right: 2px;
+}
+
+.micro-form-hint {
+    font-size: var(--micro-form-hint-size);
+    color: var(--zato-ui-text-faint);
+}
+
+/* ------------------------------------------------------------ */
+/* The buttons row                                               */
+/* ------------------------------------------------------------ */
+
+.micro-form-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--zato-ui-border);
+}
+
+/* The help badge keeps to the left, away from the OK button */
+.micro-form-buttons .how-it-works-badge {
+    margin-right: auto;
+}
+
+.micro-form-buttons .secondary-button {
+    box-shadow: none !important;
+    text-shadow: none !important;
+}

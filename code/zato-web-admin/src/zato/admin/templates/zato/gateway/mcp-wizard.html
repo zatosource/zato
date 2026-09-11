@@ -27,8 +27,10 @@ a failed one opens when its details are asked for {% endcomment %}
 <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
-<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
 <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/tree.css">
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp.css">
@@ -42,7 +44,7 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/core.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/collapse.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/review.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-descriptions.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-controls.js"></script>
@@ -206,16 +208,16 @@ $(document).ready(function() {
                 <div class="wizard-step-body" id="mcp-wizard-step-body-1" hidden>
 
                     <div class="wizard-section">
-                        <div class="wizard-lines">
+                        <div class="decision-lines">
 
-                            <div class="wizard-line" id="mcp-wizard-line-agent-filters">
-                                <label class="wizard-line-label" for="{{ form.allow_agent_filters.id_for_label }}">Allow agent filters</label>
-                                <span class="wizard-line-slot">{{ form.allow_agent_filters }}</span>
+                            <div class="decision-line" id="mcp-wizard-line-agent-filters">
+                                <label class="decision-line-label" for="{{ form.allow_agent_filters.id_for_label }}">Allow agent filters</label>
+                                <span class="decision-line-slot">{{ form.allow_agent_filters }}</span>
                             </div>
 
-                            <div class="wizard-line" id="mcp-wizard-line-size-caps">
-                                <label class="wizard-line-label" for="mcp-wizard-edit-size-caps">Size caps</label>
-                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="mcp-wizard-edit-size-caps"><span class="zato-link-face wizard-toggle-summary" id="mcp-wizard-summary-size-caps"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            <div class="decision-line" id="mcp-wizard-line-size-caps">
+                                <label class="decision-line-label" for="mcp-wizard-edit-size-caps">Size caps</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-size-caps"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-size-caps"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
                         </div>
@@ -223,9 +225,9 @@ $(document).ready(function() {
 
                     <div class="wizard-section">
 
-                        <div class="wizard-line" id="mcp-wizard-row-options">
-                            <label class="wizard-line-label" for="mcp-wizard-edit-options">More options</label>
-                            <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="mcp-wizard-edit-options"><span class="zato-link-face wizard-toggle-summary" id="mcp-wizard-summary-options"></span><span class="zato-soft-hint" id="mcp-wizard-hint-options"></span></a></span>
+                        <div class="decision-line" id="mcp-wizard-row-options">
+                            <label class="decision-line-label" for="mcp-wizard-edit-options">More options</label>
+                            <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-options"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-options"></span><span class="zato-soft-hint" id="mcp-wizard-hint-options"></span></a></span>
                         </div>
 
                         <div class="wizard-collapse-body" id="mcp-wizard-options-body" hidden>

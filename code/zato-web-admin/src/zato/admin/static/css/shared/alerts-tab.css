@@ -1,0 +1,151 @@
+/*
+ * Alerts tab - the per-object alert settings panel of a create or edit form,
+ * read as one page of settings inside a dialog.
+ *
+ * The lines and the chips come from shared/decision-lines.css, the summary
+ * links from shared/summary-link.css and the popover micro-forms and the
+ * panel body from shared/micro-forms.css. This file only fits them into a
+ * dialog - the surface the tab stands on, the room around the lines, how
+ * the questions read next to the Main tab's own labels, the dimmed state the
+ * settings take when the Active switch is off and the shape of the panel the
+ * email connection is picked in.
+ *
+ * Include it after the kits in the extra_css block:
+ *
+ *     <link rel="stylesheet" href="/static/css/shared/tabs.css">
+ *     <link rel="stylesheet" href="/static/css/shared/form-tabs.css">
+ *     <link rel="stylesheet" href="/static/css/shared/popup.css">
+ *     <link rel="stylesheet" href="/static/css/shared/micro-forms.css">
+ *     <link rel="stylesheet" href="/static/css/shared/decision-lines.css">
+ *     <link rel="stylesheet" href="/static/css/shared/summary-link.css">
+ *     <link rel="stylesheet" href="/static/css/shared/alerts-tab.css">
+ */
+
+/* The tokens sit on the panel, so they never spill to the rest of the dialog */
+.data-popup .alerts-tab-panel {
+    --alerts-tab-padding: 10px 12px 6px;
+    --alerts-tab-off-opacity: 0.45;
+    --alerts-tab-section-space: 14px;
+    --alerts-tab-section-title-size: 12px;
+    --alerts-tab-section-title-weight: 700;
+    --alerts-tab-section-title-space: 8px;
+
+    /* The questions read the way the Main tab's labels do - the same 12px
+       of .form-data, in the regular weight, and since they are short the
+       answers start closer than on a wizard page */
+    --decision-line-label-width: 10.5em;
+    --decision-line-label-size: 12px;
+    --decision-line-label-weight: 400;
+    --decision-lines-gap: 8px;
+    --decision-lines-max-width: none;
+    --decision-chip-font-size: 12px;
+
+    /* One height for every line, whatever answers it - a switch, a link or a
+       chip - so the sections keep one rhythm, and the chip is sized to it */
+    --alerts-tab-line-height: 20px;
+    --decision-chip-height: 20px;
+}
+
+/* The tab's body is a .form-data, the surface the Main tab's table stands on -
+   style.css draws it as a table, this one is a div, so the padding is its own.
+   The width of .form-data is 100%, so the padding has to sit inside it, or
+   the body runs wider than the dialog by the padding on both sides. */
+.data-popup .alerts-tab-body {
+    box-sizing: border-box;
+    padding: var(--alerts-tab-padding);
+}
+
+.data-popup .alerts-tab-panel .decision-line {
+    min-height: var(--alerts-tab-line-height);
+}
+
+.data-popup .alerts-tab-section {
+    margin-bottom: var(--alerts-tab-section-space);
+}
+
+.data-popup .alerts-tab-section:last-child {
+    margin-bottom: 0;
+}
+
+.data-popup .alerts-tab-section-title {
+    margin-bottom: var(--alerts-tab-section-title-space);
+    font-size: var(--alerts-tab-section-title-size);
+    font-weight: var(--alerts-tab-section-title-weight);
+    color: var(--zato-ui-text);
+}
+
+/* A summary link is always on show here - on a wizard it goes away once its
+   switch is off, but a line of the tab has no switch of its own */
+.data-popup .alerts-tab-panel a.summary-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.4;
+}
+
+/* With Active off, every line but the Active line itself is dimmed and inert,
+   so a reader sees at once that nothing else is being measured. The Active
+   line is the first of the core settings, so it is the lines that are dimmed,
+   not the sections. */
+.data-popup .alerts-tab-panel.alerts-tab-off .alerts-tab-line:not(.alerts-tab-active-line) {
+    opacity: var(--alerts-tab-off-opacity);
+    pointer-events: none;
+}
+
+/* ------------------------------------------------------------ */
+/* The popovers the numbers are edited in                        */
+/* ------------------------------------------------------------ */
+
+/* The popovers are appended to document.body, hence a class of their own -
+   their labels read in the regular weight, the way the questions do, and a
+   switch inside one is the size the dialog's own are, the .data-popup slider
+   tokens of style.css, rather than the page-wide size of :root */
+.alerts-tab-micro-form {
+    --micro-form-label-weight: 400;
+    --toggle-width: 32px;
+    --toggle-height: 16px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 2px;
+    --toggle-travel: 16px;
+    --toggle-off-background: #999;
+    --toggle-on-background: #2d6392;
+}
+
+/* A popover here is exactly as wide as its label - "Consecutive failures" -
+   and the count field stretches to that same width, so label, field and the
+   OK button under them share both edges. The width of 0 keeps the field out
+   of the popover's max-content measure, which the label alone then sets, and
+   the min-width of 100% fills the field out to the label once that is known. */
+.alerts-tab-micro-form .micro-form-field input.micro-form-number {
+    width: 0;
+    min-width: 100%;
+}
+
+/* ------------------------------------------------------------ */
+/* The panel the email connection is picked in                   */
+/* ------------------------------------------------------------ */
+
+/* The dialog stands at the same height the panels do, and the panel is
+   what is being read at the time, so it goes over the top of the dialog.
+   Two short lists, one per kind of connection, each as tall as it needs
+   to be and no taller - never the one long list a wizard panel holds. */
+.alerts-tab-pick-panel {
+    --decision-pick-panel-z-index: 10001;
+    --decision-pick-panel-list-height: 7em;
+    --alerts-tab-add-link-space: 4px 0 10px;
+}
+
+.alerts-tab-pick-panel .decision-pick-panel-list {
+    flex: 0 0 auto;
+    max-height: var(--decision-pick-panel-list-height);
+    overflow-y: auto;
+}
+
+/* The link opening the page a new connection is made on, under its group's
+   list. The panel body is a flex column, which would stretch the link and
+   its dashed underline across the whole panel, so it keeps to its own width. */
+.alerts-tab-pick-panel a.alerts-tab-add-link {
+    align-self: flex-start;
+    margin: var(--alerts-tab-add-link-space);
+    font-size: 12px;
+}

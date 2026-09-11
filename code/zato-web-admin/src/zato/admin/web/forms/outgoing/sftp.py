@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
+from zato.admin.web import alerts_tab
 from zato.admin.web.forms import add_select
 from zato.common.api import SFTP
 from zato.common.file_transfer.api import Verify_How_Human, Verify_How_List
@@ -50,6 +51,9 @@ class CreateForm(forms.Form):
             choices.append([item, label])
 
         self.fields['verify_how'].choices = choices
+
+        # The Alerts tab - the file transfer thresholds, toggles and the email connection
+        alerts_tab.add_alerts_fields(self, alerts_tab.alert_type_file_transfer)
 
 # ################################################################################################################################
 # ################################################################################################################################

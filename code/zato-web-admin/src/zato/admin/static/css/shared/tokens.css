@@ -38,4 +38,23 @@
     --zato-page-heading-padding-block: 10px;
     --zato-page-heading-padding-inline-start: 0;
     --zato-page-heading-padding-inline-end: 10px;
+
+    /* The palette the shared UI kits read - the decision lines, the popover
+       micro-forms, the summary links and the wizards built out of them */
+    --zato-ui-accent: var(--zato-seablue-light2);
+
+    /* What a picked option wears - the lighter of the two dashboard blues,
+       so a choice made reads as a choice made and not as an alarm */
+    --zato-ui-accent-soft: var(--zato-seablue-light3);
+    --zato-ui-done: #28a745;
+    --zato-ui-error: #dc3545;
+    --zato-ui-border: #d9dee3;
+    --zato-ui-border-strong: #b8c0c7;
+    --zato-ui-text: #1a1a2e;
+    --zato-ui-text-muted: #71717a;
+    --zato-ui-text-faint: #9ca3af;
+
+    /* Every button inside one of the kits - a popover's OK, a panel's OK
+       and Cancel, a wizard's footer - reads at this one size */
+    --zato-ui-button-font-size: 11px;
 }

@@ -389,7 +389,7 @@ review._editRouting = function() {
 
 review._editDestinations = function() {
 
-    var lines = $.fn.zato.wizard_kit.lines;
+    var lines = $.fn.zato.decision_lines;
     var chip = document.getElementById('mllp-wizard-slot-destinations-chip');
 
     lines.closePanel();

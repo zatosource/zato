@@ -1,0 +1,54 @@
+/*
+ * Summary link - the one link that is the way into a row's options.
+ *
+ * The link reads the current answer in the site-wide dashed-underline link
+ * face and offers the click with a soft hint that waits for a hover:
+ *
+ *     <a href="javascript:void(0)" class="summary-link" id="...">
+ *         <span class="zato-link-face summary-link-text">3 failures</span>
+ *         <span class="zato-soft-hint">Click to edit</span>
+ *     </a>
+ *
+ * A wizard's toggle rows, the alert rules screen and the Alerts tab of a
+ * dialog all open their popover micro-forms through it. .zato-link-face
+ * and .zato-soft-hint come from style.css.
+ *
+ * Token                       Purpose
+ * --summary-link-font-size    The answer and the hint
+ * --summary-link-height       The link's line box, auto unless a row of
+ *                             switches needs it clamped to their height
+ */
+
+:root {
+    --summary-link-font-size: 12px;
+    --summary-link-height: auto;
+}
+
+/* The font size sits on the link itself so its line box is built from
+   the 12px text rather than the page's 16px strut */
+a.summary-link {
+    background-image: none;
+    padding-bottom: 0;
+    font-size: var(--summary-link-font-size);
+    height: var(--summary-link-height);
+}
+
+.summary-link-text {
+    font-size: var(--summary-link-font-size);
+}
+
+/* The hint waits for a hover over the link - opacity keeps its space
+   reserved, so nothing around it moves when it fades in */
+.summary-link .zato-soft-hint {
+    opacity: 0;
+    transition: opacity 150ms ease;
+}
+
+.summary-link:hover .zato-soft-hint {
+    opacity: 1;
+}
+
+/* Nothing to edit while the answer is empty, so the whole link goes away */
+.summary-link:has(.summary-link-text:empty) {
+    display: none;
+}

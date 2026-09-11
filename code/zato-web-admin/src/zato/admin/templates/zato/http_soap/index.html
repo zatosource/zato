@@ -26,8 +26,8 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/panel-menu.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tippy-buttons.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
     {% if transport == 'soap' %}
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     {% endif %}
@@ -67,7 +67,7 @@
     {% comment %} What the inline editors are built from - the shared popup chrome, the wizard
     kit's panels, the badge picker and the page's own inline machinery {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/lines.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/decision-lines.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
     {% if transport == 'soap' %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
