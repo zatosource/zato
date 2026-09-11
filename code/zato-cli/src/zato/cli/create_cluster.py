@@ -125,7 +125,9 @@ class Create(ZatoCommand):
             self.add_streaming_channels(session, cluster, ping_service, streaming_sec)
             create_openapi_channel(session, cluster, openapi_handler_service)
             self.add_pubsub_rest_channels(session, cluster)
-            self.add_alert_notification_connections(session, cluster)
+
+            if 0: # alerting_disabled
+                self.add_alert_notification_connections(session, cluster)
 
             # Run ODB post-processing tasks
             odb_post_process.run()

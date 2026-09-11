@@ -542,7 +542,9 @@
                                 <a class="menu-link" href="#">Monitoring &darr;</a>
                                 <ul>
                                     <li class="child"><a class="menu-link" href="{% url "audit-log" %}?cluster={{ cluster_id|default:"1" }}">Audit log</a></li>
+                                    {% if 0 %}{% comment %}alerting_disabled{% endcomment %}
                                     <li class="child"><a class="menu-link" href="{% url "alert-rules-config" %}?cluster={{ cluster_id|default:"1" }}">Alert rules</a></li>
+                                    {% endif %}
                                 </ul>
                             </li>
 
