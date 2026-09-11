@@ -19,7 +19,7 @@ from zato.admin.web.forms.outgoing.sftp import CreateForm as SFTPCreateForm, Edi
 from zato.admin.web.forms.outgoing.smb import CreateForm as SMBCreateForm
 from zato.common.alerting.object_config import encode_email_connection, Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, \
     get_defaults as get_storage_defaults
-from zato.common.api import EMAIL
+from zato.common.api import EMAIL, GENERIC
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,12 +39,14 @@ _alert_type = alerts_tab.alert_type_file_transfer
 _smtp_names = ['ops.smtp', 'billing.smtp']
 _m365_name = 'ops.m365'
 _generic_imap_name = 'legacy.imap'
+_llm_names = ['ops.llm', 'ops.llm.backup']
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _FakeClient:
-    """ Stands in for the Dashboard's client to the server - answers the two email listings and nothing else.
+    """ Stands in for the Dashboard's client to the server - answers the two email listings
+    and the LLM connection listing and nothing else.
     """
     def __init__(self) -> 'None':
         self.calls:'anylist' = []
@@ -63,6 +65,13 @@ class _FakeClient:
                 Bunch(name=_m365_name, server_type=EMAIL.IMAP.ServerType.Microsoft365),
                 Bunch(name=_generic_imap_name, server_type=EMAIL.IMAP.ServerType.Generic),
             ]
+            return out
+
+        if service == 'zato.generic.connection.get-list':
+            assert request['type_'] == GENERIC.CONNECTION.TYPE.OUTCONN_LLM
+            out = []
+            for name in _llm_names:
+                out.append(Bunch(name=name))
             return out
 
         raise Exception(f'Unexpected service `{service}`')
@@ -153,16 +162,61 @@ class TestAlertsTabForm:
 
         # Both groups end with the entry opening the create page and neither says it is empty
         for kind in (Email_Conn_Type_SMTP, Email_Conn_Type_IMAP):
-            assert encode_email_connection(kind, alerts_tab.Email_Create_New_Value) in values
-            assert encode_email_connection(kind, alerts_tab.Email_None_Value) not in values
+            assert encode_email_connection(kind, alerts_tab.Pick_Create_New_Value) in values
+            assert encode_email_connection(kind, alerts_tab.Pick_None_Value) not in values
 
-        # The listings were asked for once each, with the cluster
+        # The email listings were asked for once each, with the cluster
         services = []
         for service, request in req.zato.client.calls:
             services.append(service)
-            assert request == {'cluster_id': 1}
+            if service != 'zato.generic.connection.get-list':
+                assert request == {'cluster_id': 1}
 
-        assert sorted(services) == ['zato.email.imap.get-list', 'zato.email.smtp.get-list']
+        assert sorted(services) == ['zato.email.imap.get-list', 'zato.email.smtp.get-list', 'zato.generic.connection.get-list']
+
+# ################################################################################################################################
+
+    def test_llm_select_lists_the_llm_connections_by_plain_name(self, req:'any_') -> 'None':
+
+        form = SFTPCreateForm(req=req)
+        values = _option_values(form, 'alert_llm_connection')
+
+        # An LLM value is the connection's name alone, there is no kind in front of it
+        for name in _llm_names:
+            assert name in values
+
+        assert alerts_tab.Pick_Create_New_Value in values
+        assert alerts_tab.Pick_None_Value not in values
+
+        # The one group is the LLM group
+        group_labels = []
+        for group_label, _ignored_options in form.fields['alert_llm_connection'].choices[1:]:
+            group_labels.append(group_label)
+
+        assert group_labels == ['LLM']
+
+        # The listing was asked for the LLM connections only
+        for service, request in req.zato.client.calls:
+            if service == 'zato.generic.connection.get-list':
+                assert request == {'cluster_id': 1, 'type_': GENERIC.CONNECTION.TYPE.OUTCONN_LLM, 'paginate': False}
+
+# ################################################################################################################################
+
+    def test_no_llm_connections_says_so_with_a_disabled_entry(self, req:'any_') -> 'None':
+
+        def invoke(service:'str', request:'anydict') -> 'anylist':
+            if service == 'zato.generic.connection.get-list':
+                return []
+            return _FakeClient().invoke(service, request)
+
+        req.zato.client.invoke = invoke
+
+        form = SFTPCreateForm(req=req)
+        values = _option_values(form, 'alert_llm_connection')
+        rendered = str(form['alert_llm_connection'])
+
+        assert alerts_tab.Pick_None_Value in values
+        assert f'value="{alerts_tab.Pick_None_Value}" disabled' in rendered
 
 # ################################################################################################################################
 
@@ -180,7 +234,7 @@ class TestAlertsTabForm:
         values = _option_values(form, 'alert_email_connection')
         rendered = str(form['alert_email_connection'])
 
-        none_value = encode_email_connection(Email_Conn_Type_SMTP, alerts_tab.Email_None_Value)
+        none_value = encode_email_connection(Email_Conn_Type_SMTP, alerts_tab.Pick_None_Value)
         assert none_value in values
         assert f'value="{none_value}" disabled' in rendered
 
@@ -193,19 +247,43 @@ class TestAlertsTabForm:
         assert config['storage_field_names'] == [
             'alert_is_active', 'alert_consecutive_failures', 'alert_warning_failures', 'alert_error_failures',
             'alert_window', 'alert_arrival_overdue', 'alert_test_transfers', 'alert_use_llm', 'alert_email_connection',
-            'alert_window_unit', 'alert_arrival_overdue_unit',
+            'alert_llm_connection', 'alert_window_unit', 'alert_arrival_overdue_unit',
         ]
         assert config['checkbox_field_names'] == ['alert_is_active', 'alert_test_transfers', 'alert_use_llm']
+        assert config['pick_fields'] == ['llm_connection', 'email_connection']
 
         # Every line names fields the config knows the kind or the role of
         for line in config['lines']:
             for field_name in line['fields']:
-                is_known = field_name in config['field_kinds'] or field_name in (config['is_active_field'], config['email_field'])
+                is_known = field_name in config['field_kinds'] or field_name == config['is_active_field'] or field_name in config['pick_fields']
                 assert is_known, field_name
 
-        # The create entries lead to the email pages with their create form open
-        for group in config['email_groups']:
-            assert group['create_url'].endswith('?cluster=1&create=1')
+        # The pick lines carry their groups, each leading to its page with the create form open
+        lines_by_name = {}
+        for line in config['lines']:
+            lines_by_name[line['name']] = line
+
+        email_line = lines_by_name['email']
+        llm_line = lines_by_name['llm']
+
+        assert email_line['kind'] == alerts_tab.Line_Kind_Pick
+        assert email_line['field'] == 'email_connection'
+        assert email_line['encode_kind'] is True
+        assert 'depends_on' not in email_line
+
+        assert llm_line['kind'] == alerts_tab.Line_Kind_Pick
+        assert llm_line['field'] == 'llm_connection'
+        assert llm_line['encode_kind'] is False
+        assert llm_line['depends_on'] == 'use_llm'
+        assert llm_line['groups'][0]['create_url'].endswith('/zato/outgoing/llm/?cluster=1&create=1')
+
+        for line in (email_line, llm_line):
+            for group in line['groups']:
+                assert group['create_url'].endswith('?cluster=1&create=1')
+
+        # The LLM line comes right after the Use LLM switch it depends on
+        line_names = list(lines_by_name)
+        assert line_names.index('llm') == line_names.index('use_llm') + 1
 
 # ################################################################################################################################
 

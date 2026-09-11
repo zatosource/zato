@@ -60,6 +60,9 @@ $(document).ready(function() {
             $.fn.zato.cleanup_elem_css_attention($(this));
         }
     });
+
+    // Another page, e.g. an Alerts tab, may link here to have a connection created right away
+    $.fn.zato.data_table.maybe_open_create_form($.fn.zato.outgoing.llm.create);
 })
 
 // /////////////////////////////////////////////////////////////////////////////

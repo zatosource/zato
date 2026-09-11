@@ -25,7 +25,7 @@ from zato.cli.enmasse.importers.ftp import FTPImporter
 from zato.cli.enmasse.importers.sftp import SFTPImporter
 from zato.cli.enmasse.importers.smb import SMBImporter
 from zato.common.alerting.object_config import Alerts_Key, storage_name
-from zato.common.api import EMAIL
+from zato.common.api import EMAIL, GENERIC
 from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, IMAP, SMTP
 
 # ################################################################################################################################
@@ -49,6 +49,9 @@ _smtp_name = 'enmasse.alerts.smtp'
 _imap_m365_name = 'enmasse.alerts.imap.m365'
 _imap_generic_name = 'enmasse.alerts.imap.generic'
 
+# The LLM connection an alerts mapping may name for its explanations
+_llm_name = 'enmasse.alerts.llm'
+
 # The same YAML a person would write - one connection moving every alert setting away from its default,
 # one moving a few of them and one carrying no alerts mapping at all.
 _yaml_text = f"""
@@ -66,6 +69,7 @@ sftp:
       test_transfers: true
       use_llm: false
       email_connection: smtp:{_smtp_name}
+      llm_connection: {_llm_name}
 
   - name: enmasse.alerts.sftp.2
     address: sftp.example.com
@@ -140,6 +144,16 @@ def session() -> 'any_':
 
     imap_generic = _new_imap(_imap_generic_name, EMAIL.IMAP.ServerType.Generic, cluster)
     session.add(imap_generic)
+
+    llm = GenericConn()
+    llm.name = _llm_name
+    llm.type_ = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
+    llm.is_active = True
+    llm.is_internal = False
+    llm.is_channel = False
+    llm.is_outconn = True
+    llm.cluster = cluster
+    session.add(llm)
 
     session.commit()
 
@@ -222,6 +236,7 @@ class TestAlertsImport:
         assert opaque[storage_name('test_transfers')] is True
         assert opaque[storage_name('use_llm')] is False
         assert opaque[storage_name('email_connection')] == f'smtp:{_smtp_name}'
+        assert opaque[storage_name('llm_connection')] == _llm_name
 
         assert Alerts_Key not in opaque
 
@@ -243,6 +258,7 @@ class TestAlertsImport:
 
         assert opaque[storage_name('error_failures')] == 25
         assert opaque[storage_name('email_connection')] == f'imap:{_imap_m365_name}'
+        assert opaque[storage_name('llm_connection')] == ''
 
         assert opaque[storage_name('is_active')] is True
         assert opaque[storage_name('consecutive_failures')] == 3
@@ -419,6 +435,42 @@ class TestAlertsImportRejections:
 
         message = str(context.value)
         assert 'consecutive_failure' in message
+
+# ################################################################################################################################
+
+    def test_a_missing_llm_connection_is_rejected(
+        self,
+        session:'any_',
+        sftp_importer:'SFTPImporter',
+    ) -> 'None':
+        """ Naming an LLM connection that does not exist is refused rather than stored,
+        which would leave the explanations going nowhere.
+        """
+        definition = self._definition({'llm_connection': 'enmasse.no.such.llm'})
+
+        with pytest.raises(Exception) as context:
+            _ = sftp_importer.sync_definitions([definition], session)
+
+        message = str(context.value)
+        assert 'enmasse.no.such.llm' in message
+        assert 'LLM connection' in message
+        assert 'enmasse.alerts.sftp.rejected' in message
+
+# ################################################################################################################################
+
+    def test_an_empty_llm_connection_is_accepted(
+        self,
+        session:'any_',
+        sftp_importer:'SFTPImporter',
+    ) -> 'None':
+        """ An empty LLM connection means the deployment's default explains the alerts, which is the default.
+        """
+        definition = self._definition({'llm_connection': ''})
+
+        created, _ = sftp_importer.sync_definitions([definition], session)
+        opaque = _opaque(created[0])
+
+        assert opaque[storage_name('llm_connection')] == ''
 
 # ################################################################################################################################
 

@@ -92,7 +92,8 @@ config.fields = {
     email_connection: {label: 'Email connection', kind: 'text'},
     default_to: {label: 'Email to', kind: 'text'},
     from: {label: 'Email from', kind: 'text'},
-    dashboard_url: {label: 'Dashboard URL', kind: 'text'}
+    dashboard_url: {label: 'Dashboard URL', kind: 'text'},
+    llm_connection: {label: 'LLM connection', kind: 'text'}
 };
 
 // The units a duration is edited and shown in, smallest first - a cell picks the
@@ -135,7 +136,8 @@ config.fieldHelp = {
     email_connection: 'The name of the email connection alert emails go out through.',
     default_to: 'The addresses alert emails go to, separated by commas.',
     from: 'The address alert emails come from.',
-    dashboard_url: 'The Dashboard address the links in alerts point to.'
+    dashboard_url: 'The Dashboard address the links in alerts point to.',
+    llm_connection: 'The name of the LLM connection that explains alerts when an object names none of its own.'
 };
 
 // One row per rule type, in the order they are rendered, each naming
@@ -157,7 +159,8 @@ config.types = {
 // The notifications row's own fields - where alerts go when a rule
 // does not name a target of its own
 config.notificationFields = [
-    'slack_webhook', 'teams_webhook', 'webhook_url', 'email_connection', 'default_to', 'from', 'dashboard_url'
+    'slack_webhook', 'teams_webhook', 'webhook_url', 'email_connection', 'default_to', 'from', 'dashboard_url',
+    'llm_connection'
 ];
 
 // What each type's rules watch, shown at the type's own row header

@@ -18,9 +18,9 @@ from zato.common.alerting.config_map import Explain_With_LLM_Key
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.model import AlertAction
 from zato.common.alerting.object_config import alert_type_file_transfer, encode_email_connection, Email_Conn_Type_IMAP, \
-    get_defaults as get_object_defaults
+    get_defaults as get_object_defaults, LLM_Connection_Config_Key
 from zato.common.alerting.sweep import build_fact_message, build_finding_link, read_outcome, run_sweep
-from zato.common.api import Alerting, Incidents
+from zato.common.api import Alerting
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.common import get_source_label
 from zato.common.monitoring.health import EndpointMetrics
@@ -363,14 +363,27 @@ class TestRunSweep:
         assert len(recorder.invocations) == 1
 
         service, payload = recorder.invocations[0]
-        assert service == Incidents.Service_Explain
+        assert service == Alerting.Service_Explain
 
         # .. with everything the service needs to deliver the alert itself.
         assert payload['action'] == AlertAction.Invoke_Service
         assert payload['action_config'] == {'service': 'test.channel.restart'}
-        assert payload['defaults'] == {'email_to': _addresses, 'email_from': 'alerts@example.com', 'webhook_url': ''}
+        assert payload['defaults'] == {
+            'email_to': _addresses,
+            'email_from': 'alerts@example.com',
+            'webhook_url': '',
+            'llm_connection': '',
+        }
         assert payload['object_name'] == _channel_name
         assert payload['explanation'] == ''
+
+        # .. and with what the evidence is collected from - the fact itself, the measures the rule
+        # read and the thresholds it compared against, none here because the rule has no defaults.
+        assert payload['fact']['source'] == AuditSource.MLLP_Channel
+        assert payload['fact']['object_name'] == _channel_name
+        assert payload['fact']['error_rate'] == 1.0
+        assert payload['measures'] == ['error_rate']
+        assert payload['thresholds'] == {}
 
 # ################################################################################################################################
 
@@ -623,6 +636,9 @@ _settings_other_name = 'sftp.other'
 # The email connection the settings send the alerts through
 _settings_imap_name = 'Ops mailbox'
 
+# The LLM connection the settings explain the alerts through
+_settings_llm_name = 'ops.llm'
+
 # ################################################################################################################################
 
 def _seed_transfer_failure(audit_log:'AuditLog', engine:'Engine', now:'datetime', object_name:'str', *, cid:'str',
@@ -644,8 +660,10 @@ def _seed_transfer_failure(audit_log:'AuditLog', engine:'Engine', now:'datetime'
 
 def _new_object_settings(**values:'any_') -> 'anydict':
     """ The object settings of one file transfer connection at the defaults, with the given values on top.
+    The LLM stays out of it unless a test asks for it, so the actions run directly and can be observed.
     """
     settings = get_object_defaults(alert_type_file_transfer)
+    settings['use_llm'] = False
     settings.update(values)
 
     out = {alert_type_file_transfer: {_settings_object_name: settings}}
@@ -803,6 +821,81 @@ class TestObjectSettings:
                 by_object[_settings_other_name] = connection
 
         assert by_object == {_settings_object_name: email_connection, _settings_other_name: ''}
+
+# ################################################################################################################################
+
+    def test_the_objects_use_llm_switch_off_runs_the_action_under_a_ruleset_that_explains(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-llm-off-1')
+        _seed_transfer_failure(audit_log, engine, now, _settings_other_name, cid='settings-llm-off-2')
+
+        object_settings = _new_object_settings(warning_failures=1, use_llm=False)
+        rules_text = _window_rules_text.format(window_seconds=86400)
+
+        # The ruleset says every alert is explained ..
+        rules = _load_rules(rules_text, 'alerts_file_transfer')
+        for rule in rules:
+            rule.document[Explain_With_LLM_Key] = True
+
+        recorder = _TransportRecorder()
+        defaults = AlertDefaults()
+        defaults.email_to = _addresses
+
+        result = run_sweep(engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-settings-llm-off', now,
+            defaults=defaults, object_settings=object_settings)
+
+        assert result.raised_count == 2
+
+        # .. but the object with its own switch off is emailed directly, only the other one is explained.
+        assert len(recorder.emails) == 1
+        assert len(recorder.invocations) == 1
+
+        _, _, body = recorder.emails[0]
+        assert _settings_object_name in body
+
+        service, payload = recorder.invocations[0]
+        assert service == Alerting.Service_Explain
+        assert payload['object_name'] == _settings_other_name
+
+# ################################################################################################################################
+
+    def test_the_objects_use_llm_switch_on_explains_under_a_ruleset_that_does_not(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-llm-on-1')
+        _seed_transfer_failure(audit_log, engine, now, _settings_other_name, cid='settings-llm-on-2')
+
+        object_settings = _new_object_settings(warning_failures=1, use_llm=True, llm_connection=_settings_llm_name)
+        rules_text = _window_rules_text.format(window_seconds=86400)
+
+        # The ruleset does not explain its alerts - the documents carry no key at all ..
+        result, recorder = _run_settings_sweep(engine, audit_log, now, rules_text, 'cid-settings-llm-on', object_settings)
+
+        assert result.raised_count == 2
+
+        # .. yet the object with its own switch on is explained, the other one is emailed directly.
+        assert len(recorder.emails) == 1
+        assert len(recorder.invocations) == 1
+
+        _, _, body = recorder.emails[0]
+        assert _settings_other_name in body
+
+        service, payload = recorder.invocations[0]
+        assert service == Alerting.Service_Explain
+        assert payload['object_name'] == _settings_object_name
+
+        # The payload carries the object's own LLM connection and everything the evidence is collected from -
+        # the object's own threshold stands in for the rule's default.
+        assert payload['action_config'][LLM_Connection_Config_Key] == _settings_llm_name
+        assert payload['fact']['object_name'] == _settings_object_name
+        assert payload['fact']['error_count'] == 1
+        assert payload['measures'] == ['error_count']
+        assert payload['thresholds'] == {'warning_failure_count': 1, 'window_seconds': 86400}
 
 # ################################################################################################################################
 # ################################################################################################################################

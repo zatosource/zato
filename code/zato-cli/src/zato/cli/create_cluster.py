@@ -294,24 +294,21 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_alert_notification_connections(self, session, cluster):
-        """ Adds the default alert notification connections - one Slack, one Microsoft Teams,
-        one SMTP and one LLM connection for alert explanations, all inactive
-        with placeholder details for people to fill in.
+        """ Adds the default alert notification connections - one Slack, one Microsoft Teams
+        and one SMTP, all inactive with placeholder details for people to fill in.
         """
 
         # Zato
-        from zato.common.alerting.names import get_llm_conn_name, get_notification_conn_name
+        from zato.common.alerting.names import get_notification_conn_name
         from zato.common.api import EMAIL, GENERIC
         from zato.common.odb.model import GenericConn, SMTP
 
         conn_name = get_notification_conn_name()
 
-        # Slack, Microsoft Teams and the LLM connection are generic connections
-        # and differ only by their type and name.
+        # Slack and Microsoft Teams are generic connections and differ only by their type.
         generic_details = (
             (conn_name, GENERIC.CONNECTION.TYPE.CHAT_SLACK),
             (conn_name, GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS),
-            (get_llm_conn_name(), GENERIC.CONNECTION.TYPE.OUTCONN_LLM),
         )
 
         for name, type_ in generic_details:

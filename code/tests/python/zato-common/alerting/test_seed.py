@@ -27,7 +27,7 @@ from zato.common.alerting.model import AlertAction
 from zato.common.alerting.seed import alerting_vocabulary, build_ruleset_document, default_rulesets, \
     ensure_alerting_definitions
 from zato.common.alerting.sweep import load_alert_rules, run_sweep, Fact_Entity
-from zato.common.api import Alerting, Incidents
+from zato.common.api import Alerting
 from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary, Documents_Key
@@ -264,7 +264,7 @@ class TestSweepOverSeededRules:
         assert result.raised_count >= 1
         assert recorder.emails == []
 
-        explain_invocations = [item for item in recorder.invocations if item[0] == Incidents.Service_Explain]
+        explain_invocations = [item for item in recorder.invocations if item[0] == Alerting.Service_Explain]
         assert len(explain_invocations) == 2
 
         invoked_rules = sorted(payload['rule'] for _, payload in explain_invocations)

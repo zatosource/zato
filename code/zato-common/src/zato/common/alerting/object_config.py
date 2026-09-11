@@ -8,8 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The alert settings one object carries of its own - a file transfer connection above all.
 # The settings are the fields of the object's alert type from config_map, with an Active
-# switch before them and an email connection after them, stored flat in the object's
-# opaque attributes under the alert_ prefix. The Dashboard's Alerts tab, the generic
+# switch before them and an email connection and an LLM connection after them, stored flat
+# in the object's opaque attributes under the alert_ prefix. The Dashboard's Alerts tab, the generic
 # connection services and enmasse all go through the helpers here, so what is shown,
 # what is stored and what is imported are always the same values under the same names.
 
@@ -39,19 +39,23 @@ Alerts_Key = 'alerts'
 # Every stored alert setting is named with this prefix, e.g. alert_is_active
 Field_Prefix = 'alert_'
 
-# The two fields every alert type has around its own ones
+# The three fields every alert type has around its own ones
 Is_Active_Field = 'is_active'
 Email_Connection_Field = 'email_connection'
+LLM_Connection_Field = 'llm_connection'
 
 # A duration is stored in seconds and shown as a count with a unit select named after the field
 Unit_Field_Suffix = '_unit'
 
-# The action config key an alert's own email connection travels under, from the sweep to the engine's email action
+# The action config keys an alert's own email and LLM connections travel under, from the sweep
+# to the engine's email action and to the explain service
 Email_Connection_Config_Key = 'email_connection'
+LLM_Connection_Config_Key = 'llm_connection'
 
-# The kinds of the two fields above - the type's own fields carry the kinds config_map gives them
+# The kinds of the three fields above - the type's own fields carry the kinds config_map gives them
 Kind_Active = 'active'
 Kind_Email = 'email'
+Kind_LLM = 'llm'
 
 # The email connection an object sends its alerts through is one string naming both the kind
 # of the connection and the connection itself, e.g. smtp:ops.smtp or imap:ops.m365.
@@ -63,6 +67,7 @@ email_conn_types = [Email_Conn_Type_SMTP, Email_Conn_Type_IMAP]
 # What a new object starts with
 Is_Active_Default = True
 Email_Connection_Default = ''
+LLM_Connection_Default = ''
 
 # Which alert type each connection type's settings follow
 alert_type_file_transfer = 'file_transfer'
@@ -127,6 +132,7 @@ field_help = {
     'feed_silence':         'How many seconds of silence from a feed raise an alert.',
     'use_llm':              'Whether the LLM explains every alert raised for this type.',
     Email_Connection_Field: 'The SMTP or Microsoft 365 connection that sends the alert emails.',
+    LLM_Connection_Field:   'The LLM connection that explains the alerts when Use LLM is on.',
 }
 
 # ################################################################################################################################
@@ -142,7 +148,7 @@ def storage_name(name:'str') -> 'str':
 
 def get_field_names(alert_type:'str') -> 'strlist':
     """ The fields of an alert type in their order - the Active switch, the type's own fields
-    as config_map lists them, the email connection.
+    as config_map lists them, the email connection, the LLM connection.
     """
     out:'strlist' = [Is_Active_Field]
 
@@ -150,13 +156,14 @@ def get_field_names(alert_type:'str') -> 'strlist':
         out.append(field['name'])
 
     out.append(Email_Connection_Field)
+    out.append(LLM_Connection_Field)
 
     return out
 
 # ################################################################################################################################
 
 def get_field_kinds(alert_type:'str') -> 'strstrdict':
-    """ The kind of each field of an alert type - active, email, or one of config_map's kinds.
+    """ The kind of each field of an alert type - active, email, llm, or one of config_map's kinds.
     """
     out:'strstrdict' = {Is_Active_Field: Kind_Active}
 
@@ -164,6 +171,7 @@ def get_field_kinds(alert_type:'str') -> 'strstrdict':
         out[field['name']] = field['kind']
 
     out[Email_Connection_Field] = Kind_Email
+    out[LLM_Connection_Field] = Kind_LLM
 
     return out
 
@@ -196,6 +204,7 @@ def get_defaults(alert_type:'str') -> 'anydict':
     out:'anydict' = {Is_Active_Field: Is_Active_Default}
     out.update(config_map.read_type_values(alert_type, documents))
     out[Email_Connection_Field] = Email_Connection_Default
+    out[LLM_Connection_Field] = LLM_Connection_Default
 
     # Callers get a copy of their own, so what one does to it never shows in the next one's
     _defaults_by_type[alert_type] = dict(out)

@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The notification targets live in the alerting sweep job's extra data - one JSON
 # block naming the default webhooks, the email connection and its addressing,
-# and the Dashboard address the links point to. The config screen's notifications
+# the Dashboard address the links point to and the LLM connection that explains
+# the alerts of objects naming none of their own. The config screen's notifications
 # row and enmasse both read and write it through here, so a value shown, a value
 # saved and a value imported are always the same value.
 
@@ -41,6 +42,7 @@ notification_keys = [
     Alerting.Extra_Default_To,
     Alerting.Extra_From,
     Alerting.Extra_Dashboard_URL,
+    Alerting.Extra_LLM_Connection,
 ]
 
 # ################################################################################################################################

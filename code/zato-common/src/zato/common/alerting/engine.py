@@ -31,7 +31,7 @@ from zato.common.alerting.object_config import Email_Connection_Config_Key
 from zato.common.alerting.rendering import render_alert_template, Template_Digest_Body, Template_Digest_Subject, \
     Template_Email_Body, Template_Email_Subject, Template_Slack, Template_Teams, Template_Webhook
 from zato.common.alerting.store import raise_alert, render_alert_message
-from zato.common.api import Incidents
+from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent, get_audit_engine
 from zato.common.json_internal import dumps
 from zato.common.typing_ import list_field
@@ -115,6 +115,9 @@ class AlertDefaults:
     # Where target-less plain webhook rules post - e.g. a Jira automation webhook
     webhook_url: str = ''
 
+    # The LLM connection explanations go through when an object names none of its own
+    llm_connection: str = ''
+
 # ################################################################################################################################
 
 def defaults_to_dict(defaults:'AlertDefaults') -> 'stranydict':
@@ -125,6 +128,7 @@ def defaults_to_dict(defaults:'AlertDefaults') -> 'stranydict':
         'email_to': defaults.email_to,
         'email_from': defaults.email_from,
         'webhook_url': defaults.webhook_url,
+        'llm_connection': defaults.llm_connection,
     }
 
     return out
@@ -139,6 +143,7 @@ def defaults_from_dict(data:'stranydict') -> 'AlertDefaults':
     out.email_to = data['email_to']
     out.email_from = data['email_from']
     out.webhook_url = data['webhook_url']
+    out.llm_connection = data['llm_connection']
 
     return out
 
@@ -233,14 +238,21 @@ def build_alert_payload(
 
 def build_explain_payload(rule:'AlertRule', finding:'Finding', alert_id:'int', count:'int', defaults:'AlertDefaults') -> 'stranydict':
     """ What the explain service receives - the alert's payload plus everything it needs
-    to run the rule's own action itself once the LLM has spoken: the action's name
-    and the deployment-level targets the sweep was configured with.
+    to collect the evidence and to run the rule's own action itself once the LLM has spoken:
+    the fact, the thresholds and the measures, the action's name and the deployment-level
+    targets the sweep was configured with.
     """
     out = build_alert_payload(rule, finding, alert_id, count)
 
     out['action'] = rule.action
     out['dedup_window_seconds'] = rule.dedup_window_seconds
     out['defaults'] = defaults_to_dict(defaults)
+
+    # What the evidence is collected from - the fact with every measure, the thresholds
+    # the rule compared against and the measures it read
+    out['fact'] = finding.fact
+    out['thresholds'] = finding.thresholds
+    out['measures'] = finding.measures
 
     return out
 
@@ -354,7 +366,7 @@ def _dispatch_slack(
     """
 
     # Without a channel in the rule's action config there is nowhere to post.
-    if not (channel := rule.action_config.get(Incidents.Config_Slack_Channel)):
+    if not (channel := rule.action_config.get(Alerting.Config_Slack_Channel)):
         logger.info('Alert rule `%s` has no Slack channel - skipping `%s`', rule.name, finding.object_name)
         return
 
@@ -379,7 +391,7 @@ def _dispatch_teams(
     """
 
     # Without a target in the rule's action config there is nowhere to post.
-    if not (to := rule.action_config.get(Incidents.Config_Teams_To)):
+    if not (to := rule.action_config.get(Alerting.Config_Teams_To)):
         logger.info('Alert rule `%s` has no Teams target - skipping `%s`', rule.name, finding.object_name)
         return
 
@@ -458,7 +470,7 @@ def dispatch_action(
     # the LLM does not speak for - the flag tells the two apart.
     if rule.explain_with_llm and explanation is None:
         payload = build_explain_payload(rule, finding, alert_id, count, defaults)
-        transports.invoke_service(Incidents.Service_Explain, payload)
+        transports.invoke_service(Alerting.Service_Explain, payload)
         return
 
     context = build_template_context(rule, finding, alert_id, count, explanation)

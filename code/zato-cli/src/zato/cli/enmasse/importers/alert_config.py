@@ -14,7 +14,8 @@ import os
 from zato.common.alerting.config_store import apply_type_config
 from zato.common.alerting.notification_config import set_notification_config
 from zato.common.alerting.seed import ensure_alerting_definitions
-from zato.common.api import Alerting
+from zato.common.api import Alerting, GENERIC
+from zato.common.odb.model import GenericConn
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Default_DB_URL, Env_DB_URL
 
@@ -51,7 +52,24 @@ yaml_to_extra = {
     'email_to':         Alerting.Extra_Default_To,
     'email_from':       Alerting.Extra_From,
     'dashboard_url':    Alerting.Extra_Dashboard_URL,
+    'llm_connection':   Alerting.Extra_LLM_Connection,
 }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _ensure_llm_connection_exists(name:'str', session:'SASession', cluster_id:'int') -> 'None':
+    """ Rejects a default LLM connection unless it exists - an empty name means there is no default.
+    """
+    if not name:
+        return
+
+    connection = session.query(GenericConn).\
+        filter_by(cluster_id=cluster_id, name=name, type_=GENERIC.CONNECTION.TYPE.OUTCONN_LLM).\
+        first()
+
+    if connection is None:
+        raise Exception(f'LLM connection `{name}` not found for alert notifications')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -154,6 +172,11 @@ class AlertConfigImporter:
         # Nothing to import means nothing to write
         if not values:
             return False
+
+        # The LLM connection named has to be there - explanations are never configured
+        # to go through a connection that does not exist
+        if 'llm_connection' in values:
+            _ensure_llm_connection_exists(values['llm_connection'], session, self.importer.cluster_id)
 
         # The YAML speaks the screen's vocabulary - the extra keeps its own keys
         extra_values:'stranydict' = {}

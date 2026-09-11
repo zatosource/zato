@@ -13,7 +13,7 @@ from sqlalchemy import select
 from zato.common.alerting.engine import build_digest, dispatch_action, process_findings, AlertDefaults, AlertTransports
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, FindingKind
 from zato.common.alerting.object_config import Email_Connection_Config_Key
-from zato.common.api import Incidents
+from zato.common.api import Alerting
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditSource
 from zato.common.json_internal import loads
 from zato.common.util.api import utcnow
@@ -259,13 +259,18 @@ class TestActions:
         assert len(recorder.invocations) == 1
 
         service, payload = recorder.invocations[0]
-        assert service == Incidents.Service_Explain
+        assert service == Alerting.Service_Explain
 
         # .. with everything the service needs to run the Slack action itself afterwards.
         assert payload['action'] == AlertAction.Slack
         assert payload['action_config'] == {'slack_channel': _slack_channel}
         assert payload['dedup_window_seconds'] == rule.dedup_window_seconds
-        assert payload['defaults'] == {'email_to': ['ops@example.com'], 'email_from': 'alerts@example.com', 'webhook_url': ''}
+        assert payload['defaults'] == {
+            'email_to': ['ops@example.com'],
+            'email_from': 'alerts@example.com',
+            'webhook_url': '',
+            'llm_connection': '',
+        }
         assert payload['explanation'] == ''
 
 # ################################################################################################################################

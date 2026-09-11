@@ -27,13 +27,15 @@ from zato.common.alerting.collectors import collect_facts
 from zato.common.alerting.config_map import read_window_seconds, type_sources, type_to_ruleset, Explain_With_LLM_Key
 from zato.common.alerting.engine import process_findings
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, Default_Dedup_Window_Seconds
-from zato.common.alerting.object_config import Email_Connection_Config_Key
+from zato.common.alerting.object_config import Email_Connection_Config_Key, LLM_Connection_Config_Key
 from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
-    get_muted_rule_names, is_object_active
+    get_llm_connection, get_muted_rule_names, is_object_active
 from zato.common.api import Alerting
 from zato.common.audit_log.common import get_source_label, health_sources
 from zato.common.defaults import default_cluster_id
+from zato.common.rule_engine.document import resolve_defaults
 from zato.common.rule_engine.loading import documents_from_version, load_documents
+from zato.common.rule_engine.references import referenced_terms
 from zato.common.typing_ import list_field
 from zato.common.util.api import pluralize
 
@@ -105,6 +107,14 @@ Audit_Log_Path = '/zato/audit-log/'
 
 # What the deep link asks the audit log page to do with the failing event.
 Resubmit_Action = 'resubmit'
+
+# The per-object toggle that says whether the LLM explains the object's alerts - the same
+# field the ruleset-wide switch stamps on every rule document.
+Use_LLM_Field = 'use_llm'
+
+# The fact's keys that name the object rather than measure it - a rule reads them,
+# but there is no evidence to collect for them.
+_identity_keys = ('source', 'object_name')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -346,19 +356,70 @@ def read_outcome(then:'stranydict') -> 'stranydict':
 
 # ################################################################################################################################
 
+def build_measures(rule:'Rule') -> 'strlist':
+    """ The measures of the fact a rule reads - every `alert.` term of its document without the prefix,
+    the keys naming the object left out.
+    """
+
+    # Our response to produce
+    out:'strlist' = []
+
+    prefix = Fact_Entity + '.'
+
+    for term in referenced_terms(rule.document):
+
+        if not term.startswith(prefix):
+            continue
+
+        name = term[len(prefix):]
+
+        if name in _identity_keys:
+            continue
+
+        out.append(name)
+
+    return out
+
+# ################################################################################################################################
+
+def build_thresholds(rule:'Rule', rule_values:'stranydict') -> 'stranydict':
+    """ The thresholds a rule compared against as they were in force for the object -
+    the literal defaults of the rule's document with the object's own numbers over them.
+    """
+
+    # Our response to produce
+    out:'stranydict' = resolve_defaults(rule.document['defaults'])
+
+    for name, value in rule_values.items():
+        if name in out:
+            out[name] = value
+
+    return out
+
+# ################################################################################################################################
+
 def build_dispatch(
     rule:'Rule',
     fact:'stranydict',
     outcome:'stranydict',
     dashboard_url:'str' = '',
-    email_connection:'str' = '',
+    settings:'stranydict | None' = None,
+    rule_values:'stranydict | None' = None,
     ) -> 'tuple[AlertRule, Finding] | None':
     """ Turns one rule match into the pair the engine dispatches - a transient engine rule
-    carrying the outcome's action and config, and a finding carrying the fact's measures.
+    carrying the outcome's action and config, and a finding carrying the fact's measures,
+    the thresholds the rule compared against and the measures it read.
     An outcome without an action names nothing to do, which is an authoring error, not a dispatch.
-    An object with an email connection of its own has it travel in the action config,
-    so the email action delivers through it rather than through the default one.
+    An object with settings of its own has its email and LLM connections travel in the action
+    config, so the actions deliver through them rather than through the default ones, and its
+    own Use LLM switch says whether the LLM explains the alert, over the ruleset's answer.
     """
+    if settings is None:
+        settings = {}
+
+    if rule_values is None:
+        rule_values = {}
+
     action_name = outcome.pop('action', None)
 
     if action_name not in _action_by_outcome:
@@ -393,13 +454,22 @@ def build_dispatch(
     if addresses := outcome.pop('addresses', None):
         outcome['addresses'] = [item.strip() for item in addresses.split(',')]
 
-    # The object's own email connection, when it has one
-    if email_connection:
-        outcome[Email_Connection_Config_Key] = email_connection
+    # The object's own email and LLM connections, when it has them
+    if settings:
 
-    # Whether the LLM explains the alert is the ruleset's answer, stamped on every
-    # rule document - a rule a person wrote by hand without the key is not explained.
-    explain_with_llm = rule.document.get(Explain_With_LLM_Key) is True
+        if email_connection := get_email_connection(settings):
+            outcome[Email_Connection_Config_Key] = email_connection
+
+        if llm_connection := get_llm_connection(settings):
+            outcome[LLM_Connection_Config_Key] = llm_connection
+
+    # Whether the LLM explains the alert is the object's own answer when it has settings,
+    # the ruleset's otherwise, stamped on every rule document - a rule a person wrote
+    # by hand without the key is not explained.
+    if Use_LLM_Field in settings:
+        explain_with_llm = settings[Use_LLM_Field] is True
+    else:
+        explain_with_llm = rule.document.get(Explain_With_LLM_Key) is True
 
     alert_rule = new_rule(
         rule.name,
@@ -412,7 +482,8 @@ def build_dispatch(
 
     message = build_fact_message(rule.name, fact)
 
-    finding = new_finding(rule.name, fact['source'], fact['object_name'], message, link=link, severity=severity)
+    finding = new_finding(rule.name, fact['source'], fact['object_name'], message, link=link, severity=severity,
+        fact=fact, thresholds=build_thresholds(rule, rule_values), measures=build_measures(rule))
 
     out = alert_rule, finding
     return out
@@ -486,7 +557,8 @@ def run_sweep(
         for fact in facts:
 
             match_data = {Fact_Entity: fact}
-            email_connection = ''
+            settings:'stranydict' = {}
+            rule_values:'stranydict' = {}
 
             if fact['object_name'] in settings_by_object:
 
@@ -501,8 +573,8 @@ def run_sweep(
                     continue
 
                 # .. and its own numbers stand in for the rule's defaults.
-                match_data.update(build_rule_values(alert_type, settings))
-                email_connection = get_email_connection(settings)
+                rule_values = build_rule_values(alert_type, settings)
+                match_data.update(rule_values)
 
             match_result = rule.match(match_data)
 
@@ -510,7 +582,7 @@ def run_sweep(
                 continue
 
             outcome = read_outcome(match_result.then)
-            dispatch = build_dispatch(rule, fact, outcome, dashboard_url, email_connection)
+            dispatch = build_dispatch(rule, fact, outcome, dashboard_url, settings, rule_values)
 
             if dispatch is None:
                 continue

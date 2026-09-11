@@ -1455,6 +1455,7 @@ class Alerting:
     # the default notification name, so the connection and webhook keys stay only
     # for the read-write contract of the config services and enmasse.
     Extra_Email_Connection = 'email_connection'
+    Extra_LLM_Connection   = 'llm_connection'
     Extra_From             = 'from'
     Extra_Default_To       = 'default_to'
     Extra_Dashboard_URL    = 'dashboard_url'
@@ -1475,46 +1476,27 @@ class Alerting:
     Ruleset_Name    = 'alerts'
     Vocabulary_Name = 'alerting'
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Incidents:
-    """ Explained alerts - explanations of failing connections, produced by an LLM guided
-    by a per-connection explanation skill and stored next to the alerts they explain.
-    There is no lifecycle here - the explanation travels out with the alert's
-    notifications and whatever happens next lives in the receiving system.
-    """
-
-    # The generic-object type explanations are stored under.
-    class Type:
-        Incident = 'zato-incident'
-
-    # The service the alerting engine hands an alert to when the alert's ruleset has
-    # the LLM explain its alerts - the service delivers the explained alert itself,
-    # through the rule's own action.
-    Service_Explain = 'zato.alerting.explain'
+    # Explanations - an alert the LLM explains goes to this service instead of its own action,
+    # the service explains it with the skill of the alert's source and the evidence the collectors
+    # measured, and then runs the rule's own action itself. The explanation is stored as a generic
+    # object of this type next to the alert - there is no lifecycle, it travels out with the
+    # alert's notifications and whatever happens next lives in the receiving system.
+    Service_Explain  = 'zato.alerting.explain'
+    Explanation_Type = 'zato-alert-explanation'
 
     # The name shared by the notification connections - one Slack, one Microsoft Teams, one SMTP,
-    # all created when the environment is, inactive and with placeholder details.
-    Notification_Conn_Name = 'default.alerts.notifications'
-
-    # The LLM connection explanations go through - created when the environment is,
-    # inactive and with placeholder details.
-    LLM_Connection_Name = 'default.alerts.llm'
-
-    # The environment variables that rename the default connections.
+    # all created when the environment is, inactive and with placeholder details, and the
+    # environment variable that renames them.
+    Notification_Conn_Name     = 'default.alerts.notifications'
     Env_Notification_Conn_Name = 'Zato_Alerts_Connection'
-    Env_LLM_Connection_Name    = 'Zato_Alerts_LLM_Connection'
 
     # The keys a rule's action_config may carry to say where the Slack and Teams actions deliver.
-    Config_Slack_Channel  = 'slack_channel'
-    Config_Teams_To       = 'teams_to'
+    Config_Slack_Channel = 'slack_channel'
+    Config_Teams_To      = 'teams_to'
 
-    # The one remediation the explanation may propose for REST outgoing connections.
+    # The remediation an explanation may propose where the skill of the source allows it -
+    # it repeats the failed deliveries through the same connection.
     Remediation_Resubmit = 'resubmit'
-
-    # How many recent audit events go into an explanation's evidence pack.
-    Evidence_Max_Events = 20
 
 # ################################################################################################################################
 # ################################################################################################################################

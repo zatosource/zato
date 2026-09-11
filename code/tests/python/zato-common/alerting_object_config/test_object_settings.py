@@ -17,7 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from zato.common.alerting.object_config import alert_type_file_transfer, encode_email_connection, Email_Conn_Type_IMAP, \
     get_defaults, to_storage
 from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
-    get_muted_rule_names, is_object_active, load_object_settings
+    get_llm_connection, get_muted_rule_names, is_object_active, load_object_settings
 from zato.common.api import FileTransfer, GENERIC
 from zato.common.audit_log.api import AuditSource
 from zato.common.json_internal import dumps
@@ -139,7 +139,7 @@ class TestLoadObjectSettings:
 # ################################################################################################################################
 
     def test_stored_settings_win_over_the_defaults(self) -> 'None':
-        stored = to_storage(alert_type_file_transfer, {'warning_failures': 2, 'is_active': False})
+        stored = to_storage(alert_type_file_transfer, {'warning_failures': 2, 'is_active': False, 'llm_connection': 'ops.llm'})
 
         with _session() as session:
             _add_connection(session, _ftp_name, GENERIC.CONNECTION.TYPE.OUTCONN_FTP, _cluster_id, stored)
@@ -149,9 +149,11 @@ class TestLoadObjectSettings:
 
         assert values['warning_failures'] == 2
         assert values['is_active'] is False
+        assert values['llm_connection'] == 'ops.llm'
 
         # What was not stored is still at its default
         assert values['error_failures'] == 20
+        assert values['use_llm'] is True
 
 # ################################################################################################################################
 
@@ -258,6 +260,15 @@ class TestActiveAndEmail:
 
         values['email_connection'] = encode_email_connection(Email_Conn_Type_IMAP, _imap_name)
         assert get_email_connection(values) == encode_email_connection(Email_Conn_Type_IMAP, _imap_name)
+
+# ################################################################################################################################
+
+    def test_llm_connection(self) -> 'None':
+        values = get_defaults(alert_type_file_transfer)
+        assert get_llm_connection(values) == ''
+
+        values['llm_connection'] = 'ops.llm'
+        assert get_llm_connection(values) == 'ops.llm'
 
 # ################################################################################################################################
 # ################################################################################################################################

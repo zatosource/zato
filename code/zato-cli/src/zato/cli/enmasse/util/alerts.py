@@ -8,9 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.alerting import object_config
-from zato.common.api import EMAIL
+from zato.common.api import EMAIL, GENERIC
 from zato.common.defaults import default_cluster_id
-from zato.common.odb.model import IMAP, SMTP
+from zato.common.odb.model import GenericConn, IMAP, SMTP
 from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
@@ -75,6 +75,29 @@ def _ensure_email_connection_exists(
         raise Exception(f'Email connection `{name}` of kind `{kind}` not found for {connection_type} connection `{connection_name}`')
 
 # ################################################################################################################################
+
+def _ensure_llm_connection_exists(
+    name:'str',
+    connection_type:'str',
+    connection_name:'str',
+    session:'SASession',
+) -> 'None':
+    """ Rejects an LLM connection an object names for its alerts unless it exists,
+    so that explanations are never configured to go through a connection that is not there.
+    """
+
+    # No connection named means the deployment's default explains the object's alerts
+    if name == object_config.LLM_Connection_Default:
+        return
+
+    connection = session.query(GenericConn).\
+        filter_by(cluster_id=default_cluster_id, name=name, type_=GENERIC.CONNECTION.TYPE.OUTCONN_LLM).\
+        first()
+
+    if connection is None:
+        raise Exception(f'LLM connection `{name}` not found for {connection_type} connection `{connection_name}`')
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def flatten_alerts(connection_def:'anydict', alert_type:'str', connection_type:'str', session:'SASession') -> 'None':
@@ -97,6 +120,10 @@ def flatten_alerts(connection_def:'anydict', alert_type:'str', connection_type:'
     if object_config.Email_Connection_Field in alerts:
         email_connection = alerts[object_config.Email_Connection_Field]
         _ensure_email_connection_exists(email_connection, connection_type, connection_name, session)
+
+    if object_config.LLM_Connection_Field in alerts:
+        llm_connection = alerts[object_config.LLM_Connection_Field]
+        _ensure_llm_connection_exists(llm_connection, connection_type, connection_name, session)
 
     values = object_config.get_defaults(alert_type)
     values.update(alerts)

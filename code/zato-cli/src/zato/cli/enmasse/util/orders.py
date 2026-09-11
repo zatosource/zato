@@ -223,9 +223,9 @@ _object_order['ftp']            = 'name', 'is_active', 'host', 'port', 'username
     'alerts:dict', 'schedules:list',
 
 # The alerts mapping of a file transfer connection - the writer keeps the order the exporter builds it in,
-# which is this one, the Active switch first, the type's own fields after it, the email connection last.
+# which is this one, the Active switch first, the type's own fields after it, the email and LLM connections last.
 _object_order['alerts'] = 'is_active', 'consecutive_failures', 'warning_failures', 'error_failures', 'window', \
-    'arrival_overdue', 'test_transfers', 'use_llm', 'email_connection',
+    'arrival_overdue', 'test_transfers', 'use_llm', 'email_connection', 'llm_connection',
 
 _object_order['pubsub_topic']        = 'name', 'description'
 _object_order['pubsub_permission']   = 'security', 'pub', 'sub'
@@ -240,7 +240,7 @@ _object_order['alert_rules'] = 'type', 'is_active', 'consecutive_failures', 'err
     'test_transfers', 'arrival_overdue', 'overdue_multiplier', 'start_delay', 'certificate_warning', \
     'outstanding_backlog', 'feed_silence', 'use_llm',
 _object_order['alert_notifications'] = 'slack_webhook', 'teams_webhook', 'webhook_url', 'email_connection', \
-    'email_to', 'email_from', 'dashboard_url',
+    'email_to', 'email_from', 'dashboard_url', 'llm_connection',
 
 _object_order['audit_retention']  = 'name', 'retention_days', 'content_retention_days', 'archive_dir',
 _object_order['audit_extraction'] = 'name', 'source', 'rules:list',

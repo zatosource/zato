@@ -144,6 +144,7 @@ _notification_display = {
     Alerting.Extra_Default_To:       'Email to',
     Alerting.Extra_From:             'Email from',
     Alerting.Extra_Dashboard_URL:    'Dashboard URL',
+    Alerting.Extra_LLM_Connection:   'LLM connection',
 }
 
 # What a notification cell without a value reads as

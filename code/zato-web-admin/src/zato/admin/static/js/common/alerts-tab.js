@@ -12,11 +12,13 @@
 //   - a popover line carries a summary link reading as a sentence, and the link
 //     opens a micro-form on the hidden number fields behind it,
 //   - a toggle line is a switch answered on the spot,
-//   - the email line is a chip opening a pick panel that lists the SMTP and
-//     Microsoft 365 connections in two groups, each with the link to the page
+//   - a pick line is a chip opening a pick panel that lists connections in
+//     groups - the SMTP and Microsoft 365 connections for the email line, the
+//     LLM connections for the LLM line - each group with the link to the page
 //     a new one is made on, and picking a row writes the hidden select,
 //   - the Active switch, the first line of the core settings, dims and freezes
-//     every other line when off.
+//     every other line when off, and a line depending on another toggle, the
+//     LLM line on Use LLM, is dimmed while that toggle is off.
 //
 // The popovers and the panel are appended to document.body, so each wears a
 // class of its own - alerts-tab-micro-form and alerts-tab-pick-panel - under
@@ -61,14 +63,15 @@ $.fn.zato.alerts_tab.config = {
     show_how_it_works: false,
 
     off_class: 'alerts-tab-off',
+    line_off_class: 'alerts-tab-line-off',
     id_prefix: 'id_',
     window_target: '_blank',
 
-    // The panel the email connection is picked in, and the class it wears,
+    // The panel a connection is picked in, and the class it wears,
     // under which alerts-tab.css tunes the pick panel tokens
-    email_panel_width: 340,
-    email_panel_min_width: 280,
-    email_panel_class: 'alerts-tab-pick-panel',
+    pick_panel_width: 340,
+    pick_panel_min_width: 280,
+    pick_panel_class: 'alerts-tab-pick-panel',
 
     // The link under a group's list opening the page a new connection is made on
     add_link_class: 'alerts-tab-add-link',
@@ -304,29 +307,55 @@ $.fn.zato.alerts_tab.format_summary = function(template) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Splits an email select value into the kind of connection and the connection's name
-$.fn.zato.alerts_tab.split_email_value = function(value) {
+// Splits a pick select value into the kind of connection and the connection's
+// name - an email value carries the kind before the separator, an LLM value is
+// the name alone and belongs to the line's one group
+$.fn.zato.alerts_tab.split_pick_value = function(line, value) {
 
-    var separator = $.fn.zato.alerts_tab.settings.email_kind_separator;
-    var separator_index = value.indexOf(separator);
+    var out;
 
-    var out = {
-        kind: value.substring(0, separator_index),
-        name: value.substring(separator_index + separator.length)
-    };
+    if(line.encode_kind) {
+        var separator = $.fn.zato.alerts_tab.settings.pick_kind_separator;
+        var separator_index = value.indexOf(separator);
+
+        out = {
+            kind: value.substring(0, separator_index),
+            name: value.substring(separator_index + separator.length)
+        };
+    }
+    else {
+        out = {
+            kind: line.groups[0].kind,
+            name: value
+        };
+    }
+
+    return out;
+}
+
+// The value one entry of a pick line's select carries for a connection of a kind
+$.fn.zato.alerts_tab.pick_value = function(line, kind, name) {
+
+    var out;
+
+    if(line.encode_kind) {
+        out = kind + $.fn.zato.alerts_tab.settings.pick_kind_separator + name;
+    }
+    else {
+        out = name;
+    }
 
     return out;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The group of the email select a kind of connection belongs to
-$.fn.zato.alerts_tab.email_group = function(kind) {
+// The group of a pick line a kind of connection belongs to
+$.fn.zato.alerts_tab.pick_group = function(line, kind) {
 
-    var groups = $.fn.zato.alerts_tab.settings.email_groups;
     var out = null;
 
-    groups.forEach(function(group) {
+    line.groups.forEach(function(group) {
         if(group.kind === kind) {
             out = group;
         }
@@ -339,26 +368,26 @@ $.fn.zato.alerts_tab.email_group = function(kind) {
 
 // The connections of one kind, read off the hidden select's own group so the
 // select stays the single source of what there is to pick from
-$.fn.zato.alerts_tab.email_connection_names = function(kind) {
+$.fn.zato.alerts_tab.pick_connection_names = function(line, kind) {
 
     var tab = $.fn.zato.alerts_tab;
     var settings = tab.settings;
     var out = [];
 
-    tab.field(settings.email_field).find('option').each(function() {
+    tab.field(line.field).find('option').each(function() {
 
         if(!this.value) {
             return;
         }
 
-        var parts = tab.split_email_value(this.value);
+        var parts = tab.split_pick_value(line, this.value);
 
         if(parts.kind !== kind) {
             return;
         }
 
         // The entries saying a group is empty or opening the create page are not connections
-        if(parts.name === settings.email_none_value || parts.name === settings.email_create_new_value) {
+        if(parts.name === settings.pick_none_value || parts.name === settings.pick_create_new_value) {
             return;
         }
 
@@ -370,32 +399,35 @@ $.fn.zato.alerts_tab.email_connection_names = function(kind) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Fills the email line's chip from the hidden select - solid with the picked
-// connection and its kind as the note, dashed while nothing is picked yet
-$.fn.zato.alerts_tab.render_email_chip = function(line) {
+// Fills a pick line's chip from the hidden select - solid with the picked
+// connection and its group as the note, dashed while nothing is picked yet
+$.fn.zato.alerts_tab.render_pick_chip = function(line) {
 
     var tab = $.fn.zato.alerts_tab;
     var settings = tab.settings;
-    var value = tab.field(settings.email_field).val();
+    var value = tab.field(line.field).val();
 
     var spec = {
         panel: {
             title: line.title,
-            width: tab.config.email_panel_width,
-            minWidth: tab.config.email_panel_min_width,
-            panelClass: tab.config.email_panel_class,
-            build: tab.build_email_panel
+            width: tab.config.pick_panel_width,
+            minWidth: tab.config.pick_panel_min_width,
+            panelClass: tab.config.pick_panel_class,
+            build: function(body) {
+                var out = tab.build_pick_panel(line, body);
+                return out;
+            }
         }
     };
 
-    if(value === settings.email_no_selection_value) {
-        spec.text = settings.email_no_selection_label;
+    if(value === settings.pick_no_selection_value) {
+        spec.text = settings.pick_no_selection_label;
         spec.isBlank = true;
     }
     else {
-        var parts = tab.split_email_value(value);
+        var parts = tab.split_pick_value(line, value);
         spec.text = parts.name;
-        spec.note = tab.email_group(parts.kind).label;
+        spec.note = tab.pick_group(line, parts.kind).label;
     }
 
     $.fn.zato.decision_lines.setChip(tab.element_id('slot', line.name), spec);
@@ -403,18 +435,18 @@ $.fn.zato.alerts_tab.render_email_chip = function(line) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The panel the email connection is picked in - one heading and one list per
-// kind, the list saying (None) when the kind has no connections, and under
-// each the link to the page a new one is made on
-$.fn.zato.alerts_tab.build_email_panel = function(body) {
+// The panel a pick line's connection is picked in - one heading and one list
+// per group, the list saying (None) when the group has no connections, and
+// under each the link to the page a new one is made on
+$.fn.zato.alerts_tab.build_pick_panel = function(line, body) {
 
     var tab = $.fn.zato.alerts_tab;
     var settings = tab.settings;
     var lines = $.fn.zato.decision_lines;
 
-    var current = tab.field(settings.email_field).val();
+    var current = tab.field(line.field).val();
 
-    settings.email_groups.forEach(function(group) {
+    line.groups.forEach(function(group) {
 
         var heading = document.createElement('span');
         heading.className = 'micro-form-label';
@@ -424,20 +456,20 @@ $.fn.zato.alerts_tab.build_email_panel = function(body) {
         var list = document.createElement('div');
         list.className = 'decision-pick-panel-list';
 
-        var names = tab.email_connection_names(group.kind);
+        var names = tab.pick_connection_names(line, group.kind);
 
         names.forEach(function(name) {
 
-            var value = group.kind + settings.email_kind_separator + name;
+            var value = tab.pick_value(line, group.kind, name);
             var is_picked = value === current;
-            var row = lines.buildPickRow(name, is_picked, tab.pick_email(value));
+            var row = lines.buildPickRow(name, is_picked, tab.pick_connection(line, value));
 
             // Picking the connection already picked is how the object is left without one,
             // which the name says right after itself rather than through a control of its own
             if(is_picked) {
                 var remove = document.createElement('span');
                 remove.className = 'decision-pick-remove';
-                remove.textContent = settings.email_remove_label;
+                remove.textContent = settings.pick_remove_label;
                 row.querySelector('.decision-pick-name').appendChild(remove);
             }
 
@@ -447,7 +479,7 @@ $.fn.zato.alerts_tab.build_email_panel = function(body) {
         if(!names.length) {
             var empty = document.createElement('div');
             empty.className = 'decision-pick-panel-empty';
-            empty.textContent = tab.email_none_label(group.kind);
+            empty.textContent = tab.pick_option_label(line, tab.pick_value(line, group.kind, settings.pick_none_value));
             list.appendChild(empty);
         }
 
@@ -456,7 +488,7 @@ $.fn.zato.alerts_tab.build_email_panel = function(body) {
         var add_link = document.createElement('a');
         add_link.href = 'javascript:void(0)';
         add_link.className = tab.config.add_link_class;
-        add_link.textContent = tab.email_create_label(group.kind);
+        add_link.textContent = tab.pick_option_label(line, tab.pick_value(line, group.kind, settings.pick_create_new_value));
 
         add_link.addEventListener('click', function() {
             window.open(group.create_url, tab.config.window_target);
@@ -471,26 +503,10 @@ $.fn.zato.alerts_tab.build_email_panel = function(body) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What the select's own entry for an empty group says
-$.fn.zato.alerts_tab.email_none_label = function(kind) {
+// The label of one option of a pick line's hidden select
+$.fn.zato.alerts_tab.pick_option_label = function(line, value) {
     var tab = $.fn.zato.alerts_tab;
-    var value = kind + tab.settings.email_kind_separator + tab.settings.email_none_value;
-    var out = tab.email_option_label(value);
-    return out;
-}
-
-// What the select's own entry opening the create page says
-$.fn.zato.alerts_tab.email_create_label = function(kind) {
-    var tab = $.fn.zato.alerts_tab;
-    var value = kind + tab.settings.email_kind_separator + tab.settings.email_create_new_value;
-    var out = tab.email_option_label(value);
-    return out;
-}
-
-// The label of one option of the hidden select
-$.fn.zato.alerts_tab.email_option_label = function(value) {
-    var tab = $.fn.zato.alerts_tab;
-    var option = tab.field(tab.settings.email_field).find('option').filter(function() {
+    var option = tab.field(line.field).find('option').filter(function() {
         return this.value === value;
     });
     var out = option.text();
@@ -500,17 +516,17 @@ $.fn.zato.alerts_tab.email_option_label = function(value) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // The row of one connection knows the value it stands for - picking the one
-// already picked is how the object is left without an email connection
-$.fn.zato.alerts_tab.pick_email = function(value) {
+// already picked is how the object is left without a connection
+$.fn.zato.alerts_tab.pick_connection = function(line, value) {
 
     var tab = $.fn.zato.alerts_tab;
 
     var out = function() {
 
-        var field = tab.field(tab.settings.email_field);
+        var field = tab.field(line.field);
 
         if(field.val() === value) {
-            field.val(tab.settings.email_no_selection_value);
+            field.val(tab.settings.pick_no_selection_value);
         }
         else {
             field.val(value);
@@ -540,10 +556,25 @@ $.fn.zato.alerts_tab.apply_active_state = function() {
     }
 }
 
+// Dims a line while the toggle it depends on is off - the LLM line while Use LLM is off
+$.fn.zato.alerts_tab.apply_dependent_state = function(line) {
+
+    var tab = $.fn.zato.alerts_tab;
+    var element = $('#' + tab.element_id('line', line.name));
+    var is_on = tab.field(line.depends_on).is(':checked');
+
+    if(is_on) {
+        element.removeClass(tab.config.line_off_class);
+    }
+    else {
+        element.addClass(tab.config.line_off_class);
+    }
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 
 // Writes every line of the bound panel from the form - the summaries of the
-// popover lines, the email chip and the dimmed state
+// popover lines, the chips of the pick lines and the dimmed states
 $.fn.zato.alerts_tab.render = function() {
 
     var tab = $.fn.zato.alerts_tab;
@@ -554,8 +585,12 @@ $.fn.zato.alerts_tab.render = function() {
             var summary = document.getElementById(tab.element_id('summary', line.name));
             summary.textContent = tab.format_summary(line.summary);
         }
-        else if(line.kind === 'email') {
-            tab.render_email_chip(line);
+        else if(line.kind === 'pick') {
+            tab.render_pick_chip(line);
+        }
+
+        if(line.depends_on) {
+            tab.apply_dependent_state(line);
         }
     });
 
@@ -578,6 +613,13 @@ $.fn.zato.alerts_tab.bind = function(options) {
     });
 
     tab.settings.lines.forEach(function(line) {
+
+        // A line dimmed by another toggle follows that toggle as it is flipped
+        if(line.depends_on) {
+            tab.field(line.depends_on).off('change.alerts_tab_' + line.name).on('change.alerts_tab_' + line.name, function() {
+                tab.apply_dependent_state(line);
+            });
+        }
 
         if(line.kind !== 'popover') {
             return;

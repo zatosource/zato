@@ -11,7 +11,8 @@ from zato.common.alerting import config_map
 from zato.common.alerting.object_config import alert_type_file_transfer, apply_defaults, conn_type_to_alert_type, \
     decode_email_connection, Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, Email_Connection_Default, Email_Connection_Field, \
     encode_email_connection, field_display, field_help, Field_Prefix, from_storage, get_defaults, get_field_kinds, \
-    get_field_names, Is_Active_Field, Kind_Active, Kind_Email, storage_name, to_storage
+    get_field_names, Is_Active_Field, Kind_Active, Kind_Email, Kind_LLM, LLM_Connection_Default, LLM_Connection_Field, \
+    storage_name, to_storage
 from zato.common.api import GENERIC
 
 # ################################################################################################################################
@@ -24,21 +25,22 @@ _alert_type = alert_type_file_transfer
 
 class TestFieldNames:
 
-    def test_field_names_follow_config_map_between_active_and_email(self) -> 'None':
+    def test_field_names_follow_config_map_between_active_and_the_connections(self) -> 'None':
 
         names = get_field_names(_alert_type)
 
         assert names[0] == Is_Active_Field
-        assert names[-1] == Email_Connection_Field
+        assert names[-2] == Email_Connection_Field
+        assert names[-1] == LLM_Connection_Field
 
         own_names = []
         for field in config_map.type_fields[_alert_type]:
             own_names.append(field['name'])
 
-        assert names[1:-1] == own_names
+        assert names[1:-2] == own_names
         assert names == [
             'is_active', 'consecutive_failures', 'warning_failures', 'error_failures', 'window',
-            'arrival_overdue', 'test_transfers', 'use_llm', 'email_connection',
+            'arrival_overdue', 'test_transfers', 'use_llm', 'email_connection', 'llm_connection',
         ]
 
 # ################################################################################################################################
@@ -49,6 +51,7 @@ class TestFieldNames:
 
         assert kinds[Is_Active_Field] == Kind_Active
         assert kinds[Email_Connection_Field] == Kind_Email
+        assert kinds[LLM_Connection_Field] == Kind_LLM
         assert kinds['consecutive_failures'] == config_map.Kind_Number
         assert kinds['window'] == config_map.Kind_Duration
         assert kinds['test_transfers'] == config_map.Kind_Toggle
@@ -78,8 +81,8 @@ class TestFieldNames:
 
             assert name in field_help, name
 
-            # The Active switch and the email connection are not values with a label and a unit
-            if name in (Is_Active_Field, Email_Connection_Field):
+            # The Active switch and the connections are not values with a label and a unit
+            if name in (Is_Active_Field, Email_Connection_Field, LLM_Connection_Field):
                 continue
 
             label, unit = field_display[name]
@@ -105,6 +108,7 @@ class TestDefaults:
             'test_transfers': False,
             'use_llm': True,
             'email_connection': Email_Connection_Default,
+            'llm_connection': LLM_Connection_Default,
         }
 
 # ################################################################################################################################
@@ -156,8 +160,10 @@ class TestStorage:
 
         values = get_defaults(_alert_type)
         values['error_failures'] = 7
+        values['llm_connection'] = 'ops.llm'
 
         stored = to_storage(_alert_type, values)
+        assert stored['alert_llm_connection'] == 'ops.llm'
         assert from_storage(_alert_type, stored) == values
 
 # ################################################################################################################################

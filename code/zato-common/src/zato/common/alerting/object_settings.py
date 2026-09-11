@@ -9,14 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The per-object alert settings as the sweep reads them - what an object's Alerts tab or its enmasse
 # `alerts` block stored under the alert_ prefix, loaded once per sweep and turned into what the rule
 # engine and the collectors take: the rule defaults an object overrides, the rules it mutes, the window
-# it is measured over and the email connection its alerts leave through.
+# it is measured over and the email and LLM connections its alerts leave through.
 
 from __future__ import annotations
 
 # Zato
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import apply_defaults, conn_type_to_alert_type, Email_Connection_Field, \
-    from_storage, Is_Active_Field
+    from_storage, Is_Active_Field, LLM_Connection_Field
 from zato.common.odb.model import GenericConn
 from zato.common.util.file_transfer_scheduler import get_schedule_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -133,6 +133,14 @@ def get_email_connection(values:'stranydict') -> 'str':
     """ The encoded email connection an object's alerts leave through, empty when it has none of its own.
     """
     out = values[Email_Connection_Field]
+    return out
+
+# ################################################################################################################################
+
+def get_llm_connection(values:'stranydict') -> 'str':
+    """ The LLM connection that explains an object's alerts, empty when it has none of its own.
+    """
+    out = values[LLM_Connection_Field]
     return out
 
 # ################################################################################################################################

@@ -12,9 +12,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The tab is written as decision lines (static/js/common/decision-lines.js), one question
 # per line. A line's answer is either a switch, a summary link opening a popover micro-form
 # (static/js/common/micro-forms.js) with the numbers behind it, or a chip opening a panel
-# to pick from. The
-# rendered Django fields stay the single source of every value - the numbers and the
-# email select sit hidden under the lines and the popovers read and write them.
+# to pick a connection from. The rendered Django fields stay the single source of every
+# value - the numbers and the connection selects sit hidden under the lines and the popovers
+# and the panels read and write them.
 #
 # A page names its alert type and gets the form fields, the lines the template renders
 # and the configuration the tab's JavaScript reads, all from the one field definition
@@ -29,9 +29,9 @@ from django.urls import reverse
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import alert_type_file_transfer, Email_Conn_Separator, Email_Conn_Type_IMAP, \
     Email_Conn_Type_SMTP, Email_Connection_Field, encode_email_connection, field_display as shared_field_display, \
-    field_help, Field_Prefix, get_defaults as get_storage_defaults, get_field_names, Is_Active_Field, storage_name, \
-    Unit_Field_Suffix
-from zato.common.api import EMAIL
+    field_help, Field_Prefix, get_defaults as get_storage_defaults, get_field_names, Is_Active_Field, LLM_Connection_Field, \
+    storage_name, Unit_Field_Suffix
+from zato.common.api import EMAIL, GENERIC
 from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
@@ -88,30 +88,46 @@ Checkbox_On_Value = 'on'
 # ################################################################################################################################
 
 # The kinds a line of the tab can be of - a summary link opening a popover with the
-# numbers behind it, a switch answered on the spot, or a chip opening a panel to pick from.
+# numbers behind it, a switch answered on the spot, or a chip opening a panel to pick
+# a connection from.
 Line_Kind_Popover = 'popover'
 Line_Kind_Toggle = 'toggle'
-Line_Kind_Email = 'email'
+Line_Kind_Pick = 'pick'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The email connection select - what an empty group says and what the entry that opens the create form is named.
-Email_No_Selection_Value = ''
-Email_No_Selection_Label = 'Select a connection'
-Email_None_Value = 'zato-none'
-Email_None_Label = '(None)'
-Email_Create_New_Value = 'zato-create-new'
-Email_Create_New_Label = 'Add new ...'
+# The connection selects a pick line stands on - what an empty group says and what the entry
+# that opens the create form is named. The values are shared by every pick line, an email line
+# prefixes them with the kind of the connection and an LLM line carries them as they are.
+Pick_No_Selection_Value = ''
+Pick_No_Selection_Label = 'Select a connection'
+Pick_None_Value = 'zato-none'
+Pick_None_Label = '(None)'
+Pick_Create_New_Value = 'zato-create-new'
+Pick_Create_New_Label = 'Add new ...'
 
-# What the panel picking a connection is called and what a picked row says of itself
+# What a picked row says of itself in the panel
+Pick_Remove_Label = 'click to remove'
+
+# What the panels picking a connection are called
 Email_Panel_Title = 'Email connection'
-Email_Remove_Label = 'click to remove'
+LLM_Panel_Title = 'LLM connection'
 
-# The option groups of the select, in the order they are shown, each with the service listing its connections
+# The kind the one group of the LLM line goes by - an LLM value is a plain name, so the kind
+# only names the group in the panel and in the create link, it never enters the value.
+LLM_Group_Kind = 'llm'
+
+# The option groups of the email select, in the order they are shown, each with the service listing
+# its connections - an email value names both the kind and the connection, e.g. smtp:ops.smtp.
 _email_groups = [
     {'kind': Email_Conn_Type_SMTP, 'label': 'SMTP', 'url_name': 'email-smtp', 'service': 'zato.email.smtp.get-list'},
     {'kind': Email_Conn_Type_IMAP, 'label': 'Microsoft 365', 'url_name': 'email-imap', 'service': 'zato.email.imap.get-list'},
+]
+
+# The one group of the LLM select - every LLM connection there is, listed by the generic connection service
+_llm_groups = [
+    {'kind': LLM_Group_Kind, 'label': 'LLM', 'url_name': 'out-llm', 'service': 'zato.generic.connection.get-list'},
 ]
 
 # ################################################################################################################################
@@ -139,7 +155,7 @@ field_how_it_works[Arrival_Overdue_Unit_Field] = 'Whether the time a file may fa
 # ################################################################################################################################
 
 # The sections the lines of a tab are grouped under - the core settings first,
-# the switches and the email connection, then the thresholds that raise an alert.
+# the switches and the connections, then the thresholds that raise an alert.
 Section_Core = 'Core settings'
 Section_Thresholds = 'Thresholds'
 
@@ -149,7 +165,9 @@ Section_Thresholds = 'Thresholds'
 # `{field|singular|plural}` the value with the right one of the two nouns after it and
 # `{unit_field@count_field}` the count with the unit select's noun after it, in the singular
 # or the plural as the count says. A popover line with a `unit_field` shows that select
-# right after the last of its numbers.
+# right after the last of its numbers. A pick line names the groups of its panel and whether
+# its values carry the kind of the connection, and a line with a `depends_on` toggle is dimmed
+# while that toggle is off.
 # The Active line is a toggle like any other, only it is the one that dims the rest when off.
 type_lines = {
     alert_type_file_transfer: [
@@ -170,6 +188,18 @@ type_lines = {
             'how_it_works': field_how_it_works['use_llm'],
         },
         {
+            'name': 'llm',
+            'section': Section_Core,
+            'kind': Line_Kind_Pick,
+            'label': 'LLM connection',
+            'title': LLM_Panel_Title,
+            'fields': [LLM_Connection_Field],
+            'groups': _llm_groups,
+            'encode_kind': False,
+            'depends_on': 'use_llm',
+            'how_it_works': field_how_it_works[LLM_Connection_Field],
+        },
+        {
             'name': 'test_transfers',
             'section': Section_Core,
             'kind': Line_Kind_Toggle,
@@ -180,10 +210,12 @@ type_lines = {
         {
             'name': 'email',
             'section': Section_Core,
-            'kind': Line_Kind_Email,
+            'kind': Line_Kind_Pick,
             'label': 'Email connection',
             'title': Email_Panel_Title,
             'fields': [Email_Connection_Field],
+            'groups': _email_groups,
+            'encode_kind': True,
             'how_it_works': field_how_it_works[Email_Connection_Field],
         },
         {
@@ -357,7 +389,7 @@ def get_checkbox_field_names(alert_type:'str') -> 'strtuple':
 def pre_process_alert_item(alert_type:'str', name:'str', value:'any_') -> 'any_':
     """ One field of the tab as the backend stores it - a checkbox arrives as 'on' when checked and as nothing
     otherwise and becomes a boolean, a number arrives as text and becomes an integer, a unit and the email
-    connection travel as the strings they are.
+    and LLM connections travel as the strings they are.
     """
     if name in get_checkbox_field_names(alert_type):
         out = value == Checkbox_On_Value
@@ -430,29 +462,73 @@ def _get_email_connection_names(req:'any_', group:'anydict') -> 'strlist':
 
 # ################################################################################################################################
 
-def get_email_connection_choices(req:'any_') -> 'anylist':
-    """ The grouped choices of the email connection select - one group per kind of connection,
+def _get_llm_connection_names(req:'any_', group:'anydict') -> 'strlist':
+    """ The names of every LLM connection there is.
+    """
+    out:'strlist' = []
+
+    request = {
+        'cluster_id': req.zato.cluster_id,
+        'type_': GENERIC.CONNECTION.TYPE.OUTCONN_LLM,
+        'paginate': False,
+    }
+
+    response = req.zato.client.invoke(group['service'], request)
+
+    for item in response:
+        out.append(item.name)
+
+    return out
+
+# ################################################################################################################################
+
+def _get_connection_names(req:'any_', line:'anydict', group:'anydict') -> 'strlist':
+    """ The names of the connections of one group of a pick line, from whichever listing the line's field calls for.
+    """
+    if line['fields'][0] == Email_Connection_Field:
+        out = _get_email_connection_names(req, group)
+    else:
+        out = _get_llm_connection_names(req, group)
+
+    return out
+
+# ################################################################################################################################
+
+def encode_pick_value(line:'anydict', kind:'str', name:'str') -> 'str':
+    """ The value one entry of a pick line's select carries - the kind and the name on an email line,
+    the name alone on any other.
+    """
+    if line['encode_kind']:
+        out = encode_email_connection(kind, name)
+    else:
+        out = name
+
+    return out
+
+# ################################################################################################################################
+
+def get_pick_choices(req:'any_', line:'anydict') -> 'anylist':
+    """ The grouped choices of a pick line's select - one group per kind of connection,
     each listing its connections or saying that there are none, and each ending with the entry
     that opens the page where a new one is created.
     """
-    out:'anylist' = [(Email_No_Selection_Value, Email_No_Selection_Label)]
+    out:'anylist' = [(Pick_No_Selection_Value, Pick_No_Selection_Label)]
 
-    for group in _email_groups:
+    for group in line['groups']:
         kind = group['kind']
         options:'anylist' = []
 
-        names = _get_email_connection_names(req, group)
+        names = _get_connection_names(req, line, group)
 
         for name in names:
-            value = encode_email_connection(kind, name)
-            options.append((value, name))
+            options.append((encode_pick_value(line, kind, name), name))
 
         # An empty group says so instead of collapsing to only the create entry,
         # so that a reader can tell there are no such connections at a glance.
         if not names:
-            options.append((encode_email_connection(kind, Email_None_Value), Email_None_Label))
+            options.append((encode_pick_value(line, kind, Pick_None_Value), Pick_None_Label))
 
-        options.append((encode_email_connection(kind, Email_Create_New_Value), Email_Create_New_Label))
+        options.append((encode_pick_value(line, kind, Pick_Create_New_Value), Pick_Create_New_Label))
 
         out.append((group['label'], options))
 
@@ -460,13 +536,13 @@ def get_email_connection_choices(req:'any_') -> 'anylist':
 
 # ################################################################################################################################
 
-def get_email_groups() -> 'anylist':
-    """ The groups of the email select as the tab's JavaScript needs them - each kind with its label
+def get_pick_groups(line:'anydict') -> 'anylist':
+    """ The groups of a pick line as the tab's JavaScript needs them - each kind with its label
     and the page its create entry takes the user to, the kind's own page with its create form open.
     """
     out:'anylist' = []
 
-    for group in _email_groups:
+    for group in line['groups']:
         url = reverse(group['url_name'])
 
         out.append({
@@ -478,17 +554,45 @@ def get_email_groups() -> 'anylist':
     return out
 
 # ################################################################################################################################
+
+def get_pick_lines(alert_type:'str') -> 'anylist':
+    """ The pick lines of an alert type, in the order the tab lists them.
+    """
+    out:'anylist' = []
+
+    for line in type_lines[alert_type]:
+        if line['kind'] == Line_Kind_Pick:
+            out.append(line)
+
+    return out
+
 # ################################################################################################################################
 
-class EmailConnectionSelect(forms.Select):
-    """ The email connection select - the entry saying a group has no connections is there to be read, not chosen.
+def get_pick_field_names(alert_type:'str') -> 'strlist':
+    """ The fields the pick lines of an alert type stand on - the email and the LLM connection.
+    """
+    out:'strlist' = []
+
+    for line in get_pick_lines(alert_type):
+        out.append(line['fields'][0])
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ConnectionSelect(forms.Select):
+    """ The connection select of a pick line - the entry saying a group has no connections is there to be read, not chosen.
     """
     def create_option(self, name:'str', value:'any_', label:'any_', selected:'any_', index:'any_',
         subindex:'any_'=None, attrs:'any_'=None) -> 'anydict':
 
         out = super().create_option(name, value, label, selected, index, subindex=subindex, attrs=attrs)
 
-        if str(value).endswith(Email_Conn_Separator + Email_None_Value):
+        value = str(value)
+        is_none = value == Pick_None_Value or value.endswith(Email_Conn_Separator + Pick_None_Value)
+
+        if is_none:
             out['attrs']['disabled'] = True
 
         return out
@@ -497,7 +601,7 @@ class EmailConnectionSelect(forms.Select):
 
 def add_alerts_fields(form:'forms.Form', alert_type:'str', req:'any_') -> 'None':
     """ Adds the fields of the Alerts tab to a form - the active toggle first, then the type's
-    own numbers and toggles, the unit selects its lines name, then the email connection select.
+    own numbers and toggles, the unit selects its lines name, then the connection selects of the pick lines.
     """
     defaults = get_defaults(alert_type)
 
@@ -528,8 +632,9 @@ def add_alerts_fields(form:'forms.Form', alert_type:'str', req:'any_') -> 'None'
         form.fields[form_field_name(unit_field_name)] = forms.ChoiceField(
             required=False, choices=unit_field['choices'], initial=initial, widget=forms.Select())
 
-    form.fields[form_field_name(Email_Connection_Field)] = forms.ChoiceField(
-        required=False, choices=get_email_connection_choices(req), widget=EmailConnectionSelect())
+    for line in get_pick_lines(alert_type):
+        form.fields[form_field_name(line['fields'][0])] = forms.ChoiceField(
+            required=False, choices=get_pick_choices(req, line), widget=ConnectionSelect())
 
 # ################################################################################################################################
 
@@ -586,13 +691,17 @@ def get_alerts_tab_context(form:'forms.Form', alert_type:'str') -> 'anydict':
 
 def get_alerts_tab_config(alert_type:'str') -> 'anydict':
     """ What the tab's JavaScript needs to know about a page's alert fields - the lines with their
-    fields and summaries, what each field is called and what it means, how the email select encodes
-    its values and where its create entries lead, and which hidden cells of a row the fields travel in.
+    fields and summaries, what each field is called and what it means, how the pick lines encode
+    their values and where their create entries lead, and which hidden cells of a row the fields travel in.
     """
     field_kinds = get_field_kinds(alert_type)
 
     field_labels:'anydict' = {}
-    how_it_works_by_field:'anydict' = {Is_Active_Field: field_how_it_works[Is_Active_Field], Email_Connection_Field: field_how_it_works[Email_Connection_Field]}
+    how_it_works_by_field:'anydict' = {Is_Active_Field: field_how_it_works[Is_Active_Field]}
+
+    for line in get_pick_lines(alert_type):
+        pick_field_name = line['fields'][0]
+        how_it_works_by_field[pick_field_name] = field_how_it_works[pick_field_name]
 
     for field in get_type_fields(alert_type):
         name = field['name']
@@ -621,8 +730,14 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
             if 'unit_field' in line:
                 entry['unit_field'] = line['unit_field']
 
-        if line['kind'] == Line_Kind_Email:
+        if line['kind'] == Line_Kind_Pick:
             entry['title'] = line['title']
+            entry['field'] = line['fields'][0]
+            entry['groups'] = get_pick_groups(line)
+            entry['encode_kind'] = line['encode_kind']
+
+        if 'depends_on' in line:
+            entry['depends_on'] = line['depends_on']
 
         lines.append(entry)
 
@@ -631,20 +746,19 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
         'tab_label': Tab_Label,
         'field_prefix': Field_Prefix,
         'is_active_field': Is_Active_Field,
-        'email_field': Email_Connection_Field,
+        'pick_fields': get_pick_field_names(alert_type),
         'lines': lines,
         'field_kinds': field_kinds,
         'toggle_kinds': [config_map.Kind_Toggle, config_map.Kind_Ruleset_Toggle],
         'field_labels': field_labels,
         'field_how_it_works': how_it_works_by_field,
         'edit_hint': Edit_Hint,
-        'email_kind_separator': Email_Conn_Separator,
-        'email_no_selection_value': Email_No_Selection_Value,
-        'email_no_selection_label': Email_No_Selection_Label,
-        'email_none_value': Email_None_Value,
-        'email_create_new_value': Email_Create_New_Value,
-        'email_remove_label': Email_Remove_Label,
-        'email_groups': get_email_groups(),
+        'pick_kind_separator': Email_Conn_Separator,
+        'pick_no_selection_value': Pick_No_Selection_Value,
+        'pick_no_selection_label': Pick_No_Selection_Label,
+        'pick_none_value': Pick_None_Value,
+        'pick_create_new_value': Pick_Create_New_Value,
+        'pick_remove_label': Pick_Remove_Label,
         'storage_field_names': list(get_storage_field_names(alert_type)),
         'checkbox_field_names': list(get_checkbox_field_names(alert_type)),
     }

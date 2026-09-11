@@ -92,6 +92,13 @@
     pointer-events: none;
 }
 
+/* A line that depends on another toggle - the LLM connection on Use LLM - is
+   dimmed the same way while that toggle is off. */
+.data-popup .alerts-tab-panel .alerts-tab-line.alerts-tab-line-off {
+    opacity: var(--alerts-tab-off-opacity);
+    pointer-events: none;
+}
+
 /* ------------------------------------------------------------ */
 /* The popovers the numbers are edited in                        */
 /* ------------------------------------------------------------ */

@@ -25,7 +25,8 @@ from zato.common.audit_log.resubmit import is_event_type_resubmittable
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import any_, stranydict
+    any_ = any_
     Engine = Engine
     stranydict = stranydict
 
@@ -54,6 +55,39 @@ Probe_Source_Test_Transfer    = AuditSource.Test_Transfer
 
 # The attr the certificate probe writes its days-left measure under.
 Attr_Days_Left = 'days_left'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def is_source(source:'str') -> 'any_':
+    """ The predicate picking the rows of one audit source.
+    """
+    out = event_table.c.source == source
+    return out
+
+# ################################################################################################################################
+
+def is_object(object_name:'str') -> 'any_':
+    """ The predicate picking the rows about one object.
+    """
+    out = event_table.c.object_name == object_name
+    return out
+
+# ################################################################################################################################
+
+def is_failed() -> 'any_':
+    """ The predicate picking the rows that failed.
+    """
+    out = event_table.c.outcome == AuditOutcome.Error
+    return out
+
+# ################################################################################################################################
+
+def is_recent(window_start_iso:'str') -> 'any_':
+    """ The predicate picking the rows from the start of a window onwards.
+    """
+    out = event_table.c.event_time_iso >= window_start_iso
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

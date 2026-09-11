@@ -31,10 +31,10 @@ from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.alert_config import AlertConfigImporter
 from zato.common.alerting.config_map import is_rule_active, Explain_With_LLM_Key
 from zato.common.alerting.config_store import get_type_definition
-from zato.common.alerting.notification_config import parse_extra
+from zato.common.alerting.notification_config import parse_extra, read_notification_config
 from zato.common.alerting.sweep import load_alert_rules
-from zato.common.api import Alerting
-from zato.common.odb.model import Base, Cluster, IntervalBasedJob, Job, Service
+from zato.common.api import Alerting, GENERIC
+from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, IntervalBasedJob, Job, Service
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
@@ -58,6 +58,9 @@ engine_generator:TypeAlias = Generator[Engine, None, None]
 
 # The cluster the test job belongs to
 _cluster_id = 1
+
+# The LLM connection the notifications name as the deployment's default for explanations
+_llm_name = 'enmasse.alerts.default.llm'
 
 # The same YAML a person would write - the rule entries carry every field
 # of their type so the export at the end can be compared with them whole.
@@ -88,6 +91,7 @@ alert_notifications:
   email_to: ops@example.com
   email_from: alerts@example.com
   dashboard_url: https://dashboard.example.com
+  llm_connection: enmasse.alerts.default.llm
 """
 
 # ################################################################################################################################
@@ -139,6 +143,8 @@ def odb_session() -> 'any_':
         Service.__table__,
         Job.__table__,
         IntervalBasedJob.__table__,
+        GenericConnDef.__table__,
+        GenericConn.__table__,
     ]
     Base.metadata.create_all(engine, tables=tables)
 
@@ -147,6 +153,17 @@ def odb_session() -> 'any_':
 
     cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
     session.add(cluster)
+
+    llm = GenericConn()
+    llm.name = _llm_name
+    llm.type_ = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
+    llm.is_active = True
+    llm.is_internal = False
+    llm.is_channel = False
+    llm.is_outconn = True
+    llm.cluster = cluster
+    session.add(llm)
+
     session.commit()
 
     _ = ensure_alerting_job_exists(session, _cluster_id)
@@ -280,6 +297,45 @@ class TestAlertNotificationsImport:
         assert parsed[Alerting.Extra_Default_To] == yaml_config['alert_notifications']['email_to']
         assert parsed[Alerting.Extra_From] == yaml_config['alert_notifications']['email_from']
         assert parsed[Alerting.Extra_Dashboard_URL] == yaml_config['alert_notifications']['dashboard_url']
+        assert parsed[Alerting.Extra_LLM_Connection] == _llm_name
+
+# ################################################################################################################################
+
+    def test_a_missing_llm_connection_is_rejected(
+        self,
+        yaml_config:'stranydict',
+        odb_session:'any_',
+        alert_config_importer:'AlertConfigImporter',
+    ) -> 'None':
+
+        notifications = dict(yaml_config['alert_notifications'])
+        notifications['llm_connection'] = 'enmasse.no.such.llm'
+
+        with pytest.raises(Exception) as context:
+            _ = alert_config_importer.sync_alert_notifications(notifications, odb_session)
+
+        assert 'enmasse.no.such.llm' in str(context.value)
+
+# ################################################################################################################################
+
+    def test_an_empty_llm_connection_means_no_default(
+        self,
+        yaml_config:'stranydict',
+        odb_session:'any_',
+        alert_config_importer:'AlertConfigImporter',
+    ) -> 'None':
+
+        notifications = dict(yaml_config['alert_notifications'])
+        notifications['llm_connection'] = ''
+
+        changed = alert_config_importer.sync_alert_notifications(notifications, odb_session)
+        assert changed is True
+
+        job = odb_session.query(Job).filter(Job.name==Alerting.Job_Name).one()
+
+        # An empty value is not stored in the extra at all and reads back as empty
+        assert Alerting.Extra_LLM_Connection not in parse_extra(job.extra)
+        assert read_notification_config(job.extra)[Alerting.Extra_LLM_Connection] == ''
 
 # ################################################################################################################################
 

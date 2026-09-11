@@ -21,7 +21,7 @@ from traceback import format_exc
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common.alerting.names import get_llm_conn_name, get_notification_conn_name
+from zato.common.alerting.names import get_notification_conn_name
 from zato.common.api import GENERIC
 from zato.common.defaults import default_cluster_id
 from zato.common.demo.seed import Channel_Clinic, Channel_Lab, Channel_Main, Outconn_FHIR, Outconn_Forward
@@ -790,10 +790,10 @@ def is_cluster_empty(server:'ParallelServer') -> 'bool':
             count()
 
         # Generic connections - a new environment only has the inactive alert
-        # notification and LLM placeholders
+        # notification placeholders
         connection_count = session.query(GenericConn).\
             filter(GenericConn.is_internal.is_(False)).\
-            filter(GenericConn.name.notin_([get_notification_conn_name(), get_llm_conn_name()])).\
+            filter(GenericConn.name != get_notification_conn_name()).\
             filter(GenericConn.cluster_id==default_cluster_id).\
             count()
 

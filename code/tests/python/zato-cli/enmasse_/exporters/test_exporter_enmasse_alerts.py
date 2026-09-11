@@ -30,7 +30,7 @@ from zato.cli.enmasse.importers.sftp import SFTPImporter
 from zato.cli.enmasse.importers.smb import SMBImporter
 from zato.cli.enmasse.util import FileWriter
 from zato.common.alerting.object_config import Alerts_Key
-from zato.common.api import EMAIL
+from zato.common.api import EMAIL, GENERIC
 from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, SMTP
 
 # ################################################################################################################################
@@ -51,6 +51,9 @@ _cluster_id = 1
 # The SMTP connection the alerts mappings name
 _smtp_name = 'enmasse.alerts.export.smtp'
 
+# The LLM connection the first connection names for its explanations
+_llm_name = 'enmasse.alerts.export.llm'
+
 # One connection moving every alert setting away from its default, one moving a few of them
 # and one carrying no alerts mapping at all - the last one exports without the key.
 _yaml_text = f"""
@@ -68,6 +71,7 @@ sftp:
       test_transfers: true
       use_llm: false
       email_connection: smtp:{_smtp_name}
+      llm_connection: {_llm_name}
 
   - name: enmasse.alerts.export.sftp.2
     address: sftp.example.com
@@ -135,6 +139,16 @@ def session() -> 'any_':
     smtp.ping_address = 'ping@example.com'
     smtp.cluster = cluster
     session.add(smtp)
+
+    llm = GenericConn()
+    llm.name = _llm_name
+    llm.type_ = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
+    llm.is_active = True
+    llm.is_internal = False
+    llm.is_channel = False
+    llm.is_outconn = True
+    llm.cluster = cluster
+    session.add(llm)
 
     session.commit()
 
@@ -216,6 +230,7 @@ class TestAlertsExport:
             'test_transfers': True,
             'use_llm': False,
             'email_connection': f'smtp:{_smtp_name}',
+            'llm_connection': _llm_name,
         }
 
         assert item[Alerts_Key] == expected

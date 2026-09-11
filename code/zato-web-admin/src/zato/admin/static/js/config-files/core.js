@@ -810,9 +810,12 @@ tables.applyContents = function(table, content, parsed) {
     table.size = content.length;
     table.is_editable = content.length <= tables.state.maxEditableSize;
 
-    // Every file of a screen with a fixed kind is of that kind, whatever is typed into it
+    // Every file of a screen with a fixed kind keeps the kind it was listed under, whatever is typed
+    // into it, and a new file is of the screen's own kind
     if(config.fixedKind) {
-        table.kind = config.fixedKind;
+        if(!(table.kind in config.kindLabel)) {
+            table.kind = config.fixedKind;
+        }
         table.section_count = 0;
         table.entry_count = 0;
         return;

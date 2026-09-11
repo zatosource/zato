@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ServiceNow or whatever receives the webhook. There is no incidents screen,
 # so the URL config must not resolve any incidents path.
 
+# stdlib
+import os
+
 # Zato
 from zato.admin import urls
 
@@ -53,6 +56,24 @@ class TestNoIncidentsURLs:
         assert 'alert-rules-config' in names
         assert 'alert-rules-config-save' in names
         assert 'alert-rules-config-notifications-save' in names
+
+# ################################################################################################################################
+
+    def test_no_module_says_incidents(self) -> 'None':
+        """ The word left the code along with the screens - no Dashboard view module and
+        no internal service module is named after incidents.
+        """
+        import zato.admin.web.views as views_package
+        import zato.server.service.internal as internal_package
+
+        for package in [views_package, internal_package]:
+
+            package_directory = os.path.dirname(package.__file__)
+
+            for root, _, file_names in os.walk(package_directory):
+                for file_name in file_names:
+                    if file_name.endswith('.py'):
+                        assert 'incident' not in file_name, os.path.join(root, file_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

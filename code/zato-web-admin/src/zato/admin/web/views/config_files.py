@@ -100,6 +100,14 @@ class Definition:
 
 # ################################################################################################################################
 
+    def get_extra_context(self) -> 'anydict':
+        """ What the screen's template needs beyond what every screen on the kit gets.
+        """
+        out:'anydict' = {}
+        return out
+
+# ################################################################################################################################
+
     def get_full_path(self, directory:'str', file_name:'str') -> 'str':
         """ The full path to the file that the request names. A file name names a file and
         nothing else, and the directory it is in is one of the directories the screen works with.
@@ -290,6 +298,8 @@ def build_index_response(req:'any_', definition:'Definition') -> 'TemplateRespon
         'zato_clusters': True,
         'zato_template_name': definition.template_name,
     }
+
+    return_data.update(definition.get_extra_context())
 
     out = TemplateResponse(req, definition.template_name, return_data)
     return out
