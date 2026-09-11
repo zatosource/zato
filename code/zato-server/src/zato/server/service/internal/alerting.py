@@ -14,6 +14,8 @@ from contextlib import closing
 from zato.common.api import Alerting, EMAIL, FileTransfer
 from zato.common.alerting.engine import AlertDefaults
 from zato.common.alerting.notification_config import read_notification_config, set_notification_config
+from zato.common.alerting.object_config import alert_type_file_transfer
+from zato.common.alerting.object_settings import load_object_settings
 from zato.common.alerting.probes import parse_tls_target, run_certificate_probe, run_health_probe, run_test_transfer_probe
 from zato.common.alerting.rendering import Template_Dir_Name
 from zato.common.alerting.sweep import load_alert_rules, run_sweep
@@ -52,6 +54,9 @@ _graph_health_path = 'admin/serviceAnnouncement/healthOverviews'
 _test_transfer_file_name = 'zato-test-transfer.txt'
 _test_transfer_contents = b'zato-test-transfer'
 _test_transfer_extra_directory = 'directory'
+
+# The per-object toggle saying whether a connection takes part in the test transfers at all
+_test_transfers_field = 'test_transfers'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -265,9 +270,13 @@ class AlertingRun(AdminService):
         # The daily expectations of the schedules.
         schedule_expectations = self._get_schedule_expectations()
 
+        # What each object's own Alerts tab says - its thresholds, toggles, window and email connection.
+        with closing(self.odb.session()) as session:
+            object_settings = load_object_settings(session, self.server.cluster_id)
+
         result = run_sweep(engine, rules, metrics_by_name, AuditSource.MLLP_Channel, transports, audit_log, self.cid, now,
             defaults=defaults, dashboard_url=dashboard_url, template_dir=template_dir, job_intervals=job_intervals,
-            arrival_windows=arrival_windows, schedule_expectations=schedule_expectations)
+            arrival_windows=arrival_windows, schedule_expectations=schedule_expectations, object_settings=object_settings)
 
         rule_label       = pluralize(result.rule_count, 'rule')
         fact_label       = pluralize(result.fact_count, 'fact')
@@ -421,17 +430,35 @@ class AlertingMicrosoftHealth(AdminService):
 # ################################################################################################################################
 
 class AlertingTestTransfer(AdminService):
-    """ Runs one test transfer per active file transfer connection - upload, download,
-    compare and delete a small test file - writing each outcome as an audit event the
-    test transfer collector reads and rule Test_Transfer_Failing compares. The job ships
-    inactive, like the rule, and both are activated together.
+    """ Runs one test transfer per active file transfer connection that opted in through its
+    own Alerts tab - upload, download, compare and delete a small test file - writing each
+    outcome as an audit event the test transfer collector reads and rule Test_Transfer_Failing
+    compares. The job ships inactive, like the rule, and both are activated together.
     """
     name = Alerting.Test_Transfer_Service
+
+    def _wants_test_transfer(self, settings_by_object:'anydict', conn_name:'str') -> 'bool':
+        """ Whether a connection's own settings say the test transfers run against it -
+        a connection the settings do not know, e.g. one created during the sweep, is left alone.
+        """
+        if conn_name not in settings_by_object:
+            return False
+
+        out = settings_by_object[conn_name][_test_transfers_field] is True
+        return out
+
+# ################################################################################################################################
 
     def handle(self) -> 'None':
 
         now = utcnow()
         audit_log = AuditLog(self.server.name)
+
+        # Which connections opted in - the test transfer writes to the remote system, so each object says so itself.
+        with closing(self.odb.session()) as session:
+            object_settings = load_object_settings(session, self.server.cluster_id)
+
+        settings_by_object = object_settings[alert_type_file_transfer]
 
         # The test transfer file's remote directory comes from the job's extra data when given.
         context = self.request.payload
@@ -459,6 +486,9 @@ class AlertingTestTransfer(AdminService):
             if not item['is_active']:
                 continue
 
+            if not self._wants_test_transfer(settings_by_object, conn_name):
+                continue
+
             def transfer_smb(conn_name:'str'=conn_name) -> 'None':
                 conn = self.smb[conn_name]
                 conn.write(_test_transfer_contents, remote_path)
@@ -480,6 +510,9 @@ class AlertingTestTransfer(AdminService):
             if not item['is_active']:
                 continue
 
+            if not self._wants_test_transfer(settings_by_object, conn_name):
+                continue
+
             def transfer_sftp(conn_name:'str'=conn_name) -> 'None':
                 conn = self.sftp[conn_name]
                 conn.write(_test_transfer_contents, remote_path, overwrite=True)
@@ -499,6 +532,9 @@ class AlertingTestTransfer(AdminService):
             item = outconn_ftp[conn_name]
 
             if not item['is_active']:
+                continue
+
+            if not self._wants_test_transfer(settings_by_object, conn_name):
                 continue
 
             def transfer_ftp(conn_name:'str'=conn_name) -> 'None':

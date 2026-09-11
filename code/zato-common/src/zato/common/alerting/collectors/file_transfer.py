@@ -63,9 +63,11 @@ def collect_file_transfer_facts(
     arrival_windows:'strintdict',
     schedule_expectations:'anydict | None' = None,
     run_window_seconds:'int' = Default_Window_Seconds,
+    run_window_seconds_by_object:'strintdict | None' = None,
     ) -> 'dictlist':
     """ The arrival, expectation and run facts of each schedule and the quarantine and verification facts
-    of each connection. The in-window run counts cover run_window_seconds, the window the type's failure rules carry.
+    of each connection. The in-window run counts cover run_window_seconds, the window the type's failure rules carry,
+    or a schedule's own window when it has one, by schedule name.
     """
 
     # Our response to produce
@@ -74,9 +76,12 @@ def collect_file_transfer_facts(
     if schedule_expectations is None:
         schedule_expectations = {}
 
+    if run_window_seconds_by_object is None:
+        run_window_seconds_by_object = {}
+
     arrival_facts = _collect_arrival_facts(engine, now, arrival_windows)
     expectation_facts = _collect_expectation_facts(engine, now, schedule_expectations)
-    run_facts = _collect_run_facts(engine, now, run_window_seconds)
+    run_facts = _collect_run_facts(engine, now, run_window_seconds, run_window_seconds_by_object)
     connection_facts = _collect_connection_facts(engine, now)
 
     out.extend(arrival_facts)
@@ -223,22 +228,37 @@ def _collect_expectation_facts(engine:'Engine', now:'datetime', schedule_expecta
 
 # ################################################################################################################################
 
-def _collect_run_facts(engine:'Engine', now:'datetime', run_window_seconds:'int') -> 'dictlist':
+def _collect_run_facts(
+    engine:'Engine',
+    now:'datetime',
+    run_window_seconds:'int',
+    run_window_seconds_by_object:'strintdict | None' = None,
+    ) -> 'dictlist':
     """ The newest run's status, the list-failed streak and the in-window counts of failed runs, failed files
-    and interrupted runs, per schedule.
+    and interrupted runs, per schedule - each schedule counted over its own window when it has one.
     """
 
     # Our response to produce
     out:'dictlist' = []
 
-    # The rows read must reach back as far as the counted window does
-    read_window_seconds = max(Run_Facts_Window_Seconds, run_window_seconds)
+    if run_window_seconds_by_object is None:
+        run_window_seconds_by_object = {}
+
+    # The rows read must reach back as far as the longest counted window does
+    read_window_seconds = max(Run_Facts_Window_Seconds, run_window_seconds, *run_window_seconds_by_object.values())
 
     since = now - timedelta(seconds=read_window_seconds)
     since_iso = since.isoformat()
 
+    # Where each schedule's window starts - the type's window unless the schedule has one of its own
     window_start = now - timedelta(seconds=run_window_seconds)
     window_start_iso = window_start.isoformat()
+
+    window_start_iso_by_object:'strstrdict' = {}
+
+    for object_name, object_window in run_window_seconds_by_object.items():
+        object_window_start = now - timedelta(seconds=object_window)
+        window_start_iso_by_object[object_name] = object_window_start.isoformat()
 
     # The run rows of every schedule, newest first.
     is_source = event_table.c.source == AuditSource.File_Outgoing
@@ -277,8 +297,13 @@ def _collect_run_facts(engine:'Engine', now:'datetime', run_window_seconds:'int'
             files_failed[schedule_name] = 0
             runs_interrupted[schedule_name] = 0
 
-        # The in-window counts.
-        if event_time_iso >= window_start_iso:
+        # The in-window counts, over the schedule's own window when it has one.
+        if schedule_name in window_start_iso_by_object:
+            schedule_window_start_iso = window_start_iso_by_object[schedule_name]
+        else:
+            schedule_window_start_iso = window_start_iso
+
+        if event_time_iso >= schedule_window_start_iso:
 
             if outcome == AuditOutcome.Error:
                 runs_failed[schedule_name] += 1

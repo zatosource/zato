@@ -36,6 +36,7 @@ $.fn.zato.data_table.FTP = new Class({
 // /////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
+    $.fn.zato.alerts_tab.init({config_id: 'out-ftp-alerts-tab-config'});
     $.fn.zato.time_ago.init_table('#data-table');
     $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.FTP;
@@ -77,23 +78,55 @@ $.fn.zato.outgoing.ftp.field_descriptions = {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The tabs of the create and edit dialogs - the connection itself and its alert settings
+$.fn.zato.outgoing.ftp.tab_labels = function() {
+    var out = {
+        main:   'Main',
+        alerts: $.fn.zato.alerts_tab.tab_label()
+    };
+    return out;
+}
+
+$.fn.zato.outgoing.ftp._reset_tabs = function(action) {
+    $.fn.zato.form_tabs.reset({
+        div_id:       '#' + action + '-div',
+        panel_prefix: 'out-ftp-' + action + '-tab-panel-',
+        default_tab:  'main',
+        tab_labels:   $.fn.zato.outgoing.ftp.tab_labels()
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.ftp.create = function() {
+    $.fn.zato.outgoing.ftp._reset_tabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing FTP connection', null);
+    $.fn.zato.alerts_tab.bind({
+        panel_id: 'out-ftp-create-tab-panel-alerts',
+        field_prefix: ''
+    });
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
         divId: '#create-div',
-        descriptions: $.fn.zato.outgoing.ftp.field_descriptions
+        fieldSelector: 'table.form-data tr, .decision-line',
+        descriptions: $.extend({}, $.fn.zato.outgoing.ftp.field_descriptions, $.fn.zato.alerts_tab.descriptions())
     });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.ftp.edit = function(id) {
+    $.fn.zato.outgoing.ftp._reset_tabs('edit');
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing FTP connection', id);
+    $.fn.zato.alerts_tab.bind({
+        panel_id: 'out-ftp-edit-tab-panel-alerts',
+        field_prefix: 'edit-'
+    });
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',
         divId: '#edit-div',
-        descriptions: $.fn.zato.outgoing.ftp.field_descriptions
+        fieldSelector: 'table.form-data tr, .decision-line',
+        descriptions: $.extend({}, $.fn.zato.outgoing.ftp.field_descriptions, $.fn.zato.alerts_tab.descriptions())
     });
 }
 
@@ -166,6 +199,9 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, includeTr) {
     row += String.format("<td class='ignore'>{0}</td>", item.use_ssl == true);
     row += String.format("<td class='ignore'>{0}</td>", item.should_store_content == true);
     row += String.format("<td class='ignore'>{0}</td>", item.verify_how);
+
+    // 6 - the Alerts tab
+    row += $.fn.zato.alerts_tab.hidden_cells(item);
 
     if(includeTr) {
         row += '</tr>';

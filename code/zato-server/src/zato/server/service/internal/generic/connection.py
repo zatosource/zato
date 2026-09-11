@@ -17,6 +17,7 @@ from uuid import uuid4
 # Zato
 from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, query_parameters, \
      SEC_DEF_TYPE, Sec_Def_Type_Name, ZATO_NONE
+from zato.common.alerting.object_config import apply_defaults, conn_type_to_alert_type
 from zato.common.as2.rotation import complete_rotation, needs_rotation_completion
 from zato.common.audit_log.common import AuditEvent
 from zato.common.broker_message import GENERIC
@@ -615,8 +616,14 @@ class GetList(AdminService):
                     else:
                         conn_dict[service_attr] = service_name
 
-        # .. add custom fields that do not exist in the database.
+        # .. add custom fields that do not exist in the database ..
         self._add_custom_conn_dict_fields(conn_dict)
+
+        # .. and an object whose type has alert settings carries every one of them, the ones it was
+        # never given at their defaults, so that the Dashboard and enmasse read a complete picture.
+        conn_type = conn_dict['type_']
+        if conn_type in conn_type_to_alert_type:
+            apply_defaults(conn_type_to_alert_type[conn_type], conn_dict)
 
 # ################################################################################################################################
 # ################################################################################################################################

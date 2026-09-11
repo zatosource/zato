@@ -53,7 +53,7 @@ class CreateForm(forms.Form):
         self.fields['verify_how'].choices = choices
 
         # The Alerts tab - the file transfer thresholds, toggles and the email connection
-        alerts_tab.add_alerts_fields(self, alerts_tab.alert_type_file_transfer)
+        alerts_tab.add_alerts_fields(self, alerts_tab.alert_type_file_transfer, req)
 
 # ################################################################################################################################
 # ################################################################################################################################

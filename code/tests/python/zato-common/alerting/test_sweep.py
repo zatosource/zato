@@ -17,6 +17,8 @@ from zato.common.alerting.collectors import new_fact
 from zato.common.alerting.config_map import Explain_With_LLM_Key
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.model import AlertAction
+from zato.common.alerting.object_config import alert_type_file_transfer, encode_email_connection, Email_Conn_Type_IMAP, \
+    get_defaults as get_object_defaults
 from zato.common.alerting.sweep import build_fact_message, build_finding_link, read_outcome, run_sweep
 from zato.common.api import Alerting, Incidents
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
@@ -30,11 +32,18 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 
 if 0:
-    from zato.common.alerting.sweep import rule_engine_rule_list
-    from zato.common.typing_ import anylist, stranydict
+    from datetime import datetime
+    from sqlalchemy.engine import Engine
+    from zato.common.alerting.sweep import rule_engine_rule_list, SweepResult
+    from zato.common.typing_ import any_, anydict, anylist, stranydict
+    any_ = any_
+    anydict = anydict
     anylist = anylist
+    datetime = datetime
+    Engine = Engine
     rule_engine_rule_list = rule_engine_rule_list
     stranydict = stranydict
+    SweepResult = SweepResult
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,6 +112,7 @@ class _TransportRecorder:
     """
     def __init__(self) -> 'None':
         self.emails:'anylist' = []
+        self.email_connections:'anylist' = []
         self.invocations:'anylist' = []
         self.publications:'anylist' = []
         self.posts:'anylist' = []
@@ -110,8 +120,9 @@ class _TransportRecorder:
     def make(self) -> 'AlertTransports':
         out = AlertTransports()
 
-        def send_email(addresses:'anylist', subject:'str', body:'str') -> 'None':
+        def send_email(addresses:'anylist', subject:'str', body:'str', email_connection:'str'='') -> 'None':
             self.emails.append((addresses, subject, body))
+            self.email_connections.append(email_connection)
 
         def invoke_service(service:'str', payload:'stranydict') -> 'None':
             self.invocations.append((service, payload))
@@ -599,6 +610,237 @@ class TestRunSweep:
 
         assert result.raised_count == 0
         assert recorder.emails == []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The connection the object settings tests seed failures for
+_settings_object_name = 'sftp.settings'
+
+# The other connection the same tests seed the same failures for, without settings of its own
+_settings_other_name = 'sftp.other'
+
+# The email connection the settings send the alerts through
+_settings_imap_name = 'Ops mailbox'
+
+# ################################################################################################################################
+
+def _seed_transfer_failure(audit_log:'AuditLog', engine:'Engine', now:'datetime', object_name:'str', *, cid:'str',
+    seconds_back:'int'=0) -> 'None':
+    """ Stores one failed file transfer, moved back in time if asked to.
+    """
+    event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, object_name, cid=cid,
+        outcome=AuditOutcome.Error)
+
+    if seconds_back:
+        statement = update(event_table)
+        statement = statement.where(event_table.c.id == event_id)
+        statement = statement.values(event_time_iso=(now - timedelta(seconds=seconds_back)).isoformat())
+
+        with engine.begin() as connection:
+            _ = connection.execute(statement)
+
+# ################################################################################################################################
+
+def _new_object_settings(**values:'any_') -> 'anydict':
+    """ The object settings of one file transfer connection at the defaults, with the given values on top.
+    """
+    settings = get_object_defaults(alert_type_file_transfer)
+    settings.update(values)
+
+    out = {alert_type_file_transfer: {_settings_object_name: settings}}
+    return out
+
+# ################################################################################################################################
+
+def _run_settings_sweep(engine:'Engine', audit_log:'AuditLog', now:'datetime', rules_text:'str', cid:'str',
+    object_settings:'anydict | None') -> 'tuple[SweepResult, _TransportRecorder]':
+    """ Runs one sweep of the file transfer ruleset with the given object settings.
+    """
+    defaults = AlertDefaults()
+    defaults.email_to = _addresses
+
+    recorder = _TransportRecorder()
+    rules = _load_rules(rules_text, 'alerts_file_transfer')
+
+    result = run_sweep(engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, cid, now,
+        defaults=defaults, object_settings=object_settings)
+
+    return result, recorder
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestObjectSettings:
+
+    def test_an_inactive_object_raises_nothing_while_the_others_still_do(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-inactive-1')
+        _seed_transfer_failure(audit_log, engine, now, _settings_other_name, cid='settings-inactive-2')
+
+        object_settings = _new_object_settings(is_active=False)
+        rules_text = _window_rules_text.format(window_seconds=86400)
+
+        result, recorder = _run_settings_sweep(engine, audit_log, now, rules_text, 'cid-settings-inactive', object_settings)
+
+        assert result.raised_count == 1
+        assert len(recorder.emails) == 1
+
+        _, _, body = recorder.emails[0]
+        assert _settings_other_name in body
+        assert _settings_object_name not in body
+
+# ################################################################################################################################
+
+    def test_a_toggle_that_is_off_mutes_its_rule_for_that_object(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-toggle-1')
+
+        # Off - the rule the toggle stands for never sees the object ..
+        object_settings = _new_object_settings(test_transfers=False)
+        result, recorder = _run_settings_sweep(engine, audit_log, now, _toggle_rules_text, 'cid-settings-toggle-1',
+            object_settings)
+
+        assert result.raised_count == 0
+        assert recorder.emails == []
+
+        # .. on - it does.
+        object_settings = _new_object_settings(test_transfers=True)
+        result, recorder = _run_settings_sweep(engine, audit_log, now, _toggle_rules_text, 'cid-settings-toggle-2',
+            object_settings)
+
+        assert result.raised_count == 1
+        assert len(recorder.emails) == 1
+
+# ################################################################################################################################
+
+    def test_the_objects_own_number_stands_in_for_the_rules_default(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-threshold-1')
+
+        # The rule asks for five failures and there is one - nothing without settings ..
+        rules_text = _threshold_rules_text.format(warning_failure_count=5)
+        result, recorder = _run_settings_sweep(engine, audit_log, now, rules_text, 'cid-settings-threshold-1', None)
+
+        assert result.raised_count == 0
+
+        # .. and an alert once the object itself asks for one.
+        object_settings = _new_object_settings(warning_failures=1)
+        result, recorder = _run_settings_sweep(engine, audit_log, now, rules_text, 'cid-settings-threshold-2',
+            object_settings)
+
+        assert result.raised_count == 1
+        assert len(recorder.emails) == 1
+
+# ################################################################################################################################
+
+    def test_the_objects_own_window_is_what_it_is_measured_over(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A failure two hours back for both connections
+        _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-window-1', seconds_back=7200)
+        _seed_transfer_failure(audit_log, engine, now, _settings_other_name, cid='settings-window-2', seconds_back=7200)
+
+        # The ruleset measures over a day, the object over ten minutes - only the other connection is in the window
+        object_settings = _new_object_settings(warning_failures=1, window=600)
+        rules_text = _window_rules_text.format(window_seconds=86400)
+
+        result, recorder = _run_settings_sweep(engine, audit_log, now, rules_text, 'cid-settings-window-1', object_settings)
+
+        assert result.raised_count == 1
+
+        _, _, body = recorder.emails[0]
+        assert _settings_other_name in body
+        assert 'over 86400s' in body
+
+        # The other way round - the ruleset measures over ten minutes, the object over a day
+        object_settings = _new_object_settings(warning_failures=1, window=86400)
+        rules_text = _window_rules_text.format(window_seconds=600)
+
+        result, recorder = _run_settings_sweep(engine, audit_log, now, rules_text, 'cid-settings-window-2', object_settings)
+
+        assert result.raised_count == 1
+
+        _, _, body = recorder.emails[0]
+        assert _settings_object_name in body
+        assert 'over 86400s' in body
+
+# ################################################################################################################################
+
+    def test_the_objects_own_email_connection_reaches_the_transport(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-email-1')
+        _seed_transfer_failure(audit_log, engine, now, _settings_other_name, cid='settings-email-2')
+
+        email_connection = encode_email_connection(Email_Conn_Type_IMAP, _settings_imap_name)
+        object_settings = _new_object_settings(warning_failures=1, email_connection=email_connection)
+        rules_text = _window_rules_text.format(window_seconds=86400)
+
+        result, recorder = _run_settings_sweep(engine, audit_log, now, rules_text, 'cid-settings-email', object_settings)
+
+        assert result.raised_count == 2
+
+        # The object's alert names its connection, the other one leaves through the default
+        by_object = {}
+        for (_, _, body), connection in zip(recorder.emails, recorder.email_connections):
+            if _settings_object_name in body:
+                by_object[_settings_object_name] = connection
+            else:
+                by_object[_settings_other_name] = connection
+
+        assert by_object == {_settings_object_name: email_connection, _settings_other_name: ''}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The rule the toggle test matches through - the seeded Test_Transfer_Failing rule's name over
+# a plain failure count, so the test transfers toggle is what decides whether it fires.
+_toggle_rules_text = """
+rule
+    Test_Transfer_Failing
+docs
+    A connection with any failed transfer raises an email alert.
+defaults
+    window_seconds = 86400
+when
+    alert.source is 'file-outgoing' and
+    alert.error_count is at least 1
+then
+    outcome.action = 'email'
+    outcome.severity = 'warning'
+""".strip()
+
+# The rule the threshold test matches through - the seeded Transfer_Failures rule's shape with
+# the warning count left to the test, so an object's own number can stand in for it.
+_threshold_rules_text = """
+rule
+    Transfer_Failures
+docs
+    A file transfer connection with enough failed transfers within the window raises an email alert.
+defaults
+    warning_failure_count = {warning_failure_count}
+    window_seconds = 86400
+when
+    alert.source is 'file-outgoing' and
+    alert.error_count is at least default.warning_failure_count
+then
+    outcome.action = 'email'
+    outcome.severity = 'warning'
+""".strip()
 
 # ################################################################################################################################
 # ################################################################################################################################

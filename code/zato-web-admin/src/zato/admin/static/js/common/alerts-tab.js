@@ -35,6 +35,10 @@
 //     // When building the how-it-works descriptions
 //     var descriptions = $.extend({}, own_descriptions, $.fn.zato.alerts_tab.descriptions());
 //
+//     // The hidden columns of a row the edit form is populated from
+//     get_columns: [..., ...$.fn.zato.alerts_tab.columns()]
+//     new_row: row += $.fn.zato.alerts_tab.hidden_cells(item);
+//
 // The field_prefix is the Django form prefix with its trailing dash, the empty
 // string for the create form and 'edit-' for the edit form.
 //
@@ -72,7 +76,12 @@ $.fn.zato.alerts_tab.config = {
     // The summary of a popover line - `{field}` is a value, `{field|singular|plural}` a
     // value with the right noun after it and `{unit_field@count_field}` a count with the
     // unit select's noun after it, the option's value being the singular and its label the plural
-    summary_token: /\{([a-z_]+)(?:@([a-z_]+))?(?:\|([^|}]+)\|([^}]+))?\}/g
+    summary_token: /\{([a-z_]+)(?:@([a-z_]+))?(?:\|([^|}]+)\|([^}]+))?\}/g,
+
+    // What a hidden cell says of a checkbox, which is what the edit form reads a boolean back from
+    cell_true: 'True',
+    cell_false: 'False',
+    cell_empty: ''
 };
 
 // What the Django side told us about the page's alert fields
@@ -109,6 +118,45 @@ $.fn.zato.alerts_tab.init = function(options) {
 // What the tab is called in a dialog's tab strip
 $.fn.zato.alerts_tab.tab_label = function() {
     var out = $.fn.zato.alerts_tab.settings.tab_label;
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The hidden columns of a row the tab's fields travel in, in the order the Django
+// side lists them - what a page appends to its get_columns
+$.fn.zato.alerts_tab.columns = function() {
+    var out = $.fn.zato.alerts_tab.settings.storage_field_names.slice();
+    return out;
+}
+
+// The hidden cells of a new row, one per column above - a checkbox reads as True
+// or False, anything else as the value the form holds, so that the edit form
+// populated from the row reads the way the dialog that made it did
+$.fn.zato.alerts_tab.hidden_cells = function(item) {
+
+    var tab = $.fn.zato.alerts_tab;
+    var settings = tab.settings;
+    var out = '';
+
+    settings.storage_field_names.forEach(function(field_name) {
+
+        var value = item[field_name];
+        var text;
+
+        if(settings.checkbox_field_names.indexOf(field_name) !== -1) {
+            text = value == true ? tab.config.cell_true : tab.config.cell_false;
+        }
+        else if(value === undefined) {
+            text = tab.config.cell_empty;
+        }
+        else {
+            text = value;
+        }
+
+        out += String.format("<td class='ignore'>{0}</td>", text);
+    });
+
     return out;
 }
 

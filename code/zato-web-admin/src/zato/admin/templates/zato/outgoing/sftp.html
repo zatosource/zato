@@ -1,4 +1,5 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
 {% block html_title %}SFTP outconns{% endblock %}
 
@@ -84,7 +85,9 @@
             'ignore_host_key_changes',
             'should_store_content',
             'verify_how',
-        ]
+
+            {% comment %} 7 - the Alerts tab {% endcomment %}
+        ].concat($.fn.zato.alerts_tab.columns());
     }
     </script>
 
@@ -146,6 +149,11 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} 7 - the Alerts tab {% endcomment %}
+                        {% for field_name in alerts_tab_config.storage_field_names %}
+                        <th class='ignore'>&nbsp;</th>
+                        {% endfor %}
+
                 </thead>
 
                 <tbody>
@@ -186,6 +194,11 @@
                         <td class='ignore'>{{ item.ignore_host_key_changes }}</td>
                         <td class='ignore'>{{ item.should_store_content }}</td>
                         <td class='ignore'>{{ item.verify_how }}</td>
+
+                        {% comment %} 7 - the Alerts tab {% endcomment %}
+                        {% for field_name in alerts_tab_config.storage_field_names %}
+                        <td class='ignore'>{{ item|get_item:field_name }}</td>
+                        {% endfor %}
 
                     </tr>
                 {% endfor %}
@@ -332,6 +345,13 @@
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "out-sftp-edit" %}" method="post" id="edit-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-sftp-edit-tab-panel-main" role="tabpanel">
                     <table class="form-data">
 
                         <tr>
@@ -428,6 +448,12 @@
                             </td>
                         </tr>
 
+                    </table>
+                    </div>
+
+                    {% include "zato/shared/alerts-tab.html" with panel_id="out-sftp-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
+
+                    <table class="form-data">
                         <tr>
                             <td style="text-align:left;vertical-align:middle">
                                 <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
@@ -437,8 +463,8 @@
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>
-
                     </table>
+
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>

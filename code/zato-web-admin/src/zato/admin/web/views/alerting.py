@@ -25,6 +25,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.rule_store import get_backend
 from zato.admin.web.views import method_allowed
 from zato.common.alerting import config_map
+from zato.common.alerting.object_config import field_display
 from zato.common.alerting.config_store import apply_type_config, NoSuchRulesetError
 from zato.common.alerting.notification_config import notification_keys
 from zato.common.api import Alerting
@@ -105,30 +106,12 @@ _type_titles = {
     'common':        'Common',
 }
 
-# What each screen cell says - the label next to the value and the unit suffix after it
-_field_display = {
-    'consecutive_failures': ('Consecutive failures', ''),
-    'error_rate':           ('Error rate', '%'),
-    'max_latency':          ('Max latency', ' ms'),
-    'max_query_time':       ('Max query time', ' ms'),
-    'warning_latency':      ('Warning latency', ' ms'),
-    'error_latency':        ('Error latency', ' ms'),
-    'max_tool_call_time':   ('Max tool-call time', ' ms'),
-    'health_alerts':        ('Health alerts', ''),
-    'max_call_time':        ('Max call time', ' ms'),
-    'auth_failures':        ('Auth failures', ''),
-    'warning_failures':     ('Warning failures', ''),
-    'error_failures':       ('Error failures', ''),
-    'window':               ('Window', ''),
-    'arrival_overdue':      ('Arrival overdue', ''),
-    'test_transfers':       ('Test transfers', ''),
-    'overdue_multiplier':   ('Overdue multiplier', ''),
-    'start_delay':          ('Start delay', ' ms'),
-    'certificate_warning':  ('Certificate warning', ' days'),
-    'outstanding_backlog':  ('Outstanding backlog', ''),
-    'feed_silence':         ('Feed silence', ' s'),
-    'use_llm':              ('LLM', ''),
-}
+# What the alert rules screen calls the LLM cell - shorter than the tab's label, the column being narrow
+_llm_field_name = 'use_llm'
+_llm_cell_label = 'LLM'
+
+# The one unit that sits right against its value rather than a space away from it
+_percent_unit = '%'
 
 # The five cell slots of each type's row - the columns line up across the rows,
 # so a type without a value in some column carries a placeholder there.
@@ -184,8 +167,19 @@ def _build_config_cell(field_name:'str', kind:'str', values:'stranydict') -> 'st
     if field_name not in values:
         return None
 
-    label, suffix = _field_display[field_name]
+    label, unit = field_display[field_name]
     value = values[field_name]
+
+    # The suffix sits right after the value, so a unit is set off by a space and a percent sign is not
+    if unit == _percent_unit:
+        suffix = unit
+    elif unit:
+        suffix = ' ' + unit
+    else:
+        suffix = ''
+
+    if field_name == _llm_field_name:
+        label = _llm_cell_label
 
     # Our response to produce
     out = {

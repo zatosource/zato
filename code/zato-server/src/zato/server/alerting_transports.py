@@ -16,6 +16,7 @@ import requests
 # Zato
 from zato.common.alerting.engine import AlertTransports
 from zato.common.alerting.names import get_notification_conn_name
+from zato.common.alerting.object_config import decode_email_connection, Email_Conn_Type_IMAP, Email_Conn_Type_SMTP
 from zato.common.api import SMTPMessage
 
 # ################################################################################################################################
@@ -39,27 +40,46 @@ def build_alert_transports(service:'Service', email_from:'str') -> 'AlertTranspo
     Microsoft Teams ride on the connections that share the default notification name,
     next to the server's own invoker, pub/sub and HTTP for plain webhooks. Each callable
     returns without delivering when its connection does not exist or is inactive.
+    An email about an object with an email connection of its own leaves through that
+    connection instead - an SMTP one, or a Microsoft 365 one sending through Graph.
     """
     conn_name = get_notification_conn_name()
     logger = service.logger
 
-    def send_email(addresses:'strlist', subject:'str', body:'str') -> 'None':
+    def send_email(addresses:'strlist', subject:'str', body:'str', email_connection:'str'='') -> 'None':
 
         # The email component may be disabled in server.conf.
         if not service.email:
             logger.info('Could not send an alerting email; is component_enabled.email set to True in server.conf?')
             return
 
+        # The default notification connection is an SMTP one, an object's own names its kind itself.
+        if email_connection:
+            kind, name = decode_email_connection(email_connection)
+        else:
+            kind = Email_Conn_Type_SMTP
+            name = conn_name
+
+        if kind == Email_Conn_Type_SMTP:
+            store = service.email.smtp
+            kind_label = 'SMTP'
+        elif kind == Email_Conn_Type_IMAP:
+            store = service.email.imap
+            kind_label = 'Microsoft 365'
+        else:
+            logger.info('Email connection `%s` is of an unknown kind, skipping an email to `%s`', email_connection, addresses)
+            return
+
         # A connection that does not exist sends nothing ..
         try:
-            smtp_item = service.email.smtp.get(conn_name, True)
+            item = store.get(name, True)
         except KeyError:
-            logger.info('No SMTP connection `%s` exists, skipping an email to `%s`', conn_name, addresses)
+            logger.info('No %s connection `%s` exists, skipping an email to `%s`', kind_label, name, addresses)
             return
 
         # .. and neither does an inactive one.
-        if not smtp_item.config['is_active']:
-            logger.info('SMTP connection `%s` is inactive, skipping an email to `%s`', conn_name, addresses)
+        if not item.config['is_active']:
+            logger.info('%s connection `%s` is inactive, skipping an email to `%s`', kind_label, name, addresses)
             return
 
         message = SMTPMessage()
@@ -68,7 +88,7 @@ def build_alert_transports(service:'Service', email_from:'str') -> 'AlertTranspo
         message.subject = subject
         message.body = body
 
-        smtp_item.conn.send(message)
+        item.conn.send(message)
 
     def invoke_service(service_name:'str', payload:'stranydict') -> 'None':
         _ = service.server.invoke(service_name, payload)

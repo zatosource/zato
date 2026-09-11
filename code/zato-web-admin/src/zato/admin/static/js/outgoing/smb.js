@@ -13,6 +13,7 @@ $.fn.zato.data_table.SMB = new Class({
 // /////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
+    $.fn.zato.alerts_tab.init({config_id: 'out-smb-alerts-tab-config'});
     $.fn.zato.time_ago.init_table('#data-table');
     $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.SMB;
@@ -52,23 +53,55 @@ $.fn.zato.outgoing.smb.field_descriptions = {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The tabs of the create and edit dialogs - the connection itself and its alert settings
+$.fn.zato.outgoing.smb.tab_labels = function() {
+    var out = {
+        main:   'Main',
+        alerts: $.fn.zato.alerts_tab.tab_label()
+    };
+    return out;
+}
+
+$.fn.zato.outgoing.smb._reset_tabs = function(action) {
+    $.fn.zato.form_tabs.reset({
+        div_id:       '#' + action + '-div',
+        panel_prefix: 'out-smb-' + action + '-tab-panel-',
+        default_tab:  'main',
+        tab_labels:   $.fn.zato.outgoing.smb.tab_labels()
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.smb.create = function() {
+    $.fn.zato.outgoing.smb._reset_tabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing SMB connection', null);
+    $.fn.zato.alerts_tab.bind({
+        panel_id: 'out-smb-create-tab-panel-alerts',
+        field_prefix: ''
+    });
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
         divId: '#create-div',
-        descriptions: $.fn.zato.outgoing.smb.field_descriptions
+        fieldSelector: 'table.form-data tr, .decision-line',
+        descriptions: $.extend({}, $.fn.zato.outgoing.smb.field_descriptions, $.fn.zato.alerts_tab.descriptions())
     });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.smb.edit = function(id) {
+    $.fn.zato.outgoing.smb._reset_tabs('edit');
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing SMB connection', id);
+    $.fn.zato.alerts_tab.bind({
+        panel_id: 'out-smb-edit-tab-panel-alerts',
+        field_prefix: 'edit-'
+    });
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',
         divId: '#edit-div',
-        descriptions: $.fn.zato.outgoing.smb.field_descriptions
+        fieldSelector: 'table.form-data tr, .decision-line',
+        descriptions: $.extend({}, $.fn.zato.outgoing.smb.field_descriptions, $.fn.zato.alerts_tab.descriptions())
     });
 }
 
@@ -118,6 +151,9 @@ $.fn.zato.outgoing.smb.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.username ? item.username : '');
     row += String.format("<td class='ignore'>{0}</td>", item.should_store_content == true);
     row += String.format("<td class='ignore'>{0}</td>", item.verify_how);
+
+    // 6 - the Alerts tab
+    row += $.fn.zato.alerts_tab.hidden_cells(item);
 
     if(include_tr) {
         row += '</tr>';

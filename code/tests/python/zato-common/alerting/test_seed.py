@@ -217,7 +217,7 @@ class _TransportRecorder:
     def make(self) -> 'AlertTransports':
         out = AlertTransports()
 
-        def send_email(addresses:'anylist', subject:'str', body:'str') -> 'None':
+        def send_email(addresses:'anylist', subject:'str', body:'str', email_connection:'str'='') -> 'None':
             self.emails.append((addresses, subject, body))
 
         def invoke_service(service:'str', payload:'stranydict') -> 'None':

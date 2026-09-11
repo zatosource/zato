@@ -44,12 +44,16 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+# The alert settings of the connection follow the file transfer type
+_alert_type = alerts_tab.alert_type_file_transfer
+
 _fields_required = ('name',)
-_fields_optional = 'is_active', 'address', 'username', 'private_key', 'strict_host_key_checking', \
-    'ignore_host_key_changes', 'should_store_content', 'verify_how'
+_fields_optional = ('is_active', 'address', 'username', 'private_key', 'strict_host_key_checking', \
+    'ignore_host_key_changes', 'should_store_content', 'verify_how') + alerts_tab.get_storage_field_names(_alert_type)
 
 # The connection's fields that a checkbox stands for, which is what turns their input into a boolean
-_fields_checkbox = 'strict_host_key_checking', 'ignore_host_key_changes', 'should_store_content'
+_fields_checkbox = ('strict_host_key_checking', 'ignore_host_key_changes', 'should_store_content') + \
+    alerts_tab.get_checkbox_field_names(_alert_type)
 
 # How the schedule pages know this transfer type
 _transfer_type = 'sftp'
@@ -84,6 +88,10 @@ class Index(_Index):
         item.scheduler_schedule_count = len(schedules)
         item.command_shell_url = get_connection_command_shell_url(
             self.req, _transfer_type, item.id, item.name, schedules)
+
+        # The edit form shows a duration as a count with a unit, not as the seconds it is stored as
+        alerts_tab.split_durations(_alert_type, item)
+
         return item
 
     def handle_return_data(self, return_data:'stranydict') -> 'stranydict':
@@ -98,8 +106,9 @@ class Index(_Index):
             'show_search_form': True,
             'create_form': create_form,
             'edit_form': edit_form,
-            'create_alerts_tab': alerts_tab.get_alerts_tab_context(create_form, alerts_tab.alert_type_file_transfer),
-            'alerts_tab_config': alerts_tab.get_alerts_tab_config(alerts_tab.alert_type_file_transfer),
+            'create_alerts_tab': alerts_tab.get_alerts_tab_context(create_form, _alert_type),
+            'edit_alerts_tab': alerts_tab.get_alerts_tab_context(edit_form, _alert_type),
+            'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
         }
 
 # ################################################################################################################################
@@ -127,11 +136,20 @@ class _CreateEdit(CreateEdit):
             if not value:
                 return SKIP_VALUE
 
+        # The Alerts tab's fields arrive as text and are stored typed - booleans and integers
+        elif name.startswith(alerts_tab.Field_Prefix):
+            value = alerts_tab.pre_process_alert_item(_alert_type, name, value)
+
         # The checkbox arrives as 'on' when it is checked and as an empty value otherwise
         elif name in _fields_checkbox:
             value = value == 'on'
 
         return value
+
+    def pre_process_input_dict(self, input_dict:'stranydict') -> 'None':
+
+        # A duration is stored as seconds, which is what its count and unit join into
+        alerts_tab.join_durations(_alert_type, input_dict)
 
     def post_process_return_data(self, return_data:'stranydict') -> 'stranydict':
         return_data['name_slug'] = slugify(return_data['name'])

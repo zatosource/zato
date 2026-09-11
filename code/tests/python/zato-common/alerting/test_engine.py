@@ -12,6 +12,7 @@ from sqlalchemy import select
 # Zato
 from zato.common.alerting.engine import build_digest, dispatch_action, process_findings, AlertDefaults, AlertTransports
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, FindingKind
+from zato.common.alerting.object_config import Email_Connection_Config_Key
 from zato.common.api import Incidents
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditSource
 from zato.common.json_internal import loads
@@ -65,6 +66,7 @@ class _TransportRecorder:
     """
     def __init__(self) -> 'None':
         self.emails:'anylist' = []
+        self.email_connections:'anylist' = []
         self.invocations:'anylist' = []
         self.publications:'anylist' = []
         self.slack_messages:'anylist' = []
@@ -79,8 +81,9 @@ class _TransportRecorder:
     def make(self) -> 'AlertTransports':
         out = AlertTransports()
 
-        def send_email(addresses:'anylist', subject:'str', body:'str') -> 'None':
+        def send_email(addresses:'anylist', subject:'str', body:'str', email_connection:'str'='') -> 'None':
             self.emails.append((addresses, subject, body))
+            self.email_connections.append(email_connection)
 
         def invoke_service(service:'str', payload:'stranydict') -> 'None':
             self.invocations.append((service, payload))
@@ -185,6 +188,31 @@ class TestActions:
         # The alert itself is still raised, only the email delivery is skipped
         assert result.raised_count == 1
         assert recorder.emails == []
+
+# ################################################################################################################################
+
+    def test_an_email_rule_hands_its_own_connection_to_the_transport(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        recorder = _TransportRecorder()
+
+        # Without a connection of its own the transport gets an empty name and picks the default ..
+        rule = new_rule('silent-feeds-default-conn', FindingKind.Feed_Silent,
+            action=AlertAction.Email_Digest, action_config={'addresses': _addresses})
+
+        _ = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-email-conn-1', utcnow())
+
+        assert recorder.email_connections == ['']
+
+        # .. with one, the connection travels along with the message.
+        recorder = _TransportRecorder()
+        action_config = {'addresses': _addresses, Email_Connection_Config_Key: 'imap:Ops mailbox'}
+
+        rule = new_rule('silent-feeds-own-conn', FindingKind.Feed_Silent,
+            action=AlertAction.Email_Digest, action_config=action_config)
+
+        _ = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-email-conn-2', utcnow())
+
+        assert recorder.email_connections == ['imap:Ops mailbox']
 
 # ################################################################################################################################
 

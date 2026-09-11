@@ -67,7 +67,7 @@ $.fn.zato.outgoing.sftp.collapse_more_options = function(form_type) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The tabs of the create dialog - the connection itself and its alert settings
+// The tabs of the create and edit dialogs - the connection itself and its alert settings
 $.fn.zato.outgoing.sftp.tab_labels = function() {
     var out = {
         main:   'Main',
@@ -106,12 +106,18 @@ $.fn.zato.outgoing.sftp.create = function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.sftp.edit = function(id) {
+    $.fn.zato.outgoing.sftp._reset_tabs('edit');
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing SFTP connection', id);
     $.fn.zato.outgoing.sftp.collapse_more_options('edit');
+    $.fn.zato.alerts_tab.bind({
+        panel_id: 'out-sftp-edit-tab-panel-alerts',
+        field_prefix: 'edit-'
+    });
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',
         divId: '#edit-div',
-        descriptions: $.fn.zato.outgoing.sftp.field_descriptions
+        fieldSelector: 'table.form-data tr, .decision-line',
+        descriptions: $.extend({}, $.fn.zato.outgoing.sftp.field_descriptions, $.fn.zato.alerts_tab.descriptions())
     });
 }
 
@@ -167,6 +173,9 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", ignore_host_key_changes ? 'True' : 'False');
     row += String.format("<td class='ignore'>{0}</td>", item.should_store_content == true);
     row += String.format("<td class='ignore'>{0}</td>", item.verify_how);
+
+    // 7 - the Alerts tab
+    row += $.fn.zato.alerts_tab.hidden_cells(item);
 
     if(include_tr) {
         row += '</tr>';

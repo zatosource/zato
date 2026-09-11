@@ -27,6 +27,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.alerting.model import rule_matches, AlertAction, AlertSeverity
+from zato.common.alerting.object_config import Email_Connection_Config_Key
 from zato.common.alerting.rendering import render_alert_template, Template_Digest_Body, Template_Digest_Subject, \
     Template_Email_Body, Template_Email_Subject, Template_Slack, Template_Teams, Template_Webhook
 from zato.common.alerting.store import raise_alert, render_alert_message
@@ -78,7 +79,8 @@ class AlertTransports:
     does not exist or is inactive.
     """
 
-    # send_email(addresses, subject, body)
+    # send_email(addresses, subject, body, email_connection) - the connection is the encoded one an
+    # object names as its own, e.g. `smtp:ops`, or the empty string for the default notification connection
     send_email: 'callable_' = None
 
     # invoke_service(service_name, payload_dict)
@@ -269,12 +271,19 @@ def _dispatch_email(
     explanation:'stranydict | None',
     ) -> 'None':
     """ Sends one alert as an email to the rule's own addresses, or to the sweep's
-    default ones when the rule names none.
+    default ones when the rule names none, through the object's own email connection
+    when the finding's object has one and through the default one otherwise.
     """
 
     # A rule without its own address list sends to the sweep's default address.
     if not (addresses := rule.action_config.get('addresses')):
         addresses = defaults.email_to
+
+    # The object's own email connection travels in the action config, when it has one.
+    if Email_Connection_Config_Key in rule.action_config:
+        email_connection = rule.action_config[Email_Connection_Config_Key]
+    else:
+        email_connection = ''
 
     # With no addresses configured anywhere there is nowhere to send the email.
     if not addresses:
@@ -286,7 +295,7 @@ def _dispatch_email(
     subject = render_alert_template(Template_Email_Subject, context, template_dir)
     body = render_alert_template(Template_Email_Body, context, template_dir)
 
-    transports.send_email(addresses, subject, body)
+    transports.send_email(addresses, subject, body, email_connection)
 
 # ################################################################################################################################
 

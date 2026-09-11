@@ -18,7 +18,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 #
 # A page names its alert type and gets the form fields, the lines the template renders
 # and the configuration the tab's JavaScript reads, all from the one field definition
-# that config_map holds.
+# that config_map holds and zato.common.alerting.object_config shares with enmasse
+# and the server - the names, the kinds, the defaults and the storage names are theirs.
 
 # Django
 from django import forms
@@ -26,9 +27,12 @@ from django.urls import reverse
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.seed.api import build_ruleset_document, default_rulesets
+from zato.common.alerting.object_config import alert_type_file_transfer, Email_Conn_Separator, Email_Conn_Type_IMAP, \
+    Email_Conn_Type_SMTP, Email_Connection_Field, encode_email_connection, field_display as shared_field_display, \
+    field_help, Field_Prefix, get_defaults as get_storage_defaults, get_field_names, Is_Active_Field, storage_name, \
+    Unit_Field_Suffix
+from zato.common.api import EMAIL
 from zato.common.defaults import default_cluster_id
-from zato.common.rule_engine.sql.constants import Documents_Key
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,14 +48,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Every form field of the tab is named with this prefix, which is also the prefix
-# the values are stored under in the object's opaque attributes.
-Field_Prefix = 'alert_'
-
-# The two fields every alert type has around its own ones
-Is_Active_Field = 'is_active'
-Email_Connection_Field = 'email_connection'
-
 # The units a time is given in - a select that sits right after the number in its popover.
 # An option's value is the noun in the singular and its label the plural, which is how
 # the summary reads "1 hour" and "2 hours" off the select.
@@ -60,13 +56,14 @@ duration_unit_choices = []
 for _unit_name, _ignored_seconds in config_map.Duration_Units:
     duration_unit_choices.append((_unit_name, _unit_name + 's'))
 
-# The unit of the time a file may fail to arrive for
-Arrival_Overdue_Unit_Field = 'arrival_overdue_unit'
+# The unit of the time a file may fail to arrive for - a number of its own with a unit the tab
+# keeps next to it, stored with the number so that the edit form reads the way it was saved.
+Arrival_Overdue_Unit_Field = 'arrival_overdue' + Unit_Field_Suffix
 Arrival_Overdue_Unit_Default = 'hour'
 
-# The unit of the window the failure counts are measured over - a duration field's unit
-# select is named after the field, and its default comes from the seeded rules with the count.
-Unit_Field_Suffix = '_unit'
+# The unit of the window the failure counts are measured over - a duration field's unit select
+# is named after the field and its default comes from the seeded rules with the count. The unit
+# is not stored, the window is a number of seconds in storage and is split back on the way out.
 Window_Unit_Field = config_map.Window_Field_Name + Unit_Field_Suffix
 
 # The unit selects of the tab, by name - what each offers and what a new object starts with
@@ -84,8 +81,8 @@ Active_Label = 'Active'
 # What the link opening a line's popover says beside its summary
 Edit_Hint = 'Click to edit'
 
-# Which alert type each object type's settings follow
-alert_type_file_transfer = 'file_transfer'
+# What a checkbox arrives as from the browser when it is checked
+Checkbox_On_Value = 'on'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,11 +96,7 @@ Line_Kind_Email = 'email'
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The email connection select - how a chosen connection is encoded in its value,
-# what an empty group says and what the entry that opens the create form is named.
-Email_Kind_SMTP = 'smtp'
-Email_Kind_IMAP = 'imap'
-Email_Kind_Separator = ':'
+# The email connection select - what an empty group says and what the entry that opens the create form is named.
 Email_No_Selection_Value = ''
 Email_No_Selection_Label = 'Select a connection'
 Email_None_Value = 'zato-none'
@@ -115,75 +108,32 @@ Email_Create_New_Label = 'Add new ...'
 Email_Panel_Title = 'Email connection'
 Email_Remove_Label = 'click to remove'
 
-# The option groups of the select, in the order they are shown
+# The option groups of the select, in the order they are shown, each with the service listing its connections
 _email_groups = [
-    {'kind': Email_Kind_SMTP, 'label': 'SMTP', 'url_name': 'email-smtp'},
-    {'kind': Email_Kind_IMAP, 'label': 'Microsoft 365', 'url_name': 'email-imap'},
+    {'kind': Email_Conn_Type_SMTP, 'label': 'SMTP', 'url_name': 'email-smtp', 'service': 'zato.email.smtp.get-list'},
+    {'kind': Email_Conn_Type_IMAP, 'label': 'Microsoft 365', 'url_name': 'email-imap', 'service': 'zato.email.imap.get-list'},
 ]
 
-# What the connections of each kind are, until the lookup through the backend services is in place.
-# The Microsoft 365 group has entries and the SMTP one has none so that both states of a group can be seen.
-_placeholder_email_connections = {
-    Email_Kind_SMTP: [],
-    Email_Kind_IMAP: ['ops.m365', 'finance.m365'],
-}
+# ################################################################################################################################
+# ################################################################################################################################
 
-# ################################################################################################################################
-# ################################################################################################################################
+# What a field is called in its popover, where the shared label reads as a column header rather than a question
+_popover_labels = {
+    'window':          'In the last',
+    'arrival_overdue': 'Alert after',
+}
 
 # What each field is called where it is edited and the unit its value is in
-field_display = {
-    'consecutive_failures': ('Consecutive failures', ''),
-    'error_rate':           ('Error rate', '%'),
-    'max_latency':          ('Max latency', 'ms'),
-    'max_query_time':       ('Max query time', 'ms'),
-    'warning_latency':      ('Warning latency', 'ms'),
-    'error_latency':        ('Error latency', 'ms'),
-    'max_tool_call_time':   ('Max tool-call time', 'ms'),
-    'health_alerts':        ('Health alerts', ''),
-    'max_call_time':        ('Max call time', 'ms'),
-    'auth_failures':        ('Auth failures', ''),
-    'warning_failures':     ('Warning failures', ''),
-    'error_failures':       ('Error failures', ''),
-    'window':               ('In the last', ''),
-    'arrival_overdue':      ('Alert after', ''),
-    'test_transfers':       ('Test transfers', ''),
-    'overdue_multiplier':   ('Overdue multiplier', ''),
-    'start_delay':          ('Start delay', 'ms'),
-    'certificate_warning':  ('Certificate warning', 'days'),
-    'outstanding_backlog':  ('Outstanding backlog', ''),
-    'feed_silence':         ('Feed silence', 's'),
-    'use_llm':              ('Use LLM', ''),
-}
+field_display = dict(shared_field_display)
 
-# What each field means, shown by the how-it-works badge of a popover
-field_how_it_works = {
-    Is_Active_Field:        'Whether alerts are raised for this object at all. Off means nothing below is measured.',
-    'consecutive_failures': 'How many failures in a row raise an alert.',
-    'error_rate':           'The share of failed calls, in percent, that raises an alert.',
-    'max_latency':          'Calls slower than this many milliseconds count as slow.',
-    'max_query_time':       'Queries slower than this many milliseconds count as slow.',
-    'warning_latency':      'Completions slower than this many milliseconds raise a warning.',
-    'error_latency':        'Completions slower than this many milliseconds are errors.',
-    'max_tool_call_time':   'Tool calls slower than this many milliseconds count as slow.',
-    'health_alerts':        'Whether the Microsoft service health feed raises alerts of its own.',
-    'max_call_time':        'Calls slower than this many milliseconds count as slow.',
-    'auth_failures':        'How many authentication failures in a row raise an alert.',
-    'warning_failures':     'How many failures in the window raise a warning.',
-    'error_failures':       'How many failures in the window count as errors.',
-    'window':               'How long the window is, in minutes, hours or days.',
-    Window_Unit_Field:      'Whether the window is in minutes, hours or days.',
-    'arrival_overdue':      'How long a file may fail to arrive before an alert is raised.',
-    Arrival_Overdue_Unit_Field: 'Whether the time a file may fail to arrive for is in minutes, hours or days.',
-    'test_transfers':       'Whether periodic test transfers run against this connection.',
-    'overdue_multiplier':   'How many intervals late a job may run before an alert.',
-    'start_delay':          'How many milliseconds late a job may start before an alert.',
-    'certificate_warning':  'How many days before expiry a certificate raises an alert.',
-    'outstanding_backlog':  'How many outstanding messages raise an alert.',
-    'feed_silence':         'How many seconds of silence from a feed raise an alert.',
-    'use_llm':              'Whether the LLM explains every alert raised for this type.',
-    Email_Connection_Field: 'The SMTP or Microsoft 365 connection that sends the alert emails.',
-}
+for _popover_name, _popover_label in _popover_labels.items():
+    _ignored_label, _popover_unit = shared_field_display[_popover_name]
+    field_display[_popover_name] = (_popover_label, _popover_unit)
+
+# What each field means, shown by the how-it-works badge of a popover - the shared texts and the unit selects' own
+field_how_it_works = dict(field_help)
+field_how_it_works[Window_Unit_Field] = 'Whether the window is in minutes, hours or days.'
+field_how_it_works[Arrival_Overdue_Unit_Field] = 'Whether the time a file may fail to arrive for is in minutes, hours or days.'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -279,7 +229,7 @@ type_lines = {
 def form_field_name(name:'str') -> 'str':
     """ The name a field of the tab goes by on the form and in storage.
     """
-    out = Field_Prefix + name
+    out = storage_name(name)
     return out
 
 # ################################################################################################################################
@@ -305,6 +255,19 @@ def get_unit_field_names(alert_type:'str') -> 'strlist':
 
 # ################################################################################################################################
 
+def get_duration_field_names(alert_type:'str') -> 'strlist':
+    """ The fields of an alert type stored as seconds and edited as a count with a unit.
+    """
+    out:'strlist' = []
+
+    for field in get_type_fields(alert_type):
+        if field['kind'] == config_map.Kind_Duration:
+            out.append(field['name'])
+
+    return out
+
+# ################################################################################################################################
+
 def get_field_kinds(alert_type:'str') -> 'anydict':
     """ The kind of each field of an alert type - a number or a toggle.
     """
@@ -312,6 +275,19 @@ def get_field_kinds(alert_type:'str') -> 'anydict':
 
     for field in get_type_fields(alert_type):
         out[field['name']] = field['kind']
+
+    return out
+
+# ################################################################################################################################
+
+def get_toggle_field_names(alert_type:'str') -> 'strlist':
+    """ The fields of an alert type a checkbox stands for - the Active switch and the type's toggles.
+    """
+    out:'strlist' = [Is_Active_Field]
+
+    for field in get_type_fields(alert_type):
+        if field['kind'] in (config_map.Kind_Toggle, config_map.Kind_Ruleset_Toggle):
+            out.append(field['name'])
 
     return out
 
@@ -333,53 +309,128 @@ def get_field_label(name:'str') -> 'str':
 
 def get_defaults(alert_type:'str') -> 'anydict':
     """ The default value of each field of an alert type, read from the seeded default rules
-    so that the tab and the rules never disagree about what a new object starts with.
+    so that the tab and the rules never disagree about what a new object starts with -
+    except that a duration is a count and a unit on the tab, not a number of seconds.
     """
-    ruleset_name = config_map.type_to_ruleset[alert_type]
+    out = get_storage_defaults(alert_type)
 
-    # The seed table pairs each ruleset's name with the text form of its rules ..
-    zrules_contents = ''
-    for name, contents in default_rulesets:
-        if name == ruleset_name:
-            zrules_contents = contents
+    for name in get_duration_field_names(alert_type):
+        count, unit_name = config_map.split_duration(out[name])
+        out[name] = count
+        out[name + Unit_Field_Suffix] = unit_name
 
-    # .. which parses into the same documents the store keeps ..
-    document = build_ruleset_document(ruleset_name, zrules_contents)
-    documents = document[Documents_Key]
+    return out
 
-    # .. and the screen values are read from them the way the alert rules screen reads them ..
-    out = config_map.read_type_values(alert_type, documents)
-    out[Is_Active_Field] = True
-    out[Email_Connection_Field] = Email_No_Selection_Value
+# ################################################################################################################################
+# ################################################################################################################################
 
-    # .. except that a duration is a count and a unit on the tab, not a number of seconds.
-    for field in get_type_fields(alert_type):
-        if field['kind'] == config_map.Kind_Duration:
-            count, unit_name = config_map.split_duration(out[field['name']])
-            out[field['name']] = count
-            out[field['name'] + Unit_Field_Suffix] = unit_name
+def get_storage_field_names(alert_type:'str') -> 'strtuple':
+    """ The names the tab's fields travel under between the form and the backend - every field
+    of the type under the alert_ prefix, the unit selects included, in the order the tab lists them.
+    """
+    names:'strlist' = []
+
+    for name in get_field_names(alert_type):
+        names.append(form_field_name(name))
+
+    for unit_field_name in get_unit_field_names(alert_type):
+        names.append(form_field_name(unit_field_name))
+
+    out = tuple(names)
+    return out
+
+# ################################################################################################################################
+
+def get_checkbox_field_names(alert_type:'str') -> 'strtuple':
+    """ The storage names of the tab's fields a checkbox stands for.
+    """
+    names:'strlist' = []
+
+    for name in get_toggle_field_names(alert_type):
+        names.append(form_field_name(name))
+
+    out = tuple(names)
+    return out
+
+# ################################################################################################################################
+
+def pre_process_alert_item(alert_type:'str', name:'str', value:'any_') -> 'any_':
+    """ One field of the tab as the backend stores it - a checkbox arrives as 'on' when checked and as nothing
+    otherwise and becomes a boolean, a number arrives as text and becomes an integer, a unit and the email
+    connection travel as the strings they are.
+    """
+    if name in get_checkbox_field_names(alert_type):
+        out = value == Checkbox_On_Value
+        return out
+
+    field_kinds = get_field_kinds(alert_type)
+    own_name = name[len(Field_Prefix):]
+
+    if own_name in field_kinds and field_kinds[own_name] in (config_map.Kind_Number, config_map.Kind_Duration):
+        out = int(value)
+        return out
+
+    return value
+
+# ################################################################################################################################
+
+def join_durations(alert_type:'str', input_dict:'anydict') -> 'None':
+    """ Turns each duration's count and unit in a form's input into the seconds it is stored as, in place,
+    and takes the unit out - it is not stored, the seconds say what it was.
+    """
+    for name in get_duration_field_names(alert_type):
+        count_name = form_field_name(name)
+        unit_name = form_field_name(name + Unit_Field_Suffix)
+
+        if count_name in input_dict and unit_name in input_dict:
+            input_dict[count_name] = config_map.join_duration(input_dict[count_name], input_dict[unit_name])
+            del input_dict[unit_name]
+
+# ################################################################################################################################
+
+def split_durations(alert_type:'str', item:'any_') -> 'None':
+    """ Turns each duration's seconds on a listed object into the count and the unit the edit form shows,
+    in place, and gives a unit select the object does not carry a value for its default.
+    """
+    for name in get_duration_field_names(alert_type):
+        count_name = form_field_name(name)
+        unit_name = form_field_name(name + Unit_Field_Suffix)
+
+        if count_name in item:
+            count, unit = config_map.split_duration(item[count_name])
+            item[count_name] = count
+            item[unit_name] = unit
+
+    for unit_field_name in get_unit_field_names(alert_type):
+        storage_unit_name = form_field_name(unit_field_name)
+
+        if storage_unit_name not in item:
+            item[storage_unit_name] = unit_fields[unit_field_name]['initial']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_email_connection_names(req:'any_', group:'anydict') -> 'strlist':
+    """ The names of the email connections of one group - every SMTP connection there is,
+    and among the IMAP ones only those of the Microsoft 365 kind, the only ones that can send.
+    """
+    out:'strlist' = []
+
+    response = req.zato.client.invoke(group['service'], {'cluster_id': req.zato.cluster_id})
+
+    for item in response:
+
+        if group['kind'] == Email_Conn_Type_IMAP:
+            if item.server_type != EMAIL.IMAP.ServerType.Microsoft365:
+                continue
+
+        out.append(item.name)
 
     return out
 
 # ################################################################################################################################
 
-def encode_email_connection(kind:'str', name:'str') -> 'str':
-    """ One select value naming both the kind of the email connection and the connection itself.
-    """
-    out = kind + Email_Kind_Separator + name
-    return out
-
-# ################################################################################################################################
-
-def _get_email_connection_names(kind:'str') -> 'strlist':
-    """ The names of the email connections of one kind.
-    """
-    out = _placeholder_email_connections[kind]
-    return out
-
-# ################################################################################################################################
-
-def get_email_connection_choices() -> 'anylist':
+def get_email_connection_choices(req:'any_') -> 'anylist':
     """ The grouped choices of the email connection select - one group per kind of connection,
     each listing its connections or saying that there are none, and each ending with the entry
     that opens the page where a new one is created.
@@ -390,7 +441,7 @@ def get_email_connection_choices() -> 'anylist':
         kind = group['kind']
         options:'anylist' = []
 
-        names = _get_email_connection_names(kind)
+        names = _get_email_connection_names(req, group)
 
         for name in names:
             value = encode_email_connection(kind, name)
@@ -437,14 +488,14 @@ class EmailConnectionSelect(forms.Select):
 
         out = super().create_option(name, value, label, selected, index, subindex=subindex, attrs=attrs)
 
-        if str(value).endswith(Email_Kind_Separator + Email_None_Value):
+        if str(value).endswith(Email_Conn_Separator + Email_None_Value):
             out['attrs']['disabled'] = True
 
         return out
 
 # ################################################################################################################################
 
-def add_alerts_fields(form:'forms.Form', alert_type:'str') -> 'None':
+def add_alerts_fields(form:'forms.Form', alert_type:'str', req:'any_') -> 'None':
     """ Adds the fields of the Alerts tab to a form - the active toggle first, then the type's
     own numbers and toggles, the unit selects its lines name, then the email connection select.
     """
@@ -478,7 +529,7 @@ def add_alerts_fields(form:'forms.Form', alert_type:'str') -> 'None':
             required=False, choices=unit_field['choices'], initial=initial, widget=forms.Select())
 
     form.fields[form_field_name(Email_Connection_Field)] = forms.ChoiceField(
-        required=False, choices=get_email_connection_choices(), widget=EmailConnectionSelect())
+        required=False, choices=get_email_connection_choices(req), widget=EmailConnectionSelect())
 
 # ################################################################################################################################
 
@@ -536,7 +587,7 @@ def get_alerts_tab_context(form:'forms.Form', alert_type:'str') -> 'anydict':
 def get_alerts_tab_config(alert_type:'str') -> 'anydict':
     """ What the tab's JavaScript needs to know about a page's alert fields - the lines with their
     fields and summaries, what each field is called and what it means, how the email select encodes
-    its values and where its create entries lead.
+    its values and where its create entries lead, and which hidden cells of a row the fields travel in.
     """
     field_kinds = get_field_kinds(alert_type)
 
@@ -587,13 +638,15 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
         'field_labels': field_labels,
         'field_how_it_works': how_it_works_by_field,
         'edit_hint': Edit_Hint,
-        'email_kind_separator': Email_Kind_Separator,
+        'email_kind_separator': Email_Conn_Separator,
         'email_no_selection_value': Email_No_Selection_Value,
         'email_no_selection_label': Email_No_Selection_Label,
         'email_none_value': Email_None_Value,
         'email_create_new_value': Email_Create_New_Value,
         'email_remove_label': Email_Remove_Label,
         'email_groups': get_email_groups(),
+        'storage_field_names': list(get_storage_field_names(alert_type)),
+        'checkbox_field_names': list(get_checkbox_field_names(alert_type)),
     }
 
     return out

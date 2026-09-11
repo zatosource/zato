@@ -909,6 +909,59 @@ class TestPerSourceWindows:
         assert by_name['sched.window']['last_run_status'] == Run_Status_Failed
 
 # ################################################################################################################################
+
+    def test_a_schedule_with_a_window_of_its_own_is_counted_over_it(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A failed run half an hour back for two schedules
+        for schedule_name, cid in [('sched.own-window', 'window-5'), ('sched.type-window', 'window-6')]:
+            run_data = dumps({'schedule': schedule_name, 'failed': 1})
+            event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Run_Completed, 'sftp.runs',
+                cid=cid, outcome=AuditOutcome.Error, status=Run_Status_Failed, data=run_data)
+            _backdate(event_id, now - timedelta(seconds=1800))
+
+        # The type counts over ten minutes, one schedule over a day of its own
+        facts = collect_file_transfer_facts(engine, now, {}, None, 600, {'sched.own-window': 86400})
+        by_name = {fact['object_name']: fact for fact in facts}
+
+        assert by_name['sched.own-window']['runs_failed_in_window'] == 1
+        assert by_name['sched.type-window']['runs_failed_in_window'] == 0
+
+        # And the other way round - the type over a day, the schedule over ten minutes
+        facts = collect_file_transfer_facts(engine, now, {}, None, 86400, {'sched.own-window': 600})
+        by_name = {fact['object_name']: fact for fact in facts}
+
+        assert by_name['sched.own-window']['runs_failed_in_window'] == 0
+        assert by_name['sched.type-window']['runs_failed_in_window'] == 1
+
+# ################################################################################################################################
+
+    def test_an_object_with_a_window_of_its_own_has_its_rate_measured_over_it(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A failure twenty minutes back for two connections
+        for object_name, cid in [('sftp.own-window', 'window-7'), ('sftp.type-window', 'window-8')]:
+            event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, object_name,
+                cid=cid, outcome=AuditOutcome.Error)
+            _backdate(event_id, now - timedelta(seconds=1200))
+
+        # The source is measured over ten minutes, one connection over an hour of its own
+        window_seconds_by_object = {AuditSource.File_Outgoing: {'sftp.own-window': 3600}}
+
+        facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now, window_seconds=300,
+            window_seconds_by_source={AuditSource.File_Outgoing: 600}, window_seconds_by_object=window_seconds_by_object)
+
+        by_name = {fact['object_name']: fact for fact in facts}
+
+        assert by_name['sftp.own-window']['error_count'] == 1
+        assert by_name['sftp.own-window']['window_seconds'] == 3600
+        assert by_name['sftp.type-window']['error_count'] == 0
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestCollectFacts:

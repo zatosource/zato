@@ -49,6 +49,7 @@ def collect_facts(
     *,
     window_seconds:'int' = Default_Window_Seconds,
     window_seconds_by_source:'strintdict | None' = None,
+    window_seconds_by_object:'anydict | None' = None,
     begin_event_type:'str' = Default_Begin_Event_Type,
     end_event_type:'str' = Default_End_Event_Type,
     job_intervals:'strintdict | None' = None,
@@ -58,10 +59,14 @@ def collect_facts(
     """ Runs every fact producer and merges their measures into one fact
     per (source, object) pair - the input the alert rules match over. The per-source
     windows come from the rules' window_seconds defaults, a source without one
-    is measured over window_seconds, the health sources over their own hour.
+    is measured over window_seconds, the health sources over their own hour, and an
+    object with a window of its own, by source and then by object name, over that one.
     """
     if window_seconds_by_source is None:
         window_seconds_by_source = {}
+
+    if window_seconds_by_object is None:
+        window_seconds_by_object = {}
 
     if job_intervals is None:
         job_intervals = {}
@@ -90,6 +95,12 @@ def collect_facts(
     else:
         run_window_seconds = window_seconds
 
+    # The schedules measured over a window of their own - the run facts are keyed by schedule name
+    if AuditSource.File_Outgoing in window_seconds_by_object:
+        run_window_seconds_by_object = window_seconds_by_object[AuditSource.File_Outgoing]
+    else:
+        run_window_seconds_by_object = {}
+
     error_rate_facts = collect_error_rate_facts(engine, window_seconds, now)
     latency_facts = collect_latency_facts(engine, window_seconds, now)
     consecutive_facts = collect_consecutive_failure_facts(engine, now)
@@ -100,7 +111,8 @@ def collect_facts(
     health_facts = collect_health_facts(engine, now)
     test_transfer_facts = collect_test_transfer_facts(engine, now)
     scheduler_facts = collect_scheduler_facts(engine, scheduler_window_seconds, now, job_intervals)
-    file_transfer_facts = collect_file_transfer_facts(engine, now, arrival_windows, schedule_expectations, run_window_seconds)
+    file_transfer_facts = collect_file_transfer_facts(engine, now, arrival_windows, schedule_expectations, run_window_seconds,
+        run_window_seconds_by_object)
 
     # A source with a window of its own is measured again over that window,
     # and its own measures replace the default-window ones below.
@@ -130,6 +142,39 @@ def collect_facts(
 
     error_rate_facts.extend(override_error_rate_facts)
     latency_facts.extend(override_latency_facts)
+
+    # An object with a window of its own is measured once more over that window,
+    # and its own measures replace the ones its source's window gave it.
+    object_error_rate_facts:'dictlist' = []
+    object_latency_facts:'dictlist' = []
+    overridden_objects:'set[tuple[str, str]]' = set()
+
+    for object_source, windows_by_object in window_seconds_by_object.items():
+        for object_name, object_window in windows_by_object.items():
+            overridden_objects.add((object_source, object_name))
+            object_error_rate_facts.extend(
+                collect_error_rate_facts(engine, object_window, now, source=object_source, object_name=object_name))
+            object_latency_facts.extend(
+                collect_latency_facts(engine, object_window, now, source=object_source, object_name=object_name))
+
+    if overridden_objects:
+
+        kept_error_rate_facts = []
+        kept_latency_facts = []
+
+        for fact in error_rate_facts:
+            if (fact['source'], fact['object_name']) not in overridden_objects:
+                kept_error_rate_facts.append(fact)
+
+        for fact in latency_facts:
+            if (fact['source'], fact['object_name']) not in overridden_objects:
+                kept_latency_facts.append(fact)
+
+        error_rate_facts = kept_error_rate_facts
+        latency_facts = kept_latency_facts
+
+        error_rate_facts.extend(object_error_rate_facts)
+        latency_facts.extend(object_latency_facts)
 
     # One merged fact per (source, object) pair - later measures land in the same fact
     by_object:'dict[tuple[str, str], stranydict]' = {}

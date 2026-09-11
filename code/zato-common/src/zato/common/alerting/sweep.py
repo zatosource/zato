@@ -27,6 +27,9 @@ from zato.common.alerting.collectors import collect_facts
 from zato.common.alerting.config_map import read_window_seconds, type_sources, type_to_ruleset, Explain_With_LLM_Key
 from zato.common.alerting.engine import process_findings
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, Default_Dedup_Window_Seconds
+from zato.common.alerting.object_config import Email_Connection_Config_Key
+from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
+    get_muted_rule_names, is_object_active
 from zato.common.api import Alerting
 from zato.common.audit_log.common import get_source_label, health_sources
 from zato.common.defaults import default_cluster_id
@@ -89,6 +92,12 @@ _action_by_outcome = {
 
 # The severities an outcome may carry.
 _severities = (AlertSeverity.Info, AlertSeverity.Warning, AlertSeverity.Error)
+
+# Which alert type each ruleset's rules belong to - the reverse of the config map's table
+_type_by_ruleset:'dict[str, str]' = {}
+
+for _type_name, _ruleset_name in type_to_ruleset.items():
+    _type_by_ruleset[_ruleset_name] = _type_name
 
 # Where a finding's link leads when the rule names none of its own - the audit log page,
 # the one existing screen every dashboard URL already wraps in login_required.
@@ -342,10 +351,13 @@ def build_dispatch(
     fact:'stranydict',
     outcome:'stranydict',
     dashboard_url:'str' = '',
+    email_connection:'str' = '',
     ) -> 'tuple[AlertRule, Finding] | None':
     """ Turns one rule match into the pair the engine dispatches - a transient engine rule
     carrying the outcome's action and config, and a finding carrying the fact's measures.
     An outcome without an action names nothing to do, which is an authoring error, not a dispatch.
+    An object with an email connection of its own has it travel in the action config,
+    so the email action delivers through it rather than through the default one.
     """
     action_name = outcome.pop('action', None)
 
@@ -380,6 +392,10 @@ def build_dispatch(
     # An email outcome's addresses arrive as one comma-separated string.
     if addresses := outcome.pop('addresses', None):
         outcome['addresses'] = [item.strip() for item in addresses.split(',')]
+
+    # The object's own email connection, when it has one
+    if email_connection:
+        outcome[Email_Connection_Config_Key] = email_connection
 
     # Whether the LLM explains the alert is the ruleset's answer, stamped on every
     # rule document - a rule a person wrote by hand without the key is not explained.
@@ -420,10 +436,16 @@ def run_sweep(
     job_intervals:'strintdict | None' = None,
     arrival_windows:'strintdict | None' = None,
     schedule_expectations:'anydict | None' = None,
+    object_settings:'anydict | None' = None,
     ) -> 'SweepResult':
     """ Runs one full sweep - the fact producers measure everything once, each fact runs
     through each rule of every alert ruleset, and every match is dispatched through
     the engine one at a time, so dedup and the audit trace see each match on its own.
+
+    The object settings are what each object's Alerts tab stored, by alert type and object name -
+    an object that is not active raises nothing, its toggles mute the rules they stand for,
+    its numbers stand in for the rules' defaults, it is measured over its own window
+    and its alerts leave through its own email connection.
     """
 
     # Our response to produce - the fields are assigned here because init=False
@@ -431,10 +453,15 @@ def run_sweep(
     out = SweepResult()
     out.dispatched = []
 
+    if object_settings is None:
+        object_settings = {}
+
     window_seconds_by_source = build_window_seconds_by_source(rules)
+    window_seconds_by_object = build_window_seconds_by_object(object_settings, window_seconds_by_source)
 
     facts = collect_facts(engine, metrics_by_name, metrics_source, now, window_seconds_by_source=window_seconds_by_source,
-        job_intervals=job_intervals, arrival_windows=arrival_windows, schedule_expectations=schedule_expectations)
+        window_seconds_by_object=window_seconds_by_object, job_intervals=job_intervals, arrival_windows=arrival_windows,
+        schedule_expectations=schedule_expectations)
     out.fact_count = len(facts)
 
     for rule in rules:
@@ -445,15 +472,45 @@ def run_sweep(
 
         out.rule_count += 1
 
+        # The objects of the rule's own type carry settings, anyone else's are not its business -
+        # a ruleset outside the config map's table, e.g. one a person wrote by hand, has none.
+        alert_type = ''
+        settings_by_object:'anydict' = {}
+
+        if rule.ruleset_name in _type_by_ruleset:
+            alert_type = _type_by_ruleset[rule.ruleset_name]
+
+            if alert_type in object_settings:
+                settings_by_object = object_settings[alert_type]
+
         for fact in facts:
 
-            match_result = rule.match({Fact_Entity: fact})
+            match_data = {Fact_Entity: fact}
+            email_connection = ''
+
+            if fact['object_name'] in settings_by_object:
+
+                settings = settings_by_object[fact['object_name']]
+
+                # An object switched off raises nothing at all ..
+                if not is_object_active(settings):
+                    continue
+
+                # .. one with a toggle off never reaches the rules the toggle stands for ..
+                if rule.name in get_muted_rule_names(alert_type, settings):
+                    continue
+
+                # .. and its own numbers stand in for the rule's defaults.
+                match_data.update(build_rule_values(alert_type, settings))
+                email_connection = get_email_connection(settings)
+
+            match_result = rule.match(match_data)
 
             if not match_result:
                 continue
 
             outcome = read_outcome(match_result.then)
-            dispatch = build_dispatch(rule, fact, outcome, dashboard_url)
+            dispatch = build_dispatch(rule, fact, outcome, dashboard_url, email_connection)
 
             if dispatch is None:
                 continue

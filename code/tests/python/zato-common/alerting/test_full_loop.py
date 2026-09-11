@@ -208,7 +208,7 @@ def build_transports(smtp_port:'int', recorder:'_ServiceRecorder') -> 'AlertTran
     connections recorded.
     """
 
-    def send_email(addresses:'anylist', subject:'str', body:'str') -> 'None':
+    def send_email(addresses:'anylist', subject:'str', body:'str', email_connection:'str'='') -> 'None':
         mime = MIMEText(body)
         mime['Subject'] = subject
         mime['From'] = _email_from
