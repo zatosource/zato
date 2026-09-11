@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
+from zato.common.alerting.object_config import conn_type_to_alert_type
 from zato.common.api import GENERIC, SMB
 
 # ################################################################################################################################
@@ -52,6 +53,9 @@ class SMBImporter(GenericConnectionImporter):
 
     # SMB connections may carry file transfer schedules
     supports_schedules = True
+
+    # SMB connections carry file transfer alert settings of their own
+    alert_type = conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_SMB]
 
 # ################################################################################################################################
 

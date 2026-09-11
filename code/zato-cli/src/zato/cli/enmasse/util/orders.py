@@ -216,10 +216,16 @@ _object_order['mongodb']        = 'name', 'is_active', 'server_list', 'username'
     'app_name', 'pool_size_max', 'connect_timeout', 'server_select_timeout', 'is_tls_enabled', 'tls_ca_certs_file', \
     'tls_cert_key_file', 'is_tls_validation_enabled',
 _object_order['sftp']           = 'name', 'is_active', 'address', 'username', 'private_key', 'strict_host_key_checking', \
-    'ignore_host_key_changes', 'should_store_content', 'schedules:list',
-_object_order['smb']            = 'name', 'is_active', 'host', 'port', 'username', 'should_store_content', 'schedules:list',
-_object_order['ftp']            = 'name', 'is_active', 'host', 'port', 'username', 'use_ssl', 'should_store_content', \
+    'ignore_host_key_changes', 'should_store_content', 'alerts:dict', 'schedules:list',
+_object_order['smb']            = 'name', 'is_active', 'host', 'port', 'username', 'should_store_content', 'alerts:dict', \
     'schedules:list',
+_object_order['ftp']            = 'name', 'is_active', 'host', 'port', 'username', 'use_ssl', 'should_store_content', \
+    'alerts:dict', 'schedules:list',
+
+# The alerts mapping of a file transfer connection - the writer keeps the order the exporter builds it in,
+# which is this one, the Active switch first, the type's own fields after it, the email connection last.
+_object_order['alerts'] = 'is_active', 'consecutive_failures', 'warning_failures', 'error_failures', 'window', \
+    'arrival_overdue', 'test_transfers', 'use_llm', 'email_connection',
 
 _object_order['pubsub_topic']        = 'name', 'description'
 _object_order['pubsub_permission']   = 'security', 'pub', 'sub'

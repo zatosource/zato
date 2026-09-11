@@ -11,6 +11,7 @@ import logging
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
+from zato.cli.enmasse.util.alerts import flatten_alerts
 from zato.common.api import FileTransfer, SCHEDULER, SchedulerLink
 from zato.common.odb.model import GenericConn, Job, to_json
 from zato.common.odb.query.generic import connection_list
@@ -44,6 +45,9 @@ class GenericConnectionImporter:
 
     # File transfer connections carry a list of schedules, each with a linked scheduler job
     supports_schedules = False
+
+    # Connections with alert settings of their own name the alert type the settings follow
+    alert_type = None
 
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
         self.importer = importer
@@ -122,6 +126,11 @@ class GenericConnectionImporter:
 
     def create_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
 
+        # The alerts mapping becomes flat alert_ attributes, over the defaults,
+        # which is the shape the opaque attributes store them in.
+        if self.alert_type:
+            flatten_alerts(connection_def, self.alert_type, self.connection_type, session)
+
         # Take the schedules out of the definition first - they are synchronized separately
         # after the connection exists, so they must not land in the opaque attributes as-is.
         schedules = connection_def.pop('schedules', None) if self.supports_schedules else None
@@ -175,6 +184,11 @@ class GenericConnectionImporter:
 # ################################################################################################################################
 
     def update_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
+
+        # The alerts mapping becomes flat alert_ attributes, over the defaults, the same way
+        # a new connection gets them, so that the YAML is the source of truth on every run.
+        if self.alert_type:
+            flatten_alerts(connection_def, self.alert_type, self.connection_type, session)
 
         # Take the schedules out of the definition first - they are synchronized separately
         # and must not land in the opaque attributes as-is.

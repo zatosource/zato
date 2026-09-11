@@ -10,6 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.cli.enmasse.util.alerts import group_alerts
+from zato.common.alerting.object_config import Alerts_Key, conn_type_to_alert_type
 from zato.common.api import FileTransfer, GENERIC
 from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
@@ -46,6 +48,9 @@ _field_defaults = {
     'ignore_host_key_changes': False,
     'should_store_content': False,
 }
+
+# The alert type whose settings SFTP connections carry
+_alert_type = conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_SFTP]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,6 +104,10 @@ class SFTPExporter:
                 default = _field_defaults[field]
                 if value != default:
                     item[field] = value
+
+            # Alert settings moved away from their defaults travel as one nested mapping
+            if alerts := group_alerts(row, _alert_type):
+                item[Alerts_Key] = alerts
 
             # File transfer schedules travel in their portable YAML shape
             if schedules := row.get(FileTransfer.Scheduler.Schedules_Field):
