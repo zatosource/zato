@@ -262,7 +262,6 @@
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">AI &darr;</a>
                                 <ul>
                                     <li class="child"><a class="menu-link" href="{% url "ai-skills" %}?cluster={{ cluster_id|default:"1" }}">Agent skills</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "ai-templates" %}?cluster={{ cluster_id|default:"1" }}">Templates</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "gateway-mcp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=gateway-mcp">MCP gateways</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "out-llm" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-llm">LLM connections</a></li>
                                 </ul>
@@ -543,6 +542,7 @@
                                 <a class="menu-link" href="#">Monitoring &darr;</a>
                                 <ul>
                                     <li class="child"><a class="menu-link" href="{% url "audit-log" %}?cluster={{ cluster_id|default:"1" }}">Audit log</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "alert-templates" %}?cluster={{ cluster_id|default:"1" }}">Alert templates</a></li>
                                     {% if 0 %}{% comment %}alerting_disabled{% endcomment %}
                                     <li class="child"><a class="menu-link" href="{% url "alert-rules-config" %}?cluster={{ cluster_id|default:"1" }}">Alert rules</a></li>
                                     {% endif %}

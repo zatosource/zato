@@ -61,7 +61,6 @@ from zato.admin.web.views.outgoing import smb as out_smb
 from zato.admin.web.views.outgoing import soap as out_soap
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.ai import skills as ai_skills
-from zato.admin.web.views.ai import templates as ai_templates
 from zato.admin.web.views.service import config_tables as service_config_tables
 from zato.admin.web.views.service import ide as service_ide
 from zato.admin.web.views.security import apikey, basic_auth, mtls, ntlm, spnego, wss
@@ -69,6 +68,7 @@ from zato.admin.web.views.security import posture as security_posture
 from zato.admin.web.views.security import tier as security_tier
 from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
 from zato.admin.web.views.stats import user as stats_user
+from zato.admin.web.views.monitoring import alert_templates as monitoring_alert_templates
 from zato.admin.web.views.monitoring import config as monitoring_config
 from zato.admin.web.views.monitoring import dashboard as monitoring_dashboard
 from zato.admin.web.views.monitoring.wizard import health as monitoring_wizard_health
@@ -150,10 +150,6 @@ urlpatterns += [
         login_required(ai_skills.index), name='ai-skills'),
     url(r'^zato/ai/skills/persist/$',
         login_required(ai_skills.persist), name='ai-skills-persist'),
-    url(r'^zato/ai/templates/$',
-        login_required(ai_templates.index), name='ai-templates'),
-    url(r'^zato/ai/templates/persist/$',
-        login_required(ai_templates.persist), name='ai-templates-persist'),
     url(r'^zato/service/ide/get-service/(?P<service_name>.*)/$',
         login_required(service_ide.get_service), name='service-ide-get-service'),
     url(r'^zato/service/ide/parse-payload/$',
@@ -1526,6 +1522,12 @@ urlpatterns += [
     # Monitoring - configuration
     url(r'^zato/monitoring/config/$',
         login_required(monitoring_config.config), name='monitoring-config'),
+
+    # Monitoring - alert templates
+    url(r'^zato/monitoring/alert-templates/$',
+        login_required(monitoring_alert_templates.index), name='alert-templates'),
+    url(r'^zato/monitoring/alert-templates/persist/$',
+        login_required(monitoring_alert_templates.persist), name='alert-templates-persist'),
 
     # Monitoring - wizard - health
     url(r'^zato/monitoring/wizard/health/$',

@@ -1,22 +1,20 @@
 {% extends "zato/index.html" %}
 
 {% comment %}
-Templates - the alert notification templates under the server's config/repo/alert-templates
-directory and the alert explanation skills under its config/repo/alert-skills directory,
-browsed and edited from the dashboard. The screen is built on the config files kit with
+Alert templates - the alert notification templates under the server's config/repo/alert-templates
+directory, browsed and edited from the dashboard. The screen is built on the config files kit with
 the extras off - two columns, the files on the left and the one being read on the right.
-A template is one .j2 file the alerting engine renders a notification with, a skill is one
-directory with a SKILL.md file in it, named after the audit source whose alerts the LLM
-explains with it. New files are templates, skills are only ever edited. The view provides:
+A template is one .j2 file the alerting engine renders a notification with. The view provides:
 
-* cluster_id        - the current cluster
-* file_list_json    - every template and skill with its contents
-* default_directory - where a new template lands
-* max_editable_size - how large a file may be before it is edited outside the browser
-* error             - why the skills could not be read, empty when they could
+* cluster_id                - the current cluster
+* file_list_json            - every template with its contents
+* default_directory         - where a new template lands
+* max_editable_size         - how large a file may be before it is edited outside the browser
+* new_template_content_json - what a new template starts out with
+* error                     - why the templates could not be read, empty when they could
 {% endcomment %}
 
-{% block html_title %}Templates{% endblock %}
+{% block html_title %}Alert templates{% endblock %}
 
 {% block "extra_css" %}
 <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
@@ -52,8 +50,8 @@ explains with it. New files are templates, skills are only ever edited. The view
 $(document).ready(function() {
     $.fn.zato.config_files.init({
         screen: {
-            logPrefix: 'templates',
-            storagePrefix: 'zato.ai-templates',
+            logPrefix: 'alert-templates',
+            storagePrefix: 'zato.alert-templates',
             hasTranslate: false,
             hasConvert: false,
             hasUpload: false,
@@ -61,19 +59,19 @@ $(document).ready(function() {
             hasShowAll: false,
             hasCount: false,
             fixedKind: 'template',
-            highlighter: 'markdown_to_html',
+            highlighter: 'jinja_to_html',
             newFileName: 'new-template',
             newFileSuffix: '.j2',
             newFileContent: {{ new_template_content_json|safe }},
-            kindLabel: {template: 'notification template', skill: 'explanation skill'},
-            kindBadge: {template: 'template', skill: 'skill'},
-            kindBadgeClass: {template: 'zato-badge-green', skill: 'zato-badge-blue'},
-            entryNoun: {template: 'expression', skill: 'entry'}
+            kindLabel: {template: 'notification template'},
+            kindBadge: {template: 'template'},
+            kindBadgeClass: {template: 'zato-badge-green'},
+            entryNoun: {template: 'expression'}
         },
         file_list: {{ file_list_json|safe }},
         default_directory: '{{ default_directory }}',
         max_editable_size: {{ max_editable_size }},
-        persist_url: '{% url "ai-templates-persist" %}',
+        persist_url: '{% url "alert-templates-persist" %}',
         error: '{{ error|escapejs }}'
     });
 });
@@ -86,7 +84,7 @@ $(document).ready(function() {
 <div class="settings-panel config-files-panel">
 
     <div class="config-files-panel-header">
-        <h2>Templates</h2>
+        <h2>Alert templates</h2>
 
         <!-- The file being read, in full, with the star that says it has been typed into
              since it was last saved -->

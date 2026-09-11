@@ -64,6 +64,24 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
 
 # ################################################################################################################################
 
+    def _handle_login(self, tag:'str', parts:'strlist') -> 'bool':
+        """ A server without a required password accepts any login, one with it rejects
+        every other password the way a real server does - with a NO and the failure code.
+        """
+        required_password = cast_('any_', self.server).required_password
+
+        # The password is the last word of the command, imaplib sends it quoted
+        password = parts[-1].strip('"')
+
+        if required_password and password != required_password:
+            self._respond(tag.encode('utf-8') + b' NO [AUTHENTICATIONFAILED] Authentication failed')
+            return True
+
+        self._respond(tag.encode('utf-8') + b' OK LOGIN completed')
+        return True
+
+# ################################################################################################################################
+
     def _handle_uid_search(self, tag:'str', parts:'strlist') -> 'None':
 
         # Everything after "TAG UID SEARCH" forms the search criteria
@@ -189,7 +207,10 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
             elif command == 'LOGOUT':
                 should_continue = self._handle_logout(tag)
 
-            # LOGIN, NOOP, CLOSE and anything else simply succeed
+            elif command == 'LOGIN':
+                should_continue = self._handle_login(tag, parts)
+
+            # NOOP, CLOSE and anything else simply succeed
             else:
                 should_continue = self._handle_any_other(tag, command)
 
@@ -213,6 +234,9 @@ class IMAPTestServer(socketserver.ThreadingTCPServer):
 
         self.received_commands = []
         self.host, self.port = self.server_address[:2]
+
+        # The password a login must carry - empty means any login is accepted
+        self.required_password = ''
 
         # The in-memory mailbox - a list of dicts with the uid, raw message bytes and the seen flag,
         # guarded by a lock because each client connection is served in its own thread.
