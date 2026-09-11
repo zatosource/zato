@@ -1879,14 +1879,23 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             # .. the AS4 resend job ..
             as4_resend_job_created = ensure_as4_resend_job_exists(session, self.cluster_id)
 
-            # .. the alerting sweeps ..
-            b2b_alerting_job_created = ensure_b2b_alerting_job_exists(session, self.cluster_id)
-            alerting_job_created = ensure_alerting_job_exists(session, self.cluster_id)
+            # .. the alerting sweeps and probes are not created for now ..
+            b2b_alerting_job_created = False
+            alerting_job_created = False
+            cert_check_job_created = False
+            ms_health_job_created = False
+            test_transfer_job_created = False
 
-            # .. and the alerting probes, of which the test transfer one is created inactive.
-            cert_check_job_created = ensure_cert_check_job_exists(session, self.cluster_id)
-            ms_health_job_created = ensure_ms_health_job_exists(session, self.cluster_id)
-            test_transfer_job_created = ensure_test_transfer_job_exists(session, self.cluster_id)
+            if 0: # alerting_disabled
+
+                # .. the alerting sweeps ..
+                b2b_alerting_job_created = ensure_b2b_alerting_job_exists(session, self.cluster_id)
+                alerting_job_created = ensure_alerting_job_exists(session, self.cluster_id)
+
+                # .. and the alerting probes, of which the test transfer one is created inactive.
+                cert_check_job_created = ensure_cert_check_job_exists(session, self.cluster_id)
+                ms_health_job_created = ensure_ms_health_job_exists(session, self.cluster_id)
+                test_transfer_job_created = ensure_test_transfer_job_exists(session, self.cluster_id)
 
             created_flags = [
                 openapi_created,
