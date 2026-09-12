@@ -104,7 +104,8 @@ _object_order['groups']     = 'name', 'quota_tier', 'members:list',
 _object_order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'method', \
     'content_type', 'timeout', 'is_audit_log_active', 'should_include_in_openapi', 'gateway_service_list:list', \
     'groups:list', \
-    'rate_limiting:list', 'response_cache:dict', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor',
+    'rate_limiting:list', 'response_cache:dict', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor', \
+    'alerts:dict',
 _object_order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', \
     'use_mtom', 'method', 'content_type', 'timeout', 'is_audit_log_active', \
     'groups:list', 'rate_limiting:list', 'response_cache:dict',

@@ -6,6 +6,26 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# An object's alert settings sit under one alerts mapping, its names the unprefixed ones of the Alerts tab,
+# durations in seconds, and only what differs from the defaults needs writing:
+#
+#     channel_rest:
+#       - name: orders.api
+#         service: orders.create
+#         url_path: /api/orders
+#         alerts:
+#           max_latency: 2000
+#           traffic_expected: true
+#           silence_window: 1800
+#           email_connection: smtp:ops.smtp
+#           llm_connection: ops.llm
+#
+#       - name: orders.status
+#         service: orders.status
+#         url_path: /api/orders/status
+#         alerts:
+#           is_active: false
+
 # Zato
 from zato.common.alerting import object_config
 from zato.common.api import EMAIL, GENERIC

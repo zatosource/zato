@@ -21,12 +21,13 @@ from sqlalchemy.orm import sessionmaker
 
 # Zato
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
+from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.cli.enmasse.importers.ftp import FTPImporter
 from zato.cli.enmasse.importers.sftp import SFTPImporter
 from zato.cli.enmasse.importers.smb import SMBImporter
 from zato.common.alerting.object_config import Alerts_Key, storage_name
 from zato.common.api import EMAIL, GENERIC
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, IMAP, SMTP
+from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, HTTPSOAP, IMAP, SecurityBase, Service, SMTP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,6 +52,9 @@ _imap_generic_name = 'enmasse.alerts.imap.generic'
 
 # The LLM connection an alerts mapping may name for its explanations
 _llm_name = 'enmasse.alerts.llm'
+
+# The service the REST channels invoke
+_service_name = 'enmasse.alerts.service'
 
 # The same YAML a person would write - one connection moving every alert setting away from its default,
 # one moving a few of them and one carrying no alerts mapping at all.
@@ -93,6 +97,25 @@ smb:
     host: smb.example.com
     alerts:
       window: 3600
+
+channel_rest:
+  - name: enmasse.alerts.channel.1
+    service: {_service_name}
+    url_path: /enmasse/alerts/channel/1
+    alerts:
+      is_active: false
+      consecutive_failures: 5
+      max_latency: 2000
+      auth_failures_window: 3600
+      traffic_expected: true
+      silence_window: 1800
+      use_llm: false
+      email_connection: smtp:{_smtp_name}
+      llm_connection: {_llm_name}
+
+  - name: enmasse.alerts.channel.2
+    service: {_service_name}
+    url_path: /enmasse/alerts/channel/2
 """
 
 # ################################################################################################################################
@@ -118,6 +141,9 @@ def session() -> 'any_':
         GenericConn.__table__,
         SMTP.__table__,
         IMAP.__table__,
+        Service.__table__,
+        SecurityBase.__table__,
+        HTTPSOAP.__table__,
     ]
     Base.metadata.create_all(engine, tables=tables)
 
@@ -126,6 +152,9 @@ def session() -> 'any_':
 
     cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
     session.add(cluster)
+
+    service = Service(None, _service_name, True, 'enmasse.alerts.Service', False, cluster)
+    session.add(service)
 
     smtp = SMTP()
     smtp.name = _smtp_name
@@ -194,7 +223,14 @@ def sftp_importer(importer:'EnmasseYAMLImporter') -> 'SFTPImporter':
 
 # ################################################################################################################################
 
-def _opaque(connection:'GenericConn') -> 'anydict':
+@pytest.fixture
+def channel_importer(importer:'EnmasseYAMLImporter') -> 'ChannelImporter':
+    out = ChannelImporter(importer)
+    return out
+
+# ################################################################################################################################
+
+def _opaque(connection:'any_') -> 'anydict':
     out = loads(connection.opaque1)
     return out
 
@@ -487,6 +523,185 @@ class TestAlertsImportRejections:
         opaque = _opaque(created[0])
 
         assert opaque[storage_name('email_connection')] == ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestChannelAlertsImport:
+
+    def test_a_channel_stores_every_alert_setting_under_its_prefix(
+        self,
+        yaml_config:'stranydict',
+        session:'any_',
+        channel_importer:'ChannelImporter',
+    ) -> 'None':
+        """ Each value of a REST channel's alerts mapping lands in the opaque attributes under the alert_ prefix,
+        the settings left out take the defaults and the mapping itself is not stored.
+        """
+        created, _ = channel_importer.sync_channel_rest(yaml_config['channel_rest'], session)
+        channel = _by_name(created)['enmasse.alerts.channel.1']
+
+        opaque = _opaque(channel)
+
+        assert opaque[storage_name('is_active')] is False
+        assert opaque[storage_name('consecutive_failures')] == 5
+        assert opaque[storage_name('max_latency')] == 2000
+        assert opaque[storage_name('auth_failures_window')] == 3600
+        assert opaque[storage_name('traffic_expected')] is True
+        assert opaque[storage_name('silence_window')] == 1800
+        assert opaque[storage_name('use_llm')] is False
+        assert opaque[storage_name('email_connection')] == f'smtp:{_smtp_name}'
+        assert opaque[storage_name('llm_connection')] == _llm_name
+
+        assert opaque[storage_name('error_rate')] == 10
+        assert opaque[storage_name('window')] == 300
+        assert opaque[storage_name('server_errors')] == 5
+        assert opaque[storage_name('auth_failures')] == 10
+        assert opaque[storage_name('client_errors')] == 50
+        assert opaque[storage_name('silence_slots')] == '[]'
+
+        assert Alerts_Key not in opaque
+        assert not hasattr(channel, Alerts_Key)
+
+# ################################################################################################################################
+
+    def test_a_channel_without_the_mapping_runs_on_defaults(
+        self,
+        yaml_config:'stranydict',
+        session:'any_',
+        channel_importer:'ChannelImporter',
+    ) -> 'None':
+        """ A REST channel with no alerts mapping at all is stored with every alert setting at its default,
+        next to the channel's own opaque attributes.
+        """
+        created, _ = channel_importer.sync_channel_rest(yaml_config['channel_rest'], session)
+        channel = _by_name(created)['enmasse.alerts.channel.2']
+
+        opaque = _opaque(channel)
+
+        assert opaque[storage_name('is_active')] is True
+        assert opaque[storage_name('consecutive_failures')] == 3
+        assert opaque[storage_name('max_latency')] == 5000
+        assert opaque[storage_name('traffic_expected')] is False
+        assert opaque[storage_name('silence_window')] == 3600
+        assert opaque[storage_name('use_llm')] is True
+        assert opaque[storage_name('email_connection')] == ''
+        assert opaque[storage_name('llm_connection')] == ''
+
+        assert opaque['is_audit_log_active'] is True
+
+# ################################################################################################################################
+
+    def test_a_channel_update_makes_the_yaml_the_source_of_truth(
+        self,
+        yaml_config:'stranydict',
+        session:'any_',
+        channel_importer:'ChannelImporter',
+    ) -> 'None':
+        """ Importing again with a setting moved back to its default, and the rest dropped from the mapping,
+        stores the defaults for all of them, and a mapping that changed nothing updates nothing.
+        """
+        definitions = yaml_config['channel_rest']
+
+        created, _ = channel_importer.sync_channel_rest(definitions, session)
+        assert len(created) == 2
+
+        # The same file again changes nothing ..
+        definitions = yaml.safe_load(_yaml_text)['channel_rest']
+        created_again, updated = channel_importer.sync_channel_rest(definitions, session)
+        assert len(created_again) == 0
+        assert len(updated) == 0
+
+        # .. and one with a smaller mapping updates the channel it belongs to.
+        definitions = yaml.safe_load(_yaml_text)['channel_rest']
+        definitions[0]['alerts'] = {'consecutive_failures': 3, 'use_llm': False}
+
+        created_again, updated = channel_importer.sync_channel_rest(definitions, session)
+        assert len(created_again) == 0
+        assert len(updated) == 1
+
+        channel = _by_name(updated)['enmasse.alerts.channel.1']
+        opaque = _opaque(channel)
+
+        assert opaque[storage_name('consecutive_failures')] == 3
+        assert opaque[storage_name('use_llm')] is False
+        assert opaque[storage_name('max_latency')] == 5000
+        assert opaque[storage_name('traffic_expected')] is False
+        assert opaque[storage_name('email_connection')] == ''
+        assert opaque[storage_name('llm_connection')] == ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestChannelAlertsImportRejections:
+
+    def _definition(self, alerts:'anydict') -> 'anydict':
+        out = {
+            'name': 'enmasse.alerts.channel.rejected',
+            'service': _service_name,
+            'url_path': '/enmasse/alerts/channel/rejected',
+            Alerts_Key: alerts,
+        }
+        return out
+
+# ################################################################################################################################
+
+    def test_an_unknown_field_is_rejected(
+        self,
+        session:'any_',
+        channel_importer:'ChannelImporter',
+    ) -> 'None':
+        """ A key under alerts that is not a field of the channel alert type is a mistake in the file.
+        """
+        definition = self._definition({'arrival_overdue': 2})
+
+        with pytest.raises(Exception) as context:
+            _ = channel_importer.sync_channel_rest([definition], session)
+
+        message = str(context.value)
+        assert 'arrival_overdue' in message
+        assert 'enmasse.alerts.channel.rejected' in message
+
+# ################################################################################################################################
+
+    def test_a_missing_llm_connection_is_rejected(
+        self,
+        session:'any_',
+        channel_importer:'ChannelImporter',
+    ) -> 'None':
+        """ Naming an LLM connection that does not exist is refused.
+        """
+        definition = self._definition({'llm_connection': 'enmasse.no.such.llm'})
+
+        with pytest.raises(Exception) as context:
+            _ = channel_importer.sync_channel_rest([definition], session)
+
+        message = str(context.value)
+        assert 'enmasse.no.such.llm' in message
+        assert 'LLM connection' in message
+        assert 'enmasse.alerts.channel.rejected' in message
+
+# ################################################################################################################################
+
+    def test_a_missing_email_connection_is_rejected(
+        self,
+        session:'any_',
+        channel_importer:'ChannelImporter',
+    ) -> 'None':
+        """ Naming an SMTP connection that does not exist is refused.
+        """
+        definition = self._definition({'email_connection': 'smtp:enmasse.no.such.connection'})
+
+        with pytest.raises(Exception) as context:
+            _ = channel_importer.sync_channel_rest([definition], session)
+
+        message = str(context.value)
+        assert 'enmasse.no.such.connection' in message
+        assert 'enmasse.alerts.channel.rejected' in message
+
+        # Nothing was written
+        stored = session.query(HTTPSOAP).filter_by(name='enmasse.alerts.channel.rejected').first()
+        assert stored is None
 
 # ################################################################################################################################
 # ################################################################################################################################
