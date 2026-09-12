@@ -16,8 +16,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # Zato
-from zato.common.alerting.collectors.common import Measure_Auth_Failures, Measure_Client_Errors, Measure_Error_Rate, \
-    Measure_File_Runs, Measure_Latency, Measure_Server_Errors, Measure_Silence
+from zato.common.alerting.collectors.common import Measure_Auth_Failures, Measure_Client_Errors, Measure_Connection_Failures, \
+    Measure_Error_Rate, Measure_File_Runs, Measure_Latency, Measure_Server_Errors, Measure_Silence, Measure_Status_Codes
 from zato.common.audit_log.common import AuditSource
 
 # ################################################################################################################################
@@ -35,15 +35,21 @@ if 0:
 # The kinds a screen field comes in - a number backed by rule defaults, a duration backed
 # by a rule default counted in seconds and shown as a count with a unit, a toggle backed
 # by the active flags of whole rules, a ruleset toggle backed by one key every rule
-# document of the ruleset carries, or a JSON list of time slots kept per object and backed by no rule.
+# document of the ruleset carries, a JSON list of time slots kept per object and backed by no rule,
+# or a text backed by a rule default that is a string, e.g. the status codes a connection alerts on.
 Kind_Number         = 'number'
 Kind_Duration       = 'duration'
 Kind_Toggle         = 'toggle'
 Kind_Ruleset_Toggle = 'ruleset_toggle'
 Kind_Time_Slots     = 'time_slots'
+Kind_Text           = 'text'
 
 # The time slots of an object that has none
 Time_Slots_Default = '[]'
+
+# The status codes an outgoing connection alerts on - the field and the rule default it reads and writes
+Status_Codes_Field_Name = 'status_codes'
+Status_Codes_Default = 'status_codes'
 
 # The rule default a type's window field reads and writes - how far back the
 # error-rate and failure-count facts of the type's sources are measured over.
@@ -130,9 +136,21 @@ type_fields:'dict[str, list[stranydict]]' = {
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
-            'default': Window_Seconds_Default, 'is_percent': False, 'measures': _call_measures},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Error_Rate]},
+        {'name': Status_Codes_Field_Name, 'kind': Kind_Text, 'rules': ['Status_Codes'],
+            'default': Status_Codes_Default},
+        {'name': 'status_code_threshold', 'kind': Kind_Number, 'rules': ['Status_Codes'],
+            'default': 'status_code_threshold', 'is_percent': False},
+        {'name': 'status_codes_window', 'kind': Kind_Duration, 'rules': ['Status_Codes'],
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Status_Codes]},
+        {'name': 'connection_failures', 'kind': Kind_Number, 'rules': ['Connection_Failures'],
+            'default': 'connection_failure_threshold', 'is_percent': False},
+        {'name': 'connection_failures_window', 'kind': Kind_Duration, 'rules': ['Connection_Failures'],
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Connection_Failures]},
         {'name': 'max_latency', 'kind': Kind_Number, 'rules': ['Slow_Responses'],
             'default': 'max_avg_duration_ms', 'is_percent': False},
+        {'name': 'latency_window', 'kind': Kind_Duration, 'rules': ['Slow_Responses'],
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Latency]},
         {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
     'sql': [
@@ -377,6 +395,31 @@ def read_number(documents:'stranydict', ruleset_name:'str', field:'stranydict') 
 
 # ################################################################################################################################
 
+def read_text(documents:'stranydict', ruleset_name:'str', field:'stranydict') -> 'str | None':
+    """ One text field's value, read from the first of its rules that still holds the default -
+    None when no rule does.
+    """
+
+    # Our response to produce
+    out = None
+
+    for rule_name in field['rules']:
+
+        full_name = rule_full_name(ruleset_name, rule_name)
+
+        if rule_document := documents.get(full_name):
+
+            defaults = rule_document.get('defaults')
+
+            if defaults:
+                if entry := defaults.get(field['default']):
+                    out = entry['value']
+                    break
+
+    return out
+
+# ################################################################################################################################
+
 def read_toggle(documents:'stranydict', ruleset_name:'str', field:'stranydict') -> 'bool':
     """ One toggle field's state - on only when every rule it names exists and is active.
     """
@@ -482,6 +525,11 @@ def read_type_values(type_name:'str', documents:'stranydict') -> 'stranydict':
             out[field['name']] = read_ruleset_toggle(documents, field)
         elif field['kind'] == Kind_Time_Slots:
             out[field['name']] = Time_Slots_Default
+        elif field['kind'] == Kind_Text:
+            text = read_text(documents, ruleset_name, field)
+
+            if text is not None:
+                out[field['name']] = text
         else:
             value = read_number(documents, ruleset_name, field)
 
@@ -532,6 +580,32 @@ def write_number(documents:'stranydict', ruleset_name:'str', field:'stranydict',
                 if entry := defaults.get(field['default']):
                     if entry['value'] != rule_value:
                         entry['value'] = rule_value
+                        out = True
+
+    return out
+
+# ################################################################################################################################
+
+def write_text(documents:'stranydict', ruleset_name:'str', field:'stranydict', value:'str') -> 'bool':
+    """ Writes one text field into every rule of its type that holds the default.
+    Returns whether anything actually changed.
+    """
+
+    # Our response to produce
+    out = False
+
+    for rule_name in field['rules']:
+
+        full_name = rule_full_name(ruleset_name, rule_name)
+
+        if rule_document := documents.get(full_name):
+
+            defaults = rule_document.get('defaults')
+
+            if defaults:
+                if entry := defaults.get(field['default']):
+                    if entry['value'] != value:
+                        entry['value'] = value
                         out = True
 
     return out
@@ -598,6 +672,8 @@ def write_type_values(type_name:'str', documents:'stranydict', values:'stranydic
             changed = write_ruleset_toggle(documents, field, value)
         elif field['kind'] == Kind_Time_Slots:
             continue
+        elif field['kind'] == Kind_Text:
+            changed = write_text(documents, ruleset_name, field, value)
         else:
             changed = write_number(documents, ruleset_name, field, value)
 

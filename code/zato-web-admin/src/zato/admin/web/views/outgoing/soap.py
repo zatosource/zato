@@ -41,10 +41,7 @@ _invocation_field_names = (
     'scheduler_job_id',
     'health_check_run_every',
     'health_check_run_unit',
-    'health_check_notify_on',
     'health_check_job_id',
-    'health_check_callback_type',
-    'health_check_callback_name',
 )
 
 # The retry config of an outgoing connection - each field maps to its shared default
@@ -62,13 +59,6 @@ _callback_widget_names = {
     'service': 'callback_service',
     'topic': 'callback_topic',
     'rest': 'callback_rest',
-}
-
-# The same pattern applies to the health check tab's callback widgets
-_health_check_callback_widget_names = {
-    'service': 'health_check_callback_service',
-    'topic': 'health_check_callback_topic',
-    'rest': 'health_check_callback_rest',
 }
 
 # ################################################################################################################################
@@ -139,18 +129,13 @@ class Index(_Index):
         create_form = CreateForm(security_list, req=self.req)
         edit_form = EditForm(security_list, prefix='edit', req=self.req)
 
-        # The callback tabs let outgoing SOAP connections deliver responses
-        # and health check outcomes to outgoing REST connections
+        # The callback tab lets outgoing SOAP connections deliver responses to outgoing REST connections ..
         add_http_soap_select(create_form, 'callback_rest', self.req, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, by_id=False)
         add_http_soap_select(edit_form, 'callback_rest', self.req, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, by_id=False)
-        add_http_soap_select(create_form, 'health_check_callback_rest', self.req, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, by_id=False)
-        add_http_soap_select(edit_form, 'health_check_callback_rest', self.req, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, by_id=False)
 
         # .. and to pub/sub topics, selected by name from the topics that currently exist.
         add_select_from_service(create_form, self.req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
         add_select_from_service(edit_form, self.req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
-        add_select_from_service(create_form, self.req, 'zato.pubsub.topic.get-list', 'health_check_callback_topic', by_id=False)
-        add_select_from_service(edit_form, self.req, 'zato.pubsub.topic.get-list', 'health_check_callback_topic', by_id=False)
 
         out = {
             'show_search_form': True,
@@ -173,8 +158,7 @@ class _CreateEdit(CreateEdit):
     input_optional = ('is_active', 'is_audit_log_active', 'url_path', 'soap_action', 'soap_version', 'security_id', \
         'validate_tls', 'ping_method', 'timeout', 'content_type', \
         'use_ws_addressing', 'use_mtom', 'body_credentials', 'tls_client_cert', 'tls_client_key') + \
-        _invocation_field_names + tuple(_retry_field_defaults) + ('callback_service', 'callback_topic', 'callback_rest') + \
-        ('health_check_callback_service', 'health_check_callback_topic', 'health_check_callback_rest')
+        _invocation_field_names + tuple(_retry_field_defaults) + ('callback_service', 'callback_topic', 'callback_rest')
     output_required = 'id', 'name'
 
 # ################################################################################################################################
@@ -214,15 +198,8 @@ class _CreateEdit(CreateEdit):
             widget_name = _callback_widget_names[callback_type]
             input_dict['callback_name'] = input_dict.get(widget_name)
 
-        # The health check tab's callback widgets work the same way
-        if health_check_callback_type := input_dict.get('health_check_callback_type'):
-            widget_name = _health_check_callback_widget_names[health_check_callback_type]
-            input_dict['health_check_callback_name'] = input_dict.get(widget_name)
-
         # The widgets themselves are not part of the backend's input
         for widget_name in _callback_widget_names.values():
-            input_dict.pop(widget_name, None)
-        for widget_name in _health_check_callback_widget_names.values():
             input_dict.pop(widget_name, None)
 
 # ################################################################################################################################

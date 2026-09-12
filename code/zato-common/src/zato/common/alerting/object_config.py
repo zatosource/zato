@@ -74,11 +74,20 @@ LLM_Connection_Default = ''
 # Which alert type each connection type's settings follow
 alert_type_file_transfer = 'file_transfer'
 alert_type_channels = 'channels'
+alert_type_rest = 'rest'
 
 conn_type_to_alert_type:'strstrdict' = {
     GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: alert_type_file_transfer,
     GENERIC.CONNECTION.TYPE.OUTCONN_FTP:  alert_type_file_transfer,
     GENERIC.CONNECTION.TYPE.OUTCONN_SMB:  alert_type_file_transfer,
+}
+
+# The HTTPSOAP rows that carry alert settings of their own, by connection and transport -
+# REST and SOAP channels under the channels type, outgoing REST connections under the rest type
+alert_type_by_http_soap:'dict[tuple[str, str], str]' = {
+    (CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP):  alert_type_channels,
+    (CONNECTION.CHANNEL, URL_TYPE.SOAP):        alert_type_channels,
+    (CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP): alert_type_rest,
 }
 
 # The HTTPSOAP rows that carry channel alert settings - REST and SOAP channels
@@ -92,6 +101,21 @@ transport_by_channel_source:'strstrdict' = {
 }
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def get_alert_type(connection:'str', transport:'str') -> 'str':
+    """ The alert type an HTTPSOAP row of the given connection and transport carries settings under -
+    an empty string for a row that carries none.
+    """
+    key = (connection, transport)
+
+    if key in alert_type_by_http_soap:
+        out = alert_type_by_http_soap[key]
+    else:
+        out = ''
+
+    return out
+
 # ################################################################################################################################
 
 def is_alert_channel(connection:'str', transport:'str') -> 'bool':
@@ -125,6 +149,11 @@ field_display = {
     'client_errors':        ('Client errors', ''),
     'client_errors_window': ('Client errors window', ''),
     'latency_window':       ('Latency window', ''),
+    'status_codes':         ('Status codes', ''),
+    'status_code_threshold': ('Responses', ''),
+    'status_codes_window':  ('Status codes window', ''),
+    'connection_failures':  ('Connection failures', ''),
+    'connection_failures_window': ('Connection failures window', ''),
     'traffic_expected':     ('Alert on silence', ''),
     'silence_window':       ('Silence', ''),
     'silence_slots':        ('Time ranges', ''),
@@ -160,6 +189,13 @@ field_help = {
     'client_errors':        'How many calls answered with a 4xx status other than 401 or 403 raise an alert.',
     'client_errors_window': 'How long the window the 4xx responses are counted over is.',
     'latency_window':       'How long the window the response times are averaged over is.',
+    'status_codes':         'The status codes that count, comma-separated - three-digit codes such as 401 or 403 ' + \
+                            'and whole classes such as 4xx or 5xx.',
+    'status_code_threshold': 'How many responses with one of the status codes in the window raise an alert.',
+    'status_codes_window':  'How long the window the responses are counted over is.',
+    'connection_failures':  'How many calls that failed before any response arrived - a timeout, a refused connection, ' + \
+                            'a TLS failure - raise an alert.',
+    'connection_failures_window': 'How long the window the connection failures are counted over is.',
     'traffic_expected':     'Whether a channel that receives no requests for the time below raises an alert.',
     'silence_window':       'How long the channel may go without a request, in minutes, hours or days.',
     'silence_slots':        'The ranges of the day with a silence and a switch of their own.',

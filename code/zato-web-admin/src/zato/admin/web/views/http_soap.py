@@ -24,7 +24,7 @@ from zato.admin.web.views import get_group_list as common_get_group_list, get_ht
     get_js_dt_format, get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
         method_allowed, ping_json_response, SecurityList
 from zato.admin.web.views.security.tier import get_tier_list
-from zato.common.alerting.object_config import alert_type_channels, is_alert_channel
+from zato.common.alerting.object_config import get_alert_type
 from zato.common.api import generic_attrs, Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      Sec_Def_Type_Name, SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.content_type import format_content, get_content_type
@@ -96,10 +96,7 @@ _invocation_field_names = (
     'callback_name',
     'health_check_run_every',
     'health_check_run_unit',
-    'health_check_notify_on',
     'health_check_job_id',
-    'health_check_callback_type',
-    'health_check_callback_name',
 )
 
 # The retry config of an outgoing connection - each field maps to its shared default
@@ -117,13 +114,6 @@ _callback_widget_names = {
     'service': 'callback_service',
     'topic': 'callback_topic',
     'rest': 'callback_rest',
-}
-
-# The same pattern applies to the health check tab's callback widgets
-_health_check_callback_widget_names = {
-    'service': 'health_check_callback_service',
-    'topic': 'health_check_callback_topic',
-    'rest': 'health_check_callback_rest',
 }
 
 # The flag a row of the listing turns over where it stands.
@@ -186,13 +176,13 @@ def _get_edit_create_message(params, prefix='', user_profile=None): # type: igno
             message['deprecation_sunset'] = params.get(prefix + 'deprecation_sunset', '')
             message['deprecation_successor'] = params.get(prefix + 'deprecation_successor', '')
 
-    # The Alerts tab's fields exist in the forms of REST and SOAP channels
-    if is_alert_channel(params['connection'], params['transport']):
-        for name in alerts_tab.get_storage_field_names(alert_type_channels):
+    # The Alerts tab's fields exist in the forms of REST and SOAP channels and of outgoing REST connections
+    if alert_type := get_alert_type(params['connection'], params['transport']):
+        for name in alerts_tab.get_storage_field_names(alert_type):
             value = params.get(prefix + name, '')
-            message[name] = alerts_tab.pre_process_alert_item(alert_type_channels, name, value)
+            message[name] = alerts_tab.pre_process_alert_item(alert_type, name, value)
 
-        alerts_tab.join_durations(alert_type_channels, message)
+        alerts_tab.join_durations(alert_type, message)
 
     # The declarative invocation fields exist only in the forms of outgoing connections
     for name in _invocation_field_names:
@@ -215,11 +205,6 @@ def _get_edit_create_message(params, prefix='', user_profile=None): # type: igno
     if callback_type := message['callback_type']:
         widget_name = _callback_widget_names[callback_type]
         message['callback_name'] = params.get(prefix + widget_name)
-
-    # The health check tab's callback widgets work the same way
-    if health_check_callback_type := message['health_check_callback_type']:
-        widget_name = _health_check_callback_widget_names[health_check_callback_type]
-        message['health_check_callback_name'] = params.get(prefix + widget_name)
 
     return message
 
@@ -338,6 +323,9 @@ def index(req): # type: ignore
     if transport == 'soap':
         colspan += 3
 
+    # The alert type this page's rows carry settings under, empty for a page whose rows carry none
+    alert_type = get_alert_type(connection, transport)
+
     if req.zato.cluster_id:
         for def_item in req.zato.client.invoke('zato.security.get-list', {'cluster_id': req.zato.cluster.id}):
             if connection == 'outgoing':
@@ -349,11 +337,6 @@ def index(req): # type: ignore
 
             _security.append(def_item)
 
-        if is_alert_channel(connection, transport):
-            alert_type = alert_type_channels
-        else:
-            alert_type = None
-
         create_form = CreateForm(_security, SOAP_CHANNEL_VERSIONS, req=req, alert_type=alert_type)
         edit_form = EditForm(_security, SOAP_CHANNEL_VERSIONS, prefix='edit', req=req, alert_type=alert_type)
 
@@ -361,19 +344,14 @@ def index(req): # type: ignore
             create_form.fields['url_path'].required = False
             edit_form.fields['url_path'].required = False
 
-        # The callback tabs let outgoing REST connections deliver responses
-        # and health check outcomes to other outgoing REST connections
+        # The callback tab lets outgoing REST connections deliver responses to other outgoing REST connections ..
         if connection == 'outgoing' and transport == URL_TYPE.PLAIN_HTTP:
             add_http_soap_select(create_form, 'callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
             add_http_soap_select(edit_form, 'callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
-            add_http_soap_select(create_form, 'health_check_callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
-            add_http_soap_select(edit_form, 'health_check_callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
 
             # .. and to pub/sub topics, selected by name from the topics that currently exist.
             add_select_from_service(create_form, req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
             add_select_from_service(edit_form, req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
-            add_select_from_service(create_form, req, 'zato.pubsub.topic.get-list', 'health_check_callback_topic', by_id=False)
-            add_select_from_service(edit_form, req, 'zato.pubsub.topic.get-list', 'health_check_callback_topic', by_id=False)
 
         input_dict = {
             'cluster_id': req.zato.cluster_id,
@@ -466,18 +444,18 @@ def index(req): # type: ignore
                 http_soap.is_deprecated = is_deprecated
                 http_soap.deprecation_sunset = item.get('deprecation_sunset', '')
                 http_soap.deprecation_successor = item.get('deprecation_successor', '')
-
-                # The Alerts tab's fields ride in the row for the edit form to read.
-                if is_alert_channel(connection, transport):
-                    for name in alerts_tab.get_storage_field_names(alert_type_channels):
-                        if name in item:
-                            http_soap[name] = item[name]
-
-                    alerts_tab.split_durations(alert_type_channels, http_soap)
             else:
                 http_soap.ping_method = item.ping_method
                 http_soap.pool_size = item.pool_size
                 http_soap.validate_tls = item.get('validate_tls', True)
+
+            # The Alerts tab's fields ride in the row for the edit form to read.
+            if alert_type:
+                for name in alerts_tab.get_storage_field_names(alert_type):
+                    if name in item:
+                        http_soap[name] = item[name]
+
+                alerts_tab.split_durations(alert_type, http_soap)
 
             for name in generic_attrs:
                 setattr(http_soap, name, item.get(name))
@@ -547,14 +525,16 @@ def index(req): # type: ignore
     # The scheduler tab's start date picker needs the user's date and time format
     return_data.update(get_js_dt_format(req.zato.user_profile))
 
-    # REST and SOAP channels carry the Alerts tab, the template asks this one flag
-    has_alerts_tab = is_alert_channel(connection, transport)
+    # REST and SOAP channels and outgoing REST connections carry the Alerts tab, the template asks this one flag,
+    # and a channel's dialog gets a Main and Alerts strip of its own where an outgoing connection's has one already
+    has_alerts_tab = bool(alert_type)
     return_data['has_alerts_tab'] = has_alerts_tab
+    return_data['has_channel_tabs'] = has_alerts_tab and connection == 'channel'
 
     if has_alerts_tab:
-        return_data['create_alerts_tab'] = alerts_tab.get_alerts_tab_context(create_form, alert_type_channels)
-        return_data['edit_alerts_tab'] = alerts_tab.get_alerts_tab_context(edit_form, alert_type_channels)
-        return_data['alerts_tab_config'] = alerts_tab.get_alerts_tab_config(alert_type_channels)
+        return_data['create_alerts_tab'] = alerts_tab.get_alerts_tab_context(create_form, alert_type)
+        return_data['edit_alerts_tab'] = alerts_tab.get_alerts_tab_context(edit_form, alert_type)
+        return_data['alerts_tab_config'] = alerts_tab.get_alerts_tab_config(alert_type)
 
     return TemplateResponse(req, 'zato/http_soap/index.html', return_data)
 

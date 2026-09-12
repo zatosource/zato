@@ -66,6 +66,11 @@ Measure_Server_Errors = 'server_errors'
 Measure_Silence       = 'silence'
 Measure_File_Runs     = 'file_runs'
 
+# The measures of an outgoing connection's responses - how many came with each status code
+# and how many calls failed before any response arrived
+Measure_Status_Codes        = 'status_codes'
+Measure_Connection_Failures = 'connection_failures'
+
 # The key a merged fact carries the window of each of its measures under
 Window_Seconds_By_Measure_Key = 'window_seconds_by_measure'
 
@@ -148,6 +153,13 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
         'client_error_count': 0,
         'server_error_count': 0,
         'server_error_rate': 0.0,
+
+        # The responses of an outgoing connection - how many arrived with each status code, e.g. {'503': 2},
+        # how many of them carried a code the connection alerts on and how many calls failed before
+        # any response arrived, be it a timeout, a refused connection or a TLS failure.
+        'status_counts': {},
+        'status_code_count': 0,
+        'connection_failure_count': 0,
 
         # How many days the object's TLS certificate has left. Zero means unmeasured,
         # which is why the certificate rules also require a value of at least one.

@@ -24,7 +24,7 @@ $.fn.zato.data_table.HTTPSOAP = new Class({
 
 $(document).ready(function() {
 
-    if($.fn.zato.http_soap.is_alert_channel()) {
+    if($.fn.zato.http_soap.has_alerts_tab()) {
         $.fn.zato.alerts_tab.init({config_id: 'http-soap-alerts-tab-config'});
         $.fn.zato.live_form_updates.register('create', $.fn.zato.alerts_tab.live_configs(''));
         $.fn.zato.live_form_updates.register('edit', $.fn.zato.alerts_tab.live_configs('edit-'));
@@ -93,7 +93,7 @@ $(document).ready(function() {
         // Attach date-time pickers to the scheduler start date fields in both popups ..
         $.fn.zato.http_soap.attach_datetimepicker(['#id_scheduler_start_date', '#id_edit-scheduler_start_date']);
 
-        // .. and show the callback widget matching the callback type selected ..
+        // .. and show the callback widget matching the callback type selected.
         $.each(['create', 'edit'], function(ignored, action) {
             var suffix = action === 'edit' ? 'edit-' : '';
             $('#id_' + suffix + 'callback_type').change(function() {
@@ -101,9 +101,6 @@ $(document).ready(function() {
             });
             $.fn.zato.http_soap.toggle_callback(action);
         });
-
-        // .. the health check tab manages its own callback widgets the same way.
-        $.fn.zato.health_check.init();
     }
 
     $.each(['', 'edit-'], function(ignored, suffix) {
@@ -127,7 +124,6 @@ $.fn.zato.data_table.after_populate = function() {
     if($.fn.zato.http_soap.is_rest_outgoing()) {
         $.each(['create', 'edit'], function(ignored, action) {
             $.fn.zato.http_soap.toggle_callback(action);
-            $.fn.zato.health_check.toggle_callback(action);
         });
     }
 }
@@ -146,13 +142,19 @@ $.fn.zato.http_soap.is_rest_channel = function() {
     return connection === 'channel' && transport === 'plain_http';
 }
 
-// A channel of either transport carries the Alerts tab
-$.fn.zato.http_soap.is_alert_channel = function() {
+// A channel of either transport and an outgoing REST connection carry the Alerts tab -
+// the Django side decides, the page carries its answer in the tab's config element
+$.fn.zato.http_soap.has_alerts_tab = function() {
+    var configElement = document.getElementById('http-soap-alerts-tab-config');
+    var out = configElement !== null;
+    return out;
+}
+
+// A channel's dialog has a strip of its own - Main and Alerts - where an outgoing connection's Alerts tab joins the strip it has
+$.fn.zato.http_soap.has_channel_tabs = function() {
     var connection = $('input[name="connection"]').val();
-    var transport = $('input[name="transport"]').val();
-    var isChannel = connection === 'channel';
-    var hasTab = transport === 'plain_http' || transport === 'soap';
-    return isChannel && hasTab;
+    var out = $.fn.zato.http_soap.has_alerts_tab() && connection === 'channel';
+    return out;
 }
 
 $.fn.zato.http_soap.attach_datetimepicker = function(picker_ids) {
@@ -169,16 +171,21 @@ $.fn.zato.http_soap.attach_datetimepicker = function(picker_ids) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.http_soap.tab_labels = {
-    config:       'Config',
-    scheduler:    'Scheduler',
-    request:      'Request',
-    response:     'Response',
-    callback:     'Callback',
-    health_check: 'Health check'
-};
+// The tabs of an outgoing REST connection's create and edit forms
+$.fn.zato.http_soap.outgoingTabLabels = function() {
+    var out = {
+        config:       'Config',
+        scheduler:    'Scheduler',
+        request:      'Request',
+        response:     'Response',
+        callback:     'Callback',
+        health_check: 'Health check',
+        alerts:       $.fn.zato.alerts_tab.tab_label()
+    };
+    return out;
+}
 
-// The tabs of a REST channel's create and edit forms
+// The tabs of a REST or SOAP channel's create and edit forms
 $.fn.zato.http_soap.channelTabLabels = function() {
     var out = {
         main:   'Main',
@@ -195,9 +202,9 @@ $.fn.zato.http_soap.reset_tabs = function(action) {
 
     if($.fn.zato.http_soap.is_rest_outgoing()) {
         default_tab = 'config';
-        tab_labels = $.fn.zato.http_soap.tab_labels;
+        tab_labels = $.fn.zato.http_soap.outgoingTabLabels();
     }
-    else if($.fn.zato.http_soap.is_alert_channel()) {
+    else if($.fn.zato.http_soap.has_channel_tabs()) {
         default_tab = 'main';
         tab_labels = $.fn.zato.http_soap.channelTabLabels();
     }
@@ -562,9 +569,13 @@ $.fn.zato.http_soap.init_how_it_works = function(action) {
         fieldSelector = 'table.form-data tr, .decision-line';
     }
     else if($.fn.zato.http_soap.is_rest_outgoing()) {
+
+        // An outgoing connection's Alerts tab lines are described next to its own fields and its health check's
         descriptions = $.extend({},
             $.fn.zato.http_soap.rest_outgoing_field_descriptions,
-            $.fn.zato.health_check.field_descriptions);
+            $.fn.zato.health_check.field_descriptions,
+            $.fn.zato.alerts_tab.descriptions());
+        fieldSelector = 'table.form-data tr, .decision-line';
     }
     else if($.fn.zato.http_soap.is_rest_channel()) {
 
@@ -598,7 +609,7 @@ $.fn.zato.http_soap.create = function(object_type) {
         $.fn.zato.http_soap.toggle_callback('create');
     }
 
-    if($.fn.zato.http_soap.is_alert_channel()) {
+    if($.fn.zato.http_soap.has_alerts_tab()) {
         $.fn.zato.alerts_tab.bind({
             panel_id: 'http-soap-create-tab-panel-alerts',
             field_prefix: ''
@@ -637,7 +648,7 @@ $.fn.zato.http_soap.edit = function(id) {
         $.fn.zato.health_check.populate('edit', item);
     }
 
-    if($.fn.zato.http_soap.is_alert_channel()) {
+    if($.fn.zato.http_soap.has_alerts_tab()) {
         $.fn.zato.alerts_tab.bind({
             panel_id: 'http-soap-edit-tab-panel-alerts',
             field_prefix: 'edit-'
@@ -889,11 +900,6 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format("<td class='ignore'>{0}</td>", item.gateway_service_list || '');
     }
 
-    // 42 - the Alerts tab of REST and SOAP channels
-    if(is_channel) {
-        row += $.fn.zato.alerts_tab.hidden_cells(item);
-    }
-
     /* 40 - declarative invocation and health check fields for REST outgoing connections */
     if(is_outgoing && !is_soap) {
 
@@ -902,9 +908,6 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         if(!item.callback_name && item.callback_type) {
             item.callback_name = item['callback_' + item.callback_type];
         }
-        if(!item.health_check_callback_name && item.health_check_callback_type) {
-            item.health_check_callback_name = item['health_check_callback_' + item.health_check_callback_type];
-        }
 
         var invocation_fields = [
             'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_job_id',
@@ -912,8 +915,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
             'request_data', 'request_data_mode',
             'response_map', 'response_map_mode',
             'callback_type', 'callback_name',
-            'health_check_run_every', 'health_check_run_unit', 'health_check_notify_on',
-            'health_check_job_id', 'health_check_callback_type', 'health_check_callback_name'
+            'health_check_run_every', 'health_check_run_unit', 'health_check_job_id'
         ];
         $.each(invocation_fields, function(ignored, name) {
             row += String.format("<td class='ignore'>{0}</td>", item[name] ? item[name] : '');
@@ -926,6 +928,11 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         $.each(retry_fields, function(ignored, name) {
             row += String.format("<td class='ignore'>{0}</td>", item[name]);
         });
+    }
+
+    // 42 - the Alerts tab of REST and SOAP channels and of REST outgoing connections
+    if($.fn.zato.http_soap.has_alerts_tab()) {
+        row += $.fn.zato.alerts_tab.hidden_cells(item);
     }
 
     if(include_tr) {

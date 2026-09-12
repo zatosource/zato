@@ -63,6 +63,7 @@ $.fn.zato.alerts_tab.config = {
     // The kinds of field spec a popover is built of
     specCheckbox: 'checkbox',
     specNumber: 'number',
+    specText: 'text',
 
     // The summary of a popover line - `{field}` is a value, `{field|singular|plural}` a
     // value with the right noun after it, `{unit_field@count_field}` a count with the
@@ -213,16 +214,20 @@ $.fn.zato.alerts_tab.elementId = function(part, lineName) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // One field spec of a popover page
-$.fn.zato.alerts_tab.buildSpec = function(fieldName, row) {
+$.fn.zato.alerts_tab.buildSpec = function(fieldName, row, line) {
 
     var tab = $.fn.zato.alerts_tab;
     var settings = tab.settings;
 
-    var isToggle = settings.toggle_kinds.indexOf(settings.field_kinds[fieldName]) !== -1;
+    var fieldKind = settings.field_kinds[fieldName];
+    var isToggle = settings.toggle_kinds.indexOf(fieldKind) !== -1;
     var kind;
 
     if(isToggle) {
         kind = tab.config.specCheckbox;
+    }
+    else if(fieldKind === settings.text_kind) {
+        kind = tab.config.specText;
     }
     else {
         kind = tab.config.specNumber;
@@ -239,6 +244,11 @@ $.fn.zato.alerts_tab.buildSpec = function(fieldName, row) {
         if(row.length > 1) {
             out.labelAbove = true;
         }
+    }
+
+    // A text shows what a value looks like while it is empty
+    if(kind === tab.config.specText) {
+        out.placeholder = line.text_fields[fieldName];
     }
 
     return out;
@@ -272,7 +282,7 @@ $.fn.zato.alerts_tab.buildDescriptors = function() {
         var page = line.rows.map(function(row) {
 
             var specs = row.map(function(fieldName) {
-                var spec = tab.buildSpec(fieldName, row);
+                var spec = tab.buildSpec(fieldName, row, line);
                 return spec;
             });
 

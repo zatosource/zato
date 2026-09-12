@@ -451,8 +451,7 @@
         'response_map', 'response_map_mode',
         'callback_type', 'callback_name',
         'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_job_id',
-        'health_check_run_every', 'health_check_run_unit', 'health_check_notify_on',
-        'health_check_job_id', 'health_check_callback_type', 'health_check_callback_name'
+        'health_check_run_every', 'health_check_run_unit', 'health_check_job_id'
     ];
 
     var hiddenRetryFields = [
@@ -561,10 +560,6 @@
         // so the name is derived from the widget matching the callback type selected.
         if(!item.callback_name && item.callback_type) {
             item.callback_name = item['callback_' + item.callback_type];
-        }
-
-        if(!item.health_check_callback_name && item.health_check_callback_type) {
-            item.health_check_callback_name = item['health_check_callback_' + item.health_check_callback_type];
         }
 
         row += hiddenCells(item, hiddenInvocationFields);
@@ -729,9 +724,6 @@
 
             toggleCallback(action);
         });
-
-        // .. the health check tab manages its own callback widgets the same way.
-        $.fn.zato.health_check.init();
 
         var uniqueConstraints = [
             {field: 'name', entity_type: 'outgoing_soap', attr_name: 'name'}

@@ -1,7 +1,8 @@
 {% comment %}
 Health check tab - a generic component attachable to any connection type that has a ping,
 starting with outgoing REST and SOAP connections. The connection is pinged on the given
-schedule and the outcome is delivered to the configured callback.
+schedule and each ping's outcome lands in the connection's audit log under its health source,
+which is what the Alerts tab's rules read.
 
 Expects in the context:
 * form         - the create or edit form
@@ -17,31 +18,6 @@ Expects in the context:
             {{ form.health_check_run_every }}
             {{ form.health_check_run_unit }}
         </td>
-    </tr>
-
-    <tr>
-        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}health_check_notify_on">Notify on</label></td>
-        <td>{{ form.health_check_notify_on }}</td>
-    </tr>
-
-    <tr>
-        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}health_check_callback_type">Deliver to</label></td>
-        <td>{{ form.health_check_callback_type }}</td>
-    </tr>
-
-    <tr id="health-check-callback-service-row-{{ action }}">
-        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}health_check_callback_service">Service</label></td>
-        <td>{{ form.health_check_callback_service }}</td>
-    </tr>
-
-    <tr id="health-check-callback-topic-row-{{ action }}" class="hidden">
-        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}health_check_callback_topic">Topic</label></td>
-        <td>{{ form.health_check_callback_topic }}</td>
-    </tr>
-
-    <tr id="health-check-callback-rest-row-{{ action }}" class="hidden">
-        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}health_check_callback_rest">Connection</label></td>
-        <td>{{ form.health_check_callback_rest }}</td>
     </tr>
 
 </table>

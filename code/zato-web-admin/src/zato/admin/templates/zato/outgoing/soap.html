@@ -95,10 +95,7 @@
             'scheduler_job_id',
             'health_check_run_every',
             'health_check_run_unit',
-            'health_check_notify_on',
             'health_check_job_id',
-            'health_check_callback_type',
-            'health_check_callback_name',
             'is_audit_log_active',
             'max_retries',
             'retry_sleep_time',
@@ -273,10 +270,7 @@
                         {% comment %} Health check fields {% endcomment %}
                         <td class='ignore'>{{ item.health_check_run_every|default:'' }}</td>
                         <td class='ignore'>{{ item.health_check_run_unit|default:'' }}</td>
-                        <td class='ignore'>{{ item.health_check_notify_on|default:'' }}</td>
                         <td class='ignore'>{{ item.health_check_job_id|default:'' }}</td>
-                        <td class='ignore'>{{ item.health_check_callback_type|default:'' }}</td>
-                        <td class='ignore'>{{ item.health_check_callback_name|default:'' }}</td>
 
                         <td class='ignore'>{{ item.is_audit_log_active }}</td>
 

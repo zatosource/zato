@@ -150,7 +150,11 @@ def build_rule_values(
             if rule_name not in field['rules']:
                 continue
 
-        out[default_name] = config_map.to_rule_value(values[field['name']], field['is_percent'])
+        # A text stands in for its default as it is, a number in rule units
+        if field['kind'] == config_map.Kind_Text:
+            out[default_name] = values[field['name']]
+        else:
+            out[default_name] = config_map.to_rule_value(values[field['name']], field['is_percent'])
 
     # The silence slot of the moment says how long a channel may stay silent right now
     if alert_type == alert_type_channels:

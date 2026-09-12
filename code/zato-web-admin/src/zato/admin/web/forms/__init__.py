@@ -37,7 +37,6 @@ INITIAL_CHOICES = list(iteritems(INITIAL_CHOICES_DICT))[0]
 
 SELECT_SERVICE_FIELDS = [
     'callback_service',
-    'health_check_callback_service',
     'hook_service_id',
     'hook_service_name',
     'on_close_service_name',
@@ -61,43 +60,16 @@ health_check_run_unit_choices = (
     ('days', 'days'),
 )
 
-health_check_notify_on_choices = (
-    ('failures', 'Failures only'),
-    ('all', 'Every result'),
-)
-
-# The empty first choice means no callback is configured at all
-health_check_callback_type_choices = (
-    ('', '----------'),
-    ('service', 'Service'),
-    ('topic', 'Pub/sub topic'),
-    ('rest', 'REST connection'),
-)
-
 def add_health_check_fields(form):
     """ Adds the generic health check fields to a create or edit form - any connection type
     with a ping can include them alongside the shared health-check-tab.html template.
+    Each ping's outcome lands in the connection's audit log, which is what its alerts read.
     """
     form.fields['health_check_run_every'] = forms.CharField(
         required=False, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
 
     form.fields['health_check_run_unit'] = forms.ChoiceField(
         required=False, choices=health_check_run_unit_choices, widget=forms.Select())
-
-    form.fields['health_check_notify_on'] = forms.ChoiceField(
-        required=False, choices=health_check_notify_on_choices, widget=forms.Select())
-
-    form.fields['health_check_callback_type'] = forms.ChoiceField(
-        required=False, choices=health_check_callback_type_choices, widget=forms.Select())
-
-    form.fields['health_check_callback_service'] = forms.ChoiceField(
-        required=False, widget=forms.Select(attrs={'style':'width:100%'}))
-
-    form.fields['health_check_callback_topic'] = forms.ChoiceField(
-        required=False, widget=forms.Select(attrs={'style':'width:100%'}))
-
-    form.fields['health_check_callback_rest'] = forms.ChoiceField(
-        required=False, widget=forms.Select(attrs={'style':'width:100%'}))
 
     form.fields['health_check_job_id'] = forms.CharField(required=False, widget=forms.HiddenInput())
 

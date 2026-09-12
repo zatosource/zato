@@ -420,6 +420,8 @@ class TestRoundTripOverSeededRules:
                     assert isinstance(value, bool), f'{type_name}.{field["name"]} -> {value}'
                 elif field['kind'] == config_map.Kind_Time_Slots:
                     assert value == config_map.Time_Slots_Default, f'{type_name}.{field["name"]} -> {value}'
+                elif field['kind'] == config_map.Kind_Text:
+                    assert isinstance(value, str), f'{type_name}.{field["name"]} -> {value}'
                 else:
                     assert isinstance(value, (int, float)), f'{type_name}.{field["name"]} -> {value}'
 
@@ -500,7 +502,13 @@ class TestRoundTripOverSeededRules:
             'consecutive_failures': 5,
             'error_rate': 20,
             'window': 3600,
+            'status_codes': '404, 5xx',
+            'status_code_threshold': 7,
+            'status_codes_window': 600,
+            'connection_failures': 4,
+            'connection_failures_window': 900,
             'max_latency': 9000,
+            'latency_window': 1800,
             'use_llm': False,
         }
 

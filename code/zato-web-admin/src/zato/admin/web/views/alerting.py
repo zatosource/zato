@@ -116,7 +116,7 @@ _percent_unit = '%'
 # The five cell slots of each type's row - the columns line up across the rows,
 # so a type without a value in some column carries a placeholder there.
 _type_cells = {
-    'rest':          ['consecutive_failures', 'error_rate', 'window', 'max_latency', 'use_llm'],
+    'rest':          ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'max_latency', 'use_llm'],
     'sql':           ['consecutive_failures', 'error_rate', 'window', 'max_query_time', 'use_llm'],
     'llm':           ['consecutive_failures', 'error_rate', 'window', 'warning_latency', 'error_latency', 'use_llm'],
     'mcp':           ['consecutive_failures', 'error_rate', 'window', 'max_tool_call_time', 'use_llm'],
@@ -197,6 +197,10 @@ def _build_config_cell(field_name:'str', kind:'str', values:'stranydict') -> 'st
         out['kind'] = 'duration'
         out['value'] = value
         out['display'] = _format_duration(value)
+    elif kind == config_map.Kind_Text:
+        out['kind'] = 'text'
+        out['value'] = value
+        out['display'] = value
     else:
         out['kind'] = 'number'
         out['value'] = value

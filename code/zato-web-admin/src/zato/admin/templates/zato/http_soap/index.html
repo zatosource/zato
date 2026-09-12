@@ -44,9 +44,6 @@
     {% if connection == 'outgoing' and transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/data-table-widget.css">
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/openapi.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/invocation.css">
     {% endif %}
     {% if transport == 'plain_http' %}
@@ -80,9 +77,6 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
     {% endif %}
     {% if connection == 'outgoing' and transport == 'plain_http' %}
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/health-check.js"></script>
     {% endif %}
     {% if has_alerts_tab %}
@@ -258,10 +252,7 @@
                 'callback_name',
                 'health_check_run_every',
                 'health_check_run_unit',
-                'health_check_notify_on',
                 'health_check_job_id',
-                'health_check_callback_type',
-                'health_check_callback_name',
             {% endif %}
 
             // 41 - retry config for REST outgoing connections
@@ -450,10 +441,7 @@
                             <th class='ignore'>&nbsp;</th> {% comment %} callback_name {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} health_check_run_every {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} health_check_run_unit {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} health_check_notify_on {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} health_check_job_id {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} health_check_callback_type {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} health_check_callback_name {% endcomment %}
                         {% endif %}
 
                         <!-- 41 - retry config for REST outgoing connections -->
@@ -597,13 +585,6 @@
                             <td class='ignore'>{{ item.gateway_service_list|default:"" }}</td>
                         {% endif %}
 
-                        <!-- 42 - the Alerts tab of REST channels -->
-                        {% if has_alerts_tab %}
-                            {% for field_name in alerts_tab_config.storage_field_names %}
-                            <td class='ignore'>{{ item|get_item:field_name }}</td>
-                            {% endfor %}
-                        {% endif %}
-
                         <!-- 40 - declarative invocation and health check fields for REST outgoing connections -->
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
                             <td class='ignore'>{{ item.scheduler_run_every|default_if_none:"" }}</td>
@@ -622,10 +603,7 @@
                             <td class='ignore'>{{ item.callback_name|default_if_none:"" }}</td>
                             <td class='ignore'>{{ item.health_check_run_every|default_if_none:"" }}</td>
                             <td class='ignore'>{{ item.health_check_run_unit|default_if_none:"" }}</td>
-                            <td class='ignore'>{{ item.health_check_notify_on|default_if_none:"" }}</td>
                             <td class='ignore'>{{ item.health_check_job_id|default_if_none:"" }}</td>
-                            <td class='ignore'>{{ item.health_check_callback_type|default_if_none:"" }}</td>
-                            <td class='ignore'>{{ item.health_check_callback_name|default_if_none:"" }}</td>
                         {% endif %}
 
                         <!-- 41 - retry config for REST outgoing connections -->
@@ -634,6 +612,13 @@
                             <td class='ignore'>{{ item.retry_sleep_time }}</td>
                             <td class='ignore'>{{ item.retry_backoff_threshold }}</td>
                             <td class='ignore'>{{ item.retry_backoff_multiplier }}</td>
+                        {% endif %}
+
+                        <!-- 42 - the Alerts tab of REST and SOAP channels and of REST outgoing connections -->
+                        {% if has_alerts_tab %}
+                            {% for field_name in alerts_tab_config.storage_field_names %}
+                            <td class='ignore'>{{ item|get_item:field_name }}</td>
+                            {% endfor %}
                         {% endif %}
 
                     </tr>
@@ -662,12 +647,13 @@
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
                         <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-config" role="tabpanel">
                     {% endif %}
 
-                    {% if has_alerts_tab %}
+                    {% if has_channel_tabs %}
                     <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
@@ -965,7 +951,7 @@
                         {% endif %}
                     </table>
 
-                    {% if has_alerts_tab %}
+                    {% if has_channel_tabs %}
                     </div>
 
                     {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
@@ -1006,6 +992,8 @@
                         {% include "zato/http_soap/health-check-tab.html" with form=create_form action="create" field_prefix="" %}
                     </div>
 
+                    {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
+
                     <table class="form-data">
                         <tr>
                             <td style="text-align:left;vertical-align:middle">
@@ -1045,12 +1033,13 @@
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
                         <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-config" role="tabpanel">
                     {% endif %}
 
-                    {% if has_alerts_tab %}
+                    {% if has_channel_tabs %}
                     <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
@@ -1345,7 +1334,7 @@
                         {% endif %}
                     </table>
 
-                    {% if has_alerts_tab %}
+                    {% if has_channel_tabs %}
                     </div>
 
                     {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
@@ -1385,6 +1374,8 @@
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-health_check" role="tabpanel" hidden>
                         {% include "zato/http_soap/health-check-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
                     </div>
+
+                    {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
 
                     <table class="form-data">
                         <tr>

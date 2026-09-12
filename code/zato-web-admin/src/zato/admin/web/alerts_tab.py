@@ -159,21 +159,27 @@ def get_checkbox_field_names(alert_type:'str') -> 'strtuple':
 # ################################################################################################################################
 
 def pre_process_alert_item(alert_type:'str', name:'str', value:'any_') -> 'any_':
-    """ One field of the tab as the backend stores it - a checkbox as a boolean, a number as an integer.
+    """ One field of the tab as the backend stores it - a checkbox as a boolean, a number as an integer,
+    a text without the whitespace around it.
     """
     field_kinds = get_field_kinds(alert_type)
     own_name = name[len(Field_Prefix):]
 
     is_number = False
+    is_text = False
 
     if own_name in field_kinds:
         if field_kinds[own_name] in (config_map.Kind_Number, config_map.Kind_Duration):
             is_number = True
+        elif field_kinds[own_name] == config_map.Kind_Text:
+            is_text = True
 
     if name in get_checkbox_field_names(alert_type):
         out = value == Checkbox_On_Value
     elif is_number:
         out = int(value)
+    elif is_text:
+        out = value.strip()
     else:
         out = value
 
@@ -259,6 +265,8 @@ def add_alerts_fields(form:'any_', alert_type:'str', request:'any_') -> 'None':
             form_field = forms.BooleanField(required=False, initial=default, widget=forms.CheckboxInput())
         elif field['kind'] == config_map.Kind_Time_Slots:
             form_field = forms.CharField(required=False, initial=default, widget=forms.HiddenInput())
+        elif field['kind'] == config_map.Kind_Text:
+            form_field = forms.CharField(required=False, initial=default, widget=forms.TextInput())
         else:
             form_field = forms.IntegerField(required=False, initial=default, min_value=1, widget=forms.NumberInput())
 
@@ -382,6 +390,9 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
             if 'slots_field' in line:
                 entry['slots_field'] = line['slots_field']
 
+            if 'text_fields' in line:
+                entry['text_fields'] = line['text_fields']
+
             if 'off_field' in line:
                 entry['off_field'] = line['off_field']
                 entry['summary_off'] = line['summary_off']
@@ -417,6 +428,7 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
         'edit_hint': Edit_Hint,
         'slots_kind': config_map.Kind_Time_Slots,
         'duration_kind': config_map.Kind_Duration,
+        'text_kind': config_map.Kind_Text,
         'duration_units': duration_units,
         'storage_field_names': storage_field_names,
         'checkbox_field_names': checkbox_field_names,

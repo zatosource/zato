@@ -71,7 +71,13 @@ alert_rules:
     consecutive_failures: 5
     error_rate: 20
     window: 3600
+    status_codes: 401, 403, 429, 5xx
+    status_code_threshold: 5
+    status_codes_window: 900
+    connection_failures: 2
+    connection_failures_window: 600
     max_latency: 7000
+    latency_window: 1800
     use_llm: false
   - type: file_transfer
     is_active: true

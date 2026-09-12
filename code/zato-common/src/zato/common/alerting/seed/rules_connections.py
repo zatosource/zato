@@ -32,6 +32,7 @@ docs
     A connection's health check is measured on its own, so a slow check reads as slow whatever the connection's own traffic did.
 defaults
     max_avg_duration_ms = 5000
+    window_seconds = 300
 when
     alert.source in ['rest-outgoing', 'soap-outgoing', 'rest-outgoing-health', 'soap-outgoing-health'] and
     alert.avg_duration_ms is at least default.max_avg_duration_ms
@@ -55,6 +56,39 @@ when
 then
     outcome.action = 'email'
     outcome.severity = 'warning'
+
+rule
+    Status_Codes
+docs
+    A REST outgoing connection answered with one of the status codes it alerts on, three times within the window, raises an error email alert.
+    The codes are a comma-separated list of three-digit codes and classes, e.g. 401, 403 and 5xx, and a connection may carry a list of its own.
+    A call retried after a timeout counts once, by the status it finally received.
+defaults
+    status_codes = '401, 403, 5xx'
+    status_code_threshold = 3
+    window_seconds = 300
+when
+    alert.source is 'rest-outgoing' and
+    alert.status_code_count is at least default.status_code_threshold
+then
+    outcome.action = 'email'
+    outcome.severity = 'error'
+
+rule
+    Connection_Failures
+docs
+    A REST outgoing connection whose calls failed three times within the window before any response arrived raises an error email alert.
+    A timeout, a refused or reset connection, a name that does not resolve and a TLS handshake that fails all count here,
+    a call retried after one of them counting once, by how it finally ended.
+defaults
+    connection_failure_threshold = 3
+    window_seconds = 300
+when
+    alert.source is 'rest-outgoing' and
+    alert.connection_failure_count is at least default.connection_failure_threshold
+then
+    outcome.action = 'email'
+    outcome.severity = 'error'
 
 """.strip()
 

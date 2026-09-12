@@ -26,8 +26,9 @@ from zato.admin.web.forms.outgoing.smb import CreateForm as SMBCreateForm
 from zato.admin.web.views import http_soap as http_soap_views
 from zato.admin.web.views.live_form_updates import OBJECT_TYPE_CONFIG
 from zato.admin.web.views.outgoing import ftp, sftp, smb
-from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, encode_email_connection, \
-    Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, get_defaults as get_storage_defaults, Unit_Field_Suffix
+from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, alert_type_rest, \
+    encode_email_connection, Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, get_defaults as get_storage_defaults, \
+    Unit_Field_Suffix
 from zato.common.api import EMAIL, GENERIC, ZATO_NONE
 
 # ################################################################################################################################
@@ -649,6 +650,41 @@ _expected_channel_settings = {
 }
 
 # ################################################################################################################################
+
+def _outgoing_rest_params(prefix:'str'='') -> 'anydict':
+    """ The Alerts tab's own fields of an outgoing REST connection's form, the way the tab posts them -
+    the status codes with the whitespace a person may leave around them.
+    """
+    out = {
+        prefix + 'alert_status_codes': ' 401, 403, 4xx, 5xx ',
+        prefix + 'alert_status_code_threshold': '6',
+        prefix + 'alert_status_codes_window': '15',
+        prefix + 'alert_status_codes_window_unit': 'minute',
+        prefix + 'alert_connection_failures': '2',
+        prefix + 'alert_connection_failures_window': '1',
+        prefix + 'alert_connection_failures_window_unit': 'hour',
+    }
+    return out
+
+# The settings the outgoing REST form tests expect in the message, each duration already in seconds
+_expected_outgoing_rest_settings = {
+    'alert_is_active': True,
+    'alert_consecutive_failures': 4,
+    'alert_error_rate': 15,
+    'alert_window': 600,
+    'alert_status_codes': '401, 403, 4xx, 5xx',
+    'alert_status_code_threshold': 6,
+    'alert_status_codes_window': 900,
+    'alert_connection_failures': 2,
+    'alert_connection_failures_window': 3600,
+    'alert_max_latency': 2500,
+    'alert_latency_window': 300,
+    'alert_use_llm': True,
+    'alert_email_connection': 'smtp:ops.smtp',
+    'alert_llm_connection': 'ops.llm',
+}
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestChannelForm:
@@ -724,14 +760,38 @@ class TestChannelForm:
 
 # ################################################################################################################################
 
-    def test_the_outgoing_connections_carry_no_alert_settings(self) -> 'None':
+    def test_an_outgoing_rest_message_carries_the_rest_settings(self) -> 'None':
 
-        for connection, transport in (('outgoing', 'plain_http'), ('outgoing', 'soap')):
-            params = _channel_params(connection, transport)
-            message = http_soap_views._get_edit_create_message(params)
+        params = _channel_params('outgoing', 'plain_http')
+        params.update(_outgoing_rest_params())
 
-            for name in alerts_tab.get_storage_field_names(alert_type_channels):
-                assert name not in message, (connection, transport, name)
+        message = http_soap_views._get_edit_create_message(params)
+
+        for name in alerts_tab.get_storage_field_names(alert_type_rest):
+            if name.endswith(Unit_Field_Suffix):
+                assert name not in message, name
+            else:
+                assert name in message, name
+
+        for name, value in _expected_outgoing_rest_settings.items():
+            assert message[name] == value, name
+
+        # The channel-only settings are not read off an outgoing connection's form
+        for name in ('alert_server_errors', 'alert_auth_failures', 'alert_traffic_expected', 'alert_silence_slots'):
+            assert name not in message, name
+
+# ################################################################################################################################
+
+    def test_an_outgoing_soap_connection_carries_no_alert_settings(self) -> 'None':
+
+        params = _channel_params('outgoing', 'soap')
+        message = http_soap_views._get_edit_create_message(params)
+
+        for name in alerts_tab.get_storage_field_names(alert_type_channels):
+            assert name not in message, name
+
+        for name in alerts_tab.get_storage_field_names(alert_type_rest):
+            assert name not in message, name
 
 # ################################################################################################################################
 
