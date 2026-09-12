@@ -32,16 +32,14 @@ if 0:
 # The kinds a screen field comes in - a number backed by rule defaults, a duration backed
 # by a rule default counted in seconds and shown as a count with a unit, a toggle backed
 # by the active flags of whole rules, a ruleset toggle backed by one key every rule
-# document of the ruleset carries, which is how a setting of the whole type is kept,
-# or a list of time slots - ranges of the day with their own values - that is kept
-# per object alone, as a JSON string, and is backed by no rule.
-Kind_Number = 'number'
-Kind_Duration = 'duration'
-Kind_Toggle = 'toggle'
+# document of the ruleset carries, or a JSON list of time slots kept per object and backed by no rule.
+Kind_Number         = 'number'
+Kind_Duration       = 'duration'
+Kind_Toggle         = 'toggle'
 Kind_Ruleset_Toggle = 'ruleset_toggle'
-Kind_Time_Slots = 'time_slots'
+Kind_Time_Slots     = 'time_slots'
 
-# What an object starts with when it has no time slots of its own
+# The time slots of an object that has none
 Time_Slots_Default = '[]'
 
 # The rule default a type's window field reads and writes - how far back the
@@ -49,10 +47,9 @@ Time_Slots_Default = '[]'
 Window_Seconds_Default = 'window_seconds'
 Window_Field_Name = 'window'
 
-# The duration a channel that expects traffic may go without a request, and the time slots
-# of the day that carry their own such duration
+# The silence a channel tolerates and the time slots with a silence of their own
 Silence_Window_Field_Name = 'silence_window'
-Silence_Slots_Field_Name = 'silence_slots'
+Silence_Slots_Field_Name  = 'silence_slots'
 
 # The units a duration is shown in, smallest first - the noun in the singular and its seconds.
 # A screen picks the largest unit dividing the seconds evenly, so 86400 reads as one day.

@@ -235,9 +235,7 @@
 /* The inputs                                                    */
 /* ------------------------------------------------------------ */
 
-/* One explicit height keeps rows mixing inputs and selects even. A registered
-   kind that dresses its controls itself marks its field .micro-form-field-own
-   and none of this reaches them. */
+/* One explicit height keeps rows mixing inputs and selects even, a .micro-form-field-own field is left alone */
 .micro-form-field:not(.micro-form-field-own) input[type="text"],
 .micro-form-field:not(.micro-form-field-own) input[type="number"],
 .micro-form-field:not(.micro-form-field-own) select {
@@ -313,8 +311,7 @@
     padding-right: 2px;
 }
 
-/* A switch under a label of its own sits level with the inputs next to it,
-   the line box of an input being taller than the switch */
+/* A switch under a label of its own sits level with the inputs next to it */
 .micro-form-field input.micro-form-switch {
     align-self: flex-start;
     margin: calc((var(--micro-form-input-height) - var(--toggle-height)) / 2) 0;

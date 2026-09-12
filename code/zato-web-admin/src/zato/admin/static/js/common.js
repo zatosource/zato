@@ -4330,7 +4330,7 @@ $.fn.zato.validate_unique_on_submit = function(form) {
 
     // ------------------------------------------------------------------------------------------------------------------------
 
-    $.fn.zato.live_form_updates._snapshot_select = function(selector) {
+    $.fn.zato.live_form_updates.snapshot_select = function(selector) {
         var items = {};
         $(selector).find('option').each(function() {
             var $opt = $(this);
@@ -4401,7 +4401,7 @@ $.fn.zato.validate_unique_on_submit = function(form) {
                 if(action === 'edit' && selector && selector.indexOf('edit') === -1) {
                     selector = selector.replace('#id_', '#id_edit-');
                 }
-                items = $.fn.zato.live_form_updates._snapshot_select(selector);
+                items = $.fn.zato.live_form_updates.snapshot_select(selector);
             }
 
             object_types[config.object_type] = {
@@ -4541,7 +4541,7 @@ $.fn.zato.validate_unique_on_submit = function(form) {
 
     // ------------------------------------------------------------------------------------------------------------------------
 
-    $.fn.zato.live_form_updates._puff = function($elem) {
+    $.fn.zato.live_form_updates.puff = function($elem) {
         $elem.addClass('zato-live-updated');
         setTimeout(function() {
             $elem.removeClass('zato-live-updated');
@@ -4579,7 +4579,7 @@ $.fn.zato.validate_unique_on_submit = function(form) {
                 if($opt.length) {
                     $opt.text(rename.item._label);
                     if(!skip_puff) {
-                        $.fn.zato.live_form_updates._puff($opt);
+                        $.fn.zato.live_form_updates.puff($opt);
                     }
                 }
             }
@@ -4601,7 +4601,7 @@ $.fn.zato.validate_unique_on_submit = function(form) {
                 var $new_opt = $('<option/>').val(item._id).text(item._label);
                 $select.append($new_opt);
                 if(!skip_puff) {
-                    $.fn.zato.live_form_updates._puff($new_opt);
+                    $.fn.zato.live_form_updates.puff($new_opt);
                 }
             }
             changed = true;
@@ -4611,7 +4611,7 @@ $.fn.zato.validate_unique_on_submit = function(form) {
         if(changed) {
             $select.trigger('chosen:updated');
             if(!skip_puff) {
-                $.fn.zato.live_form_updates._puff($select.closest('td'));
+                $.fn.zato.live_form_updates.puff($select.closest('td'));
             }
         }
     };
@@ -4656,7 +4656,7 @@ $.fn.zato.validate_unique_on_submit = function(form) {
                 if($badge.length) {
                     $badge.find('.security-badge-name').text(rename.item._label);
                     if(!skip_puff) {
-                        $.fn.zato.live_form_updates._puff($badge);
+                        $.fn.zato.live_form_updates.puff($badge);
                     }
                 }
             }
@@ -4672,7 +4672,7 @@ $.fn.zato.validate_unique_on_submit = function(form) {
                     var $new_badge = $.fn.zato.groups.badge_picker._make_badge(item, 0);
                     available_body.append($new_badge);
                     if(!skip_puff) {
-                        $.fn.zato.live_form_updates._puff($new_badge);
+                        $.fn.zato.live_form_updates.puff($new_badge);
                     }
                 }
             }
@@ -4710,14 +4710,12 @@ $.fn.zato.validate_unique_on_submit = function(form) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-// Fallback Esc handling for jQuery UI dialogs. jQuery UI binds its closeOnEscape
-// handler on the .ui-dialog wrapper, so it only fires while focus is inside the
-// dialog. When focus has dropped to body - e.g. a tab click hid the panel that
-// held the focused input - the keydown never reaches the wrapper and the dialog
-// stays open. This handler closes the topmost dialog in that case. It is bound
-// on window, not document, so every document-level Escape consumer (e.g. the
-// topic-matches popup in pubsub/permission.js) runs first - once such a consumer
-// has closed its own dialog, it is no longer visible and is not closed twice.
+// Esc closes the topmost jQuery UI dialog while focus is outside it. jQuery UI
+// binds its closeOnEscape handler on the .ui-dialog wrapper, so it only fires
+// while focus is inside the dialog. This handler is bound on window, not
+// document, so every document-level Escape consumer (e.g. the topic-matches
+// popup in pubsub/permission.js) runs first - once such a consumer has closed
+// its own dialog, that dialog is not visible and is not closed twice.
 $(window).on('keydown.zato-dialog-esc', function(e) {
 
     if(e.key !== 'Escape') {
@@ -4758,11 +4756,10 @@ $(window).on('keydown.zato-dialog-esc', function(e) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-// Clicking outside a jQuery UI dialog closes the topmost one, mirroring the Esc
-// fallback above. Clicks on UI that renders outside the dialog's DOM node while
-// logically belonging to it - tooltips, alert popups, tour popovers, the
-// dashboard kit's dropdown menus or the action runner's details modal - must
-// not close anything, hence the filter.
+// Clicking outside a jQuery UI dialog closes the topmost one. Clicks on UI that
+// renders outside the dialog's DOM node while belonging to it - tooltips, alert
+// popups, tour popovers, the dashboard kit's dropdown menus or the action
+// runner's details modal - do not close anything.
 $(document).on('mousedown.zato-dialog-outside-close', function(e) {
 
     // Only the primary button counts as a close request

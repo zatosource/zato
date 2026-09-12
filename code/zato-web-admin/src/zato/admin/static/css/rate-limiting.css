@@ -301,10 +301,7 @@ table.rate-limiting-form select:focus,
 }
 
 /* ------------------------------------------------------------ */
-/* Rate limiting - a slot that disallows traffic                 */
-/*                                                              */
-/* The slots themselves are the time slots kit's, in            */
-/* shared/time-slots.css - this is what disallowing adds to one */
+/* Rate limiting - a slot that disallows traffic                */
 /* ------------------------------------------------------------ */
 
 .time-slot[data-disallowed="true"]::before {
@@ -357,28 +354,8 @@ table.rate-limiting-form select:focus,
 }
 
 /* ------------------------------------------------------------ */
-/* Rate limiting - add buttons                                  */
+/* Rate limiting - add button                                   */
 /* ------------------------------------------------------------ */
-
-.rate-limiting-button-add {
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    border-radius: 3px;
-    border: 1px dashed #b0b0b0;
-    font-size: 12px;
-    color: #666666;
-    background: #f8f9fa;
-    margin-top: 4px;
-    transition: border-color 0.15s, color 0.15s;
-}
-
-.rate-limiting-button-add:hover {
-    border-color: #5794d0;
-    color: #5794d0;
-}
 
 .rate-limiting-rule .time-slots-add {
     align-self: flex-start;

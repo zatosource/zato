@@ -16,8 +16,7 @@
  * Token                       Purpose
  * --summary-link-font-size    The answer
  * --summary-link-hint-size    The hint, a notch smaller than the answer
- * --summary-link-hint-color   The hint, the muted text colour rather than
- *                             the faint grey of a plain soft hint
+ * --summary-link-hint-color   The hint colour
  * --summary-link-height       The link's line box, auto unless a row of
  *                             switches needs it clamped to their height
  */
@@ -26,6 +25,7 @@
     --summary-link-font-size: 12px;
     --summary-link-hint-size: 11px;
     --summary-link-hint-color: var(--zato-ui-text-muted);
+    --summary-link-hover-delay: 60ms;
     --summary-link-height: auto;
 }
 
@@ -42,8 +42,7 @@ a.summary-link {
     font-size: var(--summary-link-font-size);
 }
 
-/* The hint keeps its room but stays invisible until the pointer is on the
-   link, and then reads in the muted text colour, plain to see */
+/* The hint keeps its room but shows only while the pointer is on the link */
 .summary-link .zato-soft-hint {
     font-size: var(--summary-link-hint-size);
     color: var(--summary-link-hint-color);
@@ -53,6 +52,7 @@ a.summary-link {
 
 .summary-link:hover .zato-soft-hint {
     opacity: 1;
+    transition-delay: var(--summary-link-hover-delay);
 }
 
 /* Nothing to edit while the answer is empty, so the whole link goes away */

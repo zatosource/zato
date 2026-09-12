@@ -14,8 +14,6 @@ $.fn.zato.data_table.SFTP = new Class({
 
 $(document).ready(function() {
     $.fn.zato.alerts_tab.init({config_id: 'out-sftp-alerts-tab-config'});
-
-    // The connection selects of the Alerts tab follow the connections there are while a dialog is open
     $.fn.zato.live_form_updates.register('create', $.fn.zato.alerts_tab.live_configs(''));
     $.fn.zato.live_form_updates.register('edit', $.fn.zato.alerts_tab.live_configs('edit-'));
     $.fn.zato.time_ago.init_table('#data-table');

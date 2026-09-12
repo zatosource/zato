@@ -24,11 +24,8 @@ $.fn.zato.data_table.HTTPSOAP = new Class({
 
 $(document).ready(function() {
 
-    // The Alerts tab reads its configuration before the table is parsed - the rows carry its hidden cells
     if($.fn.zato.http_soap.is_rest_channel()) {
         $.fn.zato.alerts_tab.init({config_id: 'http-soap-alerts-tab-config'});
-
-        // The connection selects of the Alerts tab follow the connections there are while the create dialog is open
         $.fn.zato.live_form_updates.register('create', $.fn.zato.alerts_tab.live_configs(''));
     }
 
@@ -171,8 +168,8 @@ $.fn.zato.http_soap.tab_labels = {
     health_check: 'Health check'
 };
 
-// The tabs of a REST channel's forms - the Main tab and the Alerts tab, which names itself
-$.fn.zato.http_soap.channel_tab_labels = function() {
+// The tabs of a REST channel's create form
+$.fn.zato.http_soap.channelTabLabels = function() {
     var out = {
         main:   'Main',
         alerts: $.fn.zato.alerts_tab.tab_label()
@@ -183,18 +180,21 @@ $.fn.zato.http_soap.channel_tab_labels = function() {
 $.fn.zato.http_soap.reset_tabs = function(action) {
 
     var is_edit = action === 'edit';
-    var default_tab;
-    var tab_labels;
+    var default_tab = null;
+    var tab_labels = null;
 
     if($.fn.zato.http_soap.is_rest_outgoing()) {
         default_tab = 'config';
         tab_labels = $.fn.zato.http_soap.tab_labels;
     }
-    else if($.fn.zato.http_soap.is_rest_channel() && !is_edit) {
-        default_tab = 'main';
-        tab_labels = $.fn.zato.http_soap.channel_tab_labels();
+    else if($.fn.zato.http_soap.is_rest_channel()) {
+        if(!is_edit) {
+            default_tab = 'main';
+            tab_labels = $.fn.zato.http_soap.channelTabLabels();
+        }
     }
-    else {
+
+    if(default_tab === null) {
         return;
     }
 
@@ -577,7 +577,6 @@ $.fn.zato.http_soap.create = function(object_type) {
         $.fn.zato.http_soap.toggle_callback('create');
     }
 
-    // The Alerts tab of a REST channel fills its summaries in from the form's own defaults
     if($.fn.zato.http_soap.is_rest_channel()) {
         $.fn.zato.alerts_tab.bind({
             panel_id: 'http-soap-create-tab-panel-alerts',
@@ -862,9 +861,11 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format("<td class='ignore'>{0}</td>", item.gateway_service_list || '');
     }
 
-    /* 42 - the Alerts tab of REST channels, last of all, the way the columns are */
-    if(is_channel && !is_soap) {
-        row += $.fn.zato.alerts_tab.hidden_cells(item);
+    // 42 - the Alerts tab of REST channels
+    if(is_channel) {
+        if(!is_soap) {
+            row += $.fn.zato.alerts_tab.hidden_cells(item);
+        }
     }
 
     /* 40 - declarative invocation and health check fields for REST outgoing connections */

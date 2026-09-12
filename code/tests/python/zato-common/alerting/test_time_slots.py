@@ -14,19 +14,31 @@ from json import dumps
 import pytest
 
 # Zato
-from zato.common.alerting.time_slots import resolve_silence, validate_silence_slots
+from zato.common.alerting.time_slots import resolve_silence, SilenceResult, TimeSlotsError, validate_silence_slots
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anydict, anylist
+    anydict = anydict
+    anylist = anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _at(hh_mm:'str') -> 'datetime':
     hours, minutes = hh_mm.split(':')
-    out = datetime(2026, 9, 12, int(hours), int(minutes), tzinfo=timezone.utc)
+
+    hours = int(hours)
+    minutes = int(minutes)
+
+    out = datetime(2026, 9, 12, hours, minutes, tzinfo=timezone.utc)
     return out
 
 # ################################################################################################################################
 
-def _values(slots:'list', traffic_expected:'bool'=True, silence_window:'int'=3600) -> 'dict':
+def _values(slots:'anylist', traffic_expected:'bool'=True, silence_window:'int'=3600) -> 'anydict':
     out = {
         'traffic_expected': traffic_expected,
         'silence_window': silence_window,
@@ -46,7 +58,10 @@ class TestSilenceSlots:
             {'time_from': '12:00', 'time_to': '14:00', 'is_on': False, 'silence_seconds': 60},
         ]
 
-        assert resolve_silence(_values(slots), _at('13:00')) == (True, 900)
+        values = _values(slots)
+        now = _at('13:00')
+
+        assert resolve_silence(values, now) == SilenceResult(True, 900)
 
 # ################################################################################################################################
 
@@ -56,8 +71,12 @@ class TestSilenceSlots:
             {'time_from': '08:00', 'time_to': '18:00', 'is_on': True, 'silence_seconds': 900},
         ]
 
-        assert resolve_silence(_values(slots, traffic_expected=False, silence_window=7200), _at('20:00')) == (False, 7200)
-        assert resolve_silence(_values([]), _at('20:00')) == (True, 3600)
+        values = _values(slots, traffic_expected=False, silence_window=7200)
+        empty_values = _values([])
+        now = _at('20:00')
+
+        assert resolve_silence(values, now) == SilenceResult(False, 7200)
+        assert resolve_silence(empty_values, now) == SilenceResult(True, 3600)
 
 # ################################################################################################################################
 
@@ -67,9 +86,15 @@ class TestSilenceSlots:
             {'time_from': '22:00', 'time_to': '06:00', 'is_on': False, 'silence_seconds': 3600},
         ]
 
-        assert resolve_silence(_values(slots), _at('23:30')) == (False, 3600)
-        assert resolve_silence(_values(slots), _at('01:00')) == (False, 3600)
-        assert resolve_silence(_values(slots), _at('09:00')) == (True, 3600)
+        values = _values(slots)
+
+        late_evening = _at('23:30')
+        after_midnight = _at('01:00')
+        morning = _at('09:00')
+
+        assert resolve_silence(values, late_evening) == SilenceResult(False, 3600)
+        assert resolve_silence(values, after_midnight) == SilenceResult(False, 3600)
+        assert resolve_silence(values, morning) == SilenceResult(True, 3600)
 
 # ################################################################################################################################
 
@@ -79,7 +104,9 @@ class TestSilenceSlots:
             {'time_from': '08:00', 'time_to': '18:00', 'is_on': True, 'silence_seconds': 900},
         ]
 
-        assert validate_silence_slots(dumps(slots)) == slots
+        text = dumps(slots)
+
+        assert validate_silence_slots(text) == slots
         assert validate_silence_slots('[]') == []
 
 # ################################################################################################################################
@@ -100,9 +127,9 @@ class TestSilenceSlots:
         ]
 
         for text, message in cases:
-            with pytest.raises(ValueError) as e:
-                validate_silence_slots(text)
-            assert message in e.value.args[0], text
+            with pytest.raises(TimeSlotsError) as raised:
+                _ = validate_silence_slots(text)
+            assert message in raised.value.args[0], text
 
 # ################################################################################################################################
 # ################################################################################################################################

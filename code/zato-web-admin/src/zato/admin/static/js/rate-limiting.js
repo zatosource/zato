@@ -21,13 +21,18 @@
         ]}
     ];
 
-    var window_units = ['minute', 'hour', 'day', 'month'];
+    var windowUnits = [
+        {value: 'minute', label: 'minute'},
+        {value: 'hour', label: 'hour'},
+        {value: 'day', label: 'day'},
+        {value: 'month', label: 'month'}
+    ];
 
     // What a fresh slot holds before anything is typed into it
-    var slot_defaults = {rate: '10', burst: '20', limit: '100'};
+    var slotDefaults = {rate: '10', burst: '20', limit: '100'};
 
     // The slot lists of every rule on the page, keyed by the rule element
-    var slot_kits = new WeakMap();
+    var slotKits = new WeakMap();
 
     var rule_counter = 0;
     var stored_entity_id = '';
@@ -213,23 +218,22 @@
 
         rule_elem.appendChild(header);
 
-        // The time slots - the All day one first, the kit adds the ranges
         var slots = $.fn.zato.time_slots.create({
             container: rule_elem,
-            with_disable: true,
-            labels: {add: '+ Add rule', delete: 'Delete rule', disable: 'Disable rule', enable: 'Enable rule'},
-            toggles: [{attr: 'disallowed', off_label: 'Disallow traffic', on_label: 'Allow traffic'}],
-            build_fields: $.fn.zato.rate_limiting.build_slot_fields,
-            read_fields: $.fn.zato.rate_limiting.read_slot_fields,
-            write_fields: $.fn.zato.rate_limiting.write_slot_fields
+            withDisable: true,
+            labels: {allDay: 'All day', add: '+ Add rule', delete: 'Delete rule', disable: 'Disable rule', enable: 'Enable rule'},
+            toggles: [{attr: 'disallowed', offLabel: 'Disallow traffic', onLabel: 'Allow traffic'}],
+            buildFields: $.fn.zato.rate_limiting.buildSlotFields,
+            readFields: $.fn.zato.rate_limiting.readSlotFields,
+            writeFields: $.fn.zato.rate_limiting.writeSlotFields,
+            onTimeChange: null
         });
-        slot_kits.set(rule_elem, slots);
+        slotKits.set(rule_elem, slots);
 
         container.appendChild(rule_elem);
 
-        // Now that the rule is in the DOM, lock action cell widths
-        // so toggling text never causes layout shifts.
-        slots.lock_widths();
+        // The rule is in the DOM, so the action cells can be measured
+        slots.lockWidths();
 
         $.fn.zato.rate_limiting.renumber(container_id);
     };
@@ -238,30 +242,30 @@
     // The rate, burst and limit of one slot
     // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.rate_limiting.build_slot_fields = function(slot) {
+    $.fn.zato.rate_limiting.buildSlotFields = function(slot) {
 
         var kit = $.fn.zato.time_slots;
 
-        var rate_group = kit.add_group(slot);
-        kit.add_text(rate_group, 'Rate:', 'label');
-        kit.add_input(rate_group, 'rate', slot_defaults.rate);
-        kit.add_text(rate_group, 'req/s', 'unit');
+        var rateGroup = kit.addGroup(slot);
+        kit.addText(rateGroup, 'Rate:', 'label');
+        kit.addInput(rateGroup, 'rate', slotDefaults.rate);
+        kit.addText(rateGroup, 'req/s', 'unit');
 
-        var burst_group = kit.add_group(slot);
-        kit.add_text(burst_group, 'Burst:', 'label');
-        kit.add_input(burst_group, 'burst', slot_defaults.burst);
-        kit.add_text(burst_group, 'req/s', 'unit');
+        var burstGroup = kit.addGroup(slot);
+        kit.addText(burstGroup, 'Burst:', 'label');
+        kit.addInput(burstGroup, 'burst', slotDefaults.burst);
+        kit.addText(burstGroup, 'req/s', 'unit');
 
-        var limit_group = kit.add_group(slot);
-        kit.add_text(limit_group, 'Limit:', 'label');
-        kit.add_input(limit_group, 'limit', slot_defaults.limit);
-        kit.add_text(limit_group, 'req/', 'unit');
-        kit.add_select(limit_group, 'window_unit', window_units);
+        var limitGroup = kit.addGroup(slot);
+        kit.addText(limitGroup, 'Limit:', 'label');
+        kit.addInput(limitGroup, 'limit', slotDefaults.limit);
+        kit.addText(limitGroup, 'req/', 'unit');
+        kit.addSelect(limitGroup, 'window_unit', windowUnits);
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.rate_limiting.read_slot_fields = function(slot) {
+    $.fn.zato.rate_limiting.readSlotFields = function(slot) {
 
         var kit = $.fn.zato.time_slots;
 
@@ -277,7 +281,7 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.rate_limiting.write_slot_fields = function(slot, entry) {
+    $.fn.zato.rate_limiting.writeSlotFields = function(slot, entry) {
 
         var kit = $.fn.zato.time_slots;
 
@@ -470,7 +474,7 @@
             }
 
             // Collect time ranges
-            var time_range = slot_kits.get(rule_elem).get_entries();
+            var time_range = slotKits.get(rule_elem).getEntries();
 
             rules.push({
                 cidr_list: cidr_list,
@@ -514,9 +518,8 @@
                 $.fn.zato.rate_limiting.add_pill(rule_elem, rule.cidr_list[cidr_idx]);
             }
 
-            // Restore the time slots - the All day one is already there, the kit fills it and adds the ranges
             if(rule.time_range) {
-                slot_kits.get(rule_elem).load(rule.time_range);
+                slotKits.get(rule_elem).load(rule.time_range);
             }
         }
     };
@@ -658,7 +661,7 @@
             var use_tier = mode === 'tier';
             tier_panel.hidden = !use_tier;
             $('#' + container_id).toggle(!use_tier);
-            $('.rate-limiting-button-add, .time-slots-add').toggle(!use_tier);
+            $('.time-slots-add').toggle(!use_tier);
 
             // With no tiers to pick from there is nothing to save on the tier tab
             $('.rate-limiting-save-group').toggle(!use_tier || has_tiers);

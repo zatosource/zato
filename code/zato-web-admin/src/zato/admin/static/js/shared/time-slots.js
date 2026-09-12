@@ -1,43 +1,32 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 //
-// Time slots - a list of ranges of the day, each with values of its own, under
-// an All day slot that answers whenever no range does. The rate limiting pages
-// build their rules on it and the Alerts tab its time-of-day silence settings.
-//
-// The kit owns the slots themselves - the All day slot, the ranges added with
-// the from and to inputs and their time suggestions, the editing of a range's
-// times, the delete link and the optional disable link - and knows nothing of
-// the values a slot carries. The host builds those in a callback, reads them
-// back in another and writes them in a third, so what one slot holds is the
-// host's business alone.
+// Time slots - a list of ranges of the day, each with values of its own, under an
+// All day slot that answers whenever no range does. The host builds a slot's values.
 //
 // Works together with /static/css/shared/time-slots.css and needs the dashboard
 // kit's select menu, /static/js/dashboard-kit/select.js, for the time suggestions,
-// and /static/js/shared/time-slots-fields.js, which must load before this file,
-// for the time inputs and the field group helpers.
+// and /static/js/shared/time-slots-fields.js, which must load before this file.
 //
 // How to use:
 //
 //     var slots = $.fn.zato.time_slots.create({
-//         container: some_element,
-//         with_disable: true,
-//         toggles: [{attr: 'disallowed', off_label: 'Disallow traffic', on_label: 'Allow traffic'}],
-//         build_fields: function(slot, is_default) { .. append the slot's inputs .. },
-//         read_fields: function(slot) { return {rate: ..}; },
-//         write_fields: function(slot, entry) { .. },
-//         on_time_change: function(slot) { .. a range's times were edited .. }
+//         container: someElement,
+//         labels: {allDay: 'All day', add: '+ Add time range', delete: 'Delete', disable: 'Disable', enable: 'Enable'},
+//         withDisable: true,
+//         toggles: [{attr: 'disallowed', offLabel: 'Disallow traffic', onLabel: 'Allow traffic'}],
+//         buildFields: function(slot, isDefault) { .. append the slot's inputs .. },
+//         readFields: function(slot) { return {rate: ..}; },
+//         writeFields: function(slot, entry) { .. },
+//         onTimeChange: function(slot) { .. a range's times were edited .. }
 //     });
 //
 //     slots.load(entries);           // [{is_all_day: true, ..}, {time_from: '09:00', time_to: '17:00', ..}]
-//     var entries = slots.get_entries();
+//     var entries = slots.getEntries();
 //
 // An entry is the kit's own keys - is_all_day, time_from and time_to for a range,
-// disabled with with_disable, one boolean per toggle under its attr - plus what
-// read_fields returned, and write_fields gets the very same shape back.
-//
-// The helpers of time-slots-fields.js build the field groups a slot carries - a
-// label, an input, a unit, a select or a switch, in the kit's own classes.
+// disabled with withDisable, one boolean per toggle under its attr - plus what
+// readFields returned, and writeFields gets the very same shape back.
 //
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -47,35 +36,31 @@ $.namespace('zato.time_slots');
 
 $.fn.zato.time_slots.config = {
 
-    all_day_label: 'All day',
-    add_label: '+ Add time range',
-    delete_label: 'Delete',
-    disable_label: 'Disable',
-    enable_label: 'Enable',
-    from_placeholder: 'from',
-    to_placeholder: 'to',
+    fromPlaceholder: 'from',
+    toPlaceholder: 'to',
 
     // What a range reads as between its two times
-    range_separator: ' - ',
+    rangeSeparator: ' - ',
 
     // The times of a range are HH:MM, 24 hours
-    time_pattern: /^([01]\d|2[0-3]):([0-5]\d)$/,
-    time_length: 5,
-    minutes_per_hour: 60,
-    minutes_per_day: 24 * 60,
+    timePattern: /^([01]\d|2[0-3]):([0-5]\d)$/,
+    timeLength: 5,
+    minutesPerHour: 60,
+    minutesPerDay: 24 * 60,
 
-    // How long after a time input loses focus the edit closes, so a click into the other input keeps it open
-    close_delay_ms: 200,
+    // What a time input lets through as it is typed into
+    digitPattern: /^\d$/,
+    passthroughKeys: ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Escape', 'Enter'],
 
     // The three lives of a slot - the one All day slot, a range, and a range still being typed in
-    slot_default: 'default',
-    slot_range: 'range',
-    slot_pending: 'pending',
+    slotDefault: 'default',
+    slotRange: 'range',
+    slotPending: 'pending',
 
-    disabled_attr: 'disabled',
+    disabledAttr: 'disabled',
 
     // The times offered under the from and to inputs
-    time_suggestions: [
+    timeSuggestions: [
         {group: 'Business hours', items: [
             {value: '06:00', label: '6 AM'},
             {value: '07:00', label: '7 AM'},
@@ -107,6 +92,15 @@ $.fn.zato.time_slots.config = {
     ]
 };
 
+// The labels a host passes when it has none of its own
+$.fn.zato.time_slots.config.labels = {
+    allDay: 'All day',
+    add: '+ Add time range',
+    delete: 'Delete',
+    disable: 'Disable',
+    enable: 'Enable'
+};
+
 // /////////////////////////////////////////////////////////////////////////////
 // The constructor
 // /////////////////////////////////////////////////////////////////////////////
@@ -116,67 +110,60 @@ $.fn.zato.time_slots.create = function(options) {
     var kit = $.fn.zato.time_slots;
     var config = kit.config;
 
-    var labels = $.extend({
-        all_day: config.all_day_label,
-        add: config.add_label,
-        delete: config.delete_label,
-        disable: config.disable_label,
-        enable: config.enable_label
-    }, options.labels);
-
-    var toggles = options.toggles ? options.toggles : [];
-    var with_disable = Boolean(options.with_disable);
+    var labels = options.labels;
+    var toggles = options.toggles;
+    var withDisable = options.withDisable;
 
     var instance = {};
 
-    // The list the slots live in ..
     var root = document.createElement('div');
     root.className = 'time-slots';
     options.container.appendChild(root);
 
-    // .. and the button a range is begun with, right under it.
-    var add_button = document.createElement('span');
-    add_button.className = 'time-slots-add';
-    add_button.textContent = labels.add;
-    add_button.onclick = function() {
-        instance.begin_add();
+    var addButton = document.createElement('span');
+    addButton.className = 'time-slots-add';
+    addButton.textContent = labels.add;
+    addButton.onclick = function() {
+        instance.beginAdd();
     };
-    options.container.appendChild(add_button);
+    options.container.appendChild(addButton);
 
     instance.root = root;
-    instance.add_button = add_button;
+    instance.addButton = addButton;
 
 // /////////////////////////////////////////////////////////////////////////////
 
     // Flips one of a slot's flags - disabled or one of the host's toggles - and its link's text
-    instance.set_flag = function(slot, attr, is_on, link, on_label, off_label) {
+    instance.setFlag = function(slot, attr, isOn, link) {
 
-        if(is_on) {
+        if(isOn) {
             slot.setAttribute('data-' + attr, 'true');
-            link.textContent = on_label;
+            link.textContent = link.getAttribute('data-on-label');
         }
         else {
             slot.removeAttribute('data-' + attr);
-            link.textContent = off_label;
+            link.textContent = link.getAttribute('data-off-label');
         }
     };
 
 // /////////////////////////////////////////////////////////////////////////////
 
     // One link toggling one flag, in a cell of the actions area
-    var add_action_link = function(actions, slot, class_name, attr, off_label, on_label) {
+    var addActionLink = function(actions, slot, className, attr, offLabel, onLabel) {
 
         var cell = document.createElement('div');
         cell.className = 'time-slot-action-cell';
 
         var link = document.createElement('a');
         link.href = 'javascript:void(0)';
-        link.className = class_name;
-        link.textContent = off_label;
+        link.className = className;
+        link.textContent = offLabel;
         link.setAttribute('data-toggle-attr', attr);
+        link.setAttribute('data-on-label', onLabel);
+        link.setAttribute('data-off-label', offLabel);
         link.onclick = function() {
-            var is_on = slot.getAttribute('data-' + attr) === 'true';
-            instance.set_flag(slot, attr, !is_on, link, on_label, off_label);
+            var isOn = slot.getAttribute('data-' + attr) === 'true';
+            instance.setFlag(slot, attr, !isOn, link);
         };
 
         cell.appendChild(link);
@@ -188,98 +175,84 @@ $.fn.zato.time_slots.create = function(options) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-    var add_pipe = function(actions) {
-        var pipe = document.createElement('span');
-        pipe.className = 'time-slot-action-pipe';
-        pipe.textContent = '|';
-        actions.appendChild(pipe);
-    };
-
-// /////////////////////////////////////////////////////////////////////////////
-
     // Builds one slot - the All day one or a range - with the host's fields in the middle
-    var build_slot = function(time_from, time_to, is_default) {
+    var buildSlot = function(timeFrom, timeTo, isDefault) {
 
         var slot = document.createElement('div');
         slot.className = 'time-slot';
 
-        if(is_default) {
-            slot.setAttribute('data-slot-type', config.slot_default);
+        if(isDefault) {
+            slot.setAttribute('data-slot-type', config.slotDefault);
         }
         else {
-            slot.setAttribute('data-slot-type', config.slot_range);
-            slot.setAttribute('data-time-from', time_from);
-            slot.setAttribute('data-time-to', time_to);
+            slot.setAttribute('data-slot-type', config.slotRange);
+            slot.setAttribute('data-time-from', timeFrom);
+            slot.setAttribute('data-time-to', timeTo);
         }
 
-        var time_area = document.createElement('div');
-        time_area.className = 'time-slot-time';
+        var timeArea = document.createElement('div');
+        timeArea.className = 'time-slot-time';
 
         var label = document.createElement('span');
-        label.className = 'time-slot-time-label';
-        label.textContent = is_default ? labels.all_day : kit.range_label(time_from, time_to);
-        time_area.appendChild(label);
+        var labelText;
 
-        // A range's times are edited in place, the All day slot has none
-        if(!is_default) {
-            label.classList.add('time-slot-time-label-editable');
+        if(isDefault) {
+            label.className = 'time-slot-time-label';
+            labelText = labels.allDay;
+        }
+        else {
+            label.className = 'time-slot-time-label time-slot-time-label-editable';
+            labelText = kit.rangeLabel(timeFrom, timeTo);
+        }
+
+        label.textContent = labelText;
+        timeArea.appendChild(label);
+
+        // A range's times are edited in place
+        if(!isDefault) {
             label.onclick = function() {
-                instance.edit_time(slot, time_area, label);
+                instance.editTime(slot, timeArea, label);
             };
         }
 
-        slot.appendChild(time_area);
+        slot.appendChild(timeArea);
 
-        options.build_fields(slot, is_default);
+        options.buildFields(slot, isDefault);
 
         var actions = document.createElement('div');
         actions.className = 'time-slot-actions';
 
-        var needs_pipe = false;
-
         toggles.forEach(function(toggle) {
-            if(needs_pipe) {
-                add_pipe(actions);
-            }
-            add_action_link(actions, slot, 'time-slot-toggle', toggle.attr, toggle.off_label, toggle.on_label);
-            needs_pipe = true;
+            addActionLink(actions, slot, 'time-slot-toggle', toggle.attr, toggle.offLabel, toggle.onLabel);
         });
 
-        if(with_disable) {
-            if(needs_pipe) {
-                add_pipe(actions);
-            }
-            add_action_link(actions, slot, 'time-slot-disable', config.disabled_attr, labels.disable, labels.enable);
-            needs_pipe = true;
+        if(withDisable) {
+            addActionLink(actions, slot, 'time-slot-disable', config.disabledAttr, labels.disable, labels.enable);
         }
 
-        if(!is_default) {
-            if(needs_pipe) {
-                add_pipe(actions);
-            }
+        if(!isDefault) {
+            var deleteCell = document.createElement('div');
+            deleteCell.className = 'time-slot-action-cell';
 
-            var delete_cell = document.createElement('div');
-            delete_cell.className = 'time-slot-action-cell';
-
-            var delete_link = document.createElement('a');
-            delete_link.href = 'javascript:void(0)';
-            delete_link.className = 'time-slot-delete';
-            delete_link.textContent = labels.delete;
-            delete_link.onclick = function() {
+            var deleteLink = document.createElement('a');
+            deleteLink.href = 'javascript:void(0)';
+            deleteLink.className = 'time-slot-delete';
+            deleteLink.textContent = labels.delete;
+            deleteLink.onclick = function() {
                 root.removeChild(slot);
             };
 
-            delete_cell.appendChild(delete_link);
-            actions.appendChild(delete_cell);
+            deleteCell.appendChild(deleteLink);
+            actions.appendChild(deleteCell);
         }
 
         slot.appendChild(actions);
         root.appendChild(slot);
 
-        // A slot built into a list already on screen locks its cells now, one built
-        // before the list is attached waits for the host to call lock_widths
-        if(slot.offsetParent !== null) {
-            kit.lock_action_cells(slot);
+        // A slot built into a list already on screen locks its cells now, the All day slot
+        // built before the list is attached waits for the host to call lockWidths
+        if(root.isConnected) {
+            kit.lockActionCells(slot);
         }
 
         var out = slot;
@@ -288,105 +261,121 @@ $.fn.zato.time_slots.create = function(options) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-    instance.add_slot = function(time_from, time_to) {
-        var out = build_slot(time_from, time_to, false);
+    instance.addSlot = function(timeFrom, timeTo) {
+        var out = buildSlot(timeFrom, timeTo, false);
         return out;
     };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-    instance.lock_widths = function() {
-        kit.lock_action_cells(root);
+    instance.lockWidths = function() {
+        kit.lockActionCells(instance.defaultSlot);
     };
 
 // /////////////////////////////////////////////////////////////////////////////
 
     // Swaps a range's label for two inputs until both hold a time or the edit is left
-    instance.edit_time = function(slot, time_area, label) {
+    instance.editTime = function(slot, timeArea, label) {
 
-        if(time_area.querySelector('.time-slot-time-input')) {
+        var openInput = timeArea.querySelector('.time-slot-time-input');
+
+        if(openInput !== null) {
             return;
         }
 
         label.style.display = 'none';
 
-        var from_input = kit.build_time_input(config.from_placeholder, slot.getAttribute('data-time-from'));
-        var to_input = kit.build_time_input(config.to_placeholder, slot.getAttribute('data-time-to'));
+        var fromInput = kit.buildTimeInput(config.fromPlaceholder, slot.getAttribute('data-time-from'));
+        var toInput = kit.buildTimeInput(config.toPlaceholder, slot.getAttribute('data-time-to'));
 
         var dash = document.createElement('span');
         dash.className = 'time-slot-time-dash';
         dash.textContent = '-';
 
-        time_area.appendChild(from_input);
-        time_area.appendChild(dash);
-        time_area.appendChild(to_input);
+        timeArea.appendChild(fromInput);
+        timeArea.appendChild(dash);
+        timeArea.appendChild(toInput);
 
-        var is_finished = false;
+        var isFinished = false;
 
         var finish = function() {
 
-            is_finished = true;
-
-            var new_from = from_input.value;
-            var new_to = to_input.value;
-
-            var has_new_times = config.time_pattern.test(new_from) && config.time_pattern.test(new_to);
-
-            if(has_new_times) {
-                slot.setAttribute('data-time-from', new_from);
-                slot.setAttribute('data-time-to', new_to);
-                label.textContent = kit.range_label(new_from, new_to);
+            // Escape, a pick from the menu and focus leaving may each ask for this
+            if(isFinished) {
+                return;
             }
 
-            time_area.removeChild(from_input);
-            time_area.removeChild(dash);
-            time_area.removeChild(to_input);
+            isFinished = true;
+
+            var newFrom = fromInput.value;
+            var newTo = toInput.value;
+
+            var hasNewFrom = config.timePattern.test(newFrom);
+            var hasNewTo = config.timePattern.test(newTo);
+            var hasNewTimes = false;
+
+            if(hasNewFrom) {
+                if(hasNewTo) {
+                    hasNewTimes = true;
+                }
+            }
+
+            if(hasNewTimes) {
+                slot.setAttribute('data-time-from', newFrom);
+                slot.setAttribute('data-time-to', newTo);
+                label.textContent = kit.rangeLabel(newFrom, newTo);
+            }
+
+            timeArea.removeChild(fromInput);
+            timeArea.removeChild(dash);
+            timeArea.removeChild(toInput);
 
             label.style.display = '';
-            kit.hide_menu();
+            kit.hideMenu();
 
-            // The host may size a range's own fields by its length
-            if(has_new_times && options.on_time_change) {
-                options.on_time_change(slot);
+            if(hasNewTimes) {
+                if(options.onTimeChange !== null) {
+                    options.onTimeChange(slot);
+                }
             }
         };
 
-        // Focus moving from one input to the other is not the end of the edit
-        var try_close = function() {
-            setTimeout(function() {
-                if(is_finished) {
-                    return;
-                }
-                if(!time_area.querySelector('.time-slot-time-input:focus')) {
-                    finish();
-                }
-            }, config.close_delay_ms);
+        // Focus moving from one input to the other is not the end of the edit, focus
+        // going anywhere else is
+        var onBlur = function(input, otherInput, event) {
+            kit.validateTimeInput(input);
+
+            if(event.relatedTarget === otherInput) {
+                return;
+            }
+
+            finish();
         };
 
-        var show_to_menu = function() {
-            kit.show_menu(to_input, '', function(selected_value) {
-                to_input.value = selected_value;
+        var showToMenu = function() {
+            kit.showMenu(toInput, '', function(selectedValue) {
+                toInput.value = selectedValue;
                 finish();
             });
         };
 
-        var show_from_menu = function() {
-            kit.show_menu(from_input, '', function(selected_value) {
-                from_input.value = selected_value;
-                to_input.focus();
-                setTimeout(show_to_menu, 0);
+        var showFromMenu = function() {
+            kit.showMenu(fromInput, '', function(selectedValue) {
+                fromInput.value = selectedValue;
+                toInput.focus();
+                showToMenu();
             });
         };
 
-        from_input.onkeydown = function(event) {
-            kit.filter_time_key(event);
+        fromInput.onkeydown = function(event) {
+            kit.filterTimeKey(event);
             if(event.key === 'Escape') {
                 finish();
             }
         };
 
-        to_input.onkeydown = function(event) {
-            kit.filter_time_key(event);
+        toInput.onkeydown = function(event) {
+            kit.filterTimeKey(event);
             if(event.key === 'Enter') {
                 event.preventDefault();
                 finish();
@@ -396,106 +385,106 @@ $.fn.zato.time_slots.create = function(options) {
             }
         };
 
-        from_input.onfocus = show_from_menu;
-        to_input.onfocus = show_to_menu;
+        fromInput.onfocus = showFromMenu;
+        toInput.onfocus = showToMenu;
 
-        from_input.onblur = function() {
-            kit.validate_time_input(from_input);
-            try_close();
+        fromInput.onblur = function(event) {
+            onBlur(fromInput, toInput, event);
         };
 
-        to_input.onblur = function() {
-            kit.validate_time_input(to_input);
-            try_close();
+        toInput.onblur = function(event) {
+            onBlur(toInput, fromInput, event);
         };
 
-        from_input.focus();
-        from_input.select();
+        fromInput.focus();
+        fromInput.select();
     };
 
 // /////////////////////////////////////////////////////////////////////////////
 
     // Adds a row of two time inputs that turns into a range once both hold a time
-    instance.begin_add = function() {
+    instance.beginAdd = function() {
 
-        var existing_input = root.querySelector('.time-slot-time-input');
-        if(existing_input) {
-            existing_input.focus();
+        var existingInput = root.querySelector('.time-slot-time-input');
+
+        if(existingInput !== null) {
+            existingInput.focus();
             return;
         }
 
         var pending = document.createElement('div');
         pending.className = 'time-slot';
-        pending.setAttribute('data-slot-type', config.slot_pending);
+        pending.setAttribute('data-slot-type', config.slotPending);
 
-        var time_area = document.createElement('div');
-        time_area.className = 'time-slot-time';
+        var timeArea = document.createElement('div');
+        timeArea.className = 'time-slot-time';
 
-        var from_input = kit.build_time_input(config.from_placeholder, '');
-        var to_input = kit.build_time_input(config.to_placeholder, '');
+        var fromInput = kit.buildTimeInput(config.fromPlaceholder, '');
+        var toInput = kit.buildTimeInput(config.toPlaceholder, '');
 
         var dash = document.createElement('span');
         dash.className = 'time-slot-time-dash';
         dash.textContent = '-';
 
-        time_area.appendChild(from_input);
-        time_area.appendChild(dash);
-        time_area.appendChild(to_input);
-        pending.appendChild(time_area);
+        timeArea.appendChild(fromInput);
+        timeArea.appendChild(dash);
+        timeArea.appendChild(toInput);
+        pending.appendChild(timeArea);
         root.appendChild(pending);
 
         var cancel = function() {
-            kit.hide_menu();
+            kit.hideMenu();
             root.removeChild(pending);
         };
 
         var commit = function() {
 
-            var from_value = from_input.value;
-            var to_value = to_input.value;
+            var fromValue = fromInput.value;
+            var toValue = toInput.value;
 
-            if(!config.time_pattern.test(from_value) || !config.time_pattern.test(to_value)) {
-                return;
+            var hasFrom = config.timePattern.test(fromValue);
+            var hasTo = config.timePattern.test(toValue);
+
+            if(hasFrom) {
+                if(hasTo) {
+                    kit.hideMenu();
+                    root.removeChild(pending);
+                    instance.addSlot(fromValue, toValue);
+                }
             }
-
-            kit.hide_menu();
-            root.removeChild(pending);
-            instance.add_slot(from_value, to_value);
         };
 
-        var show_to_menu = function() {
-            kit.show_menu(to_input, to_input.value, function(selected_value) {
-                to_input.value = selected_value;
+        var showToMenu = function() {
+            kit.showMenu(toInput, toInput.value, function(selectedValue) {
+                toInput.value = selectedValue;
                 commit();
             });
         };
 
-        var show_from_menu = function() {
-            kit.show_menu(from_input, from_input.value, function(selected_value) {
-                from_input.value = selected_value;
-                to_input.focus();
-
-                // The pick has just closed the menu, the to input gets its own a tick later
-                setTimeout(show_to_menu, 0);
+        var showFromMenu = function() {
+            kit.showMenu(fromInput, fromInput.value, function(selectedValue) {
+                fromInput.value = selectedValue;
+                toInput.focus();
+                showToMenu();
             });
         };
 
-        from_input.onfocus = show_from_menu;
-        from_input.oninput = show_from_menu;
-        from_input.onkeydown = function(event) {
-            kit.filter_time_key(event);
+        fromInput.onfocus = showFromMenu;
+        fromInput.oninput = showFromMenu;
+        fromInput.onkeydown = function(event) {
+            kit.filterTimeKey(event);
             if(event.key === 'Escape') {
                 cancel();
             }
         };
-        from_input.onblur = function() {
-            kit.validate_time_input(from_input);
+        fromInput.onblur = function() {
+            kit.validateTimeInput(fromInput);
         };
 
-        to_input.onfocus = show_to_menu;
-        to_input.oninput = show_to_menu;
-        to_input.onkeydown = function(event) {
-            kit.filter_time_key(event);
+        toInput.onfocus = showToMenu;
+        toInput.oninput = showToMenu;
+        toInput.onkeydown = function(event) {
+            kit.filterTimeKey(event);
             if(event.key === 'Enter') {
                 event.preventDefault();
                 commit();
@@ -504,24 +493,24 @@ $.fn.zato.time_slots.create = function(options) {
                 cancel();
             }
         };
-        to_input.onblur = function() {
-            kit.validate_time_input(to_input);
+        toInput.onblur = function() {
+            kit.validateTimeInput(toInput);
         };
 
-        from_input.focus();
+        fromInput.focus();
     };
 
 // /////////////////////////////////////////////////////////////////////////////
 
     // Every slot but a pending one, the All day slot first
     instance.slots = function() {
-        var out = root.querySelectorAll('.time-slot:not([data-slot-type="' + config.slot_pending + '"])');
+        var out = root.querySelectorAll('.time-slot:not([data-slot-type="' + config.slotPending + '"])');
         return out;
     };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-    instance.get_entries = function() {
+    instance.getEntries = function() {
 
         var out = [];
         var slots = instance.slots();
@@ -529,21 +518,21 @@ $.fn.zato.time_slots.create = function(options) {
         for(var idx = 0; idx < slots.length; idx++) {
 
             var slot = slots[idx];
-            var is_all_day = slot.getAttribute('data-slot-type') === config.slot_default;
+            var isAllDay = slot.getAttribute('data-slot-type') === config.slotDefault;
 
-            var entry = {is_all_day: is_all_day};
+            var entry = {is_all_day: isAllDay};
 
-            if(with_disable) {
-                entry[config.disabled_attr] = slot.getAttribute('data-' + config.disabled_attr) === 'true';
+            if(withDisable) {
+                entry[config.disabledAttr] = slot.getAttribute('data-' + config.disabledAttr) === 'true';
             }
 
             toggles.forEach(function(toggle) {
                 entry[toggle.attr] = slot.getAttribute('data-' + toggle.attr) === 'true';
             });
 
-            $.extend(entry, options.read_fields(slot));
+            $.extend(entry, options.readFields(slot));
 
-            if(!is_all_day) {
+            if(!isAllDay) {
                 entry.time_from = slot.getAttribute('data-time-from');
                 entry.time_to = slot.getAttribute('data-time-to');
             }
@@ -557,9 +546,9 @@ $.fn.zato.time_slots.create = function(options) {
 // /////////////////////////////////////////////////////////////////////////////
 
     // Writes one entry's flags and fields into a slot
-    var write_slot = function(slot, entry) {
+    var writeSlot = function(slot, entry) {
 
-        options.write_fields(slot, entry);
+        options.writeFields(slot, entry);
 
         var links = slot.querySelectorAll('a[data-toggle-attr]');
 
@@ -567,15 +556,13 @@ $.fn.zato.time_slots.create = function(options) {
             var link = links[idx];
             var attr = link.getAttribute('data-toggle-attr');
 
-            if(entry[attr]) {
-                link.onclick();
-            }
+            instance.setFlag(slot, attr, entry[attr], link);
         }
     };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-    // Fills the list from entries - the All day entry goes into the All day slot, every other one adds a range
+    // The All day entry goes into the All day slot, every other one adds a range
     instance.load = function(entries) {
 
         entries.forEach(function(entry) {
@@ -583,22 +570,22 @@ $.fn.zato.time_slots.create = function(options) {
             var slot;
 
             if(entry.is_all_day) {
-                slot = instance.default_slot;
+                slot = instance.defaultSlot;
             }
             else {
-                slot = instance.add_slot(entry.time_from, entry.time_to);
+                slot = instance.addSlot(entry.time_from, entry.time_to);
             }
 
-            write_slot(slot, entry);
+            writeSlot(slot, entry);
         });
     };
 
 // /////////////////////////////////////////////////////////////////////////////
 
     // Every range added so far goes, the All day slot stays
-    instance.clear_ranges = function() {
+    instance.clearRanges = function() {
 
-        var ranges = root.querySelectorAll('.time-slot:not([data-slot-type="' + config.slot_default + '"])');
+        var ranges = root.querySelectorAll('.time-slot:not([data-slot-type="' + config.slotDefault + '"])');
 
         for(var idx = 0; idx < ranges.length; idx++) {
             root.removeChild(ranges[idx]);
@@ -607,7 +594,7 @@ $.fn.zato.time_slots.create = function(options) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-    instance.default_slot = build_slot('', '', true);
+    instance.defaultSlot = buildSlot('', '', true);
 
     var out = instance;
     return out;

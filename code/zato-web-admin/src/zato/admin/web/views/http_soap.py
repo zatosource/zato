@@ -62,9 +62,6 @@ TRANSPORT = {
 # Channels whose service is this one are API gateways and get a badge in the channel list
 Gateway_Trigger_Service = 'helpers.service-gateway'
 
-# The alert type of the one kind of object on these pages that has an Alerts tab
-_channel_alert_type = alert_type_channels
-
 _rest_security_type_supported = {
     SEC_DEF_TYPE.APIKEY,
     SEC_DEF_TYPE.BASIC_AUTH,
@@ -140,9 +137,12 @@ _inline_field_names = ['is_active', 'name', 'url_path', 'service']
 # ################################################################################################################################
 
 def is_rest_channel(connection:'str', transport:'str') -> 'bool':
-    """ Whether a page or a form is a REST channel's - the one kind of object here with an Alerts tab.
+    """ Whether a page or a form is a REST channel's.
     """
-    out = connection == 'channel' and transport == URL_TYPE.PLAIN_HTTP
+    is_channel = connection == 'channel'
+    is_plain_http = transport == URL_TYPE.PLAIN_HTTP
+
+    out = is_channel and is_plain_http
     return out
 
 # ################################################################################################################################
@@ -197,13 +197,12 @@ def _get_edit_create_message(params, prefix='', user_profile=None): # type: igno
             message['deprecation_sunset'] = params.get(prefix + 'deprecation_sunset', '')
             message['deprecation_successor'] = params.get(prefix + 'deprecation_successor', '')
 
-            # .. and so do the Alerts tab's fields - a checkbox arrives only when checked, a number as text,
-            # and a duration as a count with a unit that join into the seconds it is stored as.
-            for name in alerts_tab.get_storage_field_names(_channel_alert_type):
+            # .. and so do the Alerts tab's fields.
+            for name in alerts_tab.get_storage_field_names(alert_type_channels):
                 value = params.get(prefix + name, '')
-                message[name] = alerts_tab.pre_process_alert_item(_channel_alert_type, name, value)
+                message[name] = alerts_tab.pre_process_alert_item(alert_type_channels, name, value)
 
-            alerts_tab.join_durations(_channel_alert_type, message)
+            alerts_tab.join_durations(alert_type_channels, message)
 
     # The declarative invocation fields exist only in the forms of outgoing connections
     for name in _invocation_field_names:
@@ -360,9 +359,8 @@ def index(req): # type: ignore
 
             _security.append(def_item)
 
-        # The Alerts tab is a REST channel's - its alerts are counted off the audit log the channel keeps
         if is_rest_channel(connection, transport):
-            alert_type = _channel_alert_type
+            alert_type = alert_type_channels
         else:
             alert_type = None
 
@@ -479,13 +477,13 @@ def index(req): # type: ignore
                 http_soap.deprecation_sunset = item.get('deprecation_sunset', '')
                 http_soap.deprecation_successor = item.get('deprecation_successor', '')
 
-                # The Alerts tab's fields ride in the row for the edit form to read, a duration
-                # as the count and the unit it is edited as rather than the seconds it is stored as.
+                # The Alerts tab's fields ride in the row for the edit form to read.
                 if is_rest_channel(connection, transport):
-                    for name in alerts_tab.get_storage_field_names(_channel_alert_type):
+                    for name in alerts_tab.get_storage_field_names(alert_type_channels):
                         if name in item:
                             http_soap[name] = item[name]
-                    alerts_tab.split_durations(_channel_alert_type, http_soap)
+
+                    alerts_tab.split_durations(alert_type_channels, http_soap)
             else:
                 http_soap.ping_method = item.ping_method
                 http_soap.pool_size = item.pool_size
@@ -559,11 +557,10 @@ def index(req): # type: ignore
     # The scheduler tab's start date picker needs the user's date and time format
     return_data.update(get_js_dt_format(req.zato.user_profile))
 
-    # The Alerts tab of a REST channel's forms - the lines the template renders and what their JavaScript reads
     if is_rest_channel(connection, transport):
-        return_data['create_alerts_tab'] = alerts_tab.get_alerts_tab_context(create_form, _channel_alert_type)
-        return_data['edit_alerts_tab'] = alerts_tab.get_alerts_tab_context(edit_form, _channel_alert_type)
-        return_data['alerts_tab_config'] = alerts_tab.get_alerts_tab_config(_channel_alert_type)
+        return_data['create_alerts_tab'] = alerts_tab.get_alerts_tab_context(create_form, alert_type_channels)
+        return_data['edit_alerts_tab'] = alerts_tab.get_alerts_tab_context(edit_form, alert_type_channels)
+        return_data['alerts_tab_config'] = alerts_tab.get_alerts_tab_config(alert_type_channels)
 
     return TemplateResponse(req, 'zato/http_soap/index.html', return_data)
 

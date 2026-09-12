@@ -14,75 +14,77 @@ from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.admin.web import alerts_tab
-from zato.admin.web.alerts_tab_picks import get_live_items
+from zato.admin.web.alerts_tab_lines import Arrival_Overdue_Unit_Default, Line_Kind_Pick, Section_Callers, Section_Core, \
+    Section_Failures, Section_Traffic, Silence_Window_Unit_Field
+from zato.admin.web.alerts_tab_picks import get_live_items, Live_Type_Email_Connection, Live_Type_LLM_Connection, \
+    Pick_Select_Class
 from zato.admin.web.forms import INITIAL_CHOICES
 from zato.admin.web.forms.http_soap import CreateForm as ChannelCreateForm
 from zato.admin.web.forms.outgoing.ftp import CreateForm as FTPCreateForm
 from zato.admin.web.forms.outgoing.sftp import CreateForm as SFTPCreateForm, EditForm as SFTPEditForm
 from zato.admin.web.forms.outgoing.smb import CreateForm as SMBCreateForm
-from zato.common.alerting.object_config import alert_type_channels, encode_email_connection, Email_Conn_Type_IMAP, \
-    Email_Conn_Type_SMTP, get_defaults as get_storage_defaults
+from zato.admin.web.views.live_form_updates import OBJECT_TYPE_CONFIG
+from zato.admin.web.views.outgoing import ftp, sftp, smb
+from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, encode_email_connection, \
+    Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, get_defaults as get_storage_defaults
 from zato.common.api import EMAIL, GENERIC
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist, strlist
     any_ = any_
     anydict = anydict
     anylist = anylist
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_alert_type = alerts_tab.alert_type_file_transfer
+_alert_type = alert_type_file_transfer
 
-# What the backend services list - two SMTP connections, one Microsoft 365 IMAP one and one generic IMAP one
 _smtp_names = ['ops.smtp', 'billing.smtp']
 _m365_name = 'ops.m365'
-_generic_imap_name = 'legacy.imap'
+_generic_imap_name = 'archive.imap'
 _llm_names = ['ops.llm', 'ops.llm.backup']
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _FakeClient:
-    """ Stands in for the Dashboard's client to the server - answers the two email listings
-    and the LLM connection listing and nothing else.
+    """ Answers the two email listings, the LLM connection listing and the service listing.
     """
     def __init__(self) -> 'None':
         self.calls:'anylist' = []
 
-    def invoke(self, service:'str', request:'anydict') -> 'anylist':
+    def invoke(self, service:'str', request:'anydict') -> 'any_':
         self.calls.append((service, request))
 
         if service == 'zato.email.smtp.get-list':
             out = []
             for name in _smtp_names:
                 out.append(Bunch(name=name))
-            return out
 
-        if service == 'zato.email.imap.get-list':
+        elif service == 'zato.email.imap.get-list':
             out = [
                 Bunch(name=_m365_name, server_type=EMAIL.IMAP.ServerType.Microsoft365),
                 Bunch(name=_generic_imap_name, server_type=EMAIL.IMAP.ServerType.Generic),
             ]
-            return out
 
-        if service == 'zato.generic.connection.get-list':
+        elif service == 'zato.generic.connection.get-list':
             assert request['type_'] == GENERIC.CONNECTION.TYPE.OUTCONN_LLM
             out = []
             for name in _llm_names:
                 out.append(Bunch(name=name))
-            return out
 
-        # The REST channel form lists the services a channel may invoke, off a response object
-        if service == 'zato.service.get-list':
+        elif service == 'zato.service.get-list':
             out = Bunch(data=[Bunch(name='demo.ping', id=1)])
-            return out
 
-        raise Exception(f'Unexpected service `{service}`')
+        else:
+            raise Exception(f'Unexpected service `{service}`')
+
+        return out
 
 # ################################################################################################################################
 
@@ -98,11 +100,11 @@ def req() -> 'any_':
 # ################################################################################################################################
 
 def _option_values(form:'any_', field_name:'str') -> 'anylist':
-    """ Every option value of a select but the first, the one meaning no connection.
+    """ Every option value of a select but the first.
     """
     out:'anylist' = []
 
-    for value, _ignored_label in form.fields[field_name].choices[1:]:
+    for value, _ in form.fields[field_name].choices[1:]:
         out.append(value)
 
     return out
@@ -114,7 +116,7 @@ def _option_labels(form:'any_', field_name:'str') -> 'anylist':
     """
     out:'anylist' = []
 
-    for _ignored_value, label in form.fields[field_name].choices[1:]:
+    for _, label in form.fields[field_name].choices[1:]:
         out.append(label)
 
     return out
@@ -128,8 +130,20 @@ def _pick_rows(context:'anydict') -> 'anydict':
 
     for section in context['sections']:
         for line in section['lines']:
-            if line['kind'] == alerts_tab.Line_Kind_Pick:
+            if line['kind'] == Line_Kind_Pick:
                 out[line['name']] = line
+
+    return out
+
+# ################################################################################################################################
+
+def _lines_by_name(config:'anydict') -> 'anydict':
+    """ The lines of a tab config, by name.
+    """
+    out:'anydict' = {}
+
+    for line in config['lines']:
+        out[line['name']] = line
 
     return out
 
@@ -153,12 +167,10 @@ class TestAlertsTabForm:
         assert form.fields['alert_test_transfers'].initial is False
         assert form.fields['alert_use_llm'].initial is True
 
-        # The seeded window of a day reads as 1 day, not 86400 seconds
         assert form.fields['alert_window'].initial == 1
         assert form.fields['alert_window_unit'].initial == 'day'
 
-        # The arrival unit is the tab's own and starts at an hour
-        assert form.fields['alert_arrival_overdue_unit'].initial == alerts_tab.Arrival_Overdue_Unit_Default
+        assert form.fields['alert_arrival_overdue_unit'].initial == Arrival_Overdue_Unit_Default
 
 # ################################################################################################################################
 
@@ -178,26 +190,20 @@ class TestAlertsTabForm:
         assert form.fields['alert_auth_failures'].initial == 10
         assert form.fields['alert_client_errors'].initial == 50
         assert form.fields['alert_use_llm'].initial is True
-
-        # A channel does not expect traffic until it says so - the silence rule ships inactive
         assert form.fields['alert_traffic_expected'].initial is False
 
-        # The seeded window of five minutes and silence of an hour read as counts with a unit
         assert form.fields['alert_window'].initial == 5
         assert form.fields['alert_window_unit'].initial == 'minute'
         assert form.fields['alert_silence_window'].initial == 1
         assert form.fields['alert_silence_window_unit'].initial == 'hour'
 
-        # Each measure has a window of its own, each seeded at five minutes
         for name in ('server_errors', 'latency', 'auth_failures', 'client_errors'):
             assert form.fields[f'alert_{name}_window'].initial == 5, name
             assert form.fields[f'alert_{name}_window_unit'].initial == 'minute', name
 
-        # The time slots start empty, as a JSON list in a hidden field
         assert form.fields['alert_silence_slots'].initial == '[]'
         assert 'type="hidden"' in str(form['alert_silence_slots'])
 
-        # A form without an alert type has no tab
         plain_form = ChannelCreateForm(req=req)
         assert 'alert_is_active' not in plain_form.fields
 
@@ -209,33 +215,32 @@ class TestAlertsTabForm:
         context = alerts_tab.get_alerts_tab_context(form, alert_type_channels)
         config = alerts_tab.get_alerts_tab_config(alert_type_channels)
 
-        section_labels = []
+        section_labels:'strlist' = []
+
         for section in context['sections']:
             section_labels.append(section['label'])
-        assert section_labels == [alerts_tab.Section_Core, alerts_tab.Section_Failures, alerts_tab.Section_Callers,
-            alerts_tab.Section_Traffic]
 
-        line_names = []
+        assert section_labels == [Section_Core, Section_Failures, Section_Callers, Section_Traffic]
+
+        line_names:'strlist' = []
+
         for line in config['lines']:
             line_names.append(line['name'])
+
         assert line_names == ['active', 'use_llm', 'llm', 'email', 'failures_in_a_row', 'error_rate', 'server_errors',
             'rejected_callers', 'bad_requests', 'slow_responses', 'silence']
 
-        # The silence line carries its own switch, reads as Alerts off while it is off, has a unit of its
-        # own and the time slots its popover edits, and its summary says how many slots there are
         silence_line = config['lines'][-1]
+
         assert silence_line['label'] == 'No requests received'
         assert silence_line['fields'] == ['traffic_expected', 'silence_window', 'silence_slots']
         assert silence_line['off_field'] == 'traffic_expected'
         assert silence_line['summary_off'] == 'Alerts off'
-        assert silence_line['unit_field'] == alerts_tab.Silence_Window_Unit_Field
+        assert silence_line['unit_field'] == Silence_Window_Unit_Field
         assert silence_line['slots_field'] == 'silence_slots'
         assert '{silence_slots#' in silence_line['summary']
 
-        # Every threshold line has its number on one row and its window on the next, with a unit of its own
-        lines_by_name = {}
-        for line in config['lines']:
-            lines_by_name[line['name']] = line
+        lines_by_name = _lines_by_name(config)
 
         windows = {
             'error_rate': ('error_rate', 'window'),
@@ -252,21 +257,22 @@ class TestAlertsTabForm:
             assert f'{{{window}_unit@{window}}}' in line['summary'], line_name
             assert config['field_labels'][window] == 'In the last', line_name
 
-        # The connection selects are the lines' own answers, starting with the dashboard's own first option
         for line in _pick_rows(context).values():
             rendered = str(line['field'])
-            assert f'class="{alerts_tab.Pick_Select_Class}"' in rendered
+            assert f'class="{Pick_Select_Class}"' in rendered
             assert f'<option value="{INITIAL_CHOICES[0]}" selected>{INITIAL_CHOICES[1]}</option>' in rendered
             assert line['has_options'] is True
 
-        # Every unit select the lines name is on the form
         assert 'alert_silence_window_unit' in config['storage_field_names']
         assert 'alert_window_unit' in config['storage_field_names']
         assert 'alert_latency_window_unit' in config['storage_field_names']
         assert 'alert_silence_slots' in config['storage_field_names']
 
-        # What the popovers need to turn seconds into a count and a unit
-        assert config['duration_units'] == [('minute', 60), ('hour', 3600), ('day', 86400)]
+        assert config['duration_units'] == [
+            {'name': 'minute', 'seconds': 60},
+            {'name': 'hour', 'seconds': 3600},
+            {'name': 'day', 'seconds': 86400},
+        ]
         assert config['slots_kind'] == 'time_slots'
         assert config['duration_kind'] == 'duration'
 
@@ -299,17 +305,15 @@ class TestAlertsTabForm:
         for name in _smtp_names:
             assert encode_email_connection(Email_Conn_Type_SMTP, name) in values
 
-        # Only the Microsoft 365 IMAP connections can send, the generic one is not offered
         assert encode_email_connection(Email_Conn_Type_IMAP, _m365_name) in values
         assert encode_email_connection(Email_Conn_Type_IMAP, _generic_imap_name) not in values
 
-        # The options are flat, each labelled with its kind before its name, and nothing but connections is listed
         labels = _option_labels(form, 'alert_email_connection')
         assert labels == ['SMTP/ops.smtp', 'SMTP/billing.smtp', 'Microsoft 365/ops.m365']
         assert len(values) == 3
 
-        # The email listings were asked for once each, with the cluster
-        services = []
+        services:'strlist' = []
+
         for service, request in req.zato.client.calls:
             services.append(service)
             if service != 'zato.generic.connection.get-list':
@@ -324,11 +328,9 @@ class TestAlertsTabForm:
         form = SFTPCreateForm(req=req)
         values = _option_values(form, 'alert_llm_connection')
 
-        # An LLM value is the connection's name alone, there is no kind in front of it, and the label is the same
         assert values == _llm_names
         assert _option_labels(form, 'alert_llm_connection') == _llm_names
 
-        # The listing was asked for the LLM connections only
         for service, request in req.zato.client.calls:
             if service == 'zato.generic.connection.get-list':
                 assert request == {'cluster_id': 1, 'type_': GENERIC.CONNECTION.TYPE.OUTCONN_LLM, 'paginate': False}
@@ -337,10 +339,12 @@ class TestAlertsTabForm:
 
     def test_no_llm_connections_swaps_the_select_for_the_create_sentence(self, req:'any_') -> 'None':
 
-        def invoke(service:'str', request:'anydict') -> 'anylist':
+        def invoke(service:'str', request:'anydict') -> 'any_':
             if service == 'zato.generic.connection.get-list':
-                return []
-            return _FakeClient().invoke(service, request)
+                out = []
+            else:
+                out = _FakeClient().invoke(service, request)
+            return out
 
         req.zato.client.invoke = invoke
 
@@ -348,23 +352,23 @@ class TestAlertsTabForm:
         context = alerts_tab.get_alerts_tab_context(form, _alert_type)
         picks = _pick_rows(context)
 
-        # The select holds the first option alone, so the line shows the sentence with the one create link instead
         assert _option_values(form, 'alert_llm_connection') == []
         assert picks['llm']['has_options'] is False
         assert picks['llm']['empty_html'] == \
             'No LLM connections found. Click to <a href="/zato/outgoing/llm/?cluster=1&amp;create=1" target="_blank">create one</a>.'
 
-        # The email line still has its connections
         assert picks['email']['has_options'] is True
 
 # ################################################################################################################################
 
     def test_no_email_connections_swaps_the_select_for_the_two_create_links(self, req:'any_') -> 'None':
 
-        def invoke(service:'str', request:'anydict') -> 'anylist':
+        def invoke(service:'str', request:'anydict') -> 'any_':
             if service in ('zato.email.smtp.get-list', 'zato.email.imap.get-list'):
-                return []
-            return _FakeClient().invoke(service, request)
+                out = []
+            else:
+                out = _FakeClient().invoke(service, request)
+            return out
 
         req.zato.client.invoke = invoke
 
@@ -382,43 +386,45 @@ class TestAlertsTabForm:
 
     def test_one_empty_kind_still_lists_the_other(self, req:'any_') -> 'None':
 
-        # No SMTP connections at all this time
-        def invoke(service:'str', request:'anydict') -> 'anylist':
+        def invoke(service:'str', request:'anydict') -> 'any_':
             if service == 'zato.email.smtp.get-list':
-                return []
-            return _FakeClient().invoke(service, request)
+                out = []
+            else:
+                out = _FakeClient().invoke(service, request)
+            return out
 
         req.zato.client.invoke = invoke
 
         form = SFTPCreateForm(req=req)
-        assert _option_values(form, 'alert_email_connection') == [encode_email_connection(Email_Conn_Type_IMAP, _m365_name)]
+        m365_value = encode_email_connection(Email_Conn_Type_IMAP, _m365_name)
+
+        assert _option_values(form, 'alert_email_connection') == [m365_value]
         assert _option_labels(form, 'alert_email_connection') == ['Microsoft 365/ops.m365']
 
 # ################################################################################################################################
 
     def test_live_items_read_the_way_the_selects_do(self, req:'any_') -> 'None':
 
-        # The poll lists the very options the form builds - the id being the value and the name the label
         form = SFTPCreateForm(req=req)
 
         for live_type, field_name in (
-            (alerts_tab.Live_Type_Email_Connection, 'alert_email_connection'),
-            (alerts_tab.Live_Type_LLM_Connection, 'alert_llm_connection'),
+            (Live_Type_Email_Connection, 'alert_email_connection'),
+            (Live_Type_LLM_Connection, 'alert_llm_connection'),
         ):
-            expected = []
+            expected:'anylist' = []
+
             for value, label in form.fields[field_name].choices[1:]:
                 expected.append({'id': value, 'name': label})
 
             assert get_live_items(req, live_type) == expected, live_type
 
-        # The dispatch table of the live form updates view knows both types
-        from zato.admin.web.views.live_form_updates import OBJECT_TYPE_CONFIG
-
-        for live_type in (alerts_tab.Live_Type_Email_Connection, alerts_tab.Live_Type_LLM_Connection):
+        for live_type in (Live_Type_Email_Connection, Live_Type_LLM_Connection):
             config = OBJECT_TYPE_CONFIG[live_type]
+            expected = get_live_items(req, live_type)
+
             assert config['id_field'] == 'id'
             assert config['label_format'] == '{name}'
-            assert config['fetch_func'](req) == get_live_items(req, live_type)
+            assert config['fetch_func'](req) == expected
 
 # ################################################################################################################################
 
@@ -433,43 +439,36 @@ class TestAlertsTabForm:
         ]
         assert config['checkbox_field_names'] == ['alert_is_active', 'alert_test_transfers', 'alert_use_llm']
         assert config['pick_fields'] == ['llm_connection', 'email_connection']
-        assert 'pick_kind_separator' not in config
-        assert 'pick_create_new_value' not in config
 
-        # Every line names fields the config knows the kind or the role of
+        known_names = list(config['field_kinds'])
+        known_names.append(config['is_active_field'])
+        known_names.extend(config['pick_fields'])
+
         for line in config['lines']:
             for field_name in line['fields']:
-                is_known = field_name in config['field_kinds'] or field_name == config['is_active_field'] or field_name in config['pick_fields']
-                assert is_known, field_name
+                assert field_name in known_names, field_name
 
-        # The pick lines name their field and the type the live form updates poll knows their connections as
-        lines_by_name = {}
-        for line in config['lines']:
-            lines_by_name[line['name']] = line
+        lines_by_name = _lines_by_name(config)
 
         email_line = lines_by_name['email']
         llm_line = lines_by_name['llm']
 
-        assert email_line['kind'] == alerts_tab.Line_Kind_Pick
+        assert email_line['kind'] == Line_Kind_Pick
         assert email_line['field'] == 'email_connection'
-        assert email_line['live_type'] == alerts_tab.Live_Type_Email_Connection
+        assert email_line['live_type'] == Live_Type_Email_Connection
         assert 'depends_on' not in email_line
-        assert 'groups' not in email_line
 
-        assert llm_line['kind'] == alerts_tab.Line_Kind_Pick
+        assert llm_line['kind'] == Line_Kind_Pick
         assert llm_line['field'] == 'llm_connection'
-        assert llm_line['live_type'] == alerts_tab.Live_Type_LLM_Connection
+        assert llm_line['live_type'] == Live_Type_LLM_Connection
         assert llm_line['depends_on'] == 'use_llm'
 
-        # The LLM line comes right after the Use LLM switch it depends on
         line_names = list(lines_by_name)
         assert line_names.index('llm') == line_names.index('use_llm') + 1
 
 # ################################################################################################################################
 
     def test_storage_names_match_the_views(self) -> 'None':
-
-        from zato.admin.web.views.outgoing import ftp, sftp, smb
 
         storage_names = alerts_tab.get_storage_field_names(_alert_type)
         checkbox_names = alerts_tab.get_checkbox_field_names(_alert_type)
@@ -500,7 +499,6 @@ class TestAlertsTabStorage:
         assert alerts_tab.pre_process_alert_item(_alert_type, 'alert_window_unit', 'hour') == 'hour'
         assert alerts_tab.pre_process_alert_item(_alert_type, 'alert_email_connection', 'smtp:ops') == 'smtp:ops'
 
-        # The time slots of a channel travel as the JSON text they are
         slots_text = '[{"time_from": "22:00", "time_to": "06:00", "is_on": false, "silence_seconds": 3600}]'
         assert alerts_tab.pre_process_alert_item(alert_type_channels, 'alert_silence_slots', slots_text) == slots_text
         assert alerts_tab.pre_process_alert_item(alert_type_channels, 'alert_silence_window', '30') == 30
@@ -515,7 +513,6 @@ class TestAlertsTabStorage:
 
         assert input_dict == {'name': 'abc', 'alert_window': 3 * 3600, 'alert_arrival_overdue_unit': 'day'}
 
-        # Every window of a channel is joined on its own
         input_dict = {
             'alert_window': 5, 'alert_window_unit': 'minute',
             'alert_server_errors_window': 1, 'alert_server_errors_window_unit': 'hour',
@@ -546,23 +543,20 @@ class TestAlertsTabStorage:
 
         assert item.alert_window == 2
         assert item.alert_window_unit == 'day'
-
-        # A unit the object does not carry starts at its default
-        assert item.alert_arrival_overdue_unit == alerts_tab.Arrival_Overdue_Unit_Default
+        assert item.alert_arrival_overdue_unit == Arrival_Overdue_Unit_Default
 
 # ################################################################################################################################
 
     def test_round_trip_through_storage(self) -> 'None':
 
-        # What the form sends, as the view receives it, ..
         input_dict = {}
+
         for name, value in (('alert_window', '90'), ('alert_window_unit', 'minute'), ('alert_is_active', 'on')):
             input_dict[name] = alerts_tab.pre_process_alert_item(_alert_type, name, value)
 
         alerts_tab.join_durations(_alert_type, input_dict)
         assert input_dict['alert_window'] == 5400
 
-        # .. is what the listing turns back into what the edit form shows.
         item = Bunch(input_dict)
         alerts_tab.split_durations(_alert_type, item)
 

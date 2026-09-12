@@ -96,17 +96,16 @@ def _pubsub_subscription_security(req:'any_') -> 'dictlist':
 # ################################################################################################################################
 
 def _alert_email_connections(req:'any_') -> 'dictlist':
-
-    # The same listing the Alerts tab builds its email select from - an item's id is the option's
-    # value and its name the option's label, so the poll and the tab never disagree.
+    """ The email connections the Alerts tab lists.
+    """
     out = get_live_items(req, Live_Type_Email_Connection)
     return out
 
 # ################################################################################################################################
 
 def _alert_llm_connections(req:'any_') -> 'dictlist':
-
-    # The same listing the Alerts tab builds its LLM select from.
+    """ The LLM connections the Alerts tab lists.
+    """
     out = get_live_items(req, Live_Type_LLM_Connection)
     return out
 

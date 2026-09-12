@@ -194,7 +194,6 @@ class CreateForm(DataFormatForm):
 
         add_services(self, req)
 
-        # The Alerts tab exists only on the pages whose objects raise alerts - REST channels for now
         if alert_type:
             alerts_tab.add_alerts_fields(self, alert_type, req)
 

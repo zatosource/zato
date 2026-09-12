@@ -11,15 +11,7 @@ import time
 from dataclasses import dataclass
 
 # Zato
-from zato.common.util.time_of_day import hh_mm_to_minutes, now_us_to_minutes, time_in_range, validate_hh_mm
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The time-of-day helpers live in zato.common.util.time_of_day, shared with alerting, and are re-exported here
-hh_mm_to_minutes = hh_mm_to_minutes
-now_us_to_minutes = now_us_to_minutes
-time_in_range = time_in_range
+from zato.common.util.time_of_day import TimeOfDayError, validate_hh_mm
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -194,7 +186,7 @@ def validate_time_range(time_range:'TimeRange') -> 'None':
         try:
             validate_hh_mm(time_range.time_from, 'time_from')
             validate_hh_mm(time_range.time_to, 'time_to')
-        except ValueError as e:
+        except TimeOfDayError as e:
             raise RateLimitError(e.args[0])
 
     # .. limit_unit must be valid.

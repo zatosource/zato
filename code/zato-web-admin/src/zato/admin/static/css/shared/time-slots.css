@@ -1,10 +1,5 @@
 /* ------------------------------------------------------------ */
 /* Time slots - ranges of the day with values of their own      */
-/*                                                              */
-/* Works together with /static/js/shared/time-slots.js. The     */
-/* list hangs off a vertical line, each slot a dot on it - the  */
-/* All day slot a filled one - and a host colours the line and  */
-/* the dots through --time-slot-accent.                         */
 /* ------------------------------------------------------------ */
 
 :root {
@@ -13,12 +8,18 @@
     --time-slot-text: #2c3e50;
     --time-slot-text-muted: #666666;
     --time-slot-line: #e2e6ea;
+    --time-slot-rail-width: 2px;
     --time-slot-dot: #c0c8d0;
     --time-slot-hover: #f8fafc;
+    --time-slot-hover-delay: 60ms;
+    --time-slot-surface: #ffffff;
     --time-slot-input-border: #d0d0d0;
     --time-slot-input-focus: #5794d0;
+    --time-slot-focus-ring: #5794d01a;
+    --time-slot-input-height: 20px;
     --time-slot-dashed: #b0b0b0;
-    --time-slot-pipe: #d0d0d0;
+    --time-slot-add-background: #f8f9fa;
+    --time-slot-add-font-size: 12px;
     --time-slot-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
 }
 
@@ -33,38 +34,44 @@
     margin-top: 8px;
     margin-left: 28px;
     padding: 0;
-    border-left: 2px solid color-mix(in srgb, var(--time-slot-accent) 30%, var(--time-slot-line));
+    background: linear-gradient(
+        to right,
+        color-mix(in srgb, var(--time-slot-accent) 30%, var(--time-slot-line)) var(--time-slot-rail-width),
+        transparent var(--time-slot-rail-width)
+    ) no-repeat;
 }
 
 .time-slot {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 5px 0 5px 14px;
-    position: relative;
     transition: background 0.1s;
 }
 
 .time-slot:hover {
     background: var(--time-slot-hover);
+    transition-delay: var(--time-slot-hover-delay);
 }
 
 .time-slot::before {
     content: '';
     position: absolute;
-    left: -7px;
     top: 50%;
-    transform: translateY(-50%);
+    left: -7px;
     width: 8px;
     height: 8px;
-    border-radius: 50%;
-    background: #ffffff;
     border: 2px solid color-mix(in srgb, var(--time-slot-accent) 40%, var(--time-slot-dot));
+    border-radius: 50%;
+    background: var(--time-slot-surface);
+    transform: translateY(-50%);
     transition: border-color 0.15s, background 0.15s;
 }
 
 .time-slot:hover::before {
     border-color: var(--time-slot-accent);
+    transition-delay: var(--time-slot-hover-delay);
 }
 
 .time-slot[data-slot-type="default"]::before {
@@ -94,18 +101,18 @@
     display: flex;
     align-items: center;
     gap: 4px;
+    flex-shrink: 0;
     min-width: 120px;
     min-height: 20px;
-    flex-shrink: 0;
     font-size: var(--time-slot-font-size);
     color: var(--time-slot-text-muted);
 }
 
 .time-slot-time-label {
     font-weight: 600;
-    color: var(--time-slot-text);
-    white-space: nowrap;
     letter-spacing: 0.2px;
+    white-space: nowrap;
+    color: var(--time-slot-text);
 }
 
 .time-slot-time-label-editable {
@@ -117,26 +124,51 @@
     color: var(--time-slot-text-muted);
 }
 
-/* Two classes deep, ahead of the site-wide input[type="text"] and select rules
-   of formalize.css, which would otherwise give these their own height and face */
+/* ------------------------------------------------------------ */
+/* The inputs and selects - two classes deep, ahead of          */
+/* formalize.css                                                */
+/* ------------------------------------------------------------ */
+
+.time-slot .time-slot-time-input,
+.time-slot .time-slot-input,
+.time-slot .time-slot-select {
+    box-sizing: border-box;
+    outline: none;
+    background: var(--time-slot-surface);
+    transition: border-color 0.15s;
+}
+
+.time-slot .time-slot-time-input:focus,
+.time-slot .time-slot-input:focus,
+.time-slot .time-slot-select:focus {
+    border-color: var(--time-slot-input-focus);
+    box-shadow: 0 0 0 2px var(--time-slot-focus-ring);
+}
+
 .time-slot .time-slot-time-input {
     width: 48px;
-    text-align: center;
-    box-sizing: border-box;
-    height: 20px;
+    height: var(--time-slot-input-height);
     padding: 2px 6px;
     border: 1px dashed var(--time-slot-dashed);
     border-radius: var(--zato-pill-radius);
     font: var(--time-slot-font-size) var(--time-slot-mono);
     line-height: 1;
-    outline: none;
-    background: #ffffff;
-    transition: border-color 0.15s;
+    text-align: center;
 }
 
-.time-slot .time-slot-time-input:focus {
-    border-color: var(--time-slot-input-focus);
-    box-shadow: 0 0 0 2px #5794d01a;
+.time-slot .time-slot-input,
+.time-slot .time-slot-select {
+    padding: 3px 4px;
+    border: 1px solid var(--time-slot-input-border);
+    border-radius: 3px;
+    font-size: var(--time-slot-font-size);
+}
+
+.time-slot .time-slot-input {
+    width: 60px;
+    height: var(--time-slot-input-height);
+    font: var(--time-slot-font-size) sans-serif;
+    text-align: right;
 }
 
 /* ------------------------------------------------------------ */
@@ -148,41 +180,15 @@
     align-items: center;
     gap: 6px;
     flex-shrink: 0;
-    padding-left: 8px;
-    border-left: 1px solid #e9ecef;
     margin-left: 4px;
+    padding-left: 8px;
 }
 
 .time-slot-label,
 .time-slot-unit {
     font-size: var(--time-slot-font-size);
-    color: var(--time-slot-text-muted);
     white-space: nowrap;
-}
-
-.time-slot .time-slot-input,
-.time-slot .time-slot-select {
-    padding: 3px 4px;
-    border: 1px solid var(--time-slot-input-border);
-    border-radius: 3px;
-    font-size: var(--time-slot-font-size);
-    outline: none;
-    background: #ffffff;
-    transition: border-color 0.15s;
-}
-
-.time-slot .time-slot-input:focus,
-.time-slot .time-slot-select:focus {
-    border-color: var(--time-slot-input-focus);
-    box-shadow: 0 0 0 2px #5794d01a;
-}
-
-.time-slot .time-slot-input {
-    width: 60px;
-    text-align: right;
-    font: var(--time-slot-font-size) sans-serif;
-    box-sizing: border-box;
-    height: 19.8px;
+    color: var(--time-slot-text-muted);
 }
 
 .time-slot-switch {
@@ -190,8 +196,8 @@
     align-items: center;
     gap: 8px;
     font-size: var(--time-slot-font-size);
-    color: var(--time-slot-text-muted);
     white-space: nowrap;
+    color: var(--time-slot-text-muted);
     cursor: pointer;
 }
 
@@ -211,32 +217,27 @@
     white-space: nowrap;
 }
 
-.time-slot-action-pipe {
-    font-size: var(--time-slot-font-size);
-    color: var(--time-slot-pipe);
-    user-select: none;
-}
-
 /* ------------------------------------------------------------ */
 /* The add button under the list                                */
 /* ------------------------------------------------------------ */
 
 .time-slots-add {
-    cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 10px;
-    border-radius: 3px;
-    border: 1px dashed var(--time-slot-dashed);
-    font-size: 12px;
-    color: var(--time-slot-text-muted);
-    background: #f8f9fa;
     margin-top: 4px;
+    padding: 4px 10px;
+    border: 1px dashed var(--time-slot-dashed);
+    border-radius: 3px;
+    font-size: var(--time-slot-add-font-size);
+    color: var(--time-slot-text-muted);
+    background: var(--time-slot-add-background);
+    cursor: pointer;
     transition: border-color 0.15s, color 0.15s;
 }
 
 .time-slots-add:hover {
     border-color: var(--time-slot-input-focus);
     color: var(--time-slot-input-focus);
+    transition-delay: var(--time-slot-hover-delay);
 }

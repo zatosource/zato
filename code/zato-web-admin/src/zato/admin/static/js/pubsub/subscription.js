@@ -1020,14 +1020,14 @@ $.fn.zato.pubsub.subscription._puff_changed_rows = function(container_selector, 
         var checkbox = $(this);
         var old_value = old_values[this.id];
         if (old_value === undefined || old_value !== checkbox.val()) {
-            $.fn.zato.live_form_updates._puff(checkbox.closest('tr'));
+            $.fn.zato.live_form_updates.puff(checkbox.closest('tr'));
         }
     });
 
     var old_ids = Object.keys(old_values);
     for (var idIdx = 0; idIdx < old_ids.length; idIdx++) {
         if (!$(container_selector).find('#' + old_ids[idIdx]).length) {
-            $.fn.zato.live_form_updates._puff($(container_selector).find('.multi-select-table'));
+            $.fn.zato.live_form_updates.puff($(container_selector).find('.multi-select-table'));
             break;
         }
     }

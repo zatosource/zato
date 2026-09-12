@@ -10,8 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from zato.common.rate_limiting.common import hh_mm_to_minutes, RateLimitError, time_in_range, TimeRange, \
-    validate_time_range
+from zato.common.rate_limiting.common import RateLimitError, TimeRange, validate_time_range
+from zato.common.util.time_of_day import hh_mm_to_minutes, time_in_range
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -13,8 +13,7 @@
     --zato-dropdown-excluded-ink: rgba(224, 34, 110, 0.8);
     --zato-dropdown-excluded-tint: rgba(224, 34, 110, 0.06);
 
-    /* Above everything a menu may open from - the pages, the dialogs at 10000
-       and the micro-form popovers at 100001 */
+    /* Above the dialogs and the micro-form popovers */
     --zato-dropdown-z-index: 100010;
 }
 

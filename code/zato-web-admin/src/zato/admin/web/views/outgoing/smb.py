@@ -16,6 +16,7 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index,
      SKIP_VALUE
 from zato.admin.web.views.outgoing.file_transfer_schedule import get_connection_last_run_list, get_schedules, \
      get_schedules_by_conn_id, set_connection_last_run
+from zato.common.alerting.object_config import alert_type_file_transfer, Field_Prefix
 from zato.common.api import FileTransfer, GENERIC
 
 # ################################################################################################################################
@@ -29,7 +30,7 @@ if 0:
 # ################################################################################################################################
 
 # The alert settings of the connection follow the file transfer type
-_alert_type = alerts_tab.alert_type_file_transfer
+_alert_type = alert_type_file_transfer
 
 _fields_required = ('name',)
 _fields_optional = ('is_active', 'host', 'port', 'username', 'should_store_content', 'verify_how') + \
@@ -101,7 +102,7 @@ class _CreateEdit(CreateEdit):
             return SKIP_VALUE
 
         # The Alerts tab's fields arrive as text and are stored typed - booleans and integers
-        if name.startswith(alerts_tab.Field_Prefix):
+        if name.startswith(Field_Prefix):
             value = alerts_tab.pre_process_alert_item(_alert_type, name, value)
 
         return value

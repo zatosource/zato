@@ -12,9 +12,10 @@ import logging
 from dataclasses import dataclass
 
 # Zato
-from zato.common.rate_limiting.common import hh_mm_to_minutes, now_us_to_minutes, RateLimitError, time_in_range, TimeRange
+from zato.common.rate_limiting.common import RateLimitError, TimeRange
 from zato.common.rate_limiting.fixed_window import FixedWindowCheckResult, FixedWindowConfig, FixedWindowRegistry
 from zato.common.rate_limiting.token_bucket import CheckResult, TokenBucketConfig, TokenBucketRegistry
+from zato.common.util.time_of_day import hh_mm_to_minutes, now_us_to_minutes, time_in_range
 
 # ################################################################################################################################
 # ################################################################################################################################

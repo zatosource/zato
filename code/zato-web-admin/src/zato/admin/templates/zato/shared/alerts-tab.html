@@ -1,25 +1,6 @@
 {% comment %}
-The Alerts tab of a create or edit form - one page of settings inside a dialog.
-
-Include it right after the panel of the Main tab, inside the same form:
-
-    {% include "zato/shared/alerts-tab.html" with panel_id="out-sftp-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
-
-`alerts_tab` comes from zato.admin.web.alerts_tab.get_alerts_tab_context. The tab is
-written as decision lines (shared/decision-lines.css) - a question and one answer per
-line. A switch and a connection select are answered on the line itself, a popover line
-carries a summary link (shared/summary-link.css) the tab's JavaScript fills in. The numbers
-the popovers read and write sit hidden under the lines, so the Django form stays the single
-source of every value. The Active switch is the first line of the first section and the one line that
-stays lit when it is off, everything else being dimmed then. A connection select with nothing
-to list is hidden behind a sentence with the links that open the pages a connection is created on,
-and the tab's JavaScript swaps the two as connections come and go.
-
-The body wears form-data, the very surface the Main tab's table stands on, so the two
-tabs read as one dialog.
-
-`panel_id` is the id the form-tabs kit switches to when the Alerts tab is clicked, and
-every element the JavaScript looks up is named after it.
+The Alerts tab of a create or edit form. Included right after the panel of the Main tab, inside the same form,
+with panel_id and alerts_tab (from zato.admin.web.alerts_tab.get_alerts_tab_context).
 {% endcomment %}
 <div class="dashboard-tab-panel alerts-tab-panel" id="{{ panel_id }}" role="tabpanel" hidden>
     <div class="form-data alerts-tab-body">

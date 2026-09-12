@@ -6,50 +6,46 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The lines of the reusable Alerts tab, one table per alert type - what each line is called, which
-# fields answer it, what its popover is titled and what its summary reads as - with the unit selects,
-# the labels and the sections the lines stand on. zato.admin.web.alerts_tab builds the forms, the
-# template context and the JavaScript configuration off these tables.
+# The lines of the Alerts tab, one table per alert type, with the unit selects, the labels and the sections they stand on.
 
 # Zato
+from zato.admin.web.alerts_tab_picks import Email_Empty_Text, email_kinds, Live_Type_Email_Connection, \
+    Live_Type_LLM_Connection, llm_kinds, LLM_Empty_Text
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, Email_Connection_Field, \
     field_display as shared_field_display, field_help, Is_Active_Field, LLM_Connection_Field, Unit_Field_Suffix
-from zato.admin.web.alerts_tab_picks import Email_Empty_Text, email_kinds, Live_Type_Email_Connection, \
-    Live_Type_LLM_Connection, llm_kinds, LLM_Empty_Text
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The units a time is given in - a select that sits right after the number in its popover.
-# An option's value is the noun in the singular and its label the plural, which is how
-# the summary reads "1 hour" and "2 hours" off the select.
-duration_unit_choices = []
+if 0:
+    from zato.common.typing_ import anydict, anylist
+    anydict = anydict
+    anylist = anylist
 
-for _unit_name, _ignored_seconds in config_map.Duration_Units:
+# ################################################################################################################################
+# ################################################################################################################################
+
+# An option's value is the noun in the singular and its label the plural
+duration_unit_choices:'anylist' = []
+
+for _unit_name, _ in config_map.Duration_Units:
     duration_unit_choices.append((_unit_name, _unit_name + 's'))
 
-# The unit of the time a file may fail to arrive for - a number of its own with a unit the tab
-# keeps next to it, stored with the number so that the edit form reads the way it was saved.
-Arrival_Overdue_Unit_Field = 'arrival_overdue' + Unit_Field_Suffix
+# The unit of the time a file may fail to arrive for, stored with the number
+Arrival_Overdue_Unit_Field   = 'arrival_overdue' + Unit_Field_Suffix
 Arrival_Overdue_Unit_Default = 'hour'
 
-# The unit of the window the failure counts are measured over - a duration field's unit select
-# is named after the field and its default comes from the seeded rules with the count. The unit
-# is not stored, the window is a number of seconds in storage and is split back on the way out.
-Window_Unit_Field = config_map.Window_Field_Name + Unit_Field_Suffix
-
-# The windows of a channel's own measures, each a duration with a unit select of its own
+# The unit selects of the durations, named after their fields and not stored
+Window_Unit_Field               = config_map.Window_Field_Name + Unit_Field_Suffix
 Server_Errors_Window_Unit_Field = 'server_errors_window' + Unit_Field_Suffix
-Latency_Window_Unit_Field = 'latency_window' + Unit_Field_Suffix
+Latency_Window_Unit_Field       = 'latency_window' + Unit_Field_Suffix
 Auth_Failures_Window_Unit_Field = 'auth_failures_window' + Unit_Field_Suffix
 Client_Errors_Window_Unit_Field = 'client_errors_window' + Unit_Field_Suffix
+Silence_Window_Unit_Field       = config_map.Silence_Window_Field_Name + Unit_Field_Suffix
 
-# The unit of the silence a channel that expects traffic tolerates - a duration like the window
-Silence_Window_Unit_Field = config_map.Silence_Window_Field_Name + Unit_Field_Suffix
-
-# The unit selects of the tab, by name - what each offers and what a new object starts with
-unit_fields = {
+# The unit selects of the tab, by name
+unit_fields:'anydict' = {
     Arrival_Overdue_Unit_Field: {'choices': duration_unit_choices, 'initial': Arrival_Overdue_Unit_Default},
     Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
     Server_Errors_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
@@ -59,27 +55,19 @@ unit_fields = {
     Silence_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
 }
 
-# The time slots of a channel's silence alert - ranges of the day with a switch and a silence of
-# their own, kept as one JSON list the popover's time slots kit reads and writes whole.
+# The JSON list of time slots of a channel's silence alert
 Silence_Slots_Field = config_map.Silence_Slots_Field_Name
 
-# What the tab is called in the tab strip
 Tab_Label = 'Alerts'
-
-# What the first line of the tab, the one switching the rest on and off, is called
 Active_Label = 'Active'
-
-# What the link opening a line's popover says beside its summary
 Edit_Hint = 'Click to edit'
 
-# What a checkbox arrives as from the browser when it is checked
+# What a checked checkbox arrives as from the browser
 Checkbox_On_Value = 'on'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The kinds a line of the tab can be of - a summary link opening a popover with the
-# numbers behind it, a switch answered on the spot, or a select picking a connection.
 Line_Kind_Popover = 'popover'
 Line_Kind_Toggle = 'toggle'
 Line_Kind_Pick = 'pick'
@@ -87,7 +75,7 @@ Line_Kind_Pick = 'pick'
 # ################################################################################################################################
 # ################################################################################################################################
 
-# What a field is called in its popover, where the shared label reads as a column header rather than a question
+# What a field is called in its popover
 _popover_labels = {
     'window':               'In the last',
     'server_errors_window': 'In the last',
@@ -99,14 +87,12 @@ _popover_labels = {
     'traffic_expected':     'Alerts on',
 }
 
-# What each field is called where it is edited and the unit its value is in
 field_display = dict(shared_field_display)
 
 for _popover_name, _popover_label in _popover_labels.items():
-    _ignored_label, _popover_unit = shared_field_display[_popover_name]
+    _, _popover_unit = shared_field_display[_popover_name]
     field_display[_popover_name] = (_popover_label, _popover_unit)
 
-# What each field means, shown by the how-it-works badge of a popover - the shared texts and the unit selects' own
 field_how_it_works = dict(field_help)
 field_how_it_works[Window_Unit_Field] = 'Whether the window is in minutes, hours or days.'
 field_how_it_works[Arrival_Overdue_Unit_Field] = 'Whether the time a file may fail to arrive for is in minutes, hours or days.'
@@ -119,32 +105,20 @@ for _window_unit_field in (Server_Errors_Window_Unit_Field, Latency_Window_Unit_
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The sections the lines of a tab are grouped under - the core settings first,
-# the switches and the connections, then the thresholds that raise an alert.
 Section_Core = 'Core settings'
 Section_Thresholds = 'Thresholds'
 
-# The sections a channel's thresholds are split into - what fails, who calls and how the traffic flows
 Section_Failures = 'Failures'
 Section_Callers = 'Callers'
 Section_Traffic = 'Traffic'
 
-# The lines of the tab for each alert type, in the order they are read. A line names the
-# question, the fields answering it and, for a popover line, the title of its micro-form and
-# the sentence its summary link reads as - `{field}` is the field's value,
-# `{field|singular|plural}` the value with the right one of the two nouns after it and
-# `{unit_field@count_field}` the count with the unit select's noun after it, in the singular
-# or the plural as the count says, and `{slots_field#singular|plural}` the number of time slots
-# with the right noun after it, set off with a comma and left out altogether when there are none. A popover line with a `unit_field`
-# shows that select right after the last of its numbers, its `rows` say which fields share a row
-# of the popover when they are not all on one, a `slots_field` is a list of time slots the
-# popover's kit edits under the numbers, and a popover line with an `off_field` toggle among its
-# fields reads as its `summary_off` while that toggle is off. A pick line names the kinds of
-# connection its select lists, whether its values carry the kind, the type the live form updates
-# poll knows its connections as and what its select says when there is nothing to list, and a
-# line with a `depends_on` toggle is dimmed while that toggle is off.
-# The Active line is a toggle like any other, only it is the one that dims the rest when off.
-type_lines = {
+# The lines of the tab for each alert type, in the order they are read. In a summary, `{field}` is the field's value,
+# `{field|singular|plural}` the value with the right noun after it, `{unit_field@count_field}` the count with the unit
+# select's noun after it and `{slots_field#singular|plural}` the number of time slots with the right noun after it,
+# left out when there are none. A popover line's `rows` say which fields share a row, its `unit_field` follows the last
+# of its numbers, its `slots_field` is a list of time slots and it reads as its `summary_off` while its `off_field` is off.
+# A line with a `depends_on` toggle is dimmed while that toggle is off.
+type_lines:'anydict' = {
     alert_type_file_transfer: [
         {
             'name': 'active',
@@ -202,6 +176,7 @@ type_lines = {
             'label': 'Failures in a row',
             'title': 'Failures in a row',
             'fields': ['consecutive_failures'],
+            'rows': [['consecutive_failures']],
             'summary': 'Alert after {consecutive_failures|failure|failures} in a row',
             'how_it_works': 'How many transfers may fail one after another before an alert is raised.',
         },
@@ -212,6 +187,7 @@ type_lines = {
             'label': 'Failures over time',
             'title': 'Failures over time',
             'fields': ['warning_failures', 'error_failures', 'window'],
+            'rows': [['warning_failures', 'error_failures', 'window']],
             'unit_field': Window_Unit_Field,
             'summary': 'Warning at {warning_failures|failure|failures}, error at {error_failures}, ' + \
                 f'in the last {{{Window_Unit_Field}@window}}',
@@ -225,6 +201,7 @@ type_lines = {
             'label': 'Overdue files',
             'title': 'Overdue files',
             'fields': ['arrival_overdue'],
+            'rows': [['arrival_overdue']],
             'unit_field': Arrival_Overdue_Unit_Field,
             'summary': f'Alert after {{{Arrival_Overdue_Unit_Field}@arrival_overdue}} without a file',
             'how_it_works': 'How long a file may fail to arrive, in minutes, hours or days, before an alert is raised.',
@@ -279,6 +256,7 @@ type_lines = {
             'label': 'Failures in a row',
             'title': 'Failures in a row',
             'fields': ['consecutive_failures'],
+            'rows': [['consecutive_failures']],
             'summary': 'Alert after {consecutive_failures|failed call|failed calls} in a row',
             'how_it_works': 'How many calls may fail one after another before an alert is raised.',
         },
@@ -358,6 +336,7 @@ type_lines = {
             'label': 'No requests received',
             'title': 'No requests received',
             'fields': ['traffic_expected', 'silence_window', Silence_Slots_Field],
+            'rows': [['traffic_expected', 'silence_window', Silence_Slots_Field]],
             'unit_field': Silence_Window_Unit_Field,
             'slots_field': Silence_Slots_Field,
             'off_field': 'traffic_expected',
@@ -369,3 +348,6 @@ type_lines = {
         },
     ],
 }
+
+# ################################################################################################################################
+# ################################################################################################################################

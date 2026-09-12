@@ -11,6 +11,7 @@ from django import forms
 
 # Zato
 from zato.admin.web import alerts_tab
+from zato.common.alerting.object_config import alert_type_file_transfer
 from zato.common.api import FTP
 from zato.common.file_transfer.api import Verify_How_Human, Verify_How_List
 
@@ -53,7 +54,7 @@ class CreateForm(forms.Form):
         self.fields['verify_how'].choices = choices
 
         # The Alerts tab - the file transfer thresholds, toggles and the email connection.
-        alerts_tab.add_alerts_fields(self, alerts_tab.alert_type_file_transfer, req)
+        alerts_tab.add_alerts_fields(self, alert_type_file_transfer, req)
 
 # ################################################################################################################################
 # ################################################################################################################################
