@@ -13,6 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
+from time import monotonic
 
 # Redis
 from redis import Redis
@@ -42,6 +43,7 @@ from zato.server.generic.api.outconn_sftp import SFTPClient
 from explain_helpers import _alert_id, _cluster_id, _email_from, _get_explained_events, _llm_conn_name, _new_payload, \
     _new_service, _new_session, _server_name, _EmailAPI
 from live_config import IMAP_Password
+from live_trace import Channel_Explain, Channel_IMAP, Channel_LLM, Channel_SFTP, Channel_SMTP, Received, Sent, separator, trace
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -117,17 +119,42 @@ class _ParallelServer:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _TracedLLM:
+    """ The real wrapper with the prompt and the answer of each call on the trace.
+    """
+    def __init__(self, wrapper:'OutconnLLMWrapper') -> 'None':
+        self.wrapper = wrapper
+
+    def invoke(self, prompt:'str') -> 'stranydict':
+
+        trace(Channel_LLM, Sent, f'model {self.wrapper.config.model} at {self.wrapper.config.address}')
+        trace(Channel_LLM, Sent, prompt)
+
+        start = monotonic()
+        out = self.wrapper.invoke(prompt)
+        elapsed = monotonic() - start
+
+        usage = out['usage']
+        trace(Channel_LLM, Received, out['text'])
+        trace(Channel_LLM, Received,
+            f'{usage["input_tokens"]} tokens in, {usage["output_tokens"]} tokens out, {elapsed:.1f}s')
+        separator(Channel_LLM)
+
+        return out
+
+# ################################################################################################################################
+
 class _LiveLLMFacade:
     """ A self.llm stand-in over the real wrapper - the same conn_dict shape and lookup the
     real facade keeps, every explanation going through the one connection to Ollama.
     """
     def __init__(self, wrapper:'OutconnLLMWrapper') -> 'None':
         self.conn_dict = {_llm_conn_name: {'is_active': True}}
-        self.wrapper = wrapper
+        self.llm = _TracedLLM(wrapper)
 
-    def __getitem__(self, name:'str') -> 'OutconnLLMWrapper':
+    def __getitem__(self, name:'str') -> '_TracedLLM':
         assert name == _llm_conn_name
-        return self.wrapper
+        return self.llm
 
 # ################################################################################################################################
 
@@ -185,21 +212,45 @@ def _new_imap_connection(imap_server:'any_', password:'str') -> 'GenericIMAPConn
 
 # ################################################################################################################################
 
+def _trace_imap_wire(imap_server:'any_', start:'int') -> 'None':
+    """ Both directions of what went over the wire since the given position.
+    """
+    for direction, line in imap_server.wire[start:]:
+        trace(Channel_IMAP, direction, line)
+
+    separator(Channel_IMAP)
+
+# ################################################################################################################################
+
 def _produce_imap_failures(imap_server:'any_') -> 'None':
     """ One successful ping for the baseline, then rejected logins - each one a real
     IMAP exchange the connection class records as an auth-failed event.
     """
+    trace(Channel_IMAP, Sent, f'ping `{_imap_conn_name}` at {imap_server.host}:{imap_server.port} with the right password')
+
+    start = len(imap_server.wire)
     _new_imap_connection(imap_server, IMAP_Password).ping()
+    _trace_imap_wire(imap_server, start)
 
     misconfigured = _new_imap_connection(imap_server, _imap_wrong_password)
 
     for _ in range(_failure_count):
+
+        trace(Channel_IMAP, Sent, f'ping `{_imap_conn_name}` with the wrong password')
+        start = len(imap_server.wire)
+
         try:
             misconfigured.ping()
-        except Exception:
-            pass
+        except Exception as e:
+            error = f'{e.__class__.__name__}: {e}'
         else:
             raise AssertionError('Expected the login to be rejected')
+
+        for direction, line in imap_server.wire[start:]:
+            trace(Channel_IMAP, direction, line)
+
+        trace(Channel_IMAP, Received, f'the connection class raised {error}')
+        separator(Channel_IMAP)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -318,11 +369,22 @@ def _produce_sftp_failures(sftp_server:'any_', server:'_ParallelServer') -> 'Non
     def transfer_bad() -> 'None':
         transfer(bad_path)
 
+    def trace_exchanges(is_ok:'bool') -> 'None':
+        for exchange in conn.take_exchanges():
+            trace(Channel_SFTP, Sent, exchange['command'])
+            trace(Channel_SFTP, Received, exchange['reply'])
+        trace(Channel_SFTP, Received, f'test transfer ok: {is_ok}')
+        separator(Channel_SFTP)
+
+    trace(Channel_SFTP, Sent, f'test transfer of `{_sftp_conn_name}` to {good_path}')
     is_ok = run_test_transfer_probe(audit_log, _sftp_conn_name, transfer_good, utcnow(), cid=_cid)
+    trace_exchanges(is_ok)
     assert is_ok
 
     for _ in range(_failure_count):
+        trace(Channel_SFTP, Sent, f'test transfer of `{_sftp_conn_name}` to {bad_path}')
         is_ok = run_test_transfer_probe(audit_log, _sftp_conn_name, transfer_bad, utcnow(), cid=_cid)
+        trace_exchanges(is_ok)
         assert not is_ok
 
 # ################################################################################################################################
@@ -333,7 +395,23 @@ def _stored_explanation(session_maker:'any_') -> 'stranydict':
     out = store.get(f'explanation.{_alert_id}')
 
     assert out is not None
+
+    trace(Channel_Explain, Received, f'explanation: {out["explanation"]}')
+    trace(Channel_Explain, Received, f'confidence: {out["confidence"]}, remediation: {out["remediation"]}')
+    separator(Channel_Explain)
+
     return out
+
+# ################################################################################################################################
+
+def _trace_delivery(smtp_receiver:'any_') -> 'None':
+    """ What the SMTP receiver got.
+    """
+    for received in smtp_receiver.messages:
+        trace(Channel_SMTP, Received, f'from {received.sender} to {", ".join(received.recipients)}')
+        trace(Channel_SMTP, Received, f'subject: {received.subject}')
+        trace(Channel_SMTP, Received, received.body)
+        separator(Channel_SMTP)
 
 # ################################################################################################################################
 
@@ -408,6 +486,7 @@ class TestExplainLive:
         assert explained[0]['outcome'] == AuditOutcome.OK
 
         # .. and the explained alert reached the mailbox.
+        _trace_delivery(smtp_receiver)
         assert len(smtp_receiver.messages) == 1
 
         received = smtp_receiver.messages[0]
@@ -463,6 +542,7 @@ class TestExplainLive:
         assert len(explained) == 1
         assert explained[0]['object_name'] == _sftp_conn_name
 
+        _trace_delivery(smtp_receiver)
         assert len(smtp_receiver.messages) == 1
         assert stored['explanation'] in smtp_receiver.messages[0].body
 

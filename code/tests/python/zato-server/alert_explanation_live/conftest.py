@@ -12,11 +12,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # explained alert is delivered to a real SMTP receiver. The suite skips when docker is not available.
 
 # stdlib
+import logging
 import os
 import socket
 import subprocess
 import sys
 import time
+import warnings
 from shutil import copytree
 
 # The Ollama container helpers live in the LLM MCP suite, the IMAP server in the IMAP scheduler suite,
@@ -41,6 +43,7 @@ import ollama_containers as containers
 from _imap_test_server import IMAPTestServer
 from hl7_client.smtp_receiver import SMTPReceiver
 from live_config import IMAP_Password
+from live_trace import is_on as is_trace_on
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,6 +93,21 @@ def _wait_for_tcp_port(port:'int', timeout:'int'=_redis_wait_timeout) -> 'None':
     raise Exception(f'Port {port} did not accept connections within {timeout}s')
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(autouse=True, scope='session')
+def quiet_when_traced() -> 'None':
+    """ With the trace on, the screen carries the exchanges alone - the tracebacks the probe
+    logs about the failures it is meant to produce and gevent's fork warnings stay off it.
+    """
+    if not is_trace_on():
+        return
+
+    # With no handler at all the root logger prints every warning through its last resort handler
+    logging.getLogger().addHandler(logging.NullHandler())
+
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+
 # ################################################################################################################################
 
 @pytest.fixture(autouse=True)

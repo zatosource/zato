@@ -36,6 +36,9 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
     def _respond(self, data:'bytes') -> 'None':
         _ = self.wfile.write(data + b'\r\n')
 
+        # Every line sent is recorded next to the lines received, in order
+        cast_('any_', self.server).wire.append(('<<', data.decode('utf-8', errors='replace')))
+
 # ################################################################################################################################
 
     def _handle_capability(self, tag:'str') -> 'bool':
@@ -187,8 +190,9 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
             if not text:
                 continue
 
-            # Every received command is recorded for tests to assert on
+            # Every received command is recorded for tests to assert on, and on the wire log in order
             cast_('any_', self.server).received_commands.append(text)
+            cast_('any_', self.server).wire.append(('>>', text))
             logger.info('IMAP test server received: %s', text)
 
             parts = text.split(' ')
@@ -234,6 +238,9 @@ class IMAPTestServer(socketserver.ThreadingTCPServer):
 
         self.received_commands = []
         self.host, self.port = self.server_address[:2]
+
+        # Both directions of the conversation in order - each item is a direction marker and the line
+        self.wire:'list' = []
 
         # The password a login must carry - empty means any login is accepted
         self.required_password = ''
@@ -307,6 +314,7 @@ class IMAPTestServer(socketserver.ThreadingTCPServer):
             self.mailbox = []
 
         self.received_commands = []
+        self.wire = []
 
 # ################################################################################################################################
 
