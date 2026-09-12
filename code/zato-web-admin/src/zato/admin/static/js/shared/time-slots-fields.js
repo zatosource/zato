@@ -100,6 +100,29 @@ $.fn.zato.time_slots.range_label = function(time_from, time_to) {
 };
 
 // /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.time_slots.hh_mm_to_minutes = function(hh_mm) {
+    var parts = hh_mm.split(':');
+    var out = parseInt(parts[0]) * $.fn.zato.time_slots.config.minutes_per_hour + parseInt(parts[1]);
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// How many minutes a range of the day spans, one ending at or before its start crossing midnight
+$.fn.zato.time_slots.range_minutes = function(time_from, time_to) {
+
+    var kit = $.fn.zato.time_slots;
+    var out = kit.hh_mm_to_minutes(time_to) - kit.hh_mm_to_minutes(time_from);
+
+    if(out <= 0) {
+        out += kit.config.minutes_per_day;
+    }
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 // Field group helpers - what a host builds a slot's values with
 // /////////////////////////////////////////////////////////////////////////////
 

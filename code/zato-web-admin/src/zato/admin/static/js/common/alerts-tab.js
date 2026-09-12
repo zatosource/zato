@@ -93,6 +93,9 @@ $.fn.zato.alerts_tab.config = {
     // so adding and removing ranges never changes its width
     slots_popover_width: '560px',
 
+    // A range's length comes from the kit in minutes, its units are compared in seconds
+    seconds_per_minute: 60,
+
     // The keys of one time slot in the hidden slots field, shared with the Python side
     slot_time_from: 'time_from',
     slot_time_to: 'time_to',
@@ -131,6 +134,7 @@ $.fn.zato.alerts_tab.init = function(options) {
         descriptors: tab.build_descriptors(),
         popupClass: tab.config.popup_class,
         showHowItWorks: tab.config.show_how_it_works,
+        showCancel: true,
         onDone: tab.render
     });
 

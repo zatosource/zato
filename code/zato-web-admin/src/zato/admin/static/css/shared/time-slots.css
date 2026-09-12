@@ -117,7 +117,9 @@
     color: var(--time-slot-text-muted);
 }
 
-.time-slot-time-input {
+/* Two classes deep, ahead of the site-wide input[type="text"] and select rules
+   of formalize.css, which would otherwise give these their own height and face */
+.time-slot .time-slot-time-input {
     width: 48px;
     text-align: center;
     box-sizing: border-box;
@@ -132,7 +134,7 @@
     transition: border-color 0.15s;
 }
 
-.time-slot-time-input:focus {
+.time-slot .time-slot-time-input:focus {
     border-color: var(--time-slot-input-focus);
     box-shadow: 0 0 0 2px #5794d01a;
 }
@@ -158,8 +160,8 @@
     white-space: nowrap;
 }
 
-.time-slot-input,
-.time-slot-select {
+.time-slot .time-slot-input,
+.time-slot .time-slot-select {
     padding: 3px 4px;
     border: 1px solid var(--time-slot-input-border);
     border-radius: 3px;
@@ -169,8 +171,8 @@
     transition: border-color 0.15s;
 }
 
-.time-slot-input:focus,
-.time-slot-select:focus {
+.time-slot .time-slot-input:focus,
+.time-slot .time-slot-select:focus {
     border-color: var(--time-slot-input-focus);
     box-shadow: 0 0 0 2px #5794d01a;
 }

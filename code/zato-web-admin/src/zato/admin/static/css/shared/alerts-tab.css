@@ -176,6 +176,15 @@
     --toggle-off-background: #999;
     --toggle-on-background: #2d6392;
     --alerts-tab-slots-indent: 6px;
+
+    /* Room for the longest unit label, `minutes`, so a select reading `minute`
+       next to a count of 1 is as wide as one reading `minutes` */
+    --alerts-tab-unit-select-min-width: 7.5em;
+}
+
+.alerts-tab-micro-form .micro-form-unit,
+.alerts-tab-micro-form .time-slot-select {
+    min-width: var(--alerts-tab-unit-select-min-width);
 }
 
 /* A popover here is exactly as wide as its label - "Consecutive failures" -

@@ -108,6 +108,13 @@ microForms.defaults = {
     // A menu one of the popover's controls opens outside of it - a click there keeps the popover open
     menuSelector: '.zato-dropdown-menu',
 
+    // Where a popover opens relative to the link it answers - always there, never flipped to the
+    // other side for want of room, so a popover whose content grows keeps its top edge where it is
+    placement: 'bottom-start',
+
+    // The attribute an option of a unit select keeps its plural label in while it reads as the singular
+    unitPluralAttr: 'data-plural',
+
     // The lowest a number field goes - none of them counts down to nothing
     numberMin: 1,
 
@@ -268,7 +275,10 @@ microForms.setup = function(host, config) {
             arrow: false,
             animation: 'fade',
             duration: [150, 150],
-            placement: 'bottom-start',
+            placement: formsConfig.placement,
+            popperOptions: {
+                modifiers: [{name: 'flip', options: {fallbackPlacements: []}}]
+            },
             appendTo: document.body,
             theme: formsConfig.theme,
             maxWidth: maxWidth,
@@ -300,12 +310,15 @@ microForms.setup = function(host, config) {
                     }
                 };
                 tippyInstance.handleOutsideMousedown = handleOutsideMousedown;
-                document.addEventListener('mousedown', handleOutsideMousedown);
+
+                // Caught on the way down - a click on an element that stops the event from
+                // bubbling, a dialog's title or a tab strip, is as much outside as any other
+                document.addEventListener('mousedown', handleOutsideMousedown, true);
             },
 
             onHide: function(tippyInstance) {
                 document.removeEventListener('keydown', tippyInstance.handleEscape, true);
-                document.removeEventListener('mousedown', tippyInstance.handleOutsideMousedown);
+                document.removeEventListener('mousedown', tippyInstance.handleOutsideMousedown, true);
 
                 if(onHidden) {
                     onHidden();
@@ -473,6 +486,47 @@ microForms.setup = function(host, config) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    // Keeps a unit select reading with its count - `1 hour`, `2 hours`. An option's value is the
+    // noun in the singular and its label the plural, the label is what changes with the count.
+    // Returns the relabel function, for a host that rebuilds the options later on.
+    forms.bindUnitLabels = function(countInput, unitSelect) {
+
+        var pluralAttr = forms.config.unitPluralAttr;
+
+        var relabel = function() {
+
+            // An emptied input shows its placeholder, so that is the count the select reads with
+            var countText = countInput.value;
+            if(countText === '') {
+                countText = countInput.placeholder;
+            }
+
+            var isOne = parseInt(countText) === 1;
+
+            // The options are read afresh each time, a host may have replaced them since
+            var options = unitSelect.querySelectorAll('option');
+
+            for(var idx = 0; idx < options.length; idx++) {
+                var option = options[idx];
+
+                // A new option arrives with its plural label, which it keeps for later
+                if(!option.hasAttribute(pluralAttr)) {
+                    option.setAttribute(pluralAttr, option.textContent);
+                }
+
+                option.textContent = isOne ? option.value : option.getAttribute(pluralAttr);
+            }
+        };
+
+        countInput.addEventListener('input', relabel);
+        relabel();
+
+        var out = relabel;
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
     // Builds one input row of a micro-form page, seeded from the Django form.
     forms._buildFieldRow = function(fieldSpec) {
 
@@ -587,6 +641,7 @@ microForms.setup = function(host, config) {
                 unitSelect.appendChild(unitOption);
             });
             unitSelect.value = unitFormField.val();
+            forms.bindUnitLabels(input, unitSelect);
 
             inputRow.appendChild(unitSelect);
             row.appendChild(inputRow);

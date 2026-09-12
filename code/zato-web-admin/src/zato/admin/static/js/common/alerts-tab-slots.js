@@ -14,6 +14,9 @@
 
 $.namespace('zato.alerts_tab');
 
+// The relabel function of each slot's unit select, run again when its options are rebuilt
+$.fn.zato.alerts_tab.slot_relabels = new WeakMap();
+
 // /////////////////////////////////////////////////////////////////////////////
 
 // The duration fields of a slots line - the one the All day slot edits and the unit select next to it
@@ -69,8 +72,67 @@ $.fn.zato.alerts_tab.read_slots = function(line) {
     return out;
 }
 
+// The units a slot's duration may be in - the All day slot has them all, a range only those
+// shorter than the range itself, an hour being no unit for a range of one hour
+$.fn.zato.alerts_tab.slot_unit_options = function(line, slot) {
+
+    var tab = $.fn.zato.alerts_tab;
+    var kit = $.fn.zato.time_slots;
+    var is_default = slot.getAttribute('data-slot-type') === kit.config.slot_default;
+
+    var range_seconds = 0;
+    if(!is_default) {
+        var range_minutes = kit.range_minutes(slot.getAttribute('data-time-from'), slot.getAttribute('data-time-to'));
+        range_seconds = range_minutes * tab.config.seconds_per_minute;
+    }
+
+    var unit_seconds = {};
+    tab.settings.duration_units.forEach(function(unit) {
+        unit_seconds[unit[0]] = unit[1];
+    });
+
+    var out = [];
+    tab.field(line.unit_field).find('option').each(function() {
+        if(is_default || unit_seconds[this.value] < range_seconds) {
+            out.push({value: this.value, label: this.textContent});
+        }
+    });
+
+    // The smallest unit stays whatever the range, a range shorter than it being one of a minute
+    if(out.length === 0) {
+        var first = tab.field(line.unit_field).find('option').first();
+        out.push({value: first.val(), label: first.text()});
+    }
+
+    return out;
+}
+
+// Fills a slot's unit select with the units its range can hold, keeping the picked unit when it may
+$.fn.zato.alerts_tab.fill_unit_options = function(line, slot, unit_select, unit_name) {
+
+    var options = $.fn.zato.alerts_tab.slot_unit_options(line, slot);
+
+    unit_select.textContent = '';
+    options.forEach(function(item) {
+        var option = document.createElement('option');
+        option.value = item.value;
+        option.textContent = item.label;
+        unit_select.appendChild(option);
+    });
+
+    // A unit the range no longer holds gives way to the largest one it does
+    var has_unit = false;
+    options.forEach(function(item) {
+        if(item.value === unit_name) {
+            has_unit = true;
+        }
+    });
+
+    unit_select.value = has_unit ? unit_name : options[options.length - 1].value;
+}
+
 // Builds the switch and the duration of one slot - the labels are the line's own fields' labels,
-// the unit select clones the options of the form's unit select
+// the unit select holds the units the slot's range can, out of the form's unit select
 $.fn.zato.alerts_tab.build_slot_fields = function(line, slot) {
 
     var tab = $.fn.zato.alerts_tab;
@@ -81,16 +143,24 @@ $.fn.zato.alerts_tab.build_slot_fields = function(line, slot) {
     var switch_group = kit.add_group(slot);
     kit.add_switch(switch_group, tab.config.slot_is_on, true, settings.field_labels[line.off_field]);
 
-    var options = [];
-    tab.field(line.unit_field).find('option').each(function() {
-        options.push({value: this.value, label: this.textContent});
-    });
-
     var duration_group = kit.add_group(slot);
     kit.add_text(duration_group, settings.field_labels[duration_field], 'label');
-    kit.add_input(duration_group, duration_field, tab.field(duration_field).val());
-    kit.add_select(duration_group, line.unit_field, options);
-    kit.field(slot, line.unit_field).value = tab.field(line.unit_field).val();
+    var count_input = kit.add_input(duration_group, duration_field, tab.field(duration_field).val());
+    var unit_select = kit.add_select(duration_group, line.unit_field, []);
+
+    tab.fill_unit_options(line, slot, unit_select, tab.field(line.unit_field).val());
+    tab.slot_relabels.set(slot, tab.forms.bindUnitLabels(count_input, unit_select));
+}
+
+// A range's times were edited - its unit select offers what the new length can hold
+$.fn.zato.alerts_tab.on_slot_time_change = function(line, slot) {
+
+    var tab = $.fn.zato.alerts_tab;
+    var kit = $.fn.zato.time_slots;
+    var unit_select = kit.field(slot, line.unit_field);
+
+    tab.fill_unit_options(line, slot, unit_select, unit_select.value);
+    tab.slot_relabels.get(slot)();
 }
 
 // Fills the slots kit of a line's popover - the All day slot from the line's own fields, the ranges from the slots field
@@ -110,8 +180,12 @@ $.fn.zato.alerts_tab.load_slots = function(line, slots) {
         var duration = tab.split_duration(entry[tab.config.slot_seconds]);
 
         kit.field(slot, tab.config.slot_is_on).checked = entry[tab.config.slot_is_on];
-        kit.field(slot, duration_field).value = duration.count;
-        kit.field(slot, line.unit_field).value = duration.unit;
+        tab.fill_unit_options(line, slot, kit.field(slot, line.unit_field), duration.unit);
+
+        // Set by hand rather than typed, so the unit select is told to read with the count itself
+        var count_input = kit.field(slot, duration_field);
+        count_input.value = duration.count;
+        count_input.dispatchEvent(new Event('input'));
     });
 }
 
@@ -167,6 +241,9 @@ $.fn.zato.alerts_tab.register_slots_kind = function() {
                 container: row,
                 build_fields: function(slot) {
                     tab.build_slot_fields(line, slot);
+                },
+                on_time_change: function(slot) {
+                    tab.on_slot_time_change(line, slot);
                 },
                 read_fields: function(slot) {
                     var out = {slot: slot};

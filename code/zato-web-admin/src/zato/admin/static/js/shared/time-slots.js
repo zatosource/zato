@@ -25,7 +25,8 @@
 //         toggles: [{attr: 'disallowed', off_label: 'Disallow traffic', on_label: 'Allow traffic'}],
 //         build_fields: function(slot, is_default) { .. append the slot's inputs .. },
 //         read_fields: function(slot) { return {rate: ..}; },
-//         write_fields: function(slot, entry) { .. }
+//         write_fields: function(slot, entry) { .. },
+//         on_time_change: function(slot) { .. a range's times were edited .. }
 //     });
 //
 //     slots.load(entries);           // [{is_all_day: true, ..}, {time_from: '09:00', time_to: '17:00', ..}]
@@ -60,6 +61,8 @@ $.fn.zato.time_slots.config = {
     // The times of a range are HH:MM, 24 hours
     time_pattern: /^([01]\d|2[0-3]):([0-5]\d)$/,
     time_length: 5,
+    minutes_per_hour: 60,
+    minutes_per_day: 24 * 60,
 
     // How long after a time input loses focus the edit closes, so a click into the other input keeps it open
     close_delay_ms: 200,
@@ -327,7 +330,9 @@ $.fn.zato.time_slots.create = function(options) {
             var new_from = from_input.value;
             var new_to = to_input.value;
 
-            if(config.time_pattern.test(new_from) && config.time_pattern.test(new_to)) {
+            var has_new_times = config.time_pattern.test(new_from) && config.time_pattern.test(new_to);
+
+            if(has_new_times) {
                 slot.setAttribute('data-time-from', new_from);
                 slot.setAttribute('data-time-to', new_to);
                 label.textContent = kit.range_label(new_from, new_to);
@@ -339,6 +344,11 @@ $.fn.zato.time_slots.create = function(options) {
 
             label.style.display = '';
             kit.hide_menu();
+
+            // The host may size a range's own fields by its length
+            if(has_new_times && options.on_time_change) {
+                options.on_time_change(slot);
+            }
         };
 
         // Focus moving from one input to the other is not the end of the edit
