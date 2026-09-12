@@ -231,7 +231,7 @@ def collect_facts(
     windows come from the rules' window_seconds defaults, by source and then by measure -
     a source without one is measured over window_seconds, the health sources over their own hour,
     and an object with windows of its own, by source, then by object name and then by measure, over those.
-    The silence of a REST channel is measured for the channels named as expecting traffic alone.
+    The silence of a channel is measured for the channels named as expecting traffic alone.
     """
     if window_seconds_by_source is None:
         window_seconds_by_source = {}

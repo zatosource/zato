@@ -458,11 +458,145 @@ class TestChannelRules:
         ]
 
         for rule_name, measures in cases:
-            fact = new_fact(AuditSource.REST_Channel, 'orders.api')
-            fact.update(measures)
+            for source in (AuditSource.REST_Channel, AuditSource.SOAP_Channel):
+                fact = new_fact(source, 'orders.api')
+                fact.update(measures)
 
-            rule = rules_by_full_name[f'{_channels_ruleset_name}_{rule_name}']
-            assert rule.match({Fact_Entity: fact}), f'Expected {rule_name} to match {fact}'
+                rule = rules_by_full_name[f'{_channels_ruleset_name}_{rule_name}']
+                assert rule.match({Fact_Entity: fact}), f'Expected {rule_name} to match {fact}'
+
+            # An MLLP channel has no settings of its own and is judged by the error rate rule alone
+            fact = new_fact(AuditSource.MLLP_Channel, 'hl7.in')
+            fact.update(measures)
+            assert not rule.match({Fact_Entity: fact}), f'Expected {rule_name} not to match {fact}'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _seed_rest_only_channel_ruleset(backend:'RuleSQLBackend') -> 'RuleDefinitionRecord':
+    """ The channel ruleset as the release before this one seeded it - the six rules naming REST channels alone.
+    """
+    document = build_ruleset_document(_channels_ruleset_name, _rest_only_channels_rules)
+
+    out = backend.definitions.create(
+        name=_channels_ruleset_name,
+        object_type=Definition_Type_Ruleset,
+        document=document,
+        author='test',
+        comment='From before the SOAP channel rules',
+    )
+    _ = backend.versions.publish(definition_id=out.id, version=out.current_version, actor='test')
+
+    return out
+
+# ################################################################################################################################
+
+def _store_edit(backend:'RuleSQLBackend', ruleset:'RuleDefinitionRecord', documents:'stranydict') -> 'None':
+    """ Stores the given rule documents as a person's edit of the ruleset, the way the editor does.
+    """
+    _ = backend.versions.create(
+        definition_id=ruleset.id,
+        expected_current_version=ruleset.current_version,
+        document={Documents_Key: documents},
+        author='test',
+        comment='Edited by a person',
+    )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestChannelRulesUpgrade:
+
+    def test_the_untouched_rest_only_rules_gain_the_soap_source_on_upgrade(self, backend:'RuleSQLBackend') -> 'None':
+        _ = _seed_rest_only_channel_ruleset(backend)
+
+        ensure_alerting_definitions(backend)
+
+        ruleset = _get_ruleset(backend, _channels_ruleset_name)
+        assert ruleset.current_version == 2
+        assert ruleset.live_version == 2
+
+        # Every rule now reads exactly as this release ships it, the silence one inactive as before
+        documents = deserialize_document(ruleset.document)[Documents_Key]
+        shipped = build_ruleset_document(_channels_ruleset_name, channels_rules)[Documents_Key]
+
+        assert documents == shipped
+        assert documents[_channel_silent_full_name]['is_active'] is False
+
+        # A second run has nothing left to refresh
+        ensure_alerting_definitions(backend)
+        assert _get_ruleset(backend, _channels_ruleset_name).current_version == 2
+
+# ################################################################################################################################
+
+    def test_a_rule_a_person_edited_keeps_the_edit_while_the_others_are_refreshed(self, backend:'RuleSQLBackend') -> 'None':
+        ruleset = _seed_rest_only_channel_ruleset(backend)
+
+        # A person raises the auth failures threshold of the REST-only rule ..
+        documents = deserialize_document(ruleset.document)[Documents_Key]
+        edited_full_name = f'{_channels_ruleset_name}_Auth_Failures'
+        documents[edited_full_name]['defaults']['auth_failure_threshold']['value'] = 25
+        _store_edit(backend, ruleset, documents)
+
+        ensure_alerting_definitions(backend)
+
+        ruleset = _get_ruleset(backend, _channels_ruleset_name)
+        assert ruleset.current_version == 3
+
+        documents = deserialize_document(ruleset.document)[Documents_Key]
+        shipped = build_ruleset_document(_channels_ruleset_name, channels_rules)[Documents_Key]
+
+        # .. and that rule stays as the person left it, REST-only text and all ..
+        edited = documents[edited_full_name]
+        assert _default_values(edited)['auth_failure_threshold'] == 25
+        assert edited['conditions'][0]['comparator'] == 'is'
+        assert edited['conditions'][0]['values'] == [{'kind': 'literal', 'value': AuditSource.REST_Channel}]
+
+        # .. while every other rule reads as this release ships it.
+        for full_name, shipped_document in shipped.items():
+            if full_name != edited_full_name:
+                assert documents[full_name] == shipped_document, full_name
+
+# ################################################################################################################################
+
+    def test_a_rule_a_person_deleted_stays_deleted_through_the_refresh(self, backend:'RuleSQLBackend') -> 'None':
+        ruleset = _seed_rest_only_channel_ruleset(backend)
+
+        documents = deserialize_document(ruleset.document)[Documents_Key]
+        deleted_full_name = f'{_channels_ruleset_name}_Client_Errors'
+        del documents[deleted_full_name]
+        _store_edit(backend, ruleset, documents)
+
+        ensure_alerting_definitions(backend)
+
+        ruleset = _get_ruleset(backend, _channels_ruleset_name)
+        documents = deserialize_document(ruleset.document)[Documents_Key]
+        shipped = build_ruleset_document(_channels_ruleset_name, channels_rules)[Documents_Key]
+
+        assert deleted_full_name not in documents
+        assert set(documents) == set(shipped) - {deleted_full_name}
+
+        for full_name in documents:
+            assert documents[full_name] == shipped[full_name], full_name
+
+# ################################################################################################################################
+
+    def test_a_silence_rule_a_person_turned_on_stays_on(self, backend:'RuleSQLBackend') -> 'None':
+        ruleset = _seed_rest_only_channel_ruleset(backend)
+
+        # Turning the rule on is an edit like any other
+        documents = deserialize_document(ruleset.document)[Documents_Key]
+        documents[_channel_silent_full_name]['is_active'] = True
+        _store_edit(backend, ruleset, documents)
+
+        ensure_alerting_definitions(backend)
+
+        ruleset = _get_ruleset(backend, _channels_ruleset_name)
+        documents = deserialize_document(ruleset.document)[Documents_Key]
+
+        silent = documents[_channel_silent_full_name]
+        assert silent['is_active'] is True
+        assert silent['conditions'][0]['comparator'] == 'is'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -499,6 +633,11 @@ then
     outcome.action = 'email'
     outcome.severity = 'warning'
 """.strip()
+
+# The channel ruleset as the release before this one shipped it - the six rules naming REST channels alone
+_rest_only_channels_rules = channels_rules.\
+    replace("alert.source in ['rest-channel', 'soap-channel'] and", "alert.source is 'rest-channel' and").\
+    replace('A REST or SOAP channel', 'A REST channel')
 
 # ################################################################################################################################
 # ################################################################################################################################

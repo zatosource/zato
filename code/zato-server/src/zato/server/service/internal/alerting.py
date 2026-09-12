@@ -14,14 +14,14 @@ from contextlib import closing
 from zato.common.api import Alerting, EMAIL, FileTransfer
 from zato.common.alerting.collectors.evidence import collect_baseline, collect_measure_rows
 from zato.common.alerting.engine import defaults_from_dict, dispatch_action, AlertDefaults, Empty_Explanation
-from zato.common.alerting.explain.channel_info import describe_rest_channel
+from zato.common.alerting.explain.channel_info import describe_channel
 from zato.common.alerting.explain.evidence import build_evidence_document, build_prompt, group_failures
 from zato.common.alerting.explain.explanation import parse_explanation
 from zato.common.alerting.explain.skill import get_skill_source, load_skill, Skills_Dir_Name
 from zato.common.alerting.explain.store import ExplanationStore
 from zato.common.alerting.model import new_finding, new_rule
 from zato.common.alerting.notification_config import read_notification_config, set_notification_config
-from zato.common.alerting.object_config import alert_type_file_transfer, LLM_Connection_Config_Key
+from zato.common.alerting.object_config import alert_type_file_transfer, channel_sources, LLM_Connection_Config_Key
 from zato.common.alerting.object_settings import load_object_settings
 from zato.common.alerting.probes import parse_tls_target, run_certificate_probe, run_health_probe, run_test_transfer_probe
 from zato.common.alerting.rendering import Template_Dir_Name
@@ -834,9 +834,9 @@ class Explain(AdminService):
             if out is not None:
                 return out
 
-        if source == AuditSource.REST_Channel:
+        if source in channel_sources:
             with closing(self.odb.session()) as session:
-                channel_info = describe_rest_channel(session, self.server.cluster_id, object_name)
+                channel_info = describe_channel(session, self.server.cluster_id, source, object_name)
 
             if channel_info is not None:
                 return channel_info, object_name, False

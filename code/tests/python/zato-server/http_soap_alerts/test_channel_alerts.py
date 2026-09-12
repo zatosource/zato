@@ -46,6 +46,10 @@ _channel_name = 'orders.api'
 _outgoing_name = 'crm.api'
 _url_path = '/orders'
 
+# What the SOAP channel answers to and speaks
+_soap_action = 'urn:orders'
+_soap_version = '1.1'
+
 # The names the settings are stored under, in the order of the tab
 _storage_names = [storage_name(name) for name in get_field_names(alert_type_channels)]
 
@@ -168,6 +172,16 @@ def _base_input(**overrides:'any_') -> 'stranydict':
 
 # ################################################################################################################################
 
+def _soap_input(**overrides:'any_') -> 'stranydict':
+    """ What every create and edit of a SOAP channel sends - the REST one with the SOAP transport, action and version.
+    """
+    out = _base_input(transport=URL_TYPE.SOAP, soap_action=_soap_action, soap_version=_soap_version)
+    out.update(overrides)
+
+    return out
+
+# ################################################################################################################################
+
 def _create(session_factory:'any_', **overrides:'any_') -> 'int':
     """ Creates one HTTPSOAP object and returns its id.
     """
@@ -268,13 +282,21 @@ class TestCreate:
         for name in _storage_names:
             assert name not in opaque
 
-    def test_a_soap_channel_stores_no_settings(self, session_factory:'any_') -> 'None':
-        item_id = _create(session_factory, transport=URL_TYPE.SOAP, soap_action='urn:orders', soap_version='1.1')
+    def test_a_soap_channel_stores_the_settings_it_was_sent(self, session_factory:'any_') -> 'None':
+        item_id = _create(session_factory, **_soap_input(alert_max_latency=2500, alert_auth_failures=3))
 
         opaque = _stored_opaque(session_factory, item_id)
+        defaults = get_defaults(alert_type_channels)
 
+        assert opaque['alert_max_latency'] == 2500
+        assert opaque['alert_auth_failures'] == 3
+        assert opaque['alert_is_active'] is True
+
+        # What it was not sent is at its default, as with a REST channel
         for name in _storage_names:
-            assert name not in opaque
+            assert name in opaque
+
+        assert opaque['alert_consecutive_failures'] == defaults['consecutive_failures']
 
     def test_bad_silence_slots_are_refused_before_anything_is_written(self, session_factory:'any_') -> 'None':
         bad_slots = dumps([{'time_from': '09:00', 'is_on': True, 'silence_seconds': 900}])
@@ -319,6 +341,31 @@ class TestEdit:
         item_id = _create(session_factory, alert_max_latency=2500)
 
         service = _new_service(Edit, session_factory, _base_input(id=item_id, alert_max_latency=750, alert_is_active=False))
+        service.handle()
+
+        opaque = _stored_opaque(session_factory, item_id)
+
+        assert opaque['alert_max_latency'] == 750
+        assert opaque['alert_is_active'] is False
+
+    def test_a_soap_channel_edit_without_the_settings_keeps_the_stored_ones(self, session_factory:'any_') -> 'None':
+        item_id = _create(session_factory, **_soap_input(alert_max_latency=2500, alert_email_connection='smtp:ops.smtp'))
+
+        service = _new_service(Edit, session_factory, _soap_input(id=item_id, soap_version='1.2'))
+        service.handle()
+
+        opaque = _stored_opaque(session_factory, item_id)
+
+        assert opaque['alert_max_latency'] == 2500
+        assert opaque['alert_email_connection'] == 'smtp:ops.smtp'
+
+        for name in _storage_names:
+            assert name in opaque
+
+    def test_a_soap_channel_edit_with_the_settings_replaces_them(self, session_factory:'any_') -> 'None':
+        item_id = _create(session_factory, **_soap_input(alert_max_latency=2500))
+
+        service = _new_service(Edit, session_factory, _soap_input(id=item_id, alert_max_latency=750, alert_is_active=False))
         service.handle()
 
         opaque = _stored_opaque(session_factory, item_id)
@@ -384,6 +431,29 @@ class TestGetList:
         assert row['alert_max_latency'] == 2500
         assert row['alert_client_errors'] == defaults['client_errors']
 
+    def test_a_soap_channel_lists_every_setting_with_the_defaults_filled_in(self, session_factory:'any_') -> 'None':
+        _ = _create(session_factory, **_soap_input(alert_auth_failures=3))
+
+        # A channel stored before a setting existed has nothing under that name
+        session = session_factory()
+        item = session.query(HTTPSOAP).filter(HTTPSOAP.name==_channel_name).one()
+        opaque = parse_instance_opaque_attr(item)
+        del opaque['alert_client_errors']
+        item.opaque1 = dumps(opaque)
+        session.commit()
+        session.close()
+
+        rows = _get_list(session_factory, CONNECTION.CHANNEL, URL_TYPE.SOAP)
+        row = rows[0]
+
+        defaults = get_defaults(alert_type_channels)
+
+        for name in _storage_names:
+            assert name in row
+
+        assert row['alert_auth_failures'] == 3
+        assert row['alert_client_errors'] == defaults['client_errors']
+
     def test_an_outgoing_connection_lists_no_settings(self, session_factory:'any_') -> 'None':
         _ = _create(session_factory,
             name=_outgoing_name,
@@ -393,6 +463,23 @@ class TestGetList:
         )
 
         rows = _get_list(session_factory, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP)
+        row = rows[0]
+
+        for name in _storage_names:
+            assert name not in row
+
+    def test_a_soap_outgoing_connection_lists_no_settings(self, session_factory:'any_') -> 'None':
+        _ = _create(session_factory,
+            name=_outgoing_name,
+            connection=CONNECTION.OUTGOING,
+            transport=URL_TYPE.SOAP,
+            host='https://crm.example.com',
+            service=None,
+            soap_action=_soap_action,
+            soap_version=_soap_version,
+        )
+
+        rows = _get_list(session_factory, CONNECTION.OUTGOING, URL_TYPE.SOAP)
         row = rows[0]
 
         for name in _storage_names:

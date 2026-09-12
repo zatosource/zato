@@ -105,6 +105,9 @@ class TestGetSkillSource:
         assert get_skill_source(AuditSource.Test_Transfer) == AuditSource.File_Outgoing
         assert get_skill_source(AuditSource.Microsoft_Health) == AuditSource.Microsoft_Cloud
 
+    def test_a_soap_channel_is_explained_with_the_rest_channels_skill(self) -> 'None':
+        assert get_skill_source(AuditSource.SOAP_Channel) == AuditSource.REST_Channel
+
     def test_every_other_source_is_explained_with_its_own(self) -> 'None':
         assert get_skill_source(AuditSource.LLM) == AuditSource.LLM
         assert get_skill_source(AuditSource.Scheduler) == AuditSource.Scheduler
@@ -130,6 +133,11 @@ class TestLoadSkill:
         assert skill.remediations == []
         assert 'callers' in skill.instructions
         assert 'Windows of their own' in skill.instructions
+
+        # The one skill explains both channel kinds
+        assert 'REST or a SOAP channel' in skill.instructions
+        assert 'SOAP action' in skill.instructions
+        assert 'fault string' in skill.instructions
 
     def test_a_source_without_a_skill_returns_none(self) -> 'None':
         skill = load_skill('source-with-no-skill')

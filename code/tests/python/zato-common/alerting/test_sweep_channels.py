@@ -117,7 +117,7 @@ def _load_channel_rules() -> 'rule_engine_rule_list':
 # ################################################################################################################################
 
 def _seed_call(audit_log:'AuditLog', engine:'Engine', now:'datetime', cid:'str', status:'str', *,
-    object_name:'str'=_channel_name, seconds_back:'int'=0) -> 'None':
+    object_name:'str'=_channel_name, seconds_back:'int'=0, source:'str'=AuditSource.REST_Channel) -> 'None':
     """ Stores the request and response pair one call of a channel leaves behind, moved back in time if asked to.
     """
     if status.startswith('2'):
@@ -125,10 +125,10 @@ def _seed_call(audit_log:'AuditLog', engine:'Engine', now:'datetime', cid:'str',
     else:
         outcome = AuditOutcome.Error
 
-    request_id = audit_log.insert(AuditSource.REST_Channel, AuditEvent.Request_Received, object_name, cid=cid,
+    request_id = audit_log.insert(source, AuditEvent.Request_Received, object_name, cid=cid,
         outcome=AuditOutcome.OK, ext_client_id=_caller)
 
-    response_id = audit_log.insert(AuditSource.REST_Channel, AuditEvent.Response_Sent, object_name, cid=cid,
+    response_id = audit_log.insert(source, AuditEvent.Response_Sent, object_name, cid=cid,
         outcome=outcome, status=status, ext_client_id=_caller, duration_ms=20)
 
     if seconds_back:
@@ -144,15 +144,15 @@ def _seed_call(audit_log:'AuditLog', engine:'Engine', now:'datetime', cid:'str',
 # ################################################################################################################################
 
 def _seed_rejections(audit_log:'AuditLog', engine:'Engine', now:'datetime', prefix:'str', count:'int', *,
-    object_name:'str'=_channel_name, seconds_back:'int'=0) -> 'None':
+    object_name:'str'=_channel_name, seconds_back:'int'=0, source:'str'=AuditSource.REST_Channel) -> 'None':
     """ Stores the given number of calls a channel answered with a 401, each followed by a call that went through,
     so the rejections never form an unbroken streak and only the rules about counts and rates see them.
     """
     for idx in range(count):
         _seed_call(audit_log, engine, now, f'{prefix}-{idx}-rejected', '401 Unauthorized', object_name=object_name,
-            seconds_back=seconds_back)
+            seconds_back=seconds_back, source=source)
         _seed_call(audit_log, engine, now, f'{prefix}-{idx}-ok', '200 OK', object_name=object_name,
-            seconds_back=seconds_back)
+            seconds_back=seconds_back, source=source)
 
 # ################################################################################################################################
 
@@ -353,6 +353,93 @@ class TestChannelSweep:
 
         assert _rule_names(result) == ['Auth_Failures']
         assert recorder.email_connections == [email_connection]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestSoapChannelSweep:
+
+    def test_the_soap_channels_own_threshold_fires_on_its_own_facts(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_rejections(audit_log, engine, now, 'soap-own', 3, source=AuditSource.SOAP_Channel)
+
+        # Three rejections are under the rule's ten - nothing without settings ..
+        result, recorder = _run_channel_sweep(engine, audit_log, now, 'cid-soap-threshold-1', None)
+
+        assert result.raised_count == 0
+
+        # .. and an alert on the SOAP channel's facts once the channel itself asks for three.
+        object_settings = _new_object_settings(auth_failures=3, use_llm=True, llm_connection=_llm_name)
+        result, recorder = _run_channel_sweep(engine, audit_log, now, 'cid-soap-threshold-2', object_settings)
+
+        assert _rule_names(result) == ['Auth_Failures']
+
+        _, payload = recorder.invocations[0]
+        assert payload['source'] == AuditSource.SOAP_Channel
+        assert payload['object_name'] == _channel_name
+        assert payload['fact']['auth_failure_count'] == 3
+
+# ################################################################################################################################
+
+    def test_a_soap_channel_with_alerts_off_is_skipped(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_rejections(audit_log, engine, now, 'soap-off', 10, source=AuditSource.SOAP_Channel)
+
+        object_settings = _new_object_settings(is_active=False)
+        result, recorder = _run_channel_sweep(engine, audit_log, now, 'cid-soap-off', object_settings)
+
+        assert result.raised_count == 0
+        assert recorder.emails == []
+
+# ################################################################################################################################
+
+    def test_a_soap_channels_silence_and_its_own_window_are_measured(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # The one call the SOAP channel ever received is half an hour old - under the rule's hour,
+        # over the channel's own ten minutes
+        _seed_call(audit_log, engine, now, 'soap-silent-1', '200', seconds_back=1800, source=AuditSource.SOAP_Channel)
+
+        object_settings = _new_object_settings(traffic_expected=True)
+        result, _ = _run_channel_sweep(engine, audit_log, now, 'cid-soap-silence-1', object_settings)
+
+        assert result.raised_count == 0
+
+        object_settings = _new_object_settings(traffic_expected=True, silence_window=600)
+        result, recorder = _run_channel_sweep(engine, audit_log, now, 'cid-soap-silence-2', object_settings)
+
+        assert _rule_names(result) == ['Channel_Silent']
+
+        _, _, body = recorder.emails[0]
+        assert _channel_name in body
+
+# ################################################################################################################################
+
+    def test_a_rest_and_a_soap_channel_of_one_name_are_alerted_on_apart(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Only the SOAP channel of the name has enough rejections
+        _seed_rejections(audit_log, engine, now, 'pair-rest', 1)
+        _seed_rejections(audit_log, engine, now, 'pair-soap', 3, source=AuditSource.SOAP_Channel)
+
+        object_settings = _new_object_settings(auth_failures=3, use_llm=True, llm_connection=_llm_name)
+        result, recorder = _run_channel_sweep(engine, audit_log, now, 'cid-soap-pair', object_settings)
+
+        assert _rule_names(result) == ['Auth_Failures']
+        assert len(recorder.invocations) == 1
+
+        _, payload = recorder.invocations[0]
+        assert payload['source'] == AuditSource.SOAP_Channel
 
 # ################################################################################################################################
 # ################################################################################################################################

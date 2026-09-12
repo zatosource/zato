@@ -24,7 +24,7 @@ $.fn.zato.data_table.HTTPSOAP = new Class({
 
 $(document).ready(function() {
 
-    if($.fn.zato.http_soap.is_rest_channel()) {
+    if($.fn.zato.http_soap.is_alert_channel()) {
         $.fn.zato.alerts_tab.init({config_id: 'http-soap-alerts-tab-config'});
         $.fn.zato.live_form_updates.register('create', $.fn.zato.alerts_tab.live_configs(''));
         $.fn.zato.live_form_updates.register('edit', $.fn.zato.alerts_tab.live_configs('edit-'));
@@ -146,6 +146,15 @@ $.fn.zato.http_soap.is_rest_channel = function() {
     return connection === 'channel' && transport === 'plain_http';
 }
 
+// A channel of either transport carries the Alerts tab
+$.fn.zato.http_soap.is_alert_channel = function() {
+    var connection = $('input[name="connection"]').val();
+    var transport = $('input[name="transport"]').val();
+    var isChannel = connection === 'channel';
+    var hasTab = transport === 'plain_http' || transport === 'soap';
+    return isChannel && hasTab;
+}
+
 $.fn.zato.http_soap.attach_datetimepicker = function(picker_ids) {
     $.each(picker_ids, function(ignored, picker_id) {
         $(picker_id).datetimepicker(
@@ -188,7 +197,7 @@ $.fn.zato.http_soap.reset_tabs = function(action) {
         default_tab = 'config';
         tab_labels = $.fn.zato.http_soap.tab_labels;
     }
-    else if($.fn.zato.http_soap.is_rest_channel()) {
+    else if($.fn.zato.http_soap.is_alert_channel()) {
         default_tab = 'main';
         tab_labels = $.fn.zato.http_soap.channelTabLabels();
     }
@@ -545,7 +554,12 @@ $.fn.zato.http_soap.init_how_it_works = function(action) {
     var fieldSelector = 'table.form-data tr';
 
     if(transport == 'soap') {
-        descriptions = $.fn.zato.http_soap.field_descriptions;
+
+        // A SOAP channel's Alerts tab lines are described next to its own fields
+        descriptions = $.extend({},
+            $.fn.zato.http_soap.field_descriptions,
+            $.fn.zato.alerts_tab.descriptions());
+        fieldSelector = 'table.form-data tr, .decision-line';
     }
     else if($.fn.zato.http_soap.is_rest_outgoing()) {
         descriptions = $.extend({},
@@ -584,7 +598,7 @@ $.fn.zato.http_soap.create = function(object_type) {
         $.fn.zato.http_soap.toggle_callback('create');
     }
 
-    if($.fn.zato.http_soap.is_rest_channel()) {
+    if($.fn.zato.http_soap.is_alert_channel()) {
         $.fn.zato.alerts_tab.bind({
             panel_id: 'http-soap-create-tab-panel-alerts',
             field_prefix: ''
@@ -623,7 +637,7 @@ $.fn.zato.http_soap.edit = function(id) {
         $.fn.zato.health_check.populate('edit', item);
     }
 
-    if($.fn.zato.http_soap.is_rest_channel()) {
+    if($.fn.zato.http_soap.is_alert_channel()) {
         $.fn.zato.alerts_tab.bind({
             panel_id: 'http-soap-edit-tab-panel-alerts',
             field_prefix: 'edit-'
@@ -875,11 +889,9 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format("<td class='ignore'>{0}</td>", item.gateway_service_list || '');
     }
 
-    // 42 - the Alerts tab of REST channels
+    // 42 - the Alerts tab of REST and SOAP channels
     if(is_channel) {
-        if(!is_soap) {
-            row += $.fn.zato.alerts_tab.hidden_cells(item);
-        }
+        row += $.fn.zato.alerts_tab.hidden_cells(item);
     }
 
     /* 40 - declarative invocation and health check fields for REST outgoing connections */

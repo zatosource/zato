@@ -15,10 +15,9 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_channels, apply_defaults, conn_type_to_alert_type, \
+from zato.common.alerting.object_config import alert_type_channels, apply_defaults, channel_sources, conn_type_to_alert_type, \
     from_storage, is_alert_channel, Email_Connection_Field, Is_Active_Field, LLM_Connection_Field
 from zato.common.alerting.time_slots import resolve_silence
-from zato.common.audit_log.common import AuditSource
 from zato.common.odb.model import GenericConn, HTTPSOAP
 from zato.common.util.file_transfer_scheduler import get_schedule_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -45,9 +44,9 @@ _silence_rules = ['Channel_Silent']
 _silence_default = 'silence_seconds'
 
 # The audit sources whose objects carry settings of a type, where that is not every source the type
-# matches on - the channels type matches on three channel kinds, and REST channels alone have an Alerts tab.
+# matches on - the channels type matches on three channel kinds, and REST and SOAP channels have an Alerts tab.
 _object_sources_by_type = {
-    alert_type_channels: [AuditSource.REST_Channel],
+    alert_type_channels: list(channel_sources),
 }
 
 # ################################################################################################################################
@@ -102,7 +101,7 @@ def load_object_settings(session:'SASession', cluster_id:'int') -> 'anydict':
         for schedule in get_schedule_list(session, row.id):
             by_object[schedule['name']] = values
 
-    # The REST channels carry their settings in the same flat keys, in their own table
+    # The REST and SOAP channels carry their settings in the same flat keys, in their own table
     channel_rows = session.query(HTTPSOAP).\
         filter(HTTPSOAP.cluster_id==cluster_id).\
         all()
@@ -237,7 +236,7 @@ def get_names_with_toggle(settings_by_object:'anydict', toggle_name:'str') -> 's
 # ################################################################################################################################
 
 def get_silence_expected_names(object_settings:'anydict', now:'datetime') -> 'strset':
-    """ The active REST channels whose silence slot of the moment says traffic is expected -
+    """ The active channels whose silence slot of the moment says traffic is expected -
     the ones the silence collector measures in this sweep.
     """
 

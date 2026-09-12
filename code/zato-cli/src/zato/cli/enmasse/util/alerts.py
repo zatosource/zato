@@ -25,6 +25,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 #         url_path: /api/orders/status
 #         alerts:
 #           is_active: false
+#
+#     channel_soap:
+#       - name: orders.soap
+#         service: orders.create
+#         url_path: /soap/orders
+#         soap_action: urn:orders
+#         soap_version: '1.1'
+#         alerts:
+#           max_latency: 2500
+#           auth_failures: 3
+
+# stdlib
+import logging
+from json import loads
 
 # Zato
 from zato.common.alerting import object_config
@@ -42,6 +56,11 @@ if 0:
     SASession = SASession
     anydict = anydict
     anydictnone = anydictnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -149,6 +168,49 @@ def flatten_alerts(connection_def:'anydict', alert_type:'str', connection_type:'
     values.update(alerts)
 
     connection_def.update(object_config.to_storage(alert_type, values))
+
+# ################################################################################################################################
+
+def alerts_need_update(item:'anydict', db_def:'anydict', alert_type:'str') -> 'bool':
+    """ Whether the alert settings a YAML definition gives, over the defaults, differ from the ones the database row stores.
+    """
+    values = object_config.get_defaults(alert_type)
+
+    if object_config.Alerts_Key in item:
+        values.update(item[object_config.Alerts_Key])
+
+    expected = object_config.to_storage(alert_type, values)
+
+    stored = {}
+    opaque1 = db_def['opaque1']
+    if opaque1:
+        stored = loads(opaque1)
+
+    for key, value in expected.items():
+        if key not in stored:
+            logger.info('Alert setting %s missing for %s', key, item['name'])
+            return True
+        if stored[key] != value:
+            logger.info('Alert setting %s changed for %s: yaml=%s db=%s', key, item['name'], value, stored[key])
+            return True
+
+    return False
+
+# ################################################################################################################################
+
+def take_alert_attrs(connection_def:'anydict', alert_type:'str', connection_type:'str', session:'SASession') -> 'anydict':
+    """ The alert settings of a YAML definition under their storage names, over the defaults, ready for the opaque
+    attributes. The alerts mapping leaves the definition, so that it never reaches the object's own attributes.
+    """
+    out = {'name': connection_def['name']}
+
+    if object_config.Alerts_Key in connection_def:
+        out[object_config.Alerts_Key] = connection_def.pop(object_config.Alerts_Key)
+
+    flatten_alerts(out, alert_type, connection_type, session)
+    del out['name']
+
+    return out
 
 # ################################################################################################################################
 

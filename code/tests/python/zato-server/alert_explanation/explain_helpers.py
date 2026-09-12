@@ -31,6 +31,8 @@ from sqlalchemy.orm import sessionmaker
 import urllib3
 
 # Zato
+from zato.common.alerting.explain.evidence import Heading_Failures, Heading_Object
+from zato.common.alerting.explain.store import ExplanationStore
 from zato.common.alerting.model import Default_Dedup_Window_Seconds
 from zato.common.api import SMTPMessage
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
@@ -411,6 +413,23 @@ def _new_service(
     service.email = email
 
     return service
+
+# ################################################################################################################################
+
+def _stored_explanation(session_maker:'any_') -> 'dict':
+    store = ExplanationStore(session_maker, _cluster_id)
+    out = store.get(f'explanation.{_alert_id}')
+
+    assert out is not None
+    return out
+
+# ################################################################################################################################
+
+def _object_section(document:'str') -> 'str':
+    start = document.index(Heading_Object)
+    end = document.index(Heading_Failures)
+    out = document[start:end]
+    return out
 
 # ################################################################################################################################
 

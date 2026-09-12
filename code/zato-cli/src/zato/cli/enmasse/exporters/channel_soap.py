@@ -13,6 +13,8 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.cli.enmasse.util import get_non_default_response_cache
+from zato.cli.enmasse.util.alerts import group_alerts
+from zato.common.alerting.object_config import Alerts_Key, alert_type_channels
 from zato.common.api import CONNECTION, Groups, MISC, URL_TYPE
 from zato.common.odb.model import GenericObject, to_json
 from zato.common.odb.query import http_soap_list
@@ -155,6 +157,11 @@ class ChannelSOAPExporter:
             # The audit log is on by default so only the off state is exported
             if channel_row.get('is_audit_log_active') is False:
                 exported_channel['is_audit_log_active'] = False
+
+            # Alert settings moved away from their defaults travel as one nested mapping
+            alerts = group_alerts(channel_row, alert_type_channels)
+            if alerts is not None:
+                exported_channel[Alerts_Key] = alerts
 
             exported_channels.append(exported_channel)
 

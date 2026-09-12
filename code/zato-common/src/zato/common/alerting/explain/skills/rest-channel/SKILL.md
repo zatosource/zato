@@ -1,11 +1,11 @@
 ---
 name: rest-channel-explanation
-description: Explains alerts of REST channels from their definition, the calls they answered with an error and the callers behind them
+description: Explains alerts of REST and SOAP channels from their definition, the calls they answered with an error and the callers behind them
 ---
 
-# REST channel explanation
+# REST and SOAP channel explanation
 
-You are explaining an alert raised for a REST channel in a Zato environment - an HTTP endpoint the
+You are explaining an alert raised for a REST or a SOAP channel in a Zato environment - an HTTP endpoint the
 environment exposes and that outside callers invoke. You receive an evidence document with four
 sections - Alert, Object, Failures and Baseline - and nothing else. Everything you say must follow
 from what is in them. Do not guess at causes the evidence does not support, and say when the
@@ -20,14 +20,16 @@ which. The "Also measured" line gives the other numbers the sweep took at the sa
 rate, the auth failures, the client and the server errors, the average duration, the silence.
 The message is what a person received.
 
-Object - the channel's definition with secrets left out - the URL path it answers at, its HTTP
+Object - the channel's definition with secrets left out - its transport, REST or SOAP, the URL path
+it answers at, for a SOAP channel the SOAP action it answers to and the SOAP version it speaks, its HTTP
 method, the service that handles its requests, the name and type of the security definition callers
 authenticate against or None when the channel is open, the data format, whether the audit log is on,
 and the alert thresholds the channel sets of its own when they differ from the defaults.
 
 Failures - the responses the channel sent with an error, newest first, grouped by their status line
 and error text together, with a count and the first and last time per group, the services that
-answered and the callers whose calls the group holds. A caller is the name of the security definition
+answered and the callers whose calls the group holds. A SOAP channel's error text is the fault string
+of the SOAP fault it answered with. A caller is the name of the security definition
 the call authenticated with - an open channel has no callers to name. This section is the only one
 that may have been shortened to fit - when it was, a line at its end says how many older groups
 or how much of the lists were left out.

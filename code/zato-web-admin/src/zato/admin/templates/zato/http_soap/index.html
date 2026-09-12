@@ -29,11 +29,10 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tippy-buttons.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
-    {% if transport == 'soap' %}
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
-    {% endif %}
     {% if connection == 'channel' and transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/channel.css">
+    {% endif %}
+    {% if has_alerts_tab %}
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
@@ -77,9 +76,6 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/decision-lines.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
-    {% if transport == 'soap' %}
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
-    {% endif %}
     {% if transport == 'plain_http' %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
     {% endif %}
@@ -89,9 +85,10 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/health-check.js"></script>
     {% endif %}
-    {% if connection == 'channel' and transport == 'plain_http' %}
+    {% if has_alerts_tab %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/core.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
@@ -275,7 +272,7 @@
                 'retry_backoff_multiplier',
             {% endif %}
 
-        ]{% if connection == 'channel' and transport == 'plain_http' %}.concat($.fn.zato.alerts_tab.columns()){% endif %}
+        ]{% if has_alerts_tab %}.concat($.fn.zato.alerts_tab.columns()){% endif %}
     }
     </script>
 
@@ -601,7 +598,7 @@
                         {% endif %}
 
                         <!-- 42 - the Alerts tab of REST channels -->
-                        {% if connection == 'channel' and transport == 'plain_http' %}
+                        {% if has_alerts_tab %}
                             {% for field_name in alerts_tab_config.storage_field_names %}
                             <td class='ignore'>{{ item|get_item:field_name }}</td>
                             {% endfor %}
@@ -670,7 +667,7 @@
                     <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-config" role="tabpanel">
                     {% endif %}
 
-                    {% if connection == 'channel' and transport == 'plain_http' %}
+                    {% if has_alerts_tab %}
                     <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
@@ -949,7 +946,7 @@
                         {% endif %}
 
                         {% if connection != 'outgoing' or transport != 'plain_http' %}
-                        {% if connection != 'channel' or transport != 'plain_http' %}
+                        {% if not has_alerts_tab %}
                         <tr>
                             {% if transport == 'soap' %}
                             <td style="text-align:left;vertical-align:middle">
@@ -968,7 +965,7 @@
                         {% endif %}
                     </table>
 
-                    {% if connection == 'channel' and transport == 'plain_http' %}
+                    {% if has_alerts_tab %}
                     </div>
 
                     {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
@@ -1053,7 +1050,7 @@
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-config" role="tabpanel">
                     {% endif %}
 
-                    {% if connection == 'channel' and transport == 'plain_http' %}
+                    {% if has_alerts_tab %}
                     <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
@@ -1330,7 +1327,7 @@
                         {% endif %}
 
                         {% if connection != 'outgoing' or transport != 'plain_http' %}
-                        {% if connection != 'channel' or transport != 'plain_http' %}
+                        {% if not has_alerts_tab %}
                         <tr>
                             {% if transport == 'soap' %}
                             <td style="text-align:left;vertical-align:middle">
@@ -1348,7 +1345,7 @@
                         {% endif %}
                     </table>
 
-                    {% if connection == 'channel' and transport == 'plain_http' %}
+                    {% if has_alerts_tab %}
                     </div>
 
                     {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}

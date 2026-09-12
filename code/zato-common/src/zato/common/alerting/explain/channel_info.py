@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The Object section of a REST channel's evidence - what the channel is, read off the ODB,
+# The Object section of a REST or SOAP channel's evidence - what the channel is, read off the ODB,
 # so the model reads what the channel is before it reads how it failed. Secrets never appear,
 # a security definition is named by its name and type alone.
 
@@ -14,8 +14,9 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting.object_config import alert_type_channels, field_display, from_storage, get_defaults, \
-    Alert_Channel_Connection, Alert_Channel_Transport, Email_Connection_Field, Is_Active_Field, LLM_Connection_Field
+    transport_by_channel_source, Alert_Channel_Connection, Email_Connection_Field, Is_Active_Field, LLM_Connection_Field
 from zato.common.api import Sec_Def_Type_Name
+from zato.common.audit_log.common import AuditSource
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util.sql import parse_instance_opaque_attr
 
@@ -41,6 +42,12 @@ _none = 'None'
 
 # What a channel with every alert setting at its default says of them
 _no_own_settings = 'none, the defaults apply'
+
+# What the Transport line of each channel source reads as
+_transport_label_by_source = {
+    AuditSource.REST_Channel: 'REST',
+    AuditSource.SOAP_Channel: 'SOAP',
+}
 
 # The settings that are not thresholds - the switch is said on its own line and the connections
 # are not what a channel measures
@@ -101,15 +108,15 @@ def _own_settings_line(settings:'dict') -> 'str':
 
 # ################################################################################################################################
 
-def describe_rest_channel(session:'SASession', cluster_id:'int', name:'str') -> 'anylist | None':
-    """ The label and value pairs describing one REST channel - its path, method, service, security,
-    data format, whether its audit log is on and the alert thresholds it sets of its own. None when
-    no REST channel goes by the name in the cluster.
+def describe_channel(session:'SASession', cluster_id:'int', source:'str', name:'str') -> 'anylist | None':
+    """ The label and value pairs describing one REST or SOAP channel - its transport, path, method, service,
+    security, data format, whether its audit log is on and the alert thresholds it sets of its own, and for a
+    SOAP channel its SOAP action and version. None when no channel of the source goes by the name in the cluster.
     """
     row = session.query(HTTPSOAP).\
         filter(HTTPSOAP.cluster_id==cluster_id).\
         filter(HTTPSOAP.connection==Alert_Channel_Connection).\
-        filter(HTTPSOAP.transport==Alert_Channel_Transport).\
+        filter(HTTPSOAP.transport==transport_by_channel_source[source]).\
         filter(HTTPSOAP.name==name).\
         first()
 
@@ -122,8 +129,14 @@ def describe_rest_channel(session:'SASession', cluster_id:'int', name:'str') -> 
     out:'anylist' = []
 
     out.append(('Name', row.name))
+    out.append(('Transport', _transport_label_by_source[source]))
     out.append(('Active', 'yes' if row.is_active else 'no'))
     out.append(('URL path', row.url_path))
+
+    # A SOAP channel is told apart from the others at its path by the action it answers to
+    if source == AuditSource.SOAP_Channel:
+        out.append(('SOAP action', row.soap_action))
+        out.append(('SOAP version', row.soap_version))
 
     if row.method:
         out.append(('Method', row.method))

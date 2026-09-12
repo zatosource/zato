@@ -24,7 +24,7 @@ from zato.admin.web.views import get_group_list as common_get_group_list, get_ht
     get_js_dt_format, get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
         method_allowed, ping_json_response, SecurityList
 from zato.admin.web.views.security.tier import get_tier_list
-from zato.common.alerting.object_config import alert_type_channels
+from zato.common.alerting.object_config import alert_type_channels, is_alert_channel
 from zato.common.api import generic_attrs, Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      Sec_Def_Type_Name, SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.content_type import format_content, get_content_type
@@ -136,17 +136,6 @@ _inline_field_names = ['is_active', 'name', 'url_path', 'service']
 # ################################################################################################################################
 # ################################################################################################################################
 
-def is_rest_channel(connection:'str', transport:'str') -> 'bool':
-    """ Whether a page or a form is a REST channel's.
-    """
-    is_channel = connection == 'channel'
-    is_plain_http = transport == URL_TYPE.PLAIN_HTTP
-
-    out = is_channel and is_plain_http
-    return out
-
-# ################################################################################################################################
-
 def _get_edit_create_message(params, prefix='', user_profile=None): # type: ignore
     """ A bunch of attributes that can be used by both 'edit' and 'create' actions
     for channels and outgoing connections.
@@ -197,12 +186,13 @@ def _get_edit_create_message(params, prefix='', user_profile=None): # type: igno
             message['deprecation_sunset'] = params.get(prefix + 'deprecation_sunset', '')
             message['deprecation_successor'] = params.get(prefix + 'deprecation_successor', '')
 
-            # .. and so do the Alerts tab's fields.
-            for name in alerts_tab.get_storage_field_names(alert_type_channels):
-                value = params.get(prefix + name, '')
-                message[name] = alerts_tab.pre_process_alert_item(alert_type_channels, name, value)
+    # The Alerts tab's fields exist in the forms of REST and SOAP channels
+    if is_alert_channel(params['connection'], params['transport']):
+        for name in alerts_tab.get_storage_field_names(alert_type_channels):
+            value = params.get(prefix + name, '')
+            message[name] = alerts_tab.pre_process_alert_item(alert_type_channels, name, value)
 
-            alerts_tab.join_durations(alert_type_channels, message)
+        alerts_tab.join_durations(alert_type_channels, message)
 
     # The declarative invocation fields exist only in the forms of outgoing connections
     for name in _invocation_field_names:
@@ -359,7 +349,7 @@ def index(req): # type: ignore
 
             _security.append(def_item)
 
-        if is_rest_channel(connection, transport):
+        if is_alert_channel(connection, transport):
             alert_type = alert_type_channels
         else:
             alert_type = None
@@ -478,7 +468,7 @@ def index(req): # type: ignore
                 http_soap.deprecation_successor = item.get('deprecation_successor', '')
 
                 # The Alerts tab's fields ride in the row for the edit form to read.
-                if is_rest_channel(connection, transport):
+                if is_alert_channel(connection, transport):
                     for name in alerts_tab.get_storage_field_names(alert_type_channels):
                         if name in item:
                             http_soap[name] = item[name]
@@ -557,7 +547,11 @@ def index(req): # type: ignore
     # The scheduler tab's start date picker needs the user's date and time format
     return_data.update(get_js_dt_format(req.zato.user_profile))
 
-    if is_rest_channel(connection, transport):
+    # REST and SOAP channels carry the Alerts tab, the template asks this one flag
+    has_alerts_tab = is_alert_channel(connection, transport)
+    return_data['has_alerts_tab'] = has_alerts_tab
+
+    if has_alerts_tab:
         return_data['create_alerts_tab'] = alerts_tab.get_alerts_tab_context(create_form, alert_type_channels)
         return_data['edit_alerts_tab'] = alerts_tab.get_alerts_tab_context(edit_form, alert_type_channels)
         return_data['alerts_tab_config'] = alerts_tab.get_alerts_tab_config(alert_type_channels)

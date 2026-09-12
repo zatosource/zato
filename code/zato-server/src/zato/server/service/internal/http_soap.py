@@ -134,7 +134,7 @@ _pem_secret_fields = AS2.Secret_Fields + AS4.Secret_Fields
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The alert settings a REST channel carries, under their storage names - the switches as booleans,
+# The alert settings a REST or SOAP channel carries, under their storage names - the switches as booleans,
 # the numbers and the durations as integers, the rest as text, each optional so that a caller
 # that knows nothing of them sends nothing.
 _alert_toggle_kinds = (Kind_Active, config_map.Kind_Toggle, config_map.Kind_Ruleset_Toggle)
@@ -735,7 +735,7 @@ class GetList(_BaseGet):
             for name in _pem_secret_fields:
                 _ = item.pop(name, None)
 
-            # .. a REST channel created before a setting existed reads the same as one created after it ..
+            # .. a channel created before a setting existed reads the same as one created after it ..
             if is_alert_channel(item['connection'], item['transport']):
                 apply_defaults(alert_type_channels, item)
 
@@ -782,7 +782,7 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 # ################################################################################################################################
 
     def _prepare_alert_settings(self, input:'Bunch', skip_opaque:'anylist', stored:'strdict') -> 'None':
-        """ The alert settings of the object being written - a REST channel has every one of them, the ones
+        """ The alert settings of the object being written - a REST or SOAP channel has every one of them, the ones
         the caller sent as sent, the rest as the channel already stores them or, on a new channel, at their
         defaults. Any other object has none and the names are skipped when the opaque attributes are stored.
         """
@@ -1126,7 +1126,7 @@ class Create(_CreateEdit):
 
         input.data_encoding = input.get('data_encoding') or 'utf-8'
 
-        # A new REST channel starts with every alert setting the caller did not send at its default
+        # A new REST or SOAP channel starts with every alert setting the caller did not send at its default
         self._prepare_alert_settings(input, skip_opaque, {})
 
         # AS4 private keys are stored encrypted
@@ -1459,7 +1459,7 @@ class Edit(_CreateEdit):
                 if response_cache := opaque.get('response_cache'):
                     input.response_cache = response_cache
 
-                # A REST channel edited by a caller that sent no alert settings keeps the ones it has
+                # A REST or SOAP channel edited by a caller that sent no alert settings keeps the ones it has
                 self._prepare_alert_settings(input, skip_opaque, opaque)
 
                 # Secrets are never returned to the Dashboard, so an edit form cannot send them back.

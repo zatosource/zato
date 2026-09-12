@@ -696,9 +696,37 @@ class TestChannelForm:
 
 # ################################################################################################################################
 
-    def test_a_soap_channel_and_the_outgoing_connections_carry_no_alert_settings(self) -> 'None':
+    def test_a_soap_channel_message_carries_the_alert_settings(self) -> 'None':
+        params = _channel_params('channel', 'soap')
+        message = http_soap_views._get_edit_create_message(params)
 
-        for connection, transport in (('channel', 'soap'), ('outgoing', 'plain_http'), ('outgoing', 'soap')):
+        for name in alerts_tab.get_storage_field_names(alert_type_channels):
+            if name.endswith(Unit_Field_Suffix):
+                assert name not in message, name
+            else:
+                assert name in message, name
+
+        for name, value in _expected_channel_settings.items():
+            assert message[name] == value, name
+
+# ################################################################################################################################
+
+    def test_a_soap_channel_edit_message_reads_the_prefixed_fields(self) -> 'None':
+
+        params = _channel_params('channel', 'soap', prefix='edit-')
+        params['id'] = '18'
+
+        message = http_soap_views._get_edit_create_message(params, prefix='edit-')
+
+        assert message['id'] == '18'
+        for name, value in _expected_channel_settings.items():
+            assert message[name] == value, name
+
+# ################################################################################################################################
+
+    def test_the_outgoing_connections_carry_no_alert_settings(self) -> 'None':
+
+        for connection, transport in (('outgoing', 'plain_http'), ('outgoing', 'soap')):
             params = _channel_params(connection, transport)
             message = http_soap_views._get_edit_create_message(params)
 

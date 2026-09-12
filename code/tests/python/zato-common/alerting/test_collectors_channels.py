@@ -449,3 +449,78 @@ class TestCollectFacts:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class TestSoapChannel:
+
+    def test_a_soap_channels_silence_is_measured_under_its_own_source(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        request_id = _seed_call(audit_log, 'soap-sil-1', '200', source=AuditSource.SOAP_Channel)
+
+        # The newest request of the channel is a quarter of an hour old
+        _backdate(request_id - 1, now - timedelta(seconds=900))
+        _backdate(request_id, now - timedelta(seconds=900))
+
+        facts = collect_channel_silence_facts(engine, now, {_channel_name})
+
+        assert len(facts) == 1
+        assert facts[0]['source'] == AuditSource.SOAP_Channel
+        assert facts[0]['object_name'] == _channel_name
+        assert facts[0]['silent_seconds'] == 900
+
+    def test_a_soap_channels_status_classes_count_as_a_rest_channels_do(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _ = _seed_call(audit_log, 'soap-1', '401', source=AuditSource.SOAP_Channel)
+        _ = _seed_call(audit_log, 'soap-2', '500', source=AuditSource.SOAP_Channel)
+        _ = _seed_call(audit_log, 'soap-3', '404', source=AuditSource.SOAP_Channel)
+        _ = _seed_call(audit_log, 'soap-4', '200', source=AuditSource.SOAP_Channel)
+
+        fact = _fact_of(collect_error_rate_facts(engine, _window_seconds, now), _channel_name, AuditSource.SOAP_Channel)
+
+        assert fact['total_count'] == 4
+        assert fact['error_count'] == 3
+
+        fact = _fact_of(collect_channel_status_facts(engine, _window_seconds, now), _channel_name, AuditSource.SOAP_Channel)
+
+        assert fact['auth_failure_count'] == 1
+        assert fact['client_error_count'] == 1
+        assert fact['server_error_count'] == 1
+        assert fact['server_error_rate'] == 0.25
+
+    def test_a_rest_and_a_soap_channel_of_one_name_get_facts_of_their_own_source(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # The REST channel fails once out of two calls, the SOAP one of the same name three times out of three
+        _ = _seed_call(audit_log, 'rest-1', '500')
+        _ = _seed_call(audit_log, 'rest-2', '200')
+        _ = _seed_call(audit_log, 'soap-1', '500', source=AuditSource.SOAP_Channel)
+        _ = _seed_call(audit_log, 'soap-2', '500', source=AuditSource.SOAP_Channel)
+        _ = _seed_call(audit_log, 'soap-3', '401', source=AuditSource.SOAP_Channel)
+
+        # Both channels expect traffic and both heard from a caller just now
+        facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now, window_seconds=_window_seconds,
+            silence_expected_names={_channel_name})
+
+        rest_fact = _fact_of(facts, _channel_name)
+        soap_fact = _fact_of(facts, _channel_name, AuditSource.SOAP_Channel)
+
+        assert rest_fact['total_count'] == 2
+        assert rest_fact['error_rate'] == 0.5
+        assert rest_fact['auth_failure_count'] == 0
+        assert rest_fact['silent_seconds'] == 0
+
+        assert soap_fact['total_count'] == 3
+        assert soap_fact['error_rate'] == 1
+        assert soap_fact['auth_failure_count'] == 1
+        assert soap_fact['server_error_count'] == 2
+        assert soap_fact['silent_seconds'] == 0
+
+# ################################################################################################################################
+# ################################################################################################################################

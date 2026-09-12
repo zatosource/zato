@@ -12,6 +12,8 @@ from json import loads
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item, security_needs_update
+from zato.cli.enmasse.util.alerts import alerts_need_update, take_alert_attrs
+from zato.common.alerting.object_config import Alerts_Key, alert_type_channels
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, Service, to_json
 from zato.common.util.channel import ensure_channel_definitions_are_unique
@@ -32,6 +34,9 @@ logger = logging.getLogger(__name__)
 
 # Keys that never map to database columns directly - they are handled separately.
 _non_column_keys = ('id', 'service', 'security', 'groups', 'rate_limiting', 'response_cache', 'use_mtom', 'is_audit_log_active')
+
+# What the alert settings name the object as in the errors they raise
+_connection_type = 'channel_soap'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,7 +104,7 @@ class ChannelSOAPImporter:
                 # separately and the service name is not a column in the database row (only service_id is).
                 for key, value in item.items():
 
-                    if key in ('security', 'security_name', 'groups', 'rate_limiting', 'response_cache', 'service'):
+                    if key in ('security', 'security_name', 'groups', 'rate_limiting', 'response_cache', 'service', Alerts_Key):
                         continue
 
                     # A field the database row does not have yet means an update too.
@@ -127,6 +132,10 @@ class ChannelSOAPImporter:
 
                 # Check response_cache
                 if self._response_cache_needs_update(item, db_def):
+                    needs_update = True
+
+                # Check the alert settings
+                if alerts_need_update(item, db_def, alert_type_channels):
                     needs_update = True
 
                 if needs_update:
@@ -275,6 +284,8 @@ class ChannelSOAPImporter:
         logger.info('Creating SOAP channel: %s', name)
         logger.info('Channel definition: %s', channel_def)
 
+        alert_attrs = take_alert_attrs(channel_def, alert_type_channels, _connection_type, session)
+
         service_name = channel_def['service']
         service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).one()
         cluster = self.importer.get_cluster(session)
@@ -300,10 +311,10 @@ class ChannelSOAPImporter:
         # Handle security definition
         self._assign_security(channel, channel_def, session)
 
-        # Fields that are not columns go into the opaque attributes.
+        # Fields that are not columns go into the opaque attributes, the alert settings, every one of them, among them.
         opaque_attrs = self._build_opaque_attrs(channel_def)
-        if opaque_attrs:
-            set_instance_opaque_attrs(channel, opaque_attrs)
+        opaque_attrs.update(alert_attrs)
+        set_instance_opaque_attrs(channel, opaque_attrs)
 
         session.add(channel)
         return channel
@@ -315,6 +326,8 @@ class ChannelSOAPImporter:
         channel_id = channel_def['id']
         logger.info('Updating SOAP channel with id=%s', channel_id)
         logger.info('Channel definition: %s', channel_def)
+
+        alert_attrs = take_alert_attrs(channel_def, alert_type_channels, _connection_type, session)
 
         channel = session.query(HTTPSOAP).filter_by(id=channel_id).one()
 
@@ -335,11 +348,11 @@ class ChannelSOAPImporter:
         # Handle security definition
         self._assign_security(channel, channel_def, session)
 
-        # Fields that are not columns go into the opaque attributes,
+        # Fields that are not columns go into the opaque attributes, the alert settings among them,
         # merged with whatever the row already keeps there.
         opaque_attrs = self._build_opaque_attrs(channel_def)
-        if opaque_attrs:
-            set_instance_opaque_attrs(channel, opaque_attrs)
+        opaque_attrs.update(alert_attrs)
+        set_instance_opaque_attrs(channel, opaque_attrs)
 
         session.add(channel)
         return channel

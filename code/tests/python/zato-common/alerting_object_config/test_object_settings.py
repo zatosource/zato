@@ -65,11 +65,13 @@ _other_schedule_name = 'Weekly summary'
 # The email connection the SFTP connection's alerts leave through
 _imap_name = 'Ops mailbox'
 
-# The channels the tests store - a REST channel with settings, one without, a SOAP channel and an outgoing REST connection
+# The channels the tests store - a REST channel with settings, one without, a SOAP channel with settings
+# and an outgoing connection of each transport
 _rest_channel_name = 'orders.api'
 _plain_rest_channel_name = 'orders.status'
 _soap_channel_name = 'orders.soap'
 _rest_outgoing_name = 'crm.api'
+_soap_outgoing_name = 'crm.soap'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -227,26 +229,31 @@ class TestLoadObjectSettings:
 
 # ################################################################################################################################
 
-    def test_rest_channels_load_under_channels(self) -> 'None':
+    def test_rest_and_soap_channels_load_under_channels(self) -> 'None':
         stored = to_storage(alert_type_channels, {'consecutive_failures': 5, 'traffic_expected': True})
+        soap_stored = to_storage(alert_type_channels, {'auth_failures': 3})
 
         with _session() as session:
             _add_http_soap(session, _rest_channel_name, CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, _cluster_id, stored)
             _add_http_soap(session, _plain_rest_channel_name, CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, _cluster_id, {})
-            _add_http_soap(session, _soap_channel_name, CONNECTION.CHANNEL, URL_TYPE.SOAP, _cluster_id, {})
+            _add_http_soap(session, _soap_channel_name, CONNECTION.CHANNEL, URL_TYPE.SOAP, _cluster_id, soap_stored)
             _add_http_soap(session, _rest_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, _cluster_id, {})
+            _add_http_soap(session, _soap_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.SOAP, _cluster_id, {})
             _add_http_soap(session, 'elsewhere.api', CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, _other_cluster_id, {})
             settings = load_object_settings(session, _cluster_id)
 
         by_channel = settings[alert_type_channels]
 
-        assert sorted(by_channel) == sorted([_rest_channel_name, _plain_rest_channel_name])
+        assert sorted(by_channel) == sorted([_rest_channel_name, _plain_rest_channel_name, _soap_channel_name])
 
         assert by_channel[_rest_channel_name]['consecutive_failures'] == 5
         assert by_channel[_rest_channel_name]['traffic_expected'] is True
         assert by_channel[_rest_channel_name]['auth_failures'] == 10
 
         assert by_channel[_plain_rest_channel_name] == get_defaults(alert_type_channels)
+
+        assert by_channel[_soap_channel_name]['auth_failures'] == 3
+        assert by_channel[_soap_channel_name]['consecutive_failures'] == 3
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -344,7 +351,7 @@ class TestChannelSettings:
 
 # ################################################################################################################################
 
-    def test_a_channels_own_windows_apply_to_rest_channels_alone(self) -> 'None':
+    def test_a_channels_own_windows_apply_to_rest_and_soap_channels(self) -> 'None':
         values = get_defaults(alert_type_channels)
         values['auth_failures_window'] = 3600
 
@@ -355,16 +362,21 @@ class TestChannelSettings:
             Measure_Auth_Failures: 300,
             Measure_Latency: 300,
         }
-        window_seconds_by_source = {AuditSource.REST_Channel: source_windows, AuditSource.SOAP_Channel: source_windows}
+        window_seconds_by_source = {
+            AuditSource.REST_Channel: source_windows,
+            AuditSource.SOAP_Channel: source_windows,
+            AuditSource.MLLP_Channel: source_windows,
+        }
 
         out = build_window_seconds_by_object(object_settings, window_seconds_by_source)
 
-        assert out[AuditSource.REST_Channel][_rest_channel_name][Measure_Auth_Failures] == 3600
-        assert Measure_Error_Rate not in out[AuditSource.REST_Channel][_rest_channel_name]
-        assert Measure_Latency not in out[AuditSource.REST_Channel][_rest_channel_name]
+        for source in (AuditSource.REST_Channel, AuditSource.SOAP_Channel):
+            assert out[source][_rest_channel_name][Measure_Auth_Failures] == 3600
+            assert Measure_Error_Rate not in out[source][_rest_channel_name]
+            assert Measure_Latency not in out[source][_rest_channel_name]
 
-        # The SOAP channel source has no object of its own to measure again over the same window
-        assert AuditSource.SOAP_Channel not in out
+        # An MLLP channel has no settings of its own, so no window of its own either
+        assert AuditSource.MLLP_Channel not in out
 
 # ################################################################################################################################
 # ################################################################################################################################

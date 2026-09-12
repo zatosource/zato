@@ -77,6 +77,9 @@ response_event_type_by_source = {
     AuditSource.SOAP_Channel: AuditEvent.Response_Sent,
 }
 
+# The channels - the sources with a response event, which are the ones whose rows carry alert settings of their own
+channel_sources = tuple(response_event_type_by_source)
+
 # ################################################################################################################################
 # ################################################################################################################################
 

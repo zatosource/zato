@@ -17,8 +17,10 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting import config_map
+from zato.common.alerting.collectors.common import channel_sources as channel_sources
 from zato.common.alerting.seed.api import build_ruleset_document, default_rulesets
 from zato.common.api import CONNECTION, GENERIC, URL_TYPE
+from zato.common.audit_log.common import AuditSource
 from zato.common.rule_engine.sql.constants import Documents_Key
 
 # ################################################################################################################################
@@ -79,9 +81,15 @@ conn_type_to_alert_type:'strstrdict' = {
     GENERIC.CONNECTION.TYPE.OUTCONN_SMB:  alert_type_file_transfer,
 }
 
-# The HTTPSOAP rows that carry channel alert settings - REST channels alone
+# The HTTPSOAP rows that carry channel alert settings - REST and SOAP channels
 Alert_Channel_Connection = CONNECTION.CHANNEL
-Alert_Channel_Transport  = URL_TYPE.PLAIN_HTTP
+Alert_Channel_Transports = (URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP)
+
+# The transport the HTTPSOAP rows of each channel source go by
+transport_by_channel_source:'strstrdict' = {
+    AuditSource.REST_Channel: URL_TYPE.PLAIN_HTTP,
+    AuditSource.SOAP_Channel: URL_TYPE.SOAP,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,7 +100,7 @@ def is_alert_channel(connection:'str', transport:'str') -> 'bool':
     if connection != Alert_Channel_Connection:
         return False
 
-    out = transport == Alert_Channel_Transport
+    out = transport in Alert_Channel_Transports
     return out
 
 # ################################################################################################################################

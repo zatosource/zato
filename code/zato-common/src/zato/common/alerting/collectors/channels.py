@@ -20,8 +20,8 @@ from datetime import datetime, timedelta
 from sqlalchemy import and_, func, select
 
 # Zato
-from zato.common.alerting.collectors.common import new_fact, response_event_type_by_source
-from zato.common.audit_log.api import event_table, AuditEvent, AuditSource
+from zato.common.alerting.collectors.common import channel_sources, new_fact, response_event_type_by_source
+from zato.common.audit_log.api import event_table, AuditEvent
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,8 +51,6 @@ Server_Error_Class = '5'
 # The event a channel writes the moment a request arrives - its newest one says when the channel last heard from anyone.
 Request_Event_Type = AuditEvent.Request_Received
 
-# The one channel kind whose settings can say traffic is expected
-Silence_Source = AuditSource.REST_Channel
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,7 +144,7 @@ def collect_channel_status_facts(
 # ################################################################################################################################
 
 def collect_channel_silence_facts(engine:'Engine', now:'datetime', expected_names:'strset') -> 'dictlist':
-    """ Measures how long each of the given REST channels has gone without a request - the time since
+    """ Measures how long each of the given channels has gone without a request - the time since
     its newest request event. Only the channels whose settings say traffic is expected are measured,
     so a channel nobody calls raises nothing unless a person asked for it, and one of them that
     never received a request at all has nothing to measure from.
@@ -159,25 +157,26 @@ def collect_channel_silence_facts(engine:'Engine', now:'datetime', expected_name
         return out
 
     conditions = [
-        event_table.c.source == Silence_Source,
+        event_table.c.source.in_(list(channel_sources)),
         event_table.c.event_type == Request_Event_Type,
         event_table.c.object_name.in_(list(expected_names)),
     ]
 
     statement = select(
+        event_table.c.source,
         event_table.c.object_name,
         func.max(event_table.c.event_time_iso),
-    ).where(and_(*conditions)).group_by(event_table.c.object_name)
+    ).where(and_(*conditions)).group_by(event_table.c.source, event_table.c.object_name)
 
     with engine.connect() as connection:
         rows = connection.execute(statement).fetchall()
 
-    for row_object_name, newest_iso in rows:
+    for row_source, row_object_name, newest_iso in rows:
 
         newest = datetime.fromisoformat(newest_iso)
         silent = now - newest
 
-        fact = new_fact(Silence_Source, row_object_name)
+        fact = new_fact(row_source, row_object_name)
         fact['silent_seconds'] = int(silent.total_seconds())
 
         out.append(fact)

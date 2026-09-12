@@ -488,11 +488,29 @@ def _upgrade_vocabulary(backend:'RuleSQLBackend') -> 'bool':
 
 # ################################################################################################################################
 
+def _first_held_documents(historical:'list[anydict]') -> 'anydict':
+    """ Each rule as it read in the oldest version that held it - what the seed of some release
+    stored, before any person had a chance to edit it.
+    """
+
+    # Our response to produce
+    out:'anydict' = {}
+
+    for historical_document in historical:
+        for full_name, rule_document in historical_document[Documents_Key].items():
+            if full_name not in out:
+                out[full_name] = rule_document
+
+    return out
+
+# ################################################################################################################################
+
 def _upgrade_ruleset(backend:'RuleSQLBackend', ruleset_name:'str', zrules_contents:'str') -> 'bool':
-    """ Gives an existing default ruleset the rules a newer release ships. A rule is added only
+    """ Gives an existing default ruleset what a newer release ships. A rule is added only
     when no version of the ruleset ever held it - a rule missing now that some earlier version
-    did hold was deleted by a person and stays deleted, and anything a person edited
-    themselves is never touched.
+    did hold was deleted by a person and stays deleted. A rule that is there already is refreshed
+    only when it still reads exactly as it did in the version that first held it - a rule a person
+    edited themselves is never touched.
     """
     definition = _find_active(backend, ruleset_name, Definition_Type_Ruleset)
 
@@ -504,26 +522,38 @@ def _upgrade_ruleset(backend:'RuleSQLBackend', ruleset_name:'str', zrules_conten
     documents = document[Documents_Key]
 
     shipped = build_ruleset_document(ruleset_name, zrules_contents)
+    shipped_documents = shipped[Documents_Key]
 
-    # What the current document is missing, by each rule's full name
+    # What the current document is missing, by each rule's full name ..
     missing = []
 
-    for full_name in shipped[Documents_Key]:
+    # .. and what it holds in a form other than the one shipping now.
+    differing = []
+
+    for full_name, shipped_document in shipped_documents.items():
         if full_name not in documents:
             missing.append(full_name)
+        elif documents[full_name] != shipped_document:
+            differing.append(full_name)
 
-    # Nothing missing means nothing to store, and the history stays unread
+    # Nothing missing and nothing differing means nothing to store, and the history stays unread
     if not missing:
-        return False
+        if not differing:
+            return False
+
+    historical = _historical_documents(backend, definition)
 
     # Every rule name any version ever held - what was there once
     # and is gone now was deleted by a person on purpose.
     ever_present = set()
 
-    for historical in _historical_documents(backend, definition):
-        ever_present.update(historical[Documents_Key])
+    for historical_document in historical:
+        ever_present.update(historical_document[Documents_Key])
 
-    added_any = False
+    # Each rule as it first arrived, which is what an untouched rule still reads as
+    first_held = _first_held_documents(historical)
+
+    changed_any = False
 
     for full_name in missing:
 
@@ -531,16 +561,25 @@ def _upgrade_ruleset(backend:'RuleSQLBackend', ruleset_name:'str', zrules_conten
         if full_name in ever_present:
             continue
 
-        documents[full_name] = shipped[Documents_Key][full_name]
-        added_any = True
+        documents[full_name] = shipped_documents[full_name]
+        changed_any = True
 
-    # Everything missing was deleted by a person, so there is nothing to store
-    if not added_any:
+    for full_name in differing:
+
+        # A rule that no longer reads as it arrived was edited by a person and stays as they left it
+        if documents[full_name] != first_held[full_name]:
+            continue
+
+        documents[full_name] = shipped_documents[full_name]
+        changed_any = True
+
+    # Everything missing was deleted and everything differing was edited by a person, so there is nothing to store
+    if not changed_any:
         return False
 
     _store_upgrade(backend, definition, document)
 
-    logger.info('Upgraded the default alerting ruleset `%s` with new rules', ruleset_name)
+    logger.info('Upgraded the default alerting ruleset `%s` with the rules of this release', ruleset_name)
     return True
 
 # ################################################################################################################################
@@ -564,8 +603,8 @@ def ensure_alerting_definitions(backend:'RuleSQLBackend') -> 'None':
         created_ruleset = _seed_ruleset(backend, ruleset_name, zrules_contents)
         created_any = created_any or created_ruleset
 
-        # An already-seeded ruleset gains the rules a newer release ships,
-        # each one looked up by its own full name.
+        # An already-seeded ruleset gains the rules a newer release ships and the newer
+        # text of the ones nobody edited, each one looked up by its own full name.
         if not created_ruleset:
             _ = _upgrade_ruleset(backend, ruleset_name, zrules_contents)
 

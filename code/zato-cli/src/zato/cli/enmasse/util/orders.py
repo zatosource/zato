@@ -108,7 +108,7 @@ _object_order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'sec
     'alerts:dict',
 _object_order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', \
     'use_mtom', 'method', 'content_type', 'timeout', 'is_audit_log_active', \
-    'groups:list', 'rate_limiting:list', 'response_cache:dict',
+    'groups:list', 'rate_limiting:list', 'response_cache:dict', 'alerts:dict',
 
 _object_order['outgoing_rest'] = ('name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'content_type', \
     'timeout', 'ping_method', 'tls_verify', 'is_audit_log_active') + Retry_Fields + Invocation_Order_Fields_REST
