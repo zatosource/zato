@@ -22,6 +22,7 @@ from zato.common.alerting.explain.skill import get_default_skills_dir, get_skill
 
 # Every audit source that ships with an explanation skill of its own.
 _shipped_sources = (
+    AuditSource.REST_Channel,
     AuditSource.REST_Outgoing,
     AuditSource.SQL_Outgoing,
     AuditSource.LLM,
@@ -107,6 +108,7 @@ class TestGetSkillSource:
     def test_every_other_source_is_explained_with_its_own(self) -> 'None':
         assert get_skill_source(AuditSource.LLM) == AuditSource.LLM
         assert get_skill_source(AuditSource.Scheduler) == AuditSource.Scheduler
+        assert get_skill_source(AuditSource.REST_Channel) == AuditSource.REST_Channel
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -119,6 +121,15 @@ class TestLoadSkill:
         assert skill is not None
         assert skill.name == 'rest-outgoing-explanation'
         assert skill.remediations == ['resubmit']
+
+    def test_the_rest_channel_skill_ships_without_remediations(self) -> 'None':
+        skill = load_skill(AuditSource.REST_Channel)
+
+        assert skill is not None
+        assert skill.name == 'rest-channel-explanation'
+        assert skill.remediations == []
+        assert 'callers' in skill.instructions
+        assert 'Windows of their own' in skill.instructions
 
     def test_a_source_without_a_skill_returns_none(self) -> 'None':
         skill = load_skill('source-with-no-skill')

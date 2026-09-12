@@ -9,7 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The live explain suite - the alert explanation service end to end over real servers, every one
 # of them test-managed: the LLM is Ollama in its docker container, the failures the LLM explains
 # are produced against a real IMAP server and a real SSH server with an SFTP subsystem, and the
-# explained alert is delivered to a real SMTP receiver. The suite skips when docker is not available.
+# explained alert is delivered to a real SMTP receiver. The REST channel proof runs inside a
+# quickstart server of its own, with a hot-deployed service that raises and the LLM connection
+# imported through enmasse. The suite skips when docker is not available.
 
 # stdlib
 import logging
@@ -17,6 +19,7 @@ import os
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import warnings
 from shutil import copytree
@@ -36,13 +39,14 @@ import pytest
 from zato.common.alerting.explain.skill import get_default_skills_dir, Skills_Dir_Name
 from zato.common.alerting.rendering import get_default_template_dir, Template_Dir_Name
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 from zato.common.test.sftp_ import SFTPTestServer
 
 # Test helpers
 import ollama_containers as containers
 from _imap_test_server import IMAPTestServer
 from hl7_client.smtp_receiver import SMTPReceiver
-from live_config import IMAP_Password
+from live_config import IMAP_Password, LiveServer
 from live_trace import is_on as is_trace_on
 
 # ################################################################################################################################
@@ -51,6 +55,7 @@ from live_trace import is_on as is_trace_on
 if 0:
     from collections.abc import Iterator
     from pathlib import Path
+    from zato.common.test.conftest_base_pubsub import SessionState
     from zato.common.typing_ import any_, anydict
 
     anydictgen = Iterator[anydict]
@@ -62,6 +67,82 @@ if 0:
 # How long to wait for the test-managed Redis to accept connections
 _redis_wait_timeout = 30
 _redis_poll_interval = 0.1
+
+# The enmasse document the quickstart server imports before it starts - the LLM connection
+# the explanations go through, pointed at the Ollama container
+_enmasse_template_path = os.path.join(os.path.dirname(__file__), 'live_server_enmasse.yaml')
+
+# The service the REST channel proof points its channel at - every call to it raises
+_raising_service_source = '''# -*- coding: utf-8 -*-
+
+# Zato
+from zato.server.service import Service
+
+class AlwaysRaise(Service):
+    """ Fails on purpose, so that the channel in front of it answers with a 500.
+    """
+    name = '{service_name}'
+
+    def handle(self):
+        raise Exception('{error_text}')
+'''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _build_live_server_config(
+    state:'SessionState',
+    logger:'logging.Logger',
+    zato_bin:'str',
+    server_port:'int',
+    invoke_password:'str',
+    ) -> 'anydict':
+    """ What the quickstart server needs before it starts - the placeholders of the enmasse document
+    and the source of the service that raises, and what the tests need once it runs.
+    """
+    work_directory = tempfile.mkdtemp(prefix='zato_explain_live_work_')
+    source_path = os.path.join(work_directory, 'explain_live_services.py')
+
+    source = _raising_service_source.format(service_name=LiveServer.raising_service, error_text=LiveServer.error_text)
+
+    with open(source_path, 'w') as source_file:
+        _ = source_file.write(source)
+
+    def _populate(
+        host:'str',
+        server_port:'int',
+        invoke_password:'str',
+        server_directory:'str',
+        zato_bin:'str',
+        ) -> 'None':
+        LiveServer.host = host
+        LiveServer.server_port = server_port
+        LiveServer.invoke_password = invoke_password
+        LiveServer.server_directory = server_directory
+
+    out:'anydict' = {
+        'placeholders': {
+            'llm_conn_name': LiveServer.llm_conn_name,
+            'llm_address': containers.Ollama_OpenAI_URL,
+            'llm_model': containers.Model_Name,
+        },
+        'populate_callback': _populate,
+        'hot_deploy_sources': [source_path],
+    }
+
+    return out
+
+# ################################################################################################################################
+
+zato_server = create_zato_server_fixture(
+    logger_name='zato.test.alert_explanation_live.conftest',
+    server_log_copy_name='server-logs-alert-explanation-live.txt',
+    template_path=_enmasse_template_path,
+    quickstart_prefix='zato_explain_live_qs_',
+    extra_server_env={},
+    patch_server_conf_bind=True,
+    build_config_callback=_build_live_server_config,
+)
 
 # ################################################################################################################################
 # ################################################################################################################################

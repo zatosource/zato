@@ -24,12 +24,15 @@ from urllib.parse import quote
 
 # Zato
 from zato.common.alerting.collectors import collect_facts
-from zato.common.alerting.config_map import read_window_seconds, type_sources, type_to_ruleset, Explain_With_LLM_Key
+from zato.common.alerting.collectors.common import response_event_type_by_source, Measure_Auth_Failures, \
+    Measure_Client_Errors, Measure_Latency, Measure_Server_Errors, Window_Seconds_By_Measure_Key
+from zato.common.alerting.config_map import read_window_seconds_by_measure, type_sources, type_to_ruleset, \
+    Explain_With_LLM_Key
 from zato.common.alerting.engine import process_findings
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, Default_Dedup_Window_Seconds
 from zato.common.alerting.object_config import Email_Connection_Config_Key, LLM_Connection_Config_Key
 from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
-    get_llm_connection, get_muted_rule_names, is_object_active
+    get_llm_connection, get_muted_rule_names, get_silence_expected_names, is_object_active
 from zato.common.api import Alerting
 from zato.common.audit_log.common import get_source_label, health_sources
 from zato.common.defaults import default_cluster_id
@@ -181,14 +184,15 @@ def load_alert_rules(backend:'RuleSQLBackend') -> 'rule_engine_rule_list':
 
 # ################################################################################################################################
 
-def build_window_seconds_by_source(rules:'rule_engine_rule_list') -> 'strintdict':
-    """ The measuring window of each audit source, read off the window_seconds default of the rules
-    of the type that matches on it - a person changes the type's window on the config screen and
-    the collectors measure the type's sources over it. A source whose type has no window rule is absent.
+def build_window_seconds_by_source(rules:'rule_engine_rule_list') -> 'anydict':
+    """ The measuring window of each measure of each audit source, read off the window_seconds defaults
+    of the rules of the type that matches on it - a person changes a window on the config screen and
+    the collectors measure the type's sources over it, each measure over the window of its own line.
+    A source whose type has no window rule at all is absent.
     """
 
     # Our response to produce
-    out:'strintdict' = {}
+    out:'anydict' = {}
 
     # The documents of each ruleset, keyed the way the config map reads them
     documents_by_ruleset:'dict[str, stranydict]' = {}
@@ -206,22 +210,44 @@ def build_window_seconds_by_source(rules:'rule_engine_rule_list') -> 'strintdict
         if ruleset_name not in documents_by_ruleset:
             continue
 
-        window_seconds = read_window_seconds(documents_by_ruleset[ruleset_name], type_name)
+        window_seconds_by_measure = read_window_seconds_by_measure(documents_by_ruleset[ruleset_name], type_name)
 
-        if window_seconds is None:
+        if not window_seconds_by_measure:
             continue
 
         for source in sources:
-            out[source] = window_seconds
+            out[source] = dict(window_seconds_by_measure)
 
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _measure_window_part(fact:'stranydict', measure:'str') -> 'str':
+    """ The window one measure was taken over, as the tail of its phrase - empty when the fact
+    does not say, e.g. a fact a test built by hand, and empty when it is the error rate's window,
+    which the message has named already.
+    """
+    windows = fact[Window_Seconds_By_Measure_Key]
+
+    if measure not in windows:
+        return ''
+
+    window_seconds = windows[measure]
+
+    if fact['total_count']:
+        if window_seconds == fact['window_seconds']:
+            return ''
+
+    out = f' over {window_seconds}s'
+    return out
+
+# ################################################################################################################################
+
 def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
     """ One readable line saying which rule fired on which object and what
-    the measures were at that moment - only the measures that are non-zero speak.
+    the measures were at that moment - only the measures that are non-zero speak,
+    each with the window it was taken over when the windows differ per measure.
     """
     parts = []
 
@@ -231,6 +257,10 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
     # A connection's own health check is named in the measure rather than after it,
     # because "the check failed" and "the calls failed" are two different sentences.
     is_health_check = source in health_sources
+
+    # A channel's failed responses are sorted by who is at fault, so its measures
+    # speak of callers and requests rather than of authentication in general.
+    is_channel = source in response_event_type_by_source
 
     if fact['total_count']:
         percent = round(fact['error_rate'] * 100)
@@ -253,11 +283,30 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
             parts.append(failure_label)
 
     if fact['avg_duration_ms']:
-        parts.append(f'average duration {fact["avg_duration_ms"]}ms')
+        parts.append(f'average duration {fact["avg_duration_ms"]}ms' + _measure_window_part(fact, Measure_Latency))
 
     if auth_failure_count := fact['auth_failure_count']:
-        auth_failure_label = pluralize(auth_failure_count, 'authentication failure')
-        parts.append(auth_failure_label)
+        if is_channel:
+            auth_failure_label = pluralize(auth_failure_count, 'rejected caller')
+        else:
+            auth_failure_label = pluralize(auth_failure_count, 'authentication failure')
+        parts.append(auth_failure_label + _measure_window_part(fact, Measure_Auth_Failures))
+
+    if client_error_count := fact['client_error_count']:
+        client_error_label = pluralize(client_error_count, 'bad request')
+        parts.append(client_error_label + _measure_window_part(fact, Measure_Client_Errors))
+
+    if server_error_count := fact['server_error_count']:
+
+        # The rate is the count over the responses of its own window, which may not be the error rate's,
+        # so the responses it was taken over are read back off it rather than off total_count
+        server_error_rate = fact['server_error_rate']
+        server_percent = round(server_error_rate * 100)
+        response_count = round(server_error_count / server_error_rate)
+
+        server_part = f'server errors {server_percent}% ({server_error_count} of {response_count}'
+        server_part += _measure_window_part(fact, Measure_Server_Errors) + ')'
+        parts.append(server_part)
 
     if cert_days_left := fact['cert_days_left']:
         days_label = pluralize(cert_days_left, 'day')
@@ -530,9 +579,12 @@ def run_sweep(
     window_seconds_by_source = build_window_seconds_by_source(rules)
     window_seconds_by_object = build_window_seconds_by_object(object_settings, window_seconds_by_source)
 
+    # The channels whose settings say traffic is expected at this time of day are the ones measured for silence
+    silence_expected_names = get_silence_expected_names(object_settings, now)
+
     facts = collect_facts(engine, metrics_by_name, metrics_source, now, window_seconds_by_source=window_seconds_by_source,
         window_seconds_by_object=window_seconds_by_object, job_intervals=job_intervals, arrival_windows=arrival_windows,
-        schedule_expectations=schedule_expectations)
+        schedule_expectations=schedule_expectations, silence_expected_names=silence_expected_names)
     out.fact_count = len(facts)
 
     for rule in rules:
@@ -569,11 +621,11 @@ def run_sweep(
                     continue
 
                 # .. one with a toggle off never reaches the rules the toggle stands for ..
-                if rule.name in get_muted_rule_names(alert_type, settings):
+                if rule.name in get_muted_rule_names(alert_type, settings, now):
                     continue
 
                 # .. and its own numbers stand in for the rule's defaults.
-                rule_values = build_rule_values(alert_type, settings)
+                rule_values = build_rule_values(alert_type, settings, now, rule.name)
                 match_data.update(rule_values)
 
             match_result = rule.match(match_data)

@@ -16,14 +16,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # Zato
+from zato.common.alerting.collectors.common import Measure_Auth_Failures, Measure_Client_Errors, Measure_Error_Rate, \
+    Measure_File_Runs, Measure_Latency, Measure_Server_Errors, Measure_Silence
 from zato.common.audit_log.common import AuditSource
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strlist
+    from zato.common.typing_ import stranydict, strintdict, strlist
     stranydict = stranydict
+    strintdict = strintdict
     strlist = strlist
 
 # ################################################################################################################################
@@ -50,6 +53,14 @@ Window_Field_Name = 'window'
 # The silence a channel tolerates and the time slots with a silence of their own
 Silence_Window_Field_Name = 'silence_window'
 Silence_Slots_Field_Name  = 'silence_slots'
+
+# The key a duration field names the measures it is the window of under
+Measures_Key = 'measures'
+
+# The measures the one window of a connection type drives - its error rate and its latency,
+# and for file transfer connections the runs of their schedules as well.
+_call_measures = [Measure_Error_Rate, Measure_Latency]
+_file_transfer_measures = [Measure_Error_Rate, Measure_Latency, Measure_File_Runs]
 
 # The units a duration is shown in, smallest first - the noun in the singular and its seconds.
 # A screen picks the largest unit dividing the seconds evenly, so 86400 reads as one day.
@@ -119,7 +130,7 @@ type_fields:'dict[str, list[stranydict]]' = {
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': _call_measures},
         {'name': 'max_latency', 'kind': Kind_Number, 'rules': ['Slow_Responses'],
             'default': 'max_avg_duration_ms', 'is_percent': False},
         {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
@@ -130,7 +141,7 @@ type_fields:'dict[str, list[stranydict]]' = {
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': _call_measures},
         {'name': 'max_query_time', 'kind': Kind_Number, 'rules': ['Slow_Queries'],
             'default': 'max_avg_duration_ms', 'is_percent': False},
         {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
@@ -141,7 +152,7 @@ type_fields:'dict[str, list[stranydict]]' = {
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': _call_measures},
         {'name': 'warning_latency', 'kind': Kind_Number, 'rules': ['Slow_Completions'],
             'default': 'warning_avg_duration_ms', 'is_percent': False},
         {'name': 'error_latency', 'kind': Kind_Number, 'rules': ['Slow_Completions_Error', 'Slow_Completions'],
@@ -154,7 +165,7 @@ type_fields:'dict[str, list[stranydict]]' = {
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': _call_measures},
         {'name': 'max_tool_call_time', 'kind': Kind_Number, 'rules': ['Slow_Tool_Calls'],
             'default': 'max_avg_duration_ms', 'is_percent': False},
         {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
@@ -165,7 +176,7 @@ type_fields:'dict[str, list[stranydict]]' = {
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': _call_measures},
         {'name': 'health_alerts', 'kind': Kind_Toggle, 'rules': ['Service_Degraded', 'Service_Interrupted']},
         {'name': 'max_call_time', 'kind': Kind_Number, 'rules': ['Slow_API_Calls'],
             'default': 'max_avg_duration_ms', 'is_percent': False},
@@ -177,7 +188,7 @@ type_fields:'dict[str, list[stranydict]]' = {
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': _call_measures},
         {'name': 'auth_failures', 'kind': Kind_Number, 'rules': ['Auth_Failures'],
             'default': 'auth_failure_threshold', 'is_percent': False},
         {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
@@ -188,7 +199,7 @@ type_fields:'dict[str, list[stranydict]]' = {
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': _call_measures},
         {'name': 'auth_failures', 'kind': Kind_Number, 'rules': ['Auth_Failures'],
             'default': 'auth_failure_threshold', 'is_percent': False},
         {'name': 'max_call_time', 'kind': Kind_Number, 'rules': ['Slow_Calls'],
@@ -203,7 +214,7 @@ type_fields:'dict[str, list[stranydict]]' = {
         {'name': 'error_failures', 'kind': Kind_Number, 'rules': ['Transfer_Failures_Error', 'Transfer_Failures'],
             'default': 'error_failure_count', 'is_percent': False},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Transfer_Failures', 'Transfer_Failures_Error'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': _file_transfer_measures},
         {'name': 'arrival_overdue', 'kind': Kind_Number, 'rules': ['Arrival_Overdue'],
             'default': 'arrival_overdue_multiplier', 'is_percent': False},
         {'name': 'test_transfers', 'kind': Kind_Toggle, 'rules': ['Test_Transfer_Failing']},
@@ -213,7 +224,7 @@ type_fields:'dict[str, list[stranydict]]' = {
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Job_Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Job_Error_Rate'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': _call_measures},
         {'name': 'overdue_multiplier', 'kind': Kind_Number, 'rules': ['Missed_Run'],
             'default': 'overdue_multiplier', 'is_percent': False},
         {'name': 'start_delay', 'kind': Kind_Number, 'rules': ['Start_Delay'],
@@ -226,26 +237,26 @@ type_fields:'dict[str, list[stranydict]]' = {
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Channel_Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Channel_Error_Rate'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Error_Rate]},
         {'name': 'server_errors', 'kind': Kind_Number, 'rules': ['Server_Errors'],
             'default': 'server_error_rate_threshold', 'is_percent': True},
         {'name': 'server_errors_window', 'kind': Kind_Duration, 'rules': ['Server_Errors'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Server_Errors]},
         {'name': 'max_latency', 'kind': Kind_Number, 'rules': ['Slow_Responses'],
             'default': 'max_avg_duration_ms', 'is_percent': False},
         {'name': 'latency_window', 'kind': Kind_Duration, 'rules': ['Slow_Responses'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Latency]},
         {'name': 'auth_failures', 'kind': Kind_Number, 'rules': ['Auth_Failures'],
             'default': 'auth_failure_threshold', 'is_percent': False},
         {'name': 'auth_failures_window', 'kind': Kind_Duration, 'rules': ['Auth_Failures'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Auth_Failures]},
         {'name': 'client_errors', 'kind': Kind_Number, 'rules': ['Client_Errors'],
             'default': 'client_error_threshold', 'is_percent': False},
         {'name': 'client_errors_window', 'kind': Kind_Duration, 'rules': ['Client_Errors'],
-            'default': Window_Seconds_Default, 'is_percent': False},
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Client_Errors]},
         {'name': 'traffic_expected', 'kind': Kind_Toggle, 'rules': ['Channel_Silent']},
         {'name': Silence_Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Channel_Silent'],
-            'default': 'silence_seconds', 'is_percent': False},
+            'default': 'silence_seconds', 'is_percent': False, 'measures': [Measure_Silence]},
         {'name': Silence_Slots_Field_Name, 'kind': Kind_Time_Slots},
         {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
@@ -421,6 +432,33 @@ def read_window_seconds(documents:'stranydict', type_name:'str') -> 'int | None'
         if field['kind'] == Kind_Duration:
             out = read_number(documents, ruleset_name, field)
             break
+
+    return out
+
+# ################################################################################################################################
+
+def read_window_seconds_by_measure(documents:'stranydict', type_name:'str') -> 'strintdict':
+    """ The window of each measure one type's duration fields drive, in seconds - a field whose rule
+    is gone contributes nothing, so a type with no window rule at all reads as an empty dict.
+    """
+
+    # Our response to produce
+    out:'strintdict' = {}
+
+    ruleset_name = type_to_ruleset[type_name]
+
+    for field in type_fields[type_name]:
+
+        if field['kind'] != Kind_Duration:
+            continue
+
+        window_seconds = read_number(documents, ruleset_name, field)
+
+        if window_seconds is None:
+            continue
+
+        for measure in field[Measures_Key]:
+            out[measure] = int(window_seconds)
 
     return out
 

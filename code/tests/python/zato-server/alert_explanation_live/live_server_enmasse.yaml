@@ -1,0 +1,9 @@
+# The enmasse document the live explain suite's quickstart server imports before it starts -
+# the LLM connection the explanations go through, pointed at the Ollama container.
+
+llm:
+  - name: "{{llm_conn_name}}"
+    address: "{{llm_address}}"
+    model: "{{llm_model}}"
+    api_key: "not-needed-for-ollama"
+    timeout: 300

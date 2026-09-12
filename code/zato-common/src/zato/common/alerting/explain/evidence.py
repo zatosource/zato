@@ -19,6 +19,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 # Zato
+from zato.common.alerting.collectors.common import response_event_type_by_source, Window_Seconds_By_Measure_Key
 from zato.common.audit_log.common import get_source_label
 from zato.common.util.api import pluralize
 
@@ -52,9 +53,20 @@ Max_Files_Per_Group = 6
 # How long a single error text may be when it is first read - anything past this is noise.
 Error_Text_Max_Chars = 2000
 
-# What joins the head and the tail of a trimmed text, and what a group says when its files were shortened.
+# What joins the head and the tail of a trimmed text.
 _trim_marker = ' ... '
-_files_marker = '...'
+
+# What a group's names are called - a file transfer's rows name files, a channel's rows name the services
+# that answered and the callers that asked.
+Label_File = 'File'
+Label_Files = 'Files'
+Label_Service = 'Service'
+Label_Services = 'Services'
+Label_Caller = 'Caller'
+Label_Callers = 'Callers'
+
+# What joins a channel row's status line and its error text into one group key.
+_status_separator = ' - '
 
 # The section headings, in the order the skill reads them.
 Heading_Evidence = '# Evidence'
@@ -70,9 +82,18 @@ _failures_intro = 'Newest first. Identical errors are grouped, the count says ho
 _no_failures = 'No failed events in the window.'
 
 # The fact's keys that name the object or the window rather than measure anything.
-_non_measure_keys = ('source', 'object_name', 'window_seconds', 'last_error_event_id', 'is_resubmittable')
+_non_measure_keys = ('source', 'object_name', 'window_seconds', 'last_error_event_id', 'is_resubmittable',
+    Window_Seconds_By_Measure_Key)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def is_channel_source(source:'str') -> 'bool':
+    """ Whether a source's rows are the calls a channel received - their names are services and callers, not files.
+    """
+    out = source in response_event_type_by_source
+    return out
+
 # ################################################################################################################################
 
 def _error_text(row:'stranydict') -> 'str':
@@ -95,16 +116,49 @@ def _error_text(row:'stranydict') -> 'str':
 
 # ################################################################################################################################
 
-def group_failures(rows:'dictlist') -> 'dictlist':
+def _channel_error_text(row:'stranydict') -> 'str':
+    """ What a channel's row says went wrong - its status line first, because a 401 and a 500 with one
+    text are two different failures, and its error text after it when it has one of its own.
+    """
+    out = _error_text(row)
+
+    if row['status']:
+        if out != row['status']:
+            out = row['status'] + _status_separator + out
+
+    return out
+
+# ################################################################################################################################
+
+def _add_once(names:'strlist', name:'str') -> 'None':
+    """ Adds a name to a list unless it is empty or already there.
+    """
+    if not name:
+        return
+
+    if name in names:
+        return
+
+    names.append(name)
+
+# ################################################################################################################################
+
+def group_failures(rows:'dictlist', source:'str'='') -> 'dictlist':
     """ The rows grouped by identical error text - each group with its count, the time of its
     first and its last row and the files or endpoints it touched, the groups in the order of
-    their newest rows, newest first, which is the order the rows arrive in.
+    their newest rows, newest first, which is the order the rows arrive in. A channel's rows
+    are grouped by their status line and error text together, and each group also collects
+    the callers whose calls it holds, each caller once.
     """
     by_text:'dict[str, stranydict]' = {}
+    is_channel = is_channel_source(source)
 
     for row in rows:
 
-        text = _error_text(row)
+        if is_channel:
+            text = _channel_error_text(row)
+        else:
+            text = _error_text(row)
 
         if text not in by_text:
             by_text[text] = {
@@ -114,6 +168,7 @@ def group_failures(rows:'dictlist') -> 'dictlist':
                 'last_iso': row['event_time_iso'],
                 'files': [],
                 'files_total': 0,
+                'callers': [],
             }
 
         group = by_text[text]
@@ -122,7 +177,13 @@ def group_failures(rows:'dictlist') -> 'dictlist':
         # The rows arrive newest first, so the first row seen is the newest and every later one is older
         group['first_iso'] = row['event_time_iso']
 
-        if row['endpoint']:
+        # A file is named each time it failed, a service and a caller once each
+        if is_channel:
+            _add_once(group['files'], row['endpoint'])
+            _add_once(group['callers'], row['ext_client_id'])
+            group['files_total'] = len(group['files'])
+
+        elif row['endpoint']:
             group['files'].append(row['endpoint'])
             group['files_total'] += 1
 
@@ -144,27 +205,27 @@ def _trim_text(text:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _format_files(files:'strlist', files_total:'int', is_collapsed:'bool') -> 'str':
-    """ The files of a group as one line - all of them when there are few, the first and
+def _format_names(names:'strlist', names_total:'int', is_collapsed:'bool', one:'str', many:'str') -> 'str':
+    """ The names of a group as one line - all of them when there are few, the first and
     the last ones with the count when there are many or when the budget said so.
     """
-    if not files:
+    if not names:
         return ''
 
-    if is_collapsed or len(files) > Max_Files_Per_Group:
-        newest = files[0]
-        oldest = files[-1]
-        out = f'File: {newest} ... File: {oldest} ({files_total} in all)'
+    if is_collapsed or len(names) > Max_Files_Per_Group:
+        newest = names[0]
+        oldest = names[-1]
+        out = f'{one}: {newest} ... {one}: {oldest} ({names_total} in all)'
         return out
 
-    label = 'File' if len(files) == 1 else 'Files'
-    out = f'{label}: ' + ', '.join(files)
+    label = one if len(names) == 1 else many
+    out = f'{label}: ' + ', '.join(names)
 
     return out
 
 # ################################################################################################################################
 
-def _render_group(number:'int', group:'stranydict', is_collapsed:'bool', is_trimmed:'bool') -> 'str':
+def _render_group(number:'int', group:'stranydict', is_collapsed:'bool', is_trimmed:'bool', is_channel:'bool') -> 'str':
     """ One group of the Failures section.
     """
     text = group['text']
@@ -179,20 +240,36 @@ def _render_group(number:'int', group:'stranydict', is_collapsed:'bool', is_trim
     else:
         lines.append(f'   Count: {group["count"]}, first {group["first_iso"]}, last {group["last_iso"]}')
 
-    files_line = _format_files(group['files'], group['files_total'], is_collapsed)
+    if is_channel:
+        names_line = _format_names(group['files'], group['files_total'], is_collapsed, Label_Service, Label_Services)
+        callers_line = _format_names(group['callers'], len(group['callers']), is_collapsed, Label_Caller, Label_Callers)
+    else:
+        names_line = _format_names(group['files'], group['files_total'], is_collapsed, Label_File, Label_Files)
+        callers_line = ''
 
-    if files_line:
-        lines.append('   ' + files_line)
+    if names_line:
+        lines.append('   ' + names_line)
+
+    if callers_line:
+        lines.append('   ' + callers_line)
 
     out = '\n'.join(lines)
     return out
 
 # ################################################################################################################################
 
-def render_failures(groups:'dictlist', *, is_collapsed:'bool'=False, is_trimmed:'bool'=False, left_out:'str'='') -> 'str':
+def render_failures(
+    groups:'dictlist',
+    *,
+    source:'str' = '',
+    is_collapsed:'bool' = False,
+    is_trimmed:'bool' = False,
+    left_out:'str' = '',
+    ) -> 'str':
     """ The Failures section - the intro, the groups and the line saying what was left out, if anything was.
     """
     lines = [Heading_Failures, '']
+    is_channel = is_channel_source(source)
 
     if not groups:
         lines.append(_no_failures)
@@ -201,7 +278,7 @@ def render_failures(groups:'dictlist', *, is_collapsed:'bool'=False, is_trimmed:
         lines.append('')
 
         for index, group in enumerate(groups, 1):
-            lines.append(_render_group(index, group, is_collapsed, is_trimmed))
+            lines.append(_render_group(index, group, is_collapsed, is_trimmed, is_channel))
             lines.append('')
 
         # The blank line after the last group is what the left-out line follows, so it stays
@@ -215,7 +292,7 @@ def render_failures(groups:'dictlist', *, is_collapsed:'bool'=False, is_trimmed:
 
 # ################################################################################################################################
 
-def fit_to_budget(groups:'dictlist', budget_chars:'int') -> 'str':
+def fit_to_budget(groups:'dictlist', budget_chars:'int', source:'str'='') -> 'str':
     """ The Failures section fitted to the given number of characters - the oldest groups go
     first, then the file lists shrink to their first and last entries, then the error texts
     are trimmed to their heads and tails, and a trailing line says what was left out.
@@ -227,8 +304,8 @@ def fit_to_budget(groups:'dictlist', budget_chars:'int') -> 'str':
 
     while True:
 
-        left_out = _left_out_line(dropped_count, is_collapsed)
-        section = render_failures(kept, is_collapsed=is_collapsed, is_trimmed=is_trimmed, left_out=left_out)
+        left_out = _left_out_line(dropped_count, is_collapsed, source)
+        section = render_failures(kept, source=source, is_collapsed=is_collapsed, is_trimmed=is_trimmed, left_out=left_out)
 
         if len(section) <= budget_chars:
             return section
@@ -254,7 +331,7 @@ def fit_to_budget(groups:'dictlist', budget_chars:'int') -> 'str':
 
 # ################################################################################################################################
 
-def _left_out_line(dropped_count:'int', is_collapsed:'bool') -> 'str':
+def _left_out_line(dropped_count:'int', is_collapsed:'bool', source:'str'='') -> 'str':
     """ What the Failures section says about what it does not show.
     """
     parts:'strlist' = []
@@ -263,7 +340,10 @@ def _left_out_line(dropped_count:'int', is_collapsed:'bool') -> 'str':
         parts.append(f'{pluralize(dropped_count, "older group")} left out to fit')
 
     if is_collapsed:
-        parts.append('file lists shortened to their first and last entries')
+        if is_channel_source(source):
+            parts.append('service and caller lists shortened to their first and last entries')
+        else:
+            parts.append('file lists shortened to their first and last entries')
 
     out = ', '.join(parts)
 
@@ -324,6 +404,16 @@ def render_alert(alert:'stranydict', now:'datetime') -> 'str':
         lines.append(f'Window: {window_seconds} seconds, from {window_start.isoformat()} to {now.isoformat()}')
     else:
         lines.append('Window: none, the measure is a reading taken at the time of the sweep')
+
+    # A measure counted over a window of its own says so
+    own_window_parts:'strlist' = []
+
+    for measure, measure_window_seconds in fact[Window_Seconds_By_Measure_Key].items():
+        if measure_window_seconds != window_seconds:
+            own_window_parts.append(f'{measure} = {measure_window_seconds} seconds')
+
+    if own_window_parts:
+        lines.append('Windows of their own: ' + ', '.join(own_window_parts))
 
     # The other numbers the sweep took - only the ones that say something
     also_parts:'strlist' = []
@@ -437,7 +527,7 @@ def build_evidence_document(
     for part in fixed_parts:
         fixed_length += len(part) + 2
 
-    failures_section = fit_to_budget(groups, Evidence_Budget_Chars - fixed_length)
+    failures_section = fit_to_budget(groups, Evidence_Budget_Chars - fixed_length, alert['source'])
 
     parts = [Heading_Evidence, alert_section, object_section, failures_section, baseline_section]
 

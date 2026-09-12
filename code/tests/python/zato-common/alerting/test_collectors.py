@@ -17,7 +17,8 @@ from sqlalchemy import update
 from zato.common.alerting.collectors import collect_auth_failure_facts, collect_certificate_facts, \
     collect_consecutive_failure_facts, collect_error_rate_facts, collect_facts, collect_feed_silent_facts, \
     collect_file_transfer_facts, collect_health_facts, collect_latency_facts, collect_outstanding_facts, \
-    collect_scheduler_facts, collect_test_transfer_facts, new_fact, Attr_Days_Left, Health_Window_Seconds
+    collect_scheduler_facts, collect_test_transfer_facts, new_fact, Attr_Days_Left, Health_Window_Seconds, \
+    Measure_Error_Rate, Measure_File_Runs
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.file_transfer_run import Run_Status_Failed
 from zato.common.audit_log.scheduler import Attr_Delay_Ms
@@ -811,7 +812,8 @@ class TestFileTransferArrivalFacts:
         _backdate(event_id, now - timedelta(seconds=900))
 
         facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now,
-            window_seconds_by_source={AuditSource.File_Outgoing: 86400}, arrival_windows={self._schedule_name: 300})
+            window_seconds_by_source={AuditSource.File_Outgoing: {Measure_File_Runs: 86400}},
+            arrival_windows={self._schedule_name: 300})
 
         by_name = {fact['object_name']: fact for fact in facts}
 
@@ -835,7 +837,7 @@ class TestPerSourceWindows:
         _backdate(event_id, now - timedelta(seconds=400))
 
         facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now,
-            window_seconds=300, window_seconds_by_source={AuditSource.File_Outgoing: 600})
+            window_seconds=300, window_seconds_by_source={AuditSource.File_Outgoing: {Measure_Error_Rate: 600}})
 
         by_name = {fact['object_name']: fact for fact in facts}
 
@@ -950,10 +952,11 @@ class TestPerSourceWindows:
             _backdate(event_id, now - timedelta(seconds=1200))
 
         # The source is measured over ten minutes, one connection over an hour of its own
-        window_seconds_by_object = {AuditSource.File_Outgoing: {'sftp.own-window': 3600}}
+        window_seconds_by_object = {AuditSource.File_Outgoing: {'sftp.own-window': {Measure_Error_Rate: 3600}}}
 
         facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now, window_seconds=300,
-            window_seconds_by_source={AuditSource.File_Outgoing: 600}, window_seconds_by_object=window_seconds_by_object)
+            window_seconds_by_source={AuditSource.File_Outgoing: {Measure_Error_Rate: 600}},
+            window_seconds_by_object=window_seconds_by_object)
 
         by_name = {fact['object_name']: fact for fact in facts}
 

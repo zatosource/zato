@@ -193,6 +193,8 @@ def alerting_vocabulary() -> 'anydict':
         _term('consecutive_failures',   TermType.Number, 'how many of the newest outcomes are errors, without a break'),
         _term('avg_duration_ms',        TermType.Number, 'the average duration of completed calls within the window'),
         _term('auth_failure_count',     TermType.Number, 'how many authentication failures the window holds'),
+        _term('client_error_count',     TermType.Number, 'how many responses of a channel had a 4xx status other than 401 or 403'),
+        _term('server_error_rate',      TermType.Number, 'the share of responses of a channel that had a 5xx status'),
         _term('cert_days_left',         TermType.Number, 'how many days the TLS certificate has left, zero when unmeasured'),
         _term('health_state',           TermType.Choice, 'the health state the remote service reports about itself',
             values=_health_states),

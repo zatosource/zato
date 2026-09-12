@@ -12,6 +12,10 @@ from time import time
 from traceback import format_exc
 
 # Zato
+from zato.common.alerting import config_map
+from zato.common.alerting.object_config import alert_type_channels, apply_defaults, get_defaults, get_field_kinds, \
+     get_field_names, is_alert_channel, storage_name, Kind_Active
+from zato.common.alerting.time_slots import validate_silence_slots
 from zato.common.api import AS2, AS4, CONNECTION, Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, query_parameters, \
      SCHEDULER, SEC_DEF_TYPE, SchedulerLink, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING, SECURITY
@@ -126,6 +130,35 @@ _as2_input = tuple(_as2_fields)
 # The secret fields of AS2 and AS4 objects, i.e. their private keys and passwords - they are
 # stored encrypted and they are never returned to any caller.
 _pem_secret_fields = AS2.Secret_Fields + AS4.Secret_Fields
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The alert settings a REST channel carries, under their storage names - the switches as booleans,
+# the numbers and the durations as integers, the rest as text, each optional so that a caller
+# that knows nothing of them sends nothing.
+_alert_toggle_kinds = (Kind_Active, config_map.Kind_Toggle, config_map.Kind_Ruleset_Toggle)
+_alert_int_kinds = (config_map.Kind_Number, config_map.Kind_Duration)
+
+_alert_fields = []
+_alert_storage_names = []
+
+for _alert_field_name, _alert_field_kind in get_field_kinds(alert_type_channels).items():
+
+    _alert_storage_name = storage_name(_alert_field_name)
+    _alert_storage_names.append(_alert_storage_name)
+
+    if _alert_field_kind in _alert_toggle_kinds:
+        _alert_fields.append(Boolean('-' + _alert_storage_name))
+    elif _alert_field_kind in _alert_int_kinds:
+        _alert_fields.append(Int('-' + _alert_storage_name))
+    else:
+        _alert_fields.append('-' + _alert_storage_name)
+
+_alert_input = tuple(_alert_fields)
+
+# The one alert setting that is validated beyond its type - the silence slots travel as a JSON list in a string
+_alert_silence_slots_name = storage_name(config_map.Silence_Slots_Field_Name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -643,7 +676,8 @@ class GetList(_BaseGet):
         *_invocation_input, \
         *_retry_input, \
         *_as4_input, \
-        *_as2_input
+        *_as2_input, \
+        *_alert_input
 
     def get_data(self, session):
 
@@ -701,6 +735,10 @@ class GetList(_BaseGet):
             for name in _pem_secret_fields:
                 _ = item.pop(name, None)
 
+            # .. a REST channel created before a setting existed reads the same as one created after it ..
+            if is_alert_channel(item['connection'], item['transport']):
+                apply_defaults(alert_type_channels, item)
+
             # .. if we are here, it means that this element is to be returned ..
             out.append(item)
 
@@ -740,6 +778,38 @@ class GetList(_BaseGet):
 # ################################################################################################################################
 
 class _CreateEdit(AdminService, _HTTPSOAPService):
+
+# ################################################################################################################################
+
+    def _prepare_alert_settings(self, input:'Bunch', skip_opaque:'anylist', stored:'strdict') -> 'None':
+        """ The alert settings of the object being written - a REST channel has every one of them, the ones
+        the caller sent as sent, the rest as the channel already stores them or, on a new channel, at their
+        defaults. Any other object has none and the names are skipped when the opaque attributes are stored.
+        """
+        if not is_alert_channel(input.connection, input.transport):
+            skip_opaque.extend(_alert_storage_names)
+            return
+
+        defaults = get_defaults(alert_type_channels)
+
+        for name in get_field_names(alert_type_channels):
+            key = storage_name(name)
+
+            # A setting the caller sent stands ..
+            if input.get(key) is not None:
+                continue
+
+            # .. one it did not send is what the channel already stores ..
+            if key in stored:
+                input[key] = stored[key]
+
+            # .. or the default when the channel stores nothing yet.
+            else:
+                input[key] = defaults[name]
+
+        # A slot without both ends, a bad HH:MM or a silence below the least allowed is refused here,
+        # before anything is written
+        _ = validate_silence_slots(input[_alert_silence_slots_name])
 
 # ################################################################################################################################
 
@@ -1015,7 +1085,8 @@ class Create(_CreateEdit):
         *_invocation_input, \
         *_retry_input, \
         *_as4_input, \
-        *_as2_input
+        *_as2_input, \
+        *_alert_input
     output = 'id', 'name', '-url_path'
 
     def handle(self):
@@ -1054,6 +1125,9 @@ class Create(_CreateEdit):
         input.data_format = input.get('data_format') or ''
 
         input.data_encoding = input.get('data_encoding') or 'utf-8'
+
+        # A new REST channel starts with every alert setting the caller did not send at its default
+        self._prepare_alert_settings(input, skip_opaque, {})
 
         # AS4 private keys are stored encrypted
         self._encrypt_as4_secrets(input)
@@ -1237,7 +1311,8 @@ class Edit(_CreateEdit):
         *_invocation_input, \
         *_retry_input, \
         *_as4_input, \
-        *_as2_input
+        *_as2_input, \
+        *_alert_input
     output = '-id', '-name'
 
     def handle(self):
@@ -1383,6 +1458,9 @@ class Edit(_CreateEdit):
                 # otherwise the config event broadcast below would erase it from the runtime channel data.
                 if response_cache := opaque.get('response_cache'):
                     input.response_cache = response_cache
+
+                # A REST channel edited by a caller that sent no alert settings keeps the ones it has
+                self._prepare_alert_settings(input, skip_opaque, opaque)
 
                 # Secrets are never returned to the Dashboard, so an edit form cannot send them back.
                 for name in _pem_secret_fields:

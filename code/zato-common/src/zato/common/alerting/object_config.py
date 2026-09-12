@@ -18,7 +18,7 @@ from __future__ import annotations
 # Zato
 from zato.common.alerting import config_map
 from zato.common.alerting.seed.api import build_ruleset_document, default_rulesets
-from zato.common.api import GENERIC
+from zato.common.api import CONNECTION, GENERIC, URL_TYPE
 from zato.common.rule_engine.sql.constants import Documents_Key
 
 # ################################################################################################################################
@@ -78,6 +78,22 @@ conn_type_to_alert_type:'strstrdict' = {
     GENERIC.CONNECTION.TYPE.OUTCONN_FTP:  alert_type_file_transfer,
     GENERIC.CONNECTION.TYPE.OUTCONN_SMB:  alert_type_file_transfer,
 }
+
+# The HTTPSOAP rows that carry channel alert settings - REST channels alone
+Alert_Channel_Connection = CONNECTION.CHANNEL
+Alert_Channel_Transport  = URL_TYPE.PLAIN_HTTP
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def is_alert_channel(connection:'str', transport:'str') -> 'bool':
+    """ Whether an HTTPSOAP row of the given connection and transport carries channel alert settings.
+    """
+    if connection != Alert_Channel_Connection:
+        return False
+
+    out = transport == Alert_Channel_Transport
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

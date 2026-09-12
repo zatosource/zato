@@ -8,20 +8,24 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import contextmanager
+from datetime import datetime
 
 # SQLAlchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
-from zato.common.alerting.object_config import alert_type_file_transfer, encode_email_connection, Email_Conn_Type_IMAP, \
-    get_defaults, to_storage
+from zato.common.alerting.collectors.common import Measure_Auth_Failures, Measure_Error_Rate, Measure_File_Runs, \
+    Measure_Latency
+from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, encode_email_connection, \
+    Email_Conn_Type_IMAP, get_defaults, to_storage
 from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
-    get_llm_connection, get_muted_rule_names, is_object_active, load_object_settings
-from zato.common.api import FileTransfer, GENERIC
+    get_llm_connection, get_muted_rule_names, get_names_with_toggle, get_silence_expected_names, is_object_active, \
+    load_object_settings
+from zato.common.api import CONNECTION, FileTransfer, GENERIC, URL_TYPE
 from zato.common.audit_log.api import AuditSource
 from zato.common.json_internal import dumps
-from zato.common.odb.model import Base, Cluster, GenericConn
+from zato.common.odb.model import Base, Cluster, GenericConn, HTTPSOAP
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -34,6 +38,12 @@ if 0:
     any_ = any_
     sessiongen = Iterator[SASession]
     stranydict = stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The moment the slot tests resolve against - ten in the morning UTC
+_now = datetime(2026, 9, 12, 10, 0, 0)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,6 +65,12 @@ _other_schedule_name = 'Weekly summary'
 # The email connection the SFTP connection's alerts leave through
 _imap_name = 'Ops mailbox'
 
+# The channels the tests store - a REST channel with settings, one without, a SOAP channel and an outgoing REST connection
+_rest_channel_name = 'orders.api'
+_plain_rest_channel_name = 'orders.status'
+_soap_channel_name = 'orders.soap'
+_rest_outgoing_name = 'crm.api'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -67,6 +83,7 @@ def _session() -> 'sessiongen':
     tables = [
         Cluster.__table__,
         GenericConn.__table__,
+        HTTPSOAP.__table__,
     ]
     Base.metadata.create_all(engine, tables=tables)
 
@@ -102,6 +119,32 @@ def _add_connection(session:'SASession', name:'str', conn_type:'str', cluster_id
 
 # ################################################################################################################################
 
+def _add_http_soap(
+    session:'SASession',
+    name:'str',
+    connection:'str',
+    transport:'str',
+    cluster_id:'int',
+    opaque:'stranydict',
+    ) -> 'None':
+    """ Stores one HTTPSOAP row with the given opaque attributes.
+    """
+    item = cast_('any_', HTTPSOAP())
+    item.name = name
+    item.is_active = True
+    item.is_internal = False
+    item.connection = connection
+    item.transport = transport
+    item.url_path = '/' + name
+    item.soap_action = ''
+    item.cluster = session.query(Cluster).filter(Cluster.id==cluster_id).one()
+    item.opaque1 = dumps(opaque)
+
+    session.add(item)
+    session.commit()
+
+# ################################################################################################################################
+
 def _new_schedule(name:'str') -> 'stranydict':
     """ The fields a stored schedule always carries.
     """
@@ -122,7 +165,7 @@ class TestLoadObjectSettings:
         with _session() as session:
             settings = load_object_settings(session, _cluster_id)
 
-        assert settings == {alert_type_file_transfer: {}}
+        assert settings == {alert_type_file_transfer: {}, alert_type_channels: {}}
 
 # ################################################################################################################################
 
@@ -181,6 +224,147 @@ class TestLoadObjectSettings:
             settings = load_object_settings(session, _cluster_id)
 
         assert list(settings[alert_type_file_transfer]) == [_sftp_name]
+
+# ################################################################################################################################
+
+    def test_rest_channels_load_under_channels(self) -> 'None':
+        stored = to_storage(alert_type_channels, {'consecutive_failures': 5, 'traffic_expected': True})
+
+        with _session() as session:
+            _add_http_soap(session, _rest_channel_name, CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, _cluster_id, stored)
+            _add_http_soap(session, _plain_rest_channel_name, CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, _cluster_id, {})
+            _add_http_soap(session, _soap_channel_name, CONNECTION.CHANNEL, URL_TYPE.SOAP, _cluster_id, {})
+            _add_http_soap(session, _rest_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, _cluster_id, {})
+            _add_http_soap(session, 'elsewhere.api', CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, _other_cluster_id, {})
+            settings = load_object_settings(session, _cluster_id)
+
+        by_channel = settings[alert_type_channels]
+
+        assert sorted(by_channel) == sorted([_rest_channel_name, _plain_rest_channel_name])
+
+        assert by_channel[_rest_channel_name]['consecutive_failures'] == 5
+        assert by_channel[_rest_channel_name]['traffic_expected'] is True
+        assert by_channel[_rest_channel_name]['auth_failures'] == 10
+
+        assert by_channel[_plain_rest_channel_name] == get_defaults(alert_type_channels)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestChannelSettings:
+
+    def test_a_channel_with_alerts_off_is_not_active(self) -> 'None':
+        values = get_defaults(alert_type_channels)
+        values['is_active'] = False
+
+        assert is_object_active(values) is False
+
+# ################################################################################################################################
+
+    def test_a_channels_numbers_stand_in_for_the_rule_defaults(self) -> 'None':
+        values = get_defaults(alert_type_channels)
+        values['consecutive_failures'] = 5
+        values['server_errors'] = 20
+        values['auth_failures_window'] = 3600
+
+        rule_values = build_rule_values(alert_type_channels, values, _now)
+
+        assert rule_values['max_consecutive_failures'] == 5
+        assert rule_values['server_error_rate_threshold'] == 0.2
+        assert rule_values['silence_seconds'] == 3600
+        assert 'traffic_expected' not in rule_values
+        assert 'silence_slots' not in rule_values
+
+        # Every window of a channel is a window_seconds - the error rate's speaks when no rule is named,
+        # the one of the rule being matched otherwise
+        assert rule_values['window_seconds'] == 300
+        assert build_rule_values(alert_type_channels, values, _now, 'Auth_Failures')['window_seconds'] == 3600
+        assert build_rule_values(alert_type_channels, values, _now, 'Server_Errors')['window_seconds'] == 300
+
+# ################################################################################################################################
+
+    def test_traffic_expected_off_mutes_channel_silent(self) -> 'None':
+        values = get_defaults(alert_type_channels)
+
+        assert values['traffic_expected'] is False
+        assert get_muted_rule_names(alert_type_channels, values, _now) == ['Channel_Silent']
+
+        values['traffic_expected'] = True
+        assert get_muted_rule_names(alert_type_channels, values, _now) == []
+
+# ################################################################################################################################
+
+    def test_the_slot_of_the_moment_decides_the_silence(self) -> 'None':
+        values = get_defaults(alert_type_channels)
+        values['traffic_expected'] = False
+        values['silence_window'] = 3600
+
+        # Business hours expect a request every fifteen minutes, the all-day slot expects nothing
+        values['silence_slots'] = dumps([
+            {'time_from': '09:00', 'time_to': '17:00', 'is_on': True, 'silence_seconds': 900},
+        ])
+
+        assert get_muted_rule_names(alert_type_channels, values, _now) == []
+        assert build_rule_values(alert_type_channels, values, _now)['silence_seconds'] == 900
+
+        night = datetime(2026, 9, 12, 23, 0, 0)
+
+        assert get_muted_rule_names(alert_type_channels, values, night) == ['Channel_Silent']
+        assert build_rule_values(alert_type_channels, values, night)['silence_seconds'] == 3600
+
+# ################################################################################################################################
+
+    def test_a_slot_switched_off_mutes_the_all_day_switch(self) -> 'None':
+        values = get_defaults(alert_type_channels)
+        values['traffic_expected'] = True
+        values['silence_slots'] = dumps([
+            {'time_from': '09:00', 'time_to': '17:00', 'is_on': False, 'silence_seconds': 900},
+        ])
+
+        assert get_muted_rule_names(alert_type_channels, values, _now) == ['Channel_Silent']
+
+# ################################################################################################################################
+
+    def test_the_channels_expecting_traffic(self) -> 'None':
+        expecting = get_defaults(alert_type_channels)
+        expecting['traffic_expected'] = True
+
+        quiet = get_defaults(alert_type_channels)
+
+        off = get_defaults(alert_type_channels)
+        off['traffic_expected'] = True
+        off['is_active'] = False
+
+        by_object = {_rest_channel_name: expecting, _plain_rest_channel_name: quiet, _soap_channel_name: off}
+        object_settings = {alert_type_channels: by_object}
+
+        assert get_names_with_toggle(by_object, 'traffic_expected') == {_rest_channel_name, _soap_channel_name}
+        assert get_silence_expected_names(object_settings, _now) == {_rest_channel_name}
+        assert get_silence_expected_names({alert_type_file_transfer: {}}, _now) == set()
+
+# ################################################################################################################################
+
+    def test_a_channels_own_windows_apply_to_rest_channels_alone(self) -> 'None':
+        values = get_defaults(alert_type_channels)
+        values['auth_failures_window'] = 3600
+
+        object_settings = {alert_type_channels: {_rest_channel_name: values}}
+
+        source_windows = {
+            Measure_Error_Rate: 300,
+            Measure_Auth_Failures: 300,
+            Measure_Latency: 300,
+        }
+        window_seconds_by_source = {AuditSource.REST_Channel: source_windows, AuditSource.SOAP_Channel: source_windows}
+
+        out = build_window_seconds_by_object(object_settings, window_seconds_by_source)
+
+        assert out[AuditSource.REST_Channel][_rest_channel_name][Measure_Auth_Failures] == 3600
+        assert Measure_Error_Rate not in out[AuditSource.REST_Channel][_rest_channel_name]
+        assert Measure_Latency not in out[AuditSource.REST_Channel][_rest_channel_name]
+
+        # The SOAP channel source has no object of its own to measure again over the same window
+        assert AuditSource.SOAP_Channel not in out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -281,11 +465,13 @@ class TestWindowByObject:
         own['window'] = 600
 
         object_settings = {alert_type_file_transfer: {_sftp_name: same, _ftp_name: own}}
-        window_seconds_by_source = {AuditSource.File_Outgoing: 86400}
+        source_windows = {Measure_Error_Rate: 86400, Measure_Latency: 86400, Measure_File_Runs: 86400}
+        window_seconds_by_source = {AuditSource.File_Outgoing: source_windows}
 
         out = build_window_seconds_by_object(object_settings, window_seconds_by_source)
 
-        assert out == {AuditSource.File_Outgoing: {_ftp_name: 600}}
+        own_windows = {Measure_Error_Rate: 600, Measure_Latency: 600, Measure_File_Runs: 600}
+        assert out == {AuditSource.File_Outgoing: {_ftp_name: own_windows}}
 
 # ################################################################################################################################
 
@@ -295,12 +481,14 @@ class TestWindowByObject:
 
         out = build_window_seconds_by_object(object_settings, {})
 
-        assert out == {AuditSource.File_Outgoing: {_sftp_name: 86400}}
+        own_windows = {Measure_Error_Rate: 86400, Measure_Latency: 86400, Measure_File_Runs: 86400}
+        assert out == {AuditSource.File_Outgoing: {_sftp_name: own_windows}}
 
 # ################################################################################################################################
 
     def test_no_settings_no_windows(self) -> 'None':
-        out = build_window_seconds_by_object({alert_type_file_transfer: {}}, {AuditSource.File_Outgoing: 86400})
+        source_windows = {Measure_Error_Rate: 86400, Measure_Latency: 86400, Measure_File_Runs: 86400}
+        out = build_window_seconds_by_object({alert_type_file_transfer: {}}, {AuditSource.File_Outgoing: source_windows})
         assert out == {}
 
 # ################################################################################################################################

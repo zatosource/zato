@@ -27,6 +27,7 @@ $(document).ready(function() {
     if($.fn.zato.http_soap.is_rest_channel()) {
         $.fn.zato.alerts_tab.init({config_id: 'http-soap-alerts-tab-config'});
         $.fn.zato.live_form_updates.register('create', $.fn.zato.alerts_tab.live_configs(''));
+        $.fn.zato.live_form_updates.register('edit', $.fn.zato.alerts_tab.live_configs('edit-'));
     }
 
     $('#data-table').tablesorter();
@@ -168,7 +169,7 @@ $.fn.zato.http_soap.tab_labels = {
     health_check: 'Health check'
 };
 
-// The tabs of a REST channel's create form
+// The tabs of a REST channel's create and edit forms
 $.fn.zato.http_soap.channelTabLabels = function() {
     var out = {
         main:   'Main',
@@ -188,10 +189,8 @@ $.fn.zato.http_soap.reset_tabs = function(action) {
         tab_labels = $.fn.zato.http_soap.tab_labels;
     }
     else if($.fn.zato.http_soap.is_rest_channel()) {
-        if(!is_edit) {
-            default_tab = 'main';
-            tab_labels = $.fn.zato.http_soap.channelTabLabels();
-        }
+        default_tab = 'main';
+        tab_labels = $.fn.zato.http_soap.channelTabLabels();
     }
 
     if(default_tab === null) {
@@ -543,6 +542,7 @@ $.fn.zato.http_soap.init_how_it_works = function(action) {
 
     var transport = $('input[name="transport"]').val();
     var descriptions;
+    var fieldSelector = 'table.form-data tr';
 
     if(transport == 'soap') {
         descriptions = $.fn.zato.http_soap.field_descriptions;
@@ -552,6 +552,12 @@ $.fn.zato.http_soap.init_how_it_works = function(action) {
             $.fn.zato.http_soap.rest_outgoing_field_descriptions,
             $.fn.zato.health_check.field_descriptions);
     }
+    else if($.fn.zato.http_soap.is_rest_channel()) {
+
+        // The Alerts tab's lines are not table rows, so the walk covers them as well
+        descriptions = $.fn.zato.alerts_tab.descriptions();
+        fieldSelector = 'table.form-data tr, .decision-line';
+    }
     else {
         return;
     }
@@ -559,6 +565,7 @@ $.fn.zato.http_soap.init_how_it_works = function(action) {
     $.fn.zato.how_it_works.init({
         badgeId: action + '-how-it-works',
         divId: '#' + action + '-div',
+        fieldSelector: fieldSelector,
         descriptions: descriptions
     });
 }
@@ -614,6 +621,13 @@ $.fn.zato.http_soap.edit = function(id) {
 
         // The health check tab's widgets are populated the same way
         $.fn.zato.health_check.populate('edit', item);
+    }
+
+    if($.fn.zato.http_soap.is_rest_channel()) {
+        $.fn.zato.alerts_tab.bind({
+            panel_id: 'http-soap-edit-tab-panel-alerts',
+            field_prefix: 'edit-'
+        });
     }
 
     $.fn.zato.http_soap.init_how_it_works('edit');

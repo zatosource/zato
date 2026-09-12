@@ -56,6 +56,27 @@ Probe_Source_Test_Transfer    = AuditSource.Test_Transfer
 # The attr the certificate probe writes its days-left measure under.
 Attr_Days_Left = 'days_left'
 
+# The measures a window drives - a duration field of the config map names the ones it is the window of,
+# and the merger runs each collector over the window of its own measure.
+Measure_Error_Rate    = 'error_rate'
+Measure_Latency       = 'latency'
+Measure_Auth_Failures = 'auth_failures'
+Measure_Client_Errors = 'client_errors'
+Measure_Server_Errors = 'server_errors'
+Measure_Silence       = 'silence'
+Measure_File_Runs     = 'file_runs'
+
+# The key a merged fact carries the window of each of its measures under
+Window_Seconds_By_Measure_Key = 'window_seconds_by_measure'
+
+# The one event type of a source that carries a call's outcome - a channel writes a request
+# event and a response event per call, and only the response says how the call went.
+# A source absent from here has every one of its events counted.
+response_event_type_by_source = {
+    AuditSource.REST_Channel: AuditEvent.Response_Sent,
+    AuditSource.SOAP_Channel: AuditEvent.Response_Sent,
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -103,6 +124,7 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
         'error_count': 0,
         'total_count': 0,
         'window_seconds': 0,
+        Window_Seconds_By_Measure_Key: {},
         'outstanding': 0,
         'oldest_waiting_seconds': 0,
         'silent_seconds': 0,
@@ -114,8 +136,15 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
         # The average duration of the object's completed calls within the window.
         'avg_duration_ms': 0,
 
-        # How many authentication failures the window holds.
+        # How many authentication failures the window holds - a channel's 401 and 403 responses count here too.
         'auth_failure_count': 0,
+
+        # The failed responses of a channel by what they say about the caller and the service -
+        # every 4xx other than 401 and 403 is the caller's, every 5xx the service's, the rate
+        # being the share of 5xx among the channel's responses in the window.
+        'client_error_count': 0,
+        'server_error_count': 0,
+        'server_error_rate': 0.0,
 
         # How many days the object's TLS certificate has left. Zero means unmeasured,
         # which is why the certificate rules also require a value of at least one.

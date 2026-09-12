@@ -20,7 +20,7 @@ from sqlalchemy import and_, case, func, select
 
 # Zato
 from zato.common.alerting.collectors.common import apply_newest_error, collect_newest_error_events, new_fact, \
-    Default_Consecutive_Depth
+    response_event_type_by_source, Default_Consecutive_Depth
 from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome
 
 # ################################################################################################################################
@@ -49,6 +49,10 @@ def collect_error_rate_facts(
     per (source, object) pair that had any traffic at all. A pair whose window holds
     failures also reports its newest failing event, so an alert about the failures
     can point straight at the message that failed.
+
+    A source with a response event type counts its responses alone - a channel writes
+    two events per call and counting both would halve its error rate - every other
+    source counts every event it wrote.
     """
 
     # Our response to produce
@@ -71,15 +75,43 @@ def collect_error_rate_facts(
     # Errors and totals per source and object, in one pass
     error_case = case((event_table.c.outcome == AuditOutcome.Error, 1), else_=0)
 
+    # The sources counting responses alone step out of the first pass ..
+    response_sources = list(response_event_type_by_source)
+
+    all_events_conditions = conditions + [event_table.c.source.not_in(response_sources)]
+
     statement = select(
         event_table.c.source,
         event_table.c.object_name,
         func.count(),
         func.sum(error_case),
-    ).where(and_(*conditions)).group_by(event_table.c.source, event_table.c.object_name)
+    ).where(and_(*all_events_conditions)).group_by(event_table.c.source, event_table.c.object_name)
 
     with engine.connect() as connection:
-        rows = connection.execute(statement).fetchall()
+        rows = list(connection.execute(statement).fetchall())
+
+    # .. and are counted in a second one, each over its own response event type.
+    for response_source, response_event_type in response_event_type_by_source.items():
+
+        # A read narrowed to another source has nothing to count here
+        if source:
+            if source != response_source:
+                continue
+
+        response_conditions = conditions + [
+            event_table.c.source == response_source,
+            event_table.c.event_type == response_event_type,
+        ]
+
+        response_statement = select(
+            event_table.c.source,
+            event_table.c.object_name,
+            func.count(),
+            func.sum(error_case),
+        ).where(and_(*response_conditions)).group_by(event_table.c.source, event_table.c.object_name)
+
+        with engine.connect() as connection:
+            rows.extend(connection.execute(response_statement).fetchall())
 
     # The newest failing event of each pair within the same window, read once
     # for every pair rather than once per fact

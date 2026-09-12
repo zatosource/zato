@@ -24,7 +24,7 @@ from zato.common.alerting.model import AlertAction
 from zato.common.alerting.object_config import storage_name, LLM_Connection_Config_Key
 from zato.common.api import FileTransfer, GENERIC
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
-from zato.common.odb.model import GenericConn
+from zato.common.odb.model import Cluster, GenericConn, HTTPBasicAuth, HTTPSOAP, Service
 
 # Test helpers
 from explain_helpers import _alert_id, _cluster_id, _conn_name, _error_data, _explanation_text, _llm_conn_name, _new_payload, \
@@ -449,6 +449,200 @@ class TestStoredExplanation:
         assert explanation['remediation'] == {'action': 'resubmit'}
         assert explanation['confidence'] == 'high'
         assert explanation['created_iso'] != ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The REST channel the channel tests describe, the service behind it, the security definition its callers use
+_channel_name = 'orders.api'
+_channel_service_name = 'orders.get'
+_channel_security_name = 'Partner API'
+
+# ################################################################################################################################
+
+def _seed_rest_channel(session_maker:'any_', *, with_security:'bool'=True) -> 'None':
+    """ One REST channel with its service, a Basic Auth definition and alert settings of its own.
+    """
+    opaque = {
+        'is_audit_log_active': True,
+        storage_name('is_active'): True,
+        storage_name('auth_failures'): 3,
+        storage_name('use_llm'): True,
+    }
+
+    session = session_maker()
+    cluster = session.query(Cluster).filter(Cluster.id==_cluster_id).one()
+
+    service = Service(None, _channel_service_name, True, 'orders.OrdersGet', False, cluster)
+    session.add(service)
+
+    if with_security:
+        security = HTTPBasicAuth(None, _channel_security_name, True, 'partner', 'Zato', 'never-shown', cluster)
+        session.add(security)
+    else:
+        security = None
+
+    row = HTTPSOAP()
+    row.name = _channel_name
+    row.is_active = True
+    row.is_internal = False
+    row.connection = 'channel'
+    row.transport = 'plain_http'
+    row.url_path = '/orders'
+    row.method = 'POST'
+    row.soap_action = ''
+    row.data_format = 'json'
+    row.service = service
+    row.security = security
+    row.cluster = cluster
+    row.opaque1 = json.dumps(opaque)
+
+    session.add(row)
+    session.commit()
+    session.close()
+
+# ################################################################################################################################
+
+def _seed_channel_failures() -> 'None':
+    """ The calls a REST channel answered with an error - the request halves arrive fine, the responses
+    carry the status and the caller.
+    """
+    audit_log = AuditLog(_server_name)
+
+    for index in range(3):
+        _ = audit_log.insert(AuditSource.REST_Channel, AuditEvent.Request_Received, _channel_name, cid=f'call-{index}',
+            outcome=AuditOutcome.OK, ext_client_id=_channel_security_name)
+        _ = audit_log.insert(AuditSource.REST_Channel, AuditEvent.Response_Sent, _channel_name, cid=f'call-{index}',
+            outcome=AuditOutcome.Error, status='401 Unauthorized', data='Invalid credentials',
+            ext_client_id=_channel_security_name, endpoint=_channel_service_name)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestRestChannel:
+
+    def test_a_rest_channel_alert_is_explained_with_the_rest_channel_skill(self, llm_address:'any_', repo_dir:'str') -> 'None':
+
+        _seed_channel_failures()
+
+        session = _new_session()
+        _seed_rest_channel(session)
+
+        service = _new_service(
+            _new_payload(AlertAction.Email_Digest, {}, AuditSource.REST_Channel, object_name=_channel_name,
+                measures=['auth_failure_count']),
+            session,
+            repo_dir,
+            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+        )
+
+        service.handle()
+
+        assert len(LLMTestHandler.prompts) == 1
+
+        prompt = LLMTestHandler.prompts[0]
+        assert prompt.startswith('# REST channel explanation')
+
+        # The channel's skill allows no remediation, so the reply's resubmit is dropped and the rest is kept
+        explanation = _stored_explanation(session)
+
+        assert explanation['source'] == AuditSource.REST_Channel
+        assert explanation['explanation'] == _explanation_text
+        assert explanation['is_parsed'] is True
+        assert explanation['remediation'] is None
+
+# ################################################################################################################################
+
+    def test_the_object_section_describes_the_channel(self, llm_address:'any_', repo_dir:'str') -> 'None':
+
+        _seed_channel_failures()
+
+        session = _new_session()
+        _seed_rest_channel(session)
+
+        service = _new_service(
+            _new_payload(AlertAction.Email_Digest, {}, AuditSource.REST_Channel, object_name=_channel_name,
+                measures=['auth_failure_count']),
+            session,
+            repo_dir,
+            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+        )
+
+        service.handle()
+
+        prompt = LLMTestHandler.prompts[0]
+        section = _object_section(prompt)
+
+        assert f'Name: {_channel_name}' in section
+        assert 'Active: yes' in section
+        assert 'URL path: /orders' in section
+        assert 'Method: POST' in section
+        assert f'Service: {_channel_service_name}' in section
+        assert f'Security: {_channel_security_name} (Basic Auth)' in section
+        assert 'Data format: json' in section
+        assert 'Audit log: on' in section
+        assert 'Alerts: on' in section
+        assert 'Alert settings of its own: Auth failures 3' in section
+
+        assert 'never-shown' not in prompt
+
+        # The failures name the callers and the service, the baseline counts the responses
+        assert '1. 401 Unauthorized - Invalid credentials' in prompt
+        assert f'Service: {_channel_service_name}' in prompt
+        assert f'Caller: {_channel_security_name}' in prompt
+        assert 'OK events in the window: 0' in prompt
+
+# ################################################################################################################################
+
+    def test_a_channel_without_security_or_own_settings_says_so(self, llm_address:'any_', repo_dir:'str') -> 'None':
+
+        _seed_channel_failures()
+
+        session = _new_session()
+        _seed_rest_channel(session, with_security=False)
+
+        # The channel's own settings are the defaults
+        with session() as s:
+            row = s.query(HTTPSOAP).filter(HTTPSOAP.name==_channel_name).one()
+            row.opaque1 = json.dumps({storage_name('is_active'): True})
+            s.commit()
+
+        service = _new_service(
+            _new_payload(AlertAction.Email_Digest, {}, AuditSource.REST_Channel, object_name=_channel_name,
+                measures=['auth_failure_count']),
+            session,
+            repo_dir,
+            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+        )
+
+        service.handle()
+
+        section = _object_section(LLMTestHandler.prompts[0])
+
+        assert 'Security: None' in section
+        assert 'Alert settings of its own: none, the defaults apply' in section
+
+# ################################################################################################################################
+
+    def test_a_channel_that_is_not_in_the_odb_contributes_its_name_alone(self, llm_address:'any_', repo_dir:'str') -> 'None':
+
+        _seed_channel_failures()
+
+        session = _new_session()
+
+        service = _new_service(
+            _new_payload(AlertAction.Email_Digest, {}, AuditSource.REST_Channel, object_name=_channel_name,
+                measures=['auth_failure_count']),
+            session,
+            repo_dir,
+            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+        )
+
+        service.handle()
+
+        section = _object_section(LLMTestHandler.prompts[0])
+
+        assert section.strip() == f'{Heading_Object}\n\nName: {_channel_name}'
 
 # ################################################################################################################################
 # ################################################################################################################################

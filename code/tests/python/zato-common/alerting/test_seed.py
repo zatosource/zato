@@ -26,6 +26,7 @@ from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.model import AlertAction
 from zato.common.alerting.seed import alerting_vocabulary, build_ruleset_document, default_rulesets, \
     ensure_alerting_definitions
+from zato.common.alerting.seed.rules_common import channels_rules
 from zato.common.alerting.sweep import load_alert_rules, run_sweep, Fact_Entity
 from zato.common.api import Alerting
 from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
@@ -328,6 +329,176 @@ class TestEachTypeReachesItsRule:
             match_result = rule.match({Fact_Entity: fact})
 
             assert match_result, f'Expected {full_name} to match {fact}'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _default_values(rule_document:'stranydict') -> 'stranydict':
+    """ The defaults of one stored rule as plain values, without the literal wrappers the store keeps.
+    """
+    out = {}
+
+    for name, default in rule_document['defaults'].items():
+        out[name] = default['value']
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestChannelRules:
+
+    def test_the_channel_ruleset_ships_six_rest_channel_rules_with_their_defaults(self, backend:'RuleSQLBackend') -> 'None':
+        ensure_alerting_definitions(backend)
+
+        ruleset = _get_ruleset(backend, _channels_ruleset_name)
+        documents = deserialize_document(ruleset.document)[Documents_Key]
+
+        for rule_name, defaults in _channel_rule_defaults.items():
+            rule_document = documents[f'{_channels_ruleset_name}_{rule_name}']
+            assert _default_values(rule_document) == defaults, rule_name
+
+# ################################################################################################################################
+
+    def test_the_silence_rule_ships_inactive_and_the_rest_active(self, backend:'RuleSQLBackend') -> 'None':
+        ensure_alerting_definitions(backend)
+
+        ruleset = _get_ruleset(backend, _channels_ruleset_name)
+        documents = deserialize_document(ruleset.document)[Documents_Key]
+
+        assert documents[_channel_silent_full_name]['is_active'] is False
+
+        # A rule that ships active carries no switch at all - only the inactive one is marked
+        for full_name, rule_document in documents.items():
+            if full_name != _channel_silent_full_name:
+                assert 'is_active' not in rule_document, full_name
+
+# ################################################################################################################################
+
+    def test_an_old_channel_ruleset_gains_the_rest_channel_rules_on_upgrade(self, backend:'RuleSQLBackend') -> 'None':
+
+        # An environment from before the REST channel rules holds the channel ruleset with the error rate rule alone ..
+        old_document = build_ruleset_document(_channels_ruleset_name, _old_channels_rules)
+        ruleset = backend.definitions.create(
+            name=_channels_ruleset_name,
+            object_type=Definition_Type_Ruleset,
+            document=old_document,
+            author='test',
+            comment='From before the REST channel rules',
+        )
+        _ = backend.versions.publish(definition_id=ruleset.id, version=ruleset.current_version, actor='test')
+
+        # .. and the seeding of the newer release adds every rule it never had, the silence one inactive as it ships.
+        ensure_alerting_definitions(backend)
+
+        ruleset = _get_ruleset(backend, _channels_ruleset_name)
+        assert ruleset.current_version == 2
+        assert ruleset.live_version == 2
+
+        documents = deserialize_document(ruleset.document)[Documents_Key]
+        shipped = build_ruleset_document(_channels_ruleset_name, channels_rules)[Documents_Key]
+
+        assert set(documents) == set(shipped)
+        assert documents[_channel_silent_full_name]['is_active'] is False
+
+        for rule_name, defaults in _channel_rule_defaults.items():
+            assert _default_values(documents[f'{_channels_ruleset_name}_{rule_name}']) == defaults, rule_name
+
+# ################################################################################################################################
+
+    def test_the_channel_and_email_auth_failure_rules_keep_their_own_names(self, backend:'RuleSQLBackend') -> 'None':
+        ensure_alerting_definitions(backend)
+
+        rules = load_alert_rules(backend)
+        full_names = set()
+
+        for rule in rules:
+            full_names.add(rule.full_name)
+
+        assert 'alerts_channels_Auth_Failures' in full_names
+        assert 'alerts_email_Auth_Failures' in full_names
+
+        # The same measure is judged by each ruleset for its own sources
+        rules_by_full_name = {rule.full_name: rule for rule in rules}
+
+        channel_fact = new_fact(AuditSource.REST_Channel, 'orders.api')
+        channel_fact['auth_failure_count'] = 10
+
+        assert rules_by_full_name['alerts_channels_Auth_Failures'].match({Fact_Entity: channel_fact})
+        assert not rules_by_full_name['alerts_email_Auth_Failures'].match({Fact_Entity: channel_fact})
+
+# ################################################################################################################################
+
+    def test_the_vocabulary_speaks_the_new_channel_terms(self) -> 'None':
+        vocabulary = alerting_vocabulary()
+
+        names = set()
+        for entity in vocabulary['entities']:
+            for attribute in entity['attributes']:
+                names.add(attribute['name'])
+
+        assert 'client_error_count' in names
+        assert 'server_error_rate' in names
+
+# ################################################################################################################################
+
+    def test_a_fact_from_each_channel_measure_reaches_its_rule(self, backend:'RuleSQLBackend') -> 'None':
+        ensure_alerting_definitions(backend)
+
+        rules = load_alert_rules(backend)
+        rules_by_full_name = {rule.full_name: rule for rule in rules}
+
+        cases = [
+            ('Channel_Failing',  {'consecutive_failures': 3}),
+            ('Server_Errors',    {'total_count': 20, 'server_error_rate': 0.05}),
+            ('Slow_Responses',   {'avg_duration_ms': 5000}),
+            ('Auth_Failures',    {'auth_failure_count': 10}),
+            ('Client_Errors',    {'client_error_count': 50}),
+            ('Channel_Silent',   {'silent_seconds': 3600}),
+        ]
+
+        for rule_name, measures in cases:
+            fact = new_fact(AuditSource.REST_Channel, 'orders.api')
+            fact.update(measures)
+
+            rule = rules_by_full_name[f'{_channels_ruleset_name}_{rule_name}']
+            assert rule.match({Fact_Entity: fact}), f'Expected {rule_name} to match {fact}'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The channel ruleset and its silence rule, the one that ships inactive because it needs a person to say traffic is expected
+_channels_ruleset_name = 'alerts_channels'
+_channel_silent_full_name = 'alerts_channels_Channel_Silent'
+
+# The REST channel rules the channel ruleset ships, with the defaults each one carries
+_channel_rule_defaults = {
+    'Channel_Failing': {'max_consecutive_failures': 3},
+    'Server_Errors':   {'server_error_rate_threshold': 0.05, 'min_events': 10, 'window_seconds': 300},
+    'Slow_Responses':  {'max_avg_duration_ms': 5000, 'window_seconds': 300},
+    'Auth_Failures':   {'auth_failure_threshold': 10, 'window_seconds': 300},
+    'Client_Errors':   {'client_error_threshold': 50, 'window_seconds': 300},
+    'Channel_Silent':  {'silence_seconds': 3600},
+}
+
+# The channel ruleset as it shipped before the REST channel rules - the error rate rule alone
+_old_channels_rules = """
+rule
+    Channel_Error_Rate
+docs
+    An inbound channel whose error share reaches a tenth of its recent traffic raises an email alert.
+defaults
+    error_rate_threshold = 0.1
+    min_events = 10
+    window_seconds = 300
+when
+    alert.source in ['rest-channel', 'soap-channel', 'mllp-channel'] and
+    alert.total_count is at least default.min_events and
+    alert.error_rate is at least default.error_rate_threshold
+then
+    outcome.action = 'email'
+    outcome.severity = 'warning'
+""".strip()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -129,7 +129,8 @@ class TestFailedEvents:
 
         row = collect_failed_events(engine, _fact(), now)[0]
 
-        assert set(row) == {'id', 'event_time_iso', 'event_type', 'endpoint', 'outcome', 'status', 'duration_ms', 'data'}
+        assert set(row) == {'id', 'event_time_iso', 'event_type', 'endpoint', 'outcome', 'status', 'duration_ms', 'data',
+            'ext_client_id'}
         assert row['outcome'] == AuditOutcome.Error
         assert row['event_type'] == AuditEvent.Message_Sent
 
@@ -377,6 +378,86 @@ class TestBaseline:
 
         assert baseline['test_transfers_on'] is True
         assert baseline['test_transfer'] is None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _seed_channel_call(audit_log:'AuditLog', cid:'str', status:'str', *, caller:'str'='partner-a') -> 'int':
+    """ The request and the response one call of a REST channel leaves behind - the request always arrives fine,
+    the response carries the status and the outcome.
+    """
+    if status.startswith('2'):
+        outcome = AuditOutcome.OK
+        data = ''
+    else:
+        outcome = AuditOutcome.Error
+        data = 'Rejected'
+
+    _ = audit_log.insert(AuditSource.REST_Channel, AuditEvent.Request_Received, _channel_name, cid=cid, outcome=AuditOutcome.OK,
+        ext_client_id=caller)
+
+    out = audit_log.insert(AuditSource.REST_Channel, AuditEvent.Response_Sent, _channel_name, cid=cid, outcome=outcome,
+        status=status, data=data, ext_client_id=caller, endpoint='orders.get')
+
+    return out
+
+# ################################################################################################################################
+
+# The REST channel the channel baseline tests seed calls for
+_channel_name = 'orders.api'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestChannelBaseline:
+
+    def test_a_channels_baseline_counts_its_responses_not_its_requests(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _ = _seed_channel_call(audit_log, 'call-1', '200 OK')
+        _ = _seed_channel_call(audit_log, 'call-2', '200 OK')
+        _ = _seed_channel_call(audit_log, 'call-3', '401 Unauthorized', caller='partner-b')
+        _ = _seed_channel_call(audit_log, 'call-4', '401 Unauthorized', caller='partner-b')
+
+        baseline = collect_baseline(engine, _fact(_channel_name, AuditSource.REST_Channel), now)
+
+        # Two calls went through - the OK request halves of the rejected calls count for nothing
+        assert baseline['ok_count'] == 2
+        assert baseline['last_ok']['endpoint'] == 'orders.get'
+
+        # The two rejections are the streak, unbroken by the requests that arrived between them
+        assert baseline['streak_count'] == 2
+        assert baseline['last_ok_before_streak']['endpoint'] == 'orders.get'
+
+    def test_a_channel_whose_newest_call_went_through_has_no_streak(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _ = _seed_channel_call(audit_log, 'call-1', '500 Internal Server Error')
+        _ = _seed_channel_call(audit_log, 'call-2', '200 OK')
+
+        baseline = collect_baseline(engine, _fact(_channel_name, AuditSource.REST_Channel), now)
+
+        assert baseline['ok_count'] == 1
+        assert baseline['streak_count'] == 0
+        assert baseline['last_ok_before_streak'] is None
+
+    def test_a_channels_failed_rows_carry_their_callers(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _ = _seed_channel_call(audit_log, 'call-1', '401 Unauthorized', caller='partner-b')
+
+        rows = collect_failed_events(engine, _fact(_channel_name, AuditSource.REST_Channel), now)
+
+        assert len(rows) == 1
+        assert rows[0]['status'] == '401 Unauthorized'
+        assert rows[0]['ext_client_id'] == 'partner-b'
+        assert rows[0]['endpoint'] == 'orders.get'
 
 # ################################################################################################################################
 # ################################################################################################################################

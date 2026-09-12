@@ -19,15 +19,16 @@ from zato.admin.web.alerts_tab_lines import Arrival_Overdue_Unit_Default, Line_K
 from zato.admin.web.alerts_tab_picks import get_live_items, Live_Type_Email_Connection, Live_Type_LLM_Connection, \
     Pick_Select_Class
 from zato.admin.web.forms import INITIAL_CHOICES
-from zato.admin.web.forms.http_soap import CreateForm as ChannelCreateForm
+from zato.admin.web.forms.http_soap import CreateForm as ChannelCreateForm, EditForm as ChannelEditForm
 from zato.admin.web.forms.outgoing.ftp import CreateForm as FTPCreateForm
 from zato.admin.web.forms.outgoing.sftp import CreateForm as SFTPCreateForm, EditForm as SFTPEditForm
 from zato.admin.web.forms.outgoing.smb import CreateForm as SMBCreateForm
+from zato.admin.web.views import http_soap as http_soap_views
 from zato.admin.web.views.live_form_updates import OBJECT_TYPE_CONFIG
 from zato.admin.web.views.outgoing import ftp, sftp, smb
 from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, encode_email_connection, \
-    Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, get_defaults as get_storage_defaults
-from zato.common.api import EMAIL, GENERIC
+    Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, get_defaults as get_storage_defaults, Unit_Field_Suffix
+from zato.common.api import EMAIL, GENERIC, ZATO_NONE
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -576,6 +577,172 @@ class TestAlertsTabStorage:
                 assert tab_defaults['window'] * 86400 == value
                 continue
             assert tab_defaults[name] == value, name
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _channel_params(connection:'str', transport:'str', prefix:'str'='') -> 'anydict':
+    """ What the browser posts from a channel or connection form of the HTTP/SOAP screen, with every field
+    the message builder reads and the Alerts tab's own fields filled in the way the tab posts them.
+    """
+    out = {
+        'connection': connection,
+        'transport': transport,
+        'cluster_id': '1',
+        prefix + 'name': 'orders.api',
+        prefix + 'is_active': 'on',
+        prefix + 'security': ZATO_NONE,
+        prefix + 'url_path': '/orders',
+        prefix + 'service': 'orders.get',
+        prefix + 'alert_is_active': 'on',
+        prefix + 'alert_consecutive_failures': '4',
+        prefix + 'alert_error_rate': '15',
+        prefix + 'alert_window': '10',
+        prefix + 'alert_window_unit': 'minute',
+        prefix + 'alert_server_errors': '5',
+        prefix + 'alert_server_errors_window': '1',
+        prefix + 'alert_server_errors_window_unit': 'hour',
+        prefix + 'alert_max_latency': '2500',
+        prefix + 'alert_latency_window': '5',
+        prefix + 'alert_latency_window_unit': 'minute',
+        prefix + 'alert_auth_failures': '20',
+        prefix + 'alert_auth_failures_window': '1',
+        prefix + 'alert_auth_failures_window_unit': 'hour',
+        prefix + 'alert_client_errors': '50',
+        prefix + 'alert_client_errors_window': '5',
+        prefix + 'alert_client_errors_window_unit': 'minute',
+        prefix + 'alert_traffic_expected': 'on',
+        prefix + 'alert_silence_window': '2',
+        prefix + 'alert_silence_window_unit': 'hour',
+        prefix + 'alert_silence_slots': _slots_text,
+        prefix + 'alert_use_llm': 'on',
+        prefix + 'alert_email_connection': 'smtp:ops.smtp',
+        prefix + 'alert_llm_connection': 'ops.llm',
+    }
+    return out
+
+# ################################################################################################################################
+
+# The silence slots the channel form tests post, the way the tab's JS serializes them
+_slots_text = '[{"time_from": "22:00", "time_to": "06:00", "is_on": false, "silence_seconds": 3600}]'
+
+# The settings the channel form tests expect in the message, each duration already in seconds
+_expected_channel_settings = {
+    'alert_is_active': True,
+    'alert_consecutive_failures': 4,
+    'alert_error_rate': 15,
+    'alert_window': 600,
+    'alert_server_errors': 5,
+    'alert_server_errors_window': 3600,
+    'alert_max_latency': 2500,
+    'alert_latency_window': 300,
+    'alert_auth_failures': 20,
+    'alert_auth_failures_window': 3600,
+    'alert_client_errors': 50,
+    'alert_client_errors_window': 300,
+    'alert_traffic_expected': True,
+    'alert_silence_window': 7200,
+    'alert_silence_slots': _slots_text,
+    'alert_use_llm': True,
+    'alert_email_connection': 'smtp:ops.smtp',
+    'alert_llm_connection': 'ops.llm',
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestChannelForm:
+
+    def test_edit_form_fields_are_prefixed(self, req:'any_') -> 'None':
+
+        form = ChannelEditForm(prefix='edit', req=req, alert_type=alert_type_channels)
+
+        for field_name in ('alert_window', 'alert_silence_window', 'alert_silence_slots', 'alert_traffic_expected'):
+            rendered = str(form[field_name])
+            assert f'name="edit-{field_name}"' in rendered, field_name
+            assert f'id="id_edit-{field_name}"' in rendered, field_name
+
+# ################################################################################################################################
+
+    def test_a_rest_channel_message_carries_every_storage_name_in_seconds(self) -> 'None':
+
+        params = _channel_params('channel', 'plain_http')
+        message = http_soap_views._get_edit_create_message(params)
+
+        for name in alerts_tab.get_storage_field_names(alert_type_channels):
+            if name.endswith(Unit_Field_Suffix):
+                assert name not in message, name
+            else:
+                assert name in message, name
+
+        for name, value in _expected_channel_settings.items():
+            assert message[name] == value, name
+
+        assert message['name'] == 'orders.api'
+        assert message['url_path'] == '/orders'
+
+# ################################################################################################################################
+
+    def test_an_edit_message_reads_the_prefixed_fields(self) -> 'None':
+
+        params = _channel_params('channel', 'plain_http', prefix='edit-')
+        params['id'] = '17'
+
+        message = http_soap_views._get_edit_create_message(params, prefix='edit-')
+
+        assert message['id'] == '17'
+        for name, value in _expected_channel_settings.items():
+            assert message[name] == value, name
+
+# ################################################################################################################################
+
+    def test_a_soap_channel_and_the_outgoing_connections_carry_no_alert_settings(self) -> 'None':
+
+        for connection, transport in (('channel', 'soap'), ('outgoing', 'plain_http'), ('outgoing', 'soap')):
+            params = _channel_params(connection, transport)
+            message = http_soap_views._get_edit_create_message(params)
+
+            for name in alerts_tab.get_storage_field_names(alert_type_channels):
+                assert name not in message, (connection, transport, name)
+
+# ################################################################################################################################
+
+    def test_a_listed_channel_shows_each_window_as_a_count_and_a_unit(self) -> 'None':
+
+        item = Bunch(name='orders.api', alert_silence_window=7200, alert_window=600, alert_auth_failures_window=86400)
+        alerts_tab.split_durations(alert_type_channels, item)
+
+        assert item.alert_silence_window == 2
+        assert item.alert_silence_window_unit == 'hour'
+        assert item.alert_window == 10
+        assert item.alert_window_unit == 'minute'
+        assert item.alert_auth_failures_window == 1
+        assert item.alert_auth_failures_window_unit == 'day'
+
+        # A window that was not stored still gets the unit its select starts on
+        assert item.alert_latency_window_unit == 'minute'
+
+# ################################################################################################################################
+
+    def test_the_silence_window_round_trips_through_storage(self) -> 'None':
+
+        input_dict = {}
+
+        for name, value in (('alert_silence_window', '90'), ('alert_silence_window_unit', 'minute'),
+            ('alert_traffic_expected', 'on'), ('alert_silence_slots', _slots_text)):
+            input_dict[name] = alerts_tab.pre_process_alert_item(alert_type_channels, name, value)
+
+        alerts_tab.join_durations(alert_type_channels, input_dict)
+        assert input_dict['alert_silence_window'] == 5400
+        assert 'alert_silence_window_unit' not in input_dict
+
+        item = Bunch(input_dict)
+        alerts_tab.split_durations(alert_type_channels, item)
+
+        assert item.alert_silence_window == 90
+        assert item.alert_silence_window_unit == 'minute'
+        assert item.alert_traffic_expected is True
+        assert item.alert_silence_slots == _slots_text
 
 # ################################################################################################################################
 # ################################################################################################################################

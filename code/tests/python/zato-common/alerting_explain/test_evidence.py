@@ -74,6 +74,7 @@ def _alert() -> 'dict':
             'error_count': 12,
             'total_count': 50,
             'window_seconds': 86400,
+            'window_seconds_by_measure': {'error_rate': 86400},
             'consecutive_failures': 4,
             'outstanding': 0,
             'quarantined_in_window': 0,
@@ -268,6 +269,115 @@ class TestRenderAlert:
 
         assert 'Window: none, the measure is a reading taken at the time of the sweep' in section
         assert 'threshold' not in section
+
+    def test_a_measure_with_a_window_of_its_own_names_it(self) -> 'None':
+        alert = _alert()
+        alert['fact']['window_seconds_by_measure'] = {'error_rate': 86400, 'auth_failures': 3600, 'latency': 86400}
+
+        section = render_alert(alert, _now)
+
+        assert 'Window: 86400 seconds' in section
+        assert 'Windows of their own: auth_failures = 3600 seconds' in section
+        assert 'latency = 86400' not in section
+
+    def test_measures_over_the_one_window_have_no_windows_of_their_own(self) -> 'None':
+        section = render_alert(_alert(), _now)
+
+        assert 'Windows of their own' not in section
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _channel_row(row_id:'int', time_iso:'str', status:'str', text:'str', service:'str', caller:'str') -> 'dict':
+    """ One failed response a REST channel sent - the status it answered with, the service that answered
+    and the caller that asked.
+    """
+    out = _row(row_id, time_iso, text, service, status)
+    out['event_type'] = AuditEvent.Response_Sent
+    out['ext_client_id'] = caller
+    return out
+
+# ################################################################################################################################
+
+def _channel_rows() -> 'list':
+    """ The rows of a channel sample - newest first, two callers rejected with a 401, one 500 from the service.
+    """
+    unauthorized = 'Invalid API key'
+    failed = 'KeyError: customer_id'
+
+    out = [
+        _channel_row(501, '2026-09-11T15:42:10+00:00', '401 Unauthorized', unauthorized, 'orders.get', 'partner-a'),
+        _channel_row(498, '2026-09-11T15:41:08+00:00', '401 Unauthorized', unauthorized, 'orders.get', 'partner-b'),
+        _channel_row(471, '2026-09-11T15:40:11+00:00', '401 Unauthorized', unauthorized, 'orders.get', 'partner-a'),
+        _channel_row(420, '2026-09-11T15:12:05+00:00', '500 Internal Server Error', failed, 'orders.get', 'partner-c'),
+        _channel_row(419, '2026-09-11T15:11:05+00:00', '500 Internal Server Error', '', 'orders.get', 'partner-c'),
+    ]
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestChannelFailures:
+
+    def test_a_channels_groups_are_keyed_by_status_and_text_together(self) -> 'None':
+        groups = group_failures(_channel_rows(), AuditSource.REST_Channel)
+
+        assert len(groups) == 3
+        assert groups[0]['text'] == '401 Unauthorized - Invalid API key'
+        assert groups[1]['text'] == '500 Internal Server Error - KeyError: customer_id'
+        assert groups[2]['text'] == '500 Internal Server Error'
+
+    def test_a_group_names_each_service_and_caller_once(self) -> 'None':
+        group = group_failures(_channel_rows(), AuditSource.REST_Channel)[0]
+
+        assert group['count'] == 3
+        assert group['files'] == ['orders.get']
+        assert group['files_total'] == 1
+        assert group['callers'] == ['partner-a', 'partner-b']
+
+    def test_the_section_speaks_of_services_and_callers(self) -> 'None':
+        groups = group_failures(_channel_rows(), AuditSource.REST_Channel)
+        section = render_failures(groups, source=AuditSource.REST_Channel)
+
+        assert '1. 401 Unauthorized - Invalid API key' in section
+        assert '   Count: 3, first 2026-09-11T15:40:11+00:00, last 2026-09-11T15:42:10+00:00' in section
+        assert '   Service: orders.get' in section
+        assert '   Callers: partner-a, partner-b' in section
+        assert '   Caller: partner-c' in section
+        assert 'File' not in section
+
+    def test_two_services_are_listed_as_services(self) -> 'None':
+        rows = [
+            _channel_row(2, '2026-09-11T15:42:10+00:00', '500', 'boom', 'orders.get', 'partner-a'),
+            _channel_row(1, '2026-09-11T15:41:10+00:00', '500', 'boom', 'orders.list', 'partner-a'),
+        ]
+
+        section = render_failures(group_failures(rows, AuditSource.REST_Channel), source=AuditSource.REST_Channel)
+
+        assert '   Services: orders.get, orders.list' in section
+        assert '   Caller: partner-a' in section
+
+    def test_a_channels_groups_shrink_to_their_first_and_last_names(self) -> 'None':
+        rows = []
+
+        for index in range(Max_Files_Per_Group + 1):
+            rows.append(_channel_row(index, f'2026-09-11T15:{index:02d}:00+00:00', '500', 'boom', f'svc-{index}', f'caller-{index}'))
+
+        groups = group_failures(rows, AuditSource.REST_Channel)
+        full = render_failures(groups, source=AuditSource.REST_Channel)
+
+        assert f'Service: svc-0 ... Service: svc-{Max_Files_Per_Group} ({Max_Files_Per_Group + 1} in all)' in full
+        assert f'Caller: caller-0 ... Caller: caller-{Max_Files_Per_Group} ({Max_Files_Per_Group + 1} in all)' in full
+
+        section = fit_to_budget(groups, len(full) - 1, AuditSource.REST_Channel)
+
+        assert section.rstrip().endswith('Left out: service and caller lists shortened to their first and last entries.')
+
+    def test_a_file_transfers_groups_carry_no_callers_and_no_status_prefix(self) -> 'None':
+        groups = group_failures(_rows())
+
+        assert groups[0]['callers'] == []
+        assert groups[0]['text'] == 'Permission denied (remote path /outbox/invoices)'
 
 # ################################################################################################################################
 # ################################################################################################################################

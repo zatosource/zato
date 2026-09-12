@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The live proof - with the trace on, every exchange with the IMAP server, the SFTP server,
-# the LLM and the SMTP receiver is printed as it happens, one channel tag per line and
-# nothing else, so the run reads as a transcript rather than as a log.
+# the REST channel of the live server, the LLM and the SMTP receiver is printed as it happens,
+# one channel tag per line and nothing else, so the run reads as a transcript rather than as a log.
 
 # stdlib
 import os
@@ -22,6 +22,7 @@ Trace_Env_Key = 'Zato_Test_Explain_Trace'
 # The channels a line may come from
 Channel_IMAP    = 'IMAP'
 Channel_SFTP    = 'SFTP'
+Channel_Channel = 'CHANNEL'
 Channel_LLM     = 'LLM'
 Channel_SMTP    = 'SMTP'
 Channel_Explain = 'EXPLAIN'

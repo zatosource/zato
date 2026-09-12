@@ -35,7 +35,7 @@ from zato.common.alerting.model import Default_Dedup_Window_Seconds
 from zato.common.api import SMTPMessage
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.crypto.api import CryptoManager
-from zato.common.odb.model import Base, GenericConn, GenericObject
+from zato.common.odb.model import Base, Cluster, GenericConn, GenericObject, HTTPBasicAuth, HTTPSOAP, SecurityBase, Service
 from zato.server.service.internal.alerting import Explain
 
 # Test helpers
@@ -268,12 +268,29 @@ class _EmailAPI:
 # ################################################################################################################################
 
 def _new_session() -> 'any_':
-    """ A sessionmaker over a fresh in-memory database with just the generic_object table.
+    """ A sessionmaker over a fresh in-memory database with the tables the explain service reads.
     """
     engine = create_engine('sqlite://')
-    Base.metadata.create_all(engine, tables=[GenericObject.__table__, GenericConn.__table__])
+
+    tables = [
+        Cluster.__table__,
+        Service.__table__,
+        SecurityBase.__table__,
+        HTTPBasicAuth.__table__,
+        GenericObject.__table__,
+        GenericConn.__table__,
+        HTTPSOAP.__table__,
+    ]
+    Base.metadata.create_all(engine, tables=tables)
 
     out = sessionmaker(bind=engine)
+
+    # A REST channel's row points to its cluster, so the cluster is there for the channel tests
+    session = out()
+    session.add(Cluster(_cluster_id, 'test-cluster', '', 'sqlite'))
+    session.commit()
+    session.close()
+
     return out
 
 # ################################################################################################################################
@@ -300,6 +317,7 @@ def _new_payload(
         'error_count': 12,
         'total_count': 12,
         'window_seconds': 300,
+        'window_seconds_by_measure': {'error_rate': 300},
         'consecutive_failures': 3,
     }
 

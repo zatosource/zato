@@ -40,6 +40,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     {% endif %}
     {% if connection == 'outgoing' and transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/data-table-widget.css">
@@ -974,7 +975,10 @@
 
                     <table class="form-data">
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -1047,6 +1051,15 @@
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-config" role="tabpanel">
+                    {% endif %}
+
+                    {% if connection == 'channel' and transport == 'plain_http' %}
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-main" role="tabpanel">
                     {% endif %}
 
                     <table class="form-data">
@@ -1317,6 +1330,7 @@
                         {% endif %}
 
                         {% if connection != 'outgoing' or transport != 'plain_http' %}
+                        {% if connection != 'channel' or transport != 'plain_http' %}
                         <tr>
                             {% if transport == 'soap' %}
                             <td style="text-align:left;vertical-align:middle">
@@ -1331,7 +1345,26 @@
                             </td>
                         </tr>
                         {% endif %}
+                        {% endif %}
                     </table>
+
+                    {% if connection == 'channel' and transport == 'plain_http' %}
+                    </div>
+
+                    {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
+
+                    <table class="form-data">
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    {% endif %}
 
                     {% if connection == 'outgoing' and transport == 'plain_http' %}
                     </div>

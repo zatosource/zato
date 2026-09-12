@@ -21,8 +21,8 @@ from datetime import timedelta
 from sqlalchemy import and_, func, select
 
 # Zato
-from zato.common.alerting.collectors.common import is_failed, is_object, is_recent, is_source, Default_Window_Seconds, \
-    Probe_Source_Test_Transfer
+from zato.common.alerting.collectors.common import is_failed, is_object, is_recent, is_source, response_event_type_by_source, \
+    Default_Window_Seconds, Probe_Source_Test_Transfer
 from zato.common.alerting.collectors.file_transfer import Attr_Schedule
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.file_transfer_run import Run_Status_Failed, Run_Status_Interrupted, Run_Status_List_Failed, \
@@ -71,6 +71,7 @@ _row_columns = (
     event_table.c.status,
     event_table.c.duration_ms,
     event_table.c.data,
+    event_table.c.ext_client_id,
 )
 
 # ################################################################################################################################
@@ -99,7 +100,7 @@ def _rows_from(result:'anylist') -> 'dictlist':
     # Our response to produce
     out:'dictlist' = []
 
-    for event_id, event_time_iso, event_type, endpoint, outcome, status, duration_ms, data in result:
+    for event_id, event_time_iso, event_type, endpoint, outcome, status, duration_ms, data, ext_client_id in result:
 
         row:'stranydict' = {
             'id': event_id,
@@ -110,6 +111,7 @@ def _rows_from(result:'anylist') -> 'dictlist':
             'status': status,
             'duration_ms': duration_ms,
             'data': data,
+            'ext_client_id': ext_client_id,
         }
 
         out.append(row)
@@ -325,6 +327,21 @@ def _by_id_newest_first(row:'stranydict') -> 'int':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _outcome_conditions(source:'str') -> 'anylist':
+    """ What narrows the events whose outcomes a baseline reads - a channel logs each call twice, the request
+    and the response, and the response alone says how the call went, so only responses count for a channel.
+    """
+
+    # Our response to produce
+    out:'anylist' = []
+
+    if source in response_event_type_by_source:
+        out.append(event_table.c.event_type == response_event_type_by_source[source])
+
+    return out
+
+# ################################################################################################################################
+
 def _newest_ok_before(engine:'Engine', source:'str', object_name:'str', before_id:'int') -> 'stranydict | None':
     """ The newest successful event of an object older than the given one, None when there is none.
     """
@@ -334,6 +351,7 @@ def _newest_ok_before(engine:'Engine', source:'str', object_name:'str', before_i
         event_table.c.outcome == AuditOutcome.OK,
         event_table.c.id < before_id,
     ]
+    conditions.extend(_outcome_conditions(source))
 
     statement = select(*_row_columns).where(and_(*conditions)).order_by(event_table.c.id.desc()).limit(1)
 
@@ -370,6 +388,7 @@ def collect_baseline(
 
     source = fact['source']
     window_start_iso = _window_start_iso(fact, now)
+    outcome_conditions = _outcome_conditions(source)
 
     # How many events succeeded in the window ..
     ok_conditions = [
@@ -378,6 +397,7 @@ def collect_baseline(
         event_table.c.outcome == AuditOutcome.OK,
         is_recent(window_start_iso),
     ]
+    ok_conditions.extend(outcome_conditions)
 
     count_statement = select(func.count(event_table.c.id)).where(and_(*ok_conditions))
 
@@ -402,6 +422,7 @@ def collect_baseline(
         event_table.c.outcome.in_([AuditOutcome.OK, AuditOutcome.Error]),
         is_recent(window_start_iso),
     ]
+    newest_conditions.extend(outcome_conditions)
 
     newest_statement = select(*_row_columns).where(and_(*newest_conditions)).order_by(event_table.c.id.desc())
     newest_statement = newest_statement.limit(Max_Rows_Per_Measure)

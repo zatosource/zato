@@ -14,6 +14,7 @@ from contextlib import closing
 from zato.common.api import Alerting, EMAIL, FileTransfer
 from zato.common.alerting.collectors.evidence import collect_baseline, collect_measure_rows
 from zato.common.alerting.engine import defaults_from_dict, dispatch_action, AlertDefaults, Empty_Explanation
+from zato.common.alerting.explain.channel_info import describe_rest_channel
 from zato.common.alerting.explain.evidence import build_evidence_document, build_prompt, group_failures
 from zato.common.alerting.explain.explanation import parse_explanation
 from zato.common.alerting.explain.skill import get_skill_source, load_skill, Skills_Dir_Name
@@ -738,7 +739,7 @@ class Explain(AdminService):
         object_info, baseline_object_name, test_transfers_on = self._get_object_info(source, object_name)
 
         rows = collect_measure_rows(engine, fact, payload['measures'], now)
-        groups = group_failures(rows)
+        groups = group_failures(rows, source)
 
         baseline = collect_baseline(engine, fact, now, baseline_object_name=baseline_object_name,
             test_transfers_on=test_transfers_on)
@@ -832,6 +833,13 @@ class Explain(AdminService):
             out = self._get_file_transfer_info(object_name)
             if out is not None:
                 return out
+
+        if source == AuditSource.REST_Channel:
+            with closing(self.odb.session()) as session:
+                channel_info = describe_rest_channel(session, self.server.cluster_id, object_name)
+
+            if channel_info is not None:
+                return channel_info, object_name, False
 
         out = [('Name', object_name)]
         return out, object_name, False
