@@ -7,12 +7,13 @@ Include it right after the panel of the Main tab, inside the same form:
 
 `alerts_tab` comes from zato.admin.web.alerts_tab.get_alerts_tab_context. The tab is
 written as decision lines (shared/decision-lines.css) - a question and one answer per
-line. A switch is answered on the line itself, a popover line carries a summary link
-(shared/summary-link.css) the tab's JavaScript fills in and a panel line an empty slot it
-puts a chip into. The numbers and the email select the popovers and the panel read and
-write sit hidden under the lines, so the Django form stays the single source of every
-value. The Active switch is the first line of the first section and the one line that
-stays lit when it is off, everything else being dimmed then.
+line. A switch and a connection select are answered on the line itself, a popover line
+carries a summary link (shared/summary-link.css) the tab's JavaScript fills in. The numbers
+the popovers read and write sit hidden under the lines, so the Django form stays the single
+source of every value. The Active switch is the first line of the first section and the one line that
+stays lit when it is off, everything else being dimmed then. A connection select with nothing
+to list is hidden behind a sentence with the links that open the pages a connection is created on,
+and the tab's JavaScript swaps the two as connections come and go.
 
 The body wears form-data, the very surface the Main tab's table stands on, so the two
 tabs read as one dialog.
@@ -37,8 +38,11 @@ every element the JavaScript looks up is named after it.
                         <label class="decision-line-label" for="{{ panel_id }}-edit-{{ line.name }}">{{ line.label }}</label>
                         <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-{{ line.name }}"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-{{ line.name }}"></span><span class="zato-soft-hint">{{ alerts_tab.edit_hint }}</span></a></span>
                     {% else %}
-                        <label class="decision-line-label" for="{{ panel_id }}-slot-{{ line.name }}-chip">{{ line.label }}</label>
-                        <span class="decision-line-slot" id="{{ panel_id }}-slot-{{ line.name }}"></span>
+                        <label class="decision-line-label" for="{{ line.field.id_for_label }}">{{ line.label }}</label>
+                        <span class="decision-line-slot">
+                            <span class="alerts-tab-pick-select" id="{{ panel_id }}-pick-{{ line.name }}"{% if not line.has_options %} hidden{% endif %}>{{ line.field }}</span>
+                            <span class="alerts-tab-pick-empty" id="{{ panel_id }}-empty-{{ line.name }}"{% if line.has_options %} hidden{% endif %}>{{ line.empty_html }}</span>
+                        </span>
                     {% endif %}
                     </div>
                 {% endfor %}

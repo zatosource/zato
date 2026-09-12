@@ -2,7 +2,7 @@
  * Summary link - the one link that is the way into a row's options.
  *
  * The link reads the current answer in the site-wide dashed-underline link
- * face and offers the click with a soft hint that waits for a hover:
+ * face and offers the click with a hint that shows only under the pointer:
  *
  *     <a href="javascript:void(0)" class="summary-link" id="...">
  *         <span class="zato-link-face summary-link-text">3 failures</span>
@@ -14,13 +14,18 @@
  * and .zato-soft-hint come from style.css.
  *
  * Token                       Purpose
- * --summary-link-font-size    The answer and the hint
+ * --summary-link-font-size    The answer
+ * --summary-link-hint-size    The hint, a notch smaller than the answer
+ * --summary-link-hint-color   The hint, the muted text colour rather than
+ *                             the faint grey of a plain soft hint
  * --summary-link-height       The link's line box, auto unless a row of
  *                             switches needs it clamped to their height
  */
 
 :root {
     --summary-link-font-size: 12px;
+    --summary-link-hint-size: 11px;
+    --summary-link-hint-color: var(--zato-ui-text-muted);
     --summary-link-height: auto;
 }
 
@@ -37,9 +42,11 @@ a.summary-link {
     font-size: var(--summary-link-font-size);
 }
 
-/* The hint waits for a hover over the link - opacity keeps its space
-   reserved, so nothing around it moves when it fades in */
+/* The hint keeps its room but stays invisible until the pointer is on the
+   link, and then reads in the muted text colour, plain to see */
 .summary-link .zato-soft-hint {
+    font-size: var(--summary-link-hint-size);
+    color: var(--summary-link-hint-color);
     opacity: 0;
     transition: opacity 150ms ease;
 }

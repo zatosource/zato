@@ -2,13 +2,12 @@
  * Alerts tab - the per-object alert settings panel of a create or edit form,
  * read as one page of settings inside a dialog.
  *
- * The lines and the chips come from shared/decision-lines.css, the summary
- * links from shared/summary-link.css and the popover micro-forms and the
- * panel body from shared/micro-forms.css. This file only fits them into a
- * dialog - the surface the tab stands on, the room around the lines, how
- * the questions read next to the Main tab's own labels, the dimmed state the
- * settings take when the Active switch is off and the shape of the panel the
- * email connection is picked in.
+ * The lines come from shared/decision-lines.css, the summary links from
+ * shared/summary-link.css and the popover micro-forms from
+ * shared/micro-forms.css. This file only fits them into a dialog - the
+ * surface the tab stands on, the room around the lines, how the questions
+ * read next to the Main tab's own labels, the width of the connection
+ * selects and the dimmed state the settings take when the Active switch is off.
  *
  * Include it after the kits in the extra_css block:
  *
@@ -18,7 +17,12 @@
  *     <link rel="stylesheet" href="/static/css/shared/micro-forms.css">
  *     <link rel="stylesheet" href="/static/css/shared/decision-lines.css">
  *     <link rel="stylesheet" href="/static/css/shared/summary-link.css">
+ *     <link rel="stylesheet" href="/static/css/shared/dropdown-menu.css">
+ *     <link rel="stylesheet" href="/static/css/shared/time-slots.css">
  *     <link rel="stylesheet" href="/static/css/shared/alerts-tab.css">
+ *
+ * The last two are the time slots kit a popover of the tab may carry - the
+ * menu of time suggestions under its inputs and the slots themselves.
  */
 
 /* The tokens sit on the panel, so they never spill to the rest of the dialog */
@@ -31,19 +35,62 @@
     --alerts-tab-section-title-space: 8px;
 
     /* The questions read the way the Main tab's labels do - the same 12px
-       of .form-data, in the regular weight, and since they are short the
-       answers start closer than on a wizard page */
-    --decision-line-label-width: 10.5em;
+       of .form-data, in the regular weight */
     --decision-line-label-size: 12px;
     --decision-line-label-weight: 400;
     --decision-lines-gap: 8px;
     --decision-lines-max-width: none;
-    --decision-chip-font-size: 12px;
+    --alerts-tab-column-gap: 12px;
 
     /* One height for every line, whatever answers it - a switch, a link or a
-       chip - so the sections keep one rhythm, and the chip is sized to it */
+       select - so the sections keep one rhythm */
     --alerts-tab-line-height: 20px;
-    --decision-chip-height: 20px;
+
+    /* The connection selects are one width, wide enough for a reasonably named
+       connection, whatever the names in them happen to be, and the sentence
+       standing in for an empty one reads at the size of the questions */
+    --alerts-tab-select-width: 24em;
+    --alerts-tab-select-font-size: 12px;
+    --alerts-tab-empty-font-size: 12px;
+}
+
+/* ------------------------------------------------------------ */
+/* One label column for the whole tab                            */
+/* ------------------------------------------------------------ */
+
+/* The sections share one grid of two columns - the labels and the answers -
+   and every section, list and line is a subgrid of it, so the label column
+   is exactly as wide as the longest question anywhere on the tab and the
+   answers of every section start on the same line. A section title spans
+   both columns. */
+.data-popup .alerts-tab-panel .alerts-tab-sections {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: var(--alerts-tab-column-gap);
+}
+
+.data-popup .alerts-tab-panel .alerts-tab-section,
+.data-popup .alerts-tab-panel .decision-lines,
+.data-popup .alerts-tab-panel .decision-line {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+}
+
+.data-popup .alerts-tab-panel .decision-lines {
+    row-gap: var(--decision-lines-gap);
+}
+
+.data-popup .alerts-tab-panel .decision-line {
+    align-items: center;
+}
+
+.data-popup .alerts-tab-panel .alerts-tab-section-title {
+    grid-column: 1 / -1;
+}
+
+.data-popup .alerts-tab-panel .decision-line-label {
+    width: auto;
 }
 
 /* The tab's body is a .form-data, the surface the Main tab's table stands on -
@@ -71,6 +118,18 @@
     margin-bottom: var(--alerts-tab-section-title-space);
     font-size: var(--alerts-tab-section-title-size);
     font-weight: var(--alerts-tab-section-title-weight);
+    color: var(--zato-ui-text);
+}
+
+/* The connection selects - one width for both, the page's own select styling otherwise */
+.data-popup .alerts-tab-panel select.alerts-tab-select {
+    width: var(--alerts-tab-select-width);
+    font-size: var(--alerts-tab-select-font-size);
+}
+
+/* The sentence a select with nothing to list is swapped for */
+.data-popup .alerts-tab-panel .alerts-tab-pick-empty {
+    font-size: var(--alerts-tab-empty-font-size);
     color: var(--zato-ui-text);
 }
 
@@ -116,6 +175,7 @@
     --toggle-travel: 16px;
     --toggle-off-background: #999;
     --toggle-on-background: #2d6392;
+    --alerts-tab-slots-indent: 6px;
 }
 
 /* A popover here is exactly as wide as its label - "Consecutive failures" -
@@ -130,31 +190,18 @@
     min-width: 100%;
 }
 
-/* ------------------------------------------------------------ */
-/* The panel the email connection is picked in                   */
-/* ------------------------------------------------------------ */
-
-/* The dialog stands at the same height the panels do, and the panel is
-   what is being read at the time, so it goes over the top of the dialog.
-   Two short lists, one per kind of connection, each as tall as it needs
-   to be and no taller - never the one long list a wizard panel holds. */
-.alerts-tab-pick-panel {
-    --decision-pick-panel-z-index: 10001;
-    --decision-pick-panel-list-height: 7em;
-    --alerts-tab-add-link-space: 4px 0 10px;
+/* The time slots of a popover hang off the popover's left edge rather than
+   the indent a rule of the rate limiting page gives them, and the field they
+   are in is as wide as they are, which is what sizes the popover */
+.alerts-tab-micro-form .micro-form-field-own {
+    width: max-content;
 }
 
-.alerts-tab-pick-panel .decision-pick-panel-list {
-    flex: 0 0 auto;
-    max-height: var(--decision-pick-panel-list-height);
-    overflow-y: auto;
+.alerts-tab-micro-form .time-slots {
+    margin-left: var(--alerts-tab-slots-indent);
 }
 
-/* The link opening the page a new connection is made on, under its group's
-   list. The panel body is a flex column, which would stretch the link and
-   its dashed underline across the whole panel, so it keeps to its own width. */
-.alerts-tab-pick-panel a.alerts-tab-add-link {
+.alerts-tab-micro-form .time-slots-add {
     align-self: flex-start;
-    margin: var(--alerts-tab-add-link-space);
-    font-size: 12px;
+    margin-left: var(--alerts-tab-slots-indent);
 }

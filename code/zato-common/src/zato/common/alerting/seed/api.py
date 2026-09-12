@@ -135,6 +135,7 @@ _run_statuses = [
 # systems - activating the rule together with the test transfer job is the documented opt-in.
 _inactive_rule_full_names = [
     'alerts_file_transfer_Test_Transfer_Failing',
+    'alerts_channels_Channel_Silent',
 ]
 
 # ################################################################################################################################

@@ -17,13 +17,14 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerEr
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web import from_user_to_utc, from_utc_to_user
+from zato.admin.web import alerts_tab, from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms import add_http_soap_select, add_select_from_service
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
     get_js_dt_format, get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
         method_allowed, ping_json_response, SecurityList
 from zato.admin.web.views.security.tier import get_tier_list
+from zato.common.alerting.object_config import alert_type_channels
 from zato.common.api import generic_attrs, Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      Sec_Def_Type_Name, SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.content_type import format_content, get_content_type
@@ -60,6 +61,9 @@ TRANSPORT = {
 
 # Channels whose service is this one are API gateways and get a badge in the channel list
 Gateway_Trigger_Service = 'helpers.service-gateway'
+
+# The alert type of the one kind of object on these pages that has an Alerts tab
+_channel_alert_type = alert_type_channels
 
 _rest_security_type_supported = {
     SEC_DEF_TYPE.APIKEY,
@@ -135,6 +139,14 @@ _inline_field_names = ['is_active', 'name', 'url_path', 'service']
 # ################################################################################################################################
 # ################################################################################################################################
 
+def is_rest_channel(connection:'str', transport:'str') -> 'bool':
+    """ Whether a page or a form is a REST channel's - the one kind of object here with an Alerts tab.
+    """
+    out = connection == 'channel' and transport == URL_TYPE.PLAIN_HTTP
+    return out
+
+# ################################################################################################################################
+
 def _get_edit_create_message(params, prefix='', user_profile=None): # type: ignore
     """ A bunch of attributes that can be used by both 'edit' and 'create' actions
     for channels and outgoing connections.
@@ -184,6 +196,14 @@ def _get_edit_create_message(params, prefix='', user_profile=None): # type: igno
             message['is_deprecated'] = bool(params.get(prefix + 'is_deprecated'))
             message['deprecation_sunset'] = params.get(prefix + 'deprecation_sunset', '')
             message['deprecation_successor'] = params.get(prefix + 'deprecation_successor', '')
+
+            # .. and so do the Alerts tab's fields - a checkbox arrives only when checked, a number as text,
+            # and a duration as a count with a unit that join into the seconds it is stored as.
+            for name in alerts_tab.get_storage_field_names(_channel_alert_type):
+                value = params.get(prefix + name, '')
+                message[name] = alerts_tab.pre_process_alert_item(_channel_alert_type, name, value)
+
+            alerts_tab.join_durations(_channel_alert_type, message)
 
     # The declarative invocation fields exist only in the forms of outgoing connections
     for name in _invocation_field_names:
@@ -340,8 +360,14 @@ def index(req): # type: ignore
 
             _security.append(def_item)
 
-        create_form = CreateForm(_security, SOAP_CHANNEL_VERSIONS, req=req)
-        edit_form = EditForm(_security, SOAP_CHANNEL_VERSIONS, prefix='edit', req=req)
+        # The Alerts tab is a REST channel's - its alerts are counted off the audit log the channel keeps
+        if is_rest_channel(connection, transport):
+            alert_type = _channel_alert_type
+        else:
+            alert_type = None
+
+        create_form = CreateForm(_security, SOAP_CHANNEL_VERSIONS, req=req, alert_type=alert_type)
+        edit_form = EditForm(_security, SOAP_CHANNEL_VERSIONS, prefix='edit', req=req, alert_type=alert_type)
 
         if connection == 'outgoing':
             create_form.fields['url_path'].required = False
@@ -452,6 +478,14 @@ def index(req): # type: ignore
                 http_soap.is_deprecated = is_deprecated
                 http_soap.deprecation_sunset = item.get('deprecation_sunset', '')
                 http_soap.deprecation_successor = item.get('deprecation_successor', '')
+
+                # The Alerts tab's fields ride in the row for the edit form to read, a duration
+                # as the count and the unit it is edited as rather than the seconds it is stored as.
+                if is_rest_channel(connection, transport):
+                    for name in alerts_tab.get_storage_field_names(_channel_alert_type):
+                        if name in item:
+                            http_soap[name] = item[name]
+                    alerts_tab.split_durations(_channel_alert_type, http_soap)
             else:
                 http_soap.ping_method = item.ping_method
                 http_soap.pool_size = item.pool_size
@@ -524,6 +558,12 @@ def index(req): # type: ignore
 
     # The scheduler tab's start date picker needs the user's date and time format
     return_data.update(get_js_dt_format(req.zato.user_profile))
+
+    # The Alerts tab of a REST channel's forms - the lines the template renders and what their JavaScript reads
+    if is_rest_channel(connection, transport):
+        return_data['create_alerts_tab'] = alerts_tab.get_alerts_tab_context(create_form, _channel_alert_type)
+        return_data['edit_alerts_tab'] = alerts_tab.get_alerts_tab_context(edit_form, _channel_alert_type)
+        return_data['alerts_tab_config'] = alerts_tab.get_alerts_tab_config(_channel_alert_type)
 
     return TemplateResponse(req, 'zato/http_soap/index.html', return_data)
 

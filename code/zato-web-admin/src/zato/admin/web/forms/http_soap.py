@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
+from zato.admin.web import alerts_tab
 from zato.admin.web.forms import add_health_check_fields, add_security_select, add_services, \
     SearchForm as _ChooseClusterForm, DataFormatForm
 from zato.common.api import HTTP_SOAP, MISC, PARAMS_PRIORITY, IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY
@@ -144,7 +145,7 @@ class CreateForm(DataFormatForm):
     scheduler_job_id = forms.CharField(required=False, widget=forms.HiddenInput())
 
     def __init__(self, security_list=None, soap_versions=SOAP_VERSIONS,
-            prefix=None, post_data=None, req=None):
+            prefix=None, post_data=None, req=None, alert_type=None):
 
         security_list = security_list or []
 
@@ -192,6 +193,10 @@ class CreateForm(DataFormatForm):
         add_security_select(self, security_list)
 
         add_services(self, req)
+
+        # The Alerts tab exists only on the pages whose objects raise alerts - REST channels for now
+        if alert_type:
+            alerts_tab.add_alerts_fields(self, alert_type, req)
 
 # ################################################################################################################################
 # ################################################################################################################################

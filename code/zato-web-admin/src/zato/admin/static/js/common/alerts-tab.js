@@ -10,22 +10,29 @@
 // common/decision-lines.js and the popover micro-forms of common/micro-forms.js:
 //
 //   - a popover line carries a summary link reading as a sentence, and the link
-//     opens a micro-form on the hidden number fields behind it,
+//     opens a micro-form on the hidden number fields behind it - a threshold on
+//     one row and the window it is measured over on the next,
+//   - a popover line with a time slots field opens the time slots kit of
+//     shared/time-slots.js instead - the All day slot holding the line's own
+//     switch and duration, every range of the day added under it holding its
+//     own, the ranges kept as one JSON list in the hidden slots field,
 //   - a toggle line is a switch answered on the spot,
-//   - a pick line is a chip opening a pick panel that lists connections in
-//     groups - the SMTP and Microsoft 365 connections for the email line, the
-//     LLM connections for the LLM line - each group with the link to the page
-//     a new one is made on, and picking a row writes the hidden select,
+//   - a pick line is a select listing connections flat - the SMTP and Microsoft
+//     365 connections for the email line, the LLM connections for the LLM line -
+//     and a select with nothing to list is swapped for a sentence with the links
+//     to the pages a connection is created on, the live form updates poll
+//     swapping the two back as connections come and go,
 //   - the Active switch, the first line of the core settings, dims and freezes
 //     every other line when off, and a line depending on another toggle, the
 //     LLM line on Use LLM, is dimmed while that toggle is off.
 //
-// The popovers and the panel are appended to document.body, so each wears a
-// class of its own - alerts-tab-micro-form and alerts-tab-pick-panel - under
-// which shared/alerts-tab.css tunes the kits' tokens.
+// The popovers are appended to document.body, so each wears a class of its
+// own - alerts-tab-micro-form - under which shared/alerts-tab.css tunes the
+// micro-form tokens.
 //
 // How to use, in a page's JS:
 //
+//     // With common/alerts-tab-slots.js loaded before this file
 //     $.fn.zato.alerts_tab.init({config_id: 'out-sftp-alerts-tab-config'});
 //
 //     // Before opening the create dialog
@@ -36,6 +43,10 @@
 //
 //     // When building the how-it-works descriptions
 //     var descriptions = $.extend({}, own_descriptions, $.fn.zato.alerts_tab.descriptions());
+//
+//     // Next to the page's own live form updates configs
+//     $.fn.zato.live_form_updates.register('create', $.fn.zato.alerts_tab.live_configs(''));
+//     $.fn.zato.live_form_updates.register('edit', $.fn.zato.alerts_tab.live_configs('edit-'));
 //
 //     // The hidden columns of a row the edit form is populated from
 //     get_columns: [..., ...$.fn.zato.alerts_tab.columns()]
@@ -65,21 +76,28 @@ $.fn.zato.alerts_tab.config = {
     off_class: 'alerts-tab-off',
     line_off_class: 'alerts-tab-line-off',
     id_prefix: 'id_',
-    window_target: '_blank',
-
-    // The panel a connection is picked in, and the class it wears,
-    // under which alerts-tab.css tunes the pick panel tokens
-    pick_panel_width: 340,
-    pick_panel_min_width: 280,
-    pick_panel_class: 'alerts-tab-pick-panel',
-
-    // The link under a group's list opening the page a new connection is made on
-    add_link_class: 'alerts-tab-add-link',
 
     // The summary of a popover line - `{field}` is a value, `{field|singular|plural}` a
-    // value with the right noun after it and `{unit_field@count_field}` a count with the
-    // unit select's noun after it, the option's value being the singular and its label the plural
-    summary_token: /\{([a-z_]+)(?:@([a-z_]+))?(?:\|([^|}]+)\|([^}]+))?\}/g,
+    // value with the right noun after it, `{unit_field@count_field}` a count with the
+    // unit select's noun after it, the option's value being the singular and its label the
+    // plural, and `{slots_field#singular|plural}` the number of time slots with the right
+    // noun after it, set off with a comma and left out when there are none
+    summary_token: /\{([a-z_]+)(?:@([a-z_]+))?(?:#([^|}]+)\|([^}]+))?(?:\|([^|}]+)\|([^}]+))?\}/g,
+    slots_summary_separator: ', ',
+
+    // How wide a popover carrying time slots is - the slots need the room the numbers alone do not
+    // The class a slots field carries so the popover leaves the kit's controls to the kit's own styles
+    slots_field_class: 'micro-form-field-own',
+
+    // A slots popover is this wide from the start - room for a range with its Delete link -
+    // so adding and removing ranges never changes its width
+    slots_popover_width: '560px',
+
+    // The keys of one time slot in the hidden slots field, shared with the Python side
+    slot_time_from: 'time_from',
+    slot_time_to: 'time_to',
+    slot_is_on: 'is_on',
+    slot_seconds: 'silence_seconds',
 
     // What a hidden cell says of a checkbox, which is what the edit form reads a boolean back from
     cell_true: 'True',
@@ -90,10 +108,11 @@ $.fn.zato.alerts_tab.config = {
 // What the Django side told us about the page's alert fields
 $.fn.zato.alerts_tab.settings = null;
 
-// Which form's panel is bound at the moment
+// Which form's panel is bound at the moment, and the slots kits of the open popovers by line
 $.fn.zato.alerts_tab.state = {
     panel_id: null,
-    field_prefix: ''
+    field_prefix: '',
+    slots_kits: {}
 };
 
 // The micro-forms kit installs the popover engine here
@@ -114,6 +133,8 @@ $.fn.zato.alerts_tab.init = function(options) {
         showHowItWorks: tab.config.show_how_it_works,
         onDone: tab.render
     });
+
+    tab.register_slots_kind();
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -188,12 +209,14 @@ $.fn.zato.alerts_tab.element_id = function(part, line_name) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One micro-form per popover line - the fields of a line share one row, so
-// a warning and an error count are read side by side, and a line with a
-// unit select has it right after the last of its numbers
+// One micro-form per popover line - the fields of a line share one row unless the
+// line says which fields go on which row, a line with a unit select has it right
+// after the last of its numbers, and a line with a time slots field is the slots
+// kit alone, the All day slot carrying the line's own switch and duration
 $.fn.zato.alerts_tab.build_descriptors = function() {
 
-    var settings = $.fn.zato.alerts_tab.settings;
+    var tab = $.fn.zato.alerts_tab;
+    var settings = tab.settings;
     var out = {};
 
     settings.lines.forEach(function(line) {
@@ -202,25 +225,48 @@ $.fn.zato.alerts_tab.build_descriptors = function() {
             return;
         }
 
-        var specs = line.fields.map(function(field_name) {
-            var spec = {
-                field: field_name,
-                label: settings.field_labels[field_name],
-                kind: settings.toggle_kinds.indexOf(settings.field_kinds[field_name]) !== -1 ? 'checkbox' : 'number'
+        if(line.slots_field) {
+            out[line.name] = {
+                title: line.title,
+                width: tab.config.slots_popover_width,
+                pages: [[{kind: settings.slots_kind, field: line.slots_field, line: line}]]
             };
-            return spec;
+            return;
+        }
+
+        var rows = line.rows ? line.rows : [line.fields];
+        var last_spec = null;
+
+        var page = rows.map(function(row) {
+
+            var specs = row.map(function(field_name) {
+                var spec = {
+                    field: field_name,
+                    label: settings.field_labels[field_name],
+                    kind: settings.toggle_kinds.indexOf(settings.field_kinds[field_name]) !== -1 ? 'checkbox' : 'number'
+                };
+
+                // A switch sharing a row with numbers stands under a label like they do
+                if(spec.kind === 'checkbox' && row.length > 1) {
+                    spec.labelAbove = true;
+                }
+
+                last_spec = spec;
+                return spec;
+            });
+
+            var entry = specs.length === 1 ? specs[0] : specs;
+            return entry;
         });
 
         if(line.unit_field) {
-            specs[specs.length - 1].unitField = line.unit_field;
+            last_spec.unitField = line.unit_field;
         }
-
-        var entry = specs.length === 1 ? specs[0] : specs;
 
         out[line.name] = {
             title: line.title,
             fitContent: true,
-            pages: [[entry]]
+            pages: [page]
         };
     });
 
@@ -245,7 +291,7 @@ $.fn.zato.alerts_tab.helpDescriptions = function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 // The how-it-works descriptions of the lines of the bound panel, keyed by the
-// id each line's label points at - the switch, the edit link or the chip
+// id each line's label points at - the switch, the select or the edit link
 $.fn.zato.alerts_tab.descriptions = function() {
 
     var tab = $.fn.zato.alerts_tab;
@@ -256,14 +302,11 @@ $.fn.zato.alerts_tab.descriptions = function() {
 
         var target_id;
 
-        if(line.kind === 'toggle') {
-            target_id = tab.field_id(line.fields[0]);
-        }
-        else if(line.kind === 'popover') {
+        if(line.kind === 'popover') {
             target_id = tab.element_id('edit', line.name);
         }
         else {
-            target_id = tab.element_id('slot', line.name) + '-chip';
+            target_id = tab.field_id(line.fields[0]);
         }
 
         out[target_id] = line.how_it_works;
@@ -276,15 +319,32 @@ $.fn.zato.alerts_tab.descriptions = function() {
 
 // Writes a line's summary from its fields - `{field}` is the field's value,
 // `{field|singular|plural}` the value with the right one of the two nouns after it
-// and `{unit_field@count_field}` the count with the unit select's noun after it
-$.fn.zato.alerts_tab.format_summary = function(template) {
+// and `{unit_field@count_field}` the count with the unit select's noun after it.
+// A line with a switch among its fields reads as its off text while the switch is off.
+$.fn.zato.alerts_tab.format_summary = function(line) {
 
     var tab = $.fn.zato.alerts_tab;
 
-    var out = template.replace(tab.config.summary_token, function(ignored, field_name, count_field_name, singular, plural) {
+    if(line.off_field && !tab.field(line.off_field).is(':checked')) {
+        return line.summary_off;
+    }
+
+    var out = line.summary.replace(tab.config.summary_token, function(ignored, field_name, count_field_name, slots_singular, slots_plural, singular, plural) {
 
         var field = tab.field(field_name);
         var value = field.val();
+
+        // The ranges of the day a slots field holds, said only when there are any
+        if(slots_singular !== undefined) {
+            var slots_count = JSON.parse(value).length;
+
+            if(slots_count === 0) {
+                return '';
+            }
+
+            var slots_text = tab.config.slots_summary_separator + $.fn.zato.count_text(slots_count, slots_singular, slots_plural);
+            return slots_text;
+        }
 
         // A unit select spells its noun both ways - the value is the singular, the label the plural
         if(count_field_name !== undefined) {
@@ -307,236 +367,87 @@ $.fn.zato.alerts_tab.format_summary = function(template) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Splits a pick select value into the kind of connection and the connection's
-// name - an email value carries the kind before the separator, an LLM value is
-// the name alone and belongs to the line's one group
-$.fn.zato.alerts_tab.split_pick_value = function(line, value) {
-
-    var out;
-
-    if(line.encode_kind) {
-        var separator = $.fn.zato.alerts_tab.settings.pick_kind_separator;
-        var separator_index = value.indexOf(separator);
-
-        out = {
-            kind: value.substring(0, separator_index),
-            name: value.substring(separator_index + separator.length)
-        };
-    }
-    else {
-        out = {
-            kind: line.groups[0].kind,
-            name: value
-        };
-    }
-
-    return out;
-}
-
-// The value one entry of a pick line's select carries for a connection of a kind
-$.fn.zato.alerts_tab.pick_value = function(line, kind, name) {
-
-    var out;
-
-    if(line.encode_kind) {
-        out = kind + $.fn.zato.alerts_tab.settings.pick_kind_separator + name;
-    }
-    else {
-        out = name;
-    }
-
-    return out;
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// The group of a pick line a kind of connection belongs to
-$.fn.zato.alerts_tab.pick_group = function(line, kind) {
-
-    var out = null;
-
-    line.groups.forEach(function(group) {
-        if(group.kind === kind) {
-            out = group;
-        }
-    });
-
-    return out;
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// The connections of one kind, read off the hidden select's own group so the
-// select stays the single source of what there is to pick from
-$.fn.zato.alerts_tab.pick_connection_names = function(line, kind) {
+// A pick line shows its select while there is anything to list and the sentence
+// with the create links otherwise
+$.fn.zato.alerts_tab.apply_pick_state = function(line) {
 
     var tab = $.fn.zato.alerts_tab;
-    var settings = tab.settings;
+    var has_options = tab.field(line.field).find('option').length > 1;
+
+    document.getElementById(tab.element_id('pick', line.name)).hidden = !has_options;
+    document.getElementById(tab.element_id('empty', line.name)).hidden = has_options;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The live form updates configs of the pick lines of one form - the poll keeps
+// each select in step with the connections there are and the tab swaps the
+// select and the empty sentence as they come and go. The field prefix is the
+// form's, the empty string for the create form and 'edit-' for the edit form.
+$.fn.zato.alerts_tab.live_configs = function(field_prefix) {
+
+    var tab = $.fn.zato.alerts_tab;
     var out = [];
 
-    tab.field(line.field).find('option').each(function() {
+    tab.settings.lines.forEach(function(line) {
 
-        if(!this.value) {
+        if(line.kind !== 'pick') {
             return;
         }
 
-        var parts = tab.split_pick_value(line, this.value);
+        var select_id = tab.config.id_prefix + field_prefix + tab.settings.field_prefix + line.field;
 
-        if(parts.kind !== kind) {
-            return;
-        }
-
-        // The entries saying a group is empty or opening the create page are not connections
-        if(parts.name === settings.pick_none_value || parts.name === settings.pick_create_new_value) {
-            return;
-        }
-
-        out.push(parts.name);
-    });
-
-    return out;
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// Fills a pick line's chip from the hidden select - solid with the picked
-// connection and its group as the note, dashed while nothing is picked yet
-$.fn.zato.alerts_tab.render_pick_chip = function(line) {
-
-    var tab = $.fn.zato.alerts_tab;
-    var settings = tab.settings;
-    var value = tab.field(line.field).val();
-
-    var spec = {
-        panel: {
-            title: line.title,
-            width: tab.config.pick_panel_width,
-            minWidth: tab.config.pick_panel_min_width,
-            panelClass: tab.config.pick_panel_class,
-            build: function(body) {
-                var out = tab.build_pick_panel(line, body);
-                return out;
+        out.push({
+            object_type: line.live_type,
+            handler: 'callback',
+            snapshot_func: function() {
+                var items = $.fn.zato.live_form_updates._snapshot_select('#' + select_id);
+                return items;
+            },
+            on_diff: function(diff, skip_puff) {
+                tab.apply_pick_diff(line, select_id, diff, skip_puff);
             }
-        }
-    };
-
-    if(value === settings.pick_no_selection_value) {
-        spec.text = settings.pick_no_selection_label;
-        spec.isBlank = true;
-    }
-    else {
-        var parts = tab.split_pick_value(line, value);
-        spec.text = parts.name;
-        spec.note = tab.pick_group(line, parts.kind).label;
-    }
-
-    $.fn.zato.decision_lines.setChip(tab.element_id('slot', line.name), spec);
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// The panel a pick line's connection is picked in - one heading and one list
-// per group, the list saying (None) when the group has no connections, and
-// under each the link to the page a new one is made on
-$.fn.zato.alerts_tab.build_pick_panel = function(line, body) {
-
-    var tab = $.fn.zato.alerts_tab;
-    var settings = tab.settings;
-    var lines = $.fn.zato.decision_lines;
-
-    var current = tab.field(line.field).val();
-
-    line.groups.forEach(function(group) {
-
-        var heading = document.createElement('span');
-        heading.className = 'micro-form-label';
-        heading.textContent = group.label;
-        body.appendChild(heading);
-
-        var list = document.createElement('div');
-        list.className = 'decision-pick-panel-list';
-
-        var names = tab.pick_connection_names(line, group.kind);
-
-        names.forEach(function(name) {
-
-            var value = tab.pick_value(line, group.kind, name);
-            var is_picked = value === current;
-            var row = lines.buildPickRow(name, is_picked, tab.pick_connection(line, value));
-
-            // Picking the connection already picked is how the object is left without one,
-            // which the name says right after itself rather than through a control of its own
-            if(is_picked) {
-                var remove = document.createElement('span');
-                remove.className = 'decision-pick-remove';
-                remove.textContent = settings.pick_remove_label;
-                row.querySelector('.decision-pick-name').appendChild(remove);
-            }
-
-            list.appendChild(row);
         });
-
-        if(!names.length) {
-            var empty = document.createElement('div');
-            empty.className = 'decision-pick-panel-empty';
-            empty.textContent = tab.pick_option_label(line, tab.pick_value(line, group.kind, settings.pick_none_value));
-            list.appendChild(empty);
-        }
-
-        body.appendChild(list);
-
-        var add_link = document.createElement('a');
-        add_link.href = 'javascript:void(0)';
-        add_link.className = tab.config.add_link_class;
-        add_link.textContent = tab.pick_option_label(line, tab.pick_value(line, group.kind, settings.pick_create_new_value));
-
-        add_link.addEventListener('click', function() {
-            window.open(group.create_url, tab.config.window_target);
-        });
-
-        body.appendChild(add_link);
     });
 
-    var out = null;
     return out;
 }
 
-// /////////////////////////////////////////////////////////////////////////////
+// Applies one poll's differences to a pick select - options gone, renamed and new - and shows
+// the select or the empty sentence as the count of options says
+$.fn.zato.alerts_tab.apply_pick_diff = function(line, select_id, diff, skip_puff) {
 
-// The label of one option of a pick line's hidden select
-$.fn.zato.alerts_tab.pick_option_label = function(line, value) {
     var tab = $.fn.zato.alerts_tab;
-    var option = tab.field(line.field).find('option').filter(function() {
-        return this.value === value;
+    var select = $('#' + select_id);
+
+    diff.deleted.forEach(function(deleted_id) {
+        select.find('option').filter(function() {
+            var matches = this.value === deleted_id;
+            return matches;
+        }).remove();
     });
-    var out = option.text();
-    return out;
-}
 
-// /////////////////////////////////////////////////////////////////////////////
+    diff.renamed.forEach(function(renamed) {
+        var option = select.find('option').filter(function() {
+            var matches = this.value === renamed._id;
+            return matches;
+        });
+        option.text(renamed.item._label);
+    });
 
-// The row of one connection knows the value it stands for - picking the one
-// already picked is how the object is left without a connection
-$.fn.zato.alerts_tab.pick_connection = function(line, value) {
+    diff.created.forEach(function(item) {
+        var option = $('<option/>').val(item._id).text(item._label);
+        select.append(option);
 
-    var tab = $.fn.zato.alerts_tab;
-
-    var out = function() {
-
-        var field = tab.field(line.field);
-
-        if(field.val() === value) {
-            field.val(tab.settings.pick_no_selection_value);
+        if(!skip_puff) {
+            $.fn.zato.live_form_updates._puff(option);
         }
-        else {
-            field.val(value);
-        }
+    });
 
-        $.fn.zato.decision_lines.closePanel();
-        tab.render();
-    };
-
-    return out;
+    // The bound form's own select is the one on show, the other form's is not on screen
+    if(select_id === tab.field_id(line.field)) {
+        tab.apply_pick_state(line);
+    }
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -574,7 +485,7 @@ $.fn.zato.alerts_tab.apply_dependent_state = function(line) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // Writes every line of the bound panel from the form - the summaries of the
-// popover lines, the chips of the pick lines and the dimmed states
+// popover lines and the dimmed states
 $.fn.zato.alerts_tab.render = function() {
 
     var tab = $.fn.zato.alerts_tab;
@@ -583,14 +494,15 @@ $.fn.zato.alerts_tab.render = function() {
 
         if(line.kind === 'popover') {
             var summary = document.getElementById(tab.element_id('summary', line.name));
-            summary.textContent = tab.format_summary(line.summary);
-        }
-        else if(line.kind === 'pick') {
-            tab.render_pick_chip(line);
+            summary.textContent = tab.format_summary(line);
         }
 
         if(line.depends_on) {
             tab.apply_dependent_state(line);
+        }
+
+        if(line.kind === 'pick') {
+            tab.apply_pick_state(line);
         }
     });
 

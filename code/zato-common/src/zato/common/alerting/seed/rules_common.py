@@ -77,6 +77,99 @@ when
 then
     outcome.action = 'email'
     outcome.severity = 'warning'
+
+rule
+    Channel_Failing
+docs
+    A REST channel whose three newest calls all failed is failing and raises an error email alert -
+    whatever the callers send, the channel is not answering them any more.
+defaults
+    max_consecutive_failures = 3
+when
+    alert.source is 'rest-channel' and
+    alert.consecutive_failures is at least default.max_consecutive_failures
+then
+    outcome.action = 'email'
+    outcome.severity = 'error'
+
+rule
+    Server_Errors
+docs
+    A REST channel answering a twentieth of its recent calls with a 5xx status raises an error email alert.
+    A 5xx is the service behind the channel failing, which is the channel owner's problem, not the caller's,
+    hence the low bar. The rule waits for at least ten calls in the window.
+defaults
+    server_error_rate_threshold = 0.05
+    min_events = 10
+    window_seconds = 300
+when
+    alert.source is 'rest-channel' and
+    alert.total_count is at least default.min_events and
+    alert.server_error_rate is at least default.server_error_rate_threshold
+then
+    outcome.action = 'email'
+    outcome.severity = 'error'
+
+rule
+    Slow_Responses
+docs
+    A REST channel whose responses average more than five seconds in the window raises a warning email alert.
+defaults
+    max_avg_duration_ms = 5000
+    window_seconds = 300
+when
+    alert.source is 'rest-channel' and
+    alert.avg_duration_ms is at least default.max_avg_duration_ms
+then
+    outcome.action = 'email'
+    outcome.severity = 'warning'
+
+rule
+    Auth_Failures
+docs
+    A REST channel rejecting ten or more callers in the window, with a 401 or a 403, raises a warning email alert.
+    Rejected callers are their own signal, distinct from failures, because the remedy is credentials, not code -
+    a client's password was rotated, or someone is probing.
+defaults
+    auth_failure_threshold = 10
+    window_seconds = 300
+when
+    alert.source is 'rest-channel' and
+    alert.auth_failure_count is at least default.auth_failure_threshold
+then
+    outcome.action = 'email'
+    outcome.severity = 'warning'
+
+rule
+    Client_Errors
+docs
+    A REST channel answering fifty or more calls in the window with a 4xx other than 401 or 403 raises a warning email alert.
+    A bad request, a path not found or a method not allowed is the caller sending what the channel does not accept,
+    which is the caller's problem, hence the high bar and the low severity - a burst of them says a client changed.
+defaults
+    client_error_threshold = 50
+    window_seconds = 300
+when
+    alert.source is 'rest-channel' and
+    alert.client_error_count is at least default.client_error_threshold
+then
+    outcome.action = 'email'
+    outcome.severity = 'warning'
+
+rule
+    Channel_Silent
+docs
+    A REST channel that expects traffic and received no request for an hour raises a warning email alert.
+    Ships inactive - a channel nobody calls is not a problem - and a channel opts in on its Alerts tab,
+    which is where the silence it tolerates is set too.
+defaults
+    silence_seconds = 3600
+when
+    alert.source is 'rest-channel' and
+    alert.silent_seconds is at least default.silence_seconds
+then
+    outcome.action = 'email'
+    outcome.severity = 'warning'
 """.strip()
 
 # ################################################################################################################################

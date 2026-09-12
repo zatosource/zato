@@ -126,7 +126,7 @@ _type_cells = {
     'file_transfer': ['consecutive_failures', 'warning_failures', 'error_failures', 'window', 'test_transfers', 'use_llm',
         'arrival_overdue'],
     'scheduler':     ['error_rate', 'window', 'overdue_multiplier', 'start_delay', 'use_llm'],
-    'channels':      [None, 'error_rate', 'window', None, None],
+    'channels':      ['consecutive_failures', 'error_rate', 'window', 'max_latency', 'use_llm'],
     'common':        ['certificate_warning', 'outstanding_backlog', 'feed_silence', None, None],
 }
 

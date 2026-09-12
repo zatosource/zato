@@ -14,6 +14,7 @@ from traceback import format_exc
 from django.http import HttpResponse, HttpResponseBadRequest
 
 # Zato
+from zato.admin.web.alerts_tab_picks import get_live_items, Live_Type_Email_Connection, Live_Type_LLM_Connection
 from zato.admin.web.util import get_pubsub_security_definitions
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.http_soap import _outgoing_only_security_types, _rest_security_type_supported
@@ -90,6 +91,23 @@ def _pubsub_subscription_security(req:'any_') -> 'dictlist':
 
     # The same helper that populates the page's own dropdown, so both always agree.
     out = get_pubsub_security_definitions(req, 'create', 'subscription')
+    return out
+
+# ################################################################################################################################
+
+def _alert_email_connections(req:'any_') -> 'dictlist':
+
+    # The same listing the Alerts tab builds its email select from - an item's id is the option's
+    # value and its name the option's label, so the poll and the tab never disagree.
+    out = get_live_items(req, Live_Type_Email_Connection)
+    return out
+
+# ################################################################################################################################
+
+def _alert_llm_connections(req:'any_') -> 'dictlist':
+
+    # The same listing the Alerts tab builds its LLM select from.
+    out = get_live_items(req, Live_Type_LLM_Connection)
     return out
 
 # ################################################################################################################################
@@ -194,6 +212,20 @@ OBJECT_TYPE_CONFIG:'stranydict' = {
         'id_field': 'id',
         'label_format': '{name}',
         'extra_params': {},
+        'filter_func': None,
+    },
+
+    Live_Type_Email_Connection: {
+        'fetch_func': _alert_email_connections,
+        'id_field': 'id',
+        'label_format': '{name}',
+        'filter_func': None,
+    },
+
+    Live_Type_LLM_Connection: {
+        'fetch_func': _alert_llm_connections,
+        'id_field': 'id',
+        'label_format': '{name}',
         'filter_func': None,
     },
 }

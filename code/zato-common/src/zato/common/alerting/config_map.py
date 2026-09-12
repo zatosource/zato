@@ -31,17 +31,28 @@ if 0:
 
 # The kinds a screen field comes in - a number backed by rule defaults, a duration backed
 # by a rule default counted in seconds and shown as a count with a unit, a toggle backed
-# by the active flags of whole rules, or a ruleset toggle backed by one key every rule
-# document of the ruleset carries, which is how a setting of the whole type is kept.
+# by the active flags of whole rules, a ruleset toggle backed by one key every rule
+# document of the ruleset carries, which is how a setting of the whole type is kept,
+# or a list of time slots - ranges of the day with their own values - that is kept
+# per object alone, as a JSON string, and is backed by no rule.
 Kind_Number = 'number'
 Kind_Duration = 'duration'
 Kind_Toggle = 'toggle'
 Kind_Ruleset_Toggle = 'ruleset_toggle'
+Kind_Time_Slots = 'time_slots'
+
+# What an object starts with when it has no time slots of its own
+Time_Slots_Default = '[]'
 
 # The rule default a type's window field reads and writes - how far back the
 # error-rate and failure-count facts of the type's sources are measured over.
 Window_Seconds_Default = 'window_seconds'
 Window_Field_Name = 'window'
+
+# The duration a channel that expects traffic may go without a request, and the time slots
+# of the day that carry their own such duration
+Silence_Window_Field_Name = 'silence_window'
+Silence_Slots_Field_Name = 'silence_slots'
 
 # The units a duration is shown in, smallest first - the noun in the singular and its seconds.
 # A screen picks the largest unit dividing the seconds evenly, so 86400 reads as one day.
@@ -213,10 +224,33 @@ type_fields:'dict[str, list[stranydict]]' = {
         {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
     'channels': [
+        {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Channel_Failing'],
+            'default': 'max_consecutive_failures', 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Channel_Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Channel_Error_Rate'],
             'default': Window_Seconds_Default, 'is_percent': False},
+        {'name': 'server_errors', 'kind': Kind_Number, 'rules': ['Server_Errors'],
+            'default': 'server_error_rate_threshold', 'is_percent': True},
+        {'name': 'server_errors_window', 'kind': Kind_Duration, 'rules': ['Server_Errors'],
+            'default': Window_Seconds_Default, 'is_percent': False},
+        {'name': 'max_latency', 'kind': Kind_Number, 'rules': ['Slow_Responses'],
+            'default': 'max_avg_duration_ms', 'is_percent': False},
+        {'name': 'latency_window', 'kind': Kind_Duration, 'rules': ['Slow_Responses'],
+            'default': Window_Seconds_Default, 'is_percent': False},
+        {'name': 'auth_failures', 'kind': Kind_Number, 'rules': ['Auth_Failures'],
+            'default': 'auth_failure_threshold', 'is_percent': False},
+        {'name': 'auth_failures_window', 'kind': Kind_Duration, 'rules': ['Auth_Failures'],
+            'default': Window_Seconds_Default, 'is_percent': False},
+        {'name': 'client_errors', 'kind': Kind_Number, 'rules': ['Client_Errors'],
+            'default': 'client_error_threshold', 'is_percent': False},
+        {'name': 'client_errors_window', 'kind': Kind_Duration, 'rules': ['Client_Errors'],
+            'default': Window_Seconds_Default, 'is_percent': False},
+        {'name': 'traffic_expected', 'kind': Kind_Toggle, 'rules': ['Channel_Silent']},
+        {'name': Silence_Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Channel_Silent'],
+            'default': 'silence_seconds', 'is_percent': False},
+        {'name': Silence_Slots_Field_Name, 'kind': Kind_Time_Slots},
+        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
     'common': [
         {'name': 'certificate_warning', 'kind': Kind_Number, 'rules': ['Certificate_Expiring'],
@@ -411,6 +445,8 @@ def read_type_values(type_name:'str', documents:'stranydict') -> 'stranydict':
             out[field['name']] = read_toggle(documents, ruleset_name, field)
         elif field['kind'] == Kind_Ruleset_Toggle:
             out[field['name']] = read_ruleset_toggle(documents, field)
+        elif field['kind'] == Kind_Time_Slots:
+            out[field['name']] = Time_Slots_Default
         else:
             value = read_number(documents, ruleset_name, field)
 
@@ -525,6 +561,8 @@ def write_type_values(type_name:'str', documents:'stranydict', values:'stranydic
             changed = write_toggle(documents, ruleset_name, field, value)
         elif field['kind'] == Kind_Ruleset_Toggle:
             changed = write_ruleset_toggle(documents, field, value)
+        elif field['kind'] == Kind_Time_Slots:
+            continue
         else:
             changed = write_number(documents, ruleset_name, field, value)
 

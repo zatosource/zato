@@ -418,6 +418,8 @@ class TestRoundTripOverSeededRules:
 
                 if field['kind'] in (config_map.Kind_Toggle, config_map.Kind_Ruleset_Toggle):
                     assert isinstance(value, bool), f'{type_name}.{field["name"]} -> {value}'
+                elif field['kind'] == config_map.Kind_Time_Slots:
+                    assert value == config_map.Time_Slots_Default, f'{type_name}.{field["name"]} -> {value}'
                 else:
                     assert isinstance(value, (int, float)), f'{type_name}.{field["name"]} -> {value}'
 

@@ -4760,8 +4760,9 @@ $(window).on('keydown.zato-dialog-esc', function(e) {
 
 // Clicking outside a jQuery UI dialog closes the topmost one, mirroring the Esc
 // fallback above. Clicks on UI that renders outside the dialog's DOM node while
-// logically belonging to it - tooltips, alert popups, tour popovers or the
-// action runner's details modal - must not close anything, hence the filter.
+// logically belonging to it - tooltips, alert popups, tour popovers, the
+// dashboard kit's dropdown menus or the action runner's details modal - must
+// not close anything, hence the filter.
 $(document).on('mousedown.zato-dialog-outside-close', function(e) {
 
     // Only the primary button counts as a close request
@@ -4770,7 +4771,7 @@ $(document).on('mousedown.zato-dialog-outside-close', function(e) {
     }
 
     var ignored_selector = '.ui-dialog, [data-tippy-root], #popup_container, .driver-popover, ' +
-        '.invoker-modal-overlay, .ui-datepicker';
+        '.invoker-modal-overlay, .ui-datepicker, .zato-dropdown-menu';
     if($(e.target).closest(ignored_selector).length) {
         return;
     }

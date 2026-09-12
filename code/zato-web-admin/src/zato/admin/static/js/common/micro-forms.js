@@ -20,10 +20,19 @@
 //
 // A spec's keys: field (the Django form field name), label, kind - one of
 // text, number, select, checkbox or a kind the host registered - plus the
-// optional unitField, width, placeholder and hint.
+// optional unitField, width, placeholder and hint. A checkbox keeps its
+// switch at the end of its label's line unless labelAbove is set, which puts
+// the label over the switch the way the other kinds have theirs.
 //
 // A descriptor's keys: title, pages, plus the optional width (a CSS width
-// for the popover) and fitContent (a popover no wider than its one field).
+// for the popover, which is then exactly that wide) and fitContent (a popover
+// exactly as wide as its content, however wide that is).
+//
+// A registered kind that styles its own inputs and selects puts the class
+// micro-form-field-own on the row it builds into, and the popover's own
+// input styles then leave them alone. A menu such a kind opens outside of the
+// popover, e.g. the dashboard kit's dropdown, is matched by config.menuSelector
+// and a click into it does not close the popover.
 //
 // ---------------------------------------------------------------
 // How to use
@@ -92,8 +101,12 @@ microForms.defaults = {
     // The tippy theme all the micro-forms share
     theme: 'micro-form',
 
-    // How wide a popover may grow
+    // How wide a popover may grow - a popover sized to its content (fitContent) is as wide as that content
     maxWidth: 480,
+    fitMaxWidth: 'none',
+
+    // A menu one of the popover's controls opens outside of it - a click there keeps the popover open
+    menuSelector: '.zato-dropdown-menu',
 
     // The lowest a number field goes - none of them counts down to nothing
     numberMin: 1,
@@ -236,7 +249,7 @@ microForms.setup = function(host, config) {
     // Shows the given content element in a popover anchored to the target.
     // This is the one place all the host's popovers come from, so they all
     // close on Escape and on clicks outside, and only one is open at a time.
-    forms.showTippy = function(targetElement, contentElement, onHidden) {
+    forms.showTippy = function(targetElement, contentElement, onHidden, maxWidth) {
 
         var formsConfig = forms.config;
 
@@ -246,6 +259,11 @@ microForms.setup = function(host, config) {
             content: contentElement,
             allowHTML: true,
             trigger: 'manual',
+
+            // Closing is the popover's own business, the handlers below - tippy's own
+            // outside-click rule would fade it out under a click into a menu one of
+            // its controls opened outside of it, such as the time suggestions
+            hideOnClick: false,
             interactive: true,
             arrow: false,
             animation: 'fade',
@@ -253,7 +271,7 @@ microForms.setup = function(host, config) {
             placement: 'bottom-start',
             appendTo: document.body,
             theme: formsConfig.theme,
-            maxWidth: formsConfig.maxWidth,
+            maxWidth: maxWidth,
             zIndex: 100001,
 
             onShow: function(tippyInstance) {
@@ -271,11 +289,13 @@ microForms.setup = function(host, config) {
                 tippyInstance.handleEscape = handleEscape;
                 document.addEventListener('keydown', handleEscape, true);
 
-                // .. and so does a click anywhere outside of it.
+                // .. and so does a click anywhere outside of it, a menu one of its
+                // own controls opened being as good as inside.
                 var handleOutsideMousedown = function(event) {
                     var isInPopper = tippyInstance.popper.contains(event.target);
                     var isOnTarget = targetElement.contains(event.target);
-                    if(!isInPopper && !isOnTarget) {
+                    var isInMenu = event.target.closest(formsConfig.menuSelector) !== null;
+                    if(!isInPopper && !isOnTarget && !isInMenu) {
                         forms.close();
                     }
                 };
@@ -474,7 +494,7 @@ microForms.setup = function(host, config) {
 
         // A checkbox carries its slider at the end of the line the label
         // takes, so a column of switches lines up whatever the labels say ..
-        if(fieldSpec.kind === 'checkbox') {
+        if(fieldSpec.kind === 'checkbox' && !fieldSpec.labelAbove) {
             var checkboxLabel = document.createElement('label');
             checkboxLabel.className = 'micro-form-checkbox';
             checkboxLabel.setAttribute('for', inputId);
@@ -505,7 +525,16 @@ microForms.setup = function(host, config) {
 
         var input;
 
-        if(fieldSpec.kind === 'select') {
+        // A switch sharing a row with labeled inputs stands under a label of its
+        // own like they do, so the row reads as one line of labels over one line of controls
+        if(fieldSpec.kind === 'checkbox') {
+            input = document.createElement('input');
+            input.type = 'checkbox';
+            input.id = inputId;
+            input.className = 'micro-form-switch';
+            input.checked = formField.prop('checked');
+        }
+        else if(fieldSpec.kind === 'select') {
 
             // The choices are cloned from the Django select, the single source of options
             input = document.createElement('select');
@@ -662,13 +691,19 @@ microForms.setup = function(host, config) {
             container.classList.add('micro-form-labels-left');
         }
 
+        // A form with a width of its own is exactly that wide, whatever the default cap ..
+        var maxWidth = formsConfig.maxWidth;
+
         if(descriptor.width) {
             container.style.width = descriptor.width;
+            container.style.maxWidth = descriptor.width;
+            maxWidth = descriptor.width;
         }
 
-        // A form of one short field is only as wide as that field
+        // .. and a form sized to its content is exactly as wide as that content
         if(descriptor.fitContent) {
             container.classList.add('micro-form-fit');
+            maxWidth = formsConfig.fitMaxWidth;
         }
 
         container.appendChild(forms.buildTitle(descriptor.title));
@@ -804,7 +839,7 @@ microForms.setup = function(host, config) {
 
         renderPage();
 
-        forms.showTippy(targetElement, container);
+        forms.showTippy(targetElement, container, null, maxWidth);
         forms.initHelp(container);
     };
 

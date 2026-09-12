@@ -11,28 +11,32 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 #
 # The tab is written as decision lines (static/js/common/decision-lines.js), one question
 # per line. A line's answer is either a switch, a summary link opening a popover micro-form
-# (static/js/common/micro-forms.js) with the numbers behind it, or a chip opening a panel
-# to pick a connection from. The rendered Django fields stay the single source of every
-# value - the numbers and the connection selects sit hidden under the lines and the popovers
-# and the panels read and write them.
+# (static/js/common/micro-forms.js) with the numbers behind it, or a select picking a
+# connection. The rendered Django fields stay the single source of every value - the numbers
+# sit hidden under the lines and the popovers read and write them, the switches and the
+# selects are the lines' own answers.
 #
 # A page names its alert type and gets the form fields, the lines the template renders
 # and the configuration the tab's JavaScript reads, all from the one field definition
 # that config_map holds and zato.common.alerting.object_config shares with enmasse
 # and the server - the names, the kinds, the defaults and the storage names are theirs.
+#
+# The lines themselves are in alerts_tab_lines and the connection selects in alerts_tab_picks,
+# both read through this module.
 
 # Django
 from django import forms
-from django.urls import reverse
 
 # Zato
+from zato.admin.web.alerts_tab_lines import Active_Label, Arrival_Overdue_Unit_Default, Arrival_Overdue_Unit_Field, \
+    Checkbox_On_Value, Edit_Hint, field_display, field_how_it_works, Line_Kind_Pick, Line_Kind_Popover, Line_Kind_Toggle, Section_Callers, Section_Core, \
+    Section_Failures, Section_Thresholds, Section_Traffic, Silence_Slots_Field, Silence_Window_Unit_Field, Tab_Label, \
+    type_lines, unit_fields, Window_Unit_Field
+from zato.admin.web.alerts_tab_picks import Email_Empty_Text, get_empty_html, get_pick_choices, Live_Type_Email_Connection, \
+    Live_Type_LLM_Connection, LLM_Empty_Text, Pick_Select_Class
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_file_transfer, Email_Conn_Separator, Email_Conn_Type_IMAP, \
-    Email_Conn_Type_SMTP, Email_Connection_Field, encode_email_connection, field_display as shared_field_display, \
-    field_help, Field_Prefix, get_defaults as get_storage_defaults, get_field_names, Is_Active_Field, LLM_Connection_Field, \
-    storage_name, Unit_Field_Suffix
-from zato.common.api import EMAIL, GENERIC
-from zato.common.defaults import default_cluster_id
+from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, Field_Prefix, \
+    get_defaults as get_storage_defaults, get_field_names, Is_Active_Field, storage_name, Unit_Field_Suffix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,212 +52,35 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The units a time is given in - a select that sits right after the number in its popover.
-# An option's value is the noun in the singular and its label the plural, which is how
-# the summary reads "1 hour" and "2 hours" off the select.
-duration_unit_choices = []
-
-for _unit_name, _ignored_seconds in config_map.Duration_Units:
-    duration_unit_choices.append((_unit_name, _unit_name + 's'))
-
-# The unit of the time a file may fail to arrive for - a number of its own with a unit the tab
-# keeps next to it, stored with the number so that the edit form reads the way it was saved.
-Arrival_Overdue_Unit_Field = 'arrival_overdue' + Unit_Field_Suffix
-Arrival_Overdue_Unit_Default = 'hour'
-
-# The unit of the window the failure counts are measured over - a duration field's unit select
-# is named after the field and its default comes from the seeded rules with the count. The unit
-# is not stored, the window is a number of seconds in storage and is split back on the way out.
-Window_Unit_Field = config_map.Window_Field_Name + Unit_Field_Suffix
-
-# The unit selects of the tab, by name - what each offers and what a new object starts with
-unit_fields = {
-    Arrival_Overdue_Unit_Field: {'choices': duration_unit_choices, 'initial': Arrival_Overdue_Unit_Default},
-    Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-}
-
-# What the tab is called in the tab strip
-Tab_Label = 'Alerts'
-
-# What the first line of the tab, the one switching the rest on and off, is called
-Active_Label = 'Active'
-
-# What the link opening a line's popover says beside its summary
-Edit_Hint = 'Click to edit'
-
-# What a checkbox arrives as from the browser when it is checked
-Checkbox_On_Value = 'on'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The kinds a line of the tab can be of - a summary link opening a popover with the
-# numbers behind it, a switch answered on the spot, or a chip opening a panel to pick
-# a connection from.
-Line_Kind_Popover = 'popover'
-Line_Kind_Toggle = 'toggle'
-Line_Kind_Pick = 'pick'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The connection selects a pick line stands on - what an empty group says and what the entry
-# that opens the create form is named. The values are shared by every pick line, an email line
-# prefixes them with the kind of the connection and an LLM line carries them as they are.
-Pick_No_Selection_Value = ''
-Pick_No_Selection_Label = 'Select a connection'
-Pick_None_Value = 'zato-none'
-Pick_None_Label = '(None)'
-Pick_Create_New_Value = 'zato-create-new'
-Pick_Create_New_Label = 'Add new ...'
-
-# What a picked row says of itself in the panel
-Pick_Remove_Label = 'click to remove'
-
-# What the panels picking a connection are called
-Email_Panel_Title = 'Email connection'
-LLM_Panel_Title = 'LLM connection'
-
-# The kind the one group of the LLM line goes by - an LLM value is a plain name, so the kind
-# only names the group in the panel and in the create link, it never enters the value.
-LLM_Group_Kind = 'llm'
-
-# The option groups of the email select, in the order they are shown, each with the service listing
-# its connections - an email value names both the kind and the connection, e.g. smtp:ops.smtp.
-_email_groups = [
-    {'kind': Email_Conn_Type_SMTP, 'label': 'SMTP', 'url_name': 'email-smtp', 'service': 'zato.email.smtp.get-list'},
-    {'kind': Email_Conn_Type_IMAP, 'label': 'Microsoft 365', 'url_name': 'email-imap', 'service': 'zato.email.imap.get-list'},
-]
-
-# The one group of the LLM select - every LLM connection there is, listed by the generic connection service
-_llm_groups = [
-    {'kind': LLM_Group_Kind, 'label': 'LLM', 'url_name': 'out-llm', 'service': 'zato.generic.connection.get-list'},
-]
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# What a field is called in its popover, where the shared label reads as a column header rather than a question
-_popover_labels = {
-    'window':          'In the last',
-    'arrival_overdue': 'Alert after',
-}
-
-# What each field is called where it is edited and the unit its value is in
-field_display = dict(shared_field_display)
-
-for _popover_name, _popover_label in _popover_labels.items():
-    _ignored_label, _popover_unit = shared_field_display[_popover_name]
-    field_display[_popover_name] = (_popover_label, _popover_unit)
-
-# What each field means, shown by the how-it-works badge of a popover - the shared texts and the unit selects' own
-field_how_it_works = dict(field_help)
-field_how_it_works[Window_Unit_Field] = 'Whether the window is in minutes, hours or days.'
-field_how_it_works[Arrival_Overdue_Unit_Field] = 'Whether the time a file may fail to arrive for is in minutes, hours or days.'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The sections the lines of a tab are grouped under - the core settings first,
-# the switches and the connections, then the thresholds that raise an alert.
-Section_Core = 'Core settings'
-Section_Thresholds = 'Thresholds'
-
-# The lines of the tab for each alert type, in the order they are read. A line names the
-# question, the fields answering it and, for a popover line, the title of its micro-form and
-# the sentence its summary link reads as - `{field}` is the field's value,
-# `{field|singular|plural}` the value with the right one of the two nouns after it and
-# `{unit_field@count_field}` the count with the unit select's noun after it, in the singular
-# or the plural as the count says. A popover line with a `unit_field` shows that select
-# right after the last of its numbers. A pick line names the groups of its panel and whether
-# its values carry the kind of the connection, and a line with a `depends_on` toggle is dimmed
-# while that toggle is off.
-# The Active line is a toggle like any other, only it is the one that dims the rest when off.
-type_lines = {
-    alert_type_file_transfer: [
-        {
-            'name': 'active',
-            'section': Section_Core,
-            'kind': Line_Kind_Toggle,
-            'label': Active_Label,
-            'fields': [Is_Active_Field],
-            'how_it_works': field_how_it_works[Is_Active_Field],
-        },
-        {
-            'name': 'use_llm',
-            'section': Section_Core,
-            'kind': Line_Kind_Toggle,
-            'label': 'Use LLM',
-            'fields': ['use_llm'],
-            'how_it_works': field_how_it_works['use_llm'],
-        },
-        {
-            'name': 'llm',
-            'section': Section_Core,
-            'kind': Line_Kind_Pick,
-            'label': 'LLM connection',
-            'title': LLM_Panel_Title,
-            'fields': [LLM_Connection_Field],
-            'groups': _llm_groups,
-            'encode_kind': False,
-            'depends_on': 'use_llm',
-            'how_it_works': field_how_it_works[LLM_Connection_Field],
-        },
-        {
-            'name': 'test_transfers',
-            'section': Section_Core,
-            'kind': Line_Kind_Toggle,
-            'label': 'Test transfers',
-            'fields': ['test_transfers'],
-            'how_it_works': field_how_it_works['test_transfers'],
-        },
-        {
-            'name': 'email',
-            'section': Section_Core,
-            'kind': Line_Kind_Pick,
-            'label': 'Email connection',
-            'title': Email_Panel_Title,
-            'fields': [Email_Connection_Field],
-            'groups': _email_groups,
-            'encode_kind': True,
-            'how_it_works': field_how_it_works[Email_Connection_Field],
-        },
-        {
-            'name': 'failures_in_a_row',
-            'section': Section_Thresholds,
-            'kind': Line_Kind_Popover,
-            'label': 'Failures in a row',
-            'title': 'Failures in a row',
-            'fields': ['consecutive_failures'],
-            'summary': 'Alert after {consecutive_failures|failure|failures} in a row',
-            'how_it_works': 'How many transfers may fail one after another before an alert is raised.',
-        },
-        {
-            'name': 'failures_over_time',
-            'section': Section_Thresholds,
-            'kind': Line_Kind_Popover,
-            'label': 'Failures over time',
-            'title': 'Failures over time',
-            'fields': ['warning_failures', 'error_failures', 'window'],
-            'unit_field': Window_Unit_Field,
-            'summary': 'Warning at {warning_failures|failure|failures}, error at {error_failures}, ' + \
-                f'in the last {{{Window_Unit_Field}@window}}',
-            'how_it_works': 'How many failures in the window raise a warning, how many count as errors ' + \
-                'and how long the window is, in minutes, hours or days.',
-        },
-        {
-            'name': 'overdue_files',
-            'section': Section_Thresholds,
-            'kind': Line_Kind_Popover,
-            'label': 'Overdue files',
-            'title': 'Overdue files',
-            'fields': ['arrival_overdue'],
-            'unit_field': Arrival_Overdue_Unit_Field,
-            'summary': f'Alert after {{{Arrival_Overdue_Unit_Field}@arrival_overdue}} without a file',
-            'how_it_works': 'How long a file may fail to arrive, in minutes, hours or days, before an alert is raised.',
-        },
-    ],
-}
+# The names the pages and the tests reach for through this module
+Active_Label = Active_Label
+alert_type_channels = alert_type_channels
+alert_type_file_transfer = alert_type_file_transfer
+Arrival_Overdue_Unit_Default = Arrival_Overdue_Unit_Default
+Arrival_Overdue_Unit_Field = Arrival_Overdue_Unit_Field
+Checkbox_On_Value = Checkbox_On_Value
+Edit_Hint = Edit_Hint
+Email_Empty_Text = Email_Empty_Text
+Field_Prefix = Field_Prefix
+field_display = field_display
+field_how_it_works = field_how_it_works
+Line_Kind_Pick = Line_Kind_Pick
+Line_Kind_Popover = Line_Kind_Popover
+Line_Kind_Toggle = Line_Kind_Toggle
+Live_Type_Email_Connection = Live_Type_Email_Connection
+Live_Type_LLM_Connection = Live_Type_LLM_Connection
+LLM_Empty_Text = LLM_Empty_Text
+Pick_Select_Class = Pick_Select_Class
+Section_Callers = Section_Callers
+Section_Core = Section_Core
+Section_Failures = Section_Failures
+Section_Thresholds = Section_Thresholds
+Section_Traffic = Section_Traffic
+Silence_Slots_Field = Silence_Slots_Field
+Silence_Window_Unit_Field = Silence_Window_Unit_Field
+Tab_Label = Tab_Label
+type_lines = type_lines
+Window_Unit_Field = Window_Unit_Field
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -441,118 +268,6 @@ def split_durations(alert_type:'str', item:'any_') -> 'None':
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-def _get_email_connection_names(req:'any_', group:'anydict') -> 'strlist':
-    """ The names of the email connections of one group - every SMTP connection there is,
-    and among the IMAP ones only those of the Microsoft 365 kind, the only ones that can send.
-    """
-    out:'strlist' = []
-
-    response = req.zato.client.invoke(group['service'], {'cluster_id': req.zato.cluster_id})
-
-    for item in response:
-
-        if group['kind'] == Email_Conn_Type_IMAP:
-            if item.server_type != EMAIL.IMAP.ServerType.Microsoft365:
-                continue
-
-        out.append(item.name)
-
-    return out
-
-# ################################################################################################################################
-
-def _get_llm_connection_names(req:'any_', group:'anydict') -> 'strlist':
-    """ The names of every LLM connection there is.
-    """
-    out:'strlist' = []
-
-    request = {
-        'cluster_id': req.zato.cluster_id,
-        'type_': GENERIC.CONNECTION.TYPE.OUTCONN_LLM,
-        'paginate': False,
-    }
-
-    response = req.zato.client.invoke(group['service'], request)
-
-    for item in response:
-        out.append(item.name)
-
-    return out
-
-# ################################################################################################################################
-
-def _get_connection_names(req:'any_', line:'anydict', group:'anydict') -> 'strlist':
-    """ The names of the connections of one group of a pick line, from whichever listing the line's field calls for.
-    """
-    if line['fields'][0] == Email_Connection_Field:
-        out = _get_email_connection_names(req, group)
-    else:
-        out = _get_llm_connection_names(req, group)
-
-    return out
-
-# ################################################################################################################################
-
-def encode_pick_value(line:'anydict', kind:'str', name:'str') -> 'str':
-    """ The value one entry of a pick line's select carries - the kind and the name on an email line,
-    the name alone on any other.
-    """
-    if line['encode_kind']:
-        out = encode_email_connection(kind, name)
-    else:
-        out = name
-
-    return out
-
-# ################################################################################################################################
-
-def get_pick_choices(req:'any_', line:'anydict') -> 'anylist':
-    """ The grouped choices of a pick line's select - one group per kind of connection,
-    each listing its connections or saying that there are none, and each ending with the entry
-    that opens the page where a new one is created.
-    """
-    out:'anylist' = [(Pick_No_Selection_Value, Pick_No_Selection_Label)]
-
-    for group in line['groups']:
-        kind = group['kind']
-        options:'anylist' = []
-
-        names = _get_connection_names(req, line, group)
-
-        for name in names:
-            options.append((encode_pick_value(line, kind, name), name))
-
-        # An empty group says so instead of collapsing to only the create entry,
-        # so that a reader can tell there are no such connections at a glance.
-        if not names:
-            options.append((encode_pick_value(line, kind, Pick_None_Value), Pick_None_Label))
-
-        options.append((encode_pick_value(line, kind, Pick_Create_New_Value), Pick_Create_New_Label))
-
-        out.append((group['label'], options))
-
-    return out
-
-# ################################################################################################################################
-
-def get_pick_groups(line:'anydict') -> 'anylist':
-    """ The groups of a pick line as the tab's JavaScript needs them - each kind with its label
-    and the page its create entry takes the user to, the kind's own page with its create form open.
-    """
-    out:'anylist' = []
-
-    for group in line['groups']:
-        url = reverse(group['url_name'])
-
-        out.append({
-            'kind': group['kind'],
-            'label': group['label'],
-            'create_url': f'{url}?cluster={default_cluster_id}&create=1',
-        })
-
-    return out
-
 # ################################################################################################################################
 
 def get_pick_lines(alert_type:'str') -> 'anylist':
@@ -581,24 +296,6 @@ def get_pick_field_names(alert_type:'str') -> 'strlist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ConnectionSelect(forms.Select):
-    """ The connection select of a pick line - the entry saying a group has no connections is there to be read, not chosen.
-    """
-    def create_option(self, name:'str', value:'any_', label:'any_', selected:'any_', index:'any_',
-        subindex:'any_'=None, attrs:'any_'=None) -> 'anydict':
-
-        out = super().create_option(name, value, label, selected, index, subindex=subindex, attrs=attrs)
-
-        value = str(value)
-        is_none = value == Pick_None_Value or value.endswith(Email_Conn_Separator + Pick_None_Value)
-
-        if is_none:
-            out['attrs']['disabled'] = True
-
-        return out
-
-# ################################################################################################################################
-
 def add_alerts_fields(form:'forms.Form', alert_type:'str', req:'any_') -> 'None':
     """ Adds the fields of the Alerts tab to a form - the active toggle first, then the type's
     own numbers and toggles, the unit selects its lines name, then the connection selects of the pick lines.
@@ -615,6 +312,8 @@ def add_alerts_fields(form:'forms.Form', alert_type:'str', req:'any_') -> 'None'
 
         if field['kind'] in (config_map.Kind_Toggle, config_map.Kind_Ruleset_Toggle):
             form_field = forms.BooleanField(required=False, initial=default, widget=forms.CheckboxInput())
+        elif field['kind'] == config_map.Kind_Time_Slots:
+            form_field = forms.CharField(required=False, initial=default, widget=forms.HiddenInput())
         else:
             form_field = forms.IntegerField(required=False, initial=default, min_value=1, widget=forms.NumberInput())
 
@@ -634,7 +333,7 @@ def add_alerts_fields(form:'forms.Form', alert_type:'str', req:'any_') -> 'None'
 
     for line in get_pick_lines(alert_type):
         form.fields[form_field_name(line['fields'][0])] = forms.ChoiceField(
-            required=False, choices=get_pick_choices(req, line), widget=ConnectionSelect())
+            required=False, choices=get_pick_choices(req, line), widget=forms.Select(attrs={'class': Pick_Select_Class}))
 
 # ################################################################################################################################
 
@@ -664,10 +363,15 @@ def get_alerts_tab_context(form:'forms.Form', alert_type:'str') -> 'anydict':
             'is_active_line': line['fields'][0] == Is_Active_Field,
         }
 
-        # A switch is answered on the line itself, everything else is answered
-        # in a popover or a panel and its fields wait hidden under the lines.
-        if line['kind'] == Line_Kind_Toggle:
+        # A switch and a select are answered on the line itself, a popover line
+        # is answered in its popover and its fields wait hidden under the lines.
+        if line['kind'] in (Line_Kind_Toggle, Line_Kind_Pick):
             row['field'] = form[form_field_name(line['fields'][0])]
+
+            # A select with nothing to list is swapped for the sentence with the create links until there is
+            if line['kind'] == Line_Kind_Pick:
+                row['has_options'] = len(row['field'].field.choices) > 1
+                row['empty_html'] = get_empty_html(line)
         else:
             for field_name in line['fields']:
                 hidden_fields.append(form[form_field_name(field_name)])
@@ -730,11 +434,19 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
             if 'unit_field' in line:
                 entry['unit_field'] = line['unit_field']
 
+            if 'rows' in line:
+                entry['rows'] = line['rows']
+
+            if 'slots_field' in line:
+                entry['slots_field'] = line['slots_field']
+
+            if 'off_field' in line:
+                entry['off_field'] = line['off_field']
+                entry['summary_off'] = line['summary_off']
+
         if line['kind'] == Line_Kind_Pick:
-            entry['title'] = line['title']
             entry['field'] = line['fields'][0]
-            entry['groups'] = get_pick_groups(line)
-            entry['encode_kind'] = line['encode_kind']
+            entry['live_type'] = line['live_type']
 
         if 'depends_on' in line:
             entry['depends_on'] = line['depends_on']
@@ -753,12 +465,9 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
         'field_labels': field_labels,
         'field_how_it_works': how_it_works_by_field,
         'edit_hint': Edit_Hint,
-        'pick_kind_separator': Email_Conn_Separator,
-        'pick_no_selection_value': Pick_No_Selection_Value,
-        'pick_no_selection_label': Pick_No_Selection_Label,
-        'pick_none_value': Pick_None_Value,
-        'pick_create_new_value': Pick_Create_New_Value,
-        'pick_remove_label': Pick_Remove_Label,
+        'slots_kind': config_map.Kind_Time_Slots,
+        'duration_kind': config_map.Kind_Duration,
+        'duration_units': config_map.Duration_Units,
         'storage_field_names': list(get_storage_field_names(alert_type)),
         'checkbox_field_names': list(get_checkbox_field_names(alert_type)),
     }

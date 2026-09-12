@@ -1,4 +1,5 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
 {% block html_title %}
 
@@ -33,6 +34,12 @@
     {% endif %}
     {% if connection == 'channel' and transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/channel.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
     {% endif %}
     {% if connection == 'outgoing' and transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/data-table-widget.css">
@@ -80,6 +87,18 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/health-check.js"></script>
+    {% endif %}
+    {% if connection == 'channel' and transport == 'plain_http' %}
+    {% comment %} The Alerts tab of a REST channel - the form tabs it sits in, the micro-forms its popovers are and the tab itself {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots-fields.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab-slots.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
+    {{ alerts_tab_config|json_script:"http-soap-alerts-tab-config" }}
     {% endif %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/index.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/inline.js"></script>
@@ -253,7 +272,7 @@
                 'retry_backoff_multiplier',
             {% endif %}
 
-        ]
+        ]{% if connection == 'channel' and transport == 'plain_http' %}.concat($.fn.zato.alerts_tab.columns()){% endif %}
     }
     </script>
 
@@ -578,6 +597,13 @@
                             <td class='ignore'>{{ item.gateway_service_list|default:"" }}</td>
                         {% endif %}
 
+                        <!-- 42 - the Alerts tab of REST channels -->
+                        {% if connection == 'channel' and transport == 'plain_http' %}
+                            {% for field_name in alerts_tab_config.storage_field_names %}
+                            <td class='ignore'>{{ item|get_item:field_name }}</td>
+                            {% endfor %}
+                        {% endif %}
+
                         <!-- 40 - declarative invocation and health check fields for REST outgoing connections -->
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
                             <td class='ignore'>{{ item.scheduler_run_every|default_if_none:"" }}</td>
@@ -639,6 +665,15 @@
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-config" role="tabpanel">
+                    {% endif %}
+
+                    {% if connection == 'channel' and transport == 'plain_http' %}
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-main" role="tabpanel">
                     {% endif %}
 
                     <table class="form-data">
@@ -911,6 +946,7 @@
                         {% endif %}
 
                         {% if connection != 'outgoing' or transport != 'plain_http' %}
+                        {% if connection != 'channel' or transport != 'plain_http' %}
                         <tr>
                             {% if transport == 'soap' %}
                             <td style="text-align:left;vertical-align:middle">
@@ -926,7 +962,23 @@
 
                         </tr>
                         {% endif %}
+                        {% endif %}
                     </table>
+
+                    {% if connection == 'channel' and transport == 'plain_http' %}
+                    </div>
+
+                    {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
+
+                    <table class="form-data">
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    {% endif %}
 
                     {% if connection == 'outgoing' and transport == 'plain_http' %}
                     </div>

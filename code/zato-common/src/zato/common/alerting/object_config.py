@@ -71,6 +71,7 @@ LLM_Connection_Default = ''
 
 # Which alert type each connection type's settings follow
 alert_type_file_transfer = 'file_transfer'
+alert_type_channels = 'channels'
 
 conn_type_to_alert_type:'strstrdict' = {
     GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: alert_type_file_transfer,
@@ -94,6 +95,15 @@ field_display = {
     'health_alerts':        ('Health alerts', ''),
     'max_call_time':        ('Max call time', 'ms'),
     'auth_failures':        ('Auth failures', ''),
+    'auth_failures_window': ('Auth failures window', ''),
+    'server_errors':        ('Server errors', '%'),
+    'server_errors_window': ('Server errors window', ''),
+    'client_errors':        ('Client errors', ''),
+    'client_errors_window': ('Client errors window', ''),
+    'latency_window':       ('Latency window', ''),
+    'traffic_expected':     ('Alert on silence', ''),
+    'silence_window':       ('Silence', ''),
+    'silence_slots':        ('Time ranges', ''),
     'warning_failures':     ('Warning failures', ''),
     'error_failures':       ('Error failures', ''),
     'window':               ('Window', ''),
@@ -119,7 +129,16 @@ field_help = {
     'max_tool_call_time':   'Tool calls slower than this many milliseconds count as slow.',
     'health_alerts':        'Whether the Microsoft service health feed raises alerts of its own.',
     'max_call_time':        'Calls slower than this many milliseconds count as slow.',
-    'auth_failures':        'How many authentication failures in a row raise an alert.',
+    'auth_failures':        'How many authentication failures in the window raise an alert.',
+    'auth_failures_window': 'How long the window the authentication failures are counted over is.',
+    'server_errors':        'The share of calls answered with a 5xx status, in percent, that raises an alert.',
+    'server_errors_window': 'How long the window the 5xx responses are counted over is.',
+    'client_errors':        'How many calls answered with a 4xx status other than 401 or 403 raise an alert.',
+    'client_errors_window': 'How long the window the 4xx responses are counted over is.',
+    'latency_window':       'How long the window the response times are averaged over is.',
+    'traffic_expected':     'Whether a channel that receives no requests for the time below raises an alert.',
+    'silence_window':       'How long the channel may go without a request, in minutes, hours or days.',
+    'silence_slots':        'The ranges of the day with a silence and a switch of their own.',
     'warning_failures':     'How many failures in the window raise a warning.',
     'error_failures':       'How many failures in the window count as errors.',
     'window':               'How long the window is, in minutes, hours or days.',

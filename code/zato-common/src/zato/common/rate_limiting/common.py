@@ -7,9 +7,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import datetime
 import time
 from dataclasses import dataclass
+
+# Zato
+from zato.common.util.time_of_day import hh_mm_to_minutes, now_us_to_minutes, time_in_range, validate_hh_mm
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The time-of-day helpers live in zato.common.util.time_of_day, shared with alerting, and are re-exported here
+hh_mm_to_minutes = hh_mm_to_minutes
+now_us_to_minutes = now_us_to_minutes
+time_in_range = time_in_range
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,43 +84,6 @@ def validate_window_unit(value:'str') -> 'str':
         return out
 
     raise RateLimitError(f'Unknown window_unit: {value}')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-_time_pattern_length = 5
-
-# ################################################################################################################################
-
-def _validate_hh_mm(value:'str', field_name:'str') -> 'None':
-    """ Raises RateLimitError if the value is not a valid HH:MM string.
-    """
-
-    # Must be exactly 5 characters: HH:MM ..
-    if len(value) != _time_pattern_length:
-        raise RateLimitError(f'{field_name} must be in HH:MM format, got: {value}')
-
-    # .. the colon must be in the right place ..
-    if value[2] != ':':
-        raise RateLimitError(f'{field_name} must be in HH:MM format, got: {value}')
-
-    hours_str = value[:2]
-    minutes_str = value[3:]
-
-    # .. hours and minutes must be digits ..
-    if not hours_str.isdigit() or not minutes_str.isdigit():
-        raise RateLimitError(f'{field_name} must be in HH:MM format, got: {value}')
-
-    hours   = int(hours_str)
-    minutes = int(minutes_str)
-
-    # .. hours must be 0-23 ..
-    if hours > 23:
-        raise RateLimitError(f'{field_name} hours out of range: {value}')
-
-    # .. minutes must be 0-59.
-    if minutes > 59:
-        raise RateLimitError(f'{field_name} minutes out of range: {value}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -218,60 +191,14 @@ def validate_time_range(time_range:'TimeRange') -> 'None':
             raise RateLimitError('Non-all-day time range must have time_to')
 
         # .. and they must be valid HH:MM strings.
-        _validate_hh_mm(time_range.time_from, 'time_from')
-        _validate_hh_mm(time_range.time_to, 'time_to')
+        try:
+            validate_hh_mm(time_range.time_from, 'time_from')
+            validate_hh_mm(time_range.time_to, 'time_to')
+        except ValueError as e:
+            raise RateLimitError(e.args[0])
 
     # .. limit_unit must be valid.
     _ = validate_window_unit(time_range.limit_unit)
-
-# ################################################################################################################################
-
-def time_in_range(now_minutes:'int', from_minutes:'int', to_minutes:'int') -> 'bool':
-    """ Returns True if now_minutes falls within the [from_minutes, to_minutes) range.
-
-    All arguments are minutes since midnight (0-1439).
-    Handles midnight-crossing ranges where from_minutes > to_minutes,
-    e.g. 23:00-02:00 means from_minutes=1380, to_minutes=120.
-    """
-
-    # Non-crossing range: e.g. 09:00-17:00 ..
-    if from_minutes <= to_minutes:
-        out = from_minutes <= now_minutes < to_minutes
-
-    # .. midnight-crossing range: e.g. 23:00-02:00.
-    else:
-        out = now_minutes >= from_minutes or now_minutes < to_minutes
-
-    return out
-
-# ################################################################################################################################
-
-def hh_mm_to_minutes(value:'str') -> 'int':
-    """ Converts an HH:MM string to minutes since midnight.
-    """
-    hours_str   = value[:2]
-    minutes_str = value[3:]
-
-    hours   = int(hours_str)
-    minutes = int(minutes_str)
-
-    out = hours * Seconds_Per_Minute + minutes
-    return out
-
-# ################################################################################################################################
-
-_utc = datetime.timezone.utc
-
-# ################################################################################################################################
-
-def now_us_to_minutes(now_us:'int') -> 'int':
-    """ Converts a microsecond-since-epoch timestamp to minutes since midnight (UTC).
-    """
-    now_secs = now_us // Microseconds_Per_Second
-    now_dt   = datetime.datetime.fromtimestamp(now_secs, tz=_utc)
-
-    out = now_dt.hour * Seconds_Per_Minute + now_dt.minute
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
