@@ -12,7 +12,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # read off the server's own databases and received by a real SMTP receiver.
 
 # stdlib
-import json
 import os
 
 # requests
@@ -66,7 +65,7 @@ class TestExplainLiveChannel:
         channel_id = _create_rest_channel(client, security_id)
 
         # .. and the sweep explains through the LLM connection and mails from the address below.
-        notification_config = _set_notification_config(client)
+        notification_config = _new_notification_config()
 
         # Real calls over HTTP - rejected ones first, then ones the service behind the channel fails on
         _produce_channel_failures()
@@ -193,20 +192,12 @@ def _unwrap(response:'anydict') -> 'anydict':
 # ################################################################################################################################
 
 def _point_smtp_at_receiver(client:'AdminClient', smtp_receiver:'any_') -> 'None':
-    """ The server's default notification SMTP connection, switched on and pointed at the receiver.
+    """ The SMTP connection the alerts leave through - the one under the default notification name,
+    active and pointed at the receiver. A fresh quickstart has none, so it is created here.
     """
     conn_name = get_notification_conn_name()
-    rows, _ = client.get_list('zato.email.smtp.get-list', cluster_id=default_cluster_id)
 
-    for row in rows:
-        if row['name'] == conn_name:
-            conn_id = row['id']
-            break
-    else:
-        raise AssertionError(f'No SMTP connection `{conn_name}` among {rows}')
-
-    _ = client.edit('zato.email.smtp.edit',
-        id=conn_id,
+    _ = client.create('zato.email.smtp.create',
         cluster_id=default_cluster_id,
         name=conn_name,
         is_active=True,
@@ -271,22 +262,15 @@ def _create_rest_channel(client:'AdminClient', security_id:'int') -> 'int':
 
 # ################################################################################################################################
 
-def _set_notification_config(client:'AdminClient') -> 'stranydict':
+def _new_notification_config() -> 'stranydict':
     """ Where the sweep explains and delivers - the LLM connection enmasse created and the default addressing.
-    The same values come back read from the job's extra, which is what the sweep is invoked with.
+    The scheduler hands the sweep these values as the job's extra, and here they are its payload.
     """
-    values = {
+    out = {
         Alerting.Extra_LLM_Connection: LiveServer.llm_conn_name,
         Alerting.Extra_From: _email_from,
         Alerting.Extra_Default_To: ', '.join(_email_to),
     }
-    _ = client.invoke(Alerting.Set_Notification_Config_Service, values)
-
-    response = client.invoke(Alerting.Get_Notification_Config_Service)
-    out = json.loads(_unwrap(response)['response_data'])
-
-    assert out[Alerting.Extra_LLM_Connection] == LiveServer.llm_conn_name
-
     return out
 
 # ################################################################################################################################
