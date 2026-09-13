@@ -26,7 +26,7 @@ from typing_extensions import TypeAlias
 # Zato
 from zato.common.alerting.collectors import new_fact
 from zato.common.alerting.seed import alerting_vocabulary, build_ruleset_document, ensure_alerting_definitions
-from zato.common.alerting.seed.rules_connections import rest_rules
+from zato.common.alerting.seed.rules_connections import rest_rules, soap_rules
 from zato.common.alerting.sweep import load_alert_rules, Fact_Entity
 from zato.common.audit_log.api import AuditSource
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
@@ -62,6 +62,10 @@ _rest_rule_defaults = {
     'Status_Codes':        {'status_codes': '401, 403, 5xx', 'status_code_threshold': 3, 'window_seconds': 300},
     'Connection_Failures': {'connection_failure_threshold': 3, 'window_seconds': 300},
 }
+
+# The rules the soap ruleset ships - the rest ones over the SOAP sources and the faults on top
+_soap_rule_defaults = dict(_rest_rule_defaults)
+_soap_rule_defaults['SOAP_Faults'] = {'fault_codes': 'Receiver, Server, Sender, Client', 'fault_threshold': 3, 'window_seconds': 300}
 
 # The rest ruleset as the release before this one shipped it - three rules, the slow responses one without a window
 _old_rest_rules = """
@@ -221,6 +225,42 @@ class TestRestRules:
 
 # ################################################################################################################################
 
+    def test_the_soap_ruleset_ships_six_rules_with_their_defaults(self, backend:'RuleSQLBackend') -> 'None':
+        ensure_alerting_definitions(backend)
+
+        ruleset = _get_ruleset(backend, _soap_ruleset_name)
+        documents = deserialize_document(ruleset.document)[Documents_Key]
+
+        assert len(documents) == len(_soap_rule_defaults)
+
+        for rule_name, defaults in _soap_rule_defaults.items():
+            rule_document = documents[f'{_soap_ruleset_name}_{rule_name}']
+            assert _default_values(rule_document) == defaults, rule_name
+
+# ################################################################################################################################
+
+    def test_the_soap_ruleset_arrives_and_the_rest_one_narrows_on_upgrade(self, backend:'RuleSQLBackend') -> 'None':
+
+        # The release before this one judged SOAP connections by the rest ruleset and had no soap one
+        _ = _seed_old_rest_ruleset(backend)
+        assert backend.definitions.find_by_name(name=_soap_ruleset_name, object_type=Definition_Type_Ruleset) == []
+
+        ensure_alerting_definitions(backend)
+
+        # The soap ruleset is there now, as this release ships it ..
+        soap_ruleset = _get_ruleset(backend, _soap_ruleset_name)
+        soap_documents = deserialize_document(soap_ruleset.document)[Documents_Key]
+        assert soap_documents == build_ruleset_document(_soap_ruleset_name, soap_rules)[Documents_Key]
+
+        # .. and the rest one no longer speaks of SOAP sources anywhere.
+        rest_ruleset = _get_ruleset(backend, _rest_ruleset_name)
+        rest_documents = deserialize_document(rest_ruleset.document)[Documents_Key]
+
+        for full_name, document in rest_documents.items():
+            assert 'soap' not in str(document['conditions']), full_name
+
+# ################################################################################################################################
+
     def test_the_vocabulary_speaks_the_new_connection_terms(self) -> 'None':
         vocabulary = alerting_vocabulary()
 
@@ -231,6 +271,7 @@ class TestRestRules:
 
         assert 'status_code_count' in names
         assert 'connection_failure_count' in names
+        assert 'fault_count' in names
 
 # ################################################################################################################################
 

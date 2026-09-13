@@ -175,13 +175,25 @@ def _error_text(row:'stranydict') -> 'str':
 
 def _status_error_text(row:'stranydict') -> 'str':
     """ What a channel's or an outgoing connection's row says went wrong - its status line first, because
-    a 401 and a 500 with one text are two different failures, and its error text after it when it has one of its own.
+    a 401 and a 500 with one text are two different failures, then the SOAP fault code when the response was
+    a fault, because a 500 carrying a Receiver fault and a bare 500 are two different failures too, and its
+    error text after them when it has one of its own.
     """
     out = _error_text(row)
 
-    if row['status']:
+    head = row['status']
+
+    if row['application_outcome']:
+        if head:
+            head = head + _status_separator + row['application_outcome']
+        else:
+            head = row['application_outcome']
+
+    if head:
         if out != row['status']:
-            out = row['status'] + _status_separator + out
+            out = head + _status_separator + out
+        else:
+            out = head
 
     return out
 

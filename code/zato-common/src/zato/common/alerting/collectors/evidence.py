@@ -72,6 +72,7 @@ _row_columns = (
     event_table.c.duration_ms,
     event_table.c.data,
     event_table.c.ext_client_id,
+    event_table.c.application_outcome,
 )
 
 # ################################################################################################################################
@@ -100,7 +101,8 @@ def _rows_from(result:'anylist') -> 'dictlist':
     # Our response to produce
     out:'dictlist' = []
 
-    for event_id, event_time_iso, event_type, endpoint, outcome, status, duration_ms, data, ext_client_id in result:
+    for event_id, event_time_iso, event_type, endpoint, outcome, status, duration_ms, data, ext_client_id, \
+        application_outcome in result:
 
         row:'stranydict' = {
             'id': event_id,
@@ -112,6 +114,7 @@ def _rows_from(result:'anylist') -> 'dictlist':
             'duration_ms': duration_ms,
             'data': data,
             'ext_client_id': ext_client_id,
+            'application_outcome': application_outcome,
         }
 
         out.append(row)

@@ -161,8 +161,10 @@ class BaseHTTPSOAPWrapper(AuthMixin):
         method:'str' = '',
         *,
         is_health_check:'bool' = False,
+        application_outcome:'str' = '',
     ) -> 'None':
-        insert_audit_event(self, cid, event_type, endpoint, outcome, data, status, method, is_health_check=is_health_check)
+        insert_audit_event(self, cid, event_type, endpoint, outcome, data, status, method, is_health_check=is_health_check,
+            application_outcome=application_outcome)
 
 # ################################################################################################################################
 # ################################################################################################################################

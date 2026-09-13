@@ -14,8 +14,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from zato.common.alerting.object_config import alert_type_channels, alert_type_rest, get_defaults, get_field_names, \
-    storage_name
+from zato.common.alerting.object_config import alert_type_channels, alert_type_rest, alert_type_soap, get_defaults, \
+    get_field_names, storage_name
 from zato.common.api import CONNECTION, HTTP_SOAP, SchedulerLink, URL_TYPE
 from zato.common.exception import BadRequest
 from zato.common.ext.bunch import Bunch
@@ -48,6 +48,10 @@ _storage_names = [storage_name(name) for name in get_field_names(alert_type_rest
 
 # The names a channel alone stores - none of them ever lands on an outgoing connection
 _channel_only_names = [storage_name(name) for name in get_field_names(alert_type_channels)
+    if name not in get_field_names(alert_type_rest)]
+
+# The names a SOAP connection alone stores - the faults, which never land on a REST one either
+_soap_only_names = [storage_name(name) for name in get_field_names(alert_type_soap)
     if name not in get_field_names(alert_type_rest)]
 
 # The id the scheduler stand-in gives every job it is asked to create
@@ -105,6 +109,15 @@ class TestCreate:
         opaque = _stored_opaque(session_factory, item_id)
 
         for name in _channel_only_names:
+            assert name not in opaque, name
+
+    def test_an_outgoing_rest_connection_stores_none_of_a_soap_connections_faults(self, session_factory:'any_') -> 'None':
+        item_id = _create_outgoing(session_factory, alert_fault_codes='Receiver', alert_fault_threshold=2)
+
+        opaque = _stored_opaque(session_factory, item_id)
+
+        assert _soap_only_names
+        for name in _soap_only_names:
             assert name not in opaque, name
 
     def test_bad_status_codes_are_refused_before_anything_is_written(self, session_factory:'any_') -> 'None':

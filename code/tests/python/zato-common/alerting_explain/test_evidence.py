@@ -36,6 +36,7 @@ def _row(row_id:'int', time_iso:'str', text:'str', endpoint:'str'='', status:'st
         'status': status,
         'duration_ms': None,
         'data': text,
+        'application_outcome': '',
     }
     return out
 

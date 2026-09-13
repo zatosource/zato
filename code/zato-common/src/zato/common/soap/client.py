@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
-from operator import itemgetter
 
 # lxml
 from lxml import etree
@@ -18,11 +17,13 @@ import requests
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
+from zato.common.audit_log.common import classify_transport_error
 from zato.common.crypto.api import is_string_equal
 from zato.common.soap.addressing import add_addressing, AddressingInfo, Fault_Invalid_Addressing_Header, parse_addressing
 from zato.common.soap.audit import mask_credentials
+from zato.common.soap.client_credentials import body_credential_names, inject_body_credentials
 from zato.common.soap.common import Action_Parameter, Content_Type, NS, SOAP_Action_Header, SOAP_Media_Types, \
-    SOAPAddressingException, SOAPException, SOAPVersion
+    SOAPAddressingException, SOAPException, SOAPFault, SOAPVersion
 from zato.common.soap.ebxml import build_message as build_ebxml_message, encrypt_payload, parse_message_header, sign_payload
 from zato.common.soap.envelope import attach_body, build_envelope, get_header, get_security_header, parse_body, \
     parse_envelope, raise_for_fault, to_bytes
@@ -58,10 +59,6 @@ if 0:
 
 logger = getLogger('zato')
 
-# The lowest position a body credential mapping may name. Positions are 1-based, matching what the
-# dashboard shows, so 1 means the operation's first child.
-Minimum_Credential_Position = 1
-
 # What a retry of an outgoing SOAP request is called in the logs.
 _retry_label = 'SOAP out'
 
@@ -76,13 +73,6 @@ Default_Encoding = 'utf-8'
 # What an XML declaration starts with. Its presence is what decides whether the transport's charset
 # has anything to add - a document that declares its own encoding is self-describing.
 _xml_declaration_prefix = b'<?xml'
-
-# What body credentials look like when a connection enables them without spelling out
-# a mapping of its own - one element per credential, each named after what it carries.
-Default_Body_Credential_Mappings = [
-    {'name': 'username', 'source': 'username'},
-    {'name': 'password', 'source': 'password'},
-]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -210,86 +200,6 @@ class SOAPClient:
 
 # ################################################################################################################################
 
-    def _credential_mappings(self) -> 'anylist':
-        """ Returns the body-credential mapping rows this connection injects by, which is the
-        default pair of a username and a password element when it spells out no mapping of its own.
-        """
-        out = self.body_credentials.get('mappings')
-
-        if not out:
-            out = Default_Body_Credential_Mappings
-
-        return out
-
-# ################################################################################################################################
-
-    def _inject_body_credentials(self, operation:'any_') -> 'None':
-        """ Injects the configured credentials as child elements of the operation element -
-        by default as its first children in mapping order, or at explicit 1-based positions.
-        The elements inherit the operation's namespace, so they sit in the message like any
-        other field, which is what body-authenticated endpoints such as CDC IIS require.
-        """
-        namespace = None
-        if operation.tag.startswith('{'):
-            namespace = operation.tag[1:].partition('}')[0]
-
-        mappings = self._credential_mappings()
-
-        # Rows without a position prepend in mapping order, positioned rows slot in afterwards.
-        default_rows = []
-        positioned_rows = []
-
-        for row in mappings:
-            position = row.get('position')
-
-            if position is None:
-                default_rows.append(row)
-                continue
-
-            # A position is 1-based, so anything below 1 is a configuration error. Left unchecked it
-            # becomes a negative index, which lxml reads from the end of the children - a credential
-            # that was meant to lead the message ends up trailing it, in a place the receiving
-            # endpoint does not look, and the request fails authentication for no visible reason.
-            if position < Minimum_Credential_Position:
-                name = row['name']
-                raise SOAPException(
-                    f'Body credential position must be at least {Minimum_Credential_Position}, not `{position}` -> `{name}`')
-
-            positioned_rows.append(row)
-
-        # The default rows go in ahead of whatever the operation already carries. They are built
-        # first and inserted in one reversed pass at the front, so each one is placed without
-        # walking past the elements the previous ones were placed at.
-        default_elements = []
-
-        for row in default_rows:
-            default_elements.append(self._new_credential_element(row, namespace))
-
-        for element in reversed(default_elements):
-            operation.insert(0, element)
-
-        positioned_rows.sort(key=itemgetter('position'))
-
-        for row in positioned_rows:
-            element = self._new_credential_element(row, namespace)
-            operation.insert(row['position'] - 1, element)
-
-# ################################################################################################################################
-
-    def _new_credential_element(self, row:'anydict', namespace:'strnone') -> 'any_':
-        """ Builds one credential element out of a mapping row and the configured credentials.
-        """
-        source = row.get('source') or row['name']
-        value = self.body_credentials[source]
-
-        if namespace:
-            element = etree.Element(f'{{{namespace}}}{row["name"]}')
-        else:
-            element = etree.Element(row['name'])
-
-        element.text = value
-
-        return element
 
 # ################################################################################################################################
 
@@ -334,7 +244,7 @@ class SOAPClient:
 
         # Body credentials go in before signing so a signature covers the final body.
         if self.body_credentials:
-            self._inject_body_credentials(operation_element)
+            inject_body_credentials(self.body_credentials, operation_element)
 
         # Custom headers go in before signing too, for the same reason.
         if soap_headers:
@@ -508,9 +418,10 @@ class SOAPClient:
         content_type, # type: str
         envelope      # type: any_
     ) -> 'any_':
-        """ Sends one request through the audit log - the outgoing body, a transport-level
-        failure and the raw response are each recorded before the caller parses anything,
-        so fault envelopes are captured too. Returns the raw requests response.
+        """ Sends one request through the audit log - the outgoing body is recorded before the call
+        and a transport-level failure right after it. The response itself is recorded by _record_response
+        once the caller has parsed it, because only then is it known whether it is a fault.
+        Returns the raw requests response.
 
         The envelope is handed over as well as the body because the record is made from it rather
         than from what goes on the wire - the wire carries the credentials and the record must not.
@@ -518,46 +429,44 @@ class SOAPClient:
 
         # The request is recorded with every credential in it masked ..
         if self.audit_callback:
-            recorded = mask_credentials(envelope, self._body_credential_names())
+            recorded = mask_credentials(envelope, body_credential_names(self.body_credentials))
             self.audit_callback(cid, AuditEvent.Request_Sent, endpoint, AuditOutcome.OK, recorded)
 
         try:
             out = self._post(body, content_type, cid)
         except Exception as e:
 
-            # .. a transport-level failure means no response ever arrived ..
+            # .. a transport-level failure means no response ever arrived, and the row's status says
+            # .. what kind of failure it was, so a timeout reads as a timeout and not merely as an error ..
             if self.audit_callback:
-                self.audit_callback(cid, AuditEvent.Response_Received, endpoint, AuditOutcome.Error, str(e))
+                status = classify_transport_error(e)
+                self.audit_callback(cid, AuditEvent.Response_Received, endpoint, AuditOutcome.Error, str(e), status=status)
 
             # .. which the caller still needs to see.
             raise
-
-        # .. a fault envelope arrives with an HTTP error status, hence the outcome from response.ok -
-        # .. the status itself travels along, so a 500 reads as itself and not merely as an error.
-        if self.audit_callback:
-            outcome = AuditOutcome.OK if out.ok else AuditOutcome.Error
-            status = f'{out.status_code} {out.reason}'
-            self.audit_callback(cid, AuditEvent.Response_Received, endpoint, outcome, out.content, status=status)
 
         return out
 
 # ################################################################################################################################
 
-    def _body_credential_names(self) -> 'strlist | None':
-        """ Returns the names of the operation children that carry credentials, if any do.
-
-        Only the connection knows them, since they come from its own mapping rather than from
-        anything in the message, and an audit record cannot mask what it cannot name.
+    def _record_response(self, cid:'str', endpoint:'str', response:'any_', fault:'SOAPFault | None') -> 'None':
+        """ Records the raw response once it has been parsed - a fault envelope arrives with an HTTP error status,
+        hence the outcome from response.ok, the status itself travels along so a 500 reads as itself, and a fault
+        names its code as the application outcome, so the row says what the envelope said.
         """
-        if not self.body_credentials:
-            return None
+        if not self.audit_callback:
+            return
 
-        out = []
+        outcome = AuditOutcome.OK if response.ok else AuditOutcome.Error
+        status = f'{response.status_code} {response.reason}'
 
-        for row in self._credential_mappings():
-            out.append(row['name'])
+        if fault:
+            application_outcome = fault.code
+        else:
+            application_outcome = ''
 
-        return out
+        self.audit_callback(cid, AuditEvent.Response_Received, endpoint, outcome, response.content, status=status,
+            application_outcome=application_outcome)
 
 # ################################################################################################################################
 
@@ -569,11 +478,24 @@ class SOAPClient:
 
         logger.info('SOAP out -> %s %s; len=%d', operation, self.address, len(body))
 
-        response = self._audited_post(cid, f'{operation} {self.address}', body, content_type, envelope)
+        endpoint = f'{operation} {self.address}'
+        response = self._audited_post(cid, endpoint, body, content_type, envelope)
 
         logger.info('SOAP out <- %s; %s len=%d', operation, response.status_code, len(response.content))
 
-        out = self._parse_response(response, message_id)
+        # The response row is written whether the parse raised a fault or not - a fault is recorded by its code,
+        # anything else by its status alone, and the fault learns the status it arrived with for its caller.
+        fault = None
+
+        try:
+            out = self._parse_response(response, message_id)
+        except SOAPFault as e:
+            fault = e
+            fault.http_status = response.status_code
+            raise
+        finally:
+            self._record_response(cid, endpoint, response, fault)
+
         return out
 
 # ################################################################################################################################
@@ -616,12 +538,22 @@ class SOAPClient:
         envelope_bytes = to_bytes(envelope)
         body, content_type = build_swa(envelope_bytes, parts, SOAPVersion.V11)
 
-        response = self._audited_post(cid, f'{info.action} {self.address}', body, content_type, envelope)
+        endpoint = f'{info.action} {self.address}'
+        response = self._audited_post(cid, endpoint, body, content_type, envelope)
 
-        response_envelope_bytes, response_parts = parse_message(response.content, response.headers.get('Content-Type', ''))
-        response_envelope = parse_envelope(response_envelope_bytes)
+        # The response row is written after the parse, as in invoke, so a faulting reply is recorded by its code.
+        fault = None
 
-        raise_for_fault(response_envelope)
+        try:
+            response_envelope_bytes, response_parts = parse_message(response.content, response.headers.get('Content-Type', ''))
+            response_envelope = parse_envelope(response_envelope_bytes)
+            raise_for_fault(response_envelope)
+        except SOAPFault as e:
+            fault = e
+            fault.http_status = response.status_code
+            raise
+        finally:
+            self._record_response(cid, endpoint, response, fault)
 
         out = parse_message_header(response_envelope)
 

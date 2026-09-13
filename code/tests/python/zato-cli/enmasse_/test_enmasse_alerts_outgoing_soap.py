@@ -63,6 +63,10 @@ _conn_name_2 = 'enmasse.alerts.soap.conn.2'
 # The codes the first connection alerts on, its own rather than the default
 _own_status_codes = '401, 403, 4xx'
 
+# The SOAP fault codes the first connection alerts on, its own rather than the default
+_own_fault_codes = 'Receiver, x:Timeout'
+_default_fault_codes = 'Receiver, Server, Sender, Client'
+
 # The action the first connection calls and the version it speaks
 _soap_action = 'urn:crm:orders'
 _soap_version = '1.2'
@@ -77,6 +81,8 @@ outgoing_soap:
     alerts:
       status_codes: '{_own_status_codes}'
       status_code_threshold: 5
+      fault_codes: '{_own_fault_codes}'
+      fault_threshold: 5
       connection_failures: 2
       max_latency: 2500
       email_connection: smtp:{_smtp_name}
@@ -204,6 +210,8 @@ class TestOutgoingSOAPAlertsImport:
         # The codes are stored as the text they were typed as
         assert opaque[storage_name('status_codes')] == _own_status_codes
         assert opaque[storage_name('status_code_threshold')] == 5
+        assert opaque[storage_name('fault_codes')] == _own_fault_codes
+        assert opaque[storage_name('fault_threshold')] == 5
         assert opaque[storage_name('connection_failures')] == 2
         assert opaque[storage_name('max_latency')] == 2500
         assert opaque[storage_name('email_connection')] == f'smtp:{_smtp_name}'
@@ -213,6 +221,7 @@ class TestOutgoingSOAPAlertsImport:
         assert opaque[storage_name('is_active')] is True
         assert opaque[storage_name('consecutive_failures')] == 3
         assert opaque[storage_name('status_codes_window')] == 300
+        assert opaque[storage_name('faults_window')] == 300
         assert opaque[storage_name('connection_failures_window')] == 300
         assert opaque[storage_name('latency_window')] == 300
         assert opaque[storage_name('use_llm')] is True
@@ -245,6 +254,9 @@ class TestOutgoingSOAPAlertsImport:
         assert opaque[storage_name('is_active')] is True
         assert opaque[storage_name('status_codes')] == '401, 403, 5xx'
         assert opaque[storage_name('status_code_threshold')] == 3
+        assert opaque[storage_name('fault_codes')] == _default_fault_codes
+        assert opaque[storage_name('fault_threshold')] == 3
+        assert opaque[storage_name('faults_window')] == 300
         assert opaque[storage_name('connection_failures')] == 3
         assert opaque[storage_name('max_latency')] == 5000
         assert opaque[storage_name('email_connection')] == ''
@@ -283,6 +295,8 @@ class TestOutgoingSOAPAlertsImport:
         assert opaque[storage_name('connection_failures')] == 2
         assert opaque[storage_name('status_codes')] == '401, 403, 5xx'
         assert opaque[storage_name('status_code_threshold')] == 3
+        assert opaque[storage_name('fault_codes')] == _default_fault_codes
+        assert opaque[storage_name('fault_threshold')] == 3
         assert opaque[storage_name('max_latency')] == 5000
         assert opaque[storage_name('email_connection')] == ''
         assert opaque[storage_name('llm_connection')] == ''
@@ -303,6 +317,29 @@ class TestOutgoingSOAPAlertsImport:
 
         message = str(context.value)
         assert '6xx' in message
+        assert 'outgoing SOAP' in message
+        assert _conn_name_1 in message
+
+        # Nothing was written
+        stored = session.query(HTTPSOAP).filter_by(name=_conn_name_1).first()
+        assert stored is None
+
+# ################################################################################################################################
+
+    def test_a_bad_fault_code_is_rejected(
+        self,
+        yaml_config:'stranydict',
+        session:'any_',
+        soap_importer:'OutgoingSOAPImporter',
+    ) -> 'None':
+        definitions = yaml_config['outgoing_soap']
+        definitions[0]['alerts']['fault_codes'] = 'Receiver, not a code'
+
+        with pytest.raises(Exception) as context:
+            _ = soap_importer.sync_outgoing_soap(definitions, session)
+
+        message = str(context.value)
+        assert 'not a code' in message
         assert 'outgoing SOAP' in message
         assert _conn_name_1 in message
 
@@ -348,6 +385,8 @@ class TestOutgoingSOAPAlertsExport:
         expected = {
             'status_codes': _own_status_codes,
             'status_code_threshold': 5,
+            'fault_codes': _own_fault_codes,
+            'fault_threshold': 5,
             'connection_failures': 2,
             'max_latency': 2500,
             'email_connection': f'smtp:{_smtp_name}',
@@ -389,6 +428,7 @@ class TestOutgoingSOAPAlertsExport:
         # The alerts mapping is the last field of a written connection, the codes quoted as the text they are
         written = path.read_text()
         assert f"    alerts:\n      status_codes: '{_own_status_codes}'\n      status_code_threshold: 5\n" in written
+        assert f"      fault_codes: '{_own_fault_codes}'\n      fault_threshold: 5\n" in written
 
         read_back = yaml.safe_load(written)
         assert read_back['outgoing_soap'] == exported

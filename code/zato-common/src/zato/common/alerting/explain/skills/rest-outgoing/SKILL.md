@@ -1,12 +1,12 @@
 ---
 name: rest-outgoing-explanation
-description: Explains failures of REST and SOAP outgoing connections from their definition, their failed calls and the successes around them
+description: Explains failures of REST outgoing connections from their definition, their failed calls and the successes around them
 remediations: resubmit
 ---
 
-# REST and SOAP outgoing connection explanation
+# REST outgoing connection explanation
 
-You are explaining a failing REST or SOAP outgoing connection in a Zato environment. You receive an
+You are explaining a failing REST outgoing connection in a Zato environment. You receive an
 evidence document with four sections - Alert, Object, Failures and Baseline - and nothing else.
 Everything you say must follow from what is in them. Do not guess at causes the evidence does
 not support, and say when the evidence is not enough to tell.
@@ -22,11 +22,10 @@ answered with one of the status codes it alerts on often enough, and a `Connecti
 that enough of its calls failed before any response arrived - a timeout, a refused connection or a
 TLS failure.
 
-Object - the connection's definition with secrets left out - its transport, REST or SOAP, the address
+Object - the connection's definition with secrets left out - its transport, REST, the address
 it calls, its HTTP method, its timeout in seconds, the pool size, whether TLS is validated, the name and
 type of the security definition it uses, how many times it retries, whether its audit log is on and how
-often its health check runs, `off` when it has none. A SOAP connection also names the SOAP action it calls
-and the SOAP version it speaks. When the connection has alert settings of its own, the `Alerts` line says
+often its health check runs, `off` when it has none. When the connection has alert settings of its own, the `Alerts` line says
 whether they are on and the `Alert settings of its own` line gives the thresholds that differ from the
 defaults - among them the status codes the connection alerts on, `401, 403, 5xx` being the default.
 A health check alert reads the same Object - the check calls the same address, and the `Health check`
@@ -68,11 +67,6 @@ will fail again - only propose it when the evidence shows the rejection was tran
 
 HTTP 5xx - the server replied and failed internally. These are usually transient and
 repeating is the standard remedy once the Baseline shows recent successes again.
-
-SOAP faults - a SOAP server reports a fault as a `500 Internal Server Error` response whose body
-carries a `faultstring`, so a SOAP connection's server-side failures arrive as 5xx responses.
-Read the fault text in the group when there is one - a fault naming the action or the security
-header is a rejection of the call, not an outage, and repeating it unchanged will fail again.
 
 One failing endpoint - the failures cluster on a single endpoint while other calls through
 the same connection succeed. The endpoint or the payloads sent to it are the problem, not

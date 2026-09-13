@@ -130,7 +130,7 @@ class TestFailedEvents:
         row = collect_failed_events(engine, _fact(), now)[0]
 
         assert set(row) == {'id', 'event_time_iso', 'event_type', 'endpoint', 'outcome', 'status', 'duration_ms', 'data',
-            'ext_client_id'}
+            'ext_client_id', 'application_outcome'}
         assert row['outcome'] == AuditOutcome.Error
         assert row['event_type'] == AuditEvent.Message_Sent
 

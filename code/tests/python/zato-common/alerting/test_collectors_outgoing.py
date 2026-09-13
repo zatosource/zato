@@ -65,9 +65,10 @@ def _backdate(event_id:'int', event_time:'datetime') -> 'None':
 # ################################################################################################################################
 
 def _seed_call(audit_log:'AuditLog', cid:'str', status:'str', *, object_name:'str'=_conn_name,
-    source:'str'=AuditSource.REST_Outgoing) -> 'int':
+    source:'str'=AuditSource.REST_Outgoing, fault_code:'str'='') -> 'int':
     """ Stores the request and response pair one call of an outgoing connection leaves behind - a response with
-    its HTTP status line, or a failed call with its transport status. The id of the response is returned.
+    its HTTP status line, a SOAP fault with its code on top, or a failed call with its transport status.
+    The id of the response is returned.
     """
     if status.startswith('2'):
         outcome = AuditOutcome.OK
@@ -77,7 +78,7 @@ def _seed_call(audit_log:'AuditLog', cid:'str', status:'str', *, object_name:'st
     _ = audit_log.insert(source, AuditEvent.Request_Sent, object_name, cid=cid, outcome=AuditOutcome.OK)
 
     out = audit_log.insert(source, AuditEvent.Response_Received, object_name, cid=cid, outcome=outcome, status=status,
-        duration_ms=20)
+        application_outcome=fault_code, duration_ms=20)
 
     return out
 
@@ -121,6 +122,10 @@ class TestOutgoingStatusFacts:
 
         # The codes are for the sweep to match - nothing is derived here
         assert fact['status_code_count'] == 0
+
+        # A REST connection never carries faults
+        assert fact['fault_counts'] == {}
+        assert fact['fault_count'] == 0
 
     def test_a_transport_status_never_lands_among_the_codes(self) -> 'None':
         audit_log = AuditLog(_server_name)
@@ -192,6 +197,44 @@ class TestOutgoingStatusFacts:
         facts = collect_outgoing_status_facts(engine, _window_seconds, now, source=AuditSource.SOAP_Outgoing)
         fact = _fact_of(facts, _conn_name, AuditSource.SOAP_Outgoing)
         assert fact['status_counts'] == {'500': 1}
+
+    def test_a_fault_is_counted_by_its_code_and_never_as_a_status_code(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _ = _seed_call(audit_log, 'fault-1', '500 Internal Server Error', source=AuditSource.SOAP_Outgoing, fault_code='Receiver')
+        _ = _seed_call(audit_log, 'fault-2', '500 Internal Server Error', source=AuditSource.SOAP_Outgoing, fault_code='Receiver')
+        _ = _seed_call(audit_log, 'fault-3', '400 Bad Request', source=AuditSource.SOAP_Outgoing, fault_code='Sender')
+
+        # A proxy's 503 page is not a fault, and a timeout is neither
+        _ = _seed_call(audit_log, 'proxy-1', '503 Service Unavailable', source=AuditSource.SOAP_Outgoing)
+        _ = _seed_call(audit_log, 'timeout-1', TransportStatus.Timeout, source=AuditSource.SOAP_Outgoing)
+
+        facts = collect_outgoing_status_facts(engine, _window_seconds, now)
+        fact = _fact_of(facts, _conn_name, AuditSource.SOAP_Outgoing)
+
+        assert fact['fault_counts'] == {'Receiver': 2, 'Sender': 1}
+        assert fact['status_counts'] == {'503': 1}
+        assert fact['connection_failure_count'] == 1
+
+        # The codes are for the sweep to match - nothing is derived here
+        assert fact['fault_count'] == 0
+        assert fact['fault_code_counts'] == {}
+
+    def test_a_connection_with_faults_alone_gets_a_fact(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _ = _seed_call(audit_log, 'fault-1', '500 Internal Server Error', source=AuditSource.SOAP_Outgoing, fault_code='Receiver')
+
+        facts = collect_outgoing_status_facts(engine, _window_seconds, now)
+        fact = _fact_of(facts, _conn_name, AuditSource.SOAP_Outgoing)
+
+        assert fact['fault_counts'] == {'Receiver': 1}
+        assert fact['status_counts'] == {}
+        assert fact['connection_failure_count'] == 0
 
     def test_a_source_outside_the_outgoing_ones_measures_nothing(self) -> 'None':
         audit_log = AuditLog(_server_name)

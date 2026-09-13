@@ -22,7 +22,7 @@ from typing_extensions import TypeAlias
 # Zato
 from zato.common.alerting import config_map
 from zato.common.alerting.collectors.common import Measure_Connection_Failures, Measure_Error_Rate, Measure_Latency, \
-    Measure_Status_Codes
+    Measure_SOAP_Faults, Measure_Status_Codes
 from zato.common.alerting.seed import ensure_alerting_definitions
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
@@ -46,6 +46,8 @@ engine_generator:TypeAlias = Generator[Engine, None, None]
 # The type and ruleset most of the single-field tests speak through
 _rest_type = 'rest'
 _rest_ruleset = 'alerts_rest'
+_soap_type = 'soap'
+_soap_ruleset = 'alerts_soap'
 
 # The type whose toggle field the toggle tests speak through
 _microsoft_type = 'microsoft'
@@ -581,6 +583,70 @@ class TestTextAndWindowsOfRest:
         assert by_measure[Measure_Connection_Failures] == 900
         assert by_measure[Measure_Error_Rate] == 300
         assert by_measure[Measure_Latency] == 300
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestTextsAndWindowsOfSoap:
+
+    def test_the_soap_texts_read_off_their_rules_and_write_back_into_them(self) -> 'None':
+        status_field = _field(_soap_type, 'status_codes')
+        fault_field = _field(_soap_type, 'fault_codes')
+
+        assert status_field['kind'] == config_map.Kind_Text
+        assert fault_field['kind'] == config_map.Kind_Text
+
+        documents = {
+            config_map.rule_full_name(_soap_ruleset, 'Status_Codes'): {
+                'name': 'Status_Codes',
+                'defaults': {'status_codes': {'value': '401, 403, 5xx'}},
+            },
+            config_map.rule_full_name(_soap_ruleset, 'SOAP_Faults'): {
+                'name': 'SOAP_Faults',
+                'defaults': {'fault_codes': {'value': 'Receiver, Server, Sender, Client'}},
+            },
+        }
+
+        assert config_map.read_text(documents, _soap_ruleset, status_field) == '401, 403, 5xx'
+        assert config_map.read_text(documents, _soap_ruleset, fault_field) == 'Receiver, Server, Sender, Client'
+
+        # Each text writes into its own rule alone
+        changed = config_map.write_text(documents, _soap_ruleset, fault_field, 'Receiver, Server')
+        assert changed is True
+        assert config_map.read_text(documents, _soap_ruleset, fault_field) == 'Receiver, Server'
+        assert config_map.read_text(documents, _soap_ruleset, status_field) == '401, 403, 5xx'
+
+        changed = config_map.write_text(documents, _soap_ruleset, fault_field, 'Receiver, Server')
+        assert changed is False
+
+# ################################################################################################################################
+
+    def test_the_seeded_soap_rules_hand_each_of_the_five_windows_to_its_measure(self, backend:'RuleSQLBackend') -> 'None':
+        ensure_alerting_definitions(backend)
+
+        matches = backend.definitions.find_by_name(name=_soap_ruleset, object_type=Definition_Type_Ruleset)
+        document = deserialize_document(matches[0].document)
+        documents = document[Documents_Key]
+
+        by_measure = config_map.read_window_seconds_by_measure(documents, _soap_type)
+
+        assert by_measure == {
+            Measure_Error_Rate: 300,
+            Measure_Status_Codes: 300,
+            Measure_SOAP_Faults: 300,
+            Measure_Connection_Failures: 300,
+            Measure_Latency: 300,
+        }
+
+        # The faults window is written on its own and lands on its own measure alone
+        new_values = {'faults_window': 600}
+        _ = config_map.write_type_values(_soap_type, documents, new_values)
+
+        by_measure = config_map.read_window_seconds_by_measure(documents, _soap_type)
+
+        assert by_measure[Measure_SOAP_Faults] == 600
+        assert by_measure[Measure_Status_Codes] == 300
+        assert by_measure[Measure_Connection_Failures] == 300
 
 # ################################################################################################################################
 # ################################################################################################################################

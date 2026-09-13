@@ -19,7 +19,7 @@ from sqlalchemy import update
 
 # Zato
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
-from zato.common.alerting.object_config import alert_type_rest, get_defaults as get_object_defaults
+from zato.common.alerting.object_config import alert_type_rest, alert_type_soap, get_defaults as get_object_defaults
 from zato.common.alerting.seed.rules_connections import rest_rules, soap_rules
 from zato.common.alerting.sweep import run_sweep
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
@@ -115,8 +115,9 @@ def _load_rest_rules() -> 'rule_engine_rule_list':
 # ################################################################################################################################
 
 def _seed_call(audit_log:'AuditLog', engine:'Engine', now:'datetime', cid:'str', status:'str', *,
-    object_name:'str'=_conn_name, seconds_back:'int'=0, source:'str'=AuditSource.REST_Outgoing) -> 'None':
-    """ Stores the request and response pair one call of a connection leaves behind, moved back in time if asked to.
+    object_name:'str'=_conn_name, seconds_back:'int'=0, source:'str'=AuditSource.REST_Outgoing, fault_code:'str'='') -> 'None':
+    """ Stores the request and response pair one call of a connection leaves behind, moved back in time if asked to,
+    a SOAP fault carrying its code on top of its status.
     """
     if status.startswith('2'):
         outcome = AuditOutcome.OK
@@ -126,7 +127,7 @@ def _seed_call(audit_log:'AuditLog', engine:'Engine', now:'datetime', cid:'str',
     request_id = audit_log.insert(source, AuditEvent.Request_Sent, object_name, cid=cid, outcome=AuditOutcome.OK)
 
     response_id = audit_log.insert(source, AuditEvent.Response_Received, object_name, cid=cid,
-        outcome=outcome, status=status, duration_ms=20)
+        outcome=outcome, status=status, application_outcome=fault_code, duration_ms=20)
 
     if seconds_back:
         event_time_iso = (now - timedelta(seconds=seconds_back)).isoformat()
@@ -141,27 +142,27 @@ def _seed_call(audit_log:'AuditLog', engine:'Engine', now:'datetime', cid:'str',
 # ################################################################################################################################
 
 def _seed_failures(audit_log:'AuditLog', engine:'Engine', now:'datetime', prefix:'str', count:'int', status:'str', *,
-    object_name:'str'=_conn_name, seconds_back:'int'=0, source:'str'=AuditSource.REST_Outgoing) -> 'None':
+    object_name:'str'=_conn_name, seconds_back:'int'=0, source:'str'=AuditSource.REST_Outgoing, fault_code:'str'='') -> 'None':
     """ Stores the given number of calls that failed with the status, each followed by a call that went through,
     so the failures never form an unbroken streak and only the rules about counts and rates see them.
     """
     for idx in range(count):
         _seed_call(audit_log, engine, now, f'{prefix}-{idx}-failed', status, object_name=object_name,
-            seconds_back=seconds_back, source=source)
+            seconds_back=seconds_back, source=source, fault_code=fault_code)
         _seed_call(audit_log, engine, now, f'{prefix}-{idx}-ok', '200 OK', object_name=object_name,
             seconds_back=seconds_back, source=source)
 
 # ################################################################################################################################
 
-def _new_object_settings(**values:'any_') -> 'anydict':
-    """ The object settings of one outgoing REST connection at the defaults, with the given values on top.
+def _new_object_settings(alert_type:'str'=alert_type_rest, **values:'any_') -> 'anydict':
+    """ The object settings of one outgoing connection of the type at the defaults, with the given values on top.
     The LLM stays out of it, so the actions run directly and can be observed.
     """
-    settings = get_object_defaults(alert_type_rest)
+    settings = get_object_defaults(alert_type)
     settings['use_llm'] = False
     settings.update(values)
 
-    out = {alert_type_rest: {_conn_name: settings}}
+    out = {alert_type: {_conn_name: settings}}
     return out
 
 # ################################################################################################################################
@@ -384,6 +385,92 @@ class TestOutgoingRestSweep:
         for _, _, body in recorder.emails:
             assert '(SOAP outgoing)' in body
             assert '3 consecutive failures' in body
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestOutgoingSoapSweep:
+
+    def test_three_faults_raise_soap_faults_alone_and_not_status_codes(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Three Receiver faults on 500 - a 500 is among the default status codes, yet a fault is a fault
+        _seed_failures(audit_log, engine, now, 'fault', 3, '500 Internal Server Error', source=AuditSource.SOAP_Outgoing,
+            fault_code='Receiver')
+        _seed_failures(audit_log, engine, now, 'ok', 30, '200 OK', source=AuditSource.SOAP_Outgoing)
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-soap-faults', None)
+
+        assert _rule_names(result) == ['SOAP_Faults']
+        assert len(recorder.emails) == 1
+
+        _, _, body = recorder.emails[0]
+        assert _conn_name in body
+        assert '(SOAP outgoing)' in body
+        assert '3 SOAP faults the connection alerts on (Receiver x3)' in body
+
+# ################################################################################################################################
+
+    def test_the_connections_own_fault_codes_stand_in_for_the_default(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Three Sender faults - the default alerts on them ..
+        _seed_failures(audit_log, engine, now, 'sender', 3, '400 Bad Request', source=AuditSource.SOAP_Outgoing,
+            fault_code='Sender')
+        _seed_failures(audit_log, engine, now, 'ok', 30, '200 OK', source=AuditSource.SOAP_Outgoing)
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-soap-default', None)
+        assert _rule_names(result) == ['SOAP_Faults']
+
+        _, _, body = recorder.emails[0]
+        assert '3 SOAP faults the connection alerts on (Sender x3)' in body
+
+        # .. a connection alerting on the endpoint's own faults alone stays quiet on them ..
+        object_settings = _new_object_settings(alert_type_soap, fault_codes='Receiver')
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-soap-own-quiet', object_settings)
+
+        assert _rule_names(result) == []
+
+        # .. and three Receiver faults on top wake it up, counted by its own codes.
+        _seed_failures(audit_log, engine, now, 'receiver', 3, '500 Internal Server Error', source=AuditSource.SOAP_Outgoing,
+            fault_code='Receiver')
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-soap-own-fires', object_settings)
+        assert _rule_names(result) == ['SOAP_Faults']
+
+        _, _, body = recorder.emails[0]
+        assert '3 SOAP faults the connection alerts on (Receiver x3)' in body
+
+# ################################################################################################################################
+
+    def test_a_rest_and_a_soap_connection_of_one_name_read_settings_of_their_own(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Three 404s through a REST connection and three Sender faults through a SOAP one, both of one name
+        _seed_failures(audit_log, engine, now, 'rest-nf', 3, '404 Not Found')
+        _seed_failures(audit_log, engine, now, 'rest-ok', 30, '200 OK')
+        _seed_failures(audit_log, engine, now, 'soap-sender', 3, '400 Bad Request', source=AuditSource.SOAP_Outgoing,
+            fault_code='Sender')
+        _seed_failures(audit_log, engine, now, 'soap-ok', 30, '200 OK', source=AuditSource.SOAP_Outgoing)
+
+        # The REST one alerts on 404s of its own accord, the SOAP one on Receiver faults alone
+        object_settings = _new_object_settings(status_codes='404')
+        object_settings.update(_new_object_settings(alert_type_soap, fault_codes='Receiver'))
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-both', object_settings)
+
+        # The REST connection's 404s fire, the SOAP connection's Sender faults do not
+        assert _rule_names(result) == ['Status_Codes']
+
+        _, _, body = recorder.emails[0]
+        assert '(REST outgoing)' in body
+        assert '3 responses with a status the connection alerts on (404 x3)' in body
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -8,7 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The Alerts tab of an outgoing REST or SOAP connection - its sections in order with the health check above the failures and
 # the traffic, the status codes line carrying its text field and summarising the codes, the connection failures line, every
-# storage field of the type on both pages' forms, and the storage names the config hands the tab's JavaScript.
+# storage field of the type on both pages' forms, and the storage names the config hands the tab's JavaScript. The SOAP
+# tab has a SOAP faults line of its own right after the status codes, and the alert rules page a SOAP outgoing row with
+# the fault codes cell.
 
 # pytest
 import pytest
@@ -18,12 +20,14 @@ from zato.common.ext.bunch import Bunch
 
 # Zato - Dashboard
 from zato.admin.web import alerts_tab
-from zato.admin.web.alerts_tab_lines import Health_Check_Run_Every_Field, Health_Check_Run_Unit_Field, \
-    Health_Check_Summary_Empty, Line_Kind_Popover, Section_Core, Section_Failures, Section_Health, Section_Traffic, \
-    Status_Codes_Field, Status_Codes_Default, Status_Codes_Window_Unit_Field, Unit_Field_Suffix
+from zato.admin.web.alerts_tab_lines import Fault_Codes_Default, Fault_Codes_Field, Faults_Window_Unit_Field, \
+    Health_Check_Run_Every_Field, Health_Check_Run_Unit_Field, Health_Check_Summary_Empty, Line_Kind_Popover, Section_Core, \
+    Section_Failures, Section_Health, Section_Traffic, Status_Codes_Field, Status_Codes_Default, \
+    Status_Codes_Window_Unit_Field, Unit_Field_Suffix
 from zato.admin.web.forms.http_soap import CreateForm as ChannelCreateForm, EditForm as ChannelEditForm
 from zato.admin.web.forms.outgoing.soap import CreateForm as SOAPCreateForm, EditForm as SOAPEditForm
-from zato.common.alerting.object_config import alert_type_rest, get_defaults, get_field_names, storage_name
+from zato.admin.web.views.alerting import _build_config_cell, _type_cells, _type_titles
+from zato.common.alerting.object_config import alert_type_rest, alert_type_soap, get_defaults, get_field_names, storage_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -124,7 +128,7 @@ class TestOutgoingRestTab:
         assert line['kind'] == Line_Kind_Popover
         assert line['label'] == 'Status codes'
         assert line['fields'] == [Status_Codes_Field, 'status_code_threshold', 'status_codes_window']
-        assert line['rows'] == [[Status_Codes_Field], ['status_code_threshold'], ['status_codes_window']]
+        assert line['rows'] == [[Status_Codes_Field], ['status_code_threshold', 'status_codes_window']]
         assert line['unit_field'] == Status_Codes_Window_Unit_Field
 
         # The codes are typed as text with the placeholder showing the shape ..
@@ -213,6 +217,103 @@ class TestOutgoingRestTab:
             assert storage_name(window + Unit_Field_Suffix) in storage_names, window
 
         assert storage_name(Status_Codes_Field) in storage_names
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestOutgoingSoapTab:
+
+    def test_the_soap_lines_carry_the_faults_right_after_the_status_codes(self) -> 'None':
+
+        config = alerts_tab.get_alerts_tab_config(alert_type_soap)
+
+        line_names:'strlist' = []
+
+        for line in config['lines']:
+            line_names.append(line['name'])
+
+        assert line_names == ['active', 'use_llm', 'llm', 'email', 'health_check', 'failures_in_a_row', 'error_rate',
+            'status_codes', 'soap_faults', 'connection_failures', 'slow_responses']
+
+        # The REST tab has no such line
+        rest_config = alerts_tab.get_alerts_tab_config(alert_type_rest)
+        assert 'soap_faults' not in _lines_by_name(rest_config)
+
+# ################################################################################################################################
+
+    def test_the_soap_faults_line_carries_its_codes_and_summarises_them(self) -> 'None':
+
+        config = alerts_tab.get_alerts_tab_config(alert_type_soap)
+        line = _lines_by_name(config)['soap_faults']
+
+        assert line['kind'] == Line_Kind_Popover
+        assert line['label'] == 'SOAP faults'
+        assert line['fields'] == [Fault_Codes_Field, 'fault_threshold', 'faults_window']
+        assert line['rows'] == [[Fault_Codes_Field], ['fault_threshold', 'faults_window']]
+        assert line['unit_field'] == Faults_Window_Unit_Field
+
+        # The codes are typed as text with the default showing the shape ..
+        assert line['text_fields'] == {Fault_Codes_Field: Fault_Codes_Default}
+        assert Fault_Codes_Default == 'Receiver, Server, Sender, Client'
+        assert config['field_kinds'][Fault_Codes_Field] == 'text'
+
+        # .. and the summary names the count, the codes text and the window with its unit.
+        assert '{fault_threshold|fault|faults}' in line['summary']
+        assert f'{{{Fault_Codes_Field}}}' in line['summary']
+        assert f'{{{Faults_Window_Unit_Field}@faults_window}}' in line['summary']
+
+        assert config['field_labels']['faults_window'] == 'In the last'
+
+# ################################################################################################################################
+
+    def test_the_soap_forms_carry_the_fault_fields_and_the_rest_forms_do_not(self, req:'any_') -> 'None':
+
+        soap_form = SOAPCreateForm(req=req, alert_type=alert_type_soap)
+        defaults = get_defaults(alert_type_soap)
+
+        for name in get_field_names(alert_type_soap):
+            assert storage_name(name) in soap_form.fields, name
+
+        assert soap_form.fields[storage_name(Fault_Codes_Field)].initial == defaults['fault_codes']
+        assert soap_form.fields[storage_name('fault_threshold')].initial == defaults['fault_threshold']
+
+        rest_form = ChannelCreateForm(req=req, alert_type=alert_type_rest)
+
+        for name in ('fault_codes', 'fault_threshold', 'faults_window'):
+            assert storage_name(name) not in rest_form.fields, name
+
+# ################################################################################################################################
+
+    def test_the_soap_storage_names_carry_the_faults_window_with_its_unit(self) -> 'None':
+
+        config = alerts_tab.get_alerts_tab_config(alert_type_soap)
+        storage_names = config['storage_field_names']
+
+        assert storage_name('faults_window') in storage_names
+        assert storage_name('faults_window' + Unit_Field_Suffix) in storage_names
+        assert storage_name(Fault_Codes_Field) in storage_names
+
+# ################################################################################################################################
+
+    def test_the_type_page_renders_the_soap_row_with_its_text_cells(self) -> 'None':
+
+        assert _type_titles['rest'] == 'REST outgoing'
+        assert _type_titles['soap'] == 'SOAP outgoing'
+
+        assert 'fault_codes' in _type_cells['soap']
+        assert 'fault_codes' not in _type_cells['rest']
+
+        values = {'fault_codes': 'Receiver, Server'}
+        cell = _build_config_cell('fault_codes', 'text', values)
+
+        assert cell == {
+            'name': 'fault_codes',
+            'label': 'Fault codes',
+            'suffix': '',
+            'kind': 'text',
+            'value': 'Receiver, Server',
+            'display': 'Receiver, Server',
+        }
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -44,6 +44,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 #           status_codes: '401, 403, 4xx'
 #           status_code_threshold: 5
 #           connection_failures: 2
+#
+#     outgoing_soap:
+#       - name: crm.soap
+#         host: https://crm.example.com
+#         url_path: /soap/customers
+#         soap_action: urn:crm:GetCustomer
+#         soap_version: '1.2'
+#         alerts:
+#           fault_codes: 'Receiver, Server'
+#           fault_threshold: 3
 
 # stdlib
 import logging
@@ -51,7 +61,8 @@ from json import loads
 
 # Zato
 from zato.common.alerting import object_config
-from zato.common.alerting.config_map import Status_Codes_Field_Name
+from zato.common.alerting.config_map import Fault_Codes_Field_Name, Status_Codes_Field_Name
+from zato.common.alerting.fault_codes import parse_fault_codes
 from zato.common.alerting.status_codes import parse_status_codes
 from zato.common.api import EMAIL, GENERIC
 from zato.common.defaults import default_cluster_id
@@ -175,10 +186,17 @@ def flatten_alerts(connection_def:'anydict', alert_type:'str', connection_type:'
         llm_connection = alerts[object_config.LLM_Connection_Field]
         _ensure_llm_connection_exists(llm_connection, connection_type, connection_name, session)
 
-    # A status code that is neither three digits nor a class such as 5xx is refused before anything is stored
+    # A status code that is neither three digits nor a class such as 5xx is refused before anything is stored ..
     if Status_Codes_Field_Name in alerts:
         try:
             _ = parse_status_codes(alerts[Status_Codes_Field_Name])
+        except ValueError as e:
+            raise Exception(f'{e} for {connection_type} connection `{connection_name}`')
+
+    # .. and so is a fault code that is not a name such as Receiver or x:Timeout.
+    if Fault_Codes_Field_Name in alerts:
+        try:
+            _ = parse_fault_codes(alerts[Fault_Codes_Field_Name])
         except ValueError as e:
             raise Exception(f'{e} for {connection_type} connection `{connection_name}`')
 

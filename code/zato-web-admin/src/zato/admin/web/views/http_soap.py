@@ -555,6 +555,7 @@ def _extract_invoke_params(req):
         'request_method': req.POST.get('request_method', 'POST'),
         'query_params': req.POST.get('query_params', ''),
         'path_params': req.POST.get('path_params', ''),
+        'operation': req.POST.get('operation', ''),
     }
 
 # ################################################################################################################################

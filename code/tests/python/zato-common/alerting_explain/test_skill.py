@@ -24,6 +24,7 @@ from zato.common.alerting.explain.skill import get_default_skills_dir, get_skill
 _shipped_sources = (
     AuditSource.REST_Channel,
     AuditSource.REST_Outgoing,
+    AuditSource.SOAP_Outgoing,
     AuditSource.SQL_Outgoing,
     AuditSource.LLM,
     AuditSource.MCP,
@@ -36,7 +37,7 @@ _shipped_sources = (
 )
 
 # The sources whose skill may propose resubmitting
-_resubmit_sources = (AuditSource.REST_Outgoing, AuditSource.File_Outgoing)
+_resubmit_sources = (AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing, AuditSource.File_Outgoing)
 
 # The four sections every skill teaches the LLM to read
 _sections = ('Alert', 'Object', 'Failures', 'Baseline')
@@ -99,10 +100,10 @@ class TestGetSkillSource:
 
     def test_a_health_check_is_explained_with_the_connections_skill(self) -> 'None':
         assert get_skill_source(AuditSource.REST_Outgoing_Health) == AuditSource.REST_Outgoing
-        assert get_skill_source(AuditSource.SOAP_Outgoing_Health) == AuditSource.REST_Outgoing
+        assert get_skill_source(AuditSource.SOAP_Outgoing_Health) == AuditSource.SOAP_Outgoing
 
-    def test_an_outgoing_soap_connection_is_explained_with_the_rest_outgoing_skill(self) -> 'None':
-        assert get_skill_source(AuditSource.SOAP_Outgoing) == AuditSource.REST_Outgoing
+    def test_an_outgoing_soap_connection_is_explained_with_a_skill_of_its_own(self) -> 'None':
+        assert get_skill_source(AuditSource.SOAP_Outgoing) == AuditSource.SOAP_Outgoing
 
     def test_a_probe_is_explained_with_the_connections_skill(self) -> 'None':
         assert get_skill_source(AuditSource.Test_Transfer) == AuditSource.File_Outgoing
@@ -127,6 +128,15 @@ class TestLoadSkill:
         assert skill is not None
         assert skill.name == 'rest-outgoing-explanation'
         assert skill.remediations == ['resubmit']
+
+    def test_the_soap_outgoing_skill_ships_with_the_package(self) -> 'None':
+        skill = load_skill(AuditSource.SOAP_Outgoing)
+
+        assert skill is not None
+        assert skill.name == 'soap-outgoing-explanation'
+        assert skill.remediations == ['resubmit']
+        assert 'Receiver' in skill.instructions
+        assert 'Sender' in skill.instructions
 
     def test_the_rest_channel_skill_ships_without_remediations(self) -> 'None':
         skill = load_skill(AuditSource.REST_Channel)
@@ -228,7 +238,7 @@ class TestShippedSkills:
         assert '"confidence": "low | medium | high"' in skill.instructions
 
     @pytest.mark.parametrize('source', _shipped_sources)
-    def test_only_the_transfer_and_rest_skills_may_resubmit(self, source:'str') -> 'None':
+    def test_only_the_transfer_and_outgoing_http_skills_may_resubmit(self, source:'str') -> 'None':
         skill = load_skill(source)
 
         assert skill is not None

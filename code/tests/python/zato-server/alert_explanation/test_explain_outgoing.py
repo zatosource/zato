@@ -45,8 +45,18 @@ _security_name = 'CRM API Key'
 # The codes the connection alerts on, its own rather than the default
 _own_status_codes = '401, 403, 4xx, 5xx'
 
-# The title line of the skill an outgoing REST connection is explained with
-_outgoing_skill_title = '# REST and SOAP outgoing connection explanation'
+# The title line of the skill an outgoing REST connection is explained with, and the one of a SOAP connection's own
+_outgoing_skill_title = '# REST outgoing connection explanation'
+_soap_skill_title = '# SOAP outgoing connection explanation'
+
+# The SOAP connection - its action and version, the fault codes of its own and what its faults arrive as
+_soap_conn_name = 'crm.soap'
+_soap_action = 'urn:crm:GetCustomer'
+_soap_version = '1.2'
+_own_fault_codes = 'Receiver'
+_fault_status = '500 Internal Server Error'
+_fault_code = 'Receiver'
+_fault_text = '<soap:Envelope><soap:Body><soap:Fault><soap:Reason>An error has occurred</soap:Reason></soap:Fault></soap:Body></soap:Envelope>'
 
 # What the remote side answered the rejected calls with, and what it never got to answer
 _rejected_status = '401 Unauthorized'
@@ -55,8 +65,15 @@ _timeout_text = 'Timeout error: HTTPSConnectionPool(host=crm.example.com, port=4
 
 # ################################################################################################################################
 
-def _seed_connection(session_maker:'any_', *, with_security:'bool'=True, opaque:'dict | None'=None) -> 'None':
-    """ One outgoing REST connection with a Basic Auth definition and alert settings of its own.
+def _seed_connection(
+    session_maker:'any_',
+    *,
+    with_security:'bool'=True,
+    opaque:'dict | None'=None,
+    is_soap:'bool'=False,
+    ) -> 'None':
+    """ One outgoing REST connection with a Basic Auth definition and alert settings of its own,
+    or a SOAP one with fault codes of its own on top.
     """
     if opaque is None:
         opaque = {
@@ -69,6 +86,9 @@ def _seed_connection(session_maker:'any_', *, with_security:'bool'=True, opaque:
             storage_name('use_llm'): True,
         }
 
+        if is_soap:
+            opaque[storage_name('fault_codes')] = _own_fault_codes
+
     session = session_maker()
     cluster = session.query(Cluster).filter(Cluster.id==_cluster_id).one()
 
@@ -79,11 +99,19 @@ def _seed_connection(session_maker:'any_', *, with_security:'bool'=True, opaque:
         security = None
 
     row = HTTPSOAP()
-    row.name = _conn_name
     row.is_active = True
     row.is_internal = False
     row.connection = 'outgoing'
-    row.transport = 'plain_http'
+
+    if is_soap:
+        row.name = _soap_conn_name
+        row.transport = 'soap'
+        row.soap_action = _soap_action
+        row.soap_version = _soap_version
+    else:
+        row.name = _conn_name
+        row.transport = 'plain_http'
+        row.soap_action = ''
     row.host = _conn_host
     row.url_path = _conn_url_path
     row.method = 'POST'
@@ -91,7 +119,6 @@ def _seed_connection(session_maker:'any_', *, with_security:'bool'=True, opaque:
     row.timeout = 15
     row.pool_size = 20
     row.data_format = 'json'
-    row.soap_action = ''
     row.security = security
     row.cluster = cluster
     row.opaque1 = json.dumps(opaque)
@@ -122,11 +149,39 @@ def _seed_failures(source:'str'=AuditSource.REST_Outgoing) -> 'None':
 
 # ################################################################################################################################
 
-def _explain_outgoing(session:'any_', repo_dir:'str', llm_address:'any_', source:'str', measure:'str') -> 'str':
+def _seed_faults(source:'str'=AuditSource.SOAP_Outgoing) -> 'None':
+    """ The calls the SOAP connection made that failed - three answered with a Receiver fault on a 500, each recorded
+    by its fault code, and one bare 503 from a proxy in front of the endpoint, recorded by its status alone.
+    """
+    audit_log = AuditLog(_server_name)
+    endpoint = f'GetCustomer {_conn_host}{_conn_url_path}'
+
+    _ = audit_log.insert(source, AuditEvent.Request_Sent, _soap_conn_name, cid='proxy-1',
+        outcome=AuditOutcome.OK, endpoint=endpoint)
+    _ = audit_log.insert(source, AuditEvent.Response_Received, _soap_conn_name, cid='proxy-1',
+        outcome=AuditOutcome.Error, status='503 Service Unavailable', data='<html>Service Unavailable</html>', endpoint=endpoint)
+
+    for index in range(3):
+        _ = audit_log.insert(source, AuditEvent.Request_Sent, _soap_conn_name, cid=f'fault-{index}',
+            outcome=AuditOutcome.OK, endpoint=endpoint)
+        _ = audit_log.insert(source, AuditEvent.Response_Received, _soap_conn_name, cid=f'fault-{index}',
+            outcome=AuditOutcome.Error, status=_fault_status, application_outcome=_fault_code, data=_fault_text,
+            endpoint=endpoint)
+
+# ################################################################################################################################
+
+def _explain_outgoing(
+    session:'any_',
+    repo_dir:'str',
+    llm_address:'any_',
+    source:'str',
+    measure:'str',
+    object_name:'str'=_conn_name,
+    ) -> 'str':
     """ Explains one alert of the connection under the source and gives back the prompt the model saw.
     """
     service = _new_service(
-        _new_payload(AlertAction.Email_Digest, {}, source, object_name=_conn_name, measures=[measure]),
+        _new_payload(AlertAction.Email_Digest, {}, source, object_name=object_name, measures=[measure]),
         session,
         repo_dir,
         llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
@@ -256,6 +311,81 @@ class TestOutgoingRest:
         section = _object_section(prompt)
 
         assert section.strip() == f'{Heading_Object}\n\nName: {_conn_name}'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestOutgoingSoap:
+
+    def test_an_outgoing_soap_alert_is_explained_with_the_soap_skill(self, llm_address:'any_', repo_dir:'str') -> 'None':
+
+        _seed_faults()
+
+        session = _new_session()
+        _seed_connection(session, is_soap=True)
+
+        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.SOAP_Outgoing, 'fault_count', _soap_conn_name)
+        assert prompt.startswith(_soap_skill_title)
+
+        explanation = _stored_explanation(session)
+
+        assert explanation['source'] == AuditSource.SOAP_Outgoing
+        assert explanation['is_parsed'] is True
+
+# ################################################################################################################################
+
+    def test_a_soap_health_check_alert_is_explained_with_the_soap_skill(self, llm_address:'any_', repo_dir:'str') -> 'None':
+
+        _seed_faults(AuditSource.SOAP_Outgoing_Health)
+
+        session = _new_session()
+        _seed_connection(session, is_soap=True)
+
+        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.SOAP_Outgoing_Health, 'consecutive_failures',
+            _soap_conn_name)
+        section = _object_section(prompt)
+
+        assert prompt.startswith(_soap_skill_title)
+        assert 'Transport: SOAP' in section
+
+# ################################################################################################################################
+
+    def test_the_object_section_carries_the_soap_details_and_the_fault_codes(self, llm_address:'any_', repo_dir:'str') -> 'None':
+
+        _seed_faults()
+
+        session = _new_session()
+        _seed_connection(session, is_soap=True)
+
+        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.SOAP_Outgoing, 'fault_count', _soap_conn_name)
+        section = _object_section(prompt)
+
+        assert 'Transport: SOAP' in section
+        assert f'SOAP action: {_soap_action}' in section
+        assert f'SOAP version: {_soap_version}' in section
+
+        # The connection's own codes of both kinds are the settings that differ from the defaults
+        assert f'Status codes {_own_status_codes}' in section
+        assert f'Fault codes {_own_fault_codes}' in section
+
+# ################################################################################################################################
+
+    def test_the_failures_group_a_fault_under_its_status_and_code(self, llm_address:'any_', repo_dir:'str') -> 'None':
+
+        _seed_faults()
+
+        session = _new_session()
+        _seed_connection(session, is_soap=True)
+
+        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.SOAP_Outgoing, 'fault_count', _soap_conn_name)
+
+        # The three faults lead as one group named by the status and the fault code, the bare 503 by its status alone
+        assert f'1. {_fault_status} - {_fault_code} - {_fault_text}' in prompt
+        assert 'Count: 3' in prompt
+        assert '2. 503 Service Unavailable - <html>Service Unavailable</html>' in prompt
+
+        # The fault's own words reach the reader
+        assert 'An error has occurred' in prompt
 
 # ################################################################################################################################
 # ################################################################################################################################

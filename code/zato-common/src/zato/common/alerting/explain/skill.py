@@ -47,11 +47,10 @@ _remediations_separator = ','
 
 # Which skill explains the alerts of each source - a probe or a health check is explained
 # with the skill of the connection it checks, a SOAP channel with the skill of the REST channels
-# it fails the same way as, a SOAP outgoing connection with the skill of the REST ones, every other source with its own.
+# it fails the same way as, every other source with its own.
 explain_source_by_source = {
     AuditSource.REST_Outgoing_Health: AuditSource.REST_Outgoing,
-    AuditSource.SOAP_Outgoing:        AuditSource.REST_Outgoing,
-    AuditSource.SOAP_Outgoing_Health: AuditSource.REST_Outgoing,
+    AuditSource.SOAP_Outgoing_Health: AuditSource.SOAP_Outgoing,
     AuditSource.Test_Transfer:        AuditSource.File_Outgoing,
     AuditSource.Microsoft_Health:     AuditSource.Microsoft_Cloud,
     AuditSource.SOAP_Channel:         AuditSource.REST_Channel,

@@ -8,8 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_by_http_soap, alert_type_channels, alert_types_outgoing_http, \
-    apply_defaults, get_alert_type, get_defaults, get_field_kinds, get_field_names, storage_name, Kind_Active
+from zato.common.alerting.fault_codes import parse_fault_codes
+from zato.common.alerting.object_config import alert_type_by_http_soap, alert_type_channels, alert_type_soap, \
+    alert_types_outgoing_http, apply_defaults, get_alert_type, get_defaults, get_field_kinds, get_field_names, storage_name, \
+    Kind_Active
 from zato.common.alerting.status_codes import parse_status_codes
 from zato.common.alerting.time_slots import validate_silence_slots
 from zato.server.connection.http_soap import BadRequest
@@ -66,9 +68,11 @@ for _alert_type in alert_type_by_http_soap.values():
 alert_input = tuple(alert_fields)
 
 # The alert settings that are validated beyond their type - a channel's silence slots travel as a JSON list
-# in a string, and an outgoing REST or SOAP connection's status codes as a comma-separated list of codes and classes
+# in a string, an outgoing REST or SOAP connection's status codes as a comma-separated list of codes and classes
+# and an outgoing SOAP connection's fault codes as a comma-separated list of fault code names
 alert_silence_slots_name = storage_name(config_map.Silence_Slots_Field_Name)
 alert_status_codes_name = storage_name(config_map.Status_Codes_Field_Name)
+alert_fault_codes_name = storage_name(config_map.Fault_Codes_Field_Name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -111,10 +115,17 @@ def prepare_alert_settings(service:'AdminService', input:'Bunch', skip_opaque:'a
     if alert_type == alert_type_channels:
         _ = validate_silence_slots(input[alert_silence_slots_name])
 
-    # .. and so is a status code that is neither three digits nor a class such as 5xx.
+    # .. and so is a status code that is neither three digits nor a class such as 5xx ..
     if alert_type in alert_types_outgoing_http:
         try:
             _ = parse_status_codes(input[alert_status_codes_name])
+        except ValueError as e:
+            raise BadRequest(service.cid, str(e))
+
+    # .. and a fault code that is not a name such as Receiver or x:Timeout.
+    if alert_type == alert_type_soap:
+        try:
+            _ = parse_fault_codes(input[alert_fault_codes_name])
         except ValueError as e:
             raise BadRequest(service.cid, str(e))
 

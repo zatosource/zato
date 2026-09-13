@@ -235,6 +235,9 @@ def as_soap_security_exception(e:'XMLSecurityException') -> 'SOAPSecurityExcepti
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The HTTP status of a fault that did not arrive over HTTP
+Fault_Without_HTTP_Status = 0
+
 class SOAPFault(SOAPException):
     """ A SOAP fault of either version, surfaced as one exception type - code and reason are
     strings and detail is a dot-accessed SOAPMessage. The remaining fields say who reported the
@@ -268,6 +271,10 @@ class SOAPFault(SOAPException):
         # is the role that node was acting in.
         self.node = node
         self.role = role
+
+        # The HTTP status the fault arrived with - the client stamps it on a fault it parsed out of a response,
+        # a fault built by hand, e.g. one a channel raises, never travelled over HTTP and has none.
+        self.http_status = Fault_Without_HTTP_Status
 
 # ################################################################################################################################
 # ################################################################################################################################

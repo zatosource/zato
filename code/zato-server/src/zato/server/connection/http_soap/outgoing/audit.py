@@ -54,11 +54,13 @@ def insert_audit_event(
     method:'str' = '',
     *,
     is_health_check:'bool' = False,
+    application_outcome:'str' = '',
 ) -> 'None':
     """ Writes one audit event describing a request sent to or a response received
     from an outgoing REST or SOAP connection. A request-sent event names the method
     it went out with and is stored as the resubmit convention document,
-    which is what makes it repeatable per hop later.
+    which is what makes it repeatable per hop later. A response that is a SOAP fault
+    names the fault's code as its application outcome, next to the HTTP status it arrived with.
     """
 
     # Payloads reach here in whatever shape their caller had them in - bytes as they went on the
@@ -91,6 +93,7 @@ def insert_audit_event(
         endpoint=endpoint,
         size=size,
         outcome=outcome,
+        application_outcome=application_outcome,
         status=status,
         data=data,
     )

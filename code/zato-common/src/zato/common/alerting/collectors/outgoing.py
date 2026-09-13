@@ -47,6 +47,17 @@ Status_Code_Length = 3
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _add_count(counts_by_object:'dict[str, strintdict]', object_name:'str', key:'str', count:'int') -> 'None':
+    """ Adds one row's count to an object's counts under its key - a code or a fault code.
+    """
+    if object_name not in counts_by_object:
+        counts_by_object[object_name] = {}
+
+    counts = counts_by_object[object_name]
+    counts[key] = counts.get(key, 0) + count
+
+# ################################################################################################################################
+
 def collect_outgoing_status_facts(
     engine:'Engine',
     window_seconds:'int',
@@ -56,9 +67,11 @@ def collect_outgoing_status_facts(
     object_name:'str' = '',
     ) -> 'dictlist':
     """ Measures the responses of every outgoing connection within the window - how many arrived with each
-    status code, into `status_counts` by code, and how many calls failed before any response arrived,
-    into `connection_failure_count`, one fact per connection that has any of either. A failed call's status
-    is a transport status rather than a code, so it never lands among the codes.
+    status code, into `status_counts` by code, how many arrived as a SOAP fault of each fault code, into
+    `fault_counts` by code, and how many calls failed before any response arrived, into `connection_failure_count`,
+    one fact per connection that has any of the three. A failed call's status is a transport status rather than
+    a code, so it never lands among the codes, and a fault is a fault and never a status code either, so three
+    faults raise SOAP_Faults once rather than SOAP_Faults and Status_Codes together.
     """
 
     # Our response to produce
@@ -93,20 +106,28 @@ def collect_outgoing_status_facts(
             event_table.c.object_name,
             event_table.c.status,
             status_code,
+            event_table.c.application_outcome,
             func.count(),
-        ).where(and_(*conditions)).group_by(event_table.c.object_name, event_table.c.status)
+        ).where(and_(*conditions)).group_by(
+            event_table.c.object_name, event_table.c.status, event_table.c.application_outcome)
 
         with engine.connect() as connection:
             rows = connection.execute(statement).fetchall()
 
-        # The counts of one connection - its responses by code and its calls that never got one
+        # The counts of one connection - its responses by code, its faults by fault code and its calls that never got one
         status_counts_by_object:'dict[str, strintdict]' = {}
+        fault_counts_by_object:'dict[str, strintdict]' = {}
         failures_by_object:'strintdict' = {}
 
-        for row_object_name, status, code, count in rows:
+        for row_object_name, status, code, application_outcome, count in rows:
 
             if status in transport_statuses:
                 failures_by_object[row_object_name] = failures_by_object.get(row_object_name, 0) + count
+                continue
+
+            # A response with an application outcome is a SOAP fault of that code and nothing else
+            if application_outcome:
+                _add_count(fault_counts_by_object, row_object_name, application_outcome, count)
                 continue
 
             # A response without a status code says nothing about what it was
@@ -116,14 +137,10 @@ def collect_outgoing_status_facts(
             if not code.isdigit():
                 continue
 
-            if row_object_name not in status_counts_by_object:
-                status_counts_by_object[row_object_name] = {}
+            _add_count(status_counts_by_object, row_object_name, code, count)
 
-            status_counts = status_counts_by_object[row_object_name]
-            status_counts[code] = status_counts.get(code, 0) + count
-
-        # A connection with counts of either kind gets a fact carrying both
-        object_names = set(status_counts_by_object) | set(failures_by_object)
+        # A connection with counts of any kind gets a fact carrying all of them
+        object_names = set(status_counts_by_object) | set(fault_counts_by_object) | set(failures_by_object)
 
         for row_object_name in sorted(object_names):
 
@@ -131,6 +148,9 @@ def collect_outgoing_status_facts(
 
             if row_object_name in status_counts_by_object:
                 fact['status_counts'] = status_counts_by_object[row_object_name]
+
+            if row_object_name in fault_counts_by_object:
+                fact['fault_counts'] = fault_counts_by_object[row_object_name]
 
             if row_object_name in failures_by_object:
                 fact['connection_failure_count'] = failures_by_object[row_object_name]

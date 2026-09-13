@@ -198,6 +198,8 @@ def alerting_vocabulary() -> 'anydict':
         _term('server_error_rate',      TermType.Number, 'the share of responses of a channel that had a 5xx status'),
         _term('status_code_count',      TermType.Number,
             'how many responses an outgoing connection received with a status code it alerts on'),
+        _term('fault_count',            TermType.Number,
+            'how many responses an outgoing SOAP connection received as a fault with a fault code it alerts on'),
         _term('connection_failure_count', TermType.Number,
             'how many calls of an outgoing connection failed before any response arrived'),
         _term('cert_days_left',         TermType.Number, 'how many days the TLS certificate has left, zero when unmeasured'),
