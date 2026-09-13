@@ -28,6 +28,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/panel-menu.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tippy-buttons.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-resize.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
     {% if connection == 'channel' and transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/channel.css">
@@ -86,6 +87,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/core.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select-placement.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots-fields.js"></script>
@@ -647,7 +649,6 @@
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
-                        <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-config" role="tabpanel">
@@ -988,9 +989,8 @@
                         {% include "zato/http_soap/callback-tab.html" with form=create_form action="create" field_prefix="" %}
                     </div>
 
-                    <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-health_check" role="tabpanel" hidden>
-                        {% include "zato/http_soap/health-check-tab.html" with form=create_form action="create" field_prefix="" %}
-                    </div>
+                    {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
+                    {{ create_form.health_check_job_id }}
 
                     {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
 
@@ -1033,7 +1033,6 @@
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
-                        <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-config" role="tabpanel">
@@ -1371,9 +1370,8 @@
                         {% include "zato/http_soap/callback-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
                     </div>
 
-                    <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-health_check" role="tabpanel" hidden>
-                        {% include "zato/http_soap/health-check-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
-                    </div>
+                    {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
+                    {{ edit_form.health_check_job_id }}
 
                     {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
 

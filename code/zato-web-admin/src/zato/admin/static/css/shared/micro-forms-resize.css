@@ -1,0 +1,88 @@
+/*
+ * Micro-forms - the look of a popover resized by its bottom right corner.
+ * Loaded after shared/micro-forms.css, next to shared/popup.css, which
+ * draws the corner grip itself. The behaviour is
+ * static/js/common/micro-forms/resize.js.
+ *
+ * A popover with a size of its own wears .micro-form-resized and its width
+ * and height as inline styles. Under it the body takes whatever height the
+ * header leaves, the fields stretch to the width, a count next to a unit
+ * select fills the line up to the select, and the buttons row keeps to the
+ * bottom edge however tall the popover is dragged.
+ */
+
+/* The grip is drawn into the popover's own corner */
+.micro-form-resizable {
+    position: relative;
+}
+
+/* The grip stays above the fields it shares the corner with */
+.micro-form-grip {
+    z-index: 1;
+}
+
+/* ------------------------------------------------------------ */
+/* Height                                                        */
+/* ------------------------------------------------------------ */
+
+/* The body takes the height the header leaves and lays its fields out in a
+   column, so the buttons row can be pushed to its bottom edge */
+.micro-form-resized .micro-form-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.micro-form-resized .micro-form-buttons {
+    margin-top: auto;
+    padding-top: 10px;
+}
+
+/* The buttons keep their 10px above them even with the content pressing on
+   the bottom edge - the room comes from the last field before them, the
+   field's own 8px plus the 10px the auto margin no longer gives */
+.micro-form-resized .micro-form-body > :nth-last-child(2) {
+    margin-bottom: 18px;
+}
+
+/* A multi-line field grows with the popover */
+.micro-form-resized .micro-form-body > .micro-form-field:has(textarea) {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.micro-form-resized .micro-form-field textarea {
+    flex: 1 1 auto;
+    min-height: 0;
+    resize: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Width                                                         */
+/* ------------------------------------------------------------ */
+
+/* The fields of a row share the width the popover now has - a popover sized to
+   its content had them keep to their own widths, that being what sized it.
+   A checkbox in the row keeps to the room it needs, as it always did. */
+.micro-form-resized .micro-form-row .micro-form-field:not(:has(.micro-form-checkbox)) {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* A count next to a unit select fills the line up to the select */
+.micro-form-resized .micro-form-input-row input.micro-form-number {
+    flex: 1 1 auto;
+    width: auto;
+}
+
+/* A count standing alone under its label is as wide as the popover, the way
+   a text input next to it is */
+.micro-form-resized .micro-form-field > input.micro-form-number {
+    width: 100%;
+}
+
+/* A field a registered kind dresses itself follows the width too */
+.micro-form-resized .micro-form-field-own {
+    width: auto;
+}

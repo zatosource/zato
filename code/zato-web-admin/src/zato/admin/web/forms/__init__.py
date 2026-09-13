@@ -22,10 +22,11 @@ from zato.common.api import IO, ZATO_NONE
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, stranydict, strnone
 
     any_ = any_
     stranydict = stranydict
+    strnone = strnone
 
 # ################################################################################################################################
 
@@ -53,12 +54,37 @@ SELECT_SERVICE_FIELDS = [
 
 # ################################################################################################################################
 
+# An option's value is the noun in the singular, which a summary reads a count with - `1 hour`, `2 hours` -
+# and its label the plural. The scheduler names a unit in the plural, so a view translates on the way in and out.
 health_check_run_unit_choices = (
-    ('seconds', 'seconds'),
-    ('minutes', 'minutes'),
-    ('hours', 'hours'),
-    ('days', 'days'),
+    ('second', 'seconds'),
+    ('minute', 'minutes'),
+    ('hour', 'hours'),
+    ('day', 'days'),
 )
+
+health_check_run_unit_default = 'minute'
+
+health_check_unit_to_scheduler = {}
+health_check_unit_from_scheduler = {}
+
+for _unit_singular, _unit_plural in health_check_run_unit_choices:
+    health_check_unit_to_scheduler[_unit_singular] = _unit_plural
+    health_check_unit_from_scheduler[_unit_plural] = _unit_singular
+
+# ################################################################################################################################
+
+def health_check_unit_for_form(unit:'strnone') -> 'str':
+    """ The unit a listed connection's health check shows on the form - a connection without a check shows the default.
+    """
+    if unit:
+        out = health_check_unit_from_scheduler[unit]
+    else:
+        out = health_check_run_unit_default
+
+    return out
+
+# ################################################################################################################################
 
 def add_health_check_fields(form):
     """ Adds the generic health check fields to a create or edit form - any connection type
@@ -69,7 +95,7 @@ def add_health_check_fields(form):
         required=False, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
 
     form.fields['health_check_run_unit'] = forms.ChoiceField(
-        required=False, choices=health_check_run_unit_choices, widget=forms.Select())
+        required=False, choices=health_check_run_unit_choices, initial=health_check_run_unit_default, widget=forms.Select())
 
     form.fields['health_check_job_id'] = forms.CharField(required=False, widget=forms.HiddenInput())
 

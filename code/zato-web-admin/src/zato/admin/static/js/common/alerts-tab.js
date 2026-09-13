@@ -188,10 +188,18 @@ $.fn.zato.alerts_tab.hidden_cells = function(item) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The DOM id of one of the tab's fields on the form bound at the moment
+// The DOM id of one of the tab's fields on the form bound at the moment - a field
+// of the page's own form goes by its own name, an alert setting by its alert name
 $.fn.zato.alerts_tab.fieldId = function(fieldName) {
+
     var tab = $.fn.zato.alerts_tab;
-    var out = tab.config.idPrefixDjango + tab.state.fieldPrefix + tab.settings.field_prefix + fieldName;
+    var alertPrefix = tab.settings.field_prefix;
+
+    if(tab.settings.page_fields.indexOf(fieldName) !== -1) {
+        alertPrefix = '';
+    }
+
+    var out = tab.config.idPrefixDjango + tab.state.fieldPrefix + alertPrefix + fieldName;
     return out;
 }
 
@@ -412,11 +420,19 @@ $.fn.zato.alerts_tab.formatSummary = function(line) {
 
     var tab = $.fn.zato.alerts_tab;
     var isOff = false;
+    var isEmpty = false;
 
-    // A line with a switch among its fields reads as its off text while the switch is off
+    // A line with a switch among its fields reads as its off text while the switch is off ..
     if(line.off_field) {
         if(!tab.field(line.off_field).is(':checked')) {
             isOff = true;
+        }
+    }
+
+    // .. and a line that may be left empty reads as its empty text while its first field is
+    if(line.summary_empty !== undefined) {
+        if(tab.field(line.fields[0]).val() === '') {
+            isEmpty = true;
         }
     }
 
@@ -424,6 +440,9 @@ $.fn.zato.alerts_tab.formatSummary = function(line) {
 
     if(isOff) {
         out = line.summary_off;
+    }
+    else if(isEmpty) {
+        out = line.summary_empty;
     }
     else {
         out = line.summary.replace(tab.config.summaryToken, function(ignored, fieldName, countFieldName, slotsSingular, slotsPlural, singular, plural) {

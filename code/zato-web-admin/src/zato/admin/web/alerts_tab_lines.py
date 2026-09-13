@@ -15,6 +15,7 @@ from zato.common.alerting import config_map
 from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, alert_type_rest, \
     Email_Connection_Field, field_display as shared_field_display, field_help, Is_Active_Field, LLM_Connection_Field, \
     Unit_Field_Suffix
+from zato.common.api import HTTP_SOAP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,6 +68,12 @@ Silence_Slots_Field = config_map.Silence_Slots_Field_Name
 Status_Codes_Field = config_map.Status_Codes_Field_Name
 Status_Codes_Placeholder = '401, 403, 5xx'
 
+# How often an outgoing connection is pinged - fields of the connection's own form rather than alert settings,
+# which the tab edits in place, so they carry no alert prefix and travel outside of the alert settings
+Health_Check_Run_Every_Field = HTTP_SOAP.HealthCheck.Field_Run_Every
+Health_Check_Run_Unit_Field = HTTP_SOAP.HealthCheck.Field_Run_Unit
+Health_Check_Summary_Empty = 'No health checks'
+
 Tab_Label = 'Alerts'
 Active_Label = 'Active'
 Edit_Hint = 'Click to edit'
@@ -115,12 +122,18 @@ for _window_unit_field in (Server_Errors_Window_Unit_Field, Latency_Window_Unit_
     Client_Errors_Window_Unit_Field, Status_Codes_Window_Unit_Field, Connection_Failures_Window_Unit_Field):
     field_how_it_works[_window_unit_field] = field_how_it_works[Window_Unit_Field]
 
+field_display[Health_Check_Run_Every_Field] = ('Ping every', '')
+field_how_it_works[Health_Check_Run_Every_Field] = 'How often the connection is pinged, e.g. every 5 minutes. ' + \
+    'Leave empty for no health checks.'
+field_how_it_works[Health_Check_Run_Unit_Field] = 'Whether the time between pings is in seconds, minutes, hours or days.'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 Section_Core = 'Core settings'
 Section_Thresholds = 'Thresholds'
 
+Section_Health = 'Health check'
 Section_Failures = 'Failures'
 Section_Callers = 'Callers'
 Section_Traffic = 'Traffic'
@@ -233,6 +246,31 @@ def _slow_responses_line() -> 'anydict':
     return out
 
 # ################################################################################################################################
+
+# A connection's health check - each ping counts towards the lines below the way a call of the connection's own does,
+# under a source of its own, so a connection with no traffic is still measured. The check runs whether or not
+# the alerts are active, its pings being what they read.
+def _health_check_line() -> 'anydict':
+    out = {
+        'name': 'health_check',
+        'section': Section_Health,
+        'kind': Line_Kind_Popover,
+        'label': 'Schedule',
+        'title': 'Health check',
+        'fields': [Health_Check_Run_Every_Field],
+        'rows': [[Health_Check_Run_Every_Field]],
+        'unit_field': Health_Check_Run_Unit_Field,
+        'page_fields': True,
+        'always_on': True,
+        'summary': f'Ping every {{{Health_Check_Run_Unit_Field}@{Health_Check_Run_Every_Field}}}',
+        'summary_empty': Health_Check_Summary_Empty,
+        'how_it_works': 'How often the connection is pinged, if at all. Each ping counts towards the alerts below ' + \
+            'the way a call of your own does, only apart from your own traffic - failed pings in a row raise an alert ' + \
+            'without any of your calls failing, and the other way round.',
+    }
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 # The lines of the tab for each alert type, in the order they are read. In a summary, `{field}` is the field's value,
@@ -241,7 +279,9 @@ def _slow_responses_line() -> 'anydict':
 # left out when there are none. A popover line's `rows` say which fields share a row, its `unit_field` follows the last
 # of its numbers, its `slots_field` is a list of time slots and it reads as its `summary_off` while its `off_field` is off.
 # A line with a `depends_on` toggle is dimmed while that toggle is off. A line's `text_fields` are typed as they are,
-# each with its `placeholder` showing what a value looks like.
+# each with its `placeholder` showing what a value looks like. A line with `page_fields` edits fields of the page's own
+# form rather than alert settings - they carry no alert prefix and the page sends them on its own - it reads as its
+# `summary_empty` while its first field is empty, and one that is `always_on` is not dimmed when Active is off.
 type_lines:'anydict' = {
     alert_type_file_transfer: [
         _active_line(),
@@ -367,6 +407,7 @@ type_lines:'anydict' = {
         _use_llm_line(),
         _llm_line(),
         _email_line(),
+        _health_check_line(),
         _failures_in_a_row_line(),
         _error_rate_line(),
         {

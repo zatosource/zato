@@ -41,6 +41,14 @@ def form_field_name(name:'str') -> 'str':
 
 # ################################################################################################################################
 
+def _same_name(name:'str') -> 'str':
+    """ The name a field of the page's own form goes by on it - its own.
+    """
+    out = name
+    return out
+
+# ################################################################################################################################
+
 def get_type_fields(alert_type:'str') -> 'anylist':
     """ The number and toggle fields of an alert type, in the order the rule definition lists them.
     """
@@ -49,12 +57,52 @@ def get_type_fields(alert_type:'str') -> 'anylist':
 
 # ################################################################################################################################
 
+def is_page_line(line:'anydict') -> 'bool':
+    """ Whether a line edits fields of the page's own form rather than alert settings.
+    """
+    out = 'page_fields' in line
+    return out
+
+# ################################################################################################################################
+
+def get_page_lines(alert_type:'str') -> 'anylist':
+    """ The lines of an alert type that edit fields of the page's own form, in the order the tab lists them.
+    """
+    out:'anylist' = []
+
+    for line in type_lines[alert_type]:
+        if is_page_line(line):
+            out.append(line)
+
+    return out
+
+# ################################################################################################################################
+
+def get_page_field_names(alert_type:'str') -> 'strlist':
+    """ The fields of the page's own form the tab edits, the unit selects included.
+    """
+    out:'strlist' = []
+
+    for line in get_page_lines(alert_type):
+        out.extend(line['fields'])
+
+        if 'unit_field' in line:
+            out.append(line['unit_field'])
+
+    return out
+
+# ################################################################################################################################
+
 def get_unit_field_names(alert_type:'str') -> 'strlist':
-    """ The unit selects the lines of an alert type name, in the order the lines do.
+    """ The unit selects the lines of an alert type add to the form, in the order the lines do -
+    a page line's unit select is the page's own.
     """
     out:'strlist' = []
 
     for line in type_lines[alert_type]:
+        if is_page_line(line):
+            continue
+
         if 'unit_field' in line:
             out.append(line['unit_field'])
 
@@ -314,10 +362,17 @@ def get_alerts_tab_context(form:'any_', alert_type:'str') -> 'anydict':
             'kind': line['kind'],
             'label': line['label'],
             'is_active_line': line['fields'][0] == Is_Active_Field,
+            'is_always_on': 'always_on' in line,
         }
 
+        # A page line's fields go by their own names on the form, everyone else's by their alert names
+        if is_page_line(line):
+            to_form_name = _same_name
+        else:
+            to_form_name = form_field_name
+
         if line['kind'] in (Line_Kind_Toggle, Line_Kind_Pick):
-            field_name = form_field_name(line['fields'][0])
+            field_name = to_form_name(line['fields'][0])
             row['field'] = form[field_name]
 
             if line['kind'] == Line_Kind_Pick:
@@ -327,11 +382,11 @@ def get_alerts_tab_context(form:'any_', alert_type:'str') -> 'anydict':
                 row['empty_html'] = get_empty_html(line)
         else:
             for field_name in line['fields']:
-                hidden_field_name = form_field_name(field_name)
+                hidden_field_name = to_form_name(field_name)
                 hidden_fields.append(form[hidden_field_name])
 
             if 'unit_field' in line:
-                unit_field_name = form_field_name(line['unit_field'])
+                unit_field_name = to_form_name(line['unit_field'])
                 hidden_fields.append(form[unit_field_name])
 
         section_by_label[section_label]['lines'].append(row)
@@ -367,6 +422,17 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
     for unit_field_name in get_unit_field_names(alert_type):
         how_it_works_by_field[unit_field_name] = field_how_it_works[unit_field_name]
 
+    # The fields of the page's own form the tab edits are counts, each with the label and the help of its own
+    page_field_names = get_page_field_names(alert_type)
+
+    for line in get_page_lines(alert_type):
+        for name in line['fields']:
+            field_kinds[name] = config_map.Kind_Number
+            field_labels[name] = get_field_label(name)
+
+    for name in page_field_names:
+        how_it_works_by_field[name] = field_how_it_works[name]
+
     lines:'anylist' = []
 
     for line in type_lines[alert_type]:
@@ -397,6 +463,9 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
                 entry['off_field'] = line['off_field']
                 entry['summary_off'] = line['summary_off']
 
+            if 'summary_empty' in line:
+                entry['summary_empty'] = line['summary_empty']
+
         if line['kind'] == Line_Kind_Pick:
             entry['field'] = line['fields'][0]
             entry['live_type'] = line['live_type']
@@ -420,6 +489,7 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
         'field_prefix': Field_Prefix,
         'is_active_field': Is_Active_Field,
         'pick_fields': get_pick_field_names(alert_type),
+        'page_fields': page_field_names,
         'lines': lines,
         'field_kinds': field_kinds,
         'toggle_kinds': [config_map.Kind_Toggle, config_map.Kind_Ruleset_Toggle],

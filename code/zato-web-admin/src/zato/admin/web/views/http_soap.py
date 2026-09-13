@@ -18,7 +18,8 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import alerts_tab, from_user_to_utc, from_utc_to_user
-from zato.admin.web.forms import add_http_soap_select, add_select_from_service
+from zato.admin.web.forms import add_http_soap_select, add_select_from_service, health_check_unit_for_form, \
+    health_check_unit_to_scheduler
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
     get_js_dt_format, get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
@@ -101,6 +102,8 @@ _invocation_field_names = (
 
 # The retry config of an outgoing connection - each field maps to its shared default
 _retry = HTTP_SOAP.Retry
+
+_health_check = HTTP_SOAP.HealthCheck
 
 _retry_field_defaults = {
     _retry.Field_Max_Retries: _retry.Default_Max_Retries,
@@ -187,6 +190,10 @@ def _get_edit_create_message(params, prefix='', user_profile=None): # type: igno
     # The declarative invocation fields exist only in the forms of outgoing connections
     for name in _invocation_field_names:
         message[name] = params.get(prefix + name)
+
+    # The form names the health check's unit in the singular, the scheduler in the plural
+    if run_unit := message[_health_check.Field_Run_Unit]:
+        message[_health_check.Field_Run_Unit] = health_check_unit_to_scheduler[run_unit]
 
     # The retry fields exist only in the forms of outgoing connections too - they are sent
     # as integers, with the shared defaults filling in for anything left empty in a form.
@@ -465,6 +472,9 @@ def index(req): # type: ignore
             if connection == 'outgoing' and transport == URL_TYPE.PLAIN_HTTP:
                 for name in _invocation_field_names:
                     setattr(http_soap, name, item.get(name))
+
+                # The scheduler names the health check's unit in the plural, the form in the singular
+                http_soap[_health_check.Field_Run_Unit] = health_check_unit_for_form(item.get(_health_check.Field_Run_Unit))
 
                 # The retry fields are opaque attributes too - connections that predate them
                 # carry no values, in which case the shared defaults are displayed.

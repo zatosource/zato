@@ -113,8 +113,9 @@
 /* With Active off, every line but the Active line itself is dimmed and inert,
    so a reader sees at once that nothing else is being measured. The Active
    line is the first of the core settings, so it is the lines that are dimmed,
-   not the sections. */
-.data-popup .alerts-tab-panel.alerts-tab-off .alerts-tab-line:not(.alerts-tab-active-line) {
+   not the sections. A line that stands whether or not the alerts are active,
+   the health check, is left alone as well. */
+.data-popup .alerts-tab-panel.alerts-tab-off .alerts-tab-line:not(.alerts-tab-active-line):not(.alerts-tab-always-on-line) {
     opacity: var(--alerts-tab-off-opacity);
     pointer-events: none;
 }

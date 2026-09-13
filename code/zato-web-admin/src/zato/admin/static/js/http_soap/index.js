@@ -179,8 +179,7 @@ $.fn.zato.http_soap.outgoingTabLabels = function() {
         scheduler:    'Scheduler',
         request:      'Request',
         response:     'Response',
-        callback:     'Callback',
-        health_check: 'Health check'
+        callback:     'Callback'
     };
     return out;
 }
@@ -570,10 +569,9 @@ $.fn.zato.http_soap.init_how_it_works = function(action) {
     }
     else if($.fn.zato.http_soap.is_rest_outgoing()) {
 
-        // An outgoing connection's Alerts tab lines are described next to its own fields and its health check's
+        // An outgoing connection's Alerts tab lines are described next to its own fields
         descriptions = $.extend({},
             $.fn.zato.http_soap.rest_outgoing_field_descriptions,
-            $.fn.zato.health_check.field_descriptions,
             $.fn.zato.alerts_tab.descriptions());
         fieldSelector = 'table.form-data tr, .decision-line';
     }
@@ -644,7 +642,7 @@ $.fn.zato.http_soap.edit = function(id) {
         }
         $.fn.zato.http_soap.toggle_callback('edit');
 
-        // The health check tab's widgets are populated the same way
+        // The health check line of the Alerts tab reads its hidden inputs, populated the same way
         $.fn.zato.health_check.populate('edit', item);
     }
 

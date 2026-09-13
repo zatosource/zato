@@ -29,10 +29,12 @@
 // micro-form-field-own on the row it builds into. A menu such a kind opens
 // outside of the popover is matched by config.menuSelector.
 //
-// The engine is in three files, loaded in this order: micro-forms/core.js
+// The engine is in four files, loaded in this order: micro-forms/core.js
 // (this file - the defaults, setup and the pages), micro-forms/popover.js
-// (the tippy popover, its closing and dragging) and micro-forms/fields.js
-// (the header, the help badge and the field rows).
+// (the tippy popover, its closing and dragging), micro-forms/fields.js
+// (the header, the help badge and the field rows) and micro-forms/resize.js
+// (the corner grip and the size a form is kept at, next to
+// shared/micro-forms-resize.css).
 //
 // ---------------------------------------------------------------
 // How to use
@@ -248,6 +250,7 @@ microForms.setup = function(host, config) {
 
     microForms.installPopover(host, forms);
     microForms.installFields(host, forms);
+    microForms.installResize(host, forms);
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -482,8 +485,16 @@ microForms.setup = function(host, config) {
 
         renderPage();
 
-        forms.showTippy(targetElement, container, null, maxWidth);
+        // A form left at a size of its own opens at that size, however wide that is
+        var sizeKey = forms.sizeKey(descriptorName);
+
+        if(forms.restoreSize(container, sizeKey)) {
+            maxWidth = formsConfig.fitMaxWidth;
+        }
+
+        var instance = forms.showTippy(targetElement, container, null, maxWidth);
         forms.initHelp(container);
+        forms.makeResizable(instance, sizeKey);
     };
 
 // ////////////////////////////////////////////////////////////////////////

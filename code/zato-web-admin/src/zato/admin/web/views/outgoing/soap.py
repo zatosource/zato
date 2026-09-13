@@ -11,7 +11,8 @@ from django.http import HttpResponseServerError
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user
-from zato.admin.web.forms import add_http_soap_select, add_select_from_service
+from zato.admin.web.forms import add_http_soap_select, add_select_from_service, health_check_unit_for_form, \
+    health_check_unit_to_scheduler
 from zato.admin.web.forms.outgoing.soap import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, extract_security_id, get_js_dt_format, id_only_service, \
     Index as _Index, method_allowed, ping_json_response
@@ -46,6 +47,7 @@ _invocation_field_names = (
 
 # The retry config of an outgoing connection - each field maps to its shared default
 _retry = HTTP_SOAP.Retry
+_health_check = HTTP_SOAP.HealthCheck
 
 _retry_field_defaults = {
     _retry.Field_Max_Retries: _retry.Default_Max_Retries,
@@ -118,6 +120,10 @@ class Index(_Index):
         # and only connections with a scheduler configured carry it at all.
         if scheduler_start_date := getattr(item, 'scheduler_start_date', None):
             item.scheduler_start_date = from_utc_to_user(scheduler_start_date + '+00:00', self.req.zato.user_profile)
+
+        # The scheduler names the health check's unit in the plural, the form in the singular
+        run_unit = getattr(item, _health_check.Field_Run_Unit, None)
+        setattr(item, _health_check.Field_Run_Unit, health_check_unit_for_form(run_unit))
 
         return item
 
@@ -197,6 +203,10 @@ class _CreateEdit(CreateEdit):
         if callback_type := input_dict.get('callback_type'):
             widget_name = _callback_widget_names[callback_type]
             input_dict['callback_name'] = input_dict.get(widget_name)
+
+        # The form names the health check's unit in the singular, the scheduler in the plural
+        if run_unit := input_dict.get(_health_check.Field_Run_Unit):
+            input_dict[_health_check.Field_Run_Unit] = health_check_unit_to_scheduler[run_unit]
 
         # The widgets themselves are not part of the backend's input
         for widget_name in _callback_widget_names.values():

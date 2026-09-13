@@ -11,7 +11,7 @@ with panel_id and alerts_tab (from zato.admin.web.alerts_tab.get_alerts_tab_cont
                 <div class="alerts-tab-section-title">{{ section.label }}</div>
                 <div class="decision-lines">
                 {% for line in section.lines %}
-                    <div class="decision-line alerts-tab-line alerts-tab-line-{{ line.kind }}{% if line.is_active_line %} alerts-tab-active-line{% endif %}" id="{{ panel_id }}-line-{{ line.name }}">
+                    <div class="decision-line alerts-tab-line alerts-tab-line-{{ line.kind }}{% if line.is_active_line %} alerts-tab-active-line{% endif %}{% if line.is_always_on %} alerts-tab-always-on-line{% endif %}" id="{{ panel_id }}-line-{{ line.name }}">
                     {% if line.kind == 'toggle' %}
                         <label class="decision-line-label" for="{{ line.field.id_for_label }}">{{ line.label }}</label>
                         <span class="decision-line-slot">{{ line.field }}</span>
