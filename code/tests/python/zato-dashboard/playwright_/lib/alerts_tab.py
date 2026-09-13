@@ -139,6 +139,32 @@ def set_popover_value(page:'Page', page_prefix:'str', form_type:'str', line_name
 
 # ################################################################################################################################
 
+def set_chips_value(page:'Page', page_prefix:'str', form_type:'str', line_name:'str', field_name:'str', value:'str') -> 'None':
+    """ Opens the popover of a line, replaces the chips of one of its list fields with the comma-separated
+    names given and accepts, which writes the names back into the hidden field of the same name.
+    """
+
+    # Open the popover through the line's summary link ..
+    page.click(f'#{panel_id(page_prefix, form_type)}-edit-{line_name}')
+    _ = page.wait_for_selector(_Popover_Selector, state='visible', timeout=_Popover_Timeout)
+
+    # .. remove every chip there is ..
+    remove_selector = f'{_Popover_Selector} .alerts-tab-chip-remove'
+    while page.locator(remove_selector).count():
+        page.locator(remove_selector).first.click()
+
+    # .. type the names, each one becoming a chip on Enter ..
+    input_selector = f'#{_Popover_Input_Prefix}{field_name}'
+    for name in value.split(','):
+        page.fill(input_selector, name.strip())
+        page.press(input_selector, 'Enter')
+
+    # .. and accept, which closes the popover.
+    page.click(_Popover_Ok_Selector)
+    _ = page.wait_for_selector(_Popover_Selector, state='hidden', timeout=_Popover_Timeout)
+
+# ################################################################################################################################
+
 def summary_text(page:'Page', page_prefix:'str', form_type:'str', line_name:'str') -> 'str':
     """ What a popover line's summary link currently reads.
     """

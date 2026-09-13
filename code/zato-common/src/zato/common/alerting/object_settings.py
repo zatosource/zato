@@ -15,9 +15,10 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_by_http_soap, alert_type_channels, alert_type_rest, apply_defaults, \
-    channel_sources, conn_type_to_alert_type, from_storage, get_alert_type, outgoing_sources, Email_Connection_Field, \
+from zato.common.alerting.object_config import alert_type_by_http_soap, alert_type_channels, alert_type_rest, alert_type_soap, \
+    apply_defaults, channel_sources, conn_type_to_alert_type, from_storage, get_alert_type, Email_Connection_Field, \
     Is_Active_Field, LLM_Connection_Field
+from zato.common.audit_log.common import AuditSource
 from zato.common.alerting.time_slots import resolve_silence
 from zato.common.odb.model import GenericConn, HTTPSOAP
 from zato.common.util.file_transfer_scheduler import get_schedule_list
@@ -46,11 +47,12 @@ _silence_default = 'silence_seconds'
 
 # The audit sources whose objects carry settings of a type, where that is not every source the type
 # matches on - the channels type matches on three channel kinds, and REST and SOAP channels have an Alerts tab,
-# the rest type matches on the traffic and the check source of REST and SOAP outgoing connections, and the
+# the rest and the soap type each match on the traffic and the check source of their outgoing connections, and the
 # connections' own windows reach their traffic source while their check source keeps its hour.
 _object_sources_by_type = {
     alert_type_channels: list(channel_sources),
-    alert_type_rest: list(outgoing_sources),
+    alert_type_rest: [AuditSource.REST_Outgoing],
+    alert_type_soap: [AuditSource.SOAP_Outgoing],
 }
 
 # ################################################################################################################################

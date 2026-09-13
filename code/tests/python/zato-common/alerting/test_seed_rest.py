@@ -52,6 +52,7 @@ engine_generator:TypeAlias = Generator[Engine, None, None]
 
 # The ruleset the outgoing REST connections are judged by
 _rest_ruleset_name = 'alerts_rest'
+_soap_ruleset_name = 'alerts_soap'
 
 # The rules the rest ruleset ships, with the defaults each one carries
 _rest_rule_defaults = {
@@ -244,20 +245,34 @@ class TestRestRules:
             ('Connection_Failures', {'connection_failure_count': 3}),
         ]
 
-        for rule_name, measures in cases:
-            rule = rules_by_full_name[f'{_rest_ruleset_name}_{rule_name}']
+        # Each outgoing kind is judged by the ruleset of its own type ..
+        rulesets_by_source = {
+            AuditSource.REST_Outgoing: _rest_ruleset_name,
+            AuditSource.SOAP_Outgoing: _soap_ruleset_name,
+        }
 
-            # Both outgoing kinds are judged by their status codes and their failed calls ..
-            for source in (AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing):
+        for rule_name, measures in cases:
+            for source, ruleset_name in rulesets_by_source.items():
+
+                rule = rules_by_full_name[f'{ruleset_name}_{rule_name}']
+
                 fact = new_fact(source, 'crm.api')
                 fact.update(measures)
                 assert rule.match({Fact_Entity: fact}), f'Expected {rule_name} to match {fact}'
 
-            # .. but a connection's health check is not, it has the rules on streaks, rates and latency for that.
-            for source in (AuditSource.REST_Outgoing_Health, AuditSource.SOAP_Outgoing_Health):
-                fact = new_fact(source, 'crm.api')
-                fact.update(measures)
-                assert not rule.match({Fact_Entity: fact}), f'Expected {rule_name} not to match {fact}'
+                # .. never by the other kind's ..
+                for other_source in rulesets_by_source:
+                    if other_source == source:
+                        continue
+                    other_fact = new_fact(other_source, 'crm.api')
+                    other_fact.update(measures)
+                    assert not rule.match({Fact_Entity: other_fact}), f'Expected {rule_name} not to match {other_fact}'
+
+                # .. and a connection's health check is not, it has the rules on streaks, rates and latency for that.
+                for health_source in (AuditSource.REST_Outgoing_Health, AuditSource.SOAP_Outgoing_Health):
+                    health_fact = new_fact(health_source, 'crm.api')
+                    health_fact.update(measures)
+                    assert not rule.match({Fact_Entity: health_fact}), f'Expected {rule_name} not to match {health_fact}'
 
 # ################################################################################################################################
 # ################################################################################################################################

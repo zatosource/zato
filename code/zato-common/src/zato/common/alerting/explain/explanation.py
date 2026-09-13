@@ -38,6 +38,11 @@ _key_explanation = re.compile(r'"explanation"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _key_confidence = re.compile(r'"confidence"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _key_remediation = re.compile(r'"remediation"\s*:\s*(\{[^}]*\}|null)')
 
+# A model may fold the confidence and remediation into the prose instead of giving them keys of their own,
+# as trailing lines of the form `Confidence: high` and `Remediation: null` - both are lifted out of the prose.
+_trailing_confidence = re.compile(r'\n\s*confidence\s*:\s*(low|medium|high)\s*$', re.IGNORECASE)
+_trailing_remediation = re.compile(r'\n\s*remediation\s*:\s*(.*?)\s*$', re.IGNORECASE)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -112,6 +117,33 @@ def _repair(data:'str') -> 'anydict | None':
 
 # ################################################################################################################################
 
+def _lift_trailing_lines(parsed:'anydict') -> 'None':
+    """ Moves a confidence and a remediation the model wrote as the prose's last lines into keys of their own,
+    when the reply carries no confidence key. The remediation line is only dropped from the prose - a remediation
+    written this way is never an object the skill could act on.
+    """
+    if 'confidence' in parsed:
+        return
+
+    explanation = parsed['explanation']
+
+    # The remediation line, if there is one, is the very last line ..
+    remediation_match = _trailing_remediation.search(explanation)
+
+    if remediation_match:
+        explanation = explanation[:remediation_match.start()].rstrip()
+
+    # .. and the confidence line comes right before it.
+    confidence_match = _trailing_confidence.search(explanation)
+
+    if confidence_match is None:
+        return
+
+    parsed['explanation'] = explanation[:confidence_match.start()].rstrip()
+    parsed['confidence'] = confidence_match.group(1).lower()
+
+# ################################################################################################################################
+
 def parse_explanation(text:'str', remediations:'strlist') -> 'stranydict':
     """ Parses an LLM reply into an explanation. A reply that is not the expected JSON document
     is read a second time, key by key, and one where all three keys come back parses the same
@@ -150,7 +182,10 @@ def parse_explanation(text:'str', remediations:'strlist') -> 'stranydict':
     if not explanation:
         return out
 
-    out['explanation'] = explanation
+    # .. a confidence and a remediation written as the prose's last lines are lifted out of it ..
+    _lift_trailing_lines(parsed)
+
+    out['explanation'] = parsed['explanation']
     out['is_parsed'] = True
 
     # .. an unrecognized confidence level is dropped rather than passed through ..

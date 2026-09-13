@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from time import sleep, time
 
 # SQLAlchemy
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import sessionmaker
 
 # Zato
@@ -573,6 +573,10 @@ def _get_soap_pings() -> 'anylist':
     as its audit log recorded it under the connection's health source.
     """
     engine = _server_audit_engine()
+
+    # The server creates the table with its first audit row, so until the first ping lands there is nothing to read
+    if not inspect(engine).has_table(event_table.name):
+        return []
 
     query = select(event_table).\
         where(event_table.c.source == AuditSource.SOAP_Outgoing_Health).\

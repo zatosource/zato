@@ -36,6 +36,8 @@ if 0:
 class Get(_BaseGet):
     """ Returns information about an individual HTTP/SOAP object by its ID.
     """
+    name = 'zato.http-soap.get'
+
     input = '-cluster_id', '-id', '-name'
 
     def handle(self):
@@ -75,6 +77,8 @@ class Get(_BaseGet):
 class GetList(_BaseGet):
     """ Returns a list of HTTP/SOAP connections.
     """
+    name = 'zato.http-soap.get-list'
+
     _filter_by = HTTPSOAP.name,
 
     input = '-include_wrapper', '-cluster_id', '-connection', '-transport', '-data_format', '-needs_security_group_names', \

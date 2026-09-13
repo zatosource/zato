@@ -17,7 +17,7 @@ from sqlalchemy.orm import sessionmaker
 # Zato
 from zato.common.alerting.collectors.common import Measure_Auth_Failures, Measure_Error_Rate, Measure_File_Runs, \
     Measure_Latency, Measure_Status_Codes
-from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, alert_type_rest, \
+from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, alert_type_rest, alert_type_soap, \
     encode_email_connection, Email_Conn_Type_IMAP, get_defaults, to_storage
 from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
     get_llm_connection, get_muted_rule_names, get_names_with_toggle, get_silence_expected_names, is_object_active, \
@@ -167,7 +167,7 @@ class TestLoadObjectSettings:
         with _session() as session:
             settings = load_object_settings(session, _cluster_id)
 
-        assert settings == {alert_type_file_transfer: {}, alert_type_channels: {}, alert_type_rest: {}}
+        assert settings == {alert_type_file_transfer: {}, alert_type_channels: {}, alert_type_rest: {}, alert_type_soap: {}}
 
 # ################################################################################################################################
 
@@ -257,9 +257,9 @@ class TestLoadObjectSettings:
 
 # ################################################################################################################################
 
-    def test_both_outgoing_http_connections_load_under_rest(self) -> 'None':
+    def test_each_outgoing_http_connection_loads_under_the_type_of_its_transport(self) -> 'None':
         stored = to_storage(alert_type_rest, {'status_codes': '404, 5xx', 'connection_failures': 5})
-        soap_stored = to_storage(alert_type_rest, {'status_code_threshold': 9})
+        soap_stored = to_storage(alert_type_soap, {'status_code_threshold': 9, 'fault_codes': 'Receiver'})
 
         with _session() as session:
             _add_http_soap(session, _rest_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, _cluster_id, stored)
@@ -268,18 +268,22 @@ class TestLoadObjectSettings:
             settings = load_object_settings(session, _cluster_id)
 
         by_rest = settings[alert_type_rest]
+        by_soap = settings[alert_type_soap]
 
-        # Both outgoing connections carry their settings under the rest type, the channel is under its own type
-        assert sorted(by_rest) == sorted([_rest_outgoing_name, _soap_outgoing_name])
+        # Each outgoing connection carries its settings under the type of its transport, the channel under its own type
+        assert list(by_rest) == [_rest_outgoing_name]
+        assert list(by_soap) == [_soap_outgoing_name]
         assert list(settings[alert_type_channels]) == [_rest_channel_name]
 
         assert by_rest[_rest_outgoing_name]['status_codes'] == '404, 5xx'
         assert by_rest[_rest_outgoing_name]['connection_failures'] == 5
         assert by_rest[_rest_outgoing_name]['status_code_threshold'] == 3
 
-        # The SOAP connection reads at the defaults but for the one setting it stored
-        assert by_rest[_soap_outgoing_name]['status_code_threshold'] == 9
-        assert by_rest[_soap_outgoing_name]['connection_failures'] == get_defaults(alert_type_rest)['connection_failures']
+        # The SOAP connection reads at the defaults but for the two settings it stored, the fault codes among them
+        assert by_soap[_soap_outgoing_name]['status_code_threshold'] == 9
+        assert by_soap[_soap_outgoing_name]['fault_codes'] == 'Receiver'
+        assert by_soap[_soap_outgoing_name]['connection_failures'] == get_defaults(alert_type_soap)['connection_failures']
+        assert 'fault_codes' not in by_rest[_rest_outgoing_name]
 
 # ################################################################################################################################
 # ################################################################################################################################

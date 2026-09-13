@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.admin.web.alerts_tab_picks import Email_Empty_Text, email_kinds, Live_Type_Email_Connection, \
     Live_Type_LLM_Connection, llm_kinds, LLM_Empty_Text
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, alert_type_rest, \
+from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, alert_type_rest, alert_type_soap, \
     Email_Connection_Field, field_display as shared_field_display, field_help, get_defaults, Is_Active_Field, \
     LLM_Connection_Field, Unit_Field_Suffix
 from zato.common.api import HTTP_SOAP
@@ -47,6 +47,7 @@ Client_Errors_Window_Unit_Field = 'client_errors_window' + Unit_Field_Suffix
 Silence_Window_Unit_Field       = config_map.Silence_Window_Field_Name + Unit_Field_Suffix
 Status_Codes_Window_Unit_Field  = 'status_codes_window' + Unit_Field_Suffix
 Connection_Failures_Window_Unit_Field = 'connection_failures_window' + Unit_Field_Suffix
+Faults_Window_Unit_Field        = 'faults_window' + Unit_Field_Suffix
 
 # The unit selects of the tab, by name
 unit_fields:'anydict' = {
@@ -59,6 +60,7 @@ unit_fields:'anydict' = {
     Silence_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
     Status_Codes_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
     Connection_Failures_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
+    Faults_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
 }
 
 # The JSON list of time slots of a channel's silence alert
@@ -68,6 +70,10 @@ Silence_Slots_Field = config_map.Silence_Slots_Field_Name
 # the default the seeded rule carries, so the two can never drift apart
 Status_Codes_Field = config_map.Status_Codes_Field_Name
 Status_Codes_Default = get_defaults(alert_type_rest)[Status_Codes_Field]
+
+# The SOAP fault codes an outgoing SOAP connection alerts on, as typed, with the seeded default the same way
+Fault_Codes_Field = config_map.Fault_Codes_Field_Name
+Fault_Codes_Default = get_defaults(alert_type_soap)[Fault_Codes_Field]
 
 # How often an outgoing connection is pinged - fields of the connection's own form rather than alert settings,
 # which the tab edits in place, so they carry no alert prefix and travel outside of the alert settings
@@ -101,7 +107,9 @@ _popover_labels = {
     'client_errors_window': 'In the last',
     'status_codes_window':  'In the last',
     'connection_failures_window': 'In the last',
+    'faults_window':        'In the last',
     'status_code_threshold': 'Alert after',
+    'fault_threshold':      'Alert after',
     'connection_failures':  'Alert after',
     'arrival_overdue':      'Alert after',
     'silence_window':       'Alert after',
@@ -120,7 +128,8 @@ field_how_it_works[Arrival_Overdue_Unit_Field] = 'Whether the time a file may fa
 field_how_it_works[Silence_Window_Unit_Field] = 'Whether the silence a channel tolerates is in minutes, hours or days.'
 
 for _window_unit_field in (Server_Errors_Window_Unit_Field, Latency_Window_Unit_Field, Auth_Failures_Window_Unit_Field,
-    Client_Errors_Window_Unit_Field, Status_Codes_Window_Unit_Field, Connection_Failures_Window_Unit_Field):
+    Client_Errors_Window_Unit_Field, Status_Codes_Window_Unit_Field, Connection_Failures_Window_Unit_Field,
+    Faults_Window_Unit_Field):
     field_how_it_works[_window_unit_field] = field_how_it_works[Window_Unit_Field]
 
 field_display[Health_Check_Run_Every_Field] = ('Ping every', '')
@@ -272,6 +281,93 @@ def _health_check_line() -> 'anydict':
     return out
 
 # ################################################################################################################################
+
+def _status_codes_line() -> 'anydict':
+    out = {
+        'name': 'status_codes',
+        'section': Section_Failures,
+        'kind': Line_Kind_Popover,
+        'label': 'Status codes',
+        'title': 'Status codes',
+        'fields': [Status_Codes_Field, 'status_code_threshold', 'status_codes_window'],
+        'rows': [[Status_Codes_Field], ['status_code_threshold', 'status_codes_window']],
+        'unit_field': Status_Codes_Window_Unit_Field,
+        'text_fields': {Status_Codes_Field: Status_Codes_Default},
+        'summary': 'Alert after {status_code_threshold|response|responses} with ' + f'{{{Status_Codes_Field}}} ' + \
+            f'in the last {{{Status_Codes_Window_Unit_Field}@status_codes_window}}',
+        'how_it_works': 'Which status codes raise an alert - three-digit codes such as 401 or 403 and whole classes ' + \
+            'such as 4xx or 5xx, each one a chip, typed and added with Enter, removed with its cross - how many responses ' + \
+            'with one of them do, and how long the window they are counted over.',
+    }
+    return out
+
+# ################################################################################################################################
+
+def _connection_failures_line() -> 'anydict':
+    out = {
+        'name': 'connection_failures',
+        'section': Section_Failures,
+        'kind': Line_Kind_Popover,
+        'label': 'Connection failures',
+        'title': 'Connection failures',
+        'fields': ['connection_failures', 'connection_failures_window'],
+        'rows': [['connection_failures'], ['connection_failures_window']],
+        'unit_field': Connection_Failures_Window_Unit_Field,
+        'summary': 'Alert after {connection_failures|timeout or connection failure|timeouts or connection failures} ' + \
+            f'in the last {{{Connection_Failures_Window_Unit_Field}@connection_failures_window}}',
+        'how_it_works': 'How many calls that failed before any response arrived - a timeout, a refused or reset ' + \
+            'connection, a name that does not resolve, a TLS failure - raise an alert, ' + \
+            'and how long the window they are counted over.',
+    }
+    return out
+
+# ################################################################################################################################
+
+# The faults an outgoing SOAP connection alerts on - counted by the fault code the envelope carries, apart from the status codes
+def _soap_faults_line() -> 'anydict':
+    out = {
+        'name': 'soap_faults',
+        'section': Section_Failures,
+        'kind': Line_Kind_Popover,
+        'label': 'SOAP faults',
+        'title': 'SOAP faults',
+        'fields': [Fault_Codes_Field, 'fault_threshold', 'faults_window'],
+        'rows': [[Fault_Codes_Field], ['fault_threshold', 'faults_window']],
+        'unit_field': Faults_Window_Unit_Field,
+        'text_fields': {Fault_Codes_Field: Fault_Codes_Default},
+        'summary': 'Alert after {fault_threshold|fault|faults} with ' + f'{{{Fault_Codes_Field}}} ' + \
+            f'in the last {{{Faults_Window_Unit_Field}@faults_window}}',
+        'how_it_works': 'Which SOAP fault codes raise an alert - Receiver and Server are the endpoint\'s own faults, ' + \
+            'Sender and Client the caller\'s, and a code of the endpoint\'s own keeps its prefix, e.g. x:Timeout, ' + \
+            'each one a chip, typed and added with Enter, removed with its cross - how many faults with one of them do, ' + \
+            'and how long the window they are counted over. A fault is counted here by its code and never as a status code.',
+    }
+    return out
+
+# ################################################################################################################################
+
+# The lines of an outgoing HTTP connection of either transport - the SOAP tab has its faults right after the status codes
+def _http_lines(*, with_soap_faults:'bool') -> 'anylist':
+    out = [
+        _active_line(),
+        _use_llm_line(),
+        _llm_line(),
+        _email_line(),
+        _health_check_line(),
+        _failures_in_a_row_line(),
+        _error_rate_line(),
+        _status_codes_line(),
+    ]
+
+    if with_soap_faults:
+        out.append(_soap_faults_line())
+
+    out.append(_connection_failures_line())
+    out.append(_slow_responses_line())
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 # The lines of the tab for each alert type, in the order they are read. In a summary, `{field}` is the field's value,
@@ -279,8 +375,8 @@ def _health_check_line() -> 'anydict':
 # select's noun after it and `{slots_field#singular|plural}` the number of time slots with the right noun after it,
 # left out when there are none. A popover line's `rows` say which fields share a row, its `unit_field` follows the last
 # of its numbers, its `slots_field` is a list of time slots and it reads as its `summary_off` while its `off_field` is off.
-# A line with a `depends_on` toggle is dimmed while that toggle is off. A line's `text_fields` are typed as they are,
-# each with its `placeholder` showing what a value looks like. A line with `page_fields` edits fields of the page's own
+# A line with a `depends_on` toggle is dimmed while that toggle is off. A line's `text_fields` are lists of names
+# edited as chips and stored comma-separated, each with the seeded default it starts from. A line with `page_fields` edits fields of the page's own
 # form rather than alert settings - they carry no alert prefix and the page sends them on its own - it reads as its
 # `summary_empty` while its first field is empty, and one that is `always_on` is not dimmed when Active is off.
 type_lines:'anydict' = {
@@ -403,47 +499,8 @@ type_lines:'anydict' = {
                 'all day or in ranges of the day with a switch and a silence of their own.',
         },
     ],
-    alert_type_rest: [
-        _active_line(),
-        _use_llm_line(),
-        _llm_line(),
-        _email_line(),
-        _health_check_line(),
-        _failures_in_a_row_line(),
-        _error_rate_line(),
-        {
-            'name': 'status_codes',
-            'section': Section_Failures,
-            'kind': Line_Kind_Popover,
-            'label': 'Status codes',
-            'title': 'Status codes',
-            'fields': [Status_Codes_Field, 'status_code_threshold', 'status_codes_window'],
-            'rows': [[Status_Codes_Field], ['status_code_threshold'], ['status_codes_window']],
-            'unit_field': Status_Codes_Window_Unit_Field,
-            'text_fields': {Status_Codes_Field: Status_Codes_Default},
-            'summary': 'Alert after {status_code_threshold|response|responses} with ' + f'{{{Status_Codes_Field}}} ' + \
-                f'in the last {{{Status_Codes_Window_Unit_Field}@status_codes_window}}',
-            'how_it_works': 'Which status codes raise an alert - three-digit codes such as 401 or 403 and whole classes ' + \
-                'such as 4xx or 5xx, comma-separated - how many responses with one of them do, ' + \
-                'and how long the window they are counted over.',
-        },
-        {
-            'name': 'connection_failures',
-            'section': Section_Failures,
-            'kind': Line_Kind_Popover,
-            'label': 'Connection failures',
-            'title': 'Connection failures',
-            'fields': ['connection_failures', 'connection_failures_window'],
-            'rows': [['connection_failures'], ['connection_failures_window']],
-            'unit_field': Connection_Failures_Window_Unit_Field,
-            'summary': 'Alert after {connection_failures|timeout or connection failure|timeouts or connection failures} ' + \
-                f'in the last {{{Connection_Failures_Window_Unit_Field}@connection_failures_window}}',
-            'how_it_works': 'How many calls that failed before any response arrived - a timeout, a refused or reset ' + \
-                'connection, a name that does not resolve, a TLS failure - raise an alert, ' + \
-                'and how long the window they are counted over.',
-        },
-        _slow_responses_line(),
-    ],
+    alert_type_rest: _http_lines(with_soap_faults=False),
+    alert_type_soap: _http_lines(with_soap_faults=True),
 }
 
 # ################################################################################################################################

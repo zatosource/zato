@@ -515,7 +515,11 @@ class EnmasseYAMLImporter:
     def sync_security(self, security_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes security definitions from a YAML configuration with the database.
         """
+
+        # A file without a security block may still name definitions that exist already,
+        # so what the database has is known to every importer that resolves security by name.
         if not security_list:
+            self.security_importer.populate_sec_defs_from_db(session)
             return [], []
 
         count = len(security_list)

@@ -23,7 +23,7 @@ from logging import getLogger
 from zato.common.alerting.config_map import Explain_With_LLM_Key
 from zato.common.alerting.seed.rules_common import channels_rules, common_rules, scheduler_rules
 from zato.common.alerting.seed.rules_connections import email_rules, file_transfer_rules, llm_rules, mcp_rules, \
-    microsoft_rules, odoo_rules, rest_rules, sql_rules
+    microsoft_rules, odoo_rules, rest_rules, soap_rules, sql_rules
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditSource
 from zato.common.audit_log.file_transfer_run import Run_Status_Clean, Run_Status_Empty, Run_Status_Failed, \
@@ -150,6 +150,7 @@ default_rulesets = [
     ('alerts_common',        common_rules),
     ('alerts_channels',      channels_rules),
     ('alerts_rest',          rest_rules),
+    ('alerts_soap',          soap_rules),
     ('alerts_sql',           sql_rules),
     ('alerts_llm',           llm_rules),
     ('alerts_mcp',           mcp_rules),

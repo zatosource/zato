@@ -55,10 +55,11 @@ $.fn.zato.alerts_tab.config = {
     lineOffClass: 'alerts-tab-line-off',
     idPrefixDjango: 'id_',
 
-    // The kinds of field spec a popover is built of
+    // The kinds of field spec a popover is built of - a text field of the tab is a list of names,
+    // e.g. the status codes a connection alerts on, and it is edited as chips
     specCheckbox: 'checkbox',
     specNumber: 'number',
-    specText: 'text',
+    specChips: 'chips',
 
     // The summary of a popover line - `{field}` is a value, `{field|singular|plural}` a
     // value with the right noun after it, `{unit_field@count_field}` a count with the
@@ -73,6 +74,9 @@ $.fn.zato.alerts_tab.config = {
     // A slots popover is this wide from the start, so adding and removing ranges never changes its width
     slotsPopoverWidth: '560px',
 
+    // A popover with chips is this wide, room for a handful of names on one line and for the chips to wrap
+    chipsPopoverWidth: '420px',
+
     // A range's length comes from the kit in minutes, its units are compared in seconds
     secondsPerMinute: 60,
 
@@ -85,11 +89,13 @@ $.fn.zato.alerts_tab.config = {
 // What the Django side told us about the page's alert fields
 $.fn.zato.alerts_tab.settings = null;
 
-// Which form's panel is bound at the moment, and the slots kits of the open popovers by line
+// Which form's panel is bound at the moment, the slots kits of the open popovers by line
+// and the chip lists of the open popovers by field
 $.fn.zato.alerts_tab.state = {
     panelId: null,
     fieldPrefix: '',
-    slotsKits: {}
+    slotsKits: {},
+    chipLists: {}
 };
 
 // The micro-forms kit installs the popover engine here
@@ -122,6 +128,7 @@ $.fn.zato.alerts_tab.init = function(options) {
     });
 
     tab.registerSlotsKind();
+    tab.registerChipsKind();
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -224,7 +231,7 @@ $.fn.zato.alerts_tab.buildSpec = function(fieldName, row, line) {
         kind = tab.config.specCheckbox;
     }
     else if(fieldKind === settings.text_kind) {
-        kind = tab.config.specText;
+        kind = tab.config.specChips;
     }
     else {
         kind = tab.config.specNumber;
@@ -241,11 +248,6 @@ $.fn.zato.alerts_tab.buildSpec = function(fieldName, row, line) {
         if(row.length > 1) {
             out.labelAbove = true;
         }
-    }
-
-    // A text shows what a value looks like while it is empty
-    if(kind === tab.config.specText) {
-        out.placeholder = line.text_fields[fieldName];
     }
 
     return out;
@@ -276,10 +278,15 @@ $.fn.zato.alerts_tab.buildDescriptors = function() {
             return;
         }
 
+        var hasChips = false;
+
         var page = line.rows.map(function(row) {
 
             var specs = row.map(function(fieldName) {
                 var spec = tab.buildSpec(fieldName, row, line);
+                if(spec.kind === tab.config.specChips) {
+                    hasChips = true;
+                }
                 return spec;
             });
 
@@ -310,11 +317,21 @@ $.fn.zato.alerts_tab.buildDescriptors = function() {
             lastSpec.unitField = line.unit_field;
         }
 
-        out[line.name] = {
-            title: line.title,
-            fitContent: true,
-            pages: [page]
-        };
+        // A popover with chips has a width of its own, so the chips wrap inside it rather than size it
+        if(hasChips) {
+            out[line.name] = {
+                title: line.title,
+                width: tab.config.chipsPopoverWidth,
+                pages: [page]
+            };
+        }
+        else {
+            out[line.name] = {
+                title: line.title,
+                fitContent: true,
+                pages: [page]
+            };
+        }
     });
 
     return out;

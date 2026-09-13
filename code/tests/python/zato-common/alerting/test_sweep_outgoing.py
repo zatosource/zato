@@ -20,7 +20,7 @@ from sqlalchemy import update
 # Zato
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.object_config import alert_type_rest, get_defaults as get_object_defaults
-from zato.common.alerting.seed.rules_connections import rest_rules
+from zato.common.alerting.seed.rules_connections import rest_rules, soap_rules
 from zato.common.alerting.sweep import run_sweep
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.common import TransportStatus
@@ -53,6 +53,7 @@ _server_name = 'test-sweep-outgoing-server'
 
 # The ruleset the connections are judged by - the one the seed ships
 _ruleset_name = 'alerts_rest'
+_soap_ruleset_name = 'alerts_soap'
 
 # The connection with settings of its own and the one without any
 _conn_name = 'crm.api'
@@ -95,16 +96,19 @@ class _TransportRecorder:
 # ################################################################################################################################
 
 def _load_rest_rules() -> 'rule_engine_rule_list':
-    """ The seeded rest rules as runtime rules, all of them active.
+    """ The seeded rest and soap rules as runtime rules, all of them active - each outgoing kind
+    is judged by the ruleset of its own type.
     """
-    documents, errors = parse_data_details(rest_rules, _ruleset_name)
-    assert errors == []
-
-    loaded = load_documents(documents)
-
     out = []
-    for full_name in loaded.rule_names:
-        out.append(loaded.manager[full_name])
+
+    for ruleset_name, contents in ((_ruleset_name, rest_rules), (_soap_ruleset_name, soap_rules)):
+        documents, errors = parse_data_details(contents, ruleset_name)
+        assert errors == []
+
+        loaded = load_documents(documents)
+
+        for full_name in loaded.rule_names:
+            out.append(loaded.manager[full_name])
 
     return out
 
@@ -345,7 +349,7 @@ class TestOutgoingRestSweep:
 
 # ################################################################################################################################
 
-    def test_a_soap_outgoing_connection_is_judged_by_the_same_rules_and_named_as_soap(self) -> 'None':
+    def test_a_soap_outgoing_connection_is_judged_by_its_own_rules_and_named_as_soap(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         now = utcnow()

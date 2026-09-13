@@ -17,7 +17,8 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting.collectors.common import Measure_Auth_Failures, Measure_Client_Errors, Measure_Connection_Failures, \
-    Measure_Error_Rate, Measure_File_Runs, Measure_Latency, Measure_Server_Errors, Measure_Silence, Measure_Status_Codes
+    Measure_Error_Rate, Measure_File_Runs, Measure_Latency, Measure_Server_Errors, Measure_Silence, Measure_SOAP_Faults, \
+    Measure_Status_Codes
 from zato.common.audit_log.common import AuditSource
 
 # ################################################################################################################################
@@ -50,6 +51,10 @@ Time_Slots_Default = '[]'
 # The status codes an outgoing connection alerts on - the field and the rule default it reads and writes
 Status_Codes_Field_Name = 'status_codes'
 Status_Codes_Default = 'status_codes'
+
+# The SOAP fault codes an outgoing SOAP connection alerts on - the field and the rule default it reads and writes
+Fault_Codes_Field_Name = 'fault_codes'
+Fault_Codes_Default = 'fault_codes'
 
 # The rule default a type's window field reads and writes - how far back the
 # error-rate and failure-count facts of the type's sources are measured over.
@@ -90,6 +95,7 @@ Percent_Multiplier = 100
 # Which ruleset each screen type reads and writes, in the order the rows render.
 type_to_ruleset = {
     'rest':          'alerts_rest',
+    'soap':          'alerts_soap',
     'sql':           'alerts_sql',
     'llm':           'alerts_llm',
     'mcp':           'alerts_mcp',
@@ -108,7 +114,8 @@ type_to_ruleset = {
 # is the measuring window of. A source no type names, the health checks above all,
 # is measured over the collectors' own default window.
 type_sources:'dict[str, strlist]' = {
-    'rest':          [AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing],
+    'rest':          [AuditSource.REST_Outgoing],
+    'soap':          [AuditSource.SOAP_Outgoing],
     'sql':           [AuditSource.SQL_Outgoing],
     'llm':           [AuditSource.LLM],
     'mcp':           [AuditSource.MCP],
@@ -129,30 +136,48 @@ type_sources:'dict[str, strlist]' = {
 # the screen shows as a count with a unit. A toggle field names the rules
 # whose active flags it reads and writes whole, and a ruleset toggle names the
 # document key it reads off the first rule and writes onto every rule of the type.
+
+# The fields of an outgoing HTTP connection of either transport - the SOAP type lists them all,
+# with its faults right after the status codes, so the two tabs read the same wherever they overlap.
+_http_failure_fields:'list[stranydict]' = [
+    {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
+        'default': 'max_consecutive_failures', 'is_percent': False},
+    {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
+        'default': 'error_rate_threshold', 'is_percent': True},
+    {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Error_Rate]},
+    {'name': Status_Codes_Field_Name, 'kind': Kind_Text, 'rules': ['Status_Codes'],
+        'default': Status_Codes_Default},
+    {'name': 'status_code_threshold', 'kind': Kind_Number, 'rules': ['Status_Codes'],
+        'default': 'status_code_threshold', 'is_percent': False},
+    {'name': 'status_codes_window', 'kind': Kind_Duration, 'rules': ['Status_Codes'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Status_Codes]},
+]
+
+_soap_fault_fields:'list[stranydict]' = [
+    {'name': Fault_Codes_Field_Name, 'kind': Kind_Text, 'rules': ['SOAP_Faults'],
+        'default': Fault_Codes_Default},
+    {'name': 'fault_threshold', 'kind': Kind_Number, 'rules': ['SOAP_Faults'],
+        'default': 'fault_threshold', 'is_percent': False},
+    {'name': 'faults_window', 'kind': Kind_Duration, 'rules': ['SOAP_Faults'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_SOAP_Faults]},
+]
+
+_http_traffic_fields:'list[stranydict]' = [
+    {'name': 'connection_failures', 'kind': Kind_Number, 'rules': ['Connection_Failures'],
+        'default': 'connection_failure_threshold', 'is_percent': False},
+    {'name': 'connection_failures_window', 'kind': Kind_Duration, 'rules': ['Connection_Failures'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Connection_Failures]},
+    {'name': 'max_latency', 'kind': Kind_Number, 'rules': ['Slow_Responses'],
+        'default': 'max_avg_duration_ms', 'is_percent': False},
+    {'name': 'latency_window', 'kind': Kind_Duration, 'rules': ['Slow_Responses'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Latency]},
+    {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
+]
+
 type_fields:'dict[str, list[stranydict]]' = {
-    'rest': [
-        {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
-            'default': 'max_consecutive_failures', 'is_percent': False},
-        {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
-            'default': 'error_rate_threshold', 'is_percent': True},
-        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
-            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Error_Rate]},
-        {'name': Status_Codes_Field_Name, 'kind': Kind_Text, 'rules': ['Status_Codes'],
-            'default': Status_Codes_Default},
-        {'name': 'status_code_threshold', 'kind': Kind_Number, 'rules': ['Status_Codes'],
-            'default': 'status_code_threshold', 'is_percent': False},
-        {'name': 'status_codes_window', 'kind': Kind_Duration, 'rules': ['Status_Codes'],
-            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Status_Codes]},
-        {'name': 'connection_failures', 'kind': Kind_Number, 'rules': ['Connection_Failures'],
-            'default': 'connection_failure_threshold', 'is_percent': False},
-        {'name': 'connection_failures_window', 'kind': Kind_Duration, 'rules': ['Connection_Failures'],
-            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Connection_Failures]},
-        {'name': 'max_latency', 'kind': Kind_Number, 'rules': ['Slow_Responses'],
-            'default': 'max_avg_duration_ms', 'is_percent': False},
-        {'name': 'latency_window', 'kind': Kind_Duration, 'rules': ['Slow_Responses'],
-            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Latency]},
-        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
-    ],
+    'rest': _http_failure_fields + _http_traffic_fields,
+    'soap': _http_failure_fields + _soap_fault_fields + _http_traffic_fields,
     'sql': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
             'default': 'max_consecutive_failures', 'is_percent': False},

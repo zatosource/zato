@@ -26,7 +26,7 @@ from zato.admin.web.forms.outgoing.smb import CreateForm as SMBCreateForm
 from zato.admin.web.views import http_soap_message
 from zato.admin.web.views.live_form_updates import OBJECT_TYPE_CONFIG
 from zato.admin.web.views.outgoing import ftp, sftp, smb
-from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, alert_type_rest, \
+from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, alert_type_rest, alert_type_soap, \
     encode_email_connection, Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, get_defaults as get_storage_defaults, \
     Unit_Field_Suffix
 from zato.common.api import EMAIL, GENERIC, ZATO_NONE
@@ -672,6 +672,19 @@ def _outgoing_rest_params(prefix:'str'='') -> 'anydict':
     }
     return out
 
+def _outgoing_soap_params(prefix:'str'='') -> 'anydict':
+    """ The Alerts tab's own fields of an outgoing SOAP connection's form - the REST ones and the faults on top,
+    the fault codes with the whitespace a person may leave around them.
+    """
+    out = _outgoing_rest_params(prefix)
+    out.update({
+        prefix + 'alert_fault_codes': ' Receiver, x:Timeout ',
+        prefix + 'alert_fault_threshold': '2',
+        prefix + 'alert_faults_window': '30',
+        prefix + 'alert_faults_window_unit': 'minute',
+    })
+    return out
+
 # The settings the outgoing REST form tests expect in the message, each duration already in seconds
 _expected_outgoing_rest_settings = {
     'alert_is_active': True,
@@ -788,15 +801,15 @@ class TestChannelForm:
 
 # ################################################################################################################################
 
-    def test_an_outgoing_soap_message_carries_the_rest_settings(self) -> 'None':
+    def test_an_outgoing_soap_message_carries_the_soap_settings(self) -> 'None':
 
         params = _channel_params('outgoing', 'soap')
-        params.update(_outgoing_rest_params())
+        params.update(_outgoing_soap_params())
 
         message = http_soap_message.get_edit_create_message(params)
 
-        # The same rest settings an outgoing REST connection's message carries ..
-        for name in alerts_tab.get_storage_field_names(alert_type_rest):
+        # Every setting of the soap type - the rest settings and the faults on top ..
+        for name in alerts_tab.get_storage_field_names(alert_type_soap):
             if name.endswith(Unit_Field_Suffix):
                 assert name not in message, name
             else:
@@ -805,10 +818,14 @@ class TestChannelForm:
         for name, value in _expected_outgoing_rest_settings.items():
             assert message[name] == value, name
 
+        assert message['alert_fault_codes'] == 'Receiver, x:Timeout'
+        assert message['alert_fault_threshold'] == 2
+        assert message['alert_faults_window'] == 1800
+
         # .. and none of the channel-only ones
-        rest_names = alerts_tab.get_storage_field_names(alert_type_rest)
+        soap_names = alerts_tab.get_storage_field_names(alert_type_soap)
         for name in alerts_tab.get_storage_field_names(alert_type_channels):
-            if name not in rest_names:
+            if name not in soap_names:
                 assert name not in message, name
 
 # ################################################################################################################################

@@ -8,8 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_by_http_soap, alert_type_channels, alert_type_rest, apply_defaults, \
-    get_alert_type, get_defaults, get_field_kinds, get_field_names, storage_name, Kind_Active
+from zato.common.alerting.object_config import alert_type_by_http_soap, alert_type_channels, alert_types_outgoing_http, \
+    apply_defaults, get_alert_type, get_defaults, get_field_kinds, get_field_names, storage_name, Kind_Active
 from zato.common.alerting.status_codes import parse_status_codes
 from zato.common.alerting.time_slots import validate_silence_slots
 from zato.server.connection.http_soap import BadRequest
@@ -26,10 +26,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The alert settings a REST or SOAP channel and an outgoing REST connection carry, under their storage names -
+# The alert settings a REST or SOAP channel and an outgoing REST or SOAP connection carry, under their storage names -
 # the switches as booleans, the numbers and the durations as integers, the rest as text, each optional so that
 # a caller that knows nothing of them sends nothing. The two types share most names, and a name both have is
-# of one kind in both, so the input covers the union of the two once.
+# of one kind in all, so the input covers the union of the types once.
 alert_toggle_kinds = (Kind_Active, config_map.Kind_Toggle, config_map.Kind_Ruleset_Toggle)
 alert_int_kinds = (config_map.Kind_Number, config_map.Kind_Duration)
 
@@ -66,7 +66,7 @@ for _alert_type in alert_type_by_http_soap.values():
 alert_input = tuple(alert_fields)
 
 # The alert settings that are validated beyond their type - a channel's silence slots travel as a JSON list
-# in a string, and an outgoing REST connection's status codes as a comma-separated list of codes and classes
+# in a string, and an outgoing REST or SOAP connection's status codes as a comma-separated list of codes and classes
 alert_silence_slots_name = storage_name(config_map.Silence_Slots_Field_Name)
 alert_status_codes_name = storage_name(config_map.Status_Codes_Field_Name)
 
@@ -112,7 +112,7 @@ def prepare_alert_settings(service:'AdminService', input:'Bunch', skip_opaque:'a
         _ = validate_silence_slots(input[alert_silence_slots_name])
 
     # .. and so is a status code that is neither three digits nor a class such as 5xx.
-    if alert_type == alert_type_rest:
+    if alert_type in alert_types_outgoing_http:
         try:
             _ = parse_status_codes(input[alert_status_codes_name])
         except ValueError as e:

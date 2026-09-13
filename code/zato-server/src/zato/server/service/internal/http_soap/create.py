@@ -32,6 +32,8 @@ from zato.server.service.internal.http_soap.health_check import sync_linked_jobs
 class Create(_CreateEdit):
     """ Creates a new HTTP/SOAP connection.
     """
+    name = 'zato.http-soap.create'
+
     input = 'name', 'url_path', 'connection', \
         '-service', '-service_id', AsIs('-security_id'), '-method', '-soap_action', '-soap_version', '-data_format', \
         '-host', '-ping_method', '-pool_size', Boolean('-merge_url_params_req'), '-url_params_pri', '-params_pri', \

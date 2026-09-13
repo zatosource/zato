@@ -22,7 +22,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-FHIR_Page_Url = '/zato/outgoing/hl7/fhir/?cluster=1'
+FHIR_Page_Url = '/zato/outgoing/hl7/fhir/?cluster=1&type_=outconn-hl7-fhir'
 
 # How long to wait for a dialog to appear or a row to show up, in milliseconds
 _Dialog_Timeout = 5000

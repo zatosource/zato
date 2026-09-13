@@ -75,6 +75,7 @@ LLM_Connection_Default = ''
 alert_type_file_transfer = 'file_transfer'
 alert_type_channels = 'channels'
 alert_type_rest = 'rest'
+alert_type_soap = 'soap'
 
 conn_type_to_alert_type:'strstrdict' = {
     GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: alert_type_file_transfer,
@@ -83,13 +84,17 @@ conn_type_to_alert_type:'strstrdict' = {
 }
 
 # The HTTPSOAP rows that carry alert settings of their own, by connection and transport -
-# REST and SOAP channels under the channels type, outgoing REST and SOAP connections under the rest type
+# REST and SOAP channels under the channels type, outgoing REST connections under the rest type,
+# outgoing SOAP connections under the soap type, which is the rest type plus the SOAP faults
 alert_type_by_http_soap:'dict[tuple[str, str], str]' = {
     (CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP):  alert_type_channels,
     (CONNECTION.CHANNEL, URL_TYPE.SOAP):        alert_type_channels,
     (CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP): alert_type_rest,
-    (CONNECTION.OUTGOING, URL_TYPE.SOAP):       alert_type_rest,
+    (CONNECTION.OUTGOING, URL_TYPE.SOAP):       alert_type_soap,
 }
+
+# The two alert types of outgoing HTTP connections - what asks whether a row is an outgoing one asks for both
+alert_types_outgoing_http = (alert_type_rest, alert_type_soap)
 
 # The HTTPSOAP rows that carry channel alert settings - REST and SOAP channels
 Alert_Channel_Connection = CONNECTION.CHANNEL
@@ -115,8 +120,8 @@ transport_by_outgoing_source:'strstrdict' = {
 
 def get_alert_type(connection:'str', transport:'str') -> 'str':
     """ The alert type an HTTPSOAP row of the given connection and transport carries settings under -
-    the channels type for a REST or SOAP channel, the rest type for an outgoing REST or SOAP connection,
-    an empty string for a row that carries none.
+    the channels type for a REST or SOAP channel, the rest type for an outgoing REST connection,
+    the soap type for an outgoing SOAP connection, an empty string for a row that carries none.
     """
     key = (connection, transport)
 
@@ -165,6 +170,9 @@ field_display = {
     'status_codes_window':  ('Status codes window', ''),
     'connection_failures':  ('Connection failures', ''),
     'connection_failures_window': ('Connection failures window', ''),
+    'fault_codes':          ('Fault codes', ''),
+    'fault_threshold':      ('Faults', ''),
+    'faults_window':        ('Faults window', ''),
     'traffic_expected':     ('Alert on silence', ''),
     'silence_window':       ('Silence', ''),
     'silence_slots':        ('Time ranges', ''),
@@ -207,6 +215,10 @@ field_help = {
     'connection_failures':  'How many calls that failed before any response arrived - a timeout, a refused connection, ' + \
                             'a TLS failure - raise an alert.',
     'connection_failures_window': 'How long the window the connection failures are counted over is.',
+    'fault_codes':          'The SOAP fault codes that count, comma-separated - Receiver and Server are the endpoint\'s own faults, ' + \
+                            'Sender and Client the caller\'s, and a code of the endpoint\'s own is written with its prefix, e.g. x:Timeout.',
+    'fault_threshold':      'How many faults with one of the fault codes in the window raise an alert.',
+    'faults_window':        'How long the window the faults are counted over is.',
     'traffic_expected':     'Whether a channel that receives no requests for the time below raises an alert.',
     'silence_window':       'How long the channel may go without a request, in minutes, hours or days.',
     'silence_slots':        'The ranges of the day with a silence and a switch of their own.',

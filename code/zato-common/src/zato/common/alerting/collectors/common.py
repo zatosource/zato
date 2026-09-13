@@ -71,6 +71,9 @@ Measure_File_Runs     = 'file_runs'
 Measure_Status_Codes        = 'status_codes'
 Measure_Connection_Failures = 'connection_failures'
 
+# The measure of an outgoing SOAP connection's faults - how many responses came as a fault of each fault code
+Measure_SOAP_Faults = 'soap_faults'
+
 # The key a merged fact carries the window of each of its measures under
 Window_Seconds_By_Measure_Key = 'window_seconds_by_measure'
 
@@ -171,6 +174,13 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
         'status_code_counts': {},
         'status_code_count': 0,
         'connection_failure_count': 0,
+
+        # The faults of an outgoing SOAP connection - how many arrived with each fault code, e.g. {'Receiver': 2},
+        # how many of them carried a code the connection alerts on, by code and in all. A fault is counted
+        # here by its code and never among the status codes above.
+        'fault_counts': {},
+        'fault_code_counts': {},
+        'fault_count': 0,
 
         # How many days the object's TLS certificate has left. Zero means unmeasured,
         # which is why the certificate rules also require a value of at least one.

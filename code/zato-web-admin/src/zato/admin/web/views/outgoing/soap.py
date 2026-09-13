@@ -65,7 +65,7 @@ _callback_widget_names = {
     'rest': 'callback_rest',
 }
 
-# The alert settings of an outgoing SOAP connection follow the rest type, as an outgoing REST connection's do
+# The alert settings of an outgoing SOAP connection follow the soap type - the rest type's plus the SOAP faults
 _alert_type = get_alert_type(CONNECTION.OUTGOING, URL_TYPE.SOAP)
 _alert_field_names = alerts_tab.get_storage_field_names(_alert_type)
 

@@ -52,6 +52,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots-fields.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab-slots.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab-chips.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
     {{ alerts_tab_config|json_script:"out-soap-alerts-tab-config" }}
 
@@ -330,6 +331,7 @@
 
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="soap" role="tab" aria-selected="false">SOAP</button>
                         <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
                         <button type="button" class="dashboard-tab" data-tab="credentials" role="tab" aria-selected="false">Body credentials</button>
@@ -337,7 +339,6 @@
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
-                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-main" role="tabpanel">
@@ -496,6 +497,7 @@
 
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="soap" role="tab" aria-selected="false">SOAP</button>
                         <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
                         <button type="button" class="dashboard-tab" data-tab="credentials" role="tab" aria-selected="false">Body credentials</button>
@@ -503,7 +505,6 @@
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
-                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-main" role="tabpanel">

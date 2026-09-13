@@ -60,6 +60,35 @@ class TestParseExplanation:
         assert result['is_parsed'] is False
         assert result['remediation'] is None
 
+    def test_a_confidence_and_a_remediation_written_as_the_last_lines_of_the_prose_are_lifted_out(self) -> 'None':
+        prose = 'The TCP socket could not be opened to 127.0.0.1:20465.'
+        reply = dumps({'explanation': prose + '\n\nConfidence: High\n\nRemediation: null'})
+
+        result = parse_explanation(reply, _remediations)
+
+        assert result['is_parsed'] is True
+        assert result['explanation'] == prose
+        assert result['confidence'] == 'high'
+        assert result['remediation'] is None
+
+    def test_a_confidence_written_as_the_last_line_without_a_remediation_is_lifted_out(self) -> 'None':
+        prose = 'The remote server replied with HTTP 503 for every call in the window.'
+        reply = dumps({'explanation': prose + '\nconfidence: medium'})
+
+        result = parse_explanation(reply, _remediations)
+
+        assert result['explanation'] == prose
+        assert result['confidence'] == 'medium'
+
+    def test_a_confidence_key_of_its_own_leaves_the_prose_alone(self) -> 'None':
+        prose = 'Every call failed.\n\nConfidence: low'
+        reply = dumps({'explanation': prose, 'confidence': 'high'})
+
+        result = parse_explanation(reply, _remediations)
+
+        assert result['explanation'] == prose
+        assert result['confidence'] == 'high'
+
     def test_an_unrecognized_confidence_level_is_dropped(self) -> 'None':
         reply = dumps({'explanation': 'Test explanation text.', 'confidence': 'absolutely certain'})
 

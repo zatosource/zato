@@ -15,7 +15,7 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting.explain.settings_info import settings_lines, Off, On
-from zato.common.alerting.object_config import alert_type_rest, transport_by_outgoing_source
+from zato.common.alerting.object_config import get_alert_type, transport_by_outgoing_source
 from zato.common.api import CONNECTION, HTTP_SOAP, Sec_Def_Type_Name, URL_TYPE
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util.api import pluralize
@@ -162,7 +162,8 @@ def describe_outgoing_http(session:'SASession', cluster_id:'int', source:'str', 
 
     out.append(('Health check', _health_check_line(opaque)))
 
-    out.extend(settings_lines(alert_type_rest, opaque))
+    # The settings are the ones of the row's own type - the SOAP type carries the fault codes on top of the REST ones
+    out.extend(settings_lines(get_alert_type(CONNECTION.OUTGOING, transport), opaque))
 
     return out
 
