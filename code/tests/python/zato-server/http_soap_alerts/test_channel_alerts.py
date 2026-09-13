@@ -6,233 +6,35 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import logging
-from types import SimpleNamespace
-from unittest.mock import MagicMock
-
 # pytest
 import pytest
-
-# SQLAlchemy
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 # Zato
 from zato.common.alerting.object_config import alert_type_channels, get_defaults, get_field_names, storage_name
 from zato.common.alerting.time_slots import TimeSlotsError
 from zato.common.api import CONNECTION, URL_TYPE
-from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import dumps
-from zato.common.odb.model import Base, Cluster, HTTPSOAP, SecurityBase, Service
+from zato.common.odb.model import HTTPSOAP
 from zato.common.util.sql import parse_instance_opaque_attr
-from zato.server.service.internal.http_soap import Create, Edit, Get, GetList
+from zato.server.service.internal.http_soap import Edit
+
+# Test support
+from http_soap_stub import base_input as _base_input, create as _create, get as _get, get_list as _get_list, \
+    new_service as _new_service, soap_input as _soap_input, soap_outgoing_input as _soap_outgoing_input, \
+    stored_opaque as _stored_opaque, Channel_Name as _channel_name, Cluster_Id as _cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, stranydict
+    from zato.common.typing_ import any_
     any_ = any_
-    anydict = anydict
-    stranydict = stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-_cluster_id = 1
-_service_name = 'orders.get'
-_channel_name = 'orders.api'
-_outgoing_name = 'crm.api'
-_url_path = '/orders'
-
-# What the SOAP channel answers to and speaks
-_soap_action = 'urn:orders'
-_soap_version = '1.1'
 
 # The names the settings are stored under, in the order of the tab
 _storage_names = [storage_name(name) for name in get_field_names(alert_type_channels)]
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@pytest.fixture
-def session_factory() -> 'any_':
-    """ A sessionmaker over a fresh in-memory database with the tables the services touch.
-    """
-    engine = create_engine('sqlite://')
-
-    tables = [
-        Cluster.__table__,
-        Service.__table__,
-        SecurityBase.__table__,
-        HTTPSOAP.__table__,
-    ]
-    Base.metadata.create_all(engine, tables=tables)
-
-    factory = sessionmaker(bind=engine)
-
-    session = factory()
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-    session.add(Service(None, _service_name, True, 'orders.OrdersGet', False, cluster))
-    session.commit()
-    session.close()
-
-    yield factory
-
-    engine.dispose()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _full_input(class_:'any_', input_data:'stranydict') -> 'Bunch':
-    """ The input as SimpleIO hands it to a service - every declared name is there, the ones the caller
-    did not send as None.
-    """
-    out = Bunch()
-
-    for elem in class_.input:
-
-        if isinstance(elem, str):
-            name = elem
-        else:
-            name = elem.name
-
-        out[name.lstrip('-')] = None
-
-    out.update(input_data)
-
-    return out
-
-# ################################################################################################################################
-
-def _new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') -> 'any_':
-    """ A service with its collaborators standing in - the sessions are real, the server is not.
-    """
-    service:'any_' = object.__new__(class_)
-
-    service.request = SimpleNamespace(input=_full_input(class_, input_data))
-    service.response = SimpleNamespace(payload=Bunch())
-    service.odb = SimpleNamespace(session=session_factory)
-    service.config_dispatcher = MagicMock()
-    service.logger = logging.getLogger('test-channel-alerts')
-    service.invoke = MagicMock(return_value={})
-
-    server = SimpleNamespace(
-        cluster_id=_cluster_id,
-        get_config_session=lambda **kwargs: session_factory(),
-        encrypt=lambda value: value,
-        fs_server_config=SimpleNamespace(misc=SimpleNamespace(return_internal_objects='True')),
-    )
-    service.server = server
-
-    return service
-
-# ################################################################################################################################
-
-def _base_input(**overrides:'any_') -> 'stranydict':
-    """ What every create and edit of a REST channel sends - the alert settings are not among these.
-    """
-    out:'stranydict' = {
-        'name': _channel_name,
-        'url_path': _url_path,
-        'connection': CONNECTION.CHANNEL,
-        'transport': URL_TYPE.PLAIN_HTTP,
-        'service': _service_name,
-        'service_id': None,
-        'security_id': None,
-        'security_groups': None,
-        'method': '',
-        'soap_action': '',
-        'soap_version': None,
-        'data_format': 'json',
-        'host': None,
-        'ping_method': None,
-        'pool_size': None,
-        'merge_url_params_req': True,
-        'url_params_pri': None,
-        'params_pri': None,
-        'timeout': 10,
-        'content_type': None,
-        'match_slash': True,
-        'http_accept': None,
-        'is_active': True,
-        'is_internal': False,
-        'cluster_id': _cluster_id,
-        'is_wrapper': False,
-        'wrapper_type': None,
-        'username': None,
-        'password': None,
-        'is_audit_log_active': True,
-    }
-    out.update(overrides)
-
-    return out
-
-# ################################################################################################################################
-
-def _soap_input(**overrides:'any_') -> 'stranydict':
-    """ What every create and edit of a SOAP channel sends - the REST one with the SOAP transport, action and version.
-    """
-    out = _base_input(transport=URL_TYPE.SOAP, soap_action=_soap_action, soap_version=_soap_version)
-    out.update(overrides)
-
-    return out
-
-# ################################################################################################################################
-
-def _create(session_factory:'any_', **overrides:'any_') -> 'int':
-    """ Creates one HTTPSOAP object and returns its id.
-    """
-    service = _new_service(Create, session_factory, _base_input(**overrides))
-    service.handle()
-
-    out = service.response.payload.id
-    return out
-
-# ################################################################################################################################
-
-def _stored_opaque(session_factory:'any_', item_id:'int') -> 'anydict':
-    """ The opaque attributes an object has in the database.
-    """
-    session = session_factory()
-    item = session.query(HTTPSOAP).filter(HTTPSOAP.id==item_id).one()
-    out = parse_instance_opaque_attr(item)
-    session.close()
-
-    return out
-
-# ################################################################################################################################
-
-def _get_list(session_factory:'any_', connection:'str', transport:'str') -> 'list':
-    """ What GetList returns for one connection and transport pair.
-    """
-    input_data = {
-        'cluster_id': _cluster_id,
-        'connection': connection,
-        'transport': transport,
-        'paginate': False,
-    }
-    service = _new_service(GetList, session_factory, input_data)
-
-    session = session_factory()
-    out = service.get_data(session)
-    session.close()
-
-    return out
-
-# ################################################################################################################################
-
-def _get(session_factory:'any_', item_id:'int') -> 'anydict':
-    """ What Get returns for one object.
-    """
-    service = _new_service(Get, session_factory, {'cluster_id': _cluster_id, 'id': item_id, 'name': None})
-    service.request.input.require_any = lambda *names: None
-    service.handle()
-
-    out = service.response.payload
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -268,14 +70,8 @@ class TestCreate:
         assert opaque['alert_is_active'] is True
         assert opaque['alert_use_llm'] is True
 
-    def test_an_outgoing_connection_stores_no_settings(self, session_factory:'any_') -> 'None':
-        item_id = _create(session_factory,
-            name=_outgoing_name,
-            connection=CONNECTION.OUTGOING,
-            host='https://crm.example.com',
-            service=None,
-            alert_max_latency=2500,
-        )
+    def test_a_soap_outgoing_connection_stores_no_settings(self, session_factory:'any_') -> 'None':
+        item_id = _create(session_factory, **_soap_outgoing_input(alert_max_latency=2500))
 
         opaque = _stored_opaque(session_factory, item_id)
 
@@ -454,30 +250,8 @@ class TestGetList:
         assert row['alert_auth_failures'] == 3
         assert row['alert_client_errors'] == defaults['client_errors']
 
-    def test_an_outgoing_connection_lists_no_settings(self, session_factory:'any_') -> 'None':
-        _ = _create(session_factory,
-            name=_outgoing_name,
-            connection=CONNECTION.OUTGOING,
-            host='https://crm.example.com',
-            service=None,
-        )
-
-        rows = _get_list(session_factory, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP)
-        row = rows[0]
-
-        for name in _storage_names:
-            assert name not in row
-
     def test_a_soap_outgoing_connection_lists_no_settings(self, session_factory:'any_') -> 'None':
-        _ = _create(session_factory,
-            name=_outgoing_name,
-            connection=CONNECTION.OUTGOING,
-            transport=URL_TYPE.SOAP,
-            host='https://crm.example.com',
-            service=None,
-            soap_action=_soap_action,
-            soap_version=_soap_version,
-        )
+        _ = _create(session_factory, **_soap_outgoing_input())
 
         rows = _get_list(session_factory, CONNECTION.OUTGOING, URL_TYPE.SOAP)
         row = rows[0]

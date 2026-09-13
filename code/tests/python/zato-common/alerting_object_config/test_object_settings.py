@@ -16,9 +16,9 @@ from sqlalchemy.orm import sessionmaker
 
 # Zato
 from zato.common.alerting.collectors.common import Measure_Auth_Failures, Measure_Error_Rate, Measure_File_Runs, \
-    Measure_Latency
-from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, encode_email_connection, \
-    Email_Conn_Type_IMAP, get_defaults, to_storage
+    Measure_Latency, Measure_Status_Codes
+from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, alert_type_rest, \
+    encode_email_connection, Email_Conn_Type_IMAP, get_defaults, to_storage
 from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
     get_llm_connection, get_muted_rule_names, get_names_with_toggle, get_silence_expected_names, is_object_active, \
     load_object_settings
@@ -167,7 +167,7 @@ class TestLoadObjectSettings:
         with _session() as session:
             settings = load_object_settings(session, _cluster_id)
 
-        assert settings == {alert_type_file_transfer: {}, alert_type_channels: {}}
+        assert settings == {alert_type_file_transfer: {}, alert_type_channels: {}, alert_type_rest: {}}
 
 # ################################################################################################################################
 
@@ -254,6 +254,72 @@ class TestLoadObjectSettings:
 
         assert by_channel[_soap_channel_name]['auth_failures'] == 3
         assert by_channel[_soap_channel_name]['consecutive_failures'] == 3
+
+# ################################################################################################################################
+
+    def test_an_outgoing_rest_connection_loads_under_rest_and_an_outgoing_soap_one_nowhere(self) -> 'None':
+        stored = to_storage(alert_type_rest, {'status_codes': '404, 5xx', 'connection_failures': 5})
+
+        with _session() as session:
+            _add_http_soap(session, _rest_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, _cluster_id, stored)
+            _add_http_soap(session, _soap_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.SOAP, _cluster_id, {})
+            _add_http_soap(session, _rest_channel_name, CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, _cluster_id, {})
+            settings = load_object_settings(session, _cluster_id)
+
+        by_rest = settings[alert_type_rest]
+
+        # The outgoing SOAP connection carries no alert settings, the channel is under its own type
+        assert list(by_rest) == [_rest_outgoing_name]
+        assert list(settings[alert_type_channels]) == [_rest_channel_name]
+
+        assert by_rest[_rest_outgoing_name]['status_codes'] == '404, 5xx'
+        assert by_rest[_rest_outgoing_name]['connection_failures'] == 5
+        assert by_rest[_rest_outgoing_name]['status_code_threshold'] == 3
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestOutgoingRestSettings:
+
+    def test_a_connections_numbers_stand_in_for_the_rule_defaults(self) -> 'None':
+        values = get_defaults(alert_type_rest)
+        values['status_codes'] = '404'
+        values['status_code_threshold'] = 7
+        values['connection_failures_window'] = 3600
+
+        rule_values = build_rule_values(alert_type_rest, values, _now, 'Status_Codes')
+
+        assert rule_values['status_codes'] == '404'
+        assert rule_values['status_code_threshold'] == 7
+        assert rule_values['window_seconds'] == 300
+
+        assert build_rule_values(alert_type_rest, values, _now, 'Connection_Failures')['window_seconds'] == 3600
+
+# ################################################################################################################################
+
+    def test_a_connections_own_window_reaches_its_traffic_alone(self) -> 'None':
+        values = get_defaults(alert_type_rest)
+        values['status_codes_window'] = 3600
+
+        object_settings = {alert_type_rest: {_rest_outgoing_name: values}}
+
+        source_windows = {
+            Measure_Error_Rate: 300,
+            Measure_Status_Codes: 300,
+            Measure_Latency: 300,
+        }
+        window_seconds_by_source = {
+            AuditSource.REST_Outgoing: source_windows,
+            AuditSource.REST_Outgoing_Health: source_windows,
+        }
+
+        out = build_window_seconds_by_object(object_settings, window_seconds_by_source)
+
+        assert out[AuditSource.REST_Outgoing][_rest_outgoing_name][Measure_Status_Codes] == 3600
+        assert Measure_Error_Rate not in out[AuditSource.REST_Outgoing][_rest_outgoing_name]
+
+        # The health check keeps the rules' own windows
+        assert AuditSource.REST_Outgoing_Health not in out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -18,7 +18,6 @@ from urllib.parse import quote, urlencode
 # requests
 from requests import Response as _RequestsResponse
 from requests.adapters import HTTPAdapter
-from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout as RequestsTimeout
 from requests.sessions import Session as RequestsSession
 from requests.utils import super_len
 
@@ -32,6 +31,7 @@ from requests_toolbelt import MultipartEncoder
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, EnvVariable, HTTP_SOAP, MISC, NotGiven, SEC_DEF_TYPE, \
     URL_TYPE, Wrapper_Name_Prefix_List
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.common import classify_transport_error, TransportStatus
 from zato.common.bearer_token import normalize_scopes
 from zato.common.exception import BadRequest, Inactive, BackendInvocationError
 from zato.common.json_ import dumps, loads
@@ -111,6 +111,9 @@ _invocation = HTTP_SOAP.Invocation
 
 # What a retry of an outgoing REST request is called in the logs.
 _rest_retry_label = 'REST out'
+
+# The transport statuses that read as a connection error to a caller - a TLS handshake that fails is one too
+_connection_statuses = (TransportStatus.Connection_Error, TransportStatus.TLS_Error)
 
 # What a connection sends when it has said nothing at all about its content type - neither an explicit
 # one, nor a SOAP version, nor a data format.
@@ -289,17 +292,18 @@ class BaseHTTPSOAPWrapper:
         # Only user-defined outgoing REST and SOAP connections go to the audit log -
         # internal ones and wrapper-prefixed ones would only flood it.
         is_wrapper_name = self.config['name'].startswith(tuple(Wrapper_Name_Prefix_List))
-        self.needs_audit = (server is not None) and (not self.config['is_internal']) and (not is_wrapper_name)
+        self.can_audit = (server is not None) and (not self.config['is_internal']) and (not is_wrapper_name)
 
-        # A connection whose audit log was turned off explicitly does not write events either
-        if self.needs_audit:
-            self.needs_audit = self.config['is_audit_log_active']
-
-        # Read through self.server rather than the argument - a connection only audits when it was
-        # given a server, so by this point the two are the same thing and self.server is the one
-        # already narrowed to a ParallelServer.
-        if self.needs_audit:
+        # A connection whose audit log was turned off explicitly does not write its traffic, though its health
+        # check's pings are still written, because a check nobody can see is not a check - so the log is opened
+        # for every connection that may write at all. Read through self.server rather than the argument -
+        # a connection only audits when it was given a server, so by this point the two are the same thing
+        # and self.server is the one already narrowed to a ParallelServer.
+        if self.can_audit:
             self.audit_log = AuditLog(self.server.name)
+            self.needs_audit = self.config['is_audit_log_active']
+        else:
+            self.needs_audit = False
 
         self.set_address_data()
         self.set_auth()
@@ -750,17 +754,21 @@ class BaseHTTPSOAPWrapper:
 
             return send_with_retry(retry_policy, send, cid, _rest_retry_label)
 
-        except RequestsTimeout as e:
-            self._push_metrics(start_time, 'timeout')
-            msg = f'Timeout error: {e}'
-            raise BackendInvocationError(cid, msg, needs_msg=True)
-        except RequestsConnectionError as e:
-            self._push_metrics(start_time, 'connection_error')
-            msg = f'Connection error: {e}'
-            raise BackendInvocationError(cid, msg, needs_msg=True)
-        except Exception:
-            self._push_metrics(start_time, 'error')
-            raise
+        except Exception as e:
+
+            # .. a call that failed before any response arrived is classified once, and the classification
+            # .. travels with the error raised, so the audit log writes the same status the metrics counted ..
+            transport_status = classify_transport_error(e)
+            self._push_metrics(start_time, transport_status)
+
+            if transport_status == TransportStatus.Timeout:
+                msg = f'Timeout error: {e}'
+            elif transport_status in _connection_statuses:
+                msg = f'Connection error: {e}'
+            else:
+                raise
+
+            raise BackendInvocationError(cid, msg, needs_msg=True, transport_status=transport_status)
 
 # ################################################################################################################################
 
@@ -774,10 +782,25 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
-    def ping(self, cid:'str', return_response:'bool'=False, log_verbose:'bool'=False, *, ping_path:'str'='/') -> 'any_':
-        """ Pings a given HTTP/SOAP resource
+    def ping(
+        self,
+        cid:'str',
+        return_response:'bool'=False,
+        log_verbose:'bool'=False,
+        *,
+        ping_path:'str'='/',
+        needs_audit:'bool | None'=None,
+    ) -> 'any_':
+        """ Pings a given HTTP/SOAP resource. The ping is written to the audit log as the connection's traffic is,
+        unless the caller says so itself - a scheduled health check asks for its pings to be written whether
+        or not the connection's own audit log is on.
         """
         logger.info('Pinging:`%s`', self.config_no_sensitive)
+
+        if needs_audit is None:
+            needs_audit = self.needs_audit
+        else:
+            needs_audit = needs_audit and self.can_audit
 
         # Session object will write some info to it ..
         verbose = StringIO()
@@ -797,7 +820,7 @@ class BaseHTTPSOAPWrapper:
 
         # .. a ping writes the same request/response pair a regular invocation does, sharing one CID,
         # .. but under the connection's health source, so what the check measures stays its own ..
-        if self.needs_audit:
+        if needs_audit:
             self._insert_audit_event(cid, AuditEvent.Request_Sent, f'{ping_method} {address}', AuditOutcome.OK, '',
                 method=ping_method, is_health_check=True)
 
@@ -807,14 +830,15 @@ class BaseHTTPSOAPWrapper:
                 {'zato_pre_request':zato_pre_request_hook})
         except Exception as e:
 
-            # .. record the error in the audit log before re-raising, sharing the request's CID ..
-            if self.needs_audit:
+            # .. record the error in the audit log before re-raising, sharing the request's CID
+            # .. and naming how the call failed in the status, the way a response names its HTTP status ..
+            if needs_audit:
                 self._insert_audit_event(cid, AuditEvent.Response_Received, f'{ping_method} {address}',
-                    AuditOutcome.Error, str(e), is_health_check=True)
+                    AuditOutcome.Error, str(e), status=classify_transport_error(e), is_health_check=True)
             raise
 
         # .. record the received response in the audit log, with the HTTP status it came with ..
-        if self.needs_audit:
+        if needs_audit:
             if response.ok:
                 response_outcome = AuditOutcome.OK
             else:
@@ -1250,9 +1274,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
         except Exception as e:
 
-            # .. record the error in the audit log before re-raising, sharing the request's CID ..
+            # .. record the error in the audit log before re-raising, sharing the request's CID
+            # .. and naming how the call failed in the status, the way a response names its HTTP status ..
             if needs_audit:
-                self._insert_audit_event(cid, AuditEvent.Response_Received, f'{method} {address}', AuditOutcome.Error, str(e))
+                self._insert_audit_event(cid, AuditEvent.Response_Received, f'{method} {address}', AuditOutcome.Error, str(e),
+                    status=classify_transport_error(e))
             raise
 
         response = cast_('Response', response)

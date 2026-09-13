@@ -376,7 +376,7 @@ class TestObjectSection:
 
 # ################################################################################################################################
 
-    def test_a_rest_connection_is_read_off_its_facade(self, llm_address:'any_', repo_dir:'str') -> 'None':
+    def test_a_rest_connection_without_a_row_is_named_alone(self, llm_address:'any_', repo_dir:'str') -> 'None':
 
         _seed_error_events()
 
@@ -393,9 +393,9 @@ class TestObjectSection:
 
         section = _object_section(LLMTestHandler.prompts[0])
 
-        assert f'name: {_conn_name}' in section
-        assert 'address_host: https://crm.example.com' in section
-        assert 'timeout: 10' in section
+        # No outgoing REST connection of the name is stored, so its name is all the Object section has to say
+        assert f'Name: {_conn_name}' in section
+        assert 'Address' not in section
 
 # ################################################################################################################################
 # ################################################################################################################################

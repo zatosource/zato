@@ -173,9 +173,9 @@ class TestErrorRateFacts:
 
         # Two failed per-hop deliveries - the request-sent type is what their source
         # declared resubmittable, and the newer of the two is the one to point at
-        _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _channel_name,
+        _ = audit_log.insert(AuditSource.FHIR, AuditEvent.Request_Sent, _channel_name,
             cid='resub-er-1', outcome=AuditOutcome.Error)
-        newest_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _channel_name,
+        newest_id = audit_log.insert(AuditSource.FHIR, AuditEvent.Request_Sent, _channel_name,
             cid='resub-er-2', outcome=AuditOutcome.Error)
 
         facts = collect_error_rate_facts(engine, _window_seconds, now)
@@ -208,7 +208,7 @@ class TestErrorRateFacts:
         engine = get_audit_engine()
         now = utcnow()
 
-        _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _channel_name,
+        _ = audit_log.insert(AuditSource.FHIR, AuditEvent.Request_Sent, _channel_name,
             cid='resub-er-4', outcome=AuditOutcome.OK)
 
         facts = collect_error_rate_facts(engine, _window_seconds, now)

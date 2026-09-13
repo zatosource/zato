@@ -910,27 +910,18 @@ class HTTP_SOAP:
         # Name of the internal service that the auto-created jobs invoke to ping a connection
         Dispatch_Service = 'zato.connection.health-check.run'
 
-        class NotifyOn:
-            Failures = 'failures'
-            All = 'all'
-
-        NotifyOnList = (NotifyOn.Failures, NotifyOn.All)
-
         # Names of the keys in the extra data that an auto-created job carries
         Extra_Conn_ID = 'conn_id'
         Extra_Conn_Name = 'conn_name'
         Extra_Conn_Type = 'conn_type'
 
-        # Names of the opaque attributes that a connection carries to describe its health check
+        # Names of the opaque attributes that a connection carries to describe its health check - how often
+        # it pings, and the job that does. A check's outcome reaches people through the connection's alerts.
         Field_Run_Every = 'health_check_run_every'
         Field_Run_Unit = 'health_check_run_unit'
         Field_Job_ID = 'health_check_job_id'
-        Field_Callback_Type = 'health_check_callback_type'
-        Field_Callback_Name = 'health_check_callback_name'
-        Field_Notify_On = 'health_check_notify_on'
 
-        FieldList = (Field_Run_Every, Field_Run_Unit, Field_Job_ID, Field_Callback_Type, Field_Callback_Name,
-            Field_Notify_On)
+        FieldList = (Field_Run_Every, Field_Run_Unit, Field_Job_ID)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -13,8 +13,9 @@ from traceback import format_exc
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_channels, apply_defaults, get_defaults, get_field_kinds, \
-     get_field_names, is_alert_channel, storage_name, Kind_Active
+from zato.common.alerting.object_config import alert_type_by_http_soap, alert_type_channels, alert_type_rest, apply_defaults, \
+     get_alert_type, get_defaults, get_field_kinds, get_field_names, storage_name, Kind_Active
+from zato.common.alerting.status_codes import parse_status_codes
 from zato.common.alerting.time_slots import validate_silence_slots
 from zato.common.api import AS2, AS4, CONNECTION, Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, query_parameters, \
      SCHEDULER, SEC_DEF_TYPE, SchedulerLink, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
@@ -134,31 +135,49 @@ _pem_secret_fields = AS2.Secret_Fields + AS4.Secret_Fields
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The alert settings a REST or SOAP channel carries, under their storage names - the switches as booleans,
-# the numbers and the durations as integers, the rest as text, each optional so that a caller
-# that knows nothing of them sends nothing.
+# The alert settings a REST or SOAP channel and an outgoing REST connection carry, under their storage names -
+# the switches as booleans, the numbers and the durations as integers, the rest as text, each optional so that
+# a caller that knows nothing of them sends nothing. The two types share most names, and a name both have is
+# of one kind in both, so the input covers the union of the two once.
 _alert_toggle_kinds = (Kind_Active, config_map.Kind_Toggle, config_map.Kind_Ruleset_Toggle)
 _alert_int_kinds = (config_map.Kind_Number, config_map.Kind_Duration)
 
 _alert_fields = []
 _alert_storage_names = []
 
-for _alert_field_name, _alert_field_kind in get_field_kinds(alert_type_channels).items():
+# The storage names of each type's own fields - what is skipped when an object of the other type is written
+_alert_storage_names_by_type = {}
 
-    _alert_storage_name = storage_name(_alert_field_name)
-    _alert_storage_names.append(_alert_storage_name)
+for _alert_type in alert_type_by_http_soap.values():
 
-    if _alert_field_kind in _alert_toggle_kinds:
-        _alert_fields.append(Boolean('-' + _alert_storage_name))
-    elif _alert_field_kind in _alert_int_kinds:
-        _alert_fields.append(Int('-' + _alert_storage_name))
-    else:
-        _alert_fields.append('-' + _alert_storage_name)
+    if _alert_type in _alert_storage_names_by_type:
+        continue
+
+    _alert_storage_names_by_type[_alert_type] = []
+
+    for _alert_field_name, _alert_field_kind in get_field_kinds(_alert_type).items():
+
+        _alert_storage_name = storage_name(_alert_field_name)
+        _alert_storage_names_by_type[_alert_type].append(_alert_storage_name)
+
+        if _alert_storage_name in _alert_storage_names:
+            continue
+
+        _alert_storage_names.append(_alert_storage_name)
+
+        if _alert_field_kind in _alert_toggle_kinds:
+            _alert_fields.append(Boolean('-' + _alert_storage_name))
+        elif _alert_field_kind in _alert_int_kinds:
+            _alert_fields.append(Int('-' + _alert_storage_name))
+        else:
+            _alert_fields.append('-' + _alert_storage_name)
 
 _alert_input = tuple(_alert_fields)
 
-# The one alert setting that is validated beyond its type - the silence slots travel as a JSON list in a string
+# The alert settings that are validated beyond their type - a channel's silence slots travel as a JSON list
+# in a string, and an outgoing REST connection's status codes as a comma-separated list of codes and classes
 _alert_silence_slots_name = storage_name(config_map.Silence_Slots_Field_Name)
+_alert_status_codes_name = storage_name(config_map.Status_Codes_Field_Name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -251,31 +270,12 @@ def _has_scheduler_config(service:'AdminService', input:'Bunch') -> 'bool':
 
 # ################################################################################################################################
 
-def _has_health_check_config(service:'AdminService', input:'Bunch') -> 'bool':
-    """ Returns True if the health check fields were given on input, raising an error if only some of them were.
+def _has_health_check_config(input:'Bunch') -> 'bool':
+    """ Returns True if a health check was asked for on input - its run-every is the one thing that says so,
+    the check's outcome reaching people through the connection's alerts rather than through a callback of its own.
     """
-    run_every = input.health_check_run_every
-    callback_type = input.health_check_callback_type
-    callback_name = input.health_check_callback_name
-
-    # Collect the core fields that were actually filled in
-    given = []
-
-    for value in (run_every, callback_type, callback_name):
-        if value:
-            given.append(value)
-
-    given_count = len(given)
-
-    # Nothing was given, which means that no job is expected to exist
-    if not given_count:
-        return False
-
-    # Only some of the fields were given, which we cannot accept
-    if given_count != 3:
-        raise BadRequest(service.cid, 'Health check options require run-every, callback type and callback name together')
-
-    return True
+    out = bool(input.health_check_run_every)
+    return out
 
 # ################################################################################################################################
 
@@ -346,8 +346,6 @@ def _validate_invocation_config(service:'AdminService', input:'Bunch') -> 'None'
 
     # .. callbacks must be fully configured or absent ..
     _validate_callback(service, input.callback_type, input.callback_name, _invocation.Field_Callback_Type)
-    _validate_callback(service, input.health_check_callback_type, input.health_check_callback_name,
-        _health_check.Field_Callback_Type)
 
     # .. the scheduler fields must describe a job that can be created ..
     if _has_scheduler_config(service, input):
@@ -355,18 +353,9 @@ def _validate_invocation_config(service:'AdminService', input:'Bunch') -> 'None'
             service, input.scheduler_run_every, input.scheduler_run_unit, 'Scheduler')
 
     # .. and so must the health check fields.
-    if _has_health_check_config(service, input):
+    if _has_health_check_config(input):
         input.health_check_run_every = _validate_run_every(
             service, input.health_check_run_every, input.health_check_run_unit, 'Health check')
-
-        notify_on = input.health_check_notify_on
-        if not notify_on:
-            notify_on = _health_check.NotifyOn.Failures
-        if notify_on not in _health_check.NotifyOnList:
-            raise BadRequest(service.cid, f'Health check notify-on `{notify_on}` is not one of `{_health_check.NotifyOnList}`')
-
-        # Store the normalized value back so a default is saved explicitly
-        input.health_check_notify_on = notify_on
 
 # ################################################################################################################################
 
@@ -500,7 +489,8 @@ def _sync_linked_jobs(service:'AdminService', input:'Bunch', conn_id:'int') -> '
         extra=scheduler_extra,
     )
 
-    # .. and the health check job pings the connection, delivering each outcome to the callback.
+    # .. and the health check job pings the connection, each ping writing its outcome to the audit log
+    # .. under the connection's health source, where the connection's alerts read it.
     if input.transport == URL_TYPE.SOAP:
         health_check_conn_type = SchedulerLink.ConnType.SOAP_Outgoing
     else:
@@ -510,9 +500,6 @@ def _sync_linked_jobs(service:'AdminService', input:'Bunch', conn_id:'int') -> '
         _health_check.Extra_Conn_ID: conn_id,
         _health_check.Extra_Conn_Name: input.name,
         _health_check.Extra_Conn_Type: health_check_conn_type,
-        _health_check.Field_Callback_Type: input.health_check_callback_type,
-        _health_check.Field_Callback_Name: input.health_check_callback_name,
-        _health_check.Field_Notify_On: input.health_check_notify_on,
     })
 
     # Health check jobs have no user-facing start date so they start right away
@@ -523,7 +510,7 @@ def _sync_linked_jobs(service:'AdminService', input:'Bunch', conn_id:'int') -> '
         input,
         conn_id,
         kind=SchedulerLink.KindType.HealthCheck,
-        has_config=_has_health_check_config(service, input),
+        has_config=_has_health_check_config(input),
         job_id=input.get(_health_check.Field_Job_ID),
         job_name=_health_check.Job_Prefix + input.name,
         job_service=_health_check.Dispatch_Service,
@@ -735,9 +722,10 @@ class GetList(_BaseGet):
             for name in _pem_secret_fields:
                 _ = item.pop(name, None)
 
-            # .. a channel created before a setting existed reads the same as one created after it ..
-            if is_alert_channel(item['connection'], item['transport']):
-                apply_defaults(alert_type_channels, item)
+            # .. a channel or an outgoing REST connection created before a setting existed reads the same
+            # .. as one created after it ..
+            if alert_type := get_alert_type(item['connection'], item['transport']):
+                apply_defaults(alert_type, item)
 
             # .. if we are here, it means that this element is to be returned ..
             out.append(item)
@@ -782,34 +770,49 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 # ################################################################################################################################
 
     def _prepare_alert_settings(self, input:'Bunch', skip_opaque:'anylist', stored:'strdict') -> 'None':
-        """ The alert settings of the object being written - a REST or SOAP channel has every one of them, the ones
-        the caller sent as sent, the rest as the channel already stores them or, on a new channel, at their
-        defaults. Any other object has none and the names are skipped when the opaque attributes are stored.
+        """ The alert settings of the object being written - a REST or SOAP channel and an outgoing REST connection
+        have every one of their type's, the ones the caller sent as sent, the rest as the object already stores them
+        or, on a new object, at their defaults. Any other object has none, and the names of the other type are
+        skipped either way when the opaque attributes are stored.
         """
-        if not is_alert_channel(input.connection, input.transport):
+        alert_type = get_alert_type(input.connection, input.transport)
+
+        if not alert_type:
             skip_opaque.extend(_alert_storage_names)
             return
 
-        defaults = get_defaults(alert_type_channels)
+        for name in _alert_storage_names:
+            if name not in _alert_storage_names_by_type[alert_type]:
+                skip_opaque.append(name)
 
-        for name in get_field_names(alert_type_channels):
+        defaults = get_defaults(alert_type)
+
+        for name in get_field_names(alert_type):
             key = storage_name(name)
 
             # A setting the caller sent stands ..
             if input.get(key) is not None:
                 continue
 
-            # .. one it did not send is what the channel already stores ..
+            # .. one it did not send is what the object already stores ..
             if key in stored:
                 input[key] = stored[key]
 
-            # .. or the default when the channel stores nothing yet.
+            # .. or the default when the object stores nothing yet.
             else:
                 input[key] = defaults[name]
 
         # A slot without both ends, a bad HH:MM or a silence below the least allowed is refused here,
-        # before anything is written
-        _ = validate_silence_slots(input[_alert_silence_slots_name])
+        # before anything is written ..
+        if alert_type == alert_type_channels:
+            _ = validate_silence_slots(input[_alert_silence_slots_name])
+
+        # .. and so is a status code that is neither three digits nor a class such as 5xx.
+        if alert_type == alert_type_rest:
+            try:
+                _ = parse_status_codes(input[_alert_status_codes_name])
+            except ValueError as e:
+                raise BadRequest(self.cid, str(e))
 
 # ################################################################################################################################
 

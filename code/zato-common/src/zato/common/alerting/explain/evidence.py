@@ -19,7 +19,8 @@ from __future__ import annotations
 from datetime import timedelta
 
 # Zato
-from zato.common.alerting.collectors.common import response_event_type_by_source, Window_Seconds_By_Measure_Key
+from zato.common.alerting.collectors.common import channel_sources, response_event_type_by_source, \
+    Window_Seconds_By_Measure_Key
 from zato.common.audit_log.common import get_source_label
 from zato.common.util.api import pluralize
 
@@ -91,6 +92,16 @@ _non_measure_keys = ('source', 'object_name', 'window_seconds', 'last_error_even
 def is_channel_source(source:'str') -> 'bool':
     """ Whether a source's rows are the calls a channel received - their names are services and callers, not files.
     """
+    out = source in channel_sources
+    return out
+
+# ################################################################################################################################
+
+def groups_by_status(source:'str') -> 'bool':
+    """ Whether a source's failures are told apart by their status line first - the calls a channel received
+    and the calls an outgoing connection made both carry one, a `401 Unauthorized` or a `timeout`, and a 401
+    and a 500 with one text are two different failures.
+    """
     out = source in response_event_type_by_source
     return out
 
@@ -116,9 +127,9 @@ def _error_text(row:'stranydict') -> 'str':
 
 # ################################################################################################################################
 
-def _channel_error_text(row:'stranydict') -> 'str':
-    """ What a channel's row says went wrong - its status line first, because a 401 and a 500 with one
-    text are two different failures, and its error text after it when it has one of its own.
+def _status_error_text(row:'stranydict') -> 'str':
+    """ What a channel's or an outgoing connection's row says went wrong - its status line first, because
+    a 401 and a 500 with one text are two different failures, and its error text after it when it has one of its own.
     """
     out = _error_text(row)
 
@@ -146,17 +157,18 @@ def _add_once(names:'strlist', name:'str') -> 'None':
 def group_failures(rows:'dictlist', source:'str'='') -> 'dictlist':
     """ The rows grouped by identical error text - each group with its count, the time of its
     first and its last row and the files or endpoints it touched, the groups in the order of
-    their newest rows, newest first, which is the order the rows arrive in. A channel's rows
-    are grouped by their status line and error text together, and each group also collects
-    the callers whose calls it holds, each caller once.
+    their newest rows, newest first, which is the order the rows arrive in. A channel's and an outgoing
+    connection's rows are grouped by their status line and error text together, and a channel's group
+    also collects the callers whose calls it holds, each caller once.
     """
     by_text:'dict[str, stranydict]' = {}
     is_channel = is_channel_source(source)
+    has_status = groups_by_status(source)
 
     for row in rows:
 
-        if is_channel:
-            text = _channel_error_text(row)
+        if has_status:
+            text = _status_error_text(row)
         else:
             text = _error_text(row)
 

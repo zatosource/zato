@@ -15,9 +15,11 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_channels, apply_defaults, channel_sources, conn_type_to_alert_type, \
-    from_storage, is_alert_channel, Email_Connection_Field, Is_Active_Field, LLM_Connection_Field
+from zato.common.alerting.object_config import alert_type_by_http_soap, alert_type_channels, alert_type_rest, apply_defaults, \
+    channel_sources, conn_type_to_alert_type, from_storage, get_alert_type, Email_Connection_Field, Is_Active_Field, \
+    LLM_Connection_Field
 from zato.common.alerting.time_slots import resolve_silence
+from zato.common.audit_log.common import AuditSource
 from zato.common.odb.model import GenericConn, HTTPSOAP
 from zato.common.util.file_transfer_scheduler import get_schedule_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -44,9 +46,12 @@ _silence_rules = ['Channel_Silent']
 _silence_default = 'silence_seconds'
 
 # The audit sources whose objects carry settings of a type, where that is not every source the type
-# matches on - the channels type matches on three channel kinds, and REST and SOAP channels have an Alerts tab.
+# matches on - the channels type matches on three channel kinds, and REST and SOAP channels have an Alerts tab,
+# the rest type matches on REST and SOAP outgoing connections, and the REST ones have the tab, their own
+# windows reaching their traffic source while their check source keeps its hour.
 _object_sources_by_type = {
     alert_type_channels: list(channel_sources),
+    alert_type_rest: [AuditSource.REST_Outgoing],
 }
 
 # ################################################################################################################################
@@ -64,9 +69,9 @@ def _settings_from_item(alert_type:'str', item:'anydict') -> 'stranydict':
 def load_object_settings(session:'SASession', cluster_id:'int') -> 'anydict':
     """ The alert settings of every object whose type has them, by alert type and then by the name a fact
     about the object goes by - a connection's own name, and the name of each of its file transfer schedules,
-    because the arrival, expectation and run facts are keyed by schedule, not by connection, and a REST
-    channel's own name. An object that never stored a setting reads at the seeded defaults, the same way
-    the Dashboard shows it.
+    because the arrival, expectation and run facts are keyed by schedule, not by connection, and the own
+    name of a REST or SOAP channel and of an outgoing REST connection. An object that never stored a setting
+    reads at the seeded defaults, the same way the Dashboard shows it.
     """
 
     # Our response to produce
@@ -76,7 +81,9 @@ def load_object_settings(session:'SASession', cluster_id:'int') -> 'anydict':
         if alert_type not in out:
             out[alert_type] = {}
 
-    out[alert_type_channels] = {}
+    for alert_type in alert_type_by_http_soap.values():
+        if alert_type not in out:
+            out[alert_type] = {}
 
     conn_types = list(conn_type_to_alert_type)
 
@@ -101,20 +108,21 @@ def load_object_settings(session:'SASession', cluster_id:'int') -> 'anydict':
         for schedule in get_schedule_list(session, row.id):
             by_object[schedule['name']] = values
 
-    # The REST and SOAP channels carry their settings in the same flat keys, in their own table
-    channel_rows = session.query(HTTPSOAP).\
+    # The REST and SOAP channels and the outgoing REST connections carry their settings in the same flat keys,
+    # in their own table, each row under the type its connection and transport say
+    http_soap_rows = session.query(HTTPSOAP).\
         filter(HTTPSOAP.cluster_id==cluster_id).\
         all()
 
-    by_channel = out[alert_type_channels]
+    for http_soap_row in http_soap_rows:
 
-    for channel_row in channel_rows:
+        alert_type = get_alert_type(http_soap_row.connection, http_soap_row.transport)
 
-        if not is_alert_channel(channel_row.connection, channel_row.transport):
+        if not alert_type:
             continue
 
-        item = dict(parse_instance_opaque_attr(channel_row))
-        by_channel[channel_row.name] = _settings_from_item(alert_type_channels, item)
+        item = dict(parse_instance_opaque_attr(http_soap_row))
+        out[alert_type][http_soap_row.name] = _settings_from_item(alert_type, item)
 
     return out
 

@@ -75,15 +75,20 @@ Measure_Connection_Failures = 'connection_failures'
 Window_Seconds_By_Measure_Key = 'window_seconds_by_measure'
 
 # The one event type of a source that carries a call's outcome - a channel writes a request
-# event and a response event per call, and only the response says how the call went.
-# A source absent from here has every one of its events counted.
+# event and a response event per call, an outgoing REST connection a request-sent and a response-received
+# one, and only the response says how the call went. A source absent from here has every one of its events counted.
 response_event_type_by_source = {
-    AuditSource.REST_Channel: AuditEvent.Response_Sent,
-    AuditSource.SOAP_Channel: AuditEvent.Response_Sent,
+    AuditSource.REST_Channel:  AuditEvent.Response_Sent,
+    AuditSource.SOAP_Channel:  AuditEvent.Response_Sent,
+    AuditSource.REST_Outgoing: AuditEvent.Response_Received,
 }
 
-# The channels - the sources with a response event, which are the ones whose rows carry alert settings of their own
-channel_sources = tuple(response_event_type_by_source)
+# The channels - the sources whose rows are the calls a service received, and whose HTTPSOAP rows carry
+# alert settings under the channels type
+channel_sources = (AuditSource.REST_Channel, AuditSource.SOAP_Channel)
+
+# The outgoing connections whose responses are counted by their status code
+outgoing_sources = (AuditSource.REST_Outgoing,)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -155,9 +160,10 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
         'server_error_rate': 0.0,
 
         # The responses of an outgoing connection - how many arrived with each status code, e.g. {'503': 2},
-        # how many of them carried a code the connection alerts on and how many calls failed before
-        # any response arrived, be it a timeout, a refused connection or a TLS failure.
+        # how many of them carried a code the connection alerts on, by code and in all, and how many calls
+        # failed before any response arrived, be it a timeout, a refused connection or a TLS failure.
         'status_counts': {},
+        'status_code_counts': {},
         'status_code_count': 0,
         'connection_failure_count': 0,
 

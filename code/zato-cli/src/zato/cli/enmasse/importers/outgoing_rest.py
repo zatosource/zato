@@ -14,6 +14,8 @@ from json import loads
 # Zato
 from zato.cli.enmasse.util import as_row_list, assign_security, Invocation_Row_Fields, preprocess_item, \
     security_needs_update, serialize_invocation_rows, sync_invocation_jobs
+from zato.cli.enmasse.util.alerts import alerts_need_update, take_alert_attrs
+from zato.common.alerting.object_config import alert_type_rest, Alerts_Key
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, to_json
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -38,6 +40,9 @@ connection_extra_field_defaults = {
     'validate_tls': True,
     'is_audit_log_active': True,
 }
+
+# What the alert settings name the object as in the errors they raise
+_connection_type = 'outgoing REST'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -106,9 +111,9 @@ class OutgoingRESTImporter:
 
                 needs_update = False
 
-                # Compare standard attributes (excluding security)
+                # Compare standard attributes - security and the alert settings are checked separately
                 for key, value in item.items():
-                    if key != 'security':
+                    if key not in ('security', Alerts_Key):
 
                         # Row-based invocation fields are compared as lists no matter
                         # which of the two storage forms each side uses.
@@ -129,6 +134,10 @@ class OutgoingRESTImporter:
                 if security_needs_update(item, db_def, self.importer):
                     needs_update = True
 
+                # Check the alert settings
+                if alerts_need_update(item, db_def, alert_type_rest):
+                    needs_update = True
+
                 if needs_update:
                     item['id'] = db_def['id']
                     logger.info('Will update %s with id=%s', name, db_def['id'])
@@ -145,6 +154,9 @@ class OutgoingRESTImporter:
 
         name = outgoing_def['name']
         logger.info('Creating new outgoing REST connection: %s', name)
+
+        # The alert settings leave the definition before it reaches the row's own attributes
+        alert_attrs = take_alert_attrs(outgoing_def, alert_type_rest, _connection_type, session)
 
         outgoing = HTTPSOAP()
         outgoing.name = name
@@ -172,6 +184,9 @@ class OutgoingRESTImporter:
             if key not in outgoing_def:
                 outgoing_def[key] = value
 
+        # The alert settings go into the opaque attributes, every one of them
+        outgoing_def.update(alert_attrs)
+
         # Row-based invocation fields are stored the way the Dashboard stores them - as JSON strings
         serialize_invocation_rows(outgoing_def)
 
@@ -196,6 +211,9 @@ class OutgoingRESTImporter:
 
         outgoing = session.query(HTTPSOAP).filter_by(id=outgoing_id).one()
 
+        # The alert settings leave the definition before it reaches the row's own attributes
+        alert_attrs = take_alert_attrs(outgoing_def, alert_type_rest, _connection_type, session)
+
         for key, value in outgoing_def.items():
             if key not in ['security', 'security_name']:
                 setattr(outgoing, key, value)
@@ -206,6 +224,9 @@ class OutgoingRESTImporter:
         for key, value in connection_extra_field_defaults.items():
             if key not in outgoing_def:
                 outgoing_def[key] = value
+
+        # The alert settings go into the opaque attributes, every one of them
+        outgoing_def.update(alert_attrs)
 
         # Row-based invocation fields are stored the way the Dashboard stores them - as JSON strings
         serialize_invocation_rows(outgoing_def)

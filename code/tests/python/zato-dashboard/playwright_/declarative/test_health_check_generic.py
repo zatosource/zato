@@ -16,6 +16,7 @@ import pytest
 
 # Zato
 from zato.common.api import ZATO_NONE
+from zato.common.audit_log.api import AuditSource
 from zato.common.test import rand_string
 from zato.common.test.playwright_pubsub import open_create_dialog, submit_create_form
 
@@ -29,8 +30,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-from declarative import Callback_Store_Service, Delivery_Timeout, fill_rest_invocation_tabs, fill_soap_invocation_tabs, \
-    job_row_exists, read_callback_entries
+from audit_log_ui import get_row_event, get_row_outcome, get_rows, goto_audit_log
+from declarative import Delivery_Timeout, fill_rest_invocation_tabs, fill_soap_invocation_tabs, job_row_exists
 from http_test_server import HTTPTestServer
 from rest_outconn import delete_outconn, edit_outconn, fill_outconn_form, get_outconn_id, open_outconn_page, \
     wait_for_outconn_row
@@ -45,17 +46,19 @@ logger = logging.getLogger(__name__)
 _Test_Name_Prefix = 'test.health.check.generic.' + rand_string() + '.'
 
 # How long to sleep between the polling attempts for a health check outcome
-_Poll_Interval = 0.5
+_Poll_Interval = 1.0
 
-# The health check fields every connection in this module is created with -
-# a one-second schedule notifying the callback-store service about every outcome.
+# The health check every connection in this module is created with - a ping every second,
+# each ping's outcome landing in the audit log under the connection's health source.
 _Health_Check_Options = {
     'health_check_run_every': '1',
-    'health_check_run_unit': 'seconds',
-    'health_check_notify_on': 'all',
-    'health_check_callback_type': 'service',
-    'health_check_callback_name': Callback_Store_Service,
+    'health_check_run_unit': 'second',
 }
+
+# What a ping's completing event reads as on the audit log page, and its outcomes
+_Event_Response_Received_Label = 'Response received'
+_Outcome_OK = 'ok'
+_Outcome_Error = 'error'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,26 +89,36 @@ def find_closed_port() -> 'int':
 
 # ################################################################################################################################
 
-def wait_for_health_outcome(conn_name:'str', is_ok:'bool', timeout:'float'=Delivery_Timeout) -> 'anydict':
-    """ Waits until the callback store receives a health check outcome of the given connection
-    with the given health flag and returns it - each outcome carries its connection's name.
+def wait_for_health_outcome(page:'Page', base_url:'str', source:'str', conn_name:'str', outcome:'str',
+    timeout:'float'=Delivery_Timeout) -> 'None':
+    """ Waits until the audit log of a connection's health source holds a ping's response with the given
+    outcome - a check that came back is recorded as ok, one that did not as an error naming what stopped it.
+    The page is reloaded on each attempt, so the newest events are the ones read.
     """
     deadline = time.monotonic() + timeout
 
     while time.monotonic() < deadline:
-        entries = read_callback_entries(conn_name)
-        for entry in entries:
-            if entry['is_ok'] is is_ok:
-                logger.info('[wait_for_health_outcome] found: %s', entry)
-                return entry
+
+        goto_audit_log(page, base_url, source, conn_name)
+
+        for row in get_rows(page):
+
+            if get_row_event(row) != _Event_Response_Received_Label:
+                continue
+
+            if get_row_outcome(page, row) == outcome:
+                logger.info('[wait_for_health_outcome] found a `%s` response of `%s` under `%s`', outcome, conn_name, source)
+                return
+
         time.sleep(_Poll_Interval)
 
-    raise Exception(f'No health outcome with is_ok={is_ok} for `{conn_name}` arrived within {timeout}s')
+    raise Exception(f'No health check response with outcome `{outcome}` for `{conn_name}` arrived within {timeout}s')
 
 # ################################################################################################################################
 
 def create_health_checked_rest_outconn(page:'Page', base_url:'str', name:'str', host:'str', url_path:'str') -> 'str':
-    """ Creates an outgoing REST connection with the module's health check profile and returns its ID.
+    """ Creates an outgoing REST connection with the module's health check and returns its ID.
+    The check is a line of the Alerts tab, so this is where it is filled in.
     """
 
     # Navigate to the outgoing REST connections page and open the create dialog ..
@@ -120,7 +133,7 @@ def create_health_checked_rest_outconn(page:'Page', base_url:'str', name:'str', 
         'security_value': ZATO_NONE,
     })
 
-    # .. fill the Health check tab ..
+    # .. fill the health check line of the Alerts tab ..
     fill_rest_invocation_tabs(page, _Health_Check_Options, 'create')
 
     # .. submit and wait for the row.
@@ -133,7 +146,7 @@ def create_health_checked_rest_outconn(page:'Page', base_url:'str', name:'str', 
 # ################################################################################################################################
 
 def create_health_checked_soap_outconn(page:'Page', base_url:'str', name:'str', host:'str', url_path:'str') -> 'str':
-    """ Creates an outgoing SOAP connection with the module's health check profile and returns its ID.
+    """ Creates an outgoing SOAP connection with the module's health check and returns its ID.
     """
 
     # Navigate to the outgoing SOAP connections page and open the create dialog ..
@@ -163,9 +176,9 @@ def create_health_checked_soap_outconn(page:'Page', base_url:'str', name:'str', 
 # ################################################################################################################################
 
 class TestHealthCheckGeneric:
-    """ Tests for the generic scheduled health check component - one reusable Health check tab
-    and one dispatch service shared by every connection type with a ping, proven here
-    on outgoing REST and outgoing SOAP connections.
+    """ Tests for the generic scheduled health check component - one dispatch service shared by every
+    connection type with a ping, each ping's outcome recorded in the audit log under the connection's
+    health source, where the connection's alerts read it - proven here on outgoing REST and outgoing SOAP.
     """
 
 # ################################################################################################################################
@@ -178,8 +191,9 @@ class TestHealthCheckGeneric:
         http_test_server:'HTTPTestServer',
         ) -> 'None':
         """ A REST connection with a health check is pinged by the scheduler through the auto-created
-        health. job and each outcome reaches the callback - healthy while the endpoint is up,
-        a failure with an error once the connection points at a closed port.
+        health. job and each outcome lands in the audit log under the rest-outgoing-health source -
+        ok while the endpoint is up, an error once the connection points at a closed port. The
+        connection's own audit log is off, and the check is recorded all the same.
         """
 
         page = logged_in_page
@@ -196,12 +210,8 @@ class TestHealthCheckGeneric:
         # .. the auto-created job is on the scheduler page under the health. prefix ..
         assert job_row_exists(page, base_url, 'health.' + name), f'Job "health.{name}" should exist after create'
 
-        # .. the callback receives a healthy outcome while the endpoint answers ..
-        entry = wait_for_health_outcome(name, True)
-
-        assert entry['conn_name'] == name, f'Expected the connection name in the outcome, got: {entry}'
-        assert entry['error'] == '', f'Expected no error in a healthy outcome, got: {entry}'
-        assert entry['response_time_ms'] >= 0, f'Expected a response time, got: {entry}'
+        # .. the health source records an ok response while the endpoint answers ..
+        wait_for_health_outcome(page, base_url, AuditSource.REST_Outgoing_Health, name, _Outcome_OK)
 
         # .. now point the connection at a closed port ..
         closed_port = find_closed_port()
@@ -210,13 +220,11 @@ class TestHealthCheckGeneric:
         open_outconn_page(page, base_url)
         edit_outconn(page, outconn_id, {'host': closed_address})
 
-        # .. and the callback receives a failure outcome with the error filled in.
-        entry = wait_for_health_outcome(name, False)
-
-        assert entry['conn_name'] == name, f'Expected the connection name in the failure outcome, got: {entry}'
-        assert entry['error'] != '', f'Expected an error in a failure outcome, got: {entry}'
+        # .. and the health source records an error response once the pings are refused.
+        wait_for_health_outcome(page, base_url, AuditSource.REST_Outgoing_Health, name, _Outcome_Error)
 
         # Clean up - the health check would otherwise keep pinging every second ..
+        open_outconn_page(page, base_url)
         delete_outconn(page, outconn_id)
 
         # .. and the linked job is gone with the connection.
@@ -232,8 +240,8 @@ class TestHealthCheckGeneric:
         soap_test_server:'any_',
         ) -> 'None':
         """ The same health check component works on an outgoing SOAP connection - the auto-created
-        job pings the endpoint and the callback receives healthy outcomes, proving the component
-        is generic across connection types.
+        job pings the endpoint and the soap-outgoing-health source records ok responses, proving
+        the component is generic across connection types.
         """
 
         page = logged_in_page
@@ -248,14 +256,11 @@ class TestHealthCheckGeneric:
         # .. the auto-created job is on the scheduler page under the health. prefix ..
         assert job_row_exists(page, base_url, 'health.' + name), f'Job "health.{name}" should exist after create'
 
-        # .. and the callback receives a healthy outcome.
-        entry = wait_for_health_outcome(name, True)
-
-        assert entry['conn_name'] == name, f'Expected the connection name in the outcome, got: {entry}'
-        assert entry['error'] == '', f'Expected no error in a healthy outcome, got: {entry}'
-        assert entry['response_time_ms'] >= 0, f'Expected a response time, got: {entry}'
+        # .. and the health source records an ok response.
+        wait_for_health_outcome(page, base_url, AuditSource.SOAP_Outgoing_Health, name, _Outcome_OK)
 
         # Clean up - the health check would otherwise keep pinging every second ..
+        open_soap_outconn_page(page, base_url)
         delete_soap_outconn(page, outconn_id)
 
         # .. and the linked job is gone with the connection.

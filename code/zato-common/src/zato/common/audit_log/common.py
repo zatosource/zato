@@ -11,8 +11,15 @@ import os
 from http.client import BAD_GATEWAY, BAD_REQUEST, FORBIDDEN, GATEWAY_TIMEOUT, NOT_FOUND, REQUEST_TIMEOUT, \
     SERVICE_UNAVAILABLE, TOO_MANY_REQUESTS, UNAUTHORIZED, UNPROCESSABLE_ENTITY
 
+# requests
+from requests.exceptions import ConnectionError as RequestsConnectionError, SSLError as RequestsSSLError, \
+    Timeout as RequestsTimeout
+
 # SQLAlchemy
 from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, Numeric, String, Table, Text
+
+# Zato
+from zato.common.exception import BackendInvocationError
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -289,6 +296,44 @@ class AuditOutcome:
 
     # An event still in progress.
     Running = 'running'
+
+# ################################################################################################################################
+
+class TransportStatus:
+    """ The status a response event carries when a call failed before any response arrived - where a response
+    carries its HTTP status line, `503 Service Unavailable`, a failed call names how it failed, so a timeout
+    and a refused connection are told apart from each other and from any HTTP status.
+    """
+    Timeout          = 'timeout'
+    Connection_Error = 'connection-error'
+    TLS_Error        = 'tls-error'
+    Error            = 'error'
+
+# Every status a failed call is written under - what the collectors count as a connection failure
+transport_statuses = (TransportStatus.Timeout, TransportStatus.Connection_Error, TransportStatus.TLS_Error,
+    TransportStatus.Error)
+
+# ################################################################################################################################
+
+def classify_transport_error(e:'Exception') -> 'str':
+    """ The transport status of an exception an outgoing call raised - a timeout, a connection error, a TLS failure
+    or any other error, with a TLS failure told first because requests makes it a kind of connection error.
+    An invocation error the connection already classified answers with what it carries.
+    """
+    if isinstance(e, BackendInvocationError):
+        if e.transport_status:
+            return e.transport_status
+
+    if isinstance(e, RequestsSSLError):
+        out = TransportStatus.TLS_Error
+    elif isinstance(e, RequestsTimeout):
+        out = TransportStatus.Timeout
+    elif isinstance(e, RequestsConnectionError):
+        out = TransportStatus.Connection_Error
+    else:
+        out = TransportStatus.Error
+
+    return out
 
 # ################################################################################################################################
 

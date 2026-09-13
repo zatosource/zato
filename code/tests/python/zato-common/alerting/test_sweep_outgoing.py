@@ -1,0 +1,347 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# One sweep over outgoing REST connections with settings of their own - a connection's own status codes decide
+# which responses the Status_Codes rule counts, timeouts and refused connections raise Connection_Failures, a
+# connection with alerts off is skipped together with its health check, and its own window reaches its traffic
+# source alone while the check source keeps its hour.
+
+# stdlib
+from datetime import timedelta
+
+# SQLAlchemy
+from sqlalchemy import update
+
+# Zato
+from zato.common.alerting.engine import AlertDefaults, AlertTransports
+from zato.common.alerting.object_config import alert_type_rest, get_defaults as get_object_defaults
+from zato.common.alerting.seed.rules_connections import rest_rules
+from zato.common.alerting.sweep import run_sweep
+from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.common import TransportStatus
+from zato.common.rule_engine.loading import load_documents
+from zato.common.rule_engine.parser import parse_data_details
+from zato.common.util.api import utcnow
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from datetime import datetime
+    from sqlalchemy.engine import Engine
+    from zato.common.alerting.sweep import rule_engine_rule_list, SweepResult
+    from zato.common.typing_ import any_, anydict, anylist, stranydict
+    any_ = any_
+    anydict = anydict
+    anylist = anylist
+    datetime = datetime
+    Engine = Engine
+    rule_engine_rule_list = rule_engine_rule_list
+    stranydict = stranydict
+    SweepResult = SweepResult
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The server name all the test events are written under
+_server_name = 'test-sweep-outgoing-server'
+
+# The ruleset the connections are judged by - the one the seed ships
+_ruleset_name = 'alerts_rest'
+
+# The connection with settings of its own and the one without any
+_conn_name = 'crm.api'
+_other_conn_name = 'billing.api'
+
+# The addresses the email rules send to
+_addresses = ['ops@example.com']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _TransportRecorder:
+    """ A stand-in for the real transports, remembering everything that went out.
+    """
+    def __init__(self) -> 'None':
+        self.emails:'anylist' = []
+
+    def make(self) -> 'AlertTransports':
+        out = AlertTransports()
+
+        def send_email(addresses:'anylist', subject:'str', body:'str', email_connection:'str'='') -> 'None':
+            self.emails.append((addresses, subject, body))
+
+        def invoke_service(service:'str', payload:'stranydict') -> 'None':
+            pass
+
+        def publish(topic:'str', payload:'stranydict') -> 'None':
+            pass
+
+        def http_post(url:'str', payload:'stranydict') -> 'None':
+            pass
+
+        out.send_email = send_email
+        out.invoke_service = invoke_service
+        out.publish = publish
+        out.http_post = http_post
+
+        return out
+
+# ################################################################################################################################
+
+def _load_rest_rules() -> 'rule_engine_rule_list':
+    """ The seeded rest rules as runtime rules, all of them active.
+    """
+    documents, errors = parse_data_details(rest_rules, _ruleset_name)
+    assert errors == []
+
+    loaded = load_documents(documents)
+
+    out = []
+    for full_name in loaded.rule_names:
+        out.append(loaded.manager[full_name])
+
+    return out
+
+# ################################################################################################################################
+
+def _seed_call(audit_log:'AuditLog', engine:'Engine', now:'datetime', cid:'str', status:'str', *,
+    object_name:'str'=_conn_name, seconds_back:'int'=0, source:'str'=AuditSource.REST_Outgoing) -> 'None':
+    """ Stores the request and response pair one call of a connection leaves behind, moved back in time if asked to.
+    """
+    if status.startswith('2'):
+        outcome = AuditOutcome.OK
+    else:
+        outcome = AuditOutcome.Error
+
+    request_id = audit_log.insert(source, AuditEvent.Request_Sent, object_name, cid=cid, outcome=AuditOutcome.OK)
+
+    response_id = audit_log.insert(source, AuditEvent.Response_Received, object_name, cid=cid,
+        outcome=outcome, status=status, duration_ms=20)
+
+    if seconds_back:
+        event_time_iso = (now - timedelta(seconds=seconds_back)).isoformat()
+
+        statement = update(event_table)
+        statement = statement.where(event_table.c.id.in_([request_id, response_id]))
+        statement = statement.values(event_time_iso=event_time_iso)
+
+        with engine.begin() as connection:
+            _ = connection.execute(statement)
+
+# ################################################################################################################################
+
+def _seed_failures(audit_log:'AuditLog', engine:'Engine', now:'datetime', prefix:'str', count:'int', status:'str', *,
+    object_name:'str'=_conn_name, seconds_back:'int'=0, source:'str'=AuditSource.REST_Outgoing) -> 'None':
+    """ Stores the given number of calls that failed with the status, each followed by a call that went through,
+    so the failures never form an unbroken streak and only the rules about counts and rates see them.
+    """
+    for idx in range(count):
+        _seed_call(audit_log, engine, now, f'{prefix}-{idx}-failed', status, object_name=object_name,
+            seconds_back=seconds_back, source=source)
+        _seed_call(audit_log, engine, now, f'{prefix}-{idx}-ok', '200 OK', object_name=object_name,
+            seconds_back=seconds_back, source=source)
+
+# ################################################################################################################################
+
+def _new_object_settings(**values:'any_') -> 'anydict':
+    """ The object settings of one outgoing REST connection at the defaults, with the given values on top.
+    The LLM stays out of it, so the actions run directly and can be observed.
+    """
+    settings = get_object_defaults(alert_type_rest)
+    settings['use_llm'] = False
+    settings.update(values)
+
+    out = {alert_type_rest: {_conn_name: settings}}
+    return out
+
+# ################################################################################################################################
+
+def _run_rest_sweep(engine:'Engine', audit_log:'AuditLog', now:'datetime', cid:'str',
+    object_settings:'anydict | None') -> 'tuple[SweepResult, _TransportRecorder]':
+    """ Runs one sweep of the seeded rest ruleset with the given object settings.
+    """
+    defaults = AlertDefaults()
+    defaults.email_to = _addresses
+
+    recorder = _TransportRecorder()
+    rules = _load_rest_rules()
+
+    result = run_sweep(engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, cid, now,
+        defaults=defaults, object_settings=object_settings)
+
+    return result, recorder
+
+# ################################################################################################################################
+
+def _rule_names(result:'SweepResult') -> 'list':
+    """ The names of the rules that dispatched an action, in order.
+    """
+    out = []
+    for rule_name, _ in result.dispatched:
+        out.append(rule_name)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestOutgoingRestSweep:
+
+    def test_the_default_codes_fire_on_a_503_and_not_on_a_404(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Three 404s - not among the default 401, 403 and 5xx, and too few for the error rate ..
+        _seed_failures(audit_log, engine, now, 'nf', 3, '404 Not Found')
+        _seed_failures(audit_log, engine, now, 'ok', 30, '200 OK')
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-rest-default-1', None)
+
+        assert result.raised_count == 0
+        assert recorder.emails == []
+
+        # .. and three 503s are.
+        _seed_failures(audit_log, engine, now, 'down', 3, '503 Service Unavailable')
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-rest-default-2', None)
+
+        assert _rule_names(result) == ['Status_Codes']
+        assert len(recorder.emails) == 1
+
+        _, _, body = recorder.emails[0]
+        assert _conn_name in body
+        assert '3 responses with a status the connection alerts on (503 x3)' in body
+
+# ################################################################################################################################
+
+    def test_the_connections_own_codes_stand_in_for_the_default(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_failures(audit_log, engine, now, 'nf', 3, '404 Not Found')
+        _seed_failures(audit_log, engine, now, 'ok', 30, '200 OK')
+
+        # The connection alerts on 404s of its own accord ..
+        object_settings = _new_object_settings(status_codes='404')
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-rest-own-1', object_settings)
+
+        assert _rule_names(result) == ['Status_Codes']
+
+        _, _, body = recorder.emails[0]
+        assert '3 responses with a status the connection alerts on (404 x3)' in body
+
+        # .. and the other way round - 503s the connection does not alert on raise nothing for it.
+        _seed_failures(audit_log, engine, now, 'down', 3, '503 Service Unavailable', object_name=_other_conn_name)
+        _seed_failures(audit_log, engine, now, 'ok-other', 30, '200 OK', object_name=_other_conn_name)
+
+        object_settings = _new_object_settings(status_codes='401')
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-rest-own-2', object_settings)
+
+        # The other connection, on the defaults, is the one alerted on
+        assert _rule_names(result) == ['Status_Codes']
+
+        _, _, body = recorder.emails[0]
+        assert _other_conn_name in body
+        assert _conn_name not in body
+
+# ################################################################################################################################
+
+    def test_the_connections_own_threshold_stands_in_for_the_rules_default(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_failures(audit_log, engine, now, 'down', 2, '503 Service Unavailable')
+        _seed_failures(audit_log, engine, now, 'ok', 30, '200 OK')
+
+        # Two are under the rule's three ..
+        result, _ = _run_rest_sweep(engine, audit_log, now, 'cid-rest-threshold-1', None)
+        assert result.raised_count == 0
+
+        # .. and enough once the connection asks for two.
+        object_settings = _new_object_settings(status_code_threshold=2)
+        result, _ = _run_rest_sweep(engine, audit_log, now, 'cid-rest-threshold-2', object_settings)
+
+        assert _rule_names(result) == ['Status_Codes']
+
+# ################################################################################################################################
+
+    def test_timeouts_and_refused_connections_raise_connection_failures(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_failures(audit_log, engine, now, 'timeout', 2, TransportStatus.Timeout)
+        _seed_failures(audit_log, engine, now, 'refused', 1, TransportStatus.Connection_Error)
+        _seed_failures(audit_log, engine, now, 'ok', 30, '200 OK')
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-rest-failures', None)
+
+        # The transport statuses are no status codes, so only the failures rule speaks
+        assert _rule_names(result) == ['Connection_Failures']
+
+        _, _, body = recorder.emails[0]
+        assert _conn_name in body
+        assert '3 timeouts or connection failures' in body
+
+# ################################################################################################################################
+
+    def test_a_connection_with_alerts_off_is_skipped_with_its_health_check(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # The connection fails on its calls and on its checks, and so does the other one
+        _seed_failures(audit_log, engine, now, 'down-a', 3, '503 Service Unavailable')
+        _seed_failures(audit_log, engine, now, 'down-b', 3, '503 Service Unavailable', object_name=_other_conn_name)
+
+        for idx in range(3):
+            _seed_call(audit_log, engine, now, f'check-a-{idx}', TransportStatus.Timeout,
+                source=AuditSource.REST_Outgoing_Health)
+            _seed_call(audit_log, engine, now, f'check-b-{idx}', TransportStatus.Timeout,
+                source=AuditSource.REST_Outgoing_Health, object_name=_other_conn_name)
+
+        object_settings = _new_object_settings(is_active=False)
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-rest-off', object_settings)
+
+        # Every alert is about the other connection - its codes, its check being down, its error rate
+        assert 'Status_Codes' in _rule_names(result)
+        assert 'Connection_Down' in _rule_names(result)
+
+        for _, _, body in recorder.emails:
+            assert _other_conn_name in body
+            assert _conn_name not in body
+
+# ################################################################################################################################
+
+    def test_the_connections_own_window_reaches_its_traffic_alone(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Three 503s an hour and a half back for both connections
+        _seed_failures(audit_log, engine, now, 'win-a', 3, '503 Service Unavailable', seconds_back=5400)
+        _seed_failures(audit_log, engine, now, 'win-b', 3, '503 Service Unavailable', object_name=_other_conn_name,
+            seconds_back=5400)
+
+        # The rule measures over five minutes, the connection over two hours - only the connection is alerted on
+        object_settings = _new_object_settings(status_codes_window=7200)
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-rest-window', object_settings)
+
+        assert _rule_names(result) == ['Status_Codes']
+
+        _, _, body = recorder.emails[0]
+        assert _conn_name in body
+        assert _other_conn_name not in body
+        assert 'over 7200s' in body
+
+# ################################################################################################################################
+# ################################################################################################################################

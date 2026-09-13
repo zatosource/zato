@@ -24,8 +24,8 @@ from urllib.parse import quote
 
 # Zato
 from zato.common.alerting.collectors import collect_facts
-from zato.common.alerting.collectors.common import response_event_type_by_source, Measure_Auth_Failures, \
-    Measure_Client_Errors, Measure_Latency, Measure_Server_Errors, Window_Seconds_By_Measure_Key
+from zato.common.alerting.collectors.common import channel_sources, Measure_Auth_Failures, Measure_Client_Errors, \
+    Measure_Connection_Failures, Measure_Latency, Measure_Server_Errors, Measure_Status_Codes, Window_Seconds_By_Measure_Key
 from zato.common.alerting.config_map import read_window_seconds_by_measure, type_sources, type_to_ruleset, \
     Explain_With_LLM_Key
 from zato.common.alerting.engine import process_findings
@@ -33,6 +33,7 @@ from zato.common.alerting.model import new_finding, new_rule, AlertAction, Alert
 from zato.common.alerting.object_config import Email_Connection_Config_Key, LLM_Connection_Config_Key
 from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
     get_llm_connection, get_muted_rule_names, get_silence_expected_names, is_object_active
+from zato.common.alerting.status_codes import apply_status_codes, Status_Code_Counts_Key
 from zato.common.api import Alerting
 from zato.common.audit_log.common import get_source_label, health_sources
 from zato.common.defaults import default_cluster_id
@@ -244,6 +245,26 @@ def _measure_window_part(fact:'stranydict', measure:'str') -> 'str':
 
 # ################################################################################################################################
 
+def _format_status_code_counts(counts:'strintdict') -> 'str':
+    """ The matching responses by their code, the codes in their order and each with its count when it has
+    more than one - `401 x2, 503`.
+    """
+    parts:'strlist' = []
+
+    for code in sorted(counts):
+
+        count = counts[code]
+
+        if count == 1:
+            parts.append(code)
+        else:
+            parts.append(f'{code} x{count}')
+
+    out = ', '.join(parts)
+    return out
+
+# ################################################################################################################################
+
 def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
     """ One readable line saying which rule fired on which object and what
     the measures were at that moment - only the measures that are non-zero speak,
@@ -260,7 +281,7 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
 
     # A channel's failed responses are sorted by who is at fault, so its measures
     # speak of callers and requests rather than of authentication in general.
-    is_channel = source in response_event_type_by_source
+    is_channel = source in channel_sources
 
     if fact['total_count']:
         percent = round(fact['error_rate'] * 100)
@@ -307,6 +328,19 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
         server_part = f'server errors {server_percent}% ({server_error_count} of {response_count}'
         server_part += _measure_window_part(fact, Measure_Server_Errors) + ')'
         parts.append(server_part)
+
+    if status_code_count := fact['status_code_count']:
+        responses_label = pluralize(status_code_count, 'response')
+        codes_part = _format_status_code_counts(fact[Status_Code_Counts_Key])
+        status_part = f'{responses_label} with a status the connection alerts on ({codes_part})'
+        parts.append(status_part + _measure_window_part(fact, Measure_Status_Codes))
+
+    if connection_failure_count := fact['connection_failure_count']:
+        if connection_failure_count == 1:
+            failures_label = '1 timeout or connection failure'
+        else:
+            failures_label = f'{connection_failure_count} timeouts or connection failures'
+        parts.append(failures_label + _measure_window_part(fact, Measure_Connection_Failures))
 
     if cert_days_left := fact['cert_days_left']:
         days_label = pluralize(cert_days_left, 'day')
@@ -608,7 +642,6 @@ def run_sweep(
 
         for fact in facts:
 
-            match_data = {Fact_Entity: fact}
             settings:'stranydict' = {}
             rule_values:'stranydict' = {}
 
@@ -626,7 +659,12 @@ def run_sweep(
 
                 # .. and its own numbers stand in for the rule's defaults.
                 rule_values = build_rule_values(alert_type, settings, now, rule.name)
-                match_data.update(rule_values)
+
+            # A connection's responses are counted against the status codes in force for it and this rule
+            fact = apply_status_codes(fact, rule, rule_values)
+
+            match_data = {Fact_Entity: fact}
+            match_data.update(rule_values)
 
             match_result = rule.match(match_data)
 

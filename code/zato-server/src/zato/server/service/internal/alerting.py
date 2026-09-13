@@ -15,6 +15,7 @@ from zato.common.api import Alerting, EMAIL, FileTransfer
 from zato.common.alerting.collectors.evidence import collect_baseline, collect_measure_rows
 from zato.common.alerting.engine import defaults_from_dict, dispatch_action, AlertDefaults, Empty_Explanation
 from zato.common.alerting.explain.channel_info import describe_channel
+from zato.common.alerting.explain.outgoing_info import describe_outgoing_rest
 from zato.common.alerting.explain.evidence import build_evidence_document, build_prompt, group_failures
 from zato.common.alerting.explain.explanation import parse_explanation
 from zato.common.alerting.explain.skill import get_skill_source, load_skill, Skills_Dir_Name
@@ -636,14 +637,12 @@ class AlertingSetTestTransferState(AdminService):
 # they explain, so one alert produces one explanation, not one per sweep.
 _explanation_name_prefix = 'explanation.'
 
-# The configuration keys of a REST or LLM connection that go into the Object section - addressing,
+# The configuration keys of an LLM connection that go into the Object section - addressing,
 # timeouts and security identifiers only, never the credentials themselves.
 _object_config_keys = (
     'name',
     'is_active',
     'address',
-    'address_host',
-    'address_url_path',
     'method',
     'model',
     'data_format',
@@ -651,11 +650,14 @@ _object_config_keys = (
     'timeout',
     'pool_size',
     'validate_tls',
-    'ping_method',
     'security_name',
     'sec_type',
     'username',
 )
+
+# The sources whose alerts read an outgoing REST connection's Object - the connection's own traffic
+# and its health check, which calls the same address
+_outgoing_rest_sources = (AuditSource.REST_Outgoing, AuditSource.REST_Outgoing_Health)
 
 # What each file transfer connection type is called in the Object section
 _file_transfer_type_labels = {
@@ -817,13 +819,16 @@ class Explain(AdminService):
     def _get_object_info(self, source:'str', object_name:'str') -> 'tuple[anylist, str, bool]':
         """ The Object section of the evidence - the object's definition as label and value pairs,
         secrets left out - along with the name the baseline is read under and whether test
-        transfers are on for the object. A REST or an LLM connection is read off its facade,
-        a file transfer connection or one of its schedules off the ODB, any other source
-        contributes its name alone.
+        transfers are on for the object. An LLM connection is read off its facade, an outgoing REST
+        connection, a channel, a file transfer connection or one of its schedules off the ODB,
+        any other source contributes its name alone.
         """
-        if source == AuditSource.REST_Outgoing:
-            out = self._config_to_info(self.out.rest[object_name].config)
-            return out, object_name, False
+        if source in _outgoing_rest_sources:
+            with closing(self.odb.session()) as session:
+                outgoing_info = describe_outgoing_rest(session, self.server.cluster_id, object_name)
+
+            if outgoing_info is not None:
+                return outgoing_info, object_name, False
 
         if source == AuditSource.LLM:
             out = self._config_to_info(self.llm.conn_dict[object_name])
@@ -847,7 +852,7 @@ class Explain(AdminService):
 # ################################################################################################################################
 
     def _config_to_info(self, config:'anydict') -> 'anylist':
-        """ The keys of interest of a connection's configuration as label and value pairs - only the ones
+        """ The keys of interest of an LLM connection's configuration as label and value pairs - only the ones
         the configuration has, e.g. a connection with no security definition has no security_name at all.
         """
 

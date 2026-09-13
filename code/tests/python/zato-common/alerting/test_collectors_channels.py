@@ -91,12 +91,11 @@ def _seed_call(
 
 # ################################################################################################################################
 
-def _seed_outgoing(audit_log:'AuditLog', cid:'str', outcome:'str') -> 'None':
-    """ Stores the request and response pair an outgoing REST connection leaves behind.
+def _seed_outgoing(audit_log:'AuditLog', cid:'str', outcome:'str', source:'str'=AuditSource.REST_Outgoing) -> 'None':
+    """ Stores the request and response pair an outgoing connection leaves behind.
     """
-    _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _outgoing_name, cid=cid, outcome=AuditOutcome.OK)
-    _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Response_Received, _outgoing_name, cid=cid, outcome=outcome,
-        duration_ms=50)
+    _ = audit_log.insert(source, AuditEvent.Request_Sent, _outgoing_name, cid=cid, outcome=AuditOutcome.OK)
+    _ = audit_log.insert(source, AuditEvent.Response_Received, _outgoing_name, cid=cid, outcome=outcome, duration_ms=50)
 
 # ################################################################################################################################
 
@@ -131,7 +130,7 @@ class TestErrorRateOverResponses:
         assert fact['error_count'] == 2
         assert round(fact['error_rate'], 2) == 0.67
 
-    def test_an_outgoing_connection_is_measured_as_before(self) -> 'None':
+    def test_an_outgoing_rest_connection_is_measured_over_its_responses(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         now = utcnow()
@@ -140,6 +139,21 @@ class TestErrorRateOverResponses:
         _seed_outgoing(audit_log, 'out-2', AuditOutcome.OK)
 
         fact = _fact_of(collect_error_rate_facts(engine, _window_seconds, now), _outgoing_name, AuditSource.REST_Outgoing)
+
+        # Only the response halves count - a connection whose every call fails reads as 100%, not 50%
+        assert fact['total_count'] == 2
+        assert fact['error_count'] == 1
+        assert fact['error_rate'] == 0.5
+
+    def test_an_outgoing_soap_connection_is_measured_as_before(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_outgoing(audit_log, 'out-1', AuditOutcome.Error, source=AuditSource.SOAP_Outgoing)
+        _seed_outgoing(audit_log, 'out-2', AuditOutcome.OK, source=AuditSource.SOAP_Outgoing)
+
+        fact = _fact_of(collect_error_rate_facts(engine, _window_seconds, now), _outgoing_name, AuditSource.SOAP_Outgoing)
 
         # Every event counts for a source outside the response map - the request halves included
         assert fact['total_count'] == 4

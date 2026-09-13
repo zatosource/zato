@@ -21,6 +21,8 @@ from typing_extensions import TypeAlias
 
 # Zato
 from zato.common.alerting import config_map
+from zato.common.alerting.collectors.common import Measure_Connection_Failures, Measure_Error_Rate, Measure_Latency, \
+    Measure_Status_Codes
 from zato.common.alerting.seed import ensure_alerting_definitions
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
@@ -518,6 +520,67 @@ class TestRoundTripOverSeededRules:
         # What was written is what reads back, in the same screen units
         values = config_map.read_type_values(_rest_type, documents)
         assert values == new_values
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestTextAndWindowsOfRest:
+
+    def test_a_text_reads_off_its_rule_and_writes_back_into_it(self) -> 'None':
+        field = _field(_rest_type, 'status_codes')
+        assert field['kind'] == config_map.Kind_Text
+
+        documents = {
+            config_map.rule_full_name(_rest_ruleset, 'Status_Codes'): {
+                'name': 'Status_Codes',
+                'defaults': {'status_codes': {'value': '401, 403, 5xx'}},
+            },
+        }
+
+        assert config_map.read_text(documents, _rest_ruleset, field) == '401, 403, 5xx'
+
+        changed = config_map.write_text(documents, _rest_ruleset, field, '404')
+        assert changed is True
+        assert config_map.read_text(documents, _rest_ruleset, field) == '404'
+
+        # Writing what is already there changes nothing
+        changed = config_map.write_text(documents, _rest_ruleset, field, '404')
+        assert changed is False
+
+# ################################################################################################################################
+
+    def test_a_text_whose_rule_is_gone_reads_as_none(self) -> 'None':
+        field = _field(_rest_type, 'status_codes')
+        assert config_map.read_text({}, _rest_ruleset, field) is None
+
+# ################################################################################################################################
+
+    def test_the_seeded_rest_rules_hand_each_of_the_four_windows_to_its_measure(self, backend:'RuleSQLBackend') -> 'None':
+        ensure_alerting_definitions(backend)
+
+        matches = backend.definitions.find_by_name(name=_rest_ruleset, object_type=Definition_Type_Ruleset)
+        document = deserialize_document(matches[0].document)
+        documents = document[Documents_Key]
+
+        by_measure = config_map.read_window_seconds_by_measure(documents, _rest_type)
+
+        assert by_measure == {
+            Measure_Error_Rate: 300,
+            Measure_Status_Codes: 300,
+            Measure_Connection_Failures: 300,
+            Measure_Latency: 300,
+        }
+
+        # Each window is written on its own and lands on its own measure alone
+        new_values = {'status_codes_window': 600, 'connection_failures_window': 900}
+        _ = config_map.write_type_values(_rest_type, documents, new_values)
+
+        by_measure = config_map.read_window_seconds_by_measure(documents, _rest_type)
+
+        assert by_measure[Measure_Status_Codes] == 600
+        assert by_measure[Measure_Connection_Failures] == 900
+        assert by_measure[Measure_Error_Rate] == 300
+        assert by_measure[Measure_Latency] == 300
 
 # ################################################################################################################################
 # ################################################################################################################################

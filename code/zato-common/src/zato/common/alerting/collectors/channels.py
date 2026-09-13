@@ -76,13 +76,14 @@ def collect_channel_status_facts(
     window_start = now - timedelta(seconds=window_seconds)
     window_start_iso = window_start.isoformat()
 
-    # Every channel kind with a response event of its own, or the one asked about
+    # Every channel kind, or the one asked about - an outgoing connection has a response event too,
+    # but its responses are counted by the outgoing collector, against the codes it alerts on
     if source:
-        if source not in response_event_type_by_source:
+        if source not in channel_sources:
             return out
         sources = [source]
     else:
-        sources = list(response_event_type_by_source)
+        sources = list(channel_sources)
 
     status_code = func.substr(event_table.c.status, 1, Status_Code_Length)
 

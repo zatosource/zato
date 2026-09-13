@@ -16,16 +16,26 @@ not support, and say when the evidence is not enough to tell.
 Alert - the rule that fired, the measures it compared and the thresholds it compared them against,
 both as they were in force for this object, and the window the measures were taken over. A window
 of none means a reading taken at the time of the sweep. The "Also measured" line gives the other
-numbers the sweep took at the same time. The message is what a person received.
+numbers the sweep took at the same time. The message is what a person received. Besides the
+connection-down, error-rate and slow-responses rules, a `Status_Codes` alert says the connection
+answered with one of the status codes it alerts on often enough, and a `Connection_Failures` alert
+that enough of its calls failed before any response arrived - a timeout, a refused connection or a
+TLS failure.
 
 Object - the connection's definition with secrets left out - the address it calls, its HTTP
-method, its timeout in seconds, the pool size, whether TLS is validated and the name and type of the
-security definition it uses. A health check alert reads the same Object - the check calls the same address.
+method, its timeout in seconds, the pool size, whether TLS is validated, the name and type of the
+security definition it uses, how many times it retries and whether its audit log is on. When the
+connection has alert settings of its own, the `Alerts` line says whether they are on and the
+`Alert settings of its own` line gives the thresholds that differ from the defaults - among them
+the status codes the connection alerts on, `401, 403, 5xx` being the default. A health check alert
+reads the same Object - the check calls the same address.
 
-Failures - the failed calls the measures counted, newest first, grouped by identical error text
-with a count and the first and last time per group, and the endpoints or files each group touched.
-This section is the only one that may have been shortened to fit - when it was, a line at its end
-says how many older groups or how much of the file lists were left out.
+Failures - the failed calls the measures counted, newest first, grouped by their status and error
+text together, with a count and the first and last time per group, and the endpoints each group
+touched. A failure's status is either the HTTP status the remote side answered with, `401 Unauthorized`,
+or one of `timeout`, `connection-error`, `tls-error` and `error` when the call failed before any
+response arrived. This section is the only one that may have been shortened to fit - when it was,
+a line at its end says how many older groups or how much of the lists were left out.
 
 Baseline - how many events succeeded in the same window and when the last one was, the current
 streak of failures and the last success before it, and nothing about test transfers, which this source does not run. Use it to tell an outage from

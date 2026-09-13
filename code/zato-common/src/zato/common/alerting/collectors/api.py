@@ -17,9 +17,11 @@ from __future__ import annotations
 from zato.common.alerting.collectors.backlogs import collect_feed_silent_facts, collect_outstanding_facts
 from zato.common.alerting.collectors.channels import collect_channel_silence_facts, collect_channel_status_facts
 from zato.common.alerting.collectors.common import new_fact, Default_Begin_Event_Type, Default_End_Event_Type, \
-    Default_Window_Seconds, Health_Window_Seconds, Measure_Auth_Failures, Measure_Client_Errors, Measure_Error_Rate, \
-    Measure_File_Runs, Measure_Latency, Measure_Server_Errors, Window_Seconds_By_Measure_Key
+    Default_Window_Seconds, Health_Window_Seconds, Measure_Auth_Failures, Measure_Client_Errors, Measure_Connection_Failures, \
+    Measure_Error_Rate, Measure_File_Runs, Measure_Latency, Measure_Server_Errors, Measure_Status_Codes, \
+    Window_Seconds_By_Measure_Key
 from zato.common.alerting.collectors.file_transfer import collect_file_transfer_facts
+from zato.common.alerting.collectors.outgoing import collect_outgoing_status_facts
 from zato.common.alerting.collectors.probes import collect_certificate_facts, collect_health_facts, \
     collect_test_transfer_facts
 from zato.common.alerting.collectors.rates import collect_auth_failure_facts, collect_consecutive_failure_facts, \
@@ -65,26 +67,30 @@ def _collect_auth_failure_facts(
 # ################################################################################################################################
 
 # The windowed collectors by the measure that drives each - every one takes the engine, the window,
-# the moment and the optional source and object to narrow to. The status collector answers three
-# measures, so it runs once per measure and each run keeps the keys of its own measure alone.
+# the moment and the optional source and object to narrow to. The channel status collector answers three
+# measures and the outgoing one two, so each runs once per measure and each run keeps the keys of its own measure alone.
 _collector_by_measure:'dict[str, callable_]' = {
-    Measure_Error_Rate:    collect_error_rate_facts,
-    Measure_Latency:       collect_latency_facts,
-    Measure_Auth_Failures: _collect_auth_failure_facts,
-    Measure_Client_Errors: collect_channel_status_facts,
-    Measure_Server_Errors: collect_channel_status_facts,
+    Measure_Error_Rate:          collect_error_rate_facts,
+    Measure_Latency:             collect_latency_facts,
+    Measure_Auth_Failures:       _collect_auth_failure_facts,
+    Measure_Client_Errors:       collect_channel_status_facts,
+    Measure_Server_Errors:       collect_channel_status_facts,
+    Measure_Status_Codes:        collect_outgoing_status_facts,
+    Measure_Connection_Failures: collect_outgoing_status_facts,
 }
 
 # The fact keys each windowed measure owns - what a run over one measure's window is allowed
 # to say, so two runs of one collector over two windows never overwrite each other's numbers.
 # The error rate's keys include the fact's window, which is what window_seconds keeps meaning.
 _keys_by_measure:'dict[str, tuple[str, ...]]' = {
-    Measure_Error_Rate:    ('error_rate', 'error_count', 'total_count', 'window_seconds', 'last_error_event_id',
+    Measure_Error_Rate:          ('error_rate', 'error_count', 'total_count', 'window_seconds', 'last_error_event_id',
         'is_resubmittable'),
-    Measure_Latency:       ('avg_duration_ms',),
-    Measure_Auth_Failures: ('auth_failure_count',),
-    Measure_Client_Errors: ('client_error_count',),
-    Measure_Server_Errors: ('server_error_count', 'server_error_rate'),
+    Measure_Latency:             ('avg_duration_ms',),
+    Measure_Auth_Failures:       ('auth_failure_count',),
+    Measure_Client_Errors:       ('client_error_count',),
+    Measure_Server_Errors:       ('server_error_count', 'server_error_rate'),
+    Measure_Status_Codes:        ('status_counts',),
+    Measure_Connection_Failures: ('connection_failure_count',),
 }
 
 # ################################################################################################################################

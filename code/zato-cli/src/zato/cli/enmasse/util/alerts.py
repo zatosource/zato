@@ -35,6 +35,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 #         alerts:
 #           max_latency: 2500
 #           auth_failures: 3
+#
+#     outgoing_rest:
+#       - name: crm.api
+#         host: https://crm.example.com
+#         url_path: /api/v2/customers
+#         alerts:
+#           status_codes: '401, 403, 4xx'
+#           status_code_threshold: 5
+#           connection_failures: 2
 
 # stdlib
 import logging
@@ -42,6 +51,8 @@ from json import loads
 
 # Zato
 from zato.common.alerting import object_config
+from zato.common.alerting.config_map import Status_Codes_Field_Name
+from zato.common.alerting.status_codes import parse_status_codes
 from zato.common.api import EMAIL, GENERIC
 from zato.common.defaults import default_cluster_id
 from zato.common.odb.model import GenericConn, IMAP, SMTP
@@ -163,6 +174,13 @@ def flatten_alerts(connection_def:'anydict', alert_type:'str', connection_type:'
     if object_config.LLM_Connection_Field in alerts:
         llm_connection = alerts[object_config.LLM_Connection_Field]
         _ensure_llm_connection_exists(llm_connection, connection_type, connection_name, session)
+
+    # A status code that is neither three digits nor a class such as 5xx is refused before anything is stored
+    if Status_Codes_Field_Name in alerts:
+        try:
+            _ = parse_status_codes(alerts[Status_Codes_Field_Name])
+        except ValueError as e:
+            raise Exception(f'{e} for {connection_type} connection `{connection_name}`')
 
     values = object_config.get_defaults(alert_type)
     values.update(alerts)

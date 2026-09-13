@@ -125,8 +125,12 @@ ClientHTTPError = Reportable
 # ################################################################################################################################
 
 class BackendInvocationError(Reportable):
-    def __init__(self, cid, msg='REST invocation error', needs_msg=False):
+    """ An outgoing call that failed before any response arrived - the transport status names how,
+    e.g. a timeout or a connection error, in the words the audit log stores a failed call under.
+    """
+    def __init__(self, cid, msg='REST invocation error', needs_msg=False, transport_status=''):
         super(BackendInvocationError, self).__init__(cid, msg, BAD_REQUEST, needs_msg)
+        self.transport_status = transport_status
 
 # ################################################################################################################################
 

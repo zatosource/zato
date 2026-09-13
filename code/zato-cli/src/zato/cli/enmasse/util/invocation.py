@@ -68,9 +68,6 @@ Invocation_Common_Fields = (
     _invocation.Field_Start_Date,
     _health_check.Field_Run_Every,
     _health_check.Field_Run_Unit,
-    _health_check.Field_Notify_On,
-    _health_check.Field_Callback_Type,
-    _health_check.Field_Callback_Name,
 )
 
 # Everything an outgoing REST connection carries
@@ -294,7 +291,8 @@ def sync_invocation_jobs(
         )
         conn_def[_invocation.Field_Job_ID] = job.id
 
-    # .. and the health check job pings the connection, delivering each outcome to the callback.
+    # .. and the health check job pings the connection, each ping writing its outcome to the audit log,
+    # .. where the connection's alerts read it.
     if health_check_run_every := conn_def.get(_health_check.Field_Run_Every):
 
         health_check_run_unit = conn_def.get(_health_check.Field_Run_Unit)
@@ -302,18 +300,10 @@ def sync_invocation_jobs(
             health_check_run_unit = _invocation.Unit.Minutes
         conn_def[_health_check.Field_Run_Unit] = health_check_run_unit
 
-        notify_on = conn_def.get(_health_check.Field_Notify_On)
-        if not notify_on:
-            notify_on = _health_check.NotifyOn.Failures
-        conn_def[_health_check.Field_Notify_On] = notify_on
-
         extra = json_dumps({
             _health_check.Extra_Conn_ID: conn.id,
             _health_check.Extra_Conn_Name: conn.name,
             _health_check.Extra_Conn_Type: conn_type,
-            _health_check.Field_Callback_Type: conn_def.get(_health_check.Field_Callback_Type),
-            _health_check.Field_Callback_Name: conn_def.get(_health_check.Field_Callback_Name),
-            _health_check.Field_Notify_On: notify_on,
         })
 
         job = _sync_one_invocation_job(

@@ -111,7 +111,7 @@ _object_order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'sec
     'groups:list', 'rate_limiting:list', 'response_cache:dict', 'alerts:dict',
 
 _object_order['outgoing_rest'] = ('name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'content_type', \
-    'timeout', 'ping_method', 'tls_verify', 'is_audit_log_active') + Retry_Fields + Invocation_Order_Fields_REST
+    'timeout', 'ping_method', 'tls_verify', 'is_audit_log_active') + Retry_Fields + Invocation_Order_Fields_REST + ('alerts:dict',)
 _object_order['outgoing_soap'] = ('name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', \
     'content_type', 'timeout', 'tls_verify', 'is_audit_log_active', 'use_ws_addressing', 'use_mtom', \
     'tls_client_cert', 'tls_client_key', 'body_credentials') + Retry_Fields + Invocation_Order_Fields_SOAP
