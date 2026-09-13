@@ -236,6 +236,49 @@ class TestOutgoingStatusFacts:
         assert fact['status_counts'] == {}
         assert fact['connection_failure_count'] == 0
 
+    def test_an_operation_outcome_is_counted_by_its_issue_code_and_never_as_a_status_code(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A FHIR server's OperationOutcomes carry their issue code as the application outcome ..
+        _ = _seed_call(audit_log, 'outcome-1', '500 Internal Server Error', source=AuditSource.FHIR, fault_code='exception')
+        _ = _seed_call(audit_log, 'outcome-2', '500 Internal Server Error', source=AuditSource.FHIR, fault_code='exception')
+        _ = _seed_call(audit_log, 'outcome-3', '404 Not Found', source=AuditSource.FHIR, fault_code='not-found')
+
+        # .. a proxy's 503 page is not an OperationOutcome, and a timeout is neither.
+        _ = _seed_call(audit_log, 'proxy-1', '503 Service Unavailable', source=AuditSource.FHIR)
+        _ = _seed_call(audit_log, 'timeout-1', TransportStatus.Timeout, source=AuditSource.FHIR)
+
+        facts = collect_outgoing_status_facts(engine, _window_seconds, now)
+        fact = _fact_of(facts, _conn_name, AuditSource.FHIR)
+
+        assert fact['fault_counts'] == {'exception': 2, 'not-found': 1}
+        assert fact['status_counts'] == {'503': 1}
+        assert fact['connection_failure_count'] == 1
+
+        # The codes are for the sweep to match - nothing is derived here
+        assert fact['outcome_count'] == 0
+        assert fact['outcome_code_counts'] == {}
+
+    def test_a_fhir_health_check_is_counted_by_its_response_event_under_its_own_source(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _ = _seed_call(audit_log, 'check-1', '200 OK', source=AuditSource.FHIR_Health)
+        _ = _seed_call(audit_log, 'check-2', TransportStatus.Connection_Error, source=AuditSource.FHIR_Health)
+
+        facts = collect_error_rate_facts(engine, _window_seconds, now)
+        fact = _fact_of(facts, _conn_name, AuditSource.FHIR_Health)
+
+        assert fact['total_count'] == 2
+        assert fact['error_count'] == 1
+
+        # The check's rows are the check's alone - the connection's own source has no fact of them
+        for other in facts:
+            assert not (other['source'] == AuditSource.FHIR and other['object_name'] == _conn_name)
+
     def test_a_source_outside_the_outgoing_ones_measures_nothing(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()

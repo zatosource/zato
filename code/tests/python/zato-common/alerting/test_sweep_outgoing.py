@@ -19,8 +19,10 @@ from sqlalchemy import update
 
 # Zato
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
-from zato.common.alerting.object_config import alert_type_rest, alert_type_soap, get_defaults as get_object_defaults
+from zato.common.alerting.object_config import alert_type_fhir, alert_type_rest, alert_type_soap, \
+    get_defaults as get_object_defaults
 from zato.common.alerting.seed.rules_connections import rest_rules, soap_rules
+from zato.common.alerting.seed.rules_fhir import fhir_rules
 from zato.common.alerting.sweep import run_sweep
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.common import TransportStatus
@@ -54,6 +56,7 @@ _server_name = 'test-sweep-outgoing-server'
 # The ruleset the connections are judged by - the one the seed ships
 _ruleset_name = 'alerts_rest'
 _soap_ruleset_name = 'alerts_soap'
+_fhir_ruleset_name = 'alerts_fhir'
 
 # The connection with settings of its own and the one without any
 _conn_name = 'crm.api'
@@ -96,12 +99,12 @@ class _TransportRecorder:
 # ################################################################################################################################
 
 def _load_rest_rules() -> 'rule_engine_rule_list':
-    """ The seeded rest and soap rules as runtime rules, all of them active - each outgoing kind
+    """ The seeded rest, soap and fhir rules as runtime rules, all of them active - each outgoing kind
     is judged by the ruleset of its own type.
     """
     out = []
 
-    for ruleset_name, contents in ((_ruleset_name, rest_rules), (_soap_ruleset_name, soap_rules)):
+    for ruleset_name, contents in ((_ruleset_name, rest_rules), (_soap_ruleset_name, soap_rules), (_fhir_ruleset_name, fhir_rules)):
         documents, errors = parse_data_details(contents, ruleset_name)
         assert errors == []
 
@@ -471,6 +474,90 @@ class TestOutgoingSoapSweep:
         _, _, body = recorder.emails[0]
         assert '(REST outgoing)' in body
         assert '3 responses with a status the connection alerts on (404 x3)' in body
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestOutgoingFhirSweep:
+
+    def test_three_outcomes_raise_operation_outcomes_alone_and_not_status_codes(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Three exception outcomes on 500 - a 500 is among the default status codes, yet an outcome is an outcome
+        _seed_failures(audit_log, engine, now, 'outcome', 3, '500 Internal Server Error', source=AuditSource.FHIR,
+            fault_code='exception')
+        _seed_failures(audit_log, engine, now, 'ok', 30, '200 OK', source=AuditSource.FHIR)
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-fhir-outcomes', None)
+
+        assert _rule_names(result) == ['Operation_Outcomes']
+        assert len(recorder.emails) == 1
+
+        _, _, body = recorder.emails[0]
+        assert _conn_name in body
+        assert '(FHIR outgoing)' in body
+        assert '3 operation outcomes the connection alerts on (exception x3)' in body
+
+# ################################################################################################################################
+
+    def test_the_connections_own_outcome_codes_stand_in_for_the_default(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Three not-found outcomes - the default does not alert on a missing resource ..
+        _seed_failures(audit_log, engine, now, 'nf', 3, '404 Not Found', source=AuditSource.FHIR, fault_code='not-found')
+        _seed_failures(audit_log, engine, now, 'ok', 30, '200 OK', source=AuditSource.FHIR)
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-fhir-default-quiet', None)
+        assert _rule_names(result) == []
+
+        # .. a connection that names it alerts on them, counted by its own codes ..
+        object_settings = _new_object_settings(alert_type_fhir, outcome_codes='not-found')
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-fhir-own-fires', object_settings)
+
+        assert _rule_names(result) == ['Operation_Outcomes']
+
+        _, _, body = recorder.emails[0]
+        assert '3 operation outcomes the connection alerts on (not-found x3)' in body
+
+        # .. and three exceptions on top leave that connection quiet on them while the default fires on them alone.
+        _seed_failures(audit_log, engine, now, 'exc', 3, '500 Internal Server Error', source=AuditSource.FHIR,
+            fault_code='exception')
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-fhir-own-still', object_settings)
+        assert _rule_names(result) == ['Operation_Outcomes']
+
+        _, _, body = recorder.emails[0]
+        assert '3 operation outcomes the connection alerts on (not-found x3)' in body
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-fhir-default-fires', None)
+        assert _rule_names(result) == ['Operation_Outcomes']
+
+        _, _, body = recorder.emails[0]
+        assert '3 operation outcomes the connection alerts on (exception x3)' in body
+
+# ################################################################################################################################
+
+    def test_a_fhir_health_check_is_judged_by_the_fhir_rules(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Three failed checks in a row - the check's own streak, the connection's traffic being fine
+        for idx in range(3):
+            _seed_call(audit_log, engine, now, f'check-{idx}', TransportStatus.Connection_Error, source=AuditSource.FHIR_Health)
+
+        _seed_failures(audit_log, engine, now, 'ok', 5, '200 OK', source=AuditSource.FHIR)
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-fhir-check', None)
+
+        assert 'Connection_Down' in _rule_names(result)
+
+        _, _, body = recorder.emails[0]
+        assert 'FHIR check failed 3 times' in body
 
 # ################################################################################################################################
 # ################################################################################################################################

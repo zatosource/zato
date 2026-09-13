@@ -15,9 +15,10 @@ from urllib.parse import parse_qsl
 from uuid import uuid4
 
 # Zato
-from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, query_parameters, \
-     SEC_DEF_TYPE, Sec_Def_Type_Name, ZATO_NONE
-from zato.common.alerting.object_config import apply_defaults, conn_type_to_alert_type
+from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, HTTP_SOAP, query_parameters, \
+    SchedulerLink, SEC_DEF_TYPE, Sec_Def_Type_Name, ZATO_NONE
+from zato.common.alerting import config_map
+from zato.common.alerting.object_config import apply_defaults, conn_type_to_alert_type, storage_name as alert_storage_name
 from zato.common.as2.rotation import complete_rotation, needs_rotation_completion
 from zato.common.audit_log.common import AuditEvent
 from zato.common.broker_message import GENERIC
@@ -42,6 +43,9 @@ from zato.server.generic.connection import GenericConnection
 from zato.server.service import Int
 from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.internal.generic import _BaseService
+from zato.server.service.internal.generic.alert_settings import prepare_generic_alert_settings
+from zato.server.service.internal.health_check import delete_health_check_job, has_health_check_config, sync_health_check_job, \
+    validate_run_every
 from zato.server.service.internal.outgoing.file_transfer.schedule import delete_connection_jobs, resync_connection_jobs
 from zato.server.service.meta import DeleteMeta
 
@@ -68,6 +72,15 @@ broker_message = GENERIC
 broker_message_prefix = 'CONNECTION_'
 list_func = None
 extra_delete_attrs = ['type_']
+
+# ################################################################################################################################
+
+_health_check = HTTP_SOAP.HealthCheck
+
+# The generic connection types that carry a health check job, each with the connection type its job links back to
+_health_check_link_types = {
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: SchedulerLink.ConnType.FHIR_Outgoing,
+}
 
 # ################################################################################################################################
 
@@ -103,9 +116,14 @@ def delete_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_')
     """
 
     # File transfer schedules go away with their connection - each one has a linked scheduler job
-    # that would otherwise keep firing against a connection that no longer exists.
+    # that would otherwise keep firing against a connection that no longer exists ..
     if instance.type_ in FileTransfer.ConnTypeList:
         delete_connection_jobs(service, instance)
+
+    # .. and so does the health check job of a connection that has one.
+    if instance.type_ in _health_check_link_types:
+        opaque = parse_instance_opaque_attr(instance)
+        delete_health_check_job(service, opaque.get(_health_check.Field_Job_ID))
 
     before_snapshot = get_model_snapshot(instance)
 
@@ -200,6 +218,12 @@ skip_simple_type = {
     'as4_peer_encryption_cert',
     'as4_trust_anchors',
 }
+
+# The alert settings that are text - a status codes list of `500` alone or an outcome codes list must stay
+# what was typed rather than turn into a number on the way.
+for _alert_text_field_name in (config_map.Status_Codes_Field_Name, config_map.Fault_Codes_Field_Name,
+    config_map.Outcome_Codes_Field_Name):
+    skip_simple_type.add(alert_storage_name(_alert_text_field_name))
 
 # ################################################################################################################################
 
@@ -367,6 +391,14 @@ class _CreateEdit(_BaseService):
 
         self.logger.info('GenericConn _CreateEdit step 3: conn.type_=%s, conn.name=%s', conn.type_, conn.name)
 
+        # A health check asked for must describe a job that can be created
+        if data.type_ in _health_check_link_types:
+            if has_health_check_config(data):
+                run_every = validate_run_every(self, data[_health_check.Field_Run_Every], data[_health_check.Field_Run_Unit],
+                    'Health check')
+                data[_health_check.Field_Run_Every] = run_every
+                conn.opaque[_health_check.Field_Run_Every] = run_every
+
         # AS2 outgoing connections are stored in the external database when one is configured,
         # under their local ids, without the offset they are known under everywhere else.
         is_ext = needs_ext_db(data.type_)
@@ -414,6 +446,19 @@ class _CreateEdit(_BaseService):
                         data[FileTransfer.Scheduler.Schedules_Field] = stored_schedules
                         conn.opaque[FileTransfer.Scheduler.Schedules_Field] = stored_schedules
 
+                # A connection that alerts keeps the alert settings the edit did not send, and its health check
+                # job ID must not be lost to an edit that does not carry it, e.g. one that enmasse runs.
+                if data.type_ in conn_type_to_alert_type:
+                    model_opaque = parse_instance_opaque_attr(model)
+                    self._apply_alert_settings(data, conn, model_opaque)
+
+                if data.type_ in _health_check_link_types:
+                    model_opaque = parse_instance_opaque_attr(model)
+                    if not data.get(_health_check.Field_Job_ID):
+                        if previous_job_id := model_opaque.get(_health_check.Field_Job_ID):
+                            data[_health_check.Field_Job_ID] = previous_job_id
+                            conn.opaque[_health_check.Field_Job_ID] = previous_job_id
+
                 # Use the secret that was given on input because it may be a new one.
                 # Otherwise, if no secret is given on input, it means that we are not changing it
                 # so we can reuse the same secret that the model already uses.
@@ -438,6 +483,11 @@ class _CreateEdit(_BaseService):
 
                 # A creation has no earlier state to compare with
                 before_snapshot = {}
+
+                # A new connection that alerts starts at its type's defaults for whatever the caller did not send
+                if data.type_ in conn_type_to_alert_type:
+                    self._apply_alert_settings(data, conn, {})
+
                 if has_input_secret:
                     secret = input_secret
                 else:
@@ -505,6 +555,11 @@ class _CreateEdit(_BaseService):
                     if old_name != instance.name:
                         resync_connection_jobs(self, instance)
 
+        # The connection is committed by now so its health check job can be created, updated or deleted -
+        # the job pings the connection and each ping lands in the audit log under the connection's health source.
+        if data.type_ in _health_check_link_types:
+            sync_health_check_job(self, data, public_id, _health_check_link_types[data.type_])
+
         data['old_name'] = old_name
         data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value
         data['id'] = public_id
@@ -529,6 +584,18 @@ class _CreateEdit(_BaseService):
             before=before_snapshot,
             after=after_snapshot,
         )
+
+# ################################################################################################################################
+
+    def _apply_alert_settings(self, data:'Bunch', conn:'GenericConnection', stored:'strdict') -> 'None':
+        """ The alert settings of the connection being written - the ones sent as sent, the rest from the stored
+        row or the type's defaults - land both in the data that is published and in the opaque attributes that are stored.
+        """
+        alert_settings = prepare_generic_alert_settings(self, data.type_, data, stored)
+
+        for key, value in alert_settings.items():
+            data[key] = value
+            conn.opaque[key] = value
 
 # ################################################################################################################################
 # ################################################################################################################################

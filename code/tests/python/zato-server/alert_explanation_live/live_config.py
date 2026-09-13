@@ -32,5 +32,11 @@ class LiveServer:
     raising_service = 'explain.live.always-raise'
     error_text = 'The orders backend is not reachable'
 
+    # The hot-deployed service that answers every call with a FHIR OperationOutcome on a 500,
+    # the issue code it carries and its diagnostics text
+    outcome_service = 'explain.live.fhir.outcome'
+    outcome_code = 'exception'
+    outcome_text = 'The patient registry threw an exception'
+
 # ################################################################################################################################
 # ################################################################################################################################

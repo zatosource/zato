@@ -15,9 +15,10 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting.collectors.common import channel_sources, Measure_Auth_Failures, Measure_Client_Errors, \
-    Measure_Connection_Failures, Measure_Latency, Measure_Server_Errors, Measure_SOAP_Faults, Measure_Status_Codes, \
-    Window_Seconds_By_Measure_Key
+    Measure_Connection_Failures, Measure_Latency, Measure_Operation_Outcomes, Measure_Server_Errors, Measure_SOAP_Faults, \
+    Measure_Status_Codes, Window_Seconds_By_Measure_Key
 from zato.common.alerting.fault_codes import Fault_Code_Counts_Key
+from zato.common.alerting.outcome_codes import Outcome_Code_Counts_Key
 from zato.common.alerting.status_codes import Status_Code_Counts_Key
 from zato.common.audit_log.common import get_source_label, health_sources
 from zato.common.util.api import pluralize
@@ -150,6 +151,12 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
         fault_codes_part = _format_status_code_counts(fact[Fault_Code_Counts_Key])
         fault_part = f'{faults_label} the connection alerts on ({fault_codes_part})'
         parts.append(fault_part + _measure_window_part(fact, Measure_SOAP_Faults))
+
+    if outcome_count := fact['outcome_count']:
+        outcomes_label = pluralize(outcome_count, 'operation outcome')
+        outcome_codes_part = _format_status_code_counts(fact[Outcome_Code_Counts_Key])
+        outcome_part = f'{outcomes_label} the connection alerts on ({outcome_codes_part})'
+        parts.append(outcome_part + _measure_window_part(fact, Measure_Operation_Outcomes))
 
     if connection_failure_count := fact['connection_failure_count']:
         if connection_failure_count == 1:

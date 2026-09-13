@@ -17,7 +17,7 @@ from zato.admin.web.views import change_password as _change_password, CreateEdit
     extract_security_id, Index as _Index, invoke_action_handler, method_allowed, ping_connection, SecurityList
 from zato.common.alerting.object_config import alert_type_fhir, Field_Prefix
 from zato.common.api import GENERIC, generic_attrs, HTTP_SOAP, SEC_DEF_TYPE
-from zato.common.model.hl7 import HL7FHIRConfigObject
+from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,12 +37,20 @@ _health_check_field_names = (
 # ################################################################################################################################
 # ################################################################################################################################
 
+class OutgoingFHIRConfigObject(Bunch):
+    """ A config object for outgoing FHIR connections, filled in with attributes from the get-list response -
+    a Bunch, so the Alerts tab's helpers and the template read its fields by name as well.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'outgoing-hl7-fhir'
     template = 'zato/outgoing/hl7/fhir.html'
     service_name = 'zato.generic.connection.get-list'
-    output_class = HL7FHIRConfigObject
+    output_class = OutgoingFHIRConfigObject
     paginate = True
 
     input_required = 'cluster_id', 'type_'

@@ -943,8 +943,9 @@ class SchedulerLink:
     class ConnType:
         REST_Outgoing = 'rest_outgoing'
         SOAP_Outgoing = 'soap_outgoing'
+        FHIR_Outgoing = 'fhir_outgoing'
 
-    ConnTypeList = (ConnType.REST_Outgoing, ConnType.SOAP_Outgoing)
+    ConnTypeList = (ConnType.REST_Outgoing, ConnType.SOAP_Outgoing, ConnType.FHIR_Outgoing)
 
     class KindType:
         Scheduler = 'scheduler'

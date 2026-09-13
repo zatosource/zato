@@ -12,6 +12,7 @@ from contextlib import closing
 # Zato
 from zato.common.api import FileTransfer
 from zato.common.alerting.explain.channel_info import describe_channel
+from zato.common.alerting.explain.fhir_info import describe_outgoing_fhir
 from zato.common.alerting.explain.outgoing_info import describe_outgoing_http
 from zato.common.alerting.object_config import alert_type_file_transfer, channel_sources, transport_by_outgoing_source
 from zato.common.alerting.object_settings import load_object_settings
@@ -56,6 +57,9 @@ _object_config_keys = (
 # and its health check, which calls the same address
 _outgoing_http_sources = tuple(transport_by_outgoing_source)
 
+# An outgoing FHIR connection is described the same whether the alert is about its own traffic or its health check
+_outgoing_fhir_sources = (AuditSource.FHIR, AuditSource.FHIR_Health)
+
 # What each file transfer connection type is called in the Object section
 _file_transfer_type_labels = {
     FileTransfer.ConnType.SFTP: 'SFTP',
@@ -83,7 +87,7 @@ _test_transfers_field = 'test_transfers'
 def get_object_info(service:'AdminService', source:'str', object_name:'str') -> 'tuple[anylist, str, bool]':
     """ The Object section of the evidence - the object's definition as label and value pairs,
     secrets left out - along with the name the baseline is read under and whether test
-    transfers are on for the object. An LLM connection is read off its facade, an outgoing REST or SOAP
+    transfers are on for the object. An LLM connection is read off its facade, an outgoing REST, SOAP or FHIR
     connection, a channel, a file transfer connection or one of its schedules off the ODB,
     any other source contributes its name alone.
     """
@@ -93,6 +97,13 @@ def get_object_info(service:'AdminService', source:'str', object_name:'str') -> 
 
         if outgoing_info is not None:
             return outgoing_info, object_name, False
+
+    if source in _outgoing_fhir_sources:
+        with closing(service.odb.session()) as session:
+            fhir_info = describe_outgoing_fhir(session, service.server.cluster_id, object_name)
+
+        if fhir_info is not None:
+            return fhir_info, object_name, False
 
     if source == AuditSource.LLM:
         out = _config_to_info(service.llm.conn_dict[object_name])

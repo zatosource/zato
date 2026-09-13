@@ -7,7 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import GENERIC
+from zato.common.alerting.object_config import conn_type_to_alert_type
+from zato.common.api import GENERIC, SchedulerLink
 from zato.common.hl7.fhir.fields import Outgoing_Column_Defaults, Outgoing_Opaque_Defaults, Outgoing_Security_Id_Key, \
     Outgoing_Security_Name_Key
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
@@ -39,6 +40,12 @@ class OutgoingFHIRImporter(GenericConnectionImporter):
 
     connection_secret_keys:'list' = []
     connection_required_attrs = ['name', 'address']
+
+    # The alerts mapping of a FHIR connection follows the FHIR type - the REST settings plus the outcome codes
+    alert_type = conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR]
+
+    # A FHIR connection's health check job links back to it as a FHIR outgoing connection
+    health_check_conn_type = SchedulerLink.ConnType.FHIR_Outgoing
 
 # ################################################################################################################################
 

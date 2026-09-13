@@ -12,6 +12,7 @@ import logging
 # Zato
 from zato.cli.enmasse.util import preprocess_item
 from zato.cli.enmasse.util.alerts import flatten_alerts
+from zato.cli.enmasse.util.invocation import sync_health_check_job
 from zato.common.api import FileTransfer, SCHEDULER, SchedulerLink
 from zato.common.odb.model import GenericConn, Job, to_json
 from zato.common.odb.query.generic import connection_list
@@ -48,6 +49,9 @@ class GenericConnectionImporter:
 
     # Connections with alert settings of their own name the alert type the settings follow
     alert_type = None
+
+    # Connections with a health check of their own name the connection type its job links back to
+    health_check_conn_type = None
 
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
         self.importer = importer
@@ -179,6 +183,11 @@ class GenericConnectionImporter:
         if schedules is not None:
             self._sync_schedules(schedules, connection, session)
 
+        # .. and so can its health check job, whose ID is then stored with the connection
+        if self.health_check_conn_type:
+            sync_health_check_job(self.importer, session, merged_def, connection, self.health_check_conn_type)
+            set_instance_opaque_attrs(connection, merged_def)
+
         return connection
 
 # ################################################################################################################################
@@ -226,6 +235,11 @@ class GenericConnectionImporter:
         # Merge extra_fields with connection_def to ensure defaults are included
         merged_def = connection_def.copy()
         merged_def.update(extra_fields)
+
+        # The connection exists already so its health check job can be created or updated right away,
+        # its ID landing in the opaque attributes with everything else
+        if self.health_check_conn_type:
+            sync_health_check_job(self.importer, session, merged_def, connection, self.health_check_conn_type)
 
         set_instance_opaque_attrs(connection, merged_def)
 

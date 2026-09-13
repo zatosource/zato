@@ -31,8 +31,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# One connection with every field it can carry, one with the required fields only, and one naming
-# the security definition it authenticates with.
+# One connection with every field it can carry, one with the required fields only, one naming
+# the security definition it authenticates with, and one alerting on outcome codes of its own.
 template_outgoing_fhir = """
 
 security:
@@ -57,6 +57,12 @@ outgoing_fhir:
   - name: enmasse.fhir.out.3
     address: http://127.0.0.1:31003/fhir/r4
     security: enmasse.fhir.basic_auth.1
+
+  - name: enmasse.fhir.out.4
+    address: http://127.0.0.1:31004/fhir/r4
+    alerts:
+      outcome_codes: 'exception, not-found'
+      outcome_threshold: 5
 
 """
 
@@ -247,6 +253,48 @@ class TestEnmasseOutgoingFHIRImporter(TestCase):
 
         self.assertEqual(len(created_again), 0)
         self.assertEqual(len(updated), 3)
+
+# ################################################################################################################################
+
+    def test_outgoing_fhir_alerts_are_stored_under_their_prefix(self) -> 'None':
+        """ The alerts mapping becomes flat alert_ attributes of the fhir type - the outcome codes as the text
+        they were typed as, the settings left out at their defaults, and a connection without the mapping on the
+        defaults throughout.
+        """
+        self._setup_test_environment()
+
+        connection_defs = self.yaml_config['outgoing_fhir']
+        created, _ = self.outgoing_fhir_importer.sync_definitions(connection_defs, self.session)
+
+        connections_by_name = self._get_connections_by_name(created)
+
+        opaque = json.loads(connections_by_name['enmasse.fhir.out.4'].opaque1)
+        self.assertEqual(opaque['alert_outcome_codes'], 'exception, not-found')
+        self.assertEqual(opaque['alert_outcome_threshold'], 5)
+        self.assertEqual(opaque['alert_status_codes'], '401, 403, 5xx')
+        self.assertEqual(opaque['alert_outcomes_window'], 300)
+        self.assertNotIn('alerts', opaque)
+        self.assertNotIn('alert_fault_codes', opaque)
+
+        opaque = json.loads(connections_by_name['enmasse.fhir.out.2'].opaque1)
+        self.assertEqual(opaque['alert_outcome_codes'], 'exception, transient, timeout, throttled, lock-error, no-store, too-costly')
+        self.assertEqual(opaque['alert_outcome_threshold'], 3)
+
+# ################################################################################################################################
+
+    def test_outgoing_fhir_bad_outcome_codes_are_refused(self) -> 'None':
+        """ An outcome code that is not a FHIR issue code is refused before anything is written.
+        """
+        self._setup_test_environment()
+
+        connection_defs = self.yaml_config['outgoing_fhir']
+        connection_defs[3]['alerts']['outcome_codes'] = 'exception, Receiver'
+
+        with self.assertRaises(Exception) as context:
+            _ = self.outgoing_fhir_importer.sync_definitions(connection_defs, self.session)
+
+        self.assertIn('Receiver', str(context.exception))
+        self.assertIn('enmasse.fhir.out.4', str(context.exception))
 
 # ################################################################################################################################
 

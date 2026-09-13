@@ -51,6 +51,7 @@ _remediations_separator = ','
 explain_source_by_source = {
     AuditSource.REST_Outgoing_Health: AuditSource.REST_Outgoing,
     AuditSource.SOAP_Outgoing_Health: AuditSource.SOAP_Outgoing,
+    AuditSource.FHIR_Health:          AuditSource.FHIR,
     AuditSource.Test_Transfer:        AuditSource.File_Outgoing,
     AuditSource.Microsoft_Health:     AuditSource.Microsoft_Cloud,
     AuditSource.SOAP_Channel:         AuditSource.REST_Channel,

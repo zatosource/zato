@@ -7,7 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.cli.enmasse.util.invocation import Invocation_Order_Fields_REST, Invocation_Order_Fields_SOAP, Retry_Fields
+from zato.cli.enmasse.util.invocation import Health_Check_Fields, Invocation_Order_Fields_REST, Invocation_Order_Fields_SOAP, \
+    Retry_Fields
 from zato.common.api import MCP
 from zato.common.hl7.fhir.fields import Outgoing_Enmasse_Names as Outgoing_FHIR_Enmasse_Names
 from zato.common.hl7.mllp.fields import Channel_Enmasse_Names, Outgoing_Names
@@ -202,7 +203,7 @@ _object_order['outgoing_kafka']   = 'name', 'is_active', 'address', 'topic',
 
 _object_order['channel_mllp']  = ('name',) + Channel_Enmasse_Names
 _object_order['outgoing_mllp'] = ('name', 'address') + Outgoing_Names
-_object_order['outgoing_fhir'] = ('name', 'address') + Outgoing_FHIR_Enmasse_Names
+_object_order['outgoing_fhir'] = ('name', 'address') + Outgoing_FHIR_Enmasse_Names + Health_Check_Fields + ('alerts:dict',)
 
 _object_order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', \
     'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_invoke_with',

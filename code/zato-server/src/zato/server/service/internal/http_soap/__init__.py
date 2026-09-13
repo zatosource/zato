@@ -21,7 +21,7 @@ from zato.common.util.sql import parse_instance_opaque_attr
 from zato.server.connection.http_soap import BadRequest
 from zato.server.service.internal import AdminService
 from zato.server.service.internal.http_soap.common import _health_check, _HTTPSOAPService, _invocation
-from zato.server.service.internal.http_soap.health_check import get_linked_job
+from zato.server.service.internal.health_check import get_linked_job
 
 # ################################################################################################################################
 # ################################################################################################################################

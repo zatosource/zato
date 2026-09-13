@@ -55,9 +55,14 @@ Invocation_Row_Fields = (
     _invocation.Field_Request_SOAP_Headers,
 )
 
-# The invocation and health check fields shared by outgoing REST and SOAP connections.
-# Job IDs are environment-local so they never travel through enmasse - the importer
-# recreates the linked jobs itself.
+# The health check fields of any connection that has one - how often it pings. Job IDs are environment-local
+# so they never travel through enmasse - the importer recreates the linked jobs itself.
+Health_Check_Fields = (
+    _health_check.Field_Run_Every,
+    _health_check.Field_Run_Unit,
+)
+
+# The invocation and health check fields shared by outgoing REST and SOAP connections
 Invocation_Common_Fields = (
     _invocation.Field_Response_Map,
     _invocation.Field_Response_Map_Mode,
@@ -66,9 +71,7 @@ Invocation_Common_Fields = (
     _invocation.Field_Run_Every,
     _invocation.Field_Run_Unit,
     _invocation.Field_Start_Date,
-    _health_check.Field_Run_Every,
-    _health_check.Field_Run_Unit,
-)
+) + Health_Check_Fields
 
 # Everything an outgoing REST connection carries
 Invocation_Fields_REST = (
@@ -293,34 +296,52 @@ def sync_invocation_jobs(
 
     # .. and the health check job pings the connection, each ping writing its outcome to the audit log,
     # .. where the connection's alerts read it.
-    if health_check_run_every := conn_def.get(_health_check.Field_Run_Every):
+    sync_health_check_job(importer, session, conn_def, conn, conn_type)
 
-        health_check_run_unit = conn_def.get(_health_check.Field_Run_Unit)
-        if not health_check_run_unit:
-            health_check_run_unit = _invocation.Unit.Minutes
-        conn_def[_health_check.Field_Run_Unit] = health_check_run_unit
+# ################################################################################################################################
 
-        extra = json_dumps({
-            _health_check.Extra_Conn_ID: conn.id,
-            _health_check.Extra_Conn_Name: conn.name,
-            _health_check.Extra_Conn_Type: conn_type,
-        })
+def sync_health_check_job(
+    importer,  # type: EnmasseYAMLImporter
+    session,   # type: SASession
+    conn_def,  # type: anydict
+    conn,      # type: any_
+    conn_type, # type: str
+    ) -> 'None':
+    """ Creates or updates the health check job of a connection of any type being imported - an outgoing REST,
+    SOAP or FHIR connection - storing the job ID back in the definition so it lands in the connection's opaque
+    attributes. A definition without a run-every asks for no job and leaves whatever job there is alone.
+    """
+    health_check_run_every = conn_def.get(_health_check.Field_Run_Every)
 
-        job = _sync_one_invocation_job(
-            importer,
-            session,
-            conn_def,
-            conn,
-            kind=SchedulerLink.KindType.HealthCheck,
-            conn_type=conn_type,
-            job_name=_health_check.Job_Prefix + conn.name,
-            job_service=_health_check.Dispatch_Service,
-            run_every=health_check_run_every,
-            run_unit=health_check_run_unit,
-            start_date=None,
-            extra=extra,
-        )
-        conn_def[_health_check.Field_Job_ID] = job.id
+    if not health_check_run_every:
+        return
+
+    health_check_run_unit = conn_def.get(_health_check.Field_Run_Unit)
+    if not health_check_run_unit:
+        health_check_run_unit = _invocation.Unit.Minutes
+    conn_def[_health_check.Field_Run_Unit] = health_check_run_unit
+
+    extra = json_dumps({
+        _health_check.Extra_Conn_ID: conn.id,
+        _health_check.Extra_Conn_Name: conn.name,
+        _health_check.Extra_Conn_Type: conn_type,
+    })
+
+    job = _sync_one_invocation_job(
+        importer,
+        session,
+        conn_def,
+        conn,
+        kind=SchedulerLink.KindType.HealthCheck,
+        conn_type=conn_type,
+        job_name=_health_check.Job_Prefix + conn.name,
+        job_service=_health_check.Dispatch_Service,
+        run_every=health_check_run_every,
+        run_unit=health_check_run_unit,
+        start_date=None,
+        extra=extra,
+    )
+    conn_def[_health_check.Field_Job_ID] = job.id
 
 # ################################################################################################################################
 # ################################################################################################################################

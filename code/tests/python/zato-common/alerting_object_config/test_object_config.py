@@ -8,8 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_file_transfer, apply_defaults, conn_type_to_alert_type, \
-    decode_email_connection, Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, Email_Connection_Default, Email_Connection_Field, \
+from zato.common.alerting.object_config import alert_type_fhir, alert_type_file_transfer, alert_type_rest, apply_defaults, \
+    conn_type_to_alert_type, decode_email_connection, Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, Email_Connection_Default, \
+    Email_Connection_Field, \
     encode_email_connection, field_display, field_help, Field_Prefix, from_storage, get_defaults, get_field_kinds, \
     get_field_names, Is_Active_Field, Kind_Active, Kind_Email, Kind_LLM, LLM_Connection_Default, LLM_Connection_Field, \
     storage_name, to_storage
@@ -72,6 +73,23 @@ class TestFieldNames:
             assert conn_type_to_alert_type[conn_type] == _alert_type
 
         assert GENERIC.CONNECTION.TYPE.OUTCONN_AS2 not in conn_type_to_alert_type
+
+# ################################################################################################################################
+
+    def test_an_outgoing_fhir_connection_maps_to_the_fhir_type(self) -> 'None':
+        assert conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR] == alert_type_fhir
+
+        # The FHIR type is the REST type plus the operation outcomes
+        fhir_names = get_field_names(alert_type_fhir)
+        for name in get_field_names(alert_type_rest):
+            assert name in fhir_names
+
+        assert 'outcome_codes' in fhir_names
+        assert 'outcome_threshold' in fhir_names
+        assert 'outcomes_window' in fhir_names
+
+        assert get_defaults(alert_type_fhir)['outcome_codes'] == \
+            'exception, transient, timeout, throttled, lock-error, no-store, too-costly'
 
 # ################################################################################################################################
 

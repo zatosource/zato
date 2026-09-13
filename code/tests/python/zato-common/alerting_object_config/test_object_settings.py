@@ -57,6 +57,7 @@ _sftp_name = 'sftp.settings'
 _ftp_name = 'ftp.settings'
 _other_cluster_name = 'sftp.elsewhere'
 _as2_name = 'as2.no-alerts'
+_fhir_name = 'ehr.fhir'
 
 # The schedules the SFTP connection carries
 _schedule_name = 'Daily results'
@@ -216,6 +217,26 @@ class TestLoadObjectSettings:
         assert sorted(by_object) == sorted([_sftp_name, _schedule_name, _other_schedule_name])
         assert by_object[_schedule_name]['arrival_overdue'] == 3
         assert by_object[_other_schedule_name] == by_object[_sftp_name]
+
+# ################################################################################################################################
+
+    def test_an_outgoing_fhir_connection_loads_under_fhir_with_its_own_codes(self) -> 'None':
+        stored = to_storage(alert_type_fhir, {'outcome_codes': 'exception, not-found', 'outcome_threshold': 5})
+
+        with _session() as session:
+            _add_connection(session, _fhir_name, GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR, _cluster_id, stored)
+            settings = load_object_settings(session, _cluster_id)
+
+        by_object = settings[alert_type_fhir]
+
+        assert list(by_object) == [_fhir_name]
+        assert by_object[_fhir_name]['outcome_codes'] == 'exception, not-found'
+        assert by_object[_fhir_name]['outcome_threshold'] == 5
+
+        # What was not stored is still at its default, and no other type sees the row
+        assert by_object[_fhir_name]['status_codes'] == get_defaults(alert_type_fhir)['status_codes']
+        assert settings[alert_type_rest] == {}
+        assert settings[alert_type_file_transfer] == {}
 
 # ################################################################################################################################
 

@@ -486,8 +486,8 @@ def _create_edit(self, action):
                         # .. other connection types describe their linked job in their own opaque fields.
                         else:
                             with closing(self.odb.session()) as session:
-                                update_linked_job_fields(session, link_conn_id, link_kind, run.run_every, run.run_unit,
-                                    start_iso, job_id)
+                                update_linked_job_fields(session, link_conn_id, link_conn_type, link_kind, run.run_every,
+                                    run.run_unit, start_iso, job_id)
 
         self.response.payload.id = job_row.id
         self.response.payload.name = input.name
@@ -740,7 +740,7 @@ class Delete(_SchedulerAdmin):
                 # .. other connection types clear the fields describing the job from their opaque attributes.
                 else:
                     with closing(self.odb.session()) as session:
-                        clear_linked_job_fields(session, link_conn_id, link_kind)
+                        clear_linked_job_fields(session, link_conn_id, link_conn_type, link_kind)
 
         except Exception:
             self.logger.error('Could not delete the job, e:`%s`', format_exc())

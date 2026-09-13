@@ -26,7 +26,7 @@ class HealthCheckRun(AdminService):
     """ Invoked by the scheduler on behalf of any connection with a health check configured - pings
     the connection. The ping writes its request and response pair to the audit log under the connection's
     health source, which is what the alerting engine reads, so a check's outcome reaches people through
-    the connection's alerts. Generic across connection types, starting with outgoing REST and SOAP.
+    the connection's alerts. Generic across connection types - outgoing REST, SOAP and FHIR.
     """
     name = _health_check.Dispatch_Service
 
@@ -38,9 +38,12 @@ class HealthCheckRun(AdminService):
         conn_name = context[_health_check.Extra_Conn_Name]
         conn_type = context[_health_check.Extra_Conn_Type]
 
-        # Both outgoing REST and SOAP resolve to an HTTPSOAPWrapper, which knows how to ping itself
+        # Outgoing REST and SOAP resolve to an HTTPSOAPWrapper and outgoing FHIR to its own wrapper,
+        # each of which knows how to ping itself and to write the ping under its health source
         if conn_type == SchedulerLink.ConnType.SOAP_Outgoing:
             wrapper = self.out.soap[conn_name].conn
+        elif conn_type == SchedulerLink.ConnType.FHIR_Outgoing:
+            wrapper = self._config_manager.outconn_hl7_fhir[conn_name].conn
         else:
             wrapper = self.out.plain_http[conn_name].conn
 

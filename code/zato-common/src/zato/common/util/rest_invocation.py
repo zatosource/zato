@@ -18,7 +18,7 @@ from lxml import etree
 
 # Zato
 from zato.common.api import HTTP_SOAP, SchedulerLink
-from zato.common.odb.model import HTTPSOAP
+from zato.common.odb.model import GenericConn, HTTPSOAP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,6 +40,15 @@ _health_check = HTTP_SOAP.HealthCheck
 # the number of configured connections - these limits are a ceiling, not a working size.
 Compiled_Expression_Cache_Size = 1024
 Parsed_Rows_Cache_Size = 1024
+
+# The table a linked job's connection lives in, by the link's connection type - outgoing REST and SOAP
+# connections are HTTPSOAP rows, outgoing FHIR connections are generic ones. Both keep their opaque
+# attributes in the same column, so the same writes apply to either.
+_model_by_link_conn_type = {
+    SchedulerLink.ConnType.REST_Outgoing: HTTPSOAP,
+    SchedulerLink.ConnType.SOAP_Outgoing: HTTPSOAP,
+    SchedulerLink.ConnType.FHIR_Outgoing: GenericConn,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -204,12 +213,13 @@ def map_response(response_data:'any_', response_map:'str', response_map_mode:'st
 # ################################################################################################################################
 # ################################################################################################################################
 
-def update_connection_opaque_fields(session:'SASession', conn_id:'int', values:'stranydict') -> 'None':
+def update_connection_opaque_fields(session:'SASession', conn_id:'int', link_conn_type:'str', values:'stranydict') -> 'None':
     """ Writes the given opaque attributes back to an outgoing connection.
     """
+    model = _model_by_link_conn_type[link_conn_type]
 
     # The connection may no longer exist, e.g. its linked job outlived it
-    row = session.query(HTTPSOAP).filter_by(id=conn_id).first()
+    row = session.query(model).filter_by(id=conn_id).first()
     if not row:
         return
 
@@ -227,12 +237,13 @@ def update_connection_opaque_fields(session:'SASession', conn_id:'int', values:'
 
 # ################################################################################################################################
 
-def clear_connection_opaque_fields(session:'SASession', conn_id:'int', field_names:'strlist') -> 'None':
+def clear_connection_opaque_fields(session:'SASession', conn_id:'int', link_conn_type:'str', field_names:'strlist') -> 'None':
     """ Removes the given opaque attributes from an outgoing connection, e.g. when its linked job was deleted.
     """
+    model = _model_by_link_conn_type[link_conn_type]
 
     # The connection may no longer exist, e.g. the job is being deleted because the connection itself is
-    row = session.query(HTTPSOAP).filter_by(id=conn_id).first()
+    row = session.query(model).filter_by(id=conn_id).first()
     if not row:
         return
 
@@ -253,9 +264,10 @@ def clear_connection_opaque_fields(session:'SASession', conn_id:'int', field_nam
 # ################################################################################################################################
 
 def update_linked_job_fields(
-    session,    # type: SASession
-    conn_id,    # type: int
-    kind,       # type: str
+    session,        # type: SASession
+    conn_id,        # type: int
+    link_conn_type, # type: str
+    kind,           # type: str
     run_every,  # type: int
     run_unit,   # type: str
     start_date, # type: str
@@ -282,11 +294,11 @@ def update_linked_job_fields(
             _invocation.Field_Job_ID: job_id,
         }
 
-    update_connection_opaque_fields(session, conn_id, values)
+    update_connection_opaque_fields(session, conn_id, link_conn_type, values)
 
 # ################################################################################################################################
 
-def clear_linked_job_fields(session:'SASession', conn_id:'int', kind:'str') -> 'None':
+def clear_linked_job_fields(session:'SASession', conn_id:'int', link_conn_type:'str', kind:'str') -> 'None':
     """ Removes the fields describing a connection-linked scheduler job after the job was deleted,
     so the connection does not describe a job that no longer exists.
     """
@@ -295,7 +307,7 @@ def clear_linked_job_fields(session:'SASession', conn_id:'int', kind:'str') -> '
     else:
         field_names = list(_invocation.SchedulerFieldList)
 
-    clear_connection_opaque_fields(session, conn_id, field_names)
+    clear_connection_opaque_fields(session, conn_id, link_conn_type, field_names)
 
 # ################################################################################################################################
 # ################################################################################################################################

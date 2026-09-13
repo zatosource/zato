@@ -298,10 +298,13 @@ class TestEachTypeReachesItsRule:
         case('alerts_rest_Connection_Down', AuditSource.REST_Outgoing, consecutive_failures=3)
         case('alerts_soap_Connection_Down', AuditSource.SOAP_Outgoing, consecutive_failures=3)
         case('alerts_soap_SOAP_Faults', AuditSource.SOAP_Outgoing, fault_count=3)
+        case('alerts_fhir_Connection_Down', AuditSource.FHIR, consecutive_failures=3)
+        case('alerts_fhir_Operation_Outcomes', AuditSource.FHIR, outcome_count=3)
 
         # A connection's health check is measured apart from its traffic and judged by the same rule of its own type
         case('alerts_rest_Connection_Down', AuditSource.REST_Outgoing_Health, consecutive_failures=3)
         case('alerts_soap_Connection_Down', AuditSource.SOAP_Outgoing_Health, consecutive_failures=3)
+        case('alerts_fhir_Connection_Down', AuditSource.FHIR_Health, consecutive_failures=3)
 
         case('alerts_sql_Slow_Queries', AuditSource.SQL_Outgoing, avg_duration_ms=6000)
         case('alerts_llm_Slow_Completions', AuditSource.LLM, avg_duration_ms=12000)

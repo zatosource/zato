@@ -6,9 +6,10 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The live proof - with the trace on, every exchange with the IMAP server, the SFTP server,
-# the REST channel and the outgoing REST connections of the live server, the LLM and the SMTP receiver is printed as it happens,
-# one channel tag per line and nothing else, so the run reads as a transcript rather than as a log.
+# The live proof - with the trace on, every exchange with the IMAP server, the SFTP server, the REST channel and
+# the outgoing REST, SOAP and FHIR connections of the live server - each FHIR call with its status and issue code -
+# the LLM and the SMTP receiver is printed as it happens, one channel tag per line and nothing else, so the run
+# reads as a transcript rather than as a log.
 
 # stdlib
 import os

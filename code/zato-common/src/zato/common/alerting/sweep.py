@@ -33,6 +33,7 @@ from zato.common.alerting.object_settings import build_rule_values, build_window
     get_llm_connection, get_muted_rule_names, get_silence_expected_names, is_object_active
 from zato.common.alerting.fact_message import build_fact_message as build_fact_message
 from zato.common.alerting.fault_codes import apply_fault_codes
+from zato.common.alerting.outcome_codes import apply_outcome_codes
 from zato.common.alerting.status_codes import apply_status_codes
 from zato.common.api import Alerting
 from zato.common.defaults import default_cluster_id
@@ -479,9 +480,11 @@ def run_sweep(
                 rule_values = build_rule_values(alert_type, settings, now, rule.name)
 
             # A connection's responses are counted against the status codes in force for it and this rule,
-            # and a SOAP connection's faults against its fault codes the same way
+            # a SOAP connection's faults against its fault codes and a FHIR connection's operation outcomes
+            # against its outcome codes the same way
             fact = apply_status_codes(fact, rule, rule_values)
             fact = apply_fault_codes(fact, rule, rule_values)
+            fact = apply_outcome_codes(fact, rule, rule_values)
 
             match_data = {Fact_Entity: fact}
             match_data.update(rule_values)

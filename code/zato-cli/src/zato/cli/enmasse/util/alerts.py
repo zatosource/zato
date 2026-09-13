@@ -54,6 +54,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 #         alerts:
 #           fault_codes: 'Receiver, Server'
 #           fault_threshold: 3
+#
+#     outgoing_fhir:
+#       - name: ehr.fhir
+#         address: https://fhir.example.com/r4
+#         health_check_run_every: 5
+#         health_check_run_unit: minutes
+#         alerts:
+#           outcome_codes: 'exception, timeout'
+#           outcome_threshold: 3
 
 # stdlib
 import logging
@@ -61,8 +70,9 @@ from json import loads
 
 # Zato
 from zato.common.alerting import object_config
-from zato.common.alerting.config_map import Fault_Codes_Field_Name, Status_Codes_Field_Name
+from zato.common.alerting.config_map import Fault_Codes_Field_Name, Outcome_Codes_Field_Name, Status_Codes_Field_Name
 from zato.common.alerting.fault_codes import parse_fault_codes
+from zato.common.alerting.outcome_codes import parse_outcome_codes
 from zato.common.alerting.status_codes import parse_status_codes
 from zato.common.api import EMAIL, GENERIC
 from zato.common.defaults import default_cluster_id
@@ -193,10 +203,17 @@ def flatten_alerts(connection_def:'anydict', alert_type:'str', connection_type:'
         except ValueError as e:
             raise Exception(f'{e} for {connection_type} connection `{connection_name}`')
 
-    # .. and so is a fault code that is not a name such as Receiver or x:Timeout.
+    # .. so is a fault code that is not a name such as Receiver or x:Timeout ..
     if Fault_Codes_Field_Name in alerts:
         try:
             _ = parse_fault_codes(alerts[Fault_Codes_Field_Name])
+        except ValueError as e:
+            raise Exception(f'{e} for {connection_type} connection `{connection_name}`')
+
+    # .. and so is an outcome code that is not a FHIR issue code such as exception or not-found.
+    if Outcome_Codes_Field_Name in alerts:
+        try:
+            _ = parse_outcome_codes(alerts[Outcome_Codes_Field_Name])
         except ValueError as e:
             raise Exception(f'{e} for {connection_type} connection `{connection_name}`')
 

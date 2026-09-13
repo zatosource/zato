@@ -63,7 +63,7 @@ _unit_singular = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _health_check_line(opaque:'anydict') -> 'str':
+def health_check_line(opaque:'anydict') -> 'str':
     """ How often the connection's health check runs - `every 5 minutes` - or that it has none.
     """
     if _health_check.Field_Run_Every not in opaque:
@@ -160,7 +160,7 @@ def describe_outgoing_http(session:'SASession', cluster_id:'int', source:'str', 
 
     out.append(('Audit log', On if is_audit_log_active else Off))
 
-    out.append(('Health check', _health_check_line(opaque)))
+    out.append(('Health check', health_check_line(opaque)))
 
     # The settings are the ones of the row's own type - the SOAP type carries the fault codes on top of the REST ones
     out.extend(settings_lines(get_alert_type(CONNECTION.OUTGOING, transport), opaque))

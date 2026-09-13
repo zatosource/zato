@@ -25,6 +25,7 @@ _shipped_sources = (
     AuditSource.REST_Channel,
     AuditSource.REST_Outgoing,
     AuditSource.SOAP_Outgoing,
+    AuditSource.FHIR,
     AuditSource.SQL_Outgoing,
     AuditSource.LLM,
     AuditSource.MCP,
@@ -37,7 +38,7 @@ _shipped_sources = (
 )
 
 # The sources whose skill may propose resubmitting
-_resubmit_sources = (AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing, AuditSource.File_Outgoing)
+_resubmit_sources = (AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing, AuditSource.FHIR, AuditSource.File_Outgoing)
 
 # The four sections every skill teaches the LLM to read
 _sections = ('Alert', 'Object', 'Failures', 'Baseline')
@@ -101,6 +102,7 @@ class TestGetSkillSource:
     def test_a_health_check_is_explained_with_the_connections_skill(self) -> 'None':
         assert get_skill_source(AuditSource.REST_Outgoing_Health) == AuditSource.REST_Outgoing
         assert get_skill_source(AuditSource.SOAP_Outgoing_Health) == AuditSource.SOAP_Outgoing
+        assert get_skill_source(AuditSource.FHIR_Health) == AuditSource.FHIR
 
     def test_an_outgoing_soap_connection_is_explained_with_a_skill_of_its_own(self) -> 'None':
         assert get_skill_source(AuditSource.SOAP_Outgoing) == AuditSource.SOAP_Outgoing

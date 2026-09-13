@@ -91,8 +91,13 @@ _scheduler_stream_prefix = 'zato:scheduler:explain-live:' + uuid4().hex
 # the explanations go through, pointed at the Ollama container
 _enmasse_template_path = os.path.join(os.path.dirname(__file__), 'live_server_enmasse.yaml')
 
-# The service the REST channel proof points its channel at - every call to it raises
-_raising_service_source = '''# -*- coding: utf-8 -*-
+# The services the proofs point their channels at - every call to the first one raises, every call to the second
+# one is answered with a FHIR OperationOutcome on a 500, the way a FHIR server answers for a resource it failed on
+_live_services_source = '''# -*- coding: utf-8 -*-
+
+# stdlib
+from http.client import INTERNAL_SERVER_ERROR
+from json import dumps
 
 # Zato
 from zato.server.service import Service
@@ -104,6 +109,18 @@ class AlwaysRaise(Service):
 
     def handle(self):
         raise Exception('{error_text}')
+
+class FHIROutcome(Service):
+    """ Answers with an OperationOutcome on a 500, so that a FHIR connection calling the channel in front of it
+    reads an issue code of its own rather than a bare status.
+    """
+    name = '{outcome_service_name}'
+
+    def handle(self):
+        issue = {{'severity': 'error', 'code': '{outcome_code}', 'diagnostics': '{outcome_text}'}}
+        self.response.status_code = INTERNAL_SERVER_ERROR
+        self.response.content_type = 'application/fhir+json'
+        self.response.payload = dumps({{'resourceType': 'OperationOutcome', 'issue': [issue]}})
 '''
 
 # ################################################################################################################################
@@ -117,12 +134,18 @@ def _build_live_server_config(
     invoke_password:'str',
     ) -> 'anydict':
     """ What the quickstart server needs before it starts - the placeholders of the enmasse document
-    and the source of the service that raises, and what the tests need once it runs.
+    and the source of the services the proofs call, and what the tests need once it runs.
     """
     work_directory = tempfile.mkdtemp(prefix='zato_explain_live_work_')
     source_path = os.path.join(work_directory, 'explain_live_services.py')
 
-    source = _raising_service_source.format(service_name=LiveServer.raising_service, error_text=LiveServer.error_text)
+    source = _live_services_source.format(
+        service_name=LiveServer.raising_service,
+        error_text=LiveServer.error_text,
+        outcome_service_name=LiveServer.outcome_service,
+        outcome_code=LiveServer.outcome_code,
+        outcome_text=LiveServer.outcome_text,
+    )
 
     with open(source_path, 'w') as source_file:
         _ = source_file.write(source)

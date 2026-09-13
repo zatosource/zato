@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The Alerts tab of an outgoing REST or SOAP connection - its sections in order with the health check above the failures and
+# The Alerts tab of an outgoing REST, SOAP or FHIR connection - its sections in order with the health check above the failures and
 # the traffic, the status codes line carrying its text field and summarising the codes, the connection failures line, every
 # storage field of the type on both pages' forms, and the storage names the config hands the tab's JavaScript. The SOAP
 # tab has a SOAP faults line of its own right after the status codes, and the alert rules page a SOAP outgoing row with
@@ -21,13 +21,15 @@ from zato.common.ext.bunch import Bunch
 # Zato - Dashboard
 from zato.admin.web import alerts_tab
 from zato.admin.web.alerts_tab_lines import Fault_Codes_Default, Fault_Codes_Field, Faults_Window_Unit_Field, \
-    Health_Check_Run_Every_Field, Health_Check_Run_Unit_Field, Health_Check_Summary_Empty, Line_Kind_Popover, Section_Core, \
-    Section_Failures, Section_Health, Section_Traffic, Status_Codes_Field, Status_Codes_Default, \
-    Status_Codes_Window_Unit_Field, Unit_Field_Suffix
+    Health_Check_Run_Every_Field, Health_Check_Run_Unit_Field, Health_Check_Summary_Empty, Line_Kind_Popover, \
+    Outcome_Codes_Default, Outcome_Codes_Field, Outcomes_Window_Unit_Field, Section_Core, Section_Failures, Section_Health, \
+    Section_Traffic, Status_Codes_Field, Status_Codes_Default, Status_Codes_Window_Unit_Field, Unit_Field_Suffix
 from zato.admin.web.forms.http_soap import CreateForm as ChannelCreateForm, EditForm as ChannelEditForm
+from zato.admin.web.forms.outgoing.hl7.fhir import CreateForm as FHIRCreateForm, EditForm as FHIREditForm
 from zato.admin.web.forms.outgoing.soap import CreateForm as SOAPCreateForm, EditForm as SOAPEditForm
 from zato.admin.web.views.alerting import _build_config_cell, _type_cells, _type_titles
-from zato.common.alerting.object_config import alert_type_rest, alert_type_soap, get_defaults, get_field_names, storage_name
+from zato.common.alerting.object_config import alert_type_fhir, alert_type_rest, alert_type_soap, get_defaults, \
+    get_field_names, storage_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -313,6 +315,113 @@ class TestOutgoingSoapTab:
             'kind': 'text',
             'value': 'Receiver, Server',
             'display': 'Receiver, Server',
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestOutgoingFhirTab:
+
+    def test_the_fhir_lines_carry_the_outcomes_right_after_the_status_codes(self) -> 'None':
+
+        config = alerts_tab.get_alerts_tab_config(alert_type_fhir)
+
+        line_names:'strlist' = []
+
+        for line in config['lines']:
+            line_names.append(line['name'])
+
+        assert line_names == ['active', 'use_llm', 'llm', 'email', 'health_check', 'failures_in_a_row', 'error_rate',
+            'status_codes', 'operation_outcomes', 'connection_failures', 'slow_responses']
+
+        # Neither the REST tab nor the SOAP one has such a line, and the FHIR one has no faults
+        assert 'operation_outcomes' not in _lines_by_name(alerts_tab.get_alerts_tab_config(alert_type_rest))
+        assert 'operation_outcomes' not in _lines_by_name(alerts_tab.get_alerts_tab_config(alert_type_soap))
+        assert 'soap_faults' not in _lines_by_name(config)
+
+# ################################################################################################################################
+
+    def test_the_operation_outcomes_line_carries_its_codes_and_summarises_them(self) -> 'None':
+
+        config = alerts_tab.get_alerts_tab_config(alert_type_fhir)
+        line = _lines_by_name(config)['operation_outcomes']
+
+        assert line['kind'] == Line_Kind_Popover
+        assert line['label'] == 'Operation outcomes'
+        assert line['fields'] == [Outcome_Codes_Field, 'outcome_threshold', 'outcomes_window']
+        assert line['rows'] == [[Outcome_Codes_Field], ['outcome_threshold', 'outcomes_window']]
+        assert line['unit_field'] == Outcomes_Window_Unit_Field
+
+        # The codes are typed as text with the default showing the shape ..
+        assert line['text_fields'] == {Outcome_Codes_Field: Outcome_Codes_Default}
+        assert Outcome_Codes_Default == 'exception, transient, timeout, throttled, lock-error, no-store, too-costly'
+        assert config['field_kinds'][Outcome_Codes_Field] == 'text'
+
+        # .. and the summary names the count, the codes text and the window with its unit.
+        assert '{outcome_threshold|outcome|outcomes}' in line['summary']
+        assert f'{{{Outcome_Codes_Field}}}' in line['summary']
+        assert f'{{{Outcomes_Window_Unit_Field}@outcomes_window}}' in line['summary']
+
+        assert config['field_labels']['outcomes_window'] == 'In the last'
+        assert config['field_labels']['outcome_threshold'] == 'Alert after'
+
+# ################################################################################################################################
+
+    def test_the_fhir_forms_carry_the_outcome_and_health_check_fields(self, req:'any_') -> 'None':
+
+        defaults = get_defaults(alert_type_fhir)
+
+        for form_class in (FHIRCreateForm, FHIREditForm):
+            form = form_class(req=req, security_list=[])
+
+            for name in get_field_names(alert_type_fhir):
+                assert storage_name(name) in form.fields, name
+
+            assert form.fields[storage_name(Outcome_Codes_Field)].initial == defaults['outcome_codes']
+            assert form.fields[storage_name('outcome_threshold')].initial == defaults['outcome_threshold']
+
+            # The health check schedule is edited on the tab as fields of the page's own form
+            assert Health_Check_Run_Every_Field in form.fields
+            assert Health_Check_Run_Unit_Field in form.fields
+
+            for name in ('fault_codes', 'fault_threshold', 'faults_window'):
+                assert storage_name(name) not in form.fields, name
+
+# ################################################################################################################################
+
+    def test_the_fhir_storage_names_carry_the_outcomes_window_with_its_unit(self) -> 'None':
+
+        config = alerts_tab.get_alerts_tab_config(alert_type_fhir)
+        storage_names = config['storage_field_names']
+
+        assert storage_name('outcomes_window') in storage_names
+        assert storage_name('outcomes_window' + Unit_Field_Suffix) in storage_names
+        assert storage_name(Outcome_Codes_Field) in storage_names
+
+# ################################################################################################################################
+
+    def test_the_type_page_renders_the_fhir_row_with_its_text_cell(self) -> 'None':
+
+        assert _type_titles['fhir'] == 'FHIR outgoing'
+
+        assert 'outcome_codes' in _type_cells['fhir']
+        assert 'outcome_codes' not in _type_cells['rest']
+        assert 'outcome_codes' not in _type_cells['soap']
+        assert 'fault_codes' not in _type_cells['fhir']
+
+        values = {'outcome_codes': 'exception, not-found'}
+        cell = _build_config_cell('outcome_codes', 'text', values)
+
+        assert cell == {
+            'name': 'outcome_codes',
+            'label': 'Outcome codes',
+            'suffix': '',
+            'kind': 'text',
+            'value': 'exception, not-found',
+            'display': 'exception, not-found',
         }
 
 # ################################################################################################################################
