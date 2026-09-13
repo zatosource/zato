@@ -235,10 +235,12 @@
 /* The inputs                                                    */
 /* ------------------------------------------------------------ */
 
-/* One explicit height keeps rows mixing inputs and selects even, a .micro-form-field-own field is left alone */
-.micro-form-field:not(.micro-form-field-own) input[type="text"],
-.micro-form-field:not(.micro-form-field-own) input[type="number"],
-.micro-form-field:not(.micro-form-field-own) select {
+/* One explicit height keeps rows mixing inputs and selects even, a .micro-form-field-own field is left alone.
+   The :where keeps the exclusion out of the specificity, so the narrower widths
+   of a count field and of a unit select below still win over the 100% here. */
+.micro-form-field:where(:not(.micro-form-field-own)) input[type="text"],
+.micro-form-field:where(:not(.micro-form-field-own)) input[type="number"],
+.micro-form-field:where(:not(.micro-form-field-own)) select {
     width: 100%;
     box-sizing: border-box;
     height: var(--micro-form-input-height);
@@ -253,7 +255,7 @@
    The formalize height of 1.8em squeezed the select's line box out through
    the bottom edge, sitting the text low - the explicit height above plus
    paddings sized to the line box recenter it. */
-.micro-form-field:not(.micro-form-field-own) select {
+.micro-form-field:where(:not(.micro-form-field-own)) select {
     font-size: var(--micro-form-select-font-size);
     font-family: Arial, "Liberation Sans", FreeSans, sans-serif;
     line-height: normal;
@@ -261,9 +263,9 @@
     padding-bottom: 4px;
 }
 
-.micro-form-field:not(.micro-form-field-own) input[type="text"]:focus,
-.micro-form-field:not(.micro-form-field-own) input[type="number"]:focus,
-.micro-form-field:not(.micro-form-field-own) select:focus {
+.micro-form-field:where(:not(.micro-form-field-own)) input[type="text"]:focus,
+.micro-form-field:where(:not(.micro-form-field-own)) input[type="number"]:focus,
+.micro-form-field:where(:not(.micro-form-field-own)) select:focus {
     border-color: var(--zato-ui-accent);
     outline: none;
     box-shadow: none;

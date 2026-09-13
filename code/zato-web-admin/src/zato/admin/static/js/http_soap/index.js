@@ -175,12 +175,12 @@ $.fn.zato.http_soap.attach_datetimepicker = function(picker_ids) {
 $.fn.zato.http_soap.outgoingTabLabels = function() {
     var out = {
         config:       'Config',
+        alerts:       $.fn.zato.alerts_tab.tab_label(),
         scheduler:    'Scheduler',
         request:      'Request',
         response:     'Response',
         callback:     'Callback',
-        health_check: 'Health check',
-        alerts:       $.fn.zato.alerts_tab.tab_label()
+        health_check: 'Health check'
     };
     return out;
 }

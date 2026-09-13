@@ -642,12 +642,12 @@
                     {% if connection == 'outgoing' and transport == 'plain_http' %}
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
                         <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
-                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-config" role="tabpanel">
@@ -1028,12 +1028,12 @@
                     {% if connection == 'outgoing' and transport == 'plain_http' %}
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
                         <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
-                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-config" role="tabpanel">
