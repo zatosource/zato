@@ -64,7 +64,7 @@ class CreateForm(forms.Form):
 
     security_id = forms.ChoiceField(widget=forms.Select())
 
-    extra = forms.CharField(widget=forms.Textarea(attrs={'style':'height:60px'}), required=False)
+    extra = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:60px'}), required=False)
 
     def __init__(self, req:'any_', security_list:'any_', prefix:'any_'=None) -> 'None':
         super().__init__(prefix=prefix)
