@@ -13,6 +13,7 @@ $.fn.zato.data_table.HL7FHIROutconn = new Class({
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
+    $.fn.zato.alerts_tab.init({config_id: 'out-fhir-alerts-tab-config'});
     $('#data-table').tablesorter();
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.HL7FHIROutconn;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.hl7.fhir.data_table.new_row;
@@ -52,23 +53,55 @@ $.fn.zato.outgoing.hl7.fhir.field_descriptions = {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// The two tabs of a create or edit dialog - the connection's own fields and the Alerts tab
+$.fn.zato.outgoing.hl7.fhir.tab_labels = function() {
+    let out = {
+        config: 'Config',
+        alerts: $.fn.zato.alerts_tab.tab_label()
+    };
+    return out;
+}
+
+$.fn.zato.outgoing.hl7.fhir._reset_tabs = function(action) {
+    $.fn.zato.form_tabs.reset({
+        div_id:       '#' + action + '-div',
+        panel_prefix: 'out-fhir-' + action + '-tab-panel-',
+        default_tab:  'config',
+        tab_labels:   $.fn.zato.outgoing.hl7.fhir.tab_labels()
+    });
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.hl7.fhir.create = function() {
+    $.fn.zato.outgoing.hl7.fhir._reset_tabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create a new HL7 FHIR connection', null);
+    $.fn.zato.alerts_tab.bind({
+        panel_id: 'out-fhir-create-tab-panel-alerts',
+        field_prefix: ''
+    });
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
         divId: '#create-div',
-        descriptions: $.fn.zato.outgoing.hl7.fhir.field_descriptions
+        fieldSelector: 'table.form-data tr, .decision-line',
+        descriptions: $.extend({}, $.fn.zato.outgoing.hl7.fhir.field_descriptions, $.fn.zato.alerts_tab.descriptions())
     });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.hl7.fhir.edit = function(id) {
+    $.fn.zato.outgoing.hl7.fhir._reset_tabs('edit');
     $.fn.zato.data_table._create_edit('edit', 'Update the HL7 FHIR connection', id);
+    $.fn.zato.alerts_tab.bind({
+        panel_id: 'out-fhir-edit-tab-panel-alerts',
+        field_prefix: 'edit-'
+    });
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',
         divId: '#edit-div',
-        descriptions: $.fn.zato.outgoing.hl7.fhir.field_descriptions
+        fieldSelector: 'table.form-data tr, .decision-line',
+        descriptions: $.extend({}, $.fn.zato.outgoing.hl7.fhir.field_descriptions, $.fn.zato.alerts_tab.descriptions())
     });
 }
 
@@ -117,6 +150,14 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     row += String.format("<td class='ignore'>{0}</td>", item.security_id);
     row += String.format("<td class='ignore'>{0}</td>", is_audit_log_active);
 
+    // 7 - the health check
+    row += String.format("<td class='ignore'>{0}</td>", item.health_check_run_every);
+    row += String.format("<td class='ignore'>{0}</td>", item.health_check_run_unit);
+    row += String.format("<td class='ignore'>{0}</td>", item.health_check_job_id);
+
+    // 8 - the Alerts tab
+    row += $.fn.zato.alerts_tab.hidden_cells(item);
+
     if(include_tr) {
         row += '</tr>';
     }
@@ -139,10 +180,10 @@ $.fn.zato.outgoing.hl7.fhir.delete_ = function(id) {
 
 $.fn.zato.live_form_updates.register('create', [
     {object_type: 'security', target_select: '#id_security_id'}
-]);
+].concat($.fn.zato.alerts_tab.live_configs('')));
 
 $.fn.zato.live_form_updates.register('edit', [
     {object_type: 'security', target_select: '#id_edit-security_id'}
-]);
+].concat($.fn.zato.alerts_tab.live_configs('edit-')));
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

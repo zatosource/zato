@@ -10,6 +10,17 @@
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-chips.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-resize.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -25,6 +36,26 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+
+    {% comment %} Form tabs and the Alerts tab {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/chips.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/decision-lines.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select-placement.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots-fields.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab-slots.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
+    {{ alerts_tab_config|json_script:"out-fhir-alerts-tab-config" }}
+
+    {% comment %} FHIR {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/fhir.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -47,7 +78,14 @@
             'extra',
             'security_id',
             'is_audit_log_active',
-        ]
+
+            {% comment %} 7 - the health check {% endcomment %}
+            'health_check_run_every',
+            'health_check_run_unit',
+            'health_check_job_id',
+
+            {% comment %} 8 - the Alerts tab {% endcomment %}
+        ].concat($.fn.zato.alerts_tab.columns());
     }
     </script>
 
@@ -108,6 +146,16 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} 7 - the health check {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 8 - the Alerts tab {% endcomment %}
+                        {% for field_name in alerts_tab_config.storage_field_names %}
+                        <th class='ignore'>&nbsp;</th>
+                        {% endfor %}
+
                 </thead>
 
                 <tbody>
@@ -149,6 +197,16 @@
                         <td class='ignore'>{{ item.security_id|default:"" }}</td>
                         <td class='ignore'>{{ item.is_audit_log_active }}</td>
 
+                        {% comment %} 7 - the health check {% endcomment %}
+                        <td class='ignore'>{{ item.health_check_run_every|default:'' }}</td>
+                        <td class='ignore'>{{ item.health_check_run_unit|default:'' }}</td>
+                        <td class='ignore'>{{ item.health_check_job_id|default:'' }}</td>
+
+                        {% comment %} 8 - the Alerts tab {% endcomment %}
+                        {% for field_name in alerts_tab_config.storage_field_names %}
+                        <td class='ignore'>{{ item|get_item:field_name }}</td>
+                        {% endfor %}
+
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -166,6 +224,13 @@
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "outgoing-hl7-fhir-create" %}" method="post" id="create-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-fhir-create-tab-panel-config" role="tabpanel">
                     <table class="form-data">
                         <tr>
                             <td class="form-label-cell"><label for="id_name">Name</label></td>
@@ -201,6 +266,15 @@
                             <td class="form-label-cell form-label-cell-top"><label for="id_extra">Extra</label></td>
                             <td>{{ create_form.extra }}</td>
                         </tr>
+                    </table>
+                    </div>
+
+                    {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
+                    {{ create_form.health_check_job_id }}
+
+                    {% include "zato/shared/alerts-tab.html" with panel_id="out-fhir-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
+
+                    <table class="form-data">
                         <tr>
                             <td class="form-label-cell">
                                 <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
@@ -219,6 +293,13 @@
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "outgoing-hl7-fhir-edit" %}" method="post" id="edit-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-fhir-edit-tab-panel-config" role="tabpanel">
                     <table class="form-data">
                         <tr>
                             <td class="form-label-cell"><label for="id_edit-name">Name</label></td>
@@ -254,6 +335,15 @@
                             <td class="form-label-cell form-label-cell-top"><label for="id_edit-extra">Extra</label></td>
                             <td>{{ edit_form.extra }}</td>
                         </tr>
+                    </table>
+                    </div>
+
+                    {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
+                    {{ edit_form.health_check_job_id }}
+
+                    {% include "zato/shared/alerts-tab.html" with panel_id="out-fhir-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
+
+                    <table class="form-data">
                         <tr>
                             <td class="form-label-cell">
                                 <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>

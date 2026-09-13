@@ -76,11 +76,13 @@ alert_type_file_transfer = 'file_transfer'
 alert_type_channels = 'channels'
 alert_type_rest = 'rest'
 alert_type_soap = 'soap'
+alert_type_fhir = 'fhir'
 
 conn_type_to_alert_type:'strstrdict' = {
-    GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: alert_type_file_transfer,
-    GENERIC.CONNECTION.TYPE.OUTCONN_FTP:  alert_type_file_transfer,
-    GENERIC.CONNECTION.TYPE.OUTCONN_SMB:  alert_type_file_transfer,
+    GENERIC.CONNECTION.TYPE.OUTCONN_SFTP:     alert_type_file_transfer,
+    GENERIC.CONNECTION.TYPE.OUTCONN_FTP:      alert_type_file_transfer,
+    GENERIC.CONNECTION.TYPE.OUTCONN_SMB:      alert_type_file_transfer,
+    GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: alert_type_fhir,
 }
 
 # The HTTPSOAP rows that carry alert settings of their own, by connection and transport -
@@ -173,6 +175,9 @@ field_display = {
     'fault_codes':          ('Fault codes', ''),
     'fault_threshold':      ('Faults', ''),
     'faults_window':        ('Faults window', ''),
+    'outcome_codes':        ('Outcome codes', ''),
+    'outcome_threshold':    ('Outcomes', ''),
+    'outcomes_window':      ('Outcomes window', ''),
     'traffic_expected':     ('Alert on silence', ''),
     'silence_window':       ('Silence', ''),
     'silence_slots':        ('Time ranges', ''),
@@ -219,6 +224,11 @@ field_help = {
                             'Sender and Client the caller\'s, and a code of the endpoint\'s own is written with its prefix, e.g. x:Timeout.',
     'fault_threshold':      'How many faults with one of the fault codes in the window raise an alert.',
     'faults_window':        'How long the window the faults are counted over is.',
+    'outcome_codes':        'The FHIR OperationOutcome issue codes that count, comma-separated - exception, transient, timeout, ' + \
+                            'throttled, lock-error, no-store and too-costly are the server\'s own trouble, invalid, required and value ' + \
+                            'a wrong request, not-found a missing resource, security, login, forbidden and expired a refused caller.',
+    'outcome_threshold':    'How many OperationOutcomes with one of the issue codes in the window raise an alert.',
+    'outcomes_window':      'How long the window the OperationOutcomes are counted over is.',
     'traffic_expected':     'Whether a channel that receives no requests for the time below raises an alert.',
     'silence_window':       'How long the channel may go without a request, in minutes, hours or days.',
     'silence_slots':        'The ranges of the day with a silence and a switch of their own.',

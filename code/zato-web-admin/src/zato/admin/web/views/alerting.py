@@ -98,6 +98,7 @@ def _find_definition(backend:'RuleSQLBackend', name:'str', object_type:'str') ->
 _type_titles = {
     'rest':          'REST outgoing',
     'soap':          'SOAP outgoing',
+    'fhir':          'FHIR outgoing',
     'sql':           'SQL',
     'llm':           'LLM',
     'mcp':           'MCP',
@@ -122,6 +123,7 @@ _percent_unit = '%'
 _type_cells = {
     'rest':          ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'max_latency', 'use_llm'],
     'soap':          ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'fault_codes', 'max_latency', 'use_llm'],
+    'fhir':          ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'outcome_codes', 'max_latency', 'use_llm'],
     'sql':           ['consecutive_failures', 'error_rate', 'window', 'max_query_time', 'use_llm'],
     'llm':           ['consecutive_failures', 'error_rate', 'window', 'warning_latency', 'error_latency', 'use_llm'],
     'mcp':           ['consecutive_failures', 'error_rate', 'window', 'max_tool_call_time', 'use_llm'],

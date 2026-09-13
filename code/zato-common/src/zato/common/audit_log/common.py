@@ -92,6 +92,7 @@ class AuditSource:
     # from what the connection's real calls measure.
     REST_Outgoing_Health = 'rest-outgoing-health'
     SOAP_Outgoing_Health = 'soap-outgoing-health'
+    FHIR_Health          = 'fhir-health'
 
     # The probe sources - the default scheduler jobs that measure what no
     # per-call event can, writing ordinary audit events the collectors read.
@@ -102,7 +103,7 @@ class AuditSource:
 # ################################################################################################################################
 
 # What tells a check's event or measure from the connection's own.
-health_sources = {AuditSource.REST_Outgoing_Health, AuditSource.SOAP_Outgoing_Health}
+health_sources = {AuditSource.REST_Outgoing_Health, AuditSource.SOAP_Outgoing_Health, AuditSource.FHIR_Health}
 
 # ################################################################################################################################
 
@@ -116,6 +117,7 @@ _source_label = {
     AuditSource.SOAP_Outgoing: 'SOAP outgoing',
     AuditSource.REST_Outgoing_Health: 'REST check',
     AuditSource.SOAP_Outgoing_Health: 'SOAP check',
+    AuditSource.FHIR_Health: 'FHIR check',
     AuditSource.Email_IMAP: 'IMAP',
     AuditSource.Email_SMTP: 'SMTP',
     AuditSource.File_Outgoing: 'File transfer',
@@ -176,6 +178,7 @@ _source_retention_days = {
     AuditSource.X12: _default_evidence_retention_days,
     AuditSource.REST_Outgoing_Health: _default_health_check_retention_days,
     AuditSource.SOAP_Outgoing_Health: _default_health_check_retention_days,
+    AuditSource.FHIR_Health: _default_health_check_retention_days,
 }
 
 # ################################################################################################################################

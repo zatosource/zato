@@ -74,6 +74,9 @@ Measure_Connection_Failures = 'connection_failures'
 # The measure of an outgoing SOAP connection's faults - how many responses came as a fault of each fault code
 Measure_SOAP_Faults = 'soap_faults'
 
+# The measure of an outgoing FHIR connection's operation outcomes - how many responses came as an OperationOutcome of each issue code
+Measure_Operation_Outcomes = 'operation_outcomes'
+
 # The key a merged fact carries the window of each of its measures under
 Window_Seconds_By_Measure_Key = 'window_seconds_by_measure'
 
@@ -88,15 +91,17 @@ response_event_type_by_source = {
     AuditSource.SOAP_Outgoing:        AuditEvent.Response_Received,
     AuditSource.REST_Outgoing_Health: AuditEvent.Response_Received,
     AuditSource.SOAP_Outgoing_Health: AuditEvent.Response_Received,
+    AuditSource.FHIR:                 AuditEvent.Response_Received,
+    AuditSource.FHIR_Health:          AuditEvent.Response_Received,
 }
 
 # The channels - the sources whose rows are the calls a service received, and whose HTTPSOAP rows carry
 # alert settings under the channels type
 channel_sources = (AuditSource.REST_Channel, AuditSource.SOAP_Channel)
 
-# The outgoing connections whose responses are counted by their status code, and whose HTTPSOAP rows carry
-# alert settings under the rest type
-outgoing_sources = (AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing)
+# The outgoing connections whose responses are counted by their status code - the HTTPSOAP rows carrying
+# alert settings under the rest and soap types and the FHIR generic connections under the fhir type
+outgoing_sources = (AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing, AuditSource.FHIR)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -177,10 +182,14 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
 
         # The faults of an outgoing SOAP connection - how many arrived with each fault code, e.g. {'Receiver': 2},
         # how many of them carried a code the connection alerts on, by code and in all. A fault is counted
-        # here by its code and never among the status codes above.
+        # here by its code and never among the status codes above. An outgoing FHIR connection's OperationOutcomes
+        # are counted the same way under the same first key, by their issue code, and the ones the connection
+        # alerts on under the two keys after them.
         'fault_counts': {},
         'fault_code_counts': {},
         'fault_count': 0,
+        'outcome_code_counts': {},
+        'outcome_count': 0,
 
         # How many days the object's TLS certificate has left. Zero means unmeasured,
         # which is why the certificate rules also require a value of at least one.

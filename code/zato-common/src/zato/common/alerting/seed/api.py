@@ -24,6 +24,7 @@ from zato.common.alerting.config_map import Explain_With_LLM_Key
 from zato.common.alerting.seed.rules_common import channels_rules, common_rules, scheduler_rules
 from zato.common.alerting.seed.rules_connections import email_rules, file_transfer_rules, llm_rules, mcp_rules, \
     microsoft_rules, odoo_rules, rest_rules, soap_rules, sql_rules
+from zato.common.alerting.seed.rules_fhir import fhir_rules
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditSource
 from zato.common.audit_log.file_transfer_run import Run_Status_Clean, Run_Status_Empty, Run_Status_Failed, \
@@ -72,6 +73,7 @@ _alert_sources = [
     AuditSource.SOAP_Outgoing,
     AuditSource.REST_Outgoing_Health,
     AuditSource.SOAP_Outgoing_Health,
+    AuditSource.FHIR_Health,
     AuditSource.Email_IMAP,
     AuditSource.Email_SMTP,
     AuditSource.File_Outgoing,
@@ -151,6 +153,7 @@ default_rulesets = [
     ('alerts_channels',      channels_rules),
     ('alerts_rest',          rest_rules),
     ('alerts_soap',          soap_rules),
+    ('alerts_fhir',          fhir_rules),
     ('alerts_sql',           sql_rules),
     ('alerts_llm',           llm_rules),
     ('alerts_mcp',           mcp_rules),
@@ -200,6 +203,8 @@ def alerting_vocabulary() -> 'anydict':
             'how many responses an outgoing connection received with a status code it alerts on'),
         _term('fault_count',            TermType.Number,
             'how many responses an outgoing SOAP connection received as a fault with a fault code it alerts on'),
+        _term('outcome_count',          TermType.Number,
+            'how many responses an outgoing FHIR connection received as an OperationOutcome with an issue code it alerts on'),
         _term('connection_failure_count', TermType.Number,
             'how many calls of an outgoing connection failed before any response arrived'),
         _term('cert_days_left',         TermType.Number, 'how many days the TLS certificate has left, zero when unmeasured'),

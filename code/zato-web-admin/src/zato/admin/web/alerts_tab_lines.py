@@ -12,8 +12,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.admin.web.alerts_tab_picks import Email_Empty_Text, email_kinds, Live_Type_Email_Connection, \
     Live_Type_LLM_Connection, llm_kinds, LLM_Empty_Text
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, alert_type_rest, alert_type_soap, \
-    Email_Connection_Field, field_display as shared_field_display, field_help, get_defaults, Is_Active_Field, \
+from zato.common.alerting.object_config import alert_type_channels, alert_type_fhir, alert_type_file_transfer, alert_type_rest, \
+    alert_type_soap, Email_Connection_Field, field_display as shared_field_display, field_help, get_defaults, Is_Active_Field, \
     LLM_Connection_Field, Unit_Field_Suffix
 from zato.common.api import HTTP_SOAP
 
@@ -48,6 +48,7 @@ Silence_Window_Unit_Field       = config_map.Silence_Window_Field_Name + Unit_Fi
 Status_Codes_Window_Unit_Field  = 'status_codes_window' + Unit_Field_Suffix
 Connection_Failures_Window_Unit_Field = 'connection_failures_window' + Unit_Field_Suffix
 Faults_Window_Unit_Field        = 'faults_window' + Unit_Field_Suffix
+Outcomes_Window_Unit_Field      = 'outcomes_window' + Unit_Field_Suffix
 
 # The unit selects of the tab, by name
 unit_fields:'anydict' = {
@@ -61,6 +62,7 @@ unit_fields:'anydict' = {
     Status_Codes_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
     Connection_Failures_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
     Faults_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
+    Outcomes_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
 }
 
 # The JSON list of time slots of a channel's silence alert
@@ -74,6 +76,10 @@ Status_Codes_Default = get_defaults(alert_type_rest)[Status_Codes_Field]
 # The SOAP fault codes an outgoing SOAP connection alerts on, as typed, with the seeded default the same way
 Fault_Codes_Field = config_map.Fault_Codes_Field_Name
 Fault_Codes_Default = get_defaults(alert_type_soap)[Fault_Codes_Field]
+
+# The OperationOutcome issue codes an outgoing FHIR connection alerts on, as typed, with the seeded default the same way
+Outcome_Codes_Field = config_map.Outcome_Codes_Field_Name
+Outcome_Codes_Default = get_defaults(alert_type_fhir)[Outcome_Codes_Field]
 
 # How often an outgoing connection is pinged - fields of the connection's own form rather than alert settings,
 # which the tab edits in place, so they carry no alert prefix and travel outside of the alert settings
@@ -108,8 +114,10 @@ _popover_labels = {
     'status_codes_window':  'In the last',
     'connection_failures_window': 'In the last',
     'faults_window':        'In the last',
+    'outcomes_window':      'In the last',
     'status_code_threshold': 'Alert after',
     'fault_threshold':      'Alert after',
+    'outcome_threshold':    'Alert after',
     'connection_failures':  'Alert after',
     'arrival_overdue':      'Alert after',
     'silence_window':       'Alert after',
@@ -129,7 +137,7 @@ field_how_it_works[Silence_Window_Unit_Field] = 'Whether the silence a channel t
 
 for _window_unit_field in (Server_Errors_Window_Unit_Field, Latency_Window_Unit_Field, Auth_Failures_Window_Unit_Field,
     Client_Errors_Window_Unit_Field, Status_Codes_Window_Unit_Field, Connection_Failures_Window_Unit_Field,
-    Faults_Window_Unit_Field):
+    Faults_Window_Unit_Field, Outcomes_Window_Unit_Field):
     field_how_it_works[_window_unit_field] = field_how_it_works[Window_Unit_Field]
 
 field_display[Health_Check_Run_Every_Field] = ('Ping every', '')
@@ -346,8 +354,35 @@ def _soap_faults_line() -> 'anydict':
 
 # ################################################################################################################################
 
-# The lines of an outgoing HTTP connection of either transport - the SOAP tab has its faults right after the status codes
-def _http_lines(*, with_soap_faults:'bool') -> 'anylist':
+# The operation outcomes an outgoing FHIR connection alerts on - counted by the issue code the OperationOutcome carries,
+# apart from the status codes
+def _operation_outcomes_line() -> 'anydict':
+    out = {
+        'name': 'operation_outcomes',
+        'section': Section_Failures,
+        'kind': Line_Kind_Popover,
+        'label': 'Operation outcomes',
+        'title': 'Operation outcomes',
+        'fields': [Outcome_Codes_Field, 'outcome_threshold', 'outcomes_window'],
+        'rows': [[Outcome_Codes_Field], ['outcome_threshold', 'outcomes_window']],
+        'unit_field': Outcomes_Window_Unit_Field,
+        'text_fields': {Outcome_Codes_Field: Outcome_Codes_Default},
+        'summary': 'Alert after {outcome_threshold|outcome|outcomes} with ' + f'{{{Outcome_Codes_Field}}} ' + \
+            f'in the last {{{Outcomes_Window_Unit_Field}@outcomes_window}}',
+        'how_it_works': 'Which FHIR issue codes raise an alert - the code is what the server\'s OperationOutcome says went wrong, ' + \
+            'exception, transient, timeout, throttled, lock-error, no-store and too-costly being the server\'s own trouble, ' + \
+            'invalid, required and value a wrong request, not-found a missing resource, security, login, forbidden and expired ' + \
+            'a refused caller - each one a chip, typed and added with Enter, removed with its cross - how many outcomes with one ' + \
+            'of them do, and how long the window they are counted over. An OperationOutcome is counted here by its issue code ' + \
+            'and never as a status code.',
+    }
+    return out
+
+# ################################################################################################################################
+
+# The lines of an outgoing HTTP connection of any kind - a line of the kind's own, the SOAP faults or the FHIR operation
+# outcomes, goes right after the status codes
+def _http_lines(*, extra_failure_line:'anydict | None'=None) -> 'anylist':
     out = [
         _active_line(),
         _use_llm_line(),
@@ -359,8 +394,8 @@ def _http_lines(*, with_soap_faults:'bool') -> 'anylist':
         _status_codes_line(),
     ]
 
-    if with_soap_faults:
-        out.append(_soap_faults_line())
+    if extra_failure_line:
+        out.append(extra_failure_line)
 
     out.append(_connection_failures_line())
     out.append(_slow_responses_line())
@@ -499,8 +534,9 @@ type_lines:'anydict' = {
                 'all day or in ranges of the day with a switch and a silence of their own.',
         },
     ],
-    alert_type_rest: _http_lines(with_soap_faults=False),
-    alert_type_soap: _http_lines(with_soap_faults=True),
+    alert_type_rest: _http_lines(),
+    alert_type_soap: _http_lines(extra_failure_line=_soap_faults_line()),
+    alert_type_fhir: _http_lines(extra_failure_line=_operation_outcomes_line()),
 }
 
 # ################################################################################################################################

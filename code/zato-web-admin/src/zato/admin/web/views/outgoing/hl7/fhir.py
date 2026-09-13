@@ -10,11 +10,29 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web import alerts_tab
+from zato.admin.web.forms import health_check_unit_for_form, health_check_unit_to_scheduler
 from zato.admin.web.forms.outgoing.hl7.fhir import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, \
     extract_security_id, Index as _Index, invoke_action_handler, method_allowed, ping_connection, SecurityList
-from zato.common.api import GENERIC, generic_attrs, SEC_DEF_TYPE
+from zato.common.alerting.object_config import alert_type_fhir, Field_Prefix
+from zato.common.api import GENERIC, generic_attrs, HTTP_SOAP, SEC_DEF_TYPE
 from zato.common.model.hl7 import HL7FHIRConfigObject
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The alert settings of the connection follow the FHIR type
+_alert_type = alert_type_fhir
+_alert_field_names = alerts_tab.get_storage_field_names(_alert_type)
+
+# How often the connection is pinged - fields of the connection's own, edited on the Alerts tab
+_health_check = HTTP_SOAP.HealthCheck
+_health_check_field_names = (
+    _health_check.Field_Run_Every,
+    _health_check.Field_Run_Unit,
+    _health_check.Field_Job_ID,
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,8 +48,26 @@ class Index(_Index):
     input_required = 'cluster_id', 'type_'
     output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'security_id', \
         'pool_size', 'security_name'
-    output_optional = ('extra',) + generic_attrs
+    output_optional = ('extra',) + generic_attrs + _health_check_field_names + _alert_field_names
     output_repeated = True
+
+# ################################################################################################################################
+
+    def on_before_append_item(self, item):
+
+        # The scheduler names the health check's unit in the plural, the form in the singular,
+        # and a connection that was never given a health check carries no unit at all
+        if _health_check.Field_Run_Unit in item:
+            run_unit = item[_health_check.Field_Run_Unit]
+        else:
+            run_unit = None
+
+        item[_health_check.Field_Run_Unit] = health_check_unit_for_form(run_unit)
+
+        # The edit form shows a duration as a count with a unit, not as the seconds it is stored as
+        alerts_tab.split_durations(_alert_type, item)
+
+        return item
 
 # ################################################################################################################################
 
@@ -44,10 +80,16 @@ class Index(_Index):
             needs_definition_type_name_label=True
         )
 
+        create_form = CreateForm(self.req, security_list)
+        edit_form = EditForm(self.req, security_list, prefix='edit')
+
         return {
             'show_search_form': True,
-            'create_form': CreateForm(self.req, security_list),
-            'edit_form': EditForm(self.req, security_list, prefix='edit'),
+            'create_form': create_form,
+            'edit_form': edit_form,
+            'create_alerts_tab': alerts_tab.get_alerts_tab_context(create_form, _alert_type),
+            'edit_alerts_tab': alerts_tab.get_alerts_tab_context(edit_form, _alert_type),
+            'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
         }
 
 # ################################################################################################################################
@@ -57,7 +99,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name', 'is_internal', 'address', 'security_id', 'pool_size'
-    input_optional = ('is_active', 'extra') + generic_attrs
+    input_optional = ('is_active', 'extra') + generic_attrs + _health_check_field_names + _alert_field_names
     output_required = 'id', 'name'
 
 # ################################################################################################################################
@@ -73,9 +115,26 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
+    def pre_process_item(self, name, value):
+
+        # The Alerts tab's fields arrive as text and are stored typed - booleans, integers and stripped text
+        if name.startswith(Field_Prefix):
+            value = alerts_tab.pre_process_alert_item(_alert_type, name, value)
+
+        return value
+
+# ################################################################################################################################
+
     def pre_process_input_dict(self, input_dict):
         input_dict['pool_size'] = int(input_dict['pool_size'])
         input_dict['security_id'] = extract_security_id(input_dict)
+
+        # The form names the health check's unit in the singular, the scheduler in the plural
+        if run_unit := input_dict.get(_health_check.Field_Run_Unit):
+            input_dict[_health_check.Field_Run_Unit] = health_check_unit_to_scheduler[run_unit]
+
+        # A duration is stored as seconds, which is what its count and unit join into
+        alerts_tab.join_durations(_alert_type, input_dict)
 
 # ################################################################################################################################
 
