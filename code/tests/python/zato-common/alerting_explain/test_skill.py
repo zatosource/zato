@@ -99,7 +99,10 @@ class TestGetSkillSource:
 
     def test_a_health_check_is_explained_with_the_connections_skill(self) -> 'None':
         assert get_skill_source(AuditSource.REST_Outgoing_Health) == AuditSource.REST_Outgoing
-        assert get_skill_source(AuditSource.SOAP_Outgoing_Health) == AuditSource.SOAP_Outgoing
+        assert get_skill_source(AuditSource.SOAP_Outgoing_Health) == AuditSource.REST_Outgoing
+
+    def test_an_outgoing_soap_connection_is_explained_with_the_rest_outgoing_skill(self) -> 'None':
+        assert get_skill_source(AuditSource.SOAP_Outgoing) == AuditSource.REST_Outgoing
 
     def test_a_probe_is_explained_with_the_connections_skill(self) -> 'None':
         assert get_skill_source(AuditSource.Test_Transfer) == AuditSource.File_Outgoing

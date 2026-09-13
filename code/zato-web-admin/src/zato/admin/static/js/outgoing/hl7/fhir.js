@@ -45,6 +45,7 @@ $.fn.zato.outgoing.hl7.fhir.field_descriptions = {
         'Pick no security for open servers.',
     'id_extra': 'Additional client options, one key=value per line. Passed as-is to the underlying FHIR client.',
     'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection.',
+    'id_is_audit_log_active': 'Whether this connection\'s requests and responses are recorded in the audit log. On by default.',
     'id_pool_size': 'How many connections to the FHIR server the pool keeps open. ' +
         'Each service using the client concurrently needs one. The default is 10.',
 };
@@ -81,6 +82,7 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     }
 
     let is_active = item.is_active == true;
+    let is_audit_log_active = item.is_audit_log_active == true;
     var security_name = item.security_id ? item.security_select : '<span class="form_hint">---</span>';
 
     row += "<td class='numbering'>&nbsp;</td>";
@@ -96,7 +98,8 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
 
     // 3
     // The audit log of this connection's requests is filed under the connection's name
-    row += String.format('<td><a href="/zato/audit-log/?source=fhir&object_name={0}&cluster=1">Audit log</a></td>', encodeURIComponent(item.name));
+    row += String.format('<td><a href="/zato/audit-log/?source=fhir&object_name={0}&cluster=1">Audit log</a>{1}</td>',
+        encodeURIComponent(item.name), is_audit_log_active ? '' : ' <span class="form_hint">(off)</span>');
     row += String.format('<td><a href="/zato/channel-usage/?sources=fhir&objects={0}&cluster=1">Usage</a></td>', encodeURIComponent(item.name));
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.fhir.edit('{0}')\">Edit</a>", item.id));
@@ -112,6 +115,7 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     row += String.format("<td class='ignore'>{0}</td>", item.extra);
 
     row += String.format("<td class='ignore'>{0}</td>", item.security_id);
+    row += String.format("<td class='ignore'>{0}</td>", is_audit_log_active);
 
     if(include_tr) {
         row += '</tr>';

@@ -10,13 +10,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from zato.common.alerting.object_config import alert_type_channels, get_defaults, get_field_names, storage_name
+from zato.common.alerting.object_config import alert_type_channels, alert_type_rest, get_defaults, get_field_names, storage_name
 from zato.common.alerting.time_slots import TimeSlotsError
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.json_internal import dumps
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util.sql import parse_instance_opaque_attr
-from zato.server.service.internal.http_soap import Edit
+from zato.server.service.internal.http_soap.edit import Edit
 
 # Test support
 from http_soap_stub import base_input as _base_input, create as _create, get as _get, get_list as _get_list, \
@@ -35,6 +35,7 @@ if 0:
 
 # The names the settings are stored under, in the order of the tab
 _storage_names = [storage_name(name) for name in get_field_names(alert_type_channels)]
+_rest_storage_names = [storage_name(name) for name in get_field_names(alert_type_rest)]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,13 +71,21 @@ class TestCreate:
         assert opaque['alert_is_active'] is True
         assert opaque['alert_use_llm'] is True
 
-    def test_a_soap_outgoing_connection_stores_no_settings(self, session_factory:'any_') -> 'None':
-        item_id = _create(session_factory, **_soap_outgoing_input(alert_max_latency=2500))
+    def test_a_soap_outgoing_connection_stores_settings(self, session_factory:'any_') -> 'None':
+        item_id = _create(session_factory, **_soap_outgoing_input(alert_max_latency=2500, alert_status_code_threshold=7))
 
         opaque = _stored_opaque(session_factory, item_id)
+        defaults = get_defaults(alert_type_rest)
 
+        # The settings follow the rest type, as an outgoing REST connection's do ..
+        assert opaque['alert_max_latency'] == 2500
+        assert opaque['alert_status_code_threshold'] == 7
+        assert opaque['alert_status_codes'] == defaults['status_codes']
+
+        # .. and none of the channel-only ones is stored
         for name in _storage_names:
-            assert name not in opaque
+            if name not in _rest_storage_names:
+                assert name not in opaque, name
 
     def test_a_soap_channel_stores_the_settings_it_was_sent(self, session_factory:'any_') -> 'None':
         item_id = _create(session_factory, **_soap_input(alert_max_latency=2500, alert_auth_failures=3))
@@ -250,14 +259,23 @@ class TestGetList:
         assert row['alert_auth_failures'] == 3
         assert row['alert_client_errors'] == defaults['client_errors']
 
-    def test_a_soap_outgoing_connection_lists_no_settings(self, session_factory:'any_') -> 'None':
+    def test_a_soap_outgoing_connection_lists_settings(self, session_factory:'any_') -> 'None':
         _ = _create(session_factory, **_soap_outgoing_input())
 
         rows = _get_list(session_factory, CONNECTION.OUTGOING, URL_TYPE.SOAP)
         row = rows[0]
+        defaults = get_defaults(alert_type_rest)
+
+        # Every rest setting reads at its default, the channel-only ones are absent
+        for name in _rest_storage_names:
+            assert name in row, name
+
+        assert row['alert_status_codes'] == defaults['status_codes']
+        assert row['alert_connection_failures'] == defaults['connection_failures']
 
         for name in _storage_names:
-            assert name not in row
+            if name not in _rest_storage_names:
+                assert name not in row, name
 
 # ################################################################################################################################
 # ################################################################################################################################

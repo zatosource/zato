@@ -14,7 +14,7 @@ from django.views.static import serve as static_serve
 # Zato
 from zato.admin import settings
 from zato.admin.web.views import account, config_db, datadog, demo_config, destinations, env_variables, grafana_cloud, \
-    highlight as highlight_view, http_soap, live_form_updates, log_streaming, logging_, \
+    highlight as highlight_view, http_soap, http_soap_limits, live_form_updates, log_streaming, logging_, \
     main, news, openapi_, python_packages, redis_, sbom, scheduler, service, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import as4 as channel_as4
@@ -1199,17 +1199,17 @@ urlpatterns += [
     url(r'^zato/http-soap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(http_soap.ping), name='http-soap-ping'),
     url(r'^zato/http-soap/rate-limiting/save/(?P<id>.*)/$',
-        login_required(http_soap.rate_limiting_save), name='http-soap-rate-limiting-save'),
+        login_required(http_soap_limits.rate_limiting_save), name='http-soap-rate-limiting-save'),
     url(r'^zato/http-soap/rate-limiting/clear-counters/(?P<id>.*)/$',
-        login_required(http_soap.rate_limiting_clear_counters), name='http-soap-rate-limiting-clear-counters'),
+        login_required(http_soap_limits.rate_limiting_clear_counters), name='http-soap-rate-limiting-clear-counters'),
     url(r'^zato/http-soap/rate-limiting/(?P<id>.*)/$',
-        login_required(http_soap.rate_limiting), name='http-soap-rate-limiting'),
+        login_required(http_soap_limits.rate_limiting), name='http-soap-rate-limiting'),
     url(r'^zato/http-soap/response-caching/save/(?P<id>.*)/$',
-        login_required(http_soap.response_caching_save), name='http-soap-response-caching-save'),
+        login_required(http_soap_limits.response_caching_save), name='http-soap-response-caching-save'),
     url(r'^zato/http-soap/response-caching/clear/(?P<id>.*)/$',
-        login_required(http_soap.response_caching_clear), name='http-soap-response-caching-clear'),
+        login_required(http_soap_limits.response_caching_clear), name='http-soap-response-caching-clear'),
     url(r'^zato/http-soap/response-caching/(?P<id>.*)/$',
-        login_required(http_soap.response_caching), name='http-soap-response-caching'),
+        login_required(http_soap_limits.response_caching), name='http-soap-response-caching'),
     url(r'^zato/http-soap/get-security-groups/(?P<group_type>.*)/$',
         login_required(groups.get_group_list), name='http-soap-get-all-security-groups'),
 

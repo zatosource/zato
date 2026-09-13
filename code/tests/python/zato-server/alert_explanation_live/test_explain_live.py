@@ -421,7 +421,8 @@ def _assert_sound_explanation(explanation:'stranydict', words:'strlist') -> 'Non
     text = explanation['explanation']
     text_lower = text.lower()
 
-    assert explanation['is_parsed'], explanation
+    # An unparsed reply is kept whole as the explanation, so the message shows what the model sent
+    assert explanation['is_parsed'], f'The reply did not parse -> {text!r}'
     assert text, explanation
     assert explanation['confidence'] in _confidence_values, explanation
 

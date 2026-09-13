@@ -19,7 +19,8 @@ from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.ext.bunch import Bunch
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util.sql import parse_instance_opaque_attr
-from zato.server.service.internal.http_soap import Create, Get, GetList
+from zato.server.service.internal.http_soap.create import Create
+from zato.server.service.internal.http_soap.get import Get, GetList
 
 # ################################################################################################################################
 # ################################################################################################################################

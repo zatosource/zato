@@ -23,7 +23,7 @@ from zato.admin.web.forms.http_soap import CreateForm as ChannelCreateForm, Edit
 from zato.admin.web.forms.outgoing.ftp import CreateForm as FTPCreateForm
 from zato.admin.web.forms.outgoing.sftp import CreateForm as SFTPCreateForm, EditForm as SFTPEditForm
 from zato.admin.web.forms.outgoing.smb import CreateForm as SMBCreateForm
-from zato.admin.web.views import http_soap as http_soap_views
+from zato.admin.web.views import http_soap_message
 from zato.admin.web.views.live_form_updates import OBJECT_TYPE_CONFIG
 from zato.admin.web.views.outgoing import ftp, sftp, smb
 from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, alert_type_rest, \
@@ -157,7 +157,7 @@ class TestAlertsTabForm:
     def test_create_form_has_every_tab_field_with_seeded_defaults(self, req:'any_') -> 'None':
 
         form = SFTPCreateForm(req=req)
-        defaults = alerts_tab.get_defaults(_alert_type)
+        defaults = alerts_tab.get_form_defaults(_alert_type)
 
         for storage_field_name in alerts_tab.get_storage_field_names(_alert_type):
             assert storage_field_name in form.fields, storage_field_name
@@ -179,7 +179,7 @@ class TestAlertsTabForm:
     def test_rest_channel_form_carries_the_channel_tab(self, req:'any_') -> 'None':
 
         form = ChannelCreateForm(req=req, alert_type=alert_type_channels)
-        defaults = alerts_tab.get_defaults(alert_type_channels)
+        defaults = alerts_tab.get_form_defaults(alert_type_channels)
 
         for storage_field_name in alerts_tab.get_storage_field_names(alert_type_channels):
             assert storage_field_name in form.fields, storage_field_name
@@ -442,6 +442,12 @@ class TestAlertsTabForm:
         assert config['checkbox_field_names'] == ['alert_is_active', 'alert_test_transfers', 'alert_use_llm']
         assert config['pick_fields'] == ['llm_connection', 'email_connection']
 
+        # The JavaScript reads the kinds of line and the keys of a time slot off the page rather than spelling them itself
+        assert config['line_kinds'] == {'popover': 'popover', 'toggle': 'toggle', 'pick': 'pick'}
+        assert config['slot_keys'] == {
+            'time_from': 'time_from', 'time_to': 'time_to', 'is_on': 'is_on', 'seconds': 'silence_seconds',
+        }
+
         known_names = list(config['field_kinds'])
         known_names.append(config['is_active_field'])
         known_names.extend(config['pick_fields'])
@@ -570,7 +576,7 @@ class TestAlertsTabStorage:
 
     def test_tab_defaults_agree_with_the_shared_ones(self) -> 'None':
 
-        tab_defaults = alerts_tab.get_defaults(_alert_type)
+        tab_defaults = alerts_tab.get_form_defaults(_alert_type)
         shared_defaults = get_storage_defaults(_alert_type)
 
         for name, value in shared_defaults.items():
@@ -703,7 +709,7 @@ class TestChannelForm:
     def test_a_rest_channel_message_carries_every_storage_name_in_seconds(self) -> 'None':
 
         params = _channel_params('channel', 'plain_http')
-        message = http_soap_views._get_edit_create_message(params)
+        message = http_soap_message.get_edit_create_message(params)
 
         for name in alerts_tab.get_storage_field_names(alert_type_channels):
             if name.endswith(Unit_Field_Suffix):
@@ -724,7 +730,7 @@ class TestChannelForm:
         params = _channel_params('channel', 'plain_http', prefix='edit-')
         params['id'] = '17'
 
-        message = http_soap_views._get_edit_create_message(params, prefix='edit-')
+        message = http_soap_message.get_edit_create_message(params, prefix='edit-')
 
         assert message['id'] == '17'
         for name, value in _expected_channel_settings.items():
@@ -734,7 +740,7 @@ class TestChannelForm:
 
     def test_a_soap_channel_message_carries_the_alert_settings(self) -> 'None':
         params = _channel_params('channel', 'soap')
-        message = http_soap_views._get_edit_create_message(params)
+        message = http_soap_message.get_edit_create_message(params)
 
         for name in alerts_tab.get_storage_field_names(alert_type_channels):
             if name.endswith(Unit_Field_Suffix):
@@ -752,7 +758,7 @@ class TestChannelForm:
         params = _channel_params('channel', 'soap', prefix='edit-')
         params['id'] = '18'
 
-        message = http_soap_views._get_edit_create_message(params, prefix='edit-')
+        message = http_soap_message.get_edit_create_message(params, prefix='edit-')
 
         assert message['id'] == '18'
         for name, value in _expected_channel_settings.items():
@@ -765,7 +771,7 @@ class TestChannelForm:
         params = _channel_params('outgoing', 'plain_http')
         params.update(_outgoing_rest_params())
 
-        message = http_soap_views._get_edit_create_message(params)
+        message = http_soap_message.get_edit_create_message(params)
 
         for name in alerts_tab.get_storage_field_names(alert_type_rest):
             if name.endswith(Unit_Field_Suffix):
@@ -782,16 +788,28 @@ class TestChannelForm:
 
 # ################################################################################################################################
 
-    def test_an_outgoing_soap_connection_carries_no_alert_settings(self) -> 'None':
+    def test_an_outgoing_soap_message_carries_the_rest_settings(self) -> 'None':
 
         params = _channel_params('outgoing', 'soap')
-        message = http_soap_views._get_edit_create_message(params)
+        params.update(_outgoing_rest_params())
 
-        for name in alerts_tab.get_storage_field_names(alert_type_channels):
-            assert name not in message, name
+        message = http_soap_message.get_edit_create_message(params)
 
+        # The same rest settings an outgoing REST connection's message carries ..
         for name in alerts_tab.get_storage_field_names(alert_type_rest):
-            assert name not in message, name
+            if name.endswith(Unit_Field_Suffix):
+                assert name not in message, name
+            else:
+                assert name in message, name
+
+        for name, value in _expected_outgoing_rest_settings.items():
+            assert message[name] == value, name
+
+        # .. and none of the channel-only ones
+        rest_names = alerts_tab.get_storage_field_names(alert_type_rest)
+        for name in alerts_tab.get_storage_field_names(alert_type_channels):
+            if name not in rest_names:
+                assert name not in message, name
 
 # ################################################################################################################################
 

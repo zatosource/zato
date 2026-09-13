@@ -210,7 +210,7 @@ class TestWhichSkill:
         service.handle()
 
         assert len(LLMTestHandler.prompts) == 1
-        assert LLMTestHandler.prompts[0].startswith('# REST outgoing connection explanation')
+        assert LLMTestHandler.prompts[0].startswith('# REST and SOAP outgoing connection explanation')
 
         explanation = _stored_explanation(session)
         assert explanation['source'] == AuditSource.REST_Outgoing_Health

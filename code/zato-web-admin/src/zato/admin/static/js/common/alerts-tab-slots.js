@@ -149,7 +149,7 @@ $.fn.zato.alerts_tab.buildSlotFields = function(line, slot) {
     var durationField = tab.slotsDurationField(line);
 
     var switchGroup = kit.addGroup(slot);
-    kit.addSwitch(switchGroup, tab.config.slotIsOn, true, settings.field_labels[line.off_field]);
+    kit.addSwitch(switchGroup, tab.settings.slot_keys.is_on, true, settings.field_labels[line.off_field]);
 
     var durationGroup = kit.addGroup(slot);
     kit.addText(durationGroup, settings.field_labels[durationField], 'label');
@@ -185,7 +185,7 @@ $.fn.zato.alerts_tab.readSlotFields = function(line, slot) {
     var durationField = tab.slotsDurationField(line);
 
     var out = {
-        is_on: kit.field(slot, tab.config.slotIsOn).checked,
+        is_on: kit.field(slot, tab.settings.slot_keys.is_on).checked,
         count: parseInt(kit.field(slot, durationField).value),
         unit: kit.field(slot, line.unit_field).value
     };
@@ -202,7 +202,7 @@ $.fn.zato.alerts_tab.writeSlotFields = function(line, slot, entry) {
     var kit = $.fn.zato.time_slots;
     var durationField = tab.slotsDurationField(line);
 
-    kit.field(slot, tab.config.slotIsOn).checked = entry.is_on;
+    kit.field(slot, tab.settings.slot_keys.is_on).checked = entry.is_on;
     tab.fillUnitOptions(line, slot, kit.field(slot, line.unit_field), entry.unit);
 
     // The unit select relabels itself on input, which a value set by hand does not fire
@@ -229,13 +229,13 @@ $.fn.zato.alerts_tab.slotEntries = function(line) {
     }];
 
     tab.readSlots(line).forEach(function(range) {
-        var duration = tab.splitDuration(range[tab.config.slotSeconds]);
+        var duration = tab.splitDuration(range[tab.settings.slot_keys.seconds]);
 
         out.push({
             is_all_day: false,
-            time_from: range[tab.config.slotTimeFrom],
-            time_to: range[tab.config.slotTimeTo],
-            is_on: range[tab.config.slotIsOn],
+            time_from: range[tab.settings.slot_keys.time_from],
+            time_to: range[tab.settings.slot_keys.time_to],
+            is_on: range[tab.settings.slot_keys.is_on],
             count: duration.count,
             unit: duration.unit
         });
@@ -262,10 +262,10 @@ $.fn.zato.alerts_tab.saveSlots = function(line, slots) {
         }
         else {
             var range = {};
-            range[tab.config.slotTimeFrom] = entry.time_from;
-            range[tab.config.slotTimeTo] = entry.time_to;
-            range[tab.config.slotIsOn] = entry.is_on;
-            range[tab.config.slotSeconds] = tab.joinDuration(entry.count, entry.unit);
+            range[tab.settings.slot_keys.time_from] = entry.time_from;
+            range[tab.settings.slot_keys.time_to] = entry.time_to;
+            range[tab.settings.slot_keys.is_on] = entry.is_on;
+            range[tab.settings.slot_keys.seconds] = tab.joinDuration(entry.count, entry.unit);
             ranges.push(range);
         }
     });

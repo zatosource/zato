@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The outgoing connection producer - the responses an outgoing REST connection received within the window,
+# The outgoing connection producer - the responses an outgoing REST or SOAP connection received within the window,
 # counted by their status code, and the calls that failed before any response arrived. A response carries
 # its HTTP status line, `503 Service Unavailable`, and a failed call one of the transport statuses,
 # `timeout` or `connection-error`, so one query over the connection's response events sorts both out.

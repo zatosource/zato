@@ -145,7 +145,7 @@ class TestErrorRateOverResponses:
         assert fact['error_count'] == 1
         assert fact['error_rate'] == 0.5
 
-    def test_an_outgoing_soap_connection_is_measured_as_before(self) -> 'None':
+    def test_an_outgoing_soap_connection_is_measured_over_its_responses_too(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         now = utcnow()
@@ -155,10 +155,10 @@ class TestErrorRateOverResponses:
 
         fact = _fact_of(collect_error_rate_facts(engine, _window_seconds, now), _outgoing_name, AuditSource.SOAP_Outgoing)
 
-        # Every event counts for a source outside the response map - the request halves included
-        assert fact['total_count'] == 4
+        # Only the response halves count, as for an outgoing REST connection
+        assert fact['total_count'] == 2
         assert fact['error_count'] == 1
-        assert fact['error_rate'] == 0.25
+        assert fact['error_rate'] == 0.5
 
     def test_a_channel_asked_for_by_name_is_measured_alone(self) -> 'None':
         audit_log = AuditLog(_server_name)

@@ -244,6 +244,28 @@ class TestExplanationContext:
 
 # ################################################################################################################################
 
+    def test_an_explanation_without_a_confidence_has_no_parentheses(self, template_dir:'str') -> 'None':
+
+        # A reply that did not parse is the explanation as the model sent it, with no confidence to speak of
+        context = _explained_context()
+        context['confidence'] = ''
+        context['remediation'] = None
+
+        slack_text = render_alert_template(Template_Slack, context, template_dir)
+        teams_text = render_alert_template(Template_Teams, context, template_dir)
+        body = render_alert_template(Template_Email_Body, context, template_dir)
+
+        assert slack_text == f'{_message}\nExplanation: {_explanation}\n{_link}'
+        assert teams_text == f'{_message}\n\nExplanation: {_explanation}\n\n{_link}'
+        assert body == f'{_message}\nExplanation: {_explanation}\n{_link}'
+
+        # The webhook keeps the empty string, a reader of JSON tells it apart from a missing key
+        payload = json.loads(render_alert_template(Template_Webhook, context, template_dir))
+        assert payload['confidence'] == ''
+        assert payload['remediation'] is None
+
+# ################################################################################################################################
+
     def test_an_edited_copy_changes_the_next_alert(self, template_dir:'str') -> 'None':
 
         # Copied means copied - the server renders from its own files,

@@ -1,6 +1,6 @@
 {{ message }}
 {% if explanation %}
-Explanation ({{ confidence }}): {{ explanation }}
+Explanation{% if confidence %} ({{ confidence }}){% endif %}: {{ explanation }}
 {% endif %}
 {% if link %}
 {{ link }}

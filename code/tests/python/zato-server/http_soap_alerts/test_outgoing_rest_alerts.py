@@ -22,7 +22,9 @@ from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util.sql import parse_instance_opaque_attr
-from zato.server.service.internal.http_soap import _has_health_check_config, Create, Edit
+from zato.server.service.internal.http_soap.create import Create
+from zato.server.service.internal.http_soap.edit import Edit
+from zato.server.service.internal.http_soap.health_check import has_health_check_config as _has_health_check_config
 
 # Test support
 from http_soap_stub import create as _create, get as _get, get_list as _get_list, new_service as _new_service, \

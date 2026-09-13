@@ -66,12 +66,9 @@ _rest_def = {
     'scheduler_run_unit': 'minutes',
     'health_check_run_every': 5,
     'health_check_run_unit': 'minutes',
-    'health_check_notify_on': 'failures',
-    'health_check_callback_type': 'service',
-    'health_check_callback_name': 'demo.input-logger',
 }
 
-# An outgoing SOAP definition covering the soap. job prefix and topic callbacks on both tabs
+# An outgoing SOAP definition covering the soap. job prefix and topic callbacks
 _soap_def = {
     'name': 'enmasse.outgoing.soap.roundtrip',
     'host': 'https://orders.example.com',
@@ -88,9 +85,6 @@ _soap_def = {
     'scheduler_run_unit': 'hours',
     'health_check_run_every': 10,
     'health_check_run_unit': 'minutes',
-    'health_check_notify_on': 'failures',
-    'health_check_callback_type': 'topic',
-    'health_check_callback_name': 'orders.health-checks',
 }
 
 # ################################################################################################################################
@@ -200,11 +194,9 @@ class TestEnmasseOutgoingDeclarativeImport(TestCase):
         self.assertIsInstance(stored, str)
         self.assertEqual(loads(stored), _soap_def['request_message'])
 
-        # .. topic callbacks travel through unchanged, both on the Callback and the Health check tab ..
+        # .. topic callbacks travel through unchanged ..
         self.assertEqual(opaque['callback_type'], 'topic')
         self.assertEqual(opaque['callback_name'], 'orders.responses')
-        self.assertEqual(opaque['health_check_callback_type'], 'topic')
-        self.assertEqual(opaque['health_check_callback_name'], 'orders.health-checks')
 
         # .. and the linked job carries the soap. prefix and the generic link attributes.
         scheduler_job = self._get_job('soap.' + _soap_def['name'])
@@ -216,7 +208,7 @@ class TestEnmasseOutgoingDeclarativeImport(TestCase):
         self.assertEqual(scheduler_job_opaque[SchedulerLink.Kind], SchedulerLink.KindType.Scheduler)
         self.assertEqual(scheduler_job.service.name, _invocation.Dispatch_Service)
 
-        # The health check job was created too, delivering each outcome to the topic callback.
+        # The health check job was created too.
         health_check_job = self._get_job('health.' + _soap_def['name'])
         self.assertEqual(opaque[_health_check.Field_Job_ID], health_check_job.id)
 

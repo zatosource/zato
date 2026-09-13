@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # of its own, the audit log on, each pointed at a different kind of trouble: a channel of the same server that
 # rejects the connection's calls, a port nothing listens on, and a socket that accepts and never answers.
 # Real calls through each connection, one real sweep inside the server, and the explained alerts read off
-# the server's own databases and received by a real SMTP receiver.
+# the server's own databases and received by a real SMTP receiver. Then the same for a SOAP connection whose
+# health check, fired by the suite's own scheduler every second, is refused until its streak brings it down.
 
 # stdlib
 import os
@@ -181,6 +182,90 @@ class TestExplainLiveOutgoing:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TestExplainLiveOutgoingSOAP:
+
+    def test_a_soap_outgoing_connections_health_check_is_explained(
+        self,
+        ollama:'any_',
+        zato_server:'any_',
+        scheduler_process:'any_',
+        smtp_receiver:'any_',
+        ) -> 'None':
+
+        client = _new_admin_client()
+
+        # The server's own notification connection delivers to the receiver ..
+        _point_smtp_at_receiver(client, smtp_receiver)
+
+        # .. nothing listens on this port, so every ping of the connection's health check is refused.
+        refused_port = _find_closed_port()
+        host = f'http://{LiveServer.host}:{refused_port}'
+
+        # A SOAP connection with a health check every second and three failed checks bringing it down
+        conn_id = _create_soap_outgoing(client, host)
+
+        # The sweep explains through the LLM connection and mails from the address below
+        notification_config = _new_notification_config()
+
+        # The suite's own scheduler fires the check, the server pings and the pings land in the audit log
+        pings = _wait_for_soap_pings(_soap_ping_count)
+
+        for row in pings:
+            assert row['status'] == TransportStatus.Connection_Error, row
+
+        # One real sweep inside the server - the collectors, the rules, the explain service and the delivery
+        trace(Channel_Outgoing, Sent, f'invoke {Alerting.Service} with {notification_config}')
+        _ = client.invoke(Alerting.Service, notification_config)
+
+        # The check's streak fired the down rule and was explained ..
+        explanations = _get_stored_soap_health_explanations()
+        by_rule = {}
+
+        for explanation in explanations:
+            assert explanation['object_name'] == _soap_name
+            assert explanation['source'] == AuditSource.SOAP_Outgoing_Health
+            by_rule[explanation['rule']] = explanation
+
+        assert _soap_rule in by_rule, sorted(by_rule)
+
+        explained = by_rule[_soap_rule]
+        evidence = explained['evidence']
+
+        # .. its Object is the connection's own, read from the SOAP row, with how often the check runs ..
+        assert Heading_Object in evidence
+        assert f'Name: {_soap_name}' in evidence
+        assert 'Transport: SOAP' in evidence
+        assert f'SOAP action: {_soap_action}' in evidence
+        assert f'SOAP version: {_soap_version}' in evidence
+        assert f'Address: {host}{_soap_url_path}' in evidence
+        assert f'Health check: every {_soap_run_every} second' in evidence
+        assert f'{Label_Alerts}: {On}' in evidence
+
+        # .. the failures are the refused pings, grouped under the status the transport gave them ..
+        assert TransportStatus.Connection_Error + _status_separator in evidence
+
+        _assert_sound_explanation(explained, _refused_words)
+
+        # .. and the explained alert reached the mailbox.
+        _trace_delivery(smtp_receiver)
+
+        bodies = []
+        for received in smtp_receiver.messages:
+            assert received.recipients == _email_to
+            bodies.append(received.body)
+
+        for body in bodies:
+            if explained['explanation'] in body:
+                break
+        else:
+            raise AssertionError(f'Expected an email carrying {explained["explanation"]!r}')
+
+        # Deleting the connection deletes its check job with it, so the scheduler stops pinging
+        _ = client.delete('zato.http-soap.delete', id=conn_id)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # How many calls the proof makes through each connection - one more than the thresholds below ask for
 _outgoing_call_count = 4
 
@@ -247,6 +332,28 @@ _silent = _OutgoingDescription(
 )
 
 _outgoings = [_rejected, _refused, _silent]
+
+# ################################################################################################################################
+
+# The SOAP connection whose health check the proof watches - what it calls and how often it is pinged
+_soap_name = 'explain.live.upstream.soap'
+_soap_url_path = '/explain-live/upstream/soap'
+_soap_action = 'urn:explain-live:orders'
+_soap_version = '1.1'
+
+# The check runs every second and three failed checks in a row bring the connection down
+_soap_run_every = 1
+_soap_run_unit = 'seconds'
+_soap_consecutive_failures = 3
+_soap_rule = 'Connection_Down'
+
+# How many pings to wait for - as many as the rule needs
+_soap_ping_count = _soap_consecutive_failures
+
+# How long to wait for the scheduler to fire the check that many times, in seconds - the job is created
+# once the connection is, and the scheduler picks it up from its command stream before the first fire
+_soap_ping_wait_timeout = 90
+_soap_ping_wait_step = 0.5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -420,6 +527,110 @@ def _get_stored_explanations(outgoing:'_OutgoingDescription') -> 'anylist':
 
     for explanation in out:
         trace(Channel_Explain, Received, f'{outgoing.label} {explanation["rule"]}: {explanation["explanation"]}')
+        trace(Channel_Explain, Received, f'confidence: {explanation["confidence"]}, remediation: {explanation["remediation"]}')
+        separator(Channel_Explain)
+
+    return out
+
+# ################################################################################################################################
+
+def _create_soap_outgoing(client:'AdminClient', host:'str') -> 'int':
+    """ The SOAP connection of the proof - the audit log on, the LLM explaining its alerts, no security of its own,
+    a health check every second and a streak of three failed checks bringing it down.
+    """
+    response = _unwrap(client.create('zato.http-soap.create',
+        cluster_id=default_cluster_id,
+        name=_soap_name,
+        is_active=True,
+        is_internal=False,
+        connection='outgoing',
+        transport='soap',
+        data_format='xml',
+        host=host,
+        url_path=_soap_url_path,
+        soap_action=_soap_action,
+        soap_version=_soap_version,
+        timeout=_outgoing_timeout,
+        is_audit_log_active=True,
+        health_check_run_every=_soap_run_every,
+        health_check_run_unit=_soap_run_unit,
+        alert_is_active=True,
+        alert_use_llm=True,
+        alert_consecutive_failures=_soap_consecutive_failures,
+    ))
+    out = response['id']
+
+    trace(Channel_Outgoing, Sent, f'soap connection `{_soap_name}` -> {host}{_soap_url_path}, '
+        f'checked every {_soap_run_every} {_soap_run_unit}')
+    separator(Channel_Outgoing)
+
+    return out
+
+# ################################################################################################################################
+
+def _get_soap_pings() -> 'anylist':
+    """ Every ping the live server's scheduler had it make through the SOAP connection so far,
+    as its audit log recorded it under the connection's health source.
+    """
+    engine = _server_audit_engine()
+
+    query = select(event_table).\
+        where(event_table.c.source == AuditSource.SOAP_Outgoing_Health).\
+        where(event_table.c.object_name == _soap_name).\
+        where(event_table.c.event_type == AuditEvent.Response_Received).\
+        order_by(event_table.c.id)
+
+    with engine.connect() as connection:
+        out = [dict(row._mapping) for row in connection.execute(query)]
+
+    return out
+
+# ################################################################################################################################
+
+def _wait_for_soap_pings(count:'int') -> 'anylist':
+    """ Waits until the scheduler has fired the check that many times, naming each ping as it lands.
+    """
+    deadline = time() + _soap_ping_wait_timeout
+    seen = 0
+
+    while True:
+        out = _get_soap_pings()
+
+        # Each new ping is traced once, when it first shows up
+        for row in out[seen:]:
+            trace(Channel_Outgoing, Received, f'soap ping: {row["event_time_iso"]} {row["status"]!r} {row["data"]!r}')
+
+        seen = len(out)
+
+        if seen >= count:
+            separator(Channel_Outgoing)
+            return out
+
+        if time() > deadline:
+            raise AssertionError(f'Expected {count} pings of `{_soap_name}` within {_soap_ping_wait_timeout}s, found {seen}')
+
+        sleep(_soap_ping_wait_step)
+
+# ################################################################################################################################
+
+def _get_stored_soap_health_explanations() -> 'anylist':
+    """ Every explanation the live server stored for the SOAP connection's health check, read off its own ODB.
+    """
+    path = os.path.join(os.path.dirname(LiveServer.server_directory), 'zato.db')
+    session_maker = sessionmaker(bind=create_engine(f'sqlite:///{path}'))
+
+    store = ExplanationStore(session_maker, default_cluster_id)
+
+    # Our response to produce
+    out:'anylist' = []
+
+    for explanation in store.get_list():
+        if explanation['source'] == AuditSource.SOAP_Outgoing_Health:
+            if explanation['object_name'] == _soap_name:
+                out.append(explanation)
+
+    for explanation in out:
+        trace(Channel_Explain, Received, f'soap check {explanation["rule"]}: {explanation["explanation"]}')
         trace(Channel_Explain, Received, f'confidence: {explanation["confidence"]}, remediation: {explanation["remediation"]}')
         separator(Channel_Explain)
 

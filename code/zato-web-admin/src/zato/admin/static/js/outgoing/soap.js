@@ -28,6 +28,7 @@
         // The tab the create and edit dialogs open on.
         defaultTab: 'main',
 
+        // The Alerts tab's own label joins these once the tab reads its config off the page.
         tabLabels: {
             main:         'Main',
             soap:         'SOAP',
@@ -36,8 +37,13 @@
             scheduler:    'Scheduler',
             request:      'Request',
             response:     'Response',
-            callback:     'Callback',
-            health_check: 'Health check'
+            callback:     'Callback'
+        },
+
+        // The Alerts tab's panels on the create and edit dialogs
+        alertsPanelIds: {
+            create: 'out-soap-create-tab-panel-alerts',
+            edit:   'out-soap-edit-tab-panel-alerts'
         },
 
         // The two kinds of request parameter rows, each with a hidden JSON field of its own.
@@ -313,11 +319,24 @@
             panelPrefix = 'out-soap-edit-tab-panel-';
         }
 
+        var tabLabels = $.extend({}, config.tabLabels, {alerts: $.fn.zato.alerts_tab.tab_label()});
+
         $.fn.zato.form_tabs.reset({
             div_id:       divId,
             panel_prefix: panelPrefix,
             default_tab:  config.defaultTab,
-            tab_labels:   config.tabLabels
+            tab_labels:   tabLabels
+        });
+    }
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // The Alerts tab reads and writes the rendered Django form of one dialog at a time
+    function bindAlertsTab(action) {
+
+        $.fn.zato.alerts_tab.bind({
+            panel_id: config.alertsPanelIds[action],
+            field_prefix: fieldPrefix(action)
         });
     }
 
@@ -343,12 +362,14 @@
 
     function initHowItWorks(action) {
 
+        // The Alerts tab's lines are not table rows, so the walk covers them as well
         $.fn.zato.how_it_works.init({
             badgeId: action + '-how-it-works',
             divId: '#' + action + '-div',
+            fieldSelector: 'table.form-data tr, .decision-line',
             descriptions: $.extend({},
                 $.fn.zato.outgoing.soap.field_descriptions,
-                $.fn.zato.health_check.field_descriptions)
+                $.fn.zato.alerts_tab.descriptions())
         });
     }
 
@@ -384,6 +405,7 @@
         populateBodyCredentialRows('create');
         populateParamRows('create');
         toggleCallback('create');
+        bindAlertsTab('create');
         initHowItWorks('create');
     };
 
@@ -413,9 +435,10 @@
 
         toggleCallback('edit');
 
-        // The health check tab's widgets are populated the same way
+        // The health check line of the Alerts tab reads its hidden inputs, populated the same way
         $.fn.zato.health_check.populate('edit', item);
 
+        bindAlertsTab('edit');
         initHowItWorks('edit');
     };
 
@@ -568,6 +591,9 @@
 
         row += hiddenCells(item, hiddenRetryFields);
 
+        // The Alerts tab's fields ride in the row for the edit form to read
+        row += $.fn.zato.alerts_tab.hidden_cells(item);
+
         if(include_tr) {
             row += '</tr>';
         }
@@ -674,6 +700,11 @@
     // ////////////////////////////////////////////////////////////////////////
 
     $(document).ready(function() {
+
+        // The Alerts tab reads its config off the page before anything else reads the tab
+        $.fn.zato.alerts_tab.init({config_id: 'out-soap-alerts-tab-config'});
+        $.fn.zato.live_form_updates.register('create', $.fn.zato.alerts_tab.live_configs(''));
+        $.fn.zato.live_form_updates.register('edit', $.fn.zato.alerts_tab.live_configs('edit-'));
 
         $('#data-table').tablesorter();
         $.fn.zato.data_table.class_ = $.fn.zato.data_table.OutgoingSOAP;

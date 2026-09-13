@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
+from zato.admin.web import alerts_tab
 from zato.admin.web.forms import add_health_check_fields, add_security_select, add_services
 from zato.admin.web.forms.http_soap import callback_type_choices, response_map_mode_choices, scheduler_run_unit_choices
 from zato.common.api import HTTP_SOAP, MISC, SOAP_VERSIONS
@@ -95,7 +96,7 @@ class CreateForm(forms.Form):
     scheduler_start_date = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%; height:19px'}))
     scheduler_job_id = forms.CharField(required=False, widget=forms.HiddenInput())
 
-    def __init__(self, security_list=None, prefix=None, post_data=None, req=None):
+    def __init__(self, security_list=None, prefix=None, post_data=None, req=None, alert_type=''):
         security_list = security_list or []
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
@@ -119,12 +120,16 @@ class CreateForm(forms.Form):
         for value, label in response_map_mode_choices:
             self.fields['response_map_mode'].choices.append([value, label])
 
-        # The generic health check tab shares its fields across connection types
+        # The health check is a line of the Alerts tab, its fields shared across connection types
         add_health_check_fields(self)
 
         add_security_select(self, security_list, field_name='security_id')
 
         add_services(self, req)
+
+        # The Alerts tab's fields, under the rest type the outgoing REST connections share
+        if alert_type:
+            alerts_tab.add_alerts_fields(self, alert_type, req)
 
 # ################################################################################################################################
 # ################################################################################################################################

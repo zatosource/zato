@@ -90,5 +90,41 @@ class TestParseExplanation:
         assert result['is_parsed'] is False
         assert result['explanation'] == reply
 
+    def test_a_reply_with_a_broken_closing_quote_is_repaired(self) -> 'None':
+
+        # The model escaped the quote closing its explanation, so the document does not parse whole ..
+        reply = '{"explanation": "The server answered 503 for the \\"orders\\" endpoint.\\", ' + \
+            '"confidence": "medium", "remediation": {"action": "resubmit"}}'
+
+        result = parse_explanation(reply, _remediations)
+
+        # .. yet its three keys read back one by one, the same way a clean reply's do
+        assert result['is_parsed'] is True
+        assert result['explanation'].startswith('The server answered 503 for the "orders" endpoint.')
+        assert result['confidence'] == 'medium'
+        assert result['remediation'] == {'action': 'resubmit'}
+
+    def test_a_reply_missing_its_closing_brace_is_repaired(self) -> 'None':
+        reply = '{"explanation": "Every call timed out after 15 seconds.", "confidence": "high", "remediation": null'
+
+        result = parse_explanation(reply, _remediations)
+
+        assert result['is_parsed'] is True
+        assert result['explanation'] == 'Every call timed out after 15 seconds.'
+        assert result['confidence'] == 'high'
+        assert result['remediation'] is None
+
+    def test_a_reply_with_a_key_missing_stays_prose(self) -> 'None':
+
+        # Two of the three keys are there, which is not enough to trust the reading
+        reply = '{"explanation": "Every call timed out.", "confidence": "high"'
+
+        result = parse_explanation(reply, _remediations)
+
+        assert result['is_parsed'] is False
+        assert result['explanation'] == reply
+        assert result['confidence'] == ''
+        assert result['remediation'] is None
+
 # ################################################################################################################################
 # ################################################################################################################################

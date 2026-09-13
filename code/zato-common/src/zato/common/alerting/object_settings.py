@@ -16,10 +16,9 @@ from __future__ import annotations
 # Zato
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import alert_type_by_http_soap, alert_type_channels, alert_type_rest, apply_defaults, \
-    channel_sources, conn_type_to_alert_type, from_storage, get_alert_type, Email_Connection_Field, Is_Active_Field, \
-    LLM_Connection_Field
+    channel_sources, conn_type_to_alert_type, from_storage, get_alert_type, outgoing_sources, Email_Connection_Field, \
+    Is_Active_Field, LLM_Connection_Field
 from zato.common.alerting.time_slots import resolve_silence
-from zato.common.audit_log.common import AuditSource
 from zato.common.odb.model import GenericConn, HTTPSOAP
 from zato.common.util.file_transfer_scheduler import get_schedule_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -47,11 +46,11 @@ _silence_default = 'silence_seconds'
 
 # The audit sources whose objects carry settings of a type, where that is not every source the type
 # matches on - the channels type matches on three channel kinds, and REST and SOAP channels have an Alerts tab,
-# the rest type matches on REST and SOAP outgoing connections, and the REST ones have the tab, their own
-# windows reaching their traffic source while their check source keeps its hour.
+# the rest type matches on the traffic and the check source of REST and SOAP outgoing connections, and the
+# connections' own windows reach their traffic source while their check source keeps its hour.
 _object_sources_by_type = {
     alert_type_channels: list(channel_sources),
-    alert_type_rest: [AuditSource.REST_Outgoing],
+    alert_type_rest: list(outgoing_sources),
 }
 
 # ################################################################################################################################
@@ -70,7 +69,7 @@ def load_object_settings(session:'SASession', cluster_id:'int') -> 'anydict':
     """ The alert settings of every object whose type has them, by alert type and then by the name a fact
     about the object goes by - a connection's own name, and the name of each of its file transfer schedules,
     because the arrival, expectation and run facts are keyed by schedule, not by connection, and the own
-    name of a REST or SOAP channel and of an outgoing REST connection. An object that never stored a setting
+    name of a REST or SOAP channel and of an outgoing REST or SOAP connection. An object that never stored a setting
     reads at the seeded defaults, the same way the Dashboard shows it.
     """
 
@@ -108,7 +107,7 @@ def load_object_settings(session:'SASession', cluster_id:'int') -> 'anydict':
         for schedule in get_schedule_list(session, row.id):
             by_object[schedule['name']] = values
 
-    # The REST and SOAP channels and the outgoing REST connections carry their settings in the same flat keys,
+    # The REST and SOAP channels and the outgoing REST and SOAP connections carry their settings in the same flat keys,
     # in their own table, each row under the type its connection and transport say
     http_soap_rows = session.query(HTTPSOAP).\
         filter(HTTPSOAP.cluster_id==cluster_id).\

@@ -74,9 +74,6 @@ _connection_def = {
     'scheduler_start_date': '2026-01-01 00:00:00',
     'health_check_run_every': 10,
     'health_check_run_unit': 'minutes',
-    'health_check_notify_on': 'all',
-    'health_check_callback_type': 'service',
-    'health_check_callback_name': 'demo.input-logger',
 }
 
 # The names of the row-based fields the connection above carries
@@ -141,9 +138,6 @@ class TestEnmasseOutgoingSOAPDeclarativeExport(TestCase):
         self.assertEqual(conn['scheduler_start_date'], '2026-01-01 00:00:00')
         self.assertEqual(conn['health_check_run_every'], 10)
         self.assertEqual(conn['health_check_run_unit'], 'minutes')
-        self.assertEqual(conn['health_check_notify_on'], 'all')
-        self.assertEqual(conn['health_check_callback_type'], 'service')
-        self.assertEqual(conn['health_check_callback_name'], 'demo.input-logger')
 
         # .. row-based fields come out as lists of mappings, not as the JSON strings the database keeps ..
         for field_name in _row_field_names:

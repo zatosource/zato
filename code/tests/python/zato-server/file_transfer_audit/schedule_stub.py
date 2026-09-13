@@ -23,6 +23,7 @@ from sqlalchemy import select
 from zato.common.api import FileTransfer
 from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditLog
 from zato.common.ext.bunch import Bunch
+from zato.common.file_transfer.api import Default_Verify_How
 from zato.common.typing_ import cast_
 from zato.server.connection.smb import SMBConnection
 
@@ -148,6 +149,7 @@ class WrapperStub:
         self._client = client
         self.should_store_content = should_store_content
         self.audit_log = AuditLog(Server_Name)
+        self.verify_how = Default_Verify_How
 
         self.config = Bunch()
         self.config.name = Connection_Name

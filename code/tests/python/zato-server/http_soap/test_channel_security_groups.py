@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 from zato.common.api import URL_TYPE
 from zato.common.ext.bunch import Bunch
 from zato.server.connection.http_soap.url_data import URLData
-from zato.server.service.internal.http_soap import Edit
+from zato.server.service.internal.http_soap.edit import Edit
 
 # ################################################################################################################################
 # ################################################################################################################################

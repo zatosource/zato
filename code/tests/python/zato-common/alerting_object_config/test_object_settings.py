@@ -257,24 +257,29 @@ class TestLoadObjectSettings:
 
 # ################################################################################################################################
 
-    def test_an_outgoing_rest_connection_loads_under_rest_and_an_outgoing_soap_one_nowhere(self) -> 'None':
+    def test_both_outgoing_http_connections_load_under_rest(self) -> 'None':
         stored = to_storage(alert_type_rest, {'status_codes': '404, 5xx', 'connection_failures': 5})
+        soap_stored = to_storage(alert_type_rest, {'status_code_threshold': 9})
 
         with _session() as session:
             _add_http_soap(session, _rest_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, _cluster_id, stored)
-            _add_http_soap(session, _soap_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.SOAP, _cluster_id, {})
+            _add_http_soap(session, _soap_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.SOAP, _cluster_id, soap_stored)
             _add_http_soap(session, _rest_channel_name, CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, _cluster_id, {})
             settings = load_object_settings(session, _cluster_id)
 
         by_rest = settings[alert_type_rest]
 
-        # The outgoing SOAP connection carries no alert settings, the channel is under its own type
-        assert list(by_rest) == [_rest_outgoing_name]
+        # Both outgoing connections carry their settings under the rest type, the channel is under its own type
+        assert sorted(by_rest) == sorted([_rest_outgoing_name, _soap_outgoing_name])
         assert list(settings[alert_type_channels]) == [_rest_channel_name]
 
         assert by_rest[_rest_outgoing_name]['status_codes'] == '404, 5xx'
         assert by_rest[_rest_outgoing_name]['connection_failures'] == 5
         assert by_rest[_rest_outgoing_name]['status_code_threshold'] == 3
+
+        # The SOAP connection reads at the defaults but for the one setting it stored
+        assert by_rest[_soap_outgoing_name]['status_code_threshold'] == 9
+        assert by_rest[_soap_outgoing_name]['connection_failures'] == get_defaults(alert_type_rest)['connection_failures']
 
 # ################################################################################################################################
 # ################################################################################################################################

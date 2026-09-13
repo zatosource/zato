@@ -17,7 +17,7 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.collectors.common import channel_sources as channel_sources
+from zato.common.alerting.collectors.common import channel_sources as channel_sources, outgoing_sources as outgoing_sources
 from zato.common.alerting.seed.api import build_ruleset_document, default_rulesets
 from zato.common.api import CONNECTION, GENERIC, URL_TYPE
 from zato.common.audit_log.common import AuditSource
@@ -83,11 +83,12 @@ conn_type_to_alert_type:'strstrdict' = {
 }
 
 # The HTTPSOAP rows that carry alert settings of their own, by connection and transport -
-# REST and SOAP channels under the channels type, outgoing REST connections under the rest type
+# REST and SOAP channels under the channels type, outgoing REST and SOAP connections under the rest type
 alert_type_by_http_soap:'dict[tuple[str, str], str]' = {
     (CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP):  alert_type_channels,
     (CONNECTION.CHANNEL, URL_TYPE.SOAP):        alert_type_channels,
     (CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP): alert_type_rest,
+    (CONNECTION.OUTGOING, URL_TYPE.SOAP):       alert_type_rest,
 }
 
 # The HTTPSOAP rows that carry channel alert settings - REST and SOAP channels
@@ -100,11 +101,21 @@ transport_by_channel_source:'strstrdict' = {
     AuditSource.SOAP_Channel: URL_TYPE.SOAP,
 }
 
+# The transport the HTTPSOAP rows of each outgoing source go by - a connection's own traffic
+# and its health check both point at the row of that transport
+transport_by_outgoing_source:'strstrdict' = {
+    AuditSource.REST_Outgoing:        URL_TYPE.PLAIN_HTTP,
+    AuditSource.REST_Outgoing_Health: URL_TYPE.PLAIN_HTTP,
+    AuditSource.SOAP_Outgoing:        URL_TYPE.SOAP,
+    AuditSource.SOAP_Outgoing_Health: URL_TYPE.SOAP,
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 def get_alert_type(connection:'str', transport:'str') -> 'str':
     """ The alert type an HTTPSOAP row of the given connection and transport carries settings under -
+    the channels type for a REST or SOAP channel, the rest type for an outgoing REST or SOAP connection,
     an empty string for a row that carries none.
     """
     key = (connection, transport)

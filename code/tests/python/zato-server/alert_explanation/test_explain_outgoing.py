@@ -46,7 +46,7 @@ _security_name = 'CRM API Key'
 _own_status_codes = '401, 403, 4xx, 5xx'
 
 # The title line of the skill an outgoing REST connection is explained with
-_outgoing_skill_title = '# REST outgoing connection explanation'
+_outgoing_skill_title = '# REST and SOAP outgoing connection explanation'
 
 # What the remote side answered the rejected calls with, and what it never got to answer
 _rejected_status = '401 Unauthorized'

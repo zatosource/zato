@@ -1464,7 +1464,6 @@ class Alerting:
     # an underscore belongs to alerting - alerts_rest, alerts_sql and so on - and the sweep
     # matches facts through all of them.
     Ruleset_Prefix  = 'alerts'
-    Ruleset_Name    = 'alerts'
     Vocabulary_Name = 'alerting'
 
     # Explanations - an alert the LLM explains goes to this service instead of its own action,

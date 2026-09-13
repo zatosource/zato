@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import re
 from json import JSONDecodeError
 
 # Zato
@@ -16,7 +17,8 @@ from zato.common.json_internal import loads
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strlist
+    from zato.common.typing_ import anydict, stranydict, strlist
+    anydict = anydict
     strlist = strlist
 
 # ################################################################################################################################
@@ -28,6 +30,13 @@ _fence_plain = '```'
 
 # The confidence levels an explanation may carry.
 _confidence_levels = ('low', 'medium', 'high')
+
+# The three keys of a reply, each read off a document that does not parse as a whole - a JSON string
+# with its escapes for the two texts, an object or null for the remediation. This is the external boundary,
+# a model's reply, so a reading that fails leaves the reply as prose.
+_key_explanation = re.compile(r'"explanation"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_key_confidence = re.compile(r'"confidence"\s*:\s*"((?:[^"\\]|\\.)*)"')
+_key_remediation = re.compile(r'"remediation"\s*:\s*(\{[^}]*\}|null)')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,11 +65,59 @@ def _strip_fences(text:'str') -> 'str':
 
 # ################################################################################################################################
 
+def _read_json_string(escaped:'str') -> 'str':
+    """ The text a JSON string literal's contents stand for - the literal read whole when its escapes
+    are sound, its raw contents when they are not.
+    """
+    try:
+        out = loads('"' + escaped + '"')
+    except JSONDecodeError:
+        out = escaped
+
+    return out
+
+# ################################################################################################################################
+
+def _repair(data:'str') -> 'anydict | None':
+    """ A second reading of a reply that did not parse whole - the three keys are read off it one by one,
+    and a reply where all three come back is the object a clean reply would have parsed into.
+    None when any of them is missing.
+    """
+    explanation_match = _key_explanation.search(data)
+    confidence_match = _key_confidence.search(data)
+    remediation_match = _key_remediation.search(data)
+
+    if explanation_match is None:
+        return None
+
+    if confidence_match is None:
+        return None
+
+    if remediation_match is None:
+        return None
+
+    # The remediation is an object or null, both of which parse on their own
+    try:
+        remediation = loads(remediation_match.group(1))
+    except JSONDecodeError:
+        return None
+
+    out = {
+        'explanation': _read_json_string(explanation_match.group(1)),
+        'confidence': _read_json_string(confidence_match.group(1)),
+        'remediation': remediation,
+    }
+
+    return out
+
+# ################################################################################################################################
+
 def parse_explanation(text:'str', remediations:'strlist') -> 'stranydict':
     """ Parses an LLM reply into an explanation. A reply that is not the expected JSON document
-    still becomes an explanation - its full text is the explanation, with no confidence
-    and no remediation, so a person can always read what the model said. A remediation
-    is kept only when the skill of the alert's source names its action.
+    is read a second time, key by key, and one where all three keys come back parses the same
+    way a clean one does. A reply that still does not parse becomes an explanation all the same -
+    its full text is the explanation, with no confidence and no remediation, so a person can always
+    read what the model said. A remediation is kept only when the skill of the alert's source names its action.
     """
 
     # Our response to produce
@@ -74,11 +131,14 @@ def parse_explanation(text:'str', remediations:'strlist') -> 'stranydict':
     # Strip the markdown fence the model may have wrapped its reply in ..
     data = _strip_fences(text)
 
-    # .. a reply that does not parse is kept as prose ..
+    # .. a reply that does not parse whole is read key by key, and kept as prose when that fails too ..
     try:
         parsed = loads(data)
     except JSONDecodeError:
-        return out
+        parsed = _repair(data)
+
+        if parsed is None:
+            return out
 
     # .. so is one that parses into something other than an object ..
     if not isinstance(parsed, dict):

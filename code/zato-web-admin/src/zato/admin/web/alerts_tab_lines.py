@@ -13,8 +13,8 @@ from zato.admin.web.alerts_tab_picks import Email_Empty_Text, email_kinds, Live_
     Live_Type_LLM_Connection, llm_kinds, LLM_Empty_Text
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import alert_type_channels, alert_type_file_transfer, alert_type_rest, \
-    Email_Connection_Field, field_display as shared_field_display, field_help, Is_Active_Field, LLM_Connection_Field, \
-    Unit_Field_Suffix
+    Email_Connection_Field, field_display as shared_field_display, field_help, get_defaults, Is_Active_Field, \
+    LLM_Connection_Field, Unit_Field_Suffix
 from zato.common.api import HTTP_SOAP
 
 # ################################################################################################################################
@@ -64,9 +64,10 @@ unit_fields:'anydict' = {
 # The JSON list of time slots of a channel's silence alert
 Silence_Slots_Field = config_map.Silence_Slots_Field_Name
 
-# The status codes an outgoing connection alerts on, as typed
+# The status codes an outgoing connection alerts on, as typed, and what the field shows before anything is typed -
+# the default the seeded rule carries, so the two can never drift apart
 Status_Codes_Field = config_map.Status_Codes_Field_Name
-Status_Codes_Placeholder = '401, 403, 5xx'
+Status_Codes_Default = get_defaults(alert_type_rest)[Status_Codes_Field]
 
 # How often an outgoing connection is pinged - fields of the connection's own form rather than alert settings,
 # which the tab edits in place, so they carry no alert prefix and travel outside of the alert settings
@@ -419,7 +420,7 @@ type_lines:'anydict' = {
             'fields': [Status_Codes_Field, 'status_code_threshold', 'status_codes_window'],
             'rows': [[Status_Codes_Field], ['status_code_threshold'], ['status_codes_window']],
             'unit_field': Status_Codes_Window_Unit_Field,
-            'text_fields': {Status_Codes_Field: Status_Codes_Placeholder},
+            'text_fields': {Status_Codes_Field: Status_Codes_Default},
             'summary': 'Alert after {status_code_threshold|response|responses} with ' + f'{{{Status_Codes_Field}}} ' + \
                 f'in the last {{{Status_Codes_Window_Unit_Field}@status_codes_window}}',
             'how_it_works': 'Which status codes raise an alert - three-digit codes such as 401 or 403 and whole classes ' + \

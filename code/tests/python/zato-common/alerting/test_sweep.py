@@ -51,6 +51,9 @@ if 0:
 # The server name all the test events are written under
 _server_name = 'test-sweep-server'
 
+# The seeded ruleset the channel rules of the tests load under
+_ruleset_name = 'alerts_channels'
+
 # The channels the tests seed events and metrics for
 _channel_name = 'hl7.sweep.channel'
 _other_channel_name = 'hl7.sweep.other'
@@ -142,7 +145,7 @@ class _TransportRecorder:
 
 # ################################################################################################################################
 
-def _load_rules(text:'str', ruleset_name:'str'=Alerting.Ruleset_Name) -> 'rule_engine_rule_list':
+def _load_rules(text:'str', ruleset_name:'str'=_ruleset_name) -> 'rule_engine_rule_list':
     """ Builds runtime rules out of zrules text, the same way a stored version loads.
     """
     documents, errors = parse_data_details(text, ruleset_name)

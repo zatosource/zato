@@ -16,8 +16,9 @@ from zato.admin.web.alerts_tab_lines import Checkbox_On_Value, Edit_Hint, field_
     Line_Kind_Popover, Line_Kind_Toggle, Tab_Label, type_lines, unit_fields
 from zato.admin.web.alerts_tab_picks import get_empty_html, get_pick_choices, Pick_Select_Class
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import Field_Prefix, get_defaults as get_storage_defaults, get_field_names, \
-    Is_Active_Field, storage_name, Unit_Field_Suffix
+from zato.common.alerting.object_config import Field_Prefix, get_defaults as get_storage_defaults, get_field_kinds, \
+    get_field_names, Is_Active_Field, storage_name, Unit_Field_Suffix
+from zato.common.alerting.time_slots import Slot_Is_On, Slot_Seconds, Slot_Time_From, Slot_Time_To
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,14 +32,6 @@ if 0:
     strtuple = strtuple
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def form_field_name(name:'str') -> 'str':
-    """ The name a field of the tab goes by on the form and in storage.
-    """
-    out = storage_name(name)
-    return out
-
 # ################################################################################################################################
 
 def _same_name(name:'str') -> 'str':
@@ -123,18 +116,6 @@ def get_duration_field_names(alert_type:'str') -> 'strlist':
 
 # ################################################################################################################################
 
-def get_field_kinds(alert_type:'str') -> 'anydict':
-    """ The kind of each field of an alert type.
-    """
-    out:'anydict' = {}
-
-    for field in get_type_fields(alert_type):
-        out[field['name']] = field['kind']
-
-    return out
-
-# ################################################################################################################################
-
 def get_toggle_field_names(alert_type:'str') -> 'strlist':
     """ The fields of an alert type a checkbox stands for - the Active switch and the type's toggles.
     """
@@ -162,8 +143,8 @@ def get_field_label(name:'str') -> 'str':
 
 # ################################################################################################################################
 
-def get_defaults(alert_type:'str') -> 'anydict':
-    """ The default value of each field of an alert type, a duration as a count and a unit.
+def get_form_defaults(alert_type:'str') -> 'anydict':
+    """ The default value of each field of an alert type as the form shows it, a duration as a count and a unit.
     """
     out = get_storage_defaults(alert_type)
 
@@ -183,10 +164,10 @@ def get_storage_field_names(alert_type:'str') -> 'strtuple':
     names:'strlist' = []
 
     for name in get_field_names(alert_type):
-        names.append(form_field_name(name))
+        names.append(storage_name(name))
 
     for unit_field_name in get_unit_field_names(alert_type):
-        names.append(form_field_name(unit_field_name))
+        names.append(storage_name(unit_field_name))
 
     out = tuple(names)
     return out
@@ -199,7 +180,7 @@ def get_checkbox_field_names(alert_type:'str') -> 'strtuple':
     names:'strlist' = []
 
     for name in get_toggle_field_names(alert_type):
-        names.append(form_field_name(name))
+        names.append(storage_name(name))
 
     out = tuple(names)
     return out
@@ -239,8 +220,8 @@ def join_durations(alert_type:'str', input_dict:'anydict') -> 'None':
     """ Turns each duration's count and unit in a form's input into the seconds it is stored as, in place.
     """
     for name in get_duration_field_names(alert_type):
-        count_name = form_field_name(name)
-        unit_name = form_field_name(name + Unit_Field_Suffix)
+        count_name = storage_name(name)
+        unit_name = storage_name(name + Unit_Field_Suffix)
 
         if count_name in input_dict:
             if unit_name in input_dict:
@@ -253,8 +234,8 @@ def split_durations(alert_type:'str', item:'any_') -> 'None':
     """ Turns each duration's seconds on a listed object into the count and the unit the edit form shows, in place.
     """
     for name in get_duration_field_names(alert_type):
-        count_name = form_field_name(name)
-        unit_name = form_field_name(name + Unit_Field_Suffix)
+        count_name = storage_name(name)
+        unit_name = storage_name(name + Unit_Field_Suffix)
 
         if count_name in item:
             count, unit = config_map.split_duration(item[count_name])
@@ -262,7 +243,7 @@ def split_durations(alert_type:'str', item:'any_') -> 'None':
             item[unit_name] = unit
 
     for unit_field_name in get_unit_field_names(alert_type):
-        storage_unit_name = form_field_name(unit_field_name)
+        storage_unit_name = storage_name(unit_field_name)
 
         if storage_unit_name not in item:
             item[storage_unit_name] = unit_fields[unit_field_name]['initial']
@@ -299,10 +280,10 @@ def get_pick_field_names(alert_type:'str') -> 'strlist':
 def add_alerts_fields(form:'any_', alert_type:'str', request:'any_') -> 'None':
     """ Adds the fields of the Alerts tab to a form.
     """
-    defaults = get_defaults(alert_type)
+    defaults = get_form_defaults(alert_type)
 
     is_active_default = defaults[Is_Active_Field]
-    is_active_name = form_field_name(Is_Active_Field)
+    is_active_name = storage_name(Is_Active_Field)
     form.fields[is_active_name] = forms.BooleanField(required=False, initial=is_active_default, widget=forms.CheckboxInput())
 
     for field in get_type_fields(alert_type):
@@ -318,7 +299,7 @@ def add_alerts_fields(form:'any_', alert_type:'str', request:'any_') -> 'None':
         else:
             form_field = forms.IntegerField(required=False, initial=default, min_value=1, widget=forms.NumberInput())
 
-        field_name = form_field_name(name)
+        field_name = storage_name(name)
         form.fields[field_name] = form_field
 
     for unit_field_name in get_unit_field_names(alert_type):
@@ -329,12 +310,12 @@ def add_alerts_fields(form:'any_', alert_type:'str', request:'any_') -> 'None':
         else:
             initial = unit_field['initial']
 
-        field_name = form_field_name(unit_field_name)
+        field_name = storage_name(unit_field_name)
         form.fields[field_name] = forms.ChoiceField(
             required=False, choices=unit_field['choices'], initial=initial, widget=forms.Select())
 
     for line in get_pick_lines(alert_type):
-        field_name = form_field_name(line['fields'][0])
+        field_name = storage_name(line['fields'][0])
         choices = get_pick_choices(request, line)
         widget = forms.Select(attrs={'class': Pick_Select_Class})
         form.fields[field_name] = forms.ChoiceField(required=False, choices=choices, widget=widget)
@@ -369,7 +350,7 @@ def get_alerts_tab_context(form:'any_', alert_type:'str') -> 'anydict':
         if is_page_line(line):
             to_form_name = _same_name
         else:
-            to_form_name = form_field_name
+            to_form_name = storage_name
 
         if line['kind'] in (Line_Kind_Toggle, Line_Kind_Pick):
             field_name = to_form_name(line['fields'][0])
@@ -483,6 +464,20 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
     storage_field_names = list(get_storage_field_names(alert_type))
     checkbox_field_names = list(get_checkbox_field_names(alert_type))
 
+    # The kinds of line the tab lists and the keys of one time slot, so the JavaScript never spells them itself
+    line_kinds = {
+        'popover': Line_Kind_Popover,
+        'toggle': Line_Kind_Toggle,
+        'pick': Line_Kind_Pick,
+    }
+
+    slot_keys = {
+        'time_from': Slot_Time_From,
+        'time_to': Slot_Time_To,
+        'is_on': Slot_Is_On,
+        'seconds': Slot_Seconds,
+    }
+
     out = {
         'alert_type': alert_type,
         'tab_label': Tab_Label,
@@ -502,6 +497,8 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
         'duration_units': duration_units,
         'storage_field_names': storage_field_names,
         'checkbox_field_names': checkbox_field_names,
+        'line_kinds': line_kinds,
+        'slot_keys': slot_keys,
     }
 
     return out

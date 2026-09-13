@@ -233,7 +233,7 @@ class TestRestRules:
 
 # ################################################################################################################################
 
-    def test_a_fact_from_each_rest_measure_reaches_its_rule_for_rest_alone(self, backend:'RuleSQLBackend') -> 'None':
+    def test_a_fact_from_each_traffic_measure_reaches_its_rule_for_the_traffic_alone(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
 
         rules = load_alert_rules(backend)
@@ -247,12 +247,14 @@ class TestRestRules:
         for rule_name, measures in cases:
             rule = rules_by_full_name[f'{_rest_ruleset_name}_{rule_name}']
 
-            fact = new_fact(AuditSource.REST_Outgoing, 'crm.api')
-            fact.update(measures)
-            assert rule.match({Fact_Entity: fact}), f'Expected {rule_name} to match {fact}'
+            # Both outgoing kinds are judged by their status codes and their failed calls ..
+            for source in (AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing):
+                fact = new_fact(source, 'crm.api')
+                fact.update(measures)
+                assert rule.match({Fact_Entity: fact}), f'Expected {rule_name} to match {fact}'
 
-            # Neither an outgoing SOAP connection nor a REST connection's health check is judged by these rules
-            for source in (AuditSource.SOAP_Outgoing, AuditSource.REST_Outgoing_Health):
+            # .. but a connection's health check is not, it has the rules on streaks, rates and latency for that.
+            for source in (AuditSource.REST_Outgoing_Health, AuditSource.SOAP_Outgoing_Health):
                 fact = new_fact(source, 'crm.api')
                 fact.update(measures)
                 assert not rule.match({Fact_Entity: fact}), f'Expected {rule_name} not to match {fact}'

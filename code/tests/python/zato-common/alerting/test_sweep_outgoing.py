@@ -344,4 +344,42 @@ class TestOutgoingRestSweep:
         assert 'over 7200s' in body
 
 # ################################################################################################################################
+
+    def test_a_soap_outgoing_connection_is_judged_by_the_same_rules_and_named_as_soap(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Three 503s among the traffic of a SOAP connection - the same default codes a REST one alerts on ..
+        _seed_failures(audit_log, engine, now, 'soap-down', 3, '503 Service Unavailable', source=AuditSource.SOAP_Outgoing)
+        _seed_failures(audit_log, engine, now, 'soap-ok', 30, '200 OK', source=AuditSource.SOAP_Outgoing)
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-soap-codes', None)
+
+        assert _rule_names(result) == ['Status_Codes']
+        assert len(recorder.emails) == 1
+
+        # .. and the message names the connection by its own transport, not as a REST one.
+        _, _, body = recorder.emails[0]
+        assert _conn_name in body
+        assert 'SOAP outgoing' in body
+        assert 'REST outgoing' not in body
+        assert '3 responses with a status the connection alerts on (503 x3)' in body
+
+        # Three calls that never got a response in a row bring the connection down under the SOAP name too
+        for idx in range(3):
+            _seed_call(audit_log, engine, now, f'soap-streak-{idx}', TransportStatus.Connection_Error,
+                source=AuditSource.SOAP_Outgoing)
+
+        result, recorder = _run_rest_sweep(engine, audit_log, now, 'cid-soap-down', None)
+
+        # The streak brings the connection down and the refused connections count as failures on their own
+        assert 'Connection_Down' in _rule_names(result)
+        assert 'Connection_Failures' in _rule_names(result)
+
+        for _, _, body in recorder.emails:
+            assert '(SOAP outgoing)' in body
+            assert '3 consecutive failures' in body
+
+# ################################################################################################################################
 # ################################################################################################################################

@@ -11,6 +11,8 @@ from json import loads
 
 # Zato
 from zato.cli.enmasse.util import export_invocation_fields, export_retry_fields, Invocation_Fields_SOAP
+from zato.cli.enmasse.util.alerts import group_alerts
+from zato.common.alerting.object_config import alert_type_rest, Alerts_Key
 from zato.common.api import CONNECTION, MISC, URL_TYPE
 from zato.common.odb.model import to_json
 from zato.common.odb.query import http_soap_list
@@ -131,6 +133,11 @@ class OutgoingSOAPExporter:
             # The audit log is on by default so only the off state is exported
             if opaque.get('is_audit_log_active') is False:
                 exported_conn['is_audit_log_active'] = False
+
+            # The alert settings moved away from their defaults, under the rest type the outgoing REST connections share
+            alerts = group_alerts(opaque, alert_type_rest)
+            if alerts is not None:
+                exported_conn[Alerts_Key] = alerts
 
             exported_outgoing.append(exported_conn)
 

@@ -175,17 +175,35 @@ class TestOutgoingStatusFacts:
         assert len(facts) == 1
         assert facts[0]['object_name'] == _conn_name
 
-    def test_a_source_outside_the_outgoing_ones_measures_nothing(self) -> 'None':
+    def test_an_outgoing_soap_connection_is_counted_by_status_as_a_rest_one(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'soap-1', '500 Internal Server Error', source=AuditSource.SOAP_Outgoing)
+        _ = _seed_call(audit_log, 'soap-2', TransportStatus.Timeout, source=AuditSource.SOAP_Outgoing)
+
+        facts = collect_outgoing_status_facts(engine, _window_seconds, now)
+        fact = _fact_of(facts, _conn_name, AuditSource.SOAP_Outgoing)
+
+        assert fact['status_counts'] == {'500': 1}
+        assert fact['connection_failure_count'] == 1
+
+        facts = collect_outgoing_status_facts(engine, _window_seconds, now, source=AuditSource.SOAP_Outgoing)
+        fact = _fact_of(facts, _conn_name, AuditSource.SOAP_Outgoing)
+        assert fact['status_counts'] == {'500': 1}
+
+    def test_a_source_outside_the_outgoing_ones_measures_nothing(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _ = _seed_call(audit_log, 'chan-1', '500 Internal Server Error', source=AuditSource.REST_Channel)
 
         facts = collect_outgoing_status_facts(engine, _window_seconds, now)
         assert facts == []
 
-        facts = collect_outgoing_status_facts(engine, _window_seconds, now, source=AuditSource.SOAP_Outgoing)
+        facts = collect_outgoing_status_facts(engine, _window_seconds, now, source=AuditSource.REST_Channel)
         assert facts == []
 
 # ################################################################################################################################
@@ -215,7 +233,7 @@ class TestSources:
 
     def test_the_channels_are_the_channels_alone(self) -> 'None':
         assert channel_sources == (AuditSource.REST_Channel, AuditSource.SOAP_Channel)
-        assert outgoing_sources == (AuditSource.REST_Outgoing,)
+        assert outgoing_sources == (AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing)
 
     def test_a_channel_and_a_connection_of_one_name_each_get_facts_of_their_own_source(self) -> 'None':
         audit_log = AuditLog(_server_name)

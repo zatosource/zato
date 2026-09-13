@@ -49,7 +49,7 @@ outgoing_fhir:
     is_active: false
     pool_size: 3
     security: enmasse.fhir.basic_auth.1
-    is_audit_log_active: true
+    is_audit_log_active: false
 
   - name: enmasse.fhir.out.2
     address: http://127.0.0.1:31002/fhir/r4
@@ -163,8 +163,9 @@ class TestEnmasseOutgoingFHIRImporter(TestCase):
         self.assertFalse(connection.is_active)
         self.assertEqual(connection.pool_size, 3)
 
+        # The audit log was turned off in the YAML
         opaque = json.loads(connection.opaque1)
-        self.assertTrue(opaque['is_audit_log_active'])
+        self.assertIs(opaque['is_audit_log_active'], False)
 
 # ################################################################################################################################
 
@@ -183,9 +184,10 @@ class TestEnmasseOutgoingFHIRImporter(TestCase):
         self.assertTrue(connection.is_active)
         self.assertEqual(connection.pool_size, 10)
 
+        # A YAML that says nothing of the audit log leaves it on
         opaque = json.loads(connection.opaque1)
         self.assertEqual(opaque['security_id'], 0)
-        self.assertFalse(opaque['is_audit_log_active'])
+        self.assertIs(opaque['is_audit_log_active'], True)
 
 # ################################################################################################################################
 

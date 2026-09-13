@@ -6,9 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The Alerts tab of an outgoing REST connection - its sections in order with the health check above the failures and the traffic,
-# the status codes line carrying its text field and summarising the codes, the connection failures line, every
-# storage field of the type on the form, and the storage names the config hands the tab's JavaScript.
+# The Alerts tab of an outgoing REST or SOAP connection - its sections in order with the health check above the failures and
+# the traffic, the status codes line carrying its text field and summarising the codes, the connection failures line, every
+# storage field of the type on both pages' forms, and the storage names the config hands the tab's JavaScript.
 
 # pytest
 import pytest
@@ -20,8 +20,9 @@ from zato.common.ext.bunch import Bunch
 from zato.admin.web import alerts_tab
 from zato.admin.web.alerts_tab_lines import Health_Check_Run_Every_Field, Health_Check_Run_Unit_Field, \
     Health_Check_Summary_Empty, Line_Kind_Popover, Section_Core, Section_Failures, Section_Health, Section_Traffic, \
-    Status_Codes_Field, Status_Codes_Placeholder, Status_Codes_Window_Unit_Field, Unit_Field_Suffix
+    Status_Codes_Field, Status_Codes_Default, Status_Codes_Window_Unit_Field, Unit_Field_Suffix
 from zato.admin.web.forms.http_soap import CreateForm as ChannelCreateForm, EditForm as ChannelEditForm
+from zato.admin.web.forms.outgoing.soap import CreateForm as SOAPCreateForm, EditForm as SOAPEditForm
 from zato.common.alerting.object_config import alert_type_rest, get_defaults, get_field_names, storage_name
 
 # ################################################################################################################################
@@ -61,6 +62,15 @@ def req() -> 'any_':
 
 # ################################################################################################################################
 
+# The create and edit forms of each page the tab is on - the outgoing REST page shares the channels' forms,
+# the outgoing SOAP page has forms of its own
+_page_forms = [
+    pytest.param((ChannelCreateForm, ChannelEditForm), id='rest'),
+    pytest.param((SOAPCreateForm, SOAPEditForm), id='soap'),
+]
+
+# ################################################################################################################################
+
 def _lines_by_name(config:'anydict') -> 'anydict':
     """ The lines of a tab config, by name.
     """
@@ -76,9 +86,11 @@ def _lines_by_name(config:'anydict') -> 'anydict':
 
 class TestOutgoingRestTab:
 
-    def test_the_sections_run_core_health_check_failures_traffic(self, req:'any_') -> 'None':
+    @pytest.mark.parametrize('page_forms', _page_forms)
+    def test_the_sections_run_core_health_check_failures_traffic(self, req:'any_', page_forms:'any_') -> 'None':
 
-        form = ChannelCreateForm(req=req, alert_type=alert_type_rest)
+        create_form_class, _ = page_forms
+        form = create_form_class(req=req, alert_type=alert_type_rest)
         context = alerts_tab.get_alerts_tab_context(form, alert_type_rest)
 
         section_labels:'strlist' = []
@@ -116,7 +128,7 @@ class TestOutgoingRestTab:
         assert line['unit_field'] == Status_Codes_Window_Unit_Field
 
         # The codes are typed as text with the placeholder showing the shape ..
-        assert line['text_fields'] == {Status_Codes_Field: Status_Codes_Placeholder}
+        assert line['text_fields'] == {Status_Codes_Field: Status_Codes_Default}
         assert config['field_kinds'][Status_Codes_Field] == 'text'
 
         # .. and the summary names the count, the codes text and the window with its unit.
@@ -158,9 +170,11 @@ class TestOutgoingRestTab:
 
 # ################################################################################################################################
 
-    def test_the_form_carries_every_field_of_the_type_with_the_defaults(self, req:'any_') -> 'None':
+    @pytest.mark.parametrize('page_forms', _page_forms)
+    def test_the_form_carries_every_field_of_the_type_with_the_defaults(self, req:'any_', page_forms:'any_') -> 'None':
 
-        form = ChannelCreateForm(req=req, alert_type=alert_type_rest)
+        create_form_class, _ = page_forms
+        form = create_form_class(req=req, alert_type=alert_type_rest)
         defaults = get_defaults(alert_type_rest)
 
         for name in get_field_names(alert_type_rest):
@@ -177,9 +191,11 @@ class TestOutgoingRestTab:
 
 # ################################################################################################################################
 
-    def test_the_edit_form_fields_are_prefixed(self, req:'any_') -> 'None':
+    @pytest.mark.parametrize('page_forms', _page_forms)
+    def test_the_edit_form_fields_are_prefixed(self, req:'any_', page_forms:'any_') -> 'None':
 
-        form = ChannelEditForm(prefix='edit', req=req, alert_type=alert_type_rest)
+        _, edit_form_class = page_forms
+        form = edit_form_class(prefix='edit', req=req, alert_type=alert_type_rest)
         rendered = str(form[storage_name(Status_Codes_Field)])
 
         assert 'name="edit-alert_status_codes"' in rendered

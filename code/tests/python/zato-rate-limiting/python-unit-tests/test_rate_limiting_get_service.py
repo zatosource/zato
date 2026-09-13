@@ -13,7 +13,7 @@ from unittest.mock import MagicMock
 # Zato
 from zato.common.json_internal import dumps
 from zato.common.rate_limiting.common import Window_Unit_Second
-from zato.server.service.internal.http_soap import RateLimitingGet
+from zato.server.service.internal.http_soap.rate_limiting import RateLimitingGet
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -11,7 +11,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # are produced against a real IMAP server and a real SSH server with an SFTP subsystem, and the
 # explained alert is delivered to a real SMTP receiver. The REST channel proof runs inside a
 # quickstart server of its own, with a hot-deployed service that raises and the LLM connection
-# imported through enmasse. The suite skips when docker is not available.
+# imported through enmasse, and the SOAP outgoing proof has a scheduler of its own firing the
+# connection's health check. The suite skips when docker is not available.
 
 # stdlib
 import logging
@@ -22,6 +23,8 @@ import sys
 import tempfile
 import time
 import warnings
+from urllib.request import urlopen
+from uuid import uuid4
 from shutil import copytree
 
 # The Ollama container helpers live in the LLM MCP suite, the IMAP server in the IMAP scheduler suite,
@@ -67,6 +70,22 @@ if 0:
 # How long to wait for the test-managed Redis to accept connections
 _redis_wait_timeout = 30
 _redis_poll_interval = 0.1
+
+# How long to wait for the suite's own scheduler to answer on its HTTP API
+_scheduler_wait_timeout = 30
+_scheduler_poll_interval = 0.5
+
+# The scheduler binary, the same one zato start <scheduler-dir> runs
+_scheduler_binary = os.path.join(os.environ['ZATO_TEST_BASE_DIR'], 'code', 'zato-rust', 'zato_scheduler_core', 'target',
+    'release', '_zato_scheduler')
+
+# Where the scheduler's log goes
+_scheduler_log_path = '/tmp/zato-explain-live-scheduler.log'
+
+# The server and the suite's own scheduler share these, and nothing else on the machine does - the stream prefix keeps
+# their Redis streams apart from any other scheduler's, the port keeps the scheduler's HTTP API off the default one.
+# Both are decided here, before the server fixture below is built, because the server reads them from its environment.
+_scheduler_stream_prefix = 'zato:scheduler:explain-live:' + uuid4().hex
 
 # The enmasse document the quickstart server imports before it starts - the LLM connection
 # the explanations go through, pointed at the Ollama container
@@ -134,19 +153,6 @@ def _build_live_server_config(
 
 # ################################################################################################################################
 
-zato_server = create_zato_server_fixture(
-    logger_name='zato.test.alert_explanation_live.conftest',
-    server_log_copy_name='server-logs-alert-explanation-live.txt',
-    template_path=_enmasse_template_path,
-    quickstart_prefix='zato_explain_live_qs_',
-    extra_server_env={},
-    patch_server_conf_bind=True,
-    build_config_callback=_build_live_server_config,
-)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def _find_free_port() -> 'int':
     """ Binds to an ephemeral port and returns its number.
     """
@@ -156,6 +162,67 @@ def _find_free_port() -> 'int':
         out = address[1]
 
     return out
+
+# ################################################################################################################################
+
+_scheduler_http_port = _find_free_port()
+
+_scheduler_env = {
+    'Zato_Scheduler_Stream_Prefix': _scheduler_stream_prefix,
+    'Zato_Scheduler_HTTP_Port': str(_scheduler_http_port),
+}
+
+# ################################################################################################################################
+
+zato_server = create_zato_server_fixture(
+    logger_name='zato.test.alert_explanation_live.conftest',
+    server_log_copy_name='server-logs-alert-explanation-live.txt',
+    template_path=_enmasse_template_path,
+    quickstart_prefix='zato_explain_live_qs_',
+    extra_server_env=_scheduler_env,
+    patch_server_conf_bind=True,
+    build_config_callback=_build_live_server_config,
+)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def scheduler_process(zato_server:'any_') -> 'any_':
+    """ The suite's own scheduler, firing the health checks the SOAP outgoing proof configures - started after
+    the server so that quickstart has wiped the Redis keys, and reading the same stream prefix the server writes to.
+    """
+    environment = os.environ.copy()
+    environment.update(_scheduler_env)
+    _ = environment.setdefault('Zato_Scheduler_Log_Level', 'info')
+
+    log_file = open(_scheduler_log_path, 'w')
+
+    process = subprocess.Popen([_scheduler_binary], env=environment, stdout=log_file, stderr=subprocess.STDOUT)
+
+    # The HTTP API answers once the scheduler consumes its command stream too
+    deadline = time.monotonic() + _scheduler_wait_timeout
+
+    while time.monotonic() < deadline:
+        try:
+            with urlopen(f'http://127.0.0.1:{_scheduler_http_port}/metrics', timeout=1) as response:
+                _ = response.read()
+        except Exception:
+            time.sleep(_scheduler_poll_interval)
+            continue
+        else:
+            break
+    else:
+        process.kill()
+        _ = process.wait()
+        log_file.close()
+        raise Exception(f'The scheduler did not answer on port {_scheduler_http_port} within {_scheduler_wait_timeout}s')
+
+    yield process
+
+    process.kill()
+    _ = process.wait()
+    log_file.close()
 
 # ################################################################################################################################
 

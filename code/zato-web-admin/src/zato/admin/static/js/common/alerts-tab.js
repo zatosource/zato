@@ -55,11 +55,6 @@ $.fn.zato.alerts_tab.config = {
     lineOffClass: 'alerts-tab-line-off',
     idPrefixDjango: 'id_',
 
-    // The kinds of line the Django side lists
-    kindPopover: 'popover',
-    kindToggle: 'toggle',
-    kindPick: 'pick',
-
     // The kinds of field spec a popover is built of
     specCheckbox: 'checkbox',
     specNumber: 'number',
@@ -80,12 +75,6 @@ $.fn.zato.alerts_tab.config = {
 
     // A range's length comes from the kit in minutes, its units are compared in seconds
     secondsPerMinute: 60,
-
-    // The keys of one time slot in the hidden slots field, shared with the Python side
-    slotTimeFrom: 'time_from',
-    slotTimeTo: 'time_to',
-    slotIsOn: 'is_on',
-    slotSeconds: 'silence_seconds',
 
     // What a hidden cell says of a checkbox, which is what the edit form reads a boolean back from
     cellTrue: 'True',
@@ -273,7 +262,7 @@ $.fn.zato.alerts_tab.buildDescriptors = function() {
 
     settings.lines.forEach(function(line) {
 
-        if(line.kind !== tab.config.kindPopover) {
+        if(line.kind !== tab.settings.line_kinds.popover) {
             return;
         }
 
@@ -360,7 +349,7 @@ $.fn.zato.alerts_tab.descriptions = function() {
 
         var targetId;
 
-        if(line.kind === tab.config.kindPopover) {
+        if(line.kind === tab.settings.line_kinds.popover) {
             targetId = tab.elementId('edit', line.name);
         }
         else {
@@ -481,7 +470,7 @@ $.fn.zato.alerts_tab.live_configs = function(fieldPrefix) {
 
     tab.settings.lines.forEach(function(line) {
 
-        if(line.kind !== tab.config.kindPick) {
+        if(line.kind !== tab.settings.line_kinds.pick) {
             return;
         }
 
@@ -584,7 +573,7 @@ $.fn.zato.alerts_tab.render = function() {
 
     tab.settings.lines.forEach(function(line) {
 
-        if(line.kind === tab.config.kindPopover) {
+        if(line.kind === tab.settings.line_kinds.popover) {
             var summary = document.getElementById(tab.elementId('summary', line.name));
             summary.textContent = tab.formatSummary(line);
         }
@@ -593,7 +582,7 @@ $.fn.zato.alerts_tab.render = function() {
             tab.applyDependentState(line);
         }
 
-        if(line.kind === tab.config.kindPick) {
+        if(line.kind === tab.settings.line_kinds.pick) {
             tab.applyPickState(line);
         }
     });
@@ -623,7 +612,7 @@ $.fn.zato.alerts_tab.bind = function(options) {
             });
         }
 
-        if(line.kind !== tab.config.kindPopover) {
+        if(line.kind !== tab.settings.line_kinds.popover) {
             return;
         }
 

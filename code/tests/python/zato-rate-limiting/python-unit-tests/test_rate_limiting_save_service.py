@@ -16,7 +16,7 @@ from zato.common.broker_message import CHANNEL
 from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import dumps, loads
 from zato.common.rate_limiting.common import RateLimitError, Window_Unit_Second
-from zato.server.service.internal.http_soap import RateLimitingSave
+from zato.server.service.internal.http_soap.rate_limiting import RateLimitingSave
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################

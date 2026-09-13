@@ -21,7 +21,7 @@ from datetime import timedelta
 # Zato
 from zato.common.alerting.collectors.common import channel_sources, response_event_type_by_source, \
     Window_Seconds_By_Measure_Key
-from zato.common.audit_log.common import get_source_label
+from zato.common.audit_log.common import get_source_label, health_sources
 from zato.common.util.api import pluralize
 
 # ################################################################################################################################
@@ -58,13 +58,20 @@ Error_Text_Max_Chars = 2000
 _trim_marker = ' ... '
 
 # What a group's names are called - a file transfer's rows name files, a channel's rows name the services
-# that answered and the callers that asked.
+# that answered and the callers that asked, an outgoing connection's rows and its health check's pings
+# name the endpoints they called.
 Label_File = 'File'
 Label_Files = 'Files'
 Label_Service = 'Service'
 Label_Services = 'Services'
 Label_Caller = 'Caller'
 Label_Callers = 'Callers'
+Label_Endpoint = 'Endpoint'
+Label_Endpoints = 'Endpoints'
+
+# What the Baseline calls one row - a health check's rows are pings, everyone else's are events
+Noun_Event = 'event'
+Noun_Ping = 'ping'
 
 # What joins a channel row's status line and its error text into one group key.
 _status_separator = ' - '
@@ -76,8 +83,13 @@ Heading_Object   = '## Object'
 Heading_Failures = '## Failures'
 Heading_Baseline = '## Baseline'
 
-# What the Failures section says of itself before its groups.
+# What the Failures section says of itself before its groups - a health check's rows are pings,
+# an outgoing connection's rows are the calls it made, everyone else's are events.
 _failures_intro = 'Newest first. Identical errors are grouped, the count says how many times each occurred in the window.'
+_failures_intro_pings = 'Newest first. Each failure is one ping of the connection\'s health check. ' + \
+    'Identical errors are grouped, the count says how many pings failed the same way in the window.'
+_failures_intro_calls = 'Newest first. Each failure is one call the connection made. ' + \
+    'Identical errors are grouped, the count says how many calls failed the same way in the window.'
 
 # What the Failures section says when there is nothing in it.
 _no_failures = 'No failed events in the window.'
@@ -93,6 +105,40 @@ def is_channel_source(source:'str') -> 'bool':
     """ Whether a source's rows are the calls a channel received - their names are services and callers, not files.
     """
     out = source in channel_sources
+    return out
+
+# ################################################################################################################################
+
+def is_health_check_source(source:'str') -> 'bool':
+    """ Whether a source's rows are the pings of a connection's health check rather than its own calls.
+    """
+    out = source in health_sources
+    return out
+
+# ################################################################################################################################
+
+def is_outgoing_source(source:'str') -> 'bool':
+    """ Whether a source's rows are the calls an outgoing connection made, or its health check's pings -
+    the rows that carry a status line and name the endpoint they called.
+    """
+    if is_channel_source(source):
+        return False
+
+    out = source in response_event_type_by_source
+    return out
+
+# ################################################################################################################################
+
+def _failures_intro_of(source:'str') -> 'str':
+    """ What the Failures section says of a source's rows before listing them.
+    """
+    if is_health_check_source(source):
+        out = _failures_intro_pings
+    elif is_outgoing_source(source):
+        out = _failures_intro_calls
+    else:
+        out = _failures_intro
+
     return out
 
 # ################################################################################################################################
@@ -158,11 +204,13 @@ def group_failures(rows:'dictlist', source:'str'='') -> 'dictlist':
     """ The rows grouped by identical error text - each group with its count, the time of its
     first and its last row and the files or endpoints it touched, the groups in the order of
     their newest rows, newest first, which is the order the rows arrive in. A channel's and an outgoing
-    connection's rows are grouped by their status line and error text together, and a channel's group
-    also collects the callers whose calls it holds, each caller once.
+    connection's rows are grouped by their status line and error text together, an outgoing connection's
+    group names each endpoint once, and a channel's group also collects the callers whose calls it holds,
+    each caller once.
     """
     by_text:'dict[str, stranydict]' = {}
     is_channel = is_channel_source(source)
+    is_outgoing = is_outgoing_source(source)
     has_status = groups_by_status(source)
 
     for row in rows:
@@ -189,10 +237,14 @@ def group_failures(rows:'dictlist', source:'str'='') -> 'dictlist':
         # The rows arrive newest first, so the first row seen is the newest and every later one is older
         group['first_iso'] = row['event_time_iso']
 
-        # A file is named each time it failed, a service and a caller once each
+        # A file is named each time it failed, a service, a caller and an endpoint once each
         if is_channel:
             _add_once(group['files'], row['endpoint'])
             _add_once(group['callers'], row['ext_client_id'])
+            group['files_total'] = len(group['files'])
+
+        elif is_outgoing:
+            _add_once(group['files'], row['endpoint'])
             group['files_total'] = len(group['files'])
 
         elif row['endpoint']:
@@ -237,8 +289,9 @@ def _format_names(names:'strlist', names_total:'int', is_collapsed:'bool', one:'
 
 # ################################################################################################################################
 
-def _render_group(number:'int', group:'stranydict', is_collapsed:'bool', is_trimmed:'bool', is_channel:'bool') -> 'str':
-    """ One group of the Failures section.
+def _render_group(number:'int', group:'stranydict', is_collapsed:'bool', is_trimmed:'bool', source:'str') -> 'str':
+    """ One group of the Failures section - its names are services and callers for a channel, endpoints
+    for an outgoing connection and its health check, files for everyone else.
     """
     text = group['text']
 
@@ -252,12 +305,15 @@ def _render_group(number:'int', group:'stranydict', is_collapsed:'bool', is_trim
     else:
         lines.append(f'   Count: {group["count"]}, first {group["first_iso"]}, last {group["last_iso"]}')
 
-    if is_channel:
+    callers_line = ''
+
+    if is_channel_source(source):
         names_line = _format_names(group['files'], group['files_total'], is_collapsed, Label_Service, Label_Services)
         callers_line = _format_names(group['callers'], len(group['callers']), is_collapsed, Label_Caller, Label_Callers)
+    elif is_outgoing_source(source):
+        names_line = _format_names(group['files'], group['files_total'], is_collapsed, Label_Endpoint, Label_Endpoints)
     else:
         names_line = _format_names(group['files'], group['files_total'], is_collapsed, Label_File, Label_Files)
-        callers_line = ''
 
     if names_line:
         lines.append('   ' + names_line)
@@ -281,16 +337,15 @@ def render_failures(
     """ The Failures section - the intro, the groups and the line saying what was left out, if anything was.
     """
     lines = [Heading_Failures, '']
-    is_channel = is_channel_source(source)
 
     if not groups:
         lines.append(_no_failures)
     else:
-        lines.append(_failures_intro)
+        lines.append(_failures_intro_of(source))
         lines.append('')
 
         for index, group in enumerate(groups, 1):
-            lines.append(_render_group(index, group, is_collapsed, is_trimmed, is_channel))
+            lines.append(_render_group(index, group, is_collapsed, is_trimmed, source))
             lines.append('')
 
         # The blank line after the last group is what the left-out line follows, so it stays
@@ -475,17 +530,31 @@ def _row_moment(row:'stranydict') -> 'str':
 
 # ################################################################################################################################
 
-def render_baseline(baseline:'stranydict') -> 'str':
+def _baseline_noun(source:'str') -> 'str':
+    """ What the Baseline calls one row of a source - a ping for a health check, an event for everyone else.
+    """
+    if is_health_check_source(source):
+        out = Noun_Ping
+    else:
+        out = Noun_Event
+
+    return out
+
+# ################################################################################################################################
+
+def render_baseline(baseline:'stranydict', source:'str'='') -> 'str':
     """ The Baseline section - the successes around the failures and the newest test transfer result.
+    A health check's successes are its pings, so the section names them as such.
     """
     lines = [Heading_Baseline, '']
+    noun = _baseline_noun(source)
 
-    lines.append(f'OK events in the window: {baseline["ok_count"]}')
+    lines.append(f'OK {noun}s in the window: {baseline["ok_count"]}')
 
     if baseline['last_ok'] is None:
-        lines.append('Last OK event: none in the window')
+        lines.append(f'Last OK {noun}: none in the window')
     else:
-        lines.append(f'Last OK event: {_row_moment(baseline["last_ok"])}')
+        lines.append(f'Last OK {noun}: {_row_moment(baseline["last_ok"])}')
 
     streak_count = baseline['streak_count']
 
@@ -493,13 +562,13 @@ def render_baseline(baseline:'stranydict') -> 'str':
         streak_line = f'Current failure streak: {streak_count}, since {baseline["streak_start_iso"]}'
 
         if baseline['last_ok_before_streak'] is None:
-            streak_line += ', no OK event before it on record'
+            streak_line += f', no OK {noun} before it on record'
         else:
             streak_line += f', last OK before it {_row_moment(baseline["last_ok_before_streak"])}'
 
         lines.append(streak_line)
     else:
-        lines.append('Current failure streak: none, the newest event succeeded')
+        lines.append(f'Current failure streak: none, the newest {noun} succeeded')
 
     if not baseline['test_transfers_on']:
         lines.append('Test transfer result: not run, test transfers are off for this connection')
@@ -531,7 +600,7 @@ def build_evidence_document(
     """
     alert_section = render_alert(alert, now)
     object_section = render_object(object_info)
-    baseline_section = render_baseline(baseline)
+    baseline_section = render_baseline(baseline, alert['source'])
 
     fixed_parts = [Heading_Evidence, alert_section, object_section, baseline_section]
     fixed_length = 0

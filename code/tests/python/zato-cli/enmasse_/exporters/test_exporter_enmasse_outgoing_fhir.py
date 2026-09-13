@@ -48,7 +48,7 @@ outgoing_fhir:
     address: http://127.0.0.1:31101/fhir/r4
     pool_size: 7
     security: enmasse.fhir.export.basic_auth.1
-    is_audit_log_active: true
+    is_audit_log_active: false
 
   - name: enmasse.fhir.export.2
     address: http://127.0.0.1:31102/fhir/r4
@@ -144,12 +144,12 @@ class TestEnmasseOutgoingFHIRExporter(TestCase):
         item = exported_by_name['enmasse.fhir.export.1']
         self.assertEqual(item['address'], 'http://127.0.0.1:31101/fhir/r4')
         self.assertEqual(item['pool_size'], 7)
-        self.assertTrue(item['is_audit_log_active'])
+        self.assertIs(item['is_audit_log_active'], False)
 
         # .. and left this one where it was, so it is not written out ..
         self.assertNotIn('is_active', item)
 
-        # .. while the second one moved nothing at all.
+        # .. while the second one moved nothing at all - the audit log is on by default, so only the off state is written.
         item = exported_by_name['enmasse.fhir.export.2']
         self.assertEqual(item['address'], 'http://127.0.0.1:31102/fhir/r4')
         self.assertNotIn('pool_size', item)

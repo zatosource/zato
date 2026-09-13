@@ -34,6 +34,9 @@ if 0:
 # The actor every write in these tests is made by
 _actor = 'test-webapi'
 
+# The seeded ruleset the tests validate, preview and publish into
+_ruleset_name = 'alerts_common'
+
 # What the editor types into the sentence view - one finished rule of the alerts ruleset
 _rule_text = """
 rule
@@ -64,16 +67,16 @@ def _find(backend:'RuleSQLBackend', name:'str', object_type:'str') -> 'RuleDefin
 class TestValidate:
 
     def test_typed_rules_parse_into_canonical_documents(self, backend:'RuleSQLBackend') -> 'None':
-        body = {'text': _rule_text, 'ruleset_name': Alerting.Ruleset_Name}
+        body = {'text': _rule_text, 'ruleset_name': _ruleset_name}
 
         result, note = webapi.validate_rules(backend, body)
 
         assert result['errors'] == []
-        assert list(result['documents']) == [f'{Alerting.Ruleset_Name}_Test_Backlog']
+        assert list(result['documents']) == [f'{_ruleset_name}_Test_Backlog']
 
-        document = result['documents'][f'{Alerting.Ruleset_Name}_Test_Backlog']
+        document = result['documents'][f'{_ruleset_name}_Test_Backlog']
         assert document['name'] == 'Test_Backlog'
-        assert document['ruleset_name'] == Alerting.Ruleset_Name
+        assert document['ruleset_name'] == _ruleset_name
         assert '1 rule' in note
 
 # ################################################################################################################################
@@ -84,7 +87,7 @@ class TestValidate:
 
         body = {
             'text': _unknown_term_text,
-            'ruleset_name': Alerting.Ruleset_Name,
+            'ruleset_name': _ruleset_name,
             'vocabulary_id': vocabulary.id,
         }
 
@@ -107,7 +110,7 @@ class TestValidate:
 class TestRender:
 
     def test_canonical_documents_render_back_to_text(self, backend:'RuleSQLBackend') -> 'None':
-        parsed, _ = webapi.validate_rules(backend, {'text': _rule_text, 'ruleset_name': Alerting.Ruleset_Name})
+        parsed, _ = webapi.validate_rules(backend, {'text': _rule_text, 'ruleset_name': _ruleset_name})
 
         result, _ = webapi.render_rules({'documents': parsed['documents']})
 
@@ -145,10 +148,10 @@ class TestSave:
 
     def test_the_editors_save_body_creates_a_new_version(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
-        ruleset = _find(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+        ruleset = _find(backend, _ruleset_name, Definition_Type_Ruleset)
 
         # The editor validates first and saves the parsed documents merged over the stored ones
-        parsed, _ = webapi.validate_rules(backend, {'text': _rule_text, 'ruleset_name': Alerting.Ruleset_Name})
+        parsed, _ = webapi.validate_rules(backend, {'text': _rule_text, 'ruleset_name': _ruleset_name})
 
         preview, _ = webapi.preview_definition(backend, ruleset.id)
         merged = dict(preview['document'][Documents_Key])
@@ -168,13 +171,13 @@ class TestSave:
 
         # The stored document now carries the new rule alongside the seeded ones
         preview, _ = webapi.preview_definition(backend, ruleset.id)
-        assert f'{Alerting.Ruleset_Name}_Test_Backlog' in preview['document'][Documents_Key]
+        assert f'{_ruleset_name}_Test_Backlog' in preview['document'][Documents_Key]
 
 # ################################################################################################################################
 
     def test_an_invalid_document_is_refused_with_findings(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
-        ruleset = _find(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+        ruleset = _find(backend, _ruleset_name, Definition_Type_Ruleset)
 
         body = {
             'definition_id': ruleset.id,
@@ -189,7 +192,7 @@ class TestSave:
         assert 'at least one rule' in info.value.errors[0]['message']
 
         # Nothing was stored - the version is what it was
-        ruleset = _find(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+        ruleset = _find(backend, _ruleset_name, Definition_Type_Ruleset)
         assert ruleset.current_version == 1
 
 # ################################################################################################################################
@@ -203,19 +206,19 @@ class TestListingAndPreview:
         result, _ = webapi.list_definitions(backend, object_type=Definition_Type_Ruleset)
         names = [item['name'] for item in result['items']]
 
-        assert Alerting.Ruleset_Name in names
+        assert _ruleset_name in names
 
 # ################################################################################################################################
 
     def test_a_preview_carries_the_document_and_its_rendered_form(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
-        ruleset = _find(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+        ruleset = _find(backend, _ruleset_name, Definition_Type_Ruleset)
 
         result, _ = webapi.preview_definition(backend, ruleset.id)
 
-        assert result['definition']['name'] == Alerting.Ruleset_Name
+        assert result['definition']['name'] == _ruleset_name
         assert Documents_Key in result['document']
-        assert 'REST_Outgoing_Error_Rate' in result['rendered']
+        assert 'Outstanding_Backlog' in result['rendered']
 
 # ################################################################################################################################
 
@@ -235,20 +238,20 @@ class TestSearch:
 
     def test_hits_carry_the_rendered_line_and_the_match_position(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
-        ruleset = _find(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+        ruleset = _find(backend, _ruleset_name, Definition_Type_Ruleset)
 
-        result, note = webapi.search_definitions(backend, 'error_rate')
+        result, note = webapi.search_definitions(backend, 'outstanding')
 
         # Every hit points back at the alerts ruleset and the rule the line came from ..
         assert result['items']
         hit = result['items'][0]
         assert hit['definition_id'] == ruleset.id
-        assert hit['definition_name'] == Alerting.Ruleset_Name
-        assert hit['rule'].startswith(Alerting.Ruleset_Name)
+        assert hit['definition_name'] == _ruleset_name
+        assert hit['rule'].startswith(_ruleset_name)
 
         # .. and the match position marks the very text asked for.
         line = hit['line']
-        assert line[hit['match_start']:hit['match_end']].lower() == 'error_rate'
+        assert line[hit['match_start']:hit['match_end']].lower() == 'outstanding'
 
         assert 'match' in note
 

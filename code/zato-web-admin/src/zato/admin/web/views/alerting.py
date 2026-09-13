@@ -57,6 +57,9 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The seeded ruleset the listing and the editor open onto - the rules every source shares
+_ruleset_name = config_map.type_to_ruleset['common']
+
 # Defaults for the editor's GET parameters when the caller does not send them
 _default_rule_key    = ''
 _default_rule_name   = ''
@@ -359,14 +362,14 @@ def index(req:'any_') -> 'TemplateResponse':
     onto the rules of the alerts ruleset.
     """
     backend = get_backend()
-    definition = _find_definition(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+    definition = _find_definition(backend, _ruleset_name, Definition_Type_Ruleset)
 
     definition_id = definition.id if definition else 0
 
     return TemplateResponse(req, 'zato/alerting/index.html', {
         'cluster_id': default_cluster_id,
         'definition_id': definition_id,
-        'ruleset_name': Alerting.Ruleset_Name,
+        'ruleset_name': _ruleset_name,
         'zato_clusters': True,
         'zato_template_name': 'zato/alerting/index.html',
     })
@@ -379,7 +382,7 @@ def editor(req:'any_') -> 'TemplateResponse':
     on an existing rule or with the name of a rule to create.
     """
     backend = get_backend()
-    definition = _find_definition(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+    definition = _find_definition(backend, _ruleset_name, Definition_Type_Ruleset)
 
     definition_id = definition.id if definition else 0
 
@@ -435,7 +438,7 @@ def action(req:'any_') -> 'HttpResponse':
     goes live right away, like every other object the Dashboard edits.
     """
     backend = get_backend()
-    definition = _find_definition(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+    definition = _find_definition(backend, _ruleset_name, Definition_Type_Ruleset)
 
     if not definition:
         out = JsonResponse({'error': 'There is no alerts ruleset to act on'}, status=BAD_REQUEST)
@@ -481,7 +484,7 @@ def action(req:'any_') -> 'HttpResponse':
             # is the ruleset's name joined with the rule's own.
             if new_name != rule_name:
 
-                new_key = f'{Alerting.Ruleset_Name}_{new_name}'
+                new_key = f'{_ruleset_name}_{new_name}'
 
                 if new_key in documents:
                     out = JsonResponse({'error': f'A rule of that name already exists -> {new_name}'}, status=BAD_REQUEST)
@@ -562,7 +565,7 @@ def api_definitions(req:'any_') -> 'JsonResponse':
     if object_type == Definition_Type_Vocabulary:
         name = Alerting.Vocabulary_Name
     else:
-        name = Alerting.Ruleset_Name
+        name = _ruleset_name
 
     definition = _find_definition(backend, name, object_type)
 
@@ -602,7 +605,7 @@ def api_name_exists(req:'any_') -> 'JsonResponse':
     popup's uniqueness checks ask before the editor is ever opened.
     """
     backend = get_backend()
-    definition = _find_definition(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+    definition = _find_definition(backend, _ruleset_name, Definition_Type_Ruleset)
 
     name = req.POST['value'].strip()
     exists = False

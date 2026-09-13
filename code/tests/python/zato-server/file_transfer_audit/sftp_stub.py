@@ -11,11 +11,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # one that always fails and the wrapper built around them.
 
 # stdlib
+import os
+import shlex
 from contextlib import contextmanager
 
 # Zato
 from zato.common.audit_log.api import AuditLog
 from zato.common.ext.bunch import Bunch
+from zato.common.file_transfer.api import Default_Verify_How
 from zato.common.sftp import SFTPOutput
 from zato.common.typing_ import cast_
 from zato.server.connection.sftp import SFTPConnection
@@ -27,7 +30,7 @@ from audit_env import Server_Name
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,6 +47,10 @@ Remote_Path = '/documents/results.csv'
 # What the failing client says
 Raised_Error = 'The server went away'
 
+# The listing line the stub answers an `ls` with - a regular file of the given size,
+# in the shape the connection's parser expects of a server
+Ls_Line = '-rw-r--r--    1 user1    group1    {size} Mar  3 11:50 {name}'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -55,9 +62,29 @@ class ClientRecorder:
     def __init__(self) -> 'None':
         self.commands:'anylist' = []
 
+        # The size of each file put, by its remote path, which is what an `ls` of the path reports back
+        self.size_by_path:'anydict' = {}
+
     def execute(self, cid:'str', data:'str', log_level:'int') -> 'SFTPOutput':
         self.commands.append(data)
-        out = SFTPOutput(cid, 1, command=data, is_ok=True, stdout='')
+
+        # A put is remembered by the size of the local file, as a server would hold it now ..
+        parts = shlex.split(data)
+
+        if parts[0] == 'put':
+            local_path = parts[-2]
+            remote_path = parts[-1]
+            self.size_by_path[remote_path] = os.path.getsize(local_path)
+
+        # .. and an ls of a path put earlier lists it back with that very size.
+        stdout = ''
+
+        if parts[0] == 'ls':
+            remote_path = parts[-1]
+            if remote_path in self.size_by_path:
+                stdout = Ls_Line.format(size=self.size_by_path[remote_path], name=remote_path)
+
+        out = SFTPOutput(cid, 1, command=data, is_ok=True, stdout=stdout)
         return out
 
 # ################################################################################################################################
@@ -80,6 +107,7 @@ class WrapperStub:
         self.sftp_client = sftp_client
         self.should_store_content = should_store_content
         self.audit_log = AuditLog(Server_Name)
+        self.verify_how = Default_Verify_How
 
         self.config = Bunch()
         self.config.name = Connection_Name
