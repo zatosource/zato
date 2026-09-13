@@ -7,6 +7,7 @@
 <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-chips.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-resize.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
 <link rel="stylesheet" type="text/css" href="/static/css/alerting-config/index.css">
@@ -20,6 +21,7 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/chips.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/index.js"></script>
 {% endblock %}
 
@@ -104,6 +106,8 @@
                 <input type="number" id="id_alert-rules-row-outstanding_backlog">
                 <input type="number" id="id_alert-rules-row-feed_silence">
                 <input type="checkbox" id="id_alert-rules-row-use_llm">
+                <input type="text" id="id_alert-rules-row-status_codes">
+                <input type="text" id="id_alert-rules-row-fault_codes">
                 <input type="text" id="id_alert-rules-row-slack_webhook">
                 <input type="text" id="id_alert-rules-row-teams_webhook">
                 <input type="text" id="id_alert-rules-row-webhook_url">

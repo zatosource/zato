@@ -1,25 +1,38 @@
-
-// /////////////////////////////////////////////////////////////////////////////
+// Micro-forms - the chips kind, for a text field that is a list of names, such as the
+// status codes or the SOAP fault codes a connection alerts on. Each name is a chip with a
+// cross that removes it, a new one is typed into the input after the chips and added with
+// Enter or a comma, and the hidden field keeps the names joined with a comma and a space,
+// the way they were typed before there were chips. Loaded after micro-forms/core.js, next
+// to shared/micro-forms-chips.css, and registered by the host once its setup ran:
 //
-// Alerts tab - the chips kind of its popovers, for a text field that is a list of names such as
-// the status codes or the SOAP fault codes a connection alerts on. Each name is a chip with a
-// cross that removes it, a new one is typed into the input after the chips and added with Enter or
-// a comma, and the hidden field keeps the names joined with a comma and a space, as they were typed
-// before there were chips. Loads before common/alerts-tab.js.
+//      $.fn.zato.micro_forms.registerChipsKind(host);
 //
-// /////////////////////////////////////////////////////////////////////////////
+// A spec of the kind is {field, label, kind: $.fn.zato.micro_forms.chipsKind}. The list
+// is two rows of chips tall from the start and stays that tall, so a chip wrapping onto
+// the second row moves nothing below it, and a popover with chips is given a width of its
+// own by its host rather than being sized to its content.
 
-$.namespace('zato.alerts_tab');
+(function($) {
 
-$.fn.zato.alerts_tab.chipsConfig = {
+// ////////////////////////////////////////////////////////////////////////
 
-    // The classes of the chips kit
-    fieldClass: 'alerts-tab-chips-field',
-    listClass: 'alerts-tab-chips',
-    chipClass: 'alerts-tab-chip',
-    chipTextClass: 'alerts-tab-chip-text',
-    removeClass: 'alerts-tab-chip-remove',
-    inputClass: 'alerts-tab-chips-input',
+var microForms = $.fn.zato.micro_forms;
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The name a spec of this kind goes by
+microForms.chipsKind = 'chips';
+
+microForms.chipsConfig = {
+
+    // The classes of the kind
+    fieldClass: 'micro-form-chips-field',
+    ownClass: 'micro-form-field-own',
+    listClass: 'micro-form-chips',
+    chipClass: 'micro-form-chip',
+    chipTextClass: 'micro-form-chip-text',
+    removeClass: 'micro-form-chip-remove',
+    inputClass: 'micro-form-chips-input',
 
     // What the input after the chips says while it is empty
     addPlaceholder: 'Type and press Enter',
@@ -34,14 +47,14 @@ $.fn.zato.alerts_tab.chipsConfig = {
     // How the names are split when read off the hidden field and joined when written back
     splitPattern: /\s*,\s*/,
     joinText: ', '
-}
+};
 
-// /////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 
 // The names a hidden field holds, in their order, without the blanks a trailing comma leaves
-$.fn.zato.alerts_tab.chipNames = function(text) {
+microForms.chipNames = function(text) {
 
-    var config = $.fn.zato.alerts_tab.chipsConfig;
+    var config = microForms.chipsConfig;
     var out = [];
 
     text.split(config.splitPattern).forEach(function(name) {
@@ -52,14 +65,29 @@ $.fn.zato.alerts_tab.chipNames = function(text) {
     });
 
     return out;
-}
+};
 
-// /////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
+
+// The names the chips of a list currently show, in their order
+microForms.chipListNames = function(list) {
+
+    var config = microForms.chipsConfig;
+    var out = [];
+
+    list.querySelectorAll('.' + config.chipClass).forEach(function(chip) {
+        out.push(chip.dataset.name);
+    });
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
 
 // One chip - the name and the cross that removes it
-$.fn.zato.alerts_tab.buildChip = function(name, onRemove) {
+microForms.buildChip = function(name, onRemove) {
 
-    var config = $.fn.zato.alerts_tab.chipsConfig;
+    var config = microForms.chipsConfig;
 
     var chip = document.createElement('span');
     chip.className = config.chipClass;
@@ -86,33 +114,19 @@ $.fn.zato.alerts_tab.buildChip = function(name, onRemove) {
 
     var out = chip;
     return out;
-}
+};
 
-// /////////////////////////////////////////////////////////////////////////////
-
-// The names the chips of a list currently show, in their order
-$.fn.zato.alerts_tab.chipListNames = function(list) {
-
-    var config = $.fn.zato.alerts_tab.chipsConfig;
-    var out = [];
-
-    list.querySelectorAll('.' + config.chipClass).forEach(function(chip) {
-        out.push(chip.dataset.name);
-    });
-
-    return out;
-}
-
-// /////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 
 // Builds the chips of a field into its row - the label, the chips and the input after them
-$.fn.zato.alerts_tab.buildChipsField = function(fieldSpec, row) {
+microForms.buildChipsField = function(host, fieldSpec, row) {
 
-    var tab = $.fn.zato.alerts_tab;
-    var config = tab.chipsConfig;
-    var inputId = tab.forms.inputId(fieldSpec.field);
+    var config = microForms.chipsConfig;
+    var forms = host.forms;
+    var inputId = forms.inputId(fieldSpec.field);
 
-    row.classList.add(tab.config.slotsFieldClass);
+    // The kind dresses its own controls, the popover's input styles stay off them
+    row.classList.add(config.ownClass);
     row.classList.add(config.fieldClass);
 
     var label = document.createElement('label');
@@ -144,12 +158,12 @@ $.fn.zato.alerts_tab.buildChipsField = function(fieldSpec, row) {
     var addChip = function(name) {
 
         // A name already there is not added twice
-        var names = tab.chipListNames(list);
+        var names = microForms.chipListNames(list);
         if(names.indexOf(name) !== -1) {
             return;
         }
 
-        var chip = tab.buildChip(name, function() {
+        var chip = microForms.buildChip(name, function() {
             input.focus();
         });
 
@@ -158,7 +172,7 @@ $.fn.zato.alerts_tab.buildChipsField = function(fieldSpec, row) {
 
     // What was typed becomes a chip - on Enter, on a comma, and when the input loses focus
     var takeInput = function() {
-        var names = tab.chipNames(input.value);
+        var names = microForms.chipNames(input.value);
         names.forEach(addChip);
         input.value = '';
     };
@@ -196,54 +210,56 @@ $.fn.zato.alerts_tab.buildChipsField = function(fieldSpec, row) {
     input.addEventListener('blur', takeInput);
 
     // The names the hidden field holds are the chips to start with
-    var currentNames = tab.chipNames(tab.field(fieldSpec.field).val());
+    var currentNames = microForms.chipNames(host.field(fieldSpec.field).val());
     currentNames.forEach(addChip);
 
     row.appendChild(list);
 
-    tab.state.chipLists[fieldSpec.field] = list;
-}
+    forms._chipLists[fieldSpec.field] = list;
+};
 
-// /////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 
 // Writes the chips of a field back into its hidden field, whatever is still in the input included
-$.fn.zato.alerts_tab.saveChipsField = function(fieldSpec) {
+microForms.saveChipsField = function(host, fieldSpec) {
 
-    var tab = $.fn.zato.alerts_tab;
-    var config = tab.chipsConfig;
-    var list = tab.state.chipLists[fieldSpec.field];
+    var config = microForms.chipsConfig;
+    var list = host.forms._chipLists[fieldSpec.field];
 
-    var names = tab.chipListNames(list);
+    var names = microForms.chipListNames(list);
 
     var input = list.querySelector('.' + config.inputClass);
-    tab.chipNames(input.value).forEach(function(name) {
+    microForms.chipNames(input.value).forEach(function(name) {
         if(names.indexOf(name) === -1) {
             names.push(name);
         }
     });
 
-    tab.field(fieldSpec.field).val(names.join(config.joinText));
-}
+    host.field(fieldSpec.field).val(names.join(config.joinText));
+};
 
-// /////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
 
-// Registers the chips kind with the micro-forms kit
-$.fn.zato.alerts_tab.registerChipsKind = function() {
+// Registers the chips kind with a host's forms, once the host's setup ran
+microForms.registerChipsKind = function(host) {
 
-    var tab = $.fn.zato.alerts_tab;
+    var forms = host.forms;
 
-    tab.state.chipLists = {};
+    // The chip lists of the open popover, by field
+    forms._chipLists = {};
 
-    tab.forms.registerKind(tab.config.specChips, {
+    forms.registerKind(microForms.chipsKind, {
 
         build: function(fieldSpec, row) {
-            tab.buildChipsField(fieldSpec, row);
+            microForms.buildChipsField(host, fieldSpec, row);
         },
 
         save: function(popper, fieldSpec) {
-            tab.saveChipsField(fieldSpec);
+            microForms.saveChipsField(host, fieldSpec);
         }
     });
-}
+};
 
-// /////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////
+
+})(jQuery);

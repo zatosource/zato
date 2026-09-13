@@ -51,8 +51,10 @@ config.notSetLabel = 'Not set';
 // Every element the popover makes is named after this
 config.idPrefix = 'alert-rules-row';
 
-// How wide a row's popover editor stands
+// How wide a row's popover editor stands, and how wide one with chips does - room for a handful
+// of codes on one line and for the chips to wrap
 config.popupWidth = '290px';
+config.chipsPopupWidth = '420px';
 
 // The class the popover editors wear, under which index.css sizes their switches
 config.popupClass = 'alert-rules-micro-form';
@@ -78,7 +80,8 @@ config.fields = {
     warning_failures: {label: 'Warning failures', kind: 'number'},
     error_failures: {label: 'Error failures', kind: 'number'},
     window: {label: 'Window', kind: 'duration'},
-    status_codes: {label: 'Status codes', kind: 'text'},
+    status_codes: {label: 'Status codes', kind: $.fn.zato.micro_forms.chipsKind},
+    fault_codes: {label: 'Fault codes', kind: $.fn.zato.micro_forms.chipsKind},
     arrival_overdue: {label: 'Arrival overdue', kind: 'number'},
     test_transfers: {label: 'Test transfers', kind: 'checkbox'},
     overdue_multiplier: {label: 'Overdue multiplier', kind: 'number'},
@@ -123,7 +126,8 @@ config.fieldHelp = {
     warning_failures: 'How many failures in the window raise a warning.',
     error_failures: 'How many failures in the window count as errors.',
     window: 'How long the window is, in minutes, hours or days.',
-    status_codes: 'The status codes an outgoing connection alerts on, comma-separated - three-digit codes such as 401 or 403 and whole classes such as 4xx or 5xx.',
+    status_codes: 'The status codes an outgoing connection alerts on - three-digit codes such as 401 or 403 and whole classes such as 4xx or 5xx, each one a chip, typed and added with Enter, removed with its cross.',
+    fault_codes: 'The SOAP fault codes an outgoing SOAP connection alerts on - Receiver and Server are the endpoint\'s own faults, Sender and Client the caller\'s, and a code of the endpoint\'s own keeps its prefix, e.g. x:Timeout - each one a chip, typed and added with Enter, removed with its cross.',
     arrival_overdue: 'How many arrival windows may pass without a file before an alert.',
     test_transfers: 'Whether periodic test transfers run against each connection.',
     overdue_multiplier: 'How many intervals late a job may run before an alert.',
@@ -145,7 +149,8 @@ config.fieldHelp = {
 // One row per rule type, in the order they are rendered, each naming
 // the fields its popover edits
 config.types = {
-    rest: {title: 'REST and SOAP', fields: ['consecutive_failures', 'error_rate', 'window', 'max_latency', 'use_llm']},
+    rest: {title: 'REST outgoing', fields: ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'max_latency', 'use_llm']},
+    soap: {title: 'SOAP outgoing', fields: ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'fault_codes', 'max_latency', 'use_llm']},
     sql: {title: 'SQL', fields: ['consecutive_failures', 'error_rate', 'window', 'max_query_time', 'use_llm']},
     llm: {title: 'LLM', fields: ['consecutive_failures', 'error_rate', 'window', 'warning_latency', 'error_latency', 'use_llm']},
     mcp: {title: 'MCP', fields: ['consecutive_failures', 'error_rate', 'window', 'max_tool_call_time', 'use_llm']},
@@ -167,7 +172,8 @@ config.notificationFields = [
 
 // What each type's rules watch, shown at the type's own row header
 config.typeHelp = {
-    rest: 'Alert rules for REST and SOAP outgoing connections - failures in a row, error rates and slow calls.',
+    rest: 'Alert rules for REST outgoing connections - failures in a row, error rates, status codes and slow calls.',
+    soap: 'Alert rules for SOAP outgoing connections - failures in a row, error rates, status codes, SOAP faults and slow calls.',
     sql: 'Alert rules for SQL connection pools - failures in a row, error rates and slow queries.',
     llm: 'Alert rules for LLM connections - failures in a row, error rates and slow completions.',
     mcp: 'Alert rules for MCP servers - failures in a row, error rates and slow tool calls.',
@@ -377,6 +383,7 @@ var descriptors = {};
 $.each(config.types, function(typeName, typeConfig) {
 
     var entries = [];
+    var popupWidth = config.popupWidth;
 
     $.each(typeConfig.fields, function(_ignored, fieldName) {
         var fieldConfig = config.fields[fieldName];
@@ -388,9 +395,14 @@ $.each(config.types, function(typeName, typeConfig) {
         else {
             entries.push({field: fieldName, label: fieldConfig.label, kind: fieldConfig.kind});
         }
+
+        // A popover with chips is the wider one
+        if(fieldConfig.kind === $.fn.zato.micro_forms.chipsKind) {
+            popupWidth = config.chipsPopupWidth;
+        }
     });
 
-    descriptors[typeName] = {title: typeConfig.title, width: config.popupWidth, pages: [entries]};
+    descriptors[typeName] = {title: typeConfig.title, width: popupWidth, pages: [entries]};
 });
 
 // The notifications row's own micro-form - the same popover, all text fields
@@ -525,6 +537,8 @@ $.fn.zato.micro_forms.setup(editor, {
     labelsLeft: true,
     onDone: saveRow
 });
+
+$.fn.zato.micro_forms.registerChipsKind(editor);
 
 // The value cells of every row, the notifications row included - it sits
 // outside the sortable grid, so the delegation runs from the screen's root

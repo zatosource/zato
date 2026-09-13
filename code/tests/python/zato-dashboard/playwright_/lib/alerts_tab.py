@@ -149,7 +149,7 @@ def set_chips_value(page:'Page', page_prefix:'str', form_type:'str', line_name:'
     _ = page.wait_for_selector(_Popover_Selector, state='visible', timeout=_Popover_Timeout)
 
     # .. remove every chip there is ..
-    remove_selector = f'{_Popover_Selector} .alerts-tab-chip-remove'
+    remove_selector = f'{_Popover_Selector} .micro-form-chip-remove'
     while page.locator(remove_selector).count():
         page.locator(remove_selector).first.click()
 

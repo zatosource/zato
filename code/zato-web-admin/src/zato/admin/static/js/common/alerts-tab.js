@@ -56,10 +56,10 @@ $.fn.zato.alerts_tab.config = {
     idPrefixDjango: 'id_',
 
     // The kinds of field spec a popover is built of - a text field of the tab is a list of names,
-    // e.g. the status codes a connection alerts on, and it is edited as chips
+    // e.g. the status codes a connection alerts on, and it is edited as the kit's chips
     specCheckbox: 'checkbox',
     specNumber: 'number',
-    specChips: 'chips',
+    specChips: $.fn.zato.micro_forms.chipsKind,
 
     // The summary of a popover line - `{field}` is a value, `{field|singular|plural}` a
     // value with the right noun after it, `{unit_field@count_field}` a count with the
@@ -89,13 +89,11 @@ $.fn.zato.alerts_tab.config = {
 // What the Django side told us about the page's alert fields
 $.fn.zato.alerts_tab.settings = null;
 
-// Which form's panel is bound at the moment, the slots kits of the open popovers by line
-// and the chip lists of the open popovers by field
+// Which form's panel is bound at the moment, and the slots kits of the open popovers by line
 $.fn.zato.alerts_tab.state = {
     panelId: null,
     fieldPrefix: '',
-    slotsKits: {},
-    chipLists: {}
+    slotsKits: {}
 };
 
 // The micro-forms kit installs the popover engine here
@@ -128,7 +126,7 @@ $.fn.zato.alerts_tab.init = function(options) {
     });
 
     tab.registerSlotsKind();
-    tab.registerChipsKind();
+    $.fn.zato.micro_forms.registerChipsKind(tab);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
