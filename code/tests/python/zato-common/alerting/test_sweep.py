@@ -981,14 +981,14 @@ then
 # ################################################################################################################################
 
 # The ruleset the link tests match through - one rule watching the per-hop delivery
-# failures of FHIR connections, a source counting every event, and one carrying a link of its own.
+# failures of SMTP connections, a source counting every event, and one carrying a link of its own.
 _link_rules_text = """
 rule
     test_link_on_delivery_errors
 docs
-    A FHIR connection erroring on at least half its traffic raises an alert.
+    An SMTP connection erroring on at least half its traffic raises an alert.
 when
-    alert.source is 'fhir' and
+    alert.source is 'email-smtp' and
     alert.error_rate is at least 0.5
 then
     outcome.action = 'invoke-service'
@@ -999,10 +999,10 @@ _own_link_rules_text = """
 rule
     test_own_link_on_delivery_errors
 docs
-    A FHIR connection erroring on at least half its traffic raises an alert
+    An SMTP connection erroring on at least half its traffic raises an alert
     pointing at its own runbook.
 when
-    alert.source is 'fhir' and
+    alert.source is 'email-smtp' and
     alert.error_rate is at least 0.5
 then
     outcome.action = 'invoke-service'
@@ -1016,7 +1016,7 @@ def _seed_hop_failure(audit_log:'AuditLog', cid:'str') -> 'int':
     """ Stores one failed per-hop delivery - the request-sent event type its source
     declared resubmittable.
     """
-    out = audit_log.insert(AuditSource.FHIR, AuditEvent.Request_Sent, _connection_name,
+    out = audit_log.insert(AuditSource.Email_SMTP, AuditEvent.Request_Sent, _connection_name,
         cid=cid, outcome=AuditOutcome.Error)
 
     return out
@@ -1037,7 +1037,7 @@ class TestFindingLinks:
 
         rules = _load_rules(_link_rules_text)
 
-        result = run_sweep(engine, rules, {}, AuditSource.FHIR, recorder.make(), audit_log, 'cid-link-1', now)
+        result = run_sweep(engine, rules, {}, AuditSource.Email_SMTP, recorder.make(), audit_log, 'cid-link-1', now)
 
         assert result.raised_count == 1
         assert len(recorder.invocations) == 1
@@ -1046,7 +1046,7 @@ class TestFindingLinks:
         # with the resubmit confirmation asked to open on it
         link = recorder.invocations[0][1]['link']
         assert link == (
-            f'/zato/audit-log/?source=fhir&object_name={_connection_name}&cluster=1'
+            f'/zato/audit-log/?source=email-smtp&object_name={_connection_name}&cluster=1'
             f'&event={newest_id}&action=resubmit')
 
 # ################################################################################################################################
@@ -1083,7 +1083,7 @@ class TestFindingLinks:
 
         rules = _load_rules(_own_link_rules_text)
 
-        result = run_sweep(engine, rules, {}, AuditSource.FHIR, recorder.make(), audit_log, 'cid-link-3', now)
+        result = run_sweep(engine, rules, {}, AuditSource.Email_SMTP, recorder.make(), audit_log, 'cid-link-3', now)
 
         assert result.raised_count == 1
         assert len(recorder.invocations) == 1
@@ -1101,7 +1101,7 @@ class TestFindingLinks:
 
         rules = _load_rules(_link_rules_text)
 
-        result = run_sweep(engine, rules, {}, AuditSource.FHIR, recorder.make(), audit_log, 'cid-link-4', now,
+        result = run_sweep(engine, rules, {}, AuditSource.Email_SMTP, recorder.make(), audit_log, 'cid-link-4', now,
             dashboard_url='https://dashboard.example.com/')
 
         assert result.raised_count == 1
@@ -1110,7 +1110,7 @@ class TestFindingLinks:
         # The notification carries a full address - the dashboard first, the page's path after it
         link = recorder.invocations[0][1]['link']
         assert link == (
-            f'https://dashboard.example.com/zato/audit-log/?source=fhir'
+            f'https://dashboard.example.com/zato/audit-log/?source=email-smtp'
             f'&object_name={_connection_name}&cluster=1&event={newest_id}&action=resubmit')
 
 # ################################################################################################################################

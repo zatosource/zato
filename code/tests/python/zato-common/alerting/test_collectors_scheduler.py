@@ -16,7 +16,7 @@ from zato.common.audit_log.scheduler import Attr_Delay_Ms
 from zato.common.util.api import utcnow
 
 # Local
-from conftest import backdate, Server_Name, Window_Seconds
+from alerting_seeds import backdate, Server_Name, Window_Seconds
 
 # ################################################################################################################################
 # ################################################################################################################################

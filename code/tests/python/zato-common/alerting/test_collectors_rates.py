@@ -16,7 +16,7 @@ from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, Au
 from zato.common.util.api import utcnow
 
 # Local
-from conftest import backdate, seed_exchange, seed_outcome, Channel_Name, Connection_Name, Other_Channel_Name, Server_Name, \
+from alerting_seeds import backdate, seed_exchange, seed_outcome, Channel_Name, Connection_Name, Other_Channel_Name, Server_Name, \
     Window_Seconds
 
 # ################################################################################################################################
@@ -133,11 +133,11 @@ class TestErrorRateFacts:
         engine = get_audit_engine()
         now = utcnow()
 
-        # Two failed per-hop deliveries - the request-sent type is what their source
-        # declared resubmittable, and the newer of the two is the one to point at
-        _ = audit_log.insert(AuditSource.FHIR, AuditEvent.Request_Sent, Channel_Name,
+        # Two failed per-hop deliveries of a source counting every event - the request-sent type is what
+        # their source declared resubmittable, and the newer of the two is the one to point at
+        _ = audit_log.insert(AuditSource.Email_SMTP, AuditEvent.Request_Sent, Channel_Name,
             cid='resub-er-1', outcome=AuditOutcome.Error)
-        newest_id = audit_log.insert(AuditSource.FHIR, AuditEvent.Request_Sent, Channel_Name,
+        newest_id = audit_log.insert(AuditSource.Email_SMTP, AuditEvent.Request_Sent, Channel_Name,
             cid='resub-er-2', outcome=AuditOutcome.Error)
 
         facts = collect_error_rate_facts(engine, Window_Seconds, now)
@@ -170,7 +170,7 @@ class TestErrorRateFacts:
         engine = get_audit_engine()
         now = utcnow()
 
-        _ = audit_log.insert(AuditSource.FHIR, AuditEvent.Request_Sent, Channel_Name,
+        _ = audit_log.insert(AuditSource.Email_SMTP, AuditEvent.Request_Sent, Channel_Name,
             cid='resub-er-4', outcome=AuditOutcome.OK)
 
         facts = collect_error_rate_facts(engine, Window_Seconds, now)

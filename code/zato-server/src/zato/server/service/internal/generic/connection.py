@@ -9,38 +9,29 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from copy import deepcopy
-from datetime import datetime, timezone
-from traceback import format_exc
-from urllib.parse import parse_qsl
 from uuid import uuid4
 
 # Zato
-from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, HTTP_SOAP, query_parameters, \
-    SchedulerLink, SEC_DEF_TYPE, Sec_Def_Type_Name, ZATO_NONE
+from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, HTTP_SOAP, SchedulerLink, SEC_DEF_TYPE, \
+    Sec_Def_Type_Name, ZATO_NONE
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import apply_defaults, conn_type_to_alert_type, storage_name as alert_storage_name
-from zato.common.as2.rotation import complete_rotation, needs_rotation_completion
+from zato.common.alerting.object_config import conn_type_to_alert_type, storage_name as alert_storage_name
 from zato.common.audit_log.common import AuditEvent
 from zato.common.broker_message import GENERIC
 from zato.common.const import SECRETS
 from zato.common.hl7.mllp.fields import Channel_Int_Names as MLLP_Channel_Int_Names, \
     Outgoing_Int_Names as MLLP_Outgoing_Int_Names
-from zato.common.ext_db.api import get_ext_db_session, is_ext_db_configured, is_ext_object_id, needs_ext_db, \
-     to_local_id, to_public_id
-from zato.common.json_internal import dumps, loads
+from zato.common.ext_db.api import is_ext_object_id, needs_ext_db, to_local_id, to_public_id
+from zato.common.json_internal import loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
-from zato.common.odb.query.generic import connection_list
 from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
-from zato.common.util.config import replace_query_string_items_in_dict
 from zato.common.util.sql import parse_instance_opaque_attr
 from zato.common.util.gateway import on_mcp_gateway_create_edit, on_mcp_gateway_delete
 from zato.common.util.rule_engine_api import on_rule_engine_api_create_edit, on_rule_engine_api_delete
-from zato.common.util.time_ import utcnow
 from zato.server.config_audit import get_model_snapshot, record_service_config_change
 from zato.server.generic.api.outconn_sdk import get_secret_field_names
 from zato.server.generic.connection import GenericConnection
-from zato.server.service import Int
 from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.internal.generic import _BaseService
 from zato.server.service.internal.generic.alert_settings import prepare_generic_alert_settings
@@ -56,7 +47,7 @@ from six import add_metaclass
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import any_, anydict, anylist, strdict
+    from zato.common.typing_ import any_, anylist, strdict
     from zato.server.service import Service
 
     anylist = anylist
@@ -88,14 +79,6 @@ hook = {
     COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: on_mcp_gateway_create_edit,
     COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE: on_rule_engine_api_create_edit,
 }
-
-# ################################################################################################################################
-
-# The connection types whose clients send messages to a target rather than invoking a request as-is
-_chat_conn_types = frozenset({
-    COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS,
-    COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK,
-})
 
 # ################################################################################################################################
 
@@ -626,162 +609,6 @@ class Delete(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetList(AdminService):
-    """ Returns a list of generic connections by their type; includes pagination.
-    """
-    _filter_by = ModelGenericConn.name,
-
-    input = 'cluster_id', '-type_', *query_parameters
-
-# ################################################################################################################################
-
-    def get_data(self, session:'any_') -> 'any_':
-        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
-        self.logger.info('GenericConn GetList.get_data: cluster_id=%s, type_=%s', cluster_id, self.request.input.type_)
-        data:'any_' = self._search(connection_list, session, cluster_id, self.request.input.type_, False)
-        self.logger.info('GenericConn GetList.get_data: result count=%s', data.count() if hasattr(data, 'count') else 'N/A')
-        return data
-
-# ################################################################################################################################
-
-    def _add_custom_conn_dict_fields(self, conn_dict:'anydict') -> 'None':
-        pass
-
-# ################################################################################################################################
-
-    def _enrich_conn_dict(self, conn_dict:'anydict') -> 'None':
-
-        # Local aliases
-        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
-
-        # Secrets never leave the server in listings ..
-        for key in never_returned_keys:
-            _ = conn_dict.pop(key, None)
-
-        # .. neither do secret fields declared by hot-deployed connector types ..
-        for key in get_secret_field_names(self.server.config_manager, conn_dict['type_']):
-            _ = conn_dict.pop(key, None)
-
-        # .. mask out all the relevant attributes.
-        replace_query_string_items_in_dict(self.server, conn_dict)
-
-        # Process all the items found in the database.
-        for key, value in conn_dict.items():
-
-            if value:
-
-                if key.endswith('_service_id'):
-                    prefix = key.split('_service_id')[0]
-                    service_attr = prefix + '_service_name'
-                    try:
-                        service_name = self.invoke('zato.service.get-by-id', {
-                            'cluster_id': cluster_id,
-                            'id': value,
-                        })['zato_service_get_by_name_response']['name']
-                    except Exception:
-                        pass
-                    else:
-                        conn_dict[service_attr] = service_name
-
-        # .. add custom fields that do not exist in the database ..
-        self._add_custom_conn_dict_fields(conn_dict)
-
-        # .. and an object whose type has alert settings carries every one of them, the ones it was
-        # never given at their defaults, so that the Dashboard and enmasse read a complete picture.
-        conn_type = conn_dict['type_']
-        if conn_type in conn_type_to_alert_type:
-            apply_defaults(conn_type_to_alert_type[conn_type], conn_dict)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-    def _append_conn_dicts(self, session:'any_', out:'anylist', needs_id_offset:'bool') -> 'None':
-
-        search_result = self.get_data(session)
-
-        for item in search_result:
-            conn = GenericConnection.from_model(item)
-            conn_dict = conn.to_dict()
-
-            # Everyone else knows objects from the external database under their offset ids
-            if needs_id_offset:
-                conn_dict['id'] = to_public_id(conn_dict['id'])
-
-            self._enrich_conn_dict(conn_dict)
-            out.append(conn_dict)
-
-# ################################################################################################################################
-
-    def handle(self) -> 'None':
-        out:'anylist' = []
-        type_ = self.request.input.type_
-
-        self.logger.info('GenericConn GetList.handle: type_=%s', type_)
-
-        # AS2 outgoing connections come from the external database when one is configured ..
-        is_ext = needs_ext_db(type_)
-
-        with closing(self.server.get_config_session(object_type=type_)) as session:
-            self._append_conn_dicts(session, out, is_ext)
-
-        # .. lists without a type filter combine both databases.
-        if is_ext_db_configured():
-            if not type_:
-                with closing(get_ext_db_session()) as session:
-                    self._append_conn_dicts(session, out, True)
-
-        self.logger.info('GenericConn GetList.handle: returning %s items for type_=%s', len(out), type_)
-
-        self.response.payload = dumps(out)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class GetByID(AdminService):
-    """ Returns a single generic connection by its ID.
-    """
-    input = Int('id')
-
-    def handle(self) -> 'None':
-
-        input_id = self.request.input.id
-
-        # Objects from the external AS2/AS4 database are stored under their local ids there ..
-        if is_ext_object_id(input_id):
-            local_id = to_local_id(input_id)
-        else:
-            local_id = input_id
-
-        # .. look the connection up in the correct database ..
-        with closing(self.server.get_config_session(object_id=input_id)) as session:
-            query = session.query(ModelGenericConn)
-            query = query.filter(ModelGenericConn.id==local_id)
-            item = query.one()
-
-            # .. turn the model into a dict ..
-            conn = GenericConnection.from_model(item)
-            conn_dict = conn.to_dict()
-
-        # .. everyone else knows objects from the external database under their offset ids ..
-        conn_dict['id'] = input_id
-
-        # .. secrets never leave the server ..
-        for key in never_returned_keys:
-            _ = conn_dict.pop(key, None)
-
-        # .. neither do secret fields declared by hot-deployed connector types ..
-        for key in get_secret_field_names(self.server.config_manager, conn_dict['type_']):
-            _ = conn_dict.pop(key, None)
-
-        # .. mask out all the relevant secret attributes ..
-        replace_query_string_items_in_dict(self.server, conn_dict)
-
-        # .. and return the connection to our caller.
-        self.response.payload = dumps(conn_dict)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class ChangePassword(ChangePasswordBase):
     """ Changes the secret (password) of a generic connection.
     """
@@ -828,288 +655,3 @@ class ChangePassword(ChangePasswordBase):
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-class Ping(_BaseService):
-    """ Pings a generic connection.
-    """
-    input = Int('id')
-    output = 'info', '-is_success'
-
-    def handle(self) -> 'None':
-
-        # Objects from the external AS2/AS4 database are stored under their local ids there
-        input_id = self.request.input.id
-
-        if is_ext_object_id(input_id):
-            local_id = to_local_id(input_id)
-        else:
-            local_id = input_id
-
-        with closing(self.server.get_config_session(object_id=input_id)) as session:
-
-            # To ensure that the input ID is correct
-            instance = self._get_instance_by_id(session, ModelGenericConn, local_id)
-
-            # Different code paths will be taken depending on what kind of a generic connection this is
-            custom_ping_func_dict = {}
-
-            # Most connections use a generic ping function, unless overridden on a case-by-case basis.
-            ping_func = custom_ping_func_dict.get(instance.type_, self.server.config_manager.ping_generic_connection)
-
-            start_time = utcnow()
-
-            try:
-                _ = ping_func(self.request.input.id)
-            except Exception as e:
-
-                # The full traceback goes to the server log ..
-                self.logger.warning(format_exc())
-
-                # .. while the caller gets the actual error message alone.
-                error_message = str(e)
-                if not error_message:
-                    error_message = e.__class__.__name__
-
-                self.response.payload.info = error_message
-                self.response.payload.is_success = False
-            else:
-                response_time = utcnow() - start_time
-                info = 'Connection pinged; response time: {}'.format(response_time)
-                self.logger.info(info)
-                self.response.payload.info = info
-                self.response.payload.is_success = True
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Invoke(AdminService):
-    """ Invokes a generic connection by its name.
-    """
-    input = 'conn_type', 'conn_name', '-request_data', '-target'
-    output = '-response_data'
-
-    def handle(self) -> 'None':
-
-        # Local aliases
-        response = None
-        conn_type = self.request.input.conn_type
-        request_data = self.request.input.request_data
-
-        # Maps all known connection types to their implementation ..
-        conn_type_to_container = {
-            COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS: self.server.config_manager.chat_microsoft_teams,
-            COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK: self.server.config_manager.chat_slack,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: self.server.config_manager.outconn_hl7_fhir,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.server.config_manager.outconn_hl7_mllp,
-        }
-
-        # .. get the actual implementation ..
-        container = conn_type_to_container[conn_type]
-
-        # .. chat connections send the request as a message to a target - a channel, a person or a group -
-        # .. rather than invoking a client with the request as-is, and their errors are reported to the caller
-        # .. instead of being turned into a response, which is why this path returns early ..
-        if conn_type in _chat_conn_types:
-
-            target = self.request.input.target
-            if not target:
-                raise Exception('No target provided')
-
-            if not request_data:
-                raise Exception('No message provided')
-
-            # All the chat clients take the target first and the message second.
-            client = container[self.request.input.conn_name].conn.shared_client
-            response = client.send(target, request_data)
-
-            # The response is JSON and the caller needs text
-            self.response.payload.response_data = dumps(response, indent=2)
-
-            return
-
-        # .. and invoke it.
-        with container[self.request.input.conn_name].conn.client() as client:
-
-            try:
-                # FHIR connections treat the request as a path to GET, e.g. /Patient?_count=1 ..
-                if conn_type == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR:
-
-                    # .. the query string, if any, must go to the client separately from the path ..
-                    path, _, query = request_data.partition('?')
-                    params = dict(parse_qsl(query))
-
-                    response = client.execute(path=path, method='get', params=params)
-
-                    # The response is JSON and the caller needs text
-                    response = dumps(response, indent=2)
-
-                # .. other connections, e.g. MLLP, send the request as a message.
-                else:
-                    response = client.invoke(request_data)
-
-                    # The result is an AckResult and the caller needs the acknowledgment itself, i.e. the raw ER7 text
-                    response = response.ack_text
-            except Exception:
-                exc = format_exc()
-                response = exc
-                self.logger.warning(exc)
-            finally:
-                self.response.payload.response_data = response
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class InvokeGraphQL(_BaseService):
-    """ Invokes a GraphQL outgoing connection with a query and optional variables.
-    """
-    name = 'zato.generic.connection.invoke-graphql'
-    input = Int('id'), '-query', '-variables'
-    output = '-response_data', '-response_time'
-
-    def handle(self) -> 'None':
-
-        import json
-        import time
-
-        from gql import Client as GQLClient
-        from gql import gql as gql_parse
-        from zato.server.connection.facade import GraphQLInvoker
-
-        with closing(self.odb.session()) as session:
-            instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
-            config = loads(instance.opaque1) if instance.opaque1 else {}
-            config['address'] = instance.address
-            config['extra'] = instance.extra
-
-        query_text = self.request.input.get('query', '')
-        variables_text = self.request.input.get('variables', '')
-
-        if not query_text or not query_text.strip():
-            raise Exception('No query provided')
-
-        if variables_text and variables_text.strip():
-            variables = json.loads(variables_text)
-        else:
-            variables = None
-
-        transport = GraphQLInvoker._build_transport(config, self.server)
-        client = GQLClient(transport=transport)
-
-        parsed_query = gql_parse(query_text)
-
-        execute_kwargs = {}
-        if variables:
-            execute_kwargs['variable_values'] = variables
-
-        start = time.monotonic()
-
-        try:
-            with client as gql_session:
-                result = gql_session.execute(parsed_query, **execute_kwargs)
-        except Exception as e:
-            elapsed = time.monotonic() - start
-            self.response.payload.response_data = str(e)
-            self.response.payload.response_time = f'{elapsed:.3f}s'
-            raise Exception(str(e)) from None
-
-        elapsed = time.monotonic() - start
-        self.response.payload.response_data = json.dumps(result, indent=2)
-        self.response.payload.response_time = f'{elapsed:.3f}s'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class InvokeGRPC(_BaseService):
-    """ Invokes a unary method of a gRPC outgoing connection with a JSON request.
-    """
-    name = 'zato.generic.connection.invoke-grpc'
-    input = Int('id'), '-method', '-request_data'
-    output = '-response_data', '-response_time'
-
-    def handle(self) -> 'None':
-
-        import time
-
-        from zato.server.connection.grpc_ import invoke_unary_from_json
-
-        # Look up the connection's name by its ID ..
-        with closing(self.odb.session()) as session:
-            instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
-            name = instance.name
-
-        method = self.request.input.method
-        if not method:
-            raise Exception('No method provided')
-
-        request_data = self.request.input.request_data or '{}'
-
-        # .. the connection's wrapper holds the underlying channel and stub ..
-        config = self.server.config_manager.outconn_grpc[name]
-        wrapper = config['conn']
-
-        start = time.monotonic()
-
-        # .. and now the method can be invoked.
-        try:
-            response_data = invoke_unary_from_json(wrapper, method, request_data, self.cid)
-        except Exception as e:
-            elapsed = time.monotonic() - start
-            self.response.payload.response_data = str(e)
-            self.response.payload.response_time = f'{elapsed:.3f}s'
-            raise Exception(str(e)) from None
-
-        elapsed = time.monotonic() - start
-        self.response.payload.response_data = response_data
-        self.response.payload.response_time = f'{elapsed:.3f}s'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The entries of a live connection's config dict that must not travel to the edit service -
-# the live wrapper objects plus the values the config manager adds at runtime,
-# with the secret left out so the edit keeps the one already stored.
-_rotation_runtime_only_keys = ('conn', 'parent', 'secret', 'queue_build_cap', 'auth_url')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class CompleteAS2Rotation(AdminService):
-    """ Completes the scheduled certificate rotation of every outgoing AS2 connection
-    whose next-certificate activation date plus the grace window has passed -
-    the next certificate becomes the current one and the next-certificate fields are cleared.
-    """
-    name = AS2.Default.Rotation_Service
-
-    def handle(self) -> 'None':
-
-        # One reference moment for the whole sweep
-        now = datetime.now(timezone.utc)
-
-        # Take a snapshot of the current connections because completing a rotation modifies the container ..
-        conn_dicts = list(self.server.config_manager.outconn_as2.values())
-
-        for conn_dict in conn_dicts:
-
-            # .. skip the connections with no rotation to complete ..
-            if not needs_rotation_completion(conn_dict, now):
-                continue
-
-            # .. copy the config without its runtime-only entries ..
-            request = {}
-            for key, value in conn_dict.items():
-                if key in _rotation_runtime_only_keys:
-                    continue
-                request[key] = value
-
-            # .. promote the next certificate to the current one ..
-            complete_rotation(request)
-
-            # .. and persist the change through the edit service, which keeps the ext-db id mapping,
-            # .. secret re-encryption and the cluster-wide propagation correct.
-            _ = self.invoke('zato.generic.connection.edit', request)
-
-            self.logger.info('Completed AS2 certificate rotation for connection `%s`', request['name'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-

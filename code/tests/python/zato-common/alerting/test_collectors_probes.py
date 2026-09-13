@@ -13,7 +13,7 @@ from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, Au
 from zato.common.util.api import utcnow
 
 # Local
-from conftest import Channel_Name, Other_Channel_Name, Server_Name
+from alerting_seeds import Channel_Name, Other_Channel_Name, Server_Name
 
 # ################################################################################################################################
 # ################################################################################################################################

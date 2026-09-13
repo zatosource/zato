@@ -21,7 +21,8 @@ from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import loads
 from zato.common.odb.model import Cluster, GenericConn, Job, Service
 from zato.common.util.sql import parse_instance_opaque_attr
-from zato.server.service.internal.generic.connection import Create, GetList
+from zato.server.service.internal.generic.connection import Create
+from zato.server.service.internal.generic.get_list import GetList
 
 # ################################################################################################################################
 # ################################################################################################################################

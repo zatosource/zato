@@ -18,7 +18,7 @@ from zato.common.monitoring.health import EndpointMetrics
 from zato.common.util.api import utcnow
 
 # Local
-from conftest import backdate, seed_outcome, Channel_Name, Other_Channel_Name, Server_Name
+from alerting_seeds import backdate, seed_outcome, Channel_Name, Other_Channel_Name, Server_Name
 
 # ################################################################################################################################
 # ################################################################################################################################
