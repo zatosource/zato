@@ -14,7 +14,7 @@ from hl7_client.mllp_receiver import MLLPReceiver
 from mllp_channel import wait_for_item, Host
 from mllp_outconn import close_popover, delete_outgoing_connection, finish_wizard, go_to_step, \
     navigate_to_outgoing, open_create_wizard, open_edit_wizard, open_popover, set_in_popover, Popover_Input_Prefix, \
-    Saved_Tippy_Selector, Wizard_Id
+    Saved_Redirect_Pattern, Wizard_Id
 from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
@@ -65,9 +65,12 @@ _Mark_Timeout = 2000
 # by the same host the page came from, so anything beyond this is a fault, not a wait
 _Save_Timeout = 2000
 
-# How long a refused save is given to say nothing before the absence of the tooltip is
-# read as an answer - a save that did go through would have shown it by then
+# How long a refused save is given to stay put before staying put is read as an answer -
+# a save that did go through would have left for the list page by then
 _Refusal_Settle_Seconds = 0.5
+
+# What the wizard's own page looks like in the address bar - a refused save stays on it
+_Wizard_Url_Part = '/zato/outgoing/hl7/mllp/wizard/'
 
 # How long the live check is given to reach the receiver and come back
 _Probe_Timeout = 20000
@@ -97,14 +100,13 @@ def _text_has(control_id:'str') -> 'any_':
 # ################################################################################################################################
 
 def _assert_not_saved(page:'Page') -> 'None':
-    """ Confirms a refused save said nothing about having gone through - the tooltip a
-    save shows beside the button it was asked for through is given its time and does
-    not turn up.
+    """ Confirms a refused save stayed where it was - a save that goes through leaves for
+    the list page, so after its time the wizard is still the page and still on screen.
     """
     time.sleep(_Refusal_Settle_Seconds)
 
-    saved = page.query_selector(Saved_Tippy_Selector)
-    assert saved is None, 'A refused save should not have said that it went through'
+    assert _Wizard_Url_Part in page.url, f'A refused save should have stayed on the wizard, the page is: {page.url}'
+    assert page.is_visible(f'#{Wizard_Id}'), 'A refused save should have left the wizard on screen'
 
 # ################################################################################################################################
 
@@ -331,12 +333,15 @@ class TestOutgoingHL7MLLPWizard:
         _assert_not_saved(page)
 
         # With both answered the step is saved from the keyboard, an edit being saved
-        # from wherever it stands
+        # from wherever it stands - and a save that went through lands on the list page
+        # with the saved row highlighted, so the wizard is reopened to read it back
         set_in_popover(page, 'timing', 'recv_timeout', _Changed_Recv_Timeout)
         page.press('#id_edit-name', 'Enter')
 
-        _ = page.wait_for_selector(Saved_Tippy_Selector, timeout=_Save_Timeout)
+        page.wait_for_url(Saved_Redirect_Pattern, timeout=_Save_Timeout)
+        _ = page.wait_for_selector(f'#data-table tbody tr:has(td:text-is("{conn_name}"))', state='visible', timeout=_Save_Timeout)
 
+        open_edit_wizard(page, base_url, conn_name)
         go_to_step(page, 1)
 
         stored_retries = _read_in_popover(page, 'retries', 'max_retries')

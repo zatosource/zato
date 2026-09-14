@@ -381,8 +381,10 @@ class TestMLLPChannelWire:
 
 # ################################################################################################################################
 
-    def test_08_service_error_returns_ae_ack(self, zato_client:'object', mllp_port:'int') -> 'None':
-        """ Creates a channel routing MSH-3 to the error service and verifies AE ACK is returned.
+    def test_08_service_error_returns_ar_ack(self, zato_client:'object', mllp_port:'int') -> 'None':
+        """ Creates a channel routing MSH-3 to the error service and verifies an AR ACK is returned -
+        a service that fails is a transient failure the sender may retry, AE being kept for a
+        service that says the message itself cannot be processed.
         """
 
         # Create a channel that matches messages from the error sender application ..
@@ -409,14 +411,14 @@ class TestMLLPChannelWire:
         # Wait for the route to be registered
         time.sleep(1)
 
-        # Send a message from the error sender and verify AE ACK ..
+        # Send a message from the error sender and verify AR ACK ..
         message_bytes = _build_adt_a01('ERR-001', sender_application=_error_sender_application)
         ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         segments = _parse_ack_segments(ack_bytes)
 
-        # Verify MSA shows AE ..
+        # Verify MSA shows AR ..
         msa_segment = _find_segment(segments, 'MSA|')
-        assert 'MSA|AE|ERR-001' in msa_segment
+        assert 'MSA|AR|ERR-001' in msa_segment
 
         # Verify ERR segment is present ..
         err_segment = _find_segment(segments, 'ERR|')

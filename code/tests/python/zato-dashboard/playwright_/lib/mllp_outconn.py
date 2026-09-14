@@ -32,9 +32,6 @@ Popover_Input_Prefix = f'{Wizard_Id}-tippy-'
 Popover_Selector = f'#{Wizard_Id}-popup'
 Popover_Ok_Selector = f'#{Wizard_Id}-popup .micro-form-buttons .action-button'
 
-# What a save that went through says beside the button it was asked for through
-Saved_Tippy_Selector = '.tippy-box:has-text("OK, saved")'
-
 # Where a save that went through redirects to - the list page, the saved row's id as the highlight
 Saved_Redirect_Pattern = '**/zato/outgoing/hl7/mllp/**highlight=*'
 

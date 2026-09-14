@@ -431,7 +431,7 @@ class TestMLLPAudit:
 
         message_bytes = _build_adt_a01('AUDIT-ERR-001', sender_application=_error_sender_application)
         ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
-        assert b'MSA|AE|AUDIT-ERR-001' in ack_bytes
+        assert b'MSA|AR|AUDIT-ERR-001' in ack_bytes
 
         # The receipt itself succeeded ..
         received_events = _wait_for_events(
@@ -444,7 +444,7 @@ class TestMLLPAudit:
 
         ack = ack_events[-1]
         assert ack['outcome'] == AuditOutcome.Error
-        assert ack['application_outcome'] == 'AE'
+        assert ack['application_outcome'] == 'AR'
 
 # ################################################################################################################################
 

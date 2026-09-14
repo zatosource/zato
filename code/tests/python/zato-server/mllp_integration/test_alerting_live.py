@@ -312,7 +312,7 @@ class TestAlertingLive:
         for control_id in ('ALERT-ERR-001', 'ALERT-ERR-002'):
             message_bytes = _build_adt_a01(control_id, sender_application=_error_sender_application)
             ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
-            assert b'MSA|AE|' in ack_bytes
+            assert b'MSA|AR|' in ack_bytes
 
         # The error outcomes are in the audit trail for the collector to find
         ack_events = _wait_for_events(audit_db_path, _error_channel_name, 2, AuditEvent.Ack_Sent)

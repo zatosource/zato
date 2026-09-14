@@ -277,12 +277,17 @@ class TestChannelHL7MLLPWizard:
         page.click('#mllp-wizard-alerts-edit-negative_acks')
         _ = page.wait_for_selector(_Acks_Popover, state='visible', timeout=_Popover_Timeout)
 
+        # The popover puts the cursor into its first input once its transition ends - typing
+        # into another field before that would be pulled back into the codes input
+        codes_input = '#alerts-tab-tippy-ack_codes'
+        page.wait_for_function(
+            f'document.activeElement && document.activeElement.id === "{codes_input[1:]}"', timeout=_Popover_Timeout)
+
         # Two chips go, one is typed back in, and the threshold is raised
         remove_selector = f'{_Acks_Popover} .micro-form-chip-remove'
         for _ in range(_Chips_Removed):
             page.locator(remove_selector).first.click()
 
-        codes_input = '#alerts-tab-tippy-ack_codes'
         page.fill(codes_input, _Chip_Added)
         page.press(codes_input, 'Enter')
 

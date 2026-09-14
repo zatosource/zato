@@ -126,8 +126,7 @@ class Create(ZatoCommand):
             create_openapi_channel(session, cluster, openapi_handler_service)
             self.add_pubsub_rest_channels(session, cluster)
 
-            if 0: # alerting_disabled
-                self.add_alert_notification_connections(session, cluster)
+            self.add_alert_notification_connections(session, cluster)
 
             # Run ODB post-processing tasks
             odb_post_process.run()
@@ -327,7 +326,9 @@ class Create(ZatoCommand):
 
             session.add(connection)
 
-        # SMTP has a table of its own
+        # SMTP has a table of its own - it carries no password until a person sets one, the same
+        # as a connection created from the dashboard, because a password on its own, with no
+        # username next to it, would make the connection log in to a server that asks for no login.
         smtp_conn = SMTP()
         smtp_conn.name = conn_name
         smtp_conn.is_active = False
@@ -336,7 +337,6 @@ class Create(ZatoCommand):
         smtp_conn.timeout = 300
         smtp_conn.is_debug = False
         smtp_conn.username = ''
-        smtp_conn.password = uuid4().hex
         smtp_conn.mode = EMAIL.SMTP.MODE.STARTTLS
         smtp_conn.ping_address = ''
 

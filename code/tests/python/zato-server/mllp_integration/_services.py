@@ -192,9 +192,22 @@ from zato.server.service import Service
 _actor = 'test.alerting'
 
 # The seeded rulesets whose rules fire about a channel's traffic - the test's own rule goes live in the channels one
-# and the common one is emptied for the test's duration, so no default rule fires alongside it about the same traffic.
+# and the common one is put aside for the test's duration, so no default rule fires alongside it about the same traffic.
 _channels_ruleset_name = 'alerts_channels'
 _common_ruleset_name = 'alerts_common'
+
+# What the common ruleset holds while the test runs - a version with no rules at all is refused when it is loaded,
+# so the ruleset keeps one rule, about an object that never exists, which is as quiet as no rule.
+_quiet_rule_text = """
+rule
+    Test_Alerting_Quiet
+docs
+    Stands in for the common defaults while the live alerting test runs and never matches anything.
+when
+    alert.object_name is 'test.alerting.nothing'
+then
+    outcome.action = 'email'
+"""
 
 # ################################################################################################################################
 
@@ -253,7 +266,12 @@ class TestAlertingRuleSave(Service):
             raise Exception('The test alert rules do not parse -> {}'.format(errors))
 
         version = _publish_documents(_channels_ruleset_name, documents, 'Test alert rules')
-        _ = _publish_documents(_common_ruleset_name, {}, 'Test alert rules - the common defaults are put aside')
+
+        quiet_documents, quiet_errors = parse_data_details(_quiet_rule_text, _common_ruleset_name)
+        if quiet_errors:
+            raise Exception('The quiet alert rule does not parse -> {}'.format(quiet_errors))
+
+        _ = _publish_documents(_common_ruleset_name, quiet_documents, 'Test alert rules - the common defaults are put aside')
 
         self.response.payload = dumps({'is_ok': True, 'version': version})
 
