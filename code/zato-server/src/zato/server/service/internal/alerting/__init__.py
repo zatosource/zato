@@ -28,6 +28,7 @@ from zato.common.util.scheduler import set_job_active
 from zato.server.alerting_transports import build_alert_transports
 from zato.server.generic.api.channel_hl7_mllp import get_current_metrics
 from zato.server.rule_engine_api import get_backend
+from zato.server.scheduler_.adapter import SchedulerODBAdapter
 from zato.server.service.internal import AdminService
 from zato.server.service.internal.alerting.delivery import deliver
 from zato.server.service.internal.alerting.explain import get_explanation
@@ -557,6 +558,20 @@ class AlertingTestTransfer(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _push_job_to_scheduler(service:'AdminService', job_name:'str') -> 'None':
+    """ Sends one job to the scheduler as ODB holds it now - the scheduler runs off the jobs it was handed at its
+    start and at each edit, so a change written to ODB alone would wait for its next restart.
+    """
+    adapter = SchedulerODBAdapter(service.odb, service.server.cluster_id)
+
+    for job_id, job_data in adapter.get_scheduler_jobs().items():
+        if job_data['name'] == job_name:
+            service.server._scheduler.edit_job(job_id, job_data)
+            return
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class AlertingGetNotificationConfig(AdminService):
     """ Returns the notification targets the alerting sweep job's extra holds -
     what the config screen's notifications row shows.
@@ -595,6 +610,10 @@ class AlertingSetNotificationConfig(AdminService):
             changed = set_notification_config(session, self.server.cluster_id, values)
             session.commit()
 
+        # The scheduler hands each run the extra it holds of its own, so the new values go over to it now
+        if changed:
+            _push_job_to_scheduler(self, Alerting.Job_Name)
+
         self.logger.info('Alerting notification config saved (changed=%s)', changed)
 
 # ################################################################################################################################
@@ -614,6 +633,10 @@ class AlertingSetTestTransferState(AdminService):
         with closing(self.odb.session()) as session:
             changed = set_job_active(session, self.server.cluster_id, Alerting.Test_Transfer_Job_Name, is_active)
             session.commit()
+
+        # The scheduler fires off the jobs it holds of its own, so the flag goes over to it now
+        if changed:
+            _push_job_to_scheduler(self, Alerting.Test_Transfer_Job_Name)
 
         self.logger.info('Test transfer job `%s` set to is_active=%s (changed=%s)',
             Alerting.Test_Transfer_Job_Name, is_active, changed)

@@ -42,7 +42,7 @@ from zato.server.generic.api.outconn_sftp import SFTPClient
 # Test helpers
 from explain_helpers import _alert_id, _cluster_id, _email_from, _get_explained_events, _llm_conn_name, _new_payload, \
     _new_service, _new_session, _server_name, _EmailAPI
-from live_config import IMAP_Password
+from live_config import IMAP_Password, LiveServer
 from live_trace import Channel_Explain, Channel_IMAP, Channel_LLM, Channel_SFTP, Channel_SMTP, Received, Sent, separator, trace
 
 # ################################################################################################################################
@@ -82,8 +82,8 @@ _sftp_error_text = 'No such file or directory'
 # How many failures each test produces
 _failure_count = 3
 
-# The deployment-level email addressing the alerts are delivered with
-_email_to = ['ops@example.com']
+# The deployment-level email addressing the alerts are delivered with - the same the server's own sweep job carries
+_email_to = [LiveServer.email_to]
 
 # The values an explanation's confidence may take
 _confidence_values = {'low', 'medium', 'high'}

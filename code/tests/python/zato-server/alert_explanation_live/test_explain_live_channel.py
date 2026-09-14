@@ -35,7 +35,7 @@ from zato.common.test.client import AdminClient
 # Test helpers
 from live_config import LiveServer
 from live_trace import Channel_Channel, Channel_Explain, Channel_SMTP, Received, Sent, separator, trace
-from test_explain_live import _assert_sound_explanation, _email_from, _email_to, _trace_delivery
+from test_explain_live import _assert_sound_explanation, _email_to, _trace_delivery
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -392,8 +392,8 @@ def _new_notification_config() -> 'stranydict':
     """
     out = {
         Alerting.Extra_LLM_Connection: LiveServer.llm_conn_name,
-        Alerting.Extra_From: _email_from,
-        Alerting.Extra_Default_To: ', '.join(_email_to),
+        Alerting.Extra_From: LiveServer.email_from,
+        Alerting.Extra_Default_To: LiveServer.email_to,
     }
     return out
 

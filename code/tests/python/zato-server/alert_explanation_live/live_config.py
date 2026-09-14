@@ -31,6 +31,11 @@ class LiveServer:
     # The LLM connection the enmasse document creates - the one the notification config names
     llm_conn_name = 'explain.live.llm'
 
+    # Where the alerts are mailed from and to - what the enmasse document gives the server's own sweep job
+    # and what each proof invokes the sweep with, so the two deliver alike
+    email_from = 'zato@example.com'
+    email_to = 'ops@example.com'
+
     # The hot-deployed service every call to which raises, and what it raises with
     raising_service = 'explain.live.always-raise'
     error_text = 'The orders backend is not reachable'
@@ -45,6 +50,10 @@ class LiveServer:
     # and what it fails with
     reject_service = 'explain.live.mllp.reject'
     reject_text = 'The ADT feed handler is not reachable'
+
+    # The hot-deployed service that sends one HL7 message through a named outgoing MLLP connection and reports
+    # the code it was acknowledged with - what the outgoing MLLP proof sends its messages through
+    mllp_send_service = 'explain.live.mllp.send'
 
 # ################################################################################################################################
 # ################################################################################################################################

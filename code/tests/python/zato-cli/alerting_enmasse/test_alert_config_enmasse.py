@@ -359,6 +359,57 @@ class TestAlertNotificationsImport:
         assert changed is False
 
 # ################################################################################################################################
+
+    def test_an_import_into_an_environment_that_never_started_creates_the_job(
+        self,
+        yaml_config:'stranydict',
+        odb_session:'any_',
+        alert_config_importer:'AlertConfigImporter',
+    ) -> 'None':
+
+        # An environment that never started has no sweep job yet - the server creates it on its first start
+        job = odb_session.query(Job).filter(Job.name==Alerting.Job_Name).one()
+        odb_session.query(IntervalBasedJob).filter(IntervalBasedJob.job_id==job.id).delete()
+        odb_session.delete(job)
+        odb_session.commit()
+
+        changed = alert_config_importer.sync_alert_notifications(yaml_config['alert_notifications'], odb_session)
+        assert changed is True
+
+        # The import created the job the same way the server would have, with the values on it
+        job = odb_session.query(Job).filter(Job.name==Alerting.Job_Name).one()
+        assert job.is_active is True
+        assert job.service.name == Alerting.Service
+
+        interval = odb_session.query(IntervalBasedJob).filter(IntervalBasedJob.job_id==job.id).one()
+        assert interval.minutes == Alerting.Job_Interval_Minutes
+
+        values = read_notification_config(job.extra)
+        assert values[Alerting.Extra_LLM_Connection] == _llm_name
+
+# ################################################################################################################################
+
+    def test_the_file_keeps_the_notifications_a_mapping(
+        self,
+        yaml_config:'stranydict',
+    ) -> 'None':
+
+        # The CLI shapes a file before it syncs it - every list section stays a list and the one mapping section
+        # stays the mapping it is, rather than turning into a list of its own keys
+        importer = EnmasseYAMLImporter()
+        processed = importer._process_config(yaml_config)
+
+        assert processed['alert_notifications'] == yaml_config['alert_notifications']
+        assert processed['alert_rules'] == yaml_config['alert_rules']
+
+        # Two files that both carry the mapping merge field by field, the later one over the earlier one
+        merged:'stranydict' = {}
+        importer._merge_configs(merged, {'alert_notifications': {'email_to': 'first@example.com', 'email_from': 'a@example.com'}})
+        importer._merge_configs(merged, {'alert_notifications': {'email_to': 'second@example.com'}})
+
+        assert merged['alert_notifications'] == {'email_to': 'second@example.com', 'email_from': 'a@example.com'}
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestAlertConfigExport:

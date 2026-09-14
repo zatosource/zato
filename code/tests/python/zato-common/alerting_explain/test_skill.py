@@ -24,6 +24,7 @@ from zato.common.alerting.explain.skill import get_default_skills_dir, get_skill
 _shipped_sources = (
     AuditSource.REST_Channel,
     AuditSource.MLLP_Channel,
+    AuditSource.MLLP_Outgoing,
     AuditSource.REST_Outgoing,
     AuditSource.SOAP_Outgoing,
     AuditSource.FHIR,

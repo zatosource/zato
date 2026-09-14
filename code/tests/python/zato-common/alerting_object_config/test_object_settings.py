@@ -60,6 +60,7 @@ _other_cluster_name = 'sftp.elsewhere'
 _as2_name = 'as2.no-alerts'
 _fhir_name = 'ehr.fhir'
 _mllp_name = 'adt.mllp'
+_mllp_outgoing_name = 'lab.mllp'
 
 # The schedules the SFTP connection carries
 _schedule_name = 'Daily results'
@@ -258,6 +259,27 @@ class TestLoadObjectSettings:
         # What was not stored is still at its default, and no other type sees the row
         assert by_object[_mllp_name]['acks_window'] == get_defaults(alert_type_mllp_channel)['acks_window']
         assert settings[alert_type_channels] == {}
+        assert settings[alert_type_fhir] == {}
+        assert settings[alert_type_mllp_outgoing] == {}
+
+# ##############################################################################################################################
+
+    def test_an_outgoing_mllp_connection_loads_under_mllp_outgoing_with_its_own_codes(self) -> 'None':
+        stored = to_storage(alert_type_mllp_outgoing, {'ack_codes': 'AR', 'connection_failures': 5})
+
+        with _session() as session:
+            _add_connection(session, _mllp_outgoing_name, GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, _cluster_id, stored)
+            settings = load_object_settings(session, _cluster_id)
+
+        by_object = settings[alert_type_mllp_outgoing]
+
+        assert list(by_object) == [_mllp_outgoing_name]
+        assert by_object[_mllp_outgoing_name]['ack_codes'] == 'AR'
+        assert by_object[_mllp_outgoing_name]['connection_failures'] == 5
+
+        # What was not stored is still at its default, and no other type sees the row
+        assert by_object[_mllp_outgoing_name]['acks_window'] == get_defaults(alert_type_mllp_outgoing)['acks_window']
+        assert settings[alert_type_mllp_channel] == {}
         assert settings[alert_type_fhir] == {}
 
 # ################################################################################################################################

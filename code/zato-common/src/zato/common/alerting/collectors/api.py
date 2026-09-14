@@ -15,13 +15,13 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting.collectors.backlogs import collect_feed_silent_facts, collect_outstanding_facts
-from zato.common.alerting.collectors.channels import collect_ack_code_facts, collect_channel_silence_facts, \
-    collect_channel_status_facts
+from zato.common.alerting.collectors.channels import collect_channel_silence_facts, collect_channel_status_facts
 from zato.common.alerting.collectors.common import new_fact, Default_Begin_Event_Type, Default_End_Event_Type, \
     Default_Window_Seconds, Health_Window_Seconds, Measure_Ack_Codes, Measure_Auth_Failures, Measure_Client_Errors, \
     Measure_Connection_Failures, Measure_Error_Rate, Measure_File_Runs, Measure_Latency, Measure_Operation_Outcomes, \
     Measure_Server_Errors, Measure_SOAP_Faults, Measure_Status_Codes, Window_Seconds_By_Measure_Key
 from zato.common.alerting.collectors.file_transfer import collect_file_transfer_facts
+from zato.common.alerting.collectors.mllp import collect_ack_code_facts, collect_mllp_connection_failure_facts
 from zato.common.alerting.collectors.outgoing import collect_outgoing_status_facts
 from zato.common.alerting.collectors.probes import collect_certificate_facts, collect_health_facts, \
     collect_test_transfer_facts
@@ -65,6 +65,24 @@ def _collect_auth_failure_facts(
 
     return out
 
+# ##############################################################################################################################
+
+def _collect_connection_failure_facts(
+    engine:'Engine',
+    window_seconds:'int',
+    now:'datetime',
+    *,
+    source:'str' = '',
+    object_name:'str' = '',
+    ) -> 'dictlist':
+    """ The calls of every outgoing connection that got no response at all - the HTTP ones that failed before
+    a status arrived, and the MLLP messages no acknowledgment came back for.
+    """
+    out = collect_outgoing_status_facts(engine, window_seconds, now, source=source, object_name=object_name)
+    out.extend(collect_mllp_connection_failure_facts(engine, window_seconds, now, source=source, object_name=object_name))
+
+    return out
+
 # ################################################################################################################################
 
 # The windowed collectors by the measure that drives each - every one takes the engine, the window,
@@ -79,7 +97,7 @@ _collector_by_measure:'dict[str, callable_]' = {
     Measure_Status_Codes:        collect_outgoing_status_facts,
     Measure_SOAP_Faults:         collect_outgoing_status_facts,
     Measure_Operation_Outcomes:  collect_outgoing_status_facts,
-    Measure_Connection_Failures: collect_outgoing_status_facts,
+    Measure_Connection_Failures: _collect_connection_failure_facts,
     Measure_Ack_Codes:           collect_ack_code_facts,
 }
 

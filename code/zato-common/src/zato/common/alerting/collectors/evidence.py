@@ -28,6 +28,7 @@ from zato.common.audit_log.api import event_attr_table, event_body_table, event_
     AuditSource
 from zato.common.audit_log.file_transfer_run import Run_Status_Failed, Run_Status_Interrupted, Run_Status_List_Failed, \
     Run_Status_No_Directory, Run_Status_Partial
+from zato.common.hl7.audit import Attr_Ack_Status
 from zato.common.json_internal import loads
 
 # ################################################################################################################################
@@ -66,6 +67,13 @@ _troubled_run_statuses = (
 # failed ack is the ACK message itself, kept as the row's response body, so the evidence reads it from there.
 _body_kind_by_source = {
     AuditSource.MLLP_Channel: AuditBody.Response,
+}
+
+# The sources whose failed rows may say nothing in their status and carry what happened in an attr instead -
+# an outgoing MLLP connection's ack row has the ack's error text as its status, and a message no ack came back
+# for has an empty one, its ack status attr reading `timeout`, so the evidence reads that onto the row.
+_status_attr_by_source = {
+    AuditSource.MLLP_Outgoing: Attr_Ack_Status,
 }
 
 # The columns every evidence row carries.
@@ -164,6 +172,28 @@ def _attach_bodies(engine:'Engine', rows:'dictlist', kind:'str') -> 'None':
     for event_id, data in result:
         by_id[event_id]['data'] = data
 
+# ##############################################################################################################################
+
+def _attach_status_attr(engine:'Engine', rows:'dictlist', attr_name:'str') -> 'None':
+    """ Puts the value of the given attr on each row whose status is empty, as its data - what such a row
+    has to say about what went wrong when its status says nothing.
+    """
+    by_id = {row['id']: row for row in rows if not row['status']}
+
+    if not by_id:
+        return
+
+    statement = select(event_attr_table.c.event_id, event_attr_table.c.value).where(and_(
+        event_attr_table.c.event_id.in_(list(by_id)),
+        event_attr_table.c.name == attr_name,
+    ))
+
+    with engine.connect() as connection:
+        result = connection.execute(statement).fetchall()
+
+    for event_id, value in result:
+        by_id[event_id]['data'] = value
+
 # ################################################################################################################################
 
 def collect_failed_events(engine:'Engine', fact:'stranydict', now:'datetime') -> 'dictlist':
@@ -181,9 +211,13 @@ def collect_failed_events(engine:'Engine', fact:'stranydict', now:'datetime') ->
 
     out = _select_rows(engine, conditions)
 
-    # A source whose rows say what went wrong in a body has it read onto them
+    # A source whose rows say what went wrong in a body has it read onto them ..
     if source in _body_kind_by_source:
         _attach_bodies(engine, out, _body_kind_by_source[source])
+
+    # .. and one whose rows may say it in an attr alone has that read onto the rows with nothing in their status
+    if source in _status_attr_by_source:
+        _attach_status_attr(engine, out, _status_attr_by_source[source])
 
     return out
 

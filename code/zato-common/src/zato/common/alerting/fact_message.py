@@ -21,7 +21,7 @@ from zato.common.alerting.collectors.common import channel_sources, Measure_Ack_
 from zato.common.alerting.fault_codes import Fault_Code_Counts_Key
 from zato.common.alerting.outcome_codes import Outcome_Code_Counts_Key
 from zato.common.alerting.status_codes import Status_Code_Counts_Key
-from zato.common.audit_log.common import get_source_label, health_sources
+from zato.common.audit_log.common import get_source_label, health_sources, AuditSource
 from zato.common.util.api import pluralize
 
 # ################################################################################################################################
@@ -32,6 +32,15 @@ if 0:
     stranydict = stranydict
     strintdict = strintdict
     strlist = strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Whose negative acknowledgments a fact counts - a channel's, which it sent back, or a connection's, which it was answered
+_ack_owner_by_source = {
+    AuditSource.MLLP_Channel:  'channel',
+    AuditSource.MLLP_Outgoing: 'connection',
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -162,7 +171,8 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
     if ack_count := fact['ack_count']:
         acks_label = pluralize(ack_count, 'negative acknowledgment')
         ack_codes_part = _format_status_code_counts(fact[Ack_Code_Counts_Key])
-        ack_part = f'{acks_label} the channel alerts on ({ack_codes_part})'
+        ack_owner = _ack_owner_by_source[fact['source']]
+        ack_part = f'{acks_label} the {ack_owner} alerts on ({ack_codes_part})'
         parts.append(ack_part + _measure_window_part(fact, Measure_Ack_Codes))
 
     if connection_failure_count := fact['connection_failure_count']:

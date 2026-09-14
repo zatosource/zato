@@ -9,11 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import alert_type_fhir, alert_type_file_transfer, alert_type_mllp_channel, \
-    alert_type_rest, apply_defaults, conn_type_to_alert_type, decode_email_connection, Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, Email_Connection_Default, \
-    Email_Connection_Field, \
-    encode_email_connection, field_display, field_help, Field_Prefix, from_storage, get_defaults, get_field_kinds, \
-    get_field_names, Is_Active_Field, Kind_Active, Kind_Email, Kind_LLM, LLM_Connection_Default, LLM_Connection_Field, \
-    storage_name, to_storage
+    alert_type_mllp_outgoing, alert_type_rest, apply_defaults, conn_type_to_alert_type, decode_email_connection, \
+    Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, Email_Connection_Default, Email_Connection_Field, encode_email_connection, \
+    field_display, field_help, Field_Prefix, from_storage, get_defaults, get_field_kinds, get_field_names, Is_Active_Field, \
+    Kind_Active, Kind_Email, Kind_LLM, LLM_Connection_Default, LLM_Connection_Field, storage_name, to_storage
 from zato.common.api import GENERIC
 
 # ################################################################################################################################
@@ -115,6 +114,37 @@ class TestFieldNames:
         assert get_defaults(alert_type_mllp_channel)['ack_codes'] == 'AE, AR, CE, CR'
         assert get_defaults(alert_type_mllp_channel)['ack_threshold'] == 3
         assert get_defaults(alert_type_mllp_channel)['acks_window'] == 300
+
+# ##############################################################################################################################
+
+    def test_an_outgoing_mllp_connection_maps_to_the_mllp_outgoing_type(self) -> 'None':
+        assert conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP] == alert_type_mllp_outgoing
+
+        # The type has the negative acks and the connection failures, no silence and nothing HTTP
+        mllp_names = get_field_names(alert_type_mllp_outgoing)
+
+        assert 'ack_codes' in mllp_names
+        assert 'ack_threshold' in mllp_names
+        assert 'acks_window' in mllp_names
+        assert 'connection_failures' in mllp_names
+        assert 'connection_failures_window' in mllp_names
+        assert 'consecutive_failures' in mllp_names
+        assert 'error_rate' in mllp_names
+        assert 'max_latency' in mllp_names
+
+        assert 'traffic_expected' not in mllp_names
+        assert 'silence_window' not in mllp_names
+        assert 'server_errors' not in mllp_names
+        assert 'auth_failures' not in mllp_names
+        assert 'status_codes' not in mllp_names
+        assert 'fault_codes' not in mllp_names
+        assert 'outcome_codes' not in mllp_names
+
+        assert get_defaults(alert_type_mllp_outgoing)['ack_codes'] == 'AE, AR, CE, CR'
+        assert get_defaults(alert_type_mllp_outgoing)['ack_threshold'] == 3
+        assert get_defaults(alert_type_mllp_outgoing)['acks_window'] == 300
+        assert get_defaults(alert_type_mllp_outgoing)['connection_failures'] == 3
+        assert get_defaults(alert_type_mllp_outgoing)['connection_failures_window'] == 300
 
 # ################################################################################################################################
 

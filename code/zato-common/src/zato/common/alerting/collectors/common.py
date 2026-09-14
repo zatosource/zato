@@ -77,7 +77,8 @@ Measure_SOAP_Faults = 'soap_faults'
 # The measure of an outgoing FHIR connection's operation outcomes - how many responses came as an OperationOutcome of each issue code
 Measure_Operation_Outcomes = 'operation_outcomes'
 
-# The measure of an MLLP channel's negative acknowledgments - how many acks the channel sent with each negative code
+# The measure of the negative acknowledgments of MLLP - how many acks a channel sent, or an outgoing connection
+# was answered, with each negative code
 Measure_Ack_Codes = 'ack_codes'
 
 # The key a merged fact carries the window of each of its measures under
@@ -85,12 +86,14 @@ Window_Seconds_By_Measure_Key = 'window_seconds_by_measure'
 
 # The one event type of a source that carries a call's outcome - a channel writes a request
 # event and a response event per call, an MLLP channel a message-received and an ack-sent one, an outgoing
+# MLLP connection a message-sent and an ack-received one, an outgoing
 # REST or SOAP connection a request-sent and a response-received one, as does each ping of its health check,
 # and only the response says how the call went. A source absent from here has every one of its events counted.
 response_event_type_by_source = {
     AuditSource.REST_Channel:         AuditEvent.Response_Sent,
     AuditSource.SOAP_Channel:         AuditEvent.Response_Sent,
     AuditSource.MLLP_Channel:         AuditEvent.Ack_Sent,
+    AuditSource.MLLP_Outgoing:        AuditEvent.Ack_Received,
     AuditSource.REST_Outgoing:        AuditEvent.Response_Received,
     AuditSource.SOAP_Outgoing:        AuditEvent.Response_Received,
     AuditSource.REST_Outgoing_Health: AuditEvent.Response_Received,
@@ -120,6 +123,10 @@ silence_sources = all_channel_sources
 # The outgoing connections whose responses are counted by their status code - the HTTPSOAP rows carrying
 # alert settings under the rest and soap types and the FHIR generic connections under the fhir type
 outgoing_sources = (AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing, AuditSource.FHIR)
+
+# The sources whose acknowledgments are counted by their code - the acks an MLLP channel sent back and
+# the ones an outgoing MLLP connection was answered, each read off its own response event
+ack_sources = (AuditSource.MLLP_Channel, AuditSource.MLLP_Outgoing)
 
 # ################################################################################################################################
 # ################################################################################################################################

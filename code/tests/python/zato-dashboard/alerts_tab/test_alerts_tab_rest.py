@@ -27,7 +27,7 @@ from zato.admin.web.alerts_tab_lines import Fault_Codes_Default, Fault_Codes_Fie
 from zato.admin.web.forms.http_soap import CreateForm as ChannelCreateForm, EditForm as ChannelEditForm
 from zato.admin.web.forms.outgoing.hl7.fhir import CreateForm as FHIRCreateForm, EditForm as FHIREditForm
 from zato.admin.web.forms.outgoing.soap import CreateForm as SOAPCreateForm, EditForm as SOAPEditForm
-from zato.admin.web.views.alerting import _build_config_cell, _type_cells, _type_titles
+from zato.admin.web.views.alerting_config_cells import _build_config_cell, _type_cells, _type_titles
 from zato.common.alerting.object_config import alert_type_fhir, alert_type_rest, alert_type_soap, get_defaults, \
     get_field_names, storage_name
 

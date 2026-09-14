@@ -45,6 +45,9 @@ FHIR_Address = 'https://fhir.example.com/r4'
 MLLP_Type = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
 MLLP_Name = 'adt.intake'
 MLLP_Service = 'adt.process'
+MLLP_Outgoing_Type = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP
+MLLP_Outgoing_Name = 'lab.results'
+MLLP_Outgoing_Address = 'lab.example.com:2575'
 
 # The id the scheduler stand-in gives every job it is asked to create
 Job_Id = 4321
@@ -157,6 +160,27 @@ def mllp_input(**overrides:'any_') -> 'stranydict':
 
 # ################################################################################################################################
 
+def mllp_outgoing_input(**overrides:'any_') -> 'stranydict':
+    """ What every create and edit of an outgoing MLLP connection sends - the alert settings are not among these.
+    """
+    out:'stranydict' = {
+        'name': MLLP_Outgoing_Name,
+        'type_': MLLP_Outgoing_Type,
+        'is_active': True,
+        'is_internal': False,
+        'is_channel': False,
+        'is_outconn': True,
+        'address': MLLP_Outgoing_Address,
+        'pool_size': HL7.Default.pool_size,
+        'is_audit_log_active': True,
+        'cluster_id': Cluster_Id,
+    }
+    out.update(overrides)
+
+    return out
+
+# ##############################################################################################################################
+
 def create(session_factory:'any_', **overrides:'any_') -> 'int':
     """ Creates one outgoing FHIR connection and returns its id.
     """
@@ -172,6 +196,17 @@ def create_mllp(session_factory:'any_', **overrides:'any_') -> 'int':
     """ Creates one MLLP channel and returns its id.
     """
     service = new_service(Create, session_factory, mllp_input(**overrides))
+    service.handle()
+
+    out = service.response.payload.id
+    return out
+
+# ##############################################################################################################################
+
+def create_mllp_outgoing(session_factory:'any_', **overrides:'any_') -> 'int':
+    """ Creates one outgoing MLLP connection and returns its id.
+    """
+    service = new_service(Create, session_factory, mllp_outgoing_input(**overrides))
     service.handle()
 
     out = service.response.payload.id

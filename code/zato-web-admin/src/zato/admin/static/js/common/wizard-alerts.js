@@ -18,14 +18,16 @@
 //
 //      wizard.alerts = $.fn.zato.wizard_alerts.create({
 //          wizard: wizard,
-//          idPrefix: 'mllp-wizard'
+//          idPrefix: 'mllp-wizard',
+//          config: {openTop: 12}
 //      });
 //
 // where `wizard` is the wizard's namespace with its `forms`, its `review` and
-// its `config.fieldPrefix`, and `idPrefix` is what the page names the line, the
+// its `config.fieldPrefix`, `idPrefix` is what the page names the line, the
 // step strip, the holder and the tab's config under - `{idPrefix}-edit-alerts`,
 // `{idPrefix}-summary-alerts`, `{idPrefix}-steps`, `{idPrefix}-alerts-holder`
-// and `{idPrefix}-alerts-tab-config`. The instance's `init` runs after the
+// and `{idPrefix}-alerts-tab-config` - and `config`, optional, overrides any of
+// the defaults below, e.g. where the popover first opens. The instance's `init` runs after the
 // wizard's forms and review are set up, and the wizard reads its `summary`,
 // `reviewRows` and `descriptions` the way it reads any other step's.
 //
@@ -104,8 +106,9 @@ wizardAlerts.create = function(options) {
 
     var wizard = options.wizard;
 
+    // A wizard may move the popover's first opening off the defaults through options.config
     var alerts = {};
-    alerts.config = $.extend({}, wizardAlerts.defaults, wizardAlerts._ids(options.idPrefix));
+    alerts.config = $.extend({}, wizardAlerts.defaults, wizardAlerts._ids(options.idPrefix), options.config);
 
     // The panel of lines, once built
     alerts._panel = null;

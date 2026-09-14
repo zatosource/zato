@@ -85,6 +85,23 @@ _Deploy_Poll_Interval = 2
 # How long one Invoke attempt is given to come back with either an answer or an error
 _Invoke_Timeout = 15000
 
+# The Alerts popup of step 2 and, inside it, the popover of the negative acks line
+_Alerts_Popup = f'#{Wizard_Id}-popup'
+_Acks_Popover = '#alerts-tab-popup'
+_Ok_Button = ' button.action-button'
+_Popover_Timeout = 5000
+
+# The negative acks line - what it reads by default, and what the test leaves it at, the
+# first two codes removed as chips and the first one typed back in at the end
+_Default_Ack_Codes = 'AE, AR, CE, CR'
+_Chips_Removed = 2
+_Chip_Added = 'AE'
+_Created_Ack_Codes = 'CE, CR, AE'
+_Created_Ack_Threshold = '5'
+
+# An address nothing listens on - the alerts test never sends anything
+_Unused_Address = f'{Host}:1'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -379,6 +396,93 @@ class TestOutgoingHL7MLLPWizard:
 
         assert not real_errors, 'Console errors during the MLLP outconn wizard cycle:\n' + '\n'.join(real_errors)
         assert not server_errors, 'HTTP 500+ responses during the MLLP outconn wizard cycle:\n' + '\n'.join(server_errors)
+
+# ################################################################################################################################
+
+    def test_mllp_outconn_wizard_alerts(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ The Alerts line of step 2 opens its popup, the negative acks line inside it opens its
+        own popover where the codes are chips and the threshold a number, what is typed there
+        reads back on the line, on the step 2 summary and in the review, and the connection is
+        created with it, the edit wizard reading it back.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        conn_name = _Test_Name_Prefix + 'alerts'
+
+        open_create_wizard(page, base_url)
+
+        page.fill('#id_name', conn_name)
+        page.fill('#id_address', _Unused_Address)
+
+        go_to_step(page, 1)
+
+        # The Alerts popup opens off its line ..
+        page.click(f'#{Wizard_Id}-edit-alerts')
+        _ = page.wait_for_selector(_Alerts_Popup, state='visible', timeout=_Popover_Timeout)
+
+        # .. with the acks line reading the default codes ..
+        acks_summary = page.inner_text(f'#{Wizard_Id}-alerts-summary-negative_acks')
+        assert _Default_Ack_Codes in acks_summary, f'Expected "{_Default_Ack_Codes}" on the acks line, got: "{acks_summary}"'
+
+        # .. and the acks line opens its own popover over the popup.
+        page.click(f'#{Wizard_Id}-alerts-edit-negative_acks')
+        _ = page.wait_for_selector(_Acks_Popover, state='visible', timeout=_Popover_Timeout)
+
+        # The popover puts the cursor into its first input once its transition ends - typing
+        # into another field before that would be pulled back into the codes input
+        codes_input = '#alerts-tab-tippy-ack_codes'
+        page.wait_for_function(
+            f'document.activeElement && document.activeElement.id === "{codes_input[1:]}"', timeout=_Popover_Timeout)
+
+        # Two chips go, one is typed back in, and the threshold is raised
+        remove_selector = f'{_Acks_Popover} .micro-form-chip-remove'
+        for _ in range(_Chips_Removed):
+            page.locator(remove_selector).first.click()
+
+        page.fill(codes_input, _Chip_Added)
+        page.press(codes_input, 'Enter')
+
+        page.fill('#alerts-tab-tippy-ack_threshold', _Created_Ack_Threshold)
+
+        page.click(_Acks_Popover + _Ok_Button)
+        _ = page.wait_for_selector(_Acks_Popover, state='hidden', timeout=_Popover_Timeout)
+
+        # The popover wrote into the form's hidden fields and the line reads them back
+        assert page.input_value('#id_alert_ack_codes') == _Created_Ack_Codes
+        assert page.input_value('#id_alert_ack_threshold') == _Created_Ack_Threshold
+
+        acks_summary = page.inner_text(f'#{Wizard_Id}-alerts-summary-negative_acks')
+        assert _Created_Ack_Codes in acks_summary, f'Expected "{_Created_Ack_Codes}" on the acks line, got: "{acks_summary}"'
+        assert _Created_Ack_Threshold in acks_summary, f'Expected "{_Created_Ack_Threshold}" on the acks line, got: "{acks_summary}"'
+
+        # The popup closes and the step 2 line says the alerts are on
+        page.click(_Alerts_Popup + _Ok_Button)
+        _ = page.wait_for_selector(_Alerts_Popup, state='hidden', timeout=_Popover_Timeout)
+
+        line_summary = page.inner_text(f'#{Wizard_Id}-summary-alerts')
+        assert line_summary.startswith('On'), f'Expected the Alerts line to say On, got: "{line_summary}"'
+
+        # The review carries the codes ..
+        go_to_step(page, 2)
+
+        review_text = page.inner_text(f'#{Wizard_Id}-review')
+        assert _Created_Ack_Codes in review_text, f'Expected "{_Created_Ack_Codes}" in the review, got: "{review_text}"'
+
+        # .. and the connection is created with them, which the edit wizard reads back.
+        finish_wizard(page, conn_name)
+
+        open_edit_wizard(page, base_url, conn_name)
+        go_to_step(page, 1)
+
+        assert page.input_value('#id_edit-alert_ack_codes') == _Created_Ack_Codes
+        assert page.input_value('#id_edit-alert_ack_threshold') == _Created_Ack_Threshold
+
+        acks_summary = page.inner_text(f'#{Wizard_Id}-alerts-summary-negative_acks')
+        assert _Created_Ack_Codes in acks_summary, f'Expected "{_Created_Ack_Codes}" on the acks line on edit, got: "{acks_summary}"'
+
+        delete_outgoing_connection(page, base_url, conn_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

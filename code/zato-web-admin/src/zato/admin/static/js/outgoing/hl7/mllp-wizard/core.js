@@ -18,8 +18,13 @@
 
 var wizard = $.fn.zato.outgoing.hl7.mllp.wizard;
 
-// The Alerts line of step 2 and its popover - the kit's, named under the page's prefix
-wizard.alerts = $.fn.zato.wizard_alerts.create({wizard: wizard, idPrefix: 'mllp-outconn-wizard'});
+// The Alerts line of step 2 and its popover - the kit's, named under the page's
+// prefix and first opening closer under the step strip than the kit's default
+wizard.alerts = $.fn.zato.wizard_alerts.create({
+    wizard: wizard,
+    idPrefix: 'mllp-outconn-wizard',
+    config: {openTop: 12}
+});
 
 // ////////////////////////////////////////////////////////////////////////
 

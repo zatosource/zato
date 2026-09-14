@@ -47,6 +47,9 @@ class ACKStatus:
     Commit_Reject      = 'CR'
     Timeout            = 'timeout'
 
+# The attr an ack row carries its status under - the code, or the timeout marker
+Attr_Ack_Status = 'ack_status'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -373,7 +376,7 @@ def audit_ack_sent(
         application_outcome=result.application_outcome,
         classification=result.classification,
         duration_ms=duration_ms,
-        attrs={'ack_status': ack_code},
+        attrs={Attr_Ack_Status: ack_code},
         bodies={AuditBody.Response: ack_text},
     )
 
@@ -442,7 +445,7 @@ def audit_ack_received(
         classification=result.classification,
         status=error_text,
         duration_ms=duration_ms,
-        attrs={'ack_status': result.ack_status},
+        attrs={Attr_Ack_Status: result.ack_status},
     )
 
     return out

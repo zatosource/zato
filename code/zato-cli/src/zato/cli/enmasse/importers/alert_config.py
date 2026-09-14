@@ -18,6 +18,7 @@ from zato.common.api import Alerting, GENERIC
 from zato.common.odb.model import GenericConn
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Default_DB_URL, Env_DB_URL
+from zato.common.util.scheduler import ensure_alerting_job_exists
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -185,9 +186,17 @@ class AlertConfigImporter:
             if yaml_key in values:
                 extra_values[extra_key] = values[yaml_key]
 
+        # A server creates the sweep job on its first start, so an import into an environment that never started
+        # creates it here, the same way, and the server then finds it in place with the values already on it
+        job_created = ensure_alerting_job_exists(session, self.importer.cluster_id)
+
+        if job_created:
+            session.flush()
+            logger.info('Created the alerting sweep job for the notification targets')
+
         changed = set_notification_config(session, self.importer.cluster_id, extra_values)
 
-        if changed:
+        if changed or job_created:
             session.commit()
             logger.info('Updated alert notification targets')
 

@@ -70,6 +70,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 #         alerts:
 #           ack_codes: 'AR, CR'
 #           ack_threshold: 3
+#
+#     outgoing_mllp:
+#       - name: lab.results
+#         address: lab.example.com:2575
+#         alerts:
+#           ack_codes: 'AR, CR'
+#           connection_failures: 5
 
 # stdlib
 import logging

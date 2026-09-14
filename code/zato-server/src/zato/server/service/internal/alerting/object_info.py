@@ -14,6 +14,7 @@ from zato.common.api import FileTransfer
 from zato.common.alerting.explain.channel_info import describe_channel
 from zato.common.alerting.explain.fhir_info import describe_outgoing_fhir
 from zato.common.alerting.explain.mllp_channel_info import describe_mllp_channel
+from zato.common.alerting.explain.mllp_outgoing_info import describe_mllp_outgoing
 from zato.common.alerting.explain.outgoing_info import describe_outgoing_http
 from zato.common.alerting.object_config import alert_type_file_transfer, channel_sources, transport_by_outgoing_source
 from zato.common.alerting.object_settings import load_object_settings
@@ -88,10 +89,17 @@ _test_transfers_field = 'test_transfers'
 def get_object_info(service:'AdminService', source:'str', object_name:'str') -> 'tuple[anylist, str, bool]':
     """ The Object section of the evidence - the object's definition as label and value pairs,
     secrets left out - along with the name the baseline is read under and whether test
-    transfers are on for the object. An LLM connection is read off its facade, an outgoing REST, SOAP or FHIR
-    connection, a channel, an MLLP channel, a file transfer connection or one of its schedules off the ODB,
+    transfers are on for the object. An LLM connection is read off its facade, an outgoing REST, SOAP, FHIR or
+    MLLP connection, a channel, an MLLP channel, a file transfer connection or one of its schedules off the ODB,
     any other source contributes its name alone.
     """
+    if source == AuditSource.MLLP_Outgoing:
+        with closing(service.odb.session()) as session:
+            mllp_outgoing_info = describe_mllp_outgoing(session, service.server.cluster_id, object_name)
+
+        if mllp_outgoing_info is not None:
+            return mllp_outgoing_info, object_name, False
+
     if source in _outgoing_http_sources:
         with closing(service.odb.session()) as session:
             outgoing_info = describe_outgoing_http(session, service.server.cluster_id, source, object_name)

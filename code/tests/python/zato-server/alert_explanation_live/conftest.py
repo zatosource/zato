@@ -94,7 +94,8 @@ _enmasse_template_path = os.path.join(os.path.dirname(__file__), 'live_server_en
 
 # The services the proofs point their channels at - every call to the first one raises, every call to the second
 # one is answered with a FHIR OperationOutcome on a 500, the way a FHIR server answers for a resource it failed on,
-# and every HL7 message the third one receives fails in it, so the MLLP channel in front of it answers with an AR
+# every HL7 message the third one receives fails in it, so the MLLP channel in front of it answers with an AR,
+# and the fourth one sends a message through a named outgoing MLLP connection, the way a service of the server does
 _live_services_source = '''# -*- coding: utf-8 -*-
 
 # stdlib
@@ -131,6 +132,17 @@ class MLLPReject(Service):
 
     def handle(self):
         raise Exception('{reject_text}')
+
+class MLLPSend(Service):
+    """ Sends one HL7 message through the named outgoing MLLP connection and reports the acknowledgment it received,
+    so that the outgoing MLLP proof sends the way a service of the server sends.
+    """
+    name = '{send_service_name}'
+
+    def handle(self):
+        request = self.request.raw_request
+        ack = self.mllp[request['outconn']].send(request['data'])
+        self.response.payload = {{'ack_code': ack.ack_code, 'is_accepted': ack.is_accepted, 'ack_text': ack.ack_text}}
 '''
 
 # ################################################################################################################################
@@ -157,6 +169,7 @@ def _build_live_server_config(
         outcome_text=LiveServer.outcome_text,
         reject_service_name=LiveServer.reject_service,
         reject_text=LiveServer.reject_text,
+        send_service_name=LiveServer.mllp_send_service,
     )
 
     with open(source_path, 'w') as source_file:
@@ -179,6 +192,8 @@ def _build_live_server_config(
             'llm_conn_name': LiveServer.llm_conn_name,
             'llm_address': containers.Ollama_OpenAI_URL,
             'llm_model': containers.Model_Name,
+            'email_from': LiveServer.email_from,
+            'email_to': LiveServer.email_to,
         },
         'populate_callback': _populate,
         'hot_deploy_sources': [source_path],

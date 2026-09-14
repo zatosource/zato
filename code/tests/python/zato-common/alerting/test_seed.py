@@ -302,6 +302,9 @@ class TestEachTypeReachesItsRule:
         case('alerts_fhir_Operation_Outcomes', AuditSource.FHIR, outcome_count=3)
         case('alerts_mllp_channel_Channel_Failing', AuditSource.MLLP_Channel, consecutive_failures=3)
         case('alerts_mllp_channel_Negative_Acks', AuditSource.MLLP_Channel, ack_count=3)
+        case('alerts_mllp_outgoing_Connection_Down', AuditSource.MLLP_Outgoing, consecutive_failures=3)
+        case('alerts_mllp_outgoing_Negative_Acks', AuditSource.MLLP_Outgoing, ack_count=3)
+        case('alerts_mllp_outgoing_Connection_Failures', AuditSource.MLLP_Outgoing, connection_failure_count=3)
 
         # A connection's health check is measured apart from its traffic and judged by the same rule of its own type
         case('alerts_rest_Connection_Down', AuditSource.REST_Outgoing_Health, consecutive_failures=3)

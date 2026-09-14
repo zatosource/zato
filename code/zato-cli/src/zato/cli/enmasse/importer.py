@@ -371,6 +371,14 @@ class EnmasseYAMLImporter:
             if not items:
                 continue
 
+            # A mapping-valued section, e.g. alert_notifications, is one flat mapping of fields rather than
+            # a list of items - a later file's fields land over an earlier one's
+            if isinstance(items, dict):
+                if key not in target:
+                    target[key] = {}
+                target[key].update(items)
+                continue
+
             # Initialize section if it doesn't exist
             if key not in target:
                 target[key] = []
@@ -397,6 +405,11 @@ class EnmasseYAMLImporter:
         for key, items in config.items():
             # Skip if no items for this object type
             if not items:
+                continue
+
+            # A mapping-valued section stays the mapping it is - extending a list with it would keep its keys alone
+            if isinstance(items, dict):
+                result[key] = dict(items)
                 continue
 
             # Process all items for this object type
