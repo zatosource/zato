@@ -24,7 +24,8 @@ from sqlalchemy import and_, func, select
 from zato.common.alerting.collectors.common import is_failed, is_object, is_recent, is_source, response_event_type_by_source, \
     Default_Window_Seconds, Probe_Source_Test_Transfer
 from zato.common.alerting.collectors.file_transfer import Attr_Schedule
-from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_table, AuditBody, AuditEvent, AuditOutcome, \
+    AuditSource
 from zato.common.audit_log.file_transfer_run import Run_Status_Failed, Run_Status_Interrupted, Run_Status_List_Failed, \
     Run_Status_No_Directory, Run_Status_Partial
 from zato.common.json_internal import loads
@@ -60,6 +61,12 @@ _troubled_run_statuses = (
     Run_Status_List_Failed,
     Run_Status_Interrupted,
 )
+
+# The sources whose failed rows say what went wrong in a body rather than in their data - an MLLP channel's
+# failed ack is the ACK message itself, kept as the row's response body, so the evidence reads it from there.
+_body_kind_by_source = {
+    AuditSource.MLLP_Channel: AuditBody.Response,
+}
 
 # The columns every evidence row carries.
 _row_columns = (
@@ -137,18 +144,47 @@ def _select_rows(engine:'Engine', conditions:'anylist') -> 'dictlist':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _attach_bodies(engine:'Engine', rows:'dictlist', kind:'str') -> 'None':
+    """ Puts the body of the given kind on each row that has one, as its data - what the rows of a source
+    that keeps its error text in a body say went wrong.
+    """
+    if not rows:
+        return
+
+    by_id = {row['id']: row for row in rows}
+
+    statement = select(event_body_table.c.event_id, event_body_table.c.data).where(and_(
+        event_body_table.c.event_id.in_(list(by_id)),
+        event_body_table.c.kind == kind,
+    ))
+
+    with engine.connect() as connection:
+        result = connection.execute(statement).fetchall()
+
+    for event_id, data in result:
+        by_id[event_id]['data'] = data
+
+# ################################################################################################################################
+
 def collect_failed_events(engine:'Engine', fact:'stranydict', now:'datetime') -> 'dictlist':
     """ The failed events of the fact's object within its window - what the error counts,
-    the error rate and the consecutive failures were counted from.
+    the error rate, the consecutive failures and the negative acks were counted from.
     """
+    source = fact['source']
+
     conditions = [
-        is_source(fact['source']),
+        is_source(source),
         is_object(fact['object_name']),
         is_failed(),
         is_recent(_window_start_iso(fact, now)),
     ]
 
     out = _select_rows(engine, conditions)
+
+    # A source whose rows say what went wrong in a body has it read onto them
+    if source in _body_kind_by_source:
+        _attach_bodies(engine, out, _body_kind_by_source[source])
+
     return out
 
 # ################################################################################################################################

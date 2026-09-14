@@ -23,6 +23,7 @@ from datetime import datetime
 from urllib.parse import quote
 
 # Zato
+from zato.common.alerting.ack_codes import apply_ack_codes
 from zato.common.alerting.collectors import collect_facts
 from zato.common.alerting.config_map import read_window_seconds_by_measure, type_sources, type_to_ruleset, \
     Explain_With_LLM_Key
@@ -480,11 +481,12 @@ def run_sweep(
                 rule_values = build_rule_values(alert_type, settings, now, rule.name)
 
             # A connection's responses are counted against the status codes in force for it and this rule,
-            # a SOAP connection's faults against its fault codes and a FHIR connection's operation outcomes
-            # against its outcome codes the same way
+            # a SOAP connection's faults against its fault codes, a FHIR connection's operation outcomes
+            # against its outcome codes and an MLLP channel's negative acks against its ack codes the same way
             fact = apply_status_codes(fact, rule, rule_values)
             fact = apply_fault_codes(fact, rule, rule_values)
             fact = apply_outcome_codes(fact, rule, rule_values)
+            fact = apply_ack_codes(fact, rule, rule_values)
 
             match_data = {Fact_Entity: fact}
             match_data.update(rule_values)

@@ -40,8 +40,23 @@ _Test_Service = 'test.hl7.mllp.wire.ack-identity'
 # The sender the channel's routing criteria are about
 _Wizard_App = 'WIZARD_SENDER'
 
-# The badge picker the wizard's destinations panel runs on
+# The badge picker the wizard's destinations panel runs on, and the decision lines panel it opens in
 _Picker_Action = 'mllp-wizard-destinations'
+_Pick_Panel = '#decision-pick-panel'
+
+# The Alerts popup of step 2 and, inside it, the popover of the negative acks line
+_Alerts_Popup = '#mllp-wizard-popup'
+_Acks_Popover = '#alerts-tab-popup'
+_Ok_Button = ' button.action-button'
+_Popover_Timeout = 5000
+
+# The negative acks line - what it reads by default, and what the test leaves it at, the
+# first two codes removed as chips and the first one typed back in at the end
+_Default_Ack_Codes = 'AE, AR, CE, CR'
+_Chips_Removed = 2
+_Chip_Added = 'AE'
+_Created_Ack_Codes = 'CE, CR, AE'
+_Created_Ack_Threshold = '5'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -128,7 +143,7 @@ class TestChannelHL7MLLPWizard:
 
         # Open the destinations panel and pick the connection the test created
         page.click('#mllp-wizard-slot-destinations-chip')
-        _ = page.wait_for_selector('#wizard-panel', state='visible')
+        _ = page.wait_for_selector(_Pick_Panel, state='visible')
 
         available_badge = f'#badge-zone-available-{_Picker_Action} .security-badge[data-connection="{outconn_name}"]'
         assigned_badge = f'#badge-zone-assigned-{_Picker_Action} .security-badge[data-connection="{outconn_name}"]'
@@ -138,7 +153,7 @@ class TestChannelHL7MLLPWizard:
 
         # Closing the panel is what writes the picked destination into the wizard's state
         page.click('#mllp-wizard-slot-destinations-chip')
-        _ = page.wait_for_selector('#wizard-panel', state='detached')
+        _ = page.wait_for_selector(_Pick_Panel, state='detached')
 
         chip_text = page.inner_text('#mllp-wizard-slot-destinations-chip')
         assert '1 destination' in chip_text, f'Expected "1 destination" on the chip, got: "{chip_text}"'
@@ -224,6 +239,96 @@ class TestChannelHL7MLLPWizard:
 
         assert not real_errors, 'Console errors during the MLLP wizard cycle:\n' + '\n'.join(real_errors)
         assert not server_errors, 'HTTP 500+ responses during the MLLP wizard cycle:\n' + '\n'.join(server_errors)
+
+# ################################################################################################################################
+
+    def test_mllp_wizard_alerts(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ The Alerts line of step 2 opens its popup, the negative acks line inside it opens its
+        own popover where the codes are chips and the threshold a number, what is typed there
+        reads back on the line, on the step 2 summary and in the review, and the channel is
+        created with it, the edit wizard reading it back.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        navigate_to_channels(page, base_url)
+
+        page.click('#markup .page_prompt a:has-text("Create a new channel")')
+        _ = page.wait_for_selector('#mllp-wizard', state='visible')
+
+        channel_name = _Test_Name_Prefix + 'alerts'
+        page.fill('#id_name', channel_name)
+
+        page.click('#mllp-wizard-next')
+        time.sleep(0.2)
+
+        page.evaluate(f'$("#id_service").val("{_Test_Service}").trigger("chosen:updated")')
+
+        # The Alerts popup opens off its line ..
+        page.click('#mllp-wizard-edit-alerts')
+        _ = page.wait_for_selector(_Alerts_Popup, state='visible', timeout=_Popover_Timeout)
+
+        # .. with the acks line reading the default codes ..
+        acks_summary = page.inner_text('#mllp-wizard-alerts-summary-negative_acks')
+        assert _Default_Ack_Codes in acks_summary, f'Expected "{_Default_Ack_Codes}" on the acks line, got: "{acks_summary}"'
+
+        # .. and the acks line opens its own popover over the popup.
+        page.click('#mllp-wizard-alerts-edit-negative_acks')
+        _ = page.wait_for_selector(_Acks_Popover, state='visible', timeout=_Popover_Timeout)
+
+        # Two chips go, one is typed back in, and the threshold is raised
+        remove_selector = f'{_Acks_Popover} .micro-form-chip-remove'
+        for _ in range(_Chips_Removed):
+            page.locator(remove_selector).first.click()
+
+        codes_input = '#alerts-tab-tippy-ack_codes'
+        page.fill(codes_input, _Chip_Added)
+        page.press(codes_input, 'Enter')
+
+        page.fill('#alerts-tab-tippy-ack_threshold', _Created_Ack_Threshold)
+
+        page.click(_Acks_Popover + _Ok_Button)
+        _ = page.wait_for_selector(_Acks_Popover, state='hidden', timeout=_Popover_Timeout)
+
+        # The popover wrote into the form's hidden fields and the line reads them back
+        assert page.input_value('#id_alert_ack_codes') == _Created_Ack_Codes
+        assert page.input_value('#id_alert_ack_threshold') == _Created_Ack_Threshold
+
+        acks_summary = page.inner_text('#mllp-wizard-alerts-summary-negative_acks')
+        assert _Created_Ack_Codes in acks_summary, f'Expected "{_Created_Ack_Codes}" on the acks line, got: "{acks_summary}"'
+        assert _Created_Ack_Threshold in acks_summary, f'Expected "{_Created_Ack_Threshold}" on the acks line, got: "{acks_summary}"'
+
+        # The popup closes and the step 2 line says the alerts are on
+        page.click(_Alerts_Popup + _Ok_Button)
+        _ = page.wait_for_selector(_Alerts_Popup, state='hidden', timeout=_Popover_Timeout)
+
+        line_summary = page.inner_text('#mllp-wizard-summary-alerts')
+        assert line_summary.startswith('On'), f'Expected the Alerts line to say On, got: "{line_summary}"'
+
+        # The review carries the codes ..
+        page.click('#mllp-wizard-next')
+        time.sleep(0.2)
+
+        review_text = page.inner_text('#mllp-wizard-review')
+        assert _Created_Ack_Codes in review_text, f'Expected "{_Created_Ack_Codes}" in the review, got: "{review_text}"'
+
+        # .. and the channel is created with them, which the edit wizard reads back.
+        page.click('#mllp-wizard-next')
+        wait_until_saved(page)
+
+        item_id = get_item_id(page, channel_name)
+
+        _ = page.goto(f'{base_url}/zato/channel/hl7/mllp/wizard/{item_id}/?cluster=1')
+        _ = page.wait_for_selector('#mllp-wizard', state='visible')
+
+        assert page.input_value('#id_edit-alert_ack_codes') == _Created_Ack_Codes
+        assert page.input_value('#id_edit-alert_ack_threshold') == _Created_Ack_Threshold
+
+        acks_summary = page.inner_text('#mllp-wizard-alerts-summary-negative_acks')
+        assert _Created_Ack_Codes in acks_summary, f'Expected "{_Created_Ack_Codes}" on the acks line on edit, got: "{acks_summary}"'
+
+        delete_channel(page, base_url, channel_name)
 
 # ################################################################################################################################
 

@@ -17,8 +17,9 @@ from sqlalchemy.orm import sessionmaker
 # Zato
 from zato.common.alerting.collectors.common import Measure_Auth_Failures, Measure_Error_Rate, Measure_File_Runs, \
     Measure_Latency, Measure_Status_Codes
-from zato.common.alerting.object_config import alert_type_channels, alert_type_fhir, alert_type_file_transfer, alert_type_rest, \
-    alert_type_soap, encode_email_connection, Email_Conn_Type_IMAP, get_defaults, to_storage
+from zato.common.alerting.object_config import alert_type_channels, alert_type_fhir, alert_type_file_transfer, \
+    alert_type_mllp_channel, alert_type_rest, alert_type_soap, encode_email_connection, Email_Conn_Type_IMAP, get_defaults, \
+    to_storage
 from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
     get_llm_connection, get_muted_rule_names, get_names_with_toggle, get_silence_expected_names, is_object_active, \
     load_object_settings
@@ -58,6 +59,7 @@ _ftp_name = 'ftp.settings'
 _other_cluster_name = 'sftp.elsewhere'
 _as2_name = 'as2.no-alerts'
 _fhir_name = 'ehr.fhir'
+_mllp_name = 'adt.mllp'
 
 # The schedules the SFTP connection carries
 _schedule_name = 'Daily results'
@@ -168,8 +170,8 @@ class TestLoadObjectSettings:
         with _session() as session:
             settings = load_object_settings(session, _cluster_id)
 
-        assert settings == {alert_type_file_transfer: {}, alert_type_fhir: {}, alert_type_channels: {}, alert_type_rest: {}, \
-            alert_type_soap: {}}
+        assert settings == {alert_type_file_transfer: {}, alert_type_fhir: {}, alert_type_mllp_channel: {}, alert_type_channels: {}, \
+            alert_type_rest: {}, alert_type_soap: {}}
 
 # ################################################################################################################################
 
@@ -237,6 +239,26 @@ class TestLoadObjectSettings:
         assert by_object[_fhir_name]['status_codes'] == get_defaults(alert_type_fhir)['status_codes']
         assert settings[alert_type_rest] == {}
         assert settings[alert_type_file_transfer] == {}
+
+# ################################################################################################################################
+
+    def test_an_mllp_channel_loads_under_mllp_channel_with_its_own_codes(self) -> 'None':
+        stored = to_storage(alert_type_mllp_channel, {'ack_codes': 'AR', 'ack_threshold': 2})
+
+        with _session() as session:
+            _add_connection(session, _mllp_name, GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, _cluster_id, stored)
+            settings = load_object_settings(session, _cluster_id)
+
+        by_object = settings[alert_type_mllp_channel]
+
+        assert list(by_object) == [_mllp_name]
+        assert by_object[_mllp_name]['ack_codes'] == 'AR'
+        assert by_object[_mllp_name]['ack_threshold'] == 2
+
+        # What was not stored is still at its default, and no other type sees the row
+        assert by_object[_mllp_name]['acks_window'] == get_defaults(alert_type_mllp_channel)['acks_window']
+        assert settings[alert_type_channels] == {}
+        assert settings[alert_type_fhir] == {}
 
 # ################################################################################################################################
 

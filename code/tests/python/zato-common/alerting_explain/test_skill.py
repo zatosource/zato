@@ -23,6 +23,7 @@ from zato.common.alerting.explain.skill import get_default_skills_dir, get_skill
 # Every audit source that ships with an explanation skill of its own.
 _shipped_sources = (
     AuditSource.REST_Channel,
+    AuditSource.MLLP_Channel,
     AuditSource.REST_Outgoing,
     AuditSource.SOAP_Outgoing,
     AuditSource.FHIR,

@@ -25,6 +25,9 @@ class LiveServer:
     invoke_password = ''
     server_directory = ''
 
+    # Where the server's MLLP listener accepts the messages of the MLLP channel proof - decided before the server starts
+    mllp_port = 0
+
     # The LLM connection the enmasse document creates - the one the notification config names
     llm_conn_name = 'explain.live.llm'
 
@@ -37,6 +40,11 @@ class LiveServer:
     outcome_service = 'explain.live.fhir.outcome'
     outcome_code = 'exception'
     outcome_text = 'The patient registry threw an exception'
+
+    # The hot-deployed service every HL7 message to which fails, so the MLLP channel answers with an AR,
+    # and what it fails with
+    reject_service = 'explain.live.mllp.reject'
+    reject_text = 'The ADT feed handler is not reachable'
 
 # ################################################################################################################################
 # ################################################################################################################################

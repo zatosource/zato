@@ -42,6 +42,7 @@ import pytest
 from zato.common.alerting.explain.skill import get_default_skills_dir, Skills_Dir_Name
 from zato.common.alerting.rendering import get_default_template_dir, Template_Dir_Name
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Port_Env_Name
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 from zato.common.test.sftp_ import SFTPTestServer
 
@@ -92,7 +93,8 @@ _scheduler_stream_prefix = 'zato:scheduler:explain-live:' + uuid4().hex
 _enmasse_template_path = os.path.join(os.path.dirname(__file__), 'live_server_enmasse.yaml')
 
 # The services the proofs point their channels at - every call to the first one raises, every call to the second
-# one is answered with a FHIR OperationOutcome on a 500, the way a FHIR server answers for a resource it failed on
+# one is answered with a FHIR OperationOutcome on a 500, the way a FHIR server answers for a resource it failed on,
+# and every HL7 message the third one receives fails in it, so the MLLP channel in front of it answers with an AR
 _live_services_source = '''# -*- coding: utf-8 -*-
 
 # stdlib
@@ -121,6 +123,14 @@ class FHIROutcome(Service):
         self.response.status_code = INTERNAL_SERVER_ERROR
         self.response.content_type = 'application/fhir+json'
         self.response.payload = dumps({{'resourceType': 'OperationOutcome', 'issue': [issue]}})
+
+class MLLPReject(Service):
+    """ Fails on every HL7 message, so that the MLLP channel in front of it acknowledges each one with an AR.
+    """
+    name = '{reject_service_name}'
+
+    def handle(self):
+        raise Exception('{reject_text}')
 '''
 
 # ################################################################################################################################
@@ -145,6 +155,8 @@ def _build_live_server_config(
         outcome_service_name=LiveServer.outcome_service,
         outcome_code=LiveServer.outcome_code,
         outcome_text=LiveServer.outcome_text,
+        reject_service_name=LiveServer.reject_service,
+        reject_text=LiveServer.reject_text,
     )
 
     with open(source_path, 'w') as source_file:
@@ -195,6 +207,13 @@ _scheduler_env = {
     'Zato_Scheduler_HTTP_Port': str(_scheduler_http_port),
 }
 
+# The server's MLLP listener binds to a port decided here, so the MLLP channel proof knows where to send before
+# the server starts - the same variable the load balancer reads, so the two never disagree
+LiveServer.mllp_port = _find_free_port()
+
+_server_env = dict(_scheduler_env)
+_server_env[MLLP_Port_Env_Name] = str(LiveServer.mllp_port)
+
 # ################################################################################################################################
 
 zato_server = create_zato_server_fixture(
@@ -202,7 +221,7 @@ zato_server = create_zato_server_fixture(
     server_log_copy_name='server-logs-alert-explanation-live.txt',
     template_path=_enmasse_template_path,
     quickstart_prefix='zato_explain_live_qs_',
-    extra_server_env=_scheduler_env,
+    extra_server_env=_server_env,
     patch_server_conf_bind=True,
     build_config_callback=_build_live_server_config,
 )

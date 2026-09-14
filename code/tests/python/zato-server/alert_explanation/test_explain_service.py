@@ -229,9 +229,9 @@ class TestExplainPath:
 
         session = _new_session()
 
-        # No explanation skill ships for MLLP channels
+        # No explanation skill ships for outgoing MLLP connections
         service = _new_service(
-            _new_payload(AlertAction.Slack, {'slack_channel': _slack_channel}, AuditSource.MLLP_Channel),
+            _new_payload(AlertAction.Slack, {'slack_channel': _slack_channel}, AuditSource.MLLP_Outgoing),
             session,
             repo_dir,
             llm=_LLMFacade(llm_connections, llm_address),

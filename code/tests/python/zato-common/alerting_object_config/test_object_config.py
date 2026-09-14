@@ -8,8 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_fhir, alert_type_file_transfer, alert_type_rest, apply_defaults, \
-    conn_type_to_alert_type, decode_email_connection, Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, Email_Connection_Default, \
+from zato.common.alerting.object_config import alert_type_fhir, alert_type_file_transfer, alert_type_mllp_channel, \
+    alert_type_rest, apply_defaults, conn_type_to_alert_type, decode_email_connection, Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, Email_Connection_Default, \
     Email_Connection_Field, \
     encode_email_connection, field_display, field_help, Field_Prefix, from_storage, get_defaults, get_field_kinds, \
     get_field_names, Is_Active_Field, Kind_Active, Kind_Email, Kind_LLM, LLM_Connection_Default, LLM_Connection_Field, \
@@ -90,6 +90,31 @@ class TestFieldNames:
 
         assert get_defaults(alert_type_fhir)['outcome_codes'] == \
             'exception, transient, timeout, throttled, lock-error, no-store, too-costly'
+
+# ################################################################################################################################
+
+    def test_an_mllp_channel_maps_to_the_mllp_channel_type(self) -> 'None':
+        assert conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP] == alert_type_mllp_channel
+
+        # The type has the negative acks and nothing HTTP
+        mllp_names = get_field_names(alert_type_mllp_channel)
+
+        assert 'ack_codes' in mllp_names
+        assert 'ack_threshold' in mllp_names
+        assert 'acks_window' in mllp_names
+        assert 'consecutive_failures' in mllp_names
+        assert 'error_rate' in mllp_names
+        assert 'max_latency' in mllp_names
+        assert 'traffic_expected' in mllp_names
+
+        assert 'server_errors' not in mllp_names
+        assert 'auth_failures' not in mllp_names
+        assert 'client_errors' not in mllp_names
+        assert 'status_codes' not in mllp_names
+
+        assert get_defaults(alert_type_mllp_channel)['ack_codes'] == 'AE, AR, CE, CR'
+        assert get_defaults(alert_type_mllp_channel)['ack_threshold'] == 3
+        assert get_defaults(alert_type_mllp_channel)['acks_window'] == 300
 
 # ################################################################################################################################
 

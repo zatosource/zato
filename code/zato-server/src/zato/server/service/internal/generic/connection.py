@@ -202,10 +202,11 @@ skip_simple_type = {
     'as4_trust_anchors',
 }
 
-# The alert settings that are text - a status codes list of `500` alone or an outcome codes list must stay
-# what was typed rather than turn into a number on the way.
+# The alert settings that are text - a status codes list of `500` alone, an outcome codes list or an ack codes
+# list of `AE` must stay what was typed rather than turn into a number or a boolean on the way, and the
+# silence slots are a JSON text that is stored as one rather than the list it reads as.
 for _alert_text_field_name in (config_map.Status_Codes_Field_Name, config_map.Fault_Codes_Field_Name,
-    config_map.Outcome_Codes_Field_Name):
+    config_map.Outcome_Codes_Field_Name, config_map.Ack_Codes_Field_Name, config_map.Silence_Slots_Field_Name):
     skip_simple_type.add(alert_storage_name(_alert_text_field_name))
 
 # ################################################################################################################################

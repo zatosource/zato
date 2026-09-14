@@ -33,6 +33,8 @@ if 0:
 
 # One connection with every field it can carry, one with the required fields only, one naming
 # the security definition it authenticates with, and one alerting on outcome codes of its own.
+_Connection_Count = 4
+
 template_outgoing_fhir = """
 
 security:
@@ -139,7 +141,7 @@ class TestEnmasseOutgoingFHIRImporter(TestCase):
         connection_defs = self.yaml_config['outgoing_fhir']
 
         connection_def_count = len(connection_defs)
-        self.assertEqual(connection_def_count, 3)
+        self.assertEqual(connection_def_count, _Connection_Count)
 
         created, _ = self.outgoing_fhir_importer.sync_definitions(connection_defs, self.session)
 
@@ -247,12 +249,12 @@ class TestEnmasseOutgoingFHIRImporter(TestCase):
         connection_defs = self.yaml_config['outgoing_fhir']
 
         created, _ = self.outgoing_fhir_importer.sync_definitions(connection_defs, self.session)
-        self.assertEqual(len(created), 3)
+        self.assertEqual(len(created), _Connection_Count)
 
         created_again, updated = self.outgoing_fhir_importer.sync_definitions(connection_defs, self.session)
 
         self.assertEqual(len(created_again), 0)
-        self.assertEqual(len(updated), 3)
+        self.assertEqual(len(updated), _Connection_Count)
 
 # ################################################################################################################################
 

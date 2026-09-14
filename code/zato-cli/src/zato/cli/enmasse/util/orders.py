@@ -201,7 +201,7 @@ _object_order['outgoing_grpc']    = 'name', 'is_active', 'address', 'security', 
     'proto_path', 'stub_module', 'stub_class', 'ping_timeout', 'max_send_message_size', 'max_recv_message_size',
 _object_order['outgoing_kafka']   = 'name', 'is_active', 'address', 'topic',
 
-_object_order['channel_mllp']  = ('name',) + Channel_Enmasse_Names
+_object_order['channel_mllp']  = ('name',) + Channel_Enmasse_Names + ('alerts:dict',)
 _object_order['outgoing_mllp'] = ('name', 'address') + Outgoing_Names
 _object_order['outgoing_fhir'] = ('name', 'address') + Outgoing_FHIR_Enmasse_Names + Health_Check_Fields + ('alerts:dict',)
 

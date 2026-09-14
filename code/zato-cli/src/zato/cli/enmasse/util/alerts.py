@@ -63,6 +63,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 #         alerts:
 #           outcome_codes: 'exception, timeout'
 #           outcome_threshold: 3
+#
+#     channel_mllp:
+#       - name: adt.intake
+#         service: hl7.adt.intake
+#         alerts:
+#           ack_codes: 'AR, CR'
+#           ack_threshold: 3
 
 # stdlib
 import logging
@@ -70,7 +77,9 @@ from json import loads
 
 # Zato
 from zato.common.alerting import object_config
-from zato.common.alerting.config_map import Fault_Codes_Field_Name, Outcome_Codes_Field_Name, Status_Codes_Field_Name
+from zato.common.alerting.ack_codes import parse_ack_codes
+from zato.common.alerting.config_map import Ack_Codes_Field_Name, Fault_Codes_Field_Name, Outcome_Codes_Field_Name, \
+    Status_Codes_Field_Name
 from zato.common.alerting.fault_codes import parse_fault_codes
 from zato.common.alerting.outcome_codes import parse_outcome_codes
 from zato.common.alerting.status_codes import parse_status_codes
@@ -210,10 +219,17 @@ def flatten_alerts(connection_def:'anydict', alert_type:'str', connection_type:'
         except ValueError as e:
             raise Exception(f'{e} for {connection_type} connection `{connection_name}`')
 
-    # .. and so is an outcome code that is not a FHIR issue code such as exception or not-found.
+    # .. so is an outcome code that is not a FHIR issue code such as exception or not-found ..
     if Outcome_Codes_Field_Name in alerts:
         try:
             _ = parse_outcome_codes(alerts[Outcome_Codes_Field_Name])
+        except ValueError as e:
+            raise Exception(f'{e} for {connection_type} connection `{connection_name}`')
+
+    # .. and so is an acknowledgment code that is not one of AE, AR, CE and CR.
+    if Ack_Codes_Field_Name in alerts:
+        try:
+            _ = parse_ack_codes(alerts[Ack_Codes_Field_Name])
         except ValueError as e:
             raise Exception(f'{e} for {connection_type} connection `{connection_name}`')
 

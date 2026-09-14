@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # What the generic connection services are exercised with offline - a service whose collaborators stand in,
-# the input a create or an edit of an outgoing FHIR connection sends, and the readers of what was stored.
+# the input a create or an edit of an outgoing FHIR connection or of an MLLP channel sends, and the readers of what was stored.
 
 # stdlib
 import logging
@@ -42,6 +42,9 @@ Service_Name = 'zato.connection.health-check.run'
 FHIR_Type = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR
 FHIR_Name = 'ehr.fhir'
 FHIR_Address = 'https://fhir.example.com/r4'
+MLLP_Type = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
+MLLP_Name = 'adt.intake'
+MLLP_Service = 'adt.process'
 
 # The id the scheduler stand-in gives every job it is asked to create
 Job_Id = 4321
@@ -133,10 +136,42 @@ def fhir_input(**overrides:'any_') -> 'stranydict':
 
 # ################################################################################################################################
 
+def mllp_input(**overrides:'any_') -> 'stranydict':
+    """ What every create and edit of an MLLP channel sends - the alert settings are not among these.
+    """
+    out:'stranydict' = {
+        'name': MLLP_Name,
+        'type_': MLLP_Type,
+        'is_active': True,
+        'is_internal': False,
+        'is_channel': True,
+        'is_outconn': False,
+        'pool_size': 1,
+        'service': MLLP_Service,
+        'is_audit_log_active': True,
+        'cluster_id': Cluster_Id,
+    }
+    out.update(overrides)
+
+    return out
+
+# ################################################################################################################################
+
 def create(session_factory:'any_', **overrides:'any_') -> 'int':
     """ Creates one outgoing FHIR connection and returns its id.
     """
     service = new_service(Create, session_factory, fhir_input(**overrides))
+    service.handle()
+
+    out = service.response.payload.id
+    return out
+
+# ################################################################################################################################
+
+def create_mllp(session_factory:'any_', **overrides:'any_') -> 'int':
+    """ Creates one MLLP channel and returns its id.
+    """
+    service = new_service(Create, session_factory, mllp_input(**overrides))
     service.handle()
 
     out = service.response.payload.id
@@ -180,12 +215,12 @@ def add_job(session_factory:'any_', job_id:'int', name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def get_list(session_factory:'any_') -> 'anylist':
-    """ What GetList returns for outgoing FHIR connections.
+def get_list(session_factory:'any_', type_:'str'=FHIR_Type) -> 'anylist':
+    """ What GetList returns for the connections of one type, outgoing FHIR ones unless told otherwise.
     """
     input_data = {
         'cluster_id': Cluster_Id,
-        'type_': FHIR_Type,
+        'type_': type_,
         'paginate': False,
     }
     service = new_service(GetList, session_factory, input_data)

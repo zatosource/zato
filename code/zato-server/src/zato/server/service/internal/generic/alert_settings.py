@@ -14,6 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.alerting import config_map
+from zato.common.alerting.ack_codes import parse_ack_codes
 from zato.common.alerting.fault_codes import parse_fault_codes
 from zato.common.alerting.object_config import conn_type_to_alert_type, get_defaults, get_field_names, storage_name
 from zato.common.alerting.outcome_codes import parse_outcome_codes
@@ -36,6 +37,7 @@ _parsers:'dict[str, callable_]' = {
     config_map.Status_Codes_Field_Name: parse_status_codes,
     config_map.Fault_Codes_Field_Name: parse_fault_codes,
     config_map.Outcome_Codes_Field_Name: parse_outcome_codes,
+    config_map.Ack_Codes_Field_Name: parse_ack_codes,
 }
 
 # ################################################################################################################################

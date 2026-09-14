@@ -84,12 +84,13 @@ Measure_Ack_Codes = 'ack_codes'
 Window_Seconds_By_Measure_Key = 'window_seconds_by_measure'
 
 # The one event type of a source that carries a call's outcome - a channel writes a request
-# event and a response event per call, an outgoing REST or SOAP connection a request-sent and a response-received
-# one, as does each ping of its health check, and only the response says how the call went.
-# A source absent from here has every one of its events counted.
+# event and a response event per call, an MLLP channel a message-received and an ack-sent one, an outgoing
+# REST or SOAP connection a request-sent and a response-received one, as does each ping of its health check,
+# and only the response says how the call went. A source absent from here has every one of its events counted.
 response_event_type_by_source = {
     AuditSource.REST_Channel:         AuditEvent.Response_Sent,
     AuditSource.SOAP_Channel:         AuditEvent.Response_Sent,
+    AuditSource.MLLP_Channel:         AuditEvent.Ack_Sent,
     AuditSource.REST_Outgoing:        AuditEvent.Response_Received,
     AuditSource.SOAP_Outgoing:        AuditEvent.Response_Received,
     AuditSource.REST_Outgoing_Health: AuditEvent.Response_Received,
@@ -98,9 +99,23 @@ response_event_type_by_source = {
     AuditSource.FHIR_Health:          AuditEvent.Response_Received,
 }
 
+# The event a channel writes the moment a call arrives - its newest one says when the channel last heard from anyone.
+request_event_type_by_source = {
+    AuditSource.REST_Channel: AuditEvent.Request_Received,
+    AuditSource.SOAP_Channel: AuditEvent.Request_Received,
+    AuditSource.MLLP_Channel: AuditEvent.Message_Received,
+}
+
 # The channels - the sources whose rows are the calls a service received, and whose HTTPSOAP rows carry
 # alert settings under the channels type
 channel_sources = (AuditSource.REST_Channel, AuditSource.SOAP_Channel)
+
+# Every channel - the HTTP ones and the MLLP channels, whose generic rows carry alert settings under the
+# mllp_channel type - the sources whose rows name the service that answered and the caller that asked ..
+all_channel_sources = (AuditSource.REST_Channel, AuditSource.SOAP_Channel, AuditSource.MLLP_Channel)
+
+# .. and whose silence is measured, each off its own request event
+silence_sources = all_channel_sources
 
 # The outgoing connections whose responses are counted by their status code - the HTTPSOAP rows carrying
 # alert settings under the rest and soap types and the FHIR generic connections under the fhir type
@@ -187,12 +202,15 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
         # how many of them carried a code the connection alerts on, by code and in all. A fault is counted
         # here by its code and never among the status codes above. An outgoing FHIR connection's OperationOutcomes
         # are counted the same way under the same first key, by their issue code, and the ones the connection
-        # alerts on under the two keys after them.
+        # alerts on under the two keys after them, and so are the negative acks an MLLP channel sent, by their
+        # MSA-1 code, the ones the channel alerts on under the last two.
         'fault_counts': {},
         'fault_code_counts': {},
         'fault_count': 0,
         'outcome_code_counts': {},
         'outcome_count': 0,
+        'ack_code_counts': {},
+        'ack_count': 0,
 
         # How many days the object's TLS certificate has left. Zero means unmeasured,
         # which is why the certificate rules also require a value of at least one.

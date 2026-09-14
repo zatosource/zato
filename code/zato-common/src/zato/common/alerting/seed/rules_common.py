@@ -64,14 +64,14 @@ channels_rules = """
 rule
     Channel_Error_Rate
 docs
-    An inbound channel whose error share reaches a tenth of its recent traffic raises an email alert.
+    A REST or SOAP channel whose error share reaches a tenth of its recent traffic raises an email alert.
     The rule waits for at least ten events in the window, so one failure out of two calls never wakes anyone up.
 defaults
     error_rate_threshold = 0.1
     min_events = 10
     window_seconds = 300
 when
-    alert.source in ['rest-channel', 'soap-channel', 'mllp-channel'] and
+    alert.source in ['rest-channel', 'soap-channel'] and
     alert.total_count is at least default.min_events and
     alert.error_rate is at least default.error_rate_threshold
 then

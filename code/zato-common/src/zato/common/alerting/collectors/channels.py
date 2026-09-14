@@ -7,7 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The channel producers - the failed responses of a channel sorted by what their HTTP status
-# says about who is at fault, and how long a channel that expects traffic has gone without a request.
+# says about who is at fault, the negative acknowledgments an MLLP channel sent counted by their code,
+# and how long a channel that expects traffic has gone without a request.
 # A channel has no authentication event of its own - a rejected caller is a response with a 401
 # or a 403 - so the status classes are what tell a caller's problem from the service's.
 
@@ -17,20 +18,22 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 # SQLAlchemy
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
 
 # Zato
-from zato.common.alerting.collectors.common import channel_sources, new_fact, response_event_type_by_source
-from zato.common.audit_log.api import event_table, AuditEvent
+from zato.common.alerting.collectors.common import channel_sources, new_fact, request_event_type_by_source, \
+    response_event_type_by_source, silence_sources
+from zato.common.audit_log.api import event_table, AuditSource
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import dictlist, strset
+    from zato.common.typing_ import dictlist, strintdict, strset
     dictlist = dictlist
     Engine = Engine
+    strintdict = strintdict
     strset = strset
 
 # ################################################################################################################################
@@ -48,9 +51,8 @@ Client_Error_Class = '4'
 # .. and of the codes that say the service behind the channel failed.
 Server_Error_Class = '5'
 
-# The event a channel writes the moment a request arrives - its newest one says when the channel last heard from anyone.
-Request_Event_Type = AuditEvent.Request_Received
-
+# The one source whose acknowledgments are counted by their code
+Ack_Source = AuditSource.MLLP_Channel
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -144,11 +146,81 @@ def collect_channel_status_facts(
 
 # ################################################################################################################################
 
+def collect_ack_code_facts(
+    engine:'Engine',
+    window_seconds:'int',
+    now:'datetime',
+    *,
+    source:'str' = '',
+    object_name:'str' = '',
+    ) -> 'dictlist':
+    """ Measures the negative acknowledgments every MLLP channel sent within the window - how many went out
+    with each code, into `fault_counts` by code, one fact per channel that sent any. An ack row carries its
+    code as the application outcome only when the code is negative, so the positive acks group under an empty
+    outcome and are left out. Which codes a channel alerts on is not known here - the sweep matches the counts
+    against the codes in force for each channel right before the rule reads them.
+    """
+
+    # Our response to produce
+    out:'dictlist' = []
+
+    # The acks of one source alone are counted here
+    if source:
+        if source != Ack_Source:
+            return out
+
+    window_start = now - timedelta(seconds=window_seconds)
+    window_start_iso = window_start.isoformat()
+
+    conditions = [
+        event_table.c.event_time_iso >= window_start_iso,
+        event_table.c.source == Ack_Source,
+        event_table.c.event_type == response_event_type_by_source[Ack_Source],
+        event_table.c.application_outcome != '',
+    ]
+
+    # The optional criterion narrows the measures only when set
+    if object_name:
+        conditions.append(event_table.c.object_name == object_name)
+
+    statement = select(
+        event_table.c.object_name,
+        event_table.c.application_outcome,
+        func.count(),
+    ).where(and_(*conditions)).group_by(event_table.c.object_name, event_table.c.application_outcome)
+
+    with engine.connect() as connection:
+        rows = connection.execute(statement).fetchall()
+
+    # The counts of one channel, by the code of its acks
+    counts_by_object:'dict[str, strintdict]' = {}
+
+    for row_object_name, code, count in rows:
+
+        if row_object_name not in counts_by_object:
+            counts_by_object[row_object_name] = {}
+
+        counts = counts_by_object[row_object_name]
+        counts[code] = counts.get(code, 0) + count
+
+    for row_object_name in sorted(counts_by_object):
+
+        fact = new_fact(Ack_Source, row_object_name)
+        fact['fault_counts'] = counts_by_object[row_object_name]
+        fact['window_seconds'] = window_seconds
+
+        out.append(fact)
+
+    return out
+
+# ################################################################################################################################
+
 def collect_channel_silence_facts(engine:'Engine', now:'datetime', expected_names:'strset') -> 'dictlist':
     """ Measures how long each of the given channels has gone without a request - the time since
-    its newest request event. Only the channels whose settings say traffic is expected are measured,
-    so a channel nobody calls raises nothing unless a person asked for it, and one of them that
-    never received a request at all has nothing to measure from.
+    its newest request event, an HTTP channel's request-received one and an MLLP channel's message-received one.
+    Only the channels whose settings say traffic is expected are measured, so a channel nobody calls raises
+    nothing unless a person asked for it, and one of them that never received a request at all has nothing
+    to measure from.
     """
 
     # Our response to produce
@@ -157,9 +229,17 @@ def collect_channel_silence_facts(engine:'Engine', now:'datetime', expected_name
     if not expected_names:
         return out
 
+    # Each source is read off its own request event
+    source_events = []
+
+    for silence_source in silence_sources:
+        source_events.append(and_(
+            event_table.c.source == silence_source,
+            event_table.c.event_type == request_event_type_by_source[silence_source],
+        ))
+
     conditions = [
-        event_table.c.source.in_(list(channel_sources)),
-        event_table.c.event_type == Request_Event_Type,
+        or_(*source_events),
         event_table.c.object_name.in_(list(expected_names)),
     ]
 

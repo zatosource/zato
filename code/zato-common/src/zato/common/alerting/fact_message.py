@@ -14,9 +14,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # Zato
-from zato.common.alerting.collectors.common import channel_sources, Measure_Auth_Failures, Measure_Client_Errors, \
-    Measure_Connection_Failures, Measure_Latency, Measure_Operation_Outcomes, Measure_Server_Errors, Measure_SOAP_Faults, \
-    Measure_Status_Codes, Window_Seconds_By_Measure_Key
+from zato.common.alerting.ack_codes import Ack_Code_Counts_Key
+from zato.common.alerting.collectors.common import channel_sources, Measure_Ack_Codes, Measure_Auth_Failures, \
+    Measure_Client_Errors, Measure_Connection_Failures, Measure_Latency, Measure_Operation_Outcomes, Measure_Server_Errors, \
+    Measure_SOAP_Faults, Measure_Status_Codes, Window_Seconds_By_Measure_Key
 from zato.common.alerting.fault_codes import Fault_Code_Counts_Key
 from zato.common.alerting.outcome_codes import Outcome_Code_Counts_Key
 from zato.common.alerting.status_codes import Status_Code_Counts_Key
@@ -157,6 +158,12 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
         outcome_codes_part = _format_status_code_counts(fact[Outcome_Code_Counts_Key])
         outcome_part = f'{outcomes_label} the connection alerts on ({outcome_codes_part})'
         parts.append(outcome_part + _measure_window_part(fact, Measure_Operation_Outcomes))
+
+    if ack_count := fact['ack_count']:
+        acks_label = pluralize(ack_count, 'negative acknowledgment')
+        ack_codes_part = _format_status_code_counts(fact[Ack_Code_Counts_Key])
+        ack_part = f'{acks_label} the channel alerts on ({ack_codes_part})'
+        parts.append(ack_part + _measure_window_part(fact, Measure_Ack_Codes))
 
     if connection_failure_count := fact['connection_failure_count']:
         if connection_failure_count == 1:

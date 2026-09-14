@@ -15,11 +15,12 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting.collectors.backlogs import collect_feed_silent_facts, collect_outstanding_facts
-from zato.common.alerting.collectors.channels import collect_channel_silence_facts, collect_channel_status_facts
+from zato.common.alerting.collectors.channels import collect_ack_code_facts, collect_channel_silence_facts, \
+    collect_channel_status_facts
 from zato.common.alerting.collectors.common import new_fact, Default_Begin_Event_Type, Default_End_Event_Type, \
-    Default_Window_Seconds, Health_Window_Seconds, Measure_Auth_Failures, Measure_Client_Errors, Measure_Connection_Failures, \
-    Measure_Error_Rate, Measure_File_Runs, Measure_Latency, Measure_Operation_Outcomes, Measure_Server_Errors, Measure_SOAP_Faults, \
-    Measure_Status_Codes, Window_Seconds_By_Measure_Key
+    Default_Window_Seconds, Health_Window_Seconds, Measure_Ack_Codes, Measure_Auth_Failures, Measure_Client_Errors, \
+    Measure_Connection_Failures, Measure_Error_Rate, Measure_File_Runs, Measure_Latency, Measure_Operation_Outcomes, \
+    Measure_Server_Errors, Measure_SOAP_Faults, Measure_Status_Codes, Window_Seconds_By_Measure_Key
 from zato.common.alerting.collectors.file_transfer import collect_file_transfer_facts
 from zato.common.alerting.collectors.outgoing import collect_outgoing_status_facts
 from zato.common.alerting.collectors.probes import collect_certificate_facts, collect_health_facts, \
@@ -79,6 +80,7 @@ _collector_by_measure:'dict[str, callable_]' = {
     Measure_SOAP_Faults:         collect_outgoing_status_facts,
     Measure_Operation_Outcomes:  collect_outgoing_status_facts,
     Measure_Connection_Failures: collect_outgoing_status_facts,
+    Measure_Ack_Codes:           collect_ack_code_facts,
 }
 
 # The fact keys each windowed measure owns - what a run over one measure's window is allowed
@@ -95,6 +97,7 @@ _keys_by_measure:'dict[str, tuple[str, ...]]' = {
     Measure_SOAP_Faults:         ('fault_counts',),
     Measure_Operation_Outcomes:  ('fault_counts',),
     Measure_Connection_Failures: ('connection_failure_count',),
+    Measure_Ack_Codes:           ('fault_counts',),
 }
 
 # ################################################################################################################################

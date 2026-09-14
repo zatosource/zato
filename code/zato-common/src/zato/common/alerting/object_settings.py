@@ -45,6 +45,9 @@ if 0:
 _silence_rules = ['Channel_Silent']
 _silence_default = 'silence_seconds'
 
+# The types whose objects have a silence - the HTTP channels and the MLLP channels
+_silence_types = (alert_type_channels, alert_type_mllp_channel)
+
 # The audit sources whose objects carry settings of a type, where that is not every source the type
 # matches on - the channels type matches on three channel kinds, and REST and SOAP channels have an Alerts tab,
 # the rest and the soap type each match on the traffic and the check source of their outgoing connections, and the
@@ -168,7 +171,7 @@ def build_rule_values(
             out[default_name] = config_map.to_rule_value(values[field['name']], field['is_percent'])
 
     # The silence slot of the moment says how long a channel may stay silent right now
-    if alert_type == alert_type_channels:
+    if alert_type in _silence_types:
         if now is not None:
             out[_silence_default] = resolve_silence(values, now).seconds
 
@@ -195,7 +198,7 @@ def get_muted_rule_names(alert_type:'str', values:'stranydict', now:'datetime | 
 
         out.extend(field['rules'])
 
-    if alert_type == alert_type_channels:
+    if alert_type in _silence_types:
         if now is not None:
 
             # The slot of the moment decides, whatever the all-day switch says ..
@@ -258,16 +261,18 @@ def get_silence_expected_names(object_settings:'anydict', now:'datetime') -> 'st
     # Our response to produce
     out:'strset' = set()
 
-    if alert_type_channels not in object_settings:
-        return out
+    for alert_type in _silence_types:
 
-    for object_name, values in object_settings[alert_type_channels].items():
-
-        if not is_object_active(values):
+        if alert_type not in object_settings:
             continue
 
-        if resolve_silence(values, now).is_on:
-            out.add(object_name)
+        for object_name, values in object_settings[alert_type].items():
+
+            if not is_object_active(values):
+                continue
+
+            if resolve_silence(values, now).is_on:
+                out.add(object_name)
 
     return out
 

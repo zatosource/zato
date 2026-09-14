@@ -10,6 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.cli.enmasse.util.alerts import group_alerts
+from zato.common.alerting.object_config import Alerts_Key, conn_type_to_alert_type
 from zato.common.api import GENERIC
 from zato.common.destination.model import describe_entries, DestinationException, parse_entries
 from zato.common.hl7.mllp.fields import Channel_Destinations_Key, Channel_Fields, Channel_Security_Id_Key, \
@@ -33,6 +35,9 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# The alerts mapping of a channel follows the MLLP channel type
+_alert_type = conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -130,6 +135,10 @@ class ChannelMLLPExporter:
                     continue
 
                 item[field.name] = value
+
+            # .. the alert settings the channel sets of its own go under one alerts mapping ..
+            if alerts := group_alerts(row, _alert_type):
+                item[Alerts_Key] = alerts
 
             # .. and add it to the output.
             exported.append(item)

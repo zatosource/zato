@@ -19,7 +19,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 # Zato
-from zato.common.alerting.collectors.common import channel_sources, response_event_type_by_source, \
+from zato.common.alerting.collectors.common import all_channel_sources, response_event_type_by_source, \
     Window_Seconds_By_Measure_Key
 from zato.common.audit_log.common import get_source_label, health_sources
 from zato.common.util.api import pluralize
@@ -103,8 +103,9 @@ _non_measure_keys = ('source', 'object_name', 'window_seconds', 'last_error_even
 
 def is_channel_source(source:'str') -> 'bool':
     """ Whether a source's rows are the calls a channel received - their names are services and callers, not files.
+    An MLLP channel's rows are the messages it received and the acks it sent, and they name their callers too.
     """
-    out = source in channel_sources
+    out = source in all_channel_sources
     return out
 
 # ################################################################################################################################

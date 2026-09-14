@@ -300,6 +300,8 @@ class TestEachTypeReachesItsRule:
         case('alerts_soap_SOAP_Faults', AuditSource.SOAP_Outgoing, fault_count=3)
         case('alerts_fhir_Connection_Down', AuditSource.FHIR, consecutive_failures=3)
         case('alerts_fhir_Operation_Outcomes', AuditSource.FHIR, outcome_count=3)
+        case('alerts_mllp_channel_Channel_Failing', AuditSource.MLLP_Channel, consecutive_failures=3)
+        case('alerts_mllp_channel_Negative_Acks', AuditSource.MLLP_Channel, ack_count=3)
 
         # A connection's health check is measured apart from its traffic and judged by the same rule of its own type
         case('alerts_rest_Connection_Down', AuditSource.REST_Outgoing_Health, consecutive_failures=3)
@@ -470,7 +472,7 @@ class TestChannelRules:
                 rule = rules_by_full_name[f'{_channels_ruleset_name}_{rule_name}']
                 assert rule.match({Fact_Entity: fact}), f'Expected {rule_name} to match {fact}'
 
-            # An MLLP channel has no settings of its own and is judged by the error rate rule alone
+            # An MLLP channel is judged by the rules of its own ruleset, never by the HTTP channel ones
             fact = new_fact(AuditSource.MLLP_Channel, 'hl7.in')
             fact.update(measures)
             assert not rule.match({Fact_Entity: fact}), f'Expected {rule_name} not to match {fact}'

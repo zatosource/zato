@@ -29,7 +29,7 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index,
 from zato.common.alerting.object_config import alert_type_mllp_channel, Field_Prefix
 from zato.common.api import GENERIC, generic_attrs, Groups, HL7, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.destination.model import count_entries
-from zato.common.hl7.mllp.fields import Channel_Defaults, resolve_max_message_size
+from zato.common.hl7.mllp.fields import get_match_label, resolve_max_message_size, Channel_Defaults, Matcher_Labels
 from zato.common.hl7.mllp.settings import describe_bounds_violations
 from zato.common.model.hl7 import HL7MLLPChannelConfigObject
 from zato.common.util.api import asbool
@@ -62,22 +62,6 @@ _alert_field_names = alerts_tab.get_storage_field_names(_alert_type)
 # .. what a channel stores under security_id ..
 _MTLS_Select_Prefix = SEC_DEF_TYPE.MTLS + '/'
 
-# .. the fields a channel matches incoming messages on, in MSH order, each with what the list
-# .. calls it - the wizard's Match row is written the same way ..
-_Matcher_Labels = [
-    ('msh3_sending_app', 'MSH-3'),
-    ('msh4_sending_facility', 'MSH-4'),
-    ('msh5_receiving_app', 'MSH-5'),
-    ('msh6_receiving_facility', 'MSH-6'),
-    ('msh9_message_type', 'MSH-9.1'),
-    ('msh9_trigger_event', 'MSH-9.2'),
-    ('msh11_processing_id', 'MSH-11'),
-    ('msh12_version_id', 'MSH-12'),
-]
-
-# .. what a channel with no matcher of its own is said to take ..
-_Any_Message_Label = 'All messages'
-
 # .. the two flags a row turns over on the list itself ..
 _Inline_Flag_Names = ['is_active', 'is_default']
 
@@ -85,7 +69,7 @@ _Inline_Flag_Names = ['is_active', 'is_default']
 _Inline_Target_Names = ['service', 'destinations', 'respond_from', 'delivery_mode']
 
 # .. everything a row may change without the wizard being opened ..
-_Inline_Field_Names = [name for name, _ in _Matcher_Labels] + _Inline_Flag_Names + _Inline_Target_Names
+_Inline_Field_Names = [name for name, _ in Matcher_Labels] + _Inline_Flag_Names + _Inline_Target_Names
 
 # .. what the page is told when no other channel held the default flag ..
 _No_Previous_Default = 0
@@ -102,28 +86,9 @@ def get_match_values(get_value:'any_') -> 'stranydict':
     """
     out = {}
 
-    for name, _ in _Matcher_Labels:
+    for name, _ in Matcher_Labels:
         out[name] = get_value(name)
 
-    return out
-
-# ################################################################################################################################
-
-def get_match_label(values:'stranydict') -> 'str':
-    """ Says in one line which messages a channel takes - each matcher it fills in narrows
-    what reaches it, and a channel that fills in none of them takes everything.
-    """
-    parts = []
-
-    for name, label in _Matcher_Labels:
-        value = values[name]
-        if value:
-            parts.append(f'{label} = {value}')
-
-    if not parts:
-        return _Any_Message_Label
-
-    out = ', '.join(parts)
     return out
 
 # ################################################################################################################################
