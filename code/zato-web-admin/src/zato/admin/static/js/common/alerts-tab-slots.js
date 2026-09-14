@@ -275,13 +275,14 @@ $.fn.zato.alerts_tab.saveSlots = function(line, slots) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Registers the time slots kind with the micro-forms kit
-$.fn.zato.alerts_tab.registerSlotsKind = function() {
+// Registers the time slots kind with a micro-forms host - the tab's own forms, or the
+// forms of a page laying the tab's fields out in a popover of its own, e.g. a wizard's
+$.fn.zato.alerts_tab.registerSlotsKind = function(forms) {
 
     var tab = $.fn.zato.alerts_tab;
     var kit = $.fn.zato.time_slots;
 
-    tab.forms.registerKind(tab.settings.slots_kind, {
+    forms.registerKind(tab.settings.slots_kind, {
 
         build: function(fieldSpec, row) {
 

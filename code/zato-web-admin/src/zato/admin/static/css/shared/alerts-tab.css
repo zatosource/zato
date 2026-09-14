@@ -131,10 +131,14 @@
 /* The popovers the numbers are edited in                        */
 /* ------------------------------------------------------------ */
 
-/* The popovers are appended to document.body, hence a class of their own -
-   their labels read in the regular weight, the way the questions do, and a
-   switch inside one is the size the dialog's own are, the .data-popup slider
-   tokens of style.css, rather than the page-wide size of :root */
+/* The popovers are appended to document.body, hence classes of their own. Every
+   popover of the tab wears .alerts-tab-popover, under which the rules below lay
+   its fields out, and a look - .alerts-tab-micro-form in a dialog, where the
+   labels read in the regular weight, the way the questions do, and a switch is
+   the size the dialog's own are, the .data-popup slider tokens of style.css,
+   rather than the page-wide size of :root. A page whose popovers have a look of
+   their own, a wizard, gives the tab its class instead, so the tab's popovers
+   look like the page's own. */
 .alerts-tab-micro-form {
     --micro-form-label-weight: 400;
     --toggle-width: 32px;
@@ -144,14 +148,17 @@
     --toggle-travel: 16px;
     --toggle-off-background: #999;
     --toggle-on-background: #2d6392;
+}
+
+.alerts-tab-popover {
     --alerts-tab-slots-indent: 6px;
 
     /* Room for the longest unit label */
     --alerts-tab-unit-select-min-width: 7.5em;
 }
 
-.alerts-tab-micro-form .micro-form-unit,
-.alerts-tab-micro-form .time-slot-select {
+.alerts-tab-popover .micro-form-unit,
+.alerts-tab-popover .time-slot-select {
     min-width: var(--alerts-tab-unit-select-min-width);
 }
 
@@ -163,27 +170,27 @@
    A number with a unit select after it stays its own width, the two together
    being wider than the label anyway. A popover with a width of its own - one
    with chips - is not sized by a label, so its counts keep the width a count has. */
-.alerts-tab-micro-form.micro-form-fit .micro-form-field > input.micro-form-number {
+.alerts-tab-popover.micro-form-fit .micro-form-field > input.micro-form-number {
     width: 0;
     min-width: 100%;
 }
 
 /* In a popover with a width of its own the fields sharing a row sit next to each other at the width
    each has - a count, then a count with its unit select - rather than being spread across the row */
-.alerts-tab-micro-form:not(.micro-form-fit) .micro-form-row .micro-form-field {
+.alerts-tab-popover:not(.micro-form-fit) .micro-form-row .micro-form-field {
     flex: 0 0 auto;
 }
 
 /* The field the time slots are in is as wide as they are, which is what sizes the popover */
-.alerts-tab-micro-form .micro-form-field-own {
+.alerts-tab-popover .micro-form-field-own {
     width: max-content;
 }
 
-.alerts-tab-micro-form .time-slots {
+.alerts-tab-popover .time-slots {
     margin-left: var(--alerts-tab-slots-indent);
 }
 
-.alerts-tab-micro-form .time-slots-add {
+.alerts-tab-popover .time-slots-add {
     align-self: flex-start;
     margin-left: var(--alerts-tab-slots-indent);
 }

@@ -17,6 +17,9 @@ microForms.installPopover = function(host, forms) {
     // Shows the given content element in a popover anchored to the target.
     // This is the one place all the host's popovers come from, so they all
     // close on Escape and on clicks outside, and only one is open at a time.
+    // A popover that does not fit under its link goes over it, and one too tall
+    // for either is shifted up, over the link if it comes to that, as far as it
+    // takes to stay whole within the window - nothing ever runs off the page.
     forms.showTippy = function(targetElement, contentElement, onHidden, maxWidth) {
 
         var formsConfig = forms.config;
@@ -37,7 +40,10 @@ microForms.installPopover = function(host, forms) {
             duration: [150, 150],
             placement: formsConfig.placement,
             popperOptions: {
-                modifiers: [{name: 'flip', options: {fallbackPlacements: formsConfig.flipPlacements}}]
+                modifiers: [
+                    {name: 'flip', options: {fallbackPlacements: formsConfig.flipPlacements}},
+                    {name: 'preventOverflow', options: {padding: formsConfig.viewportPadding, altAxis: true, tether: false}}
+                ]
             },
             appendTo: document.body,
             theme: formsConfig.theme,
@@ -50,26 +56,37 @@ microForms.installPopover = function(host, forms) {
                 // down, before the dialog a host may sit in gets to close itself on the
                 // same key ..
                 var handleEscape = function(event) {
-                    if(event.key === 'Escape') {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        forms.close();
+
+                    if(event.key !== 'Escape') {
+                        return;
                     }
+
+                    // A popover open over this one goes first - the key is its
+                    if(forms._isCovered(tippyInstance)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                    forms.close();
                 };
                 tippyInstance.handleEscape = handleEscape;
                 document.addEventListener('keydown', handleEscape, true);
 
                 // .. and so does a click anywhere outside of it, a menu of its own
-                // controls being as good as inside.
+                // controls and a popover open over it being as good as inside.
                 var handleOutsideMousedown = function(event) {
                     var isInPopper = tippyInstance.popper.contains(event.target);
                     var isOnTarget = targetElement.contains(event.target);
                     var isInMenu = event.target.closest(formsConfig.menuSelector) !== null;
+                    var isInPopover = event.target.closest(formsConfig.popoverSelector) !== null;
 
                     if(!isInPopper) {
                         if(!isOnTarget) {
                             if(!isInMenu) {
-                                forms.close();
+                                if(!isInPopover) {
+                                    forms.close();
+                                }
                             }
                         }
                     }
@@ -128,6 +145,19 @@ microForms.installPopover = function(host, forms) {
         instance.show();
 
         var out = instance;
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Whether another popover opened over this one - popovers join the page in the
+    // order they open, so the one to open last is the last one on it
+    forms._isCovered = function(tippyInstance) {
+
+        var popovers = document.querySelectorAll(forms.config.popoverSelector);
+        var lastPopover = popovers[popovers.length - 1];
+
+        var out = !tippyInstance.popper.contains(lastPopover);
         return out;
     };
 

@@ -372,10 +372,18 @@ def get_alerts_tab_context(form:'any_', alert_type:'str') -> 'anydict':
 
         section_by_label[section_label]['lines'].append(row)
 
+    # Every field of the tab in storage order - a page that builds its own lines, e.g. a wizard's
+    # Alerts popup, renders them all hidden and mirrors the ones it shows
+    fields:'anylist' = []
+
+    for storage_field_name in get_storage_field_names(alert_type):
+        fields.append(form[storage_field_name])
+
     out = {
         'tab_label': Tab_Label,
         'sections': sections,
         'hidden_fields': hidden_fields,
+        'fields': fields,
         'edit_hint': Edit_Hint,
     }
 
@@ -420,6 +428,7 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
 
         entry = {
             'name': line['name'],
+            'section': line['section'],
             'kind': line['kind'],
             'label': line['label'],
             'fields': line['fields'],
@@ -450,6 +459,7 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
         if line['kind'] == Line_Kind_Pick:
             entry['field'] = line['fields'][0]
             entry['live_type'] = line['live_type']
+            entry['empty_html'] = get_empty_html(line)
 
         if 'depends_on' in line:
             entry['depends_on'] = line['depends_on']

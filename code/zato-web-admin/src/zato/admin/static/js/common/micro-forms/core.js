@@ -106,12 +106,17 @@ microForms.defaults = {
     maxWidth: 480,
     fitMaxWidth: 'none',
 
-    // A menu one of the popover's controls opens outside of it
+    // A menu one of the popover's controls opens outside of it, and a popover of any
+    // host - one may open over another, a line's popover over a popover of lines, and
+    // the one below then leaves clicks into the one above and Escape to it
     menuSelector: '.zato-dropdown-menu',
+    popoverSelector: '.micro-form',
 
-    // Where a popover opens relative to its link, and where it goes when it does not fit there
+    // Where a popover opens relative to its link, where it goes when it does not fit
+    // there, and how close to the window's edge it is shifted to stay whole
     placement: 'bottom-start',
     flipPlacements: ['top-start'],
+    viewportPadding: 8,
 
     // The attribute an option of a unit select keeps its plural label in
     unitPluralAttr: 'data-plural',
@@ -140,7 +145,7 @@ microForms.defaults = {
     // Whether the popover carries the How does it work? badge
     showHowItWorks: true,
 
-    // A class of the host's own put on every popover it opens
+    // The classes of the host's own put on every popover it opens, separated by spaces
     popupClass: ''
 };
 
@@ -326,11 +331,13 @@ microForms.setup = function(host, config) {
         container.className = 'micro-form zato-popup';
         container.id = formsConfig.popupId;
 
-        // The host's own class, which is where it overrides the micro-form
+        // The host's own classes, which are where it overrides the micro-form
         // tokens - the popover is appended to document.body, so no container
         // of the host's page is above it
         if(formsConfig.popupClass) {
-            container.classList.add(formsConfig.popupClass);
+            formsConfig.popupClass.split(' ').forEach(function(className) {
+                container.classList.add(className);
+            });
         }
 
         if(formsConfig.labelsLeft) {
@@ -492,7 +499,14 @@ microForms.setup = function(host, config) {
             maxWidth = formsConfig.fitMaxWidth;
         }
 
-        var instance = forms.showTippy(targetElement, container, null, maxWidth);
+        // A form with something to put away once it is gone says so in its descriptor
+        var onHidden = null;
+
+        if(descriptor.onClose) {
+            onHidden = descriptor.onClose;
+        }
+
+        var instance = forms.showTippy(targetElement, container, onHidden, maxWidth);
         forms.initHelp(container);
         forms.makeResizable(instance, sizeKey);
     };

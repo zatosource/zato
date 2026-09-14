@@ -11,7 +11,8 @@
 //
 // How to use, in a page's JS:
 //
-//     // With common/alerts-tab-slots.js loaded before this file
+//     // With common/alerts-tab-slots.js loaded before this file - a page whose
+//     // popovers have a class of their own may give it as popup_class
 //     $.fn.zato.alerts_tab.init({config_id: 'out-sftp-alerts-tab-config'});
 //
 //     // Before opening the create dialog
@@ -45,7 +46,10 @@ $.fn.zato.alerts_tab.config = {
     // Every element the popovers make is named after this
     idPrefix: 'alerts-tab',
 
-    // The class the popovers wear, under which alerts-tab.css tunes the micro-form tokens
+    // The classes the popovers wear - the one every popover of the tab wears, under which
+    // alerts-tab.css lays its fields out, and the look, under which it tunes the micro-form
+    // tokens of a dialog's popovers - a page with a look of its own gives its class instead
+    popoverClass: 'alerts-tab-popover',
     popupClass: 'alerts-tab-micro-form',
 
     // The lines of the tab are covered by the dialog's own How does it work? badge
@@ -117,15 +121,23 @@ $.fn.zato.alerts_tab.init = function(options) {
 
     tab.settings.unit_seconds = unitSeconds;
 
+    // The popovers wear the tab's own look, unless the page whose lines they open
+    // over has a class of its own for them, so they look like the page's own popovers
+    var lookClass = tab.config.popupClass;
+
+    if(options.popup_class) {
+        lookClass = options.popup_class;
+    }
+
     $.fn.zato.micro_forms.setup(tab, {
         descriptors: tab.buildDescriptors(),
-        popupClass: tab.config.popupClass,
+        popupClass: tab.config.popoverClass + ' ' + lookClass,
         showHowItWorks: tab.config.showHowItWorks,
         showCancel: true,
         onDone: tab.render
     });
 
-    tab.registerSlotsKind();
+    tab.registerSlotsKind(tab.forms);
     $.fn.zato.micro_forms.registerChipsKind(tab);
 }
 

@@ -77,6 +77,9 @@ Measure_SOAP_Faults = 'soap_faults'
 # The measure of an outgoing FHIR connection's operation outcomes - how many responses came as an OperationOutcome of each issue code
 Measure_Operation_Outcomes = 'operation_outcomes'
 
+# The measure of an MLLP channel's negative acknowledgments - how many acks the channel sent with each negative code
+Measure_Ack_Codes = 'ack_codes'
+
 # The key a merged fact carries the window of each of its measures under
 Window_Seconds_By_Measure_Key = 'window_seconds_by_measure'
 

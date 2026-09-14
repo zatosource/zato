@@ -25,6 +25,7 @@ from zato.common.alerting.seed.rules_common import channels_rules, common_rules,
 from zato.common.alerting.seed.rules_connections import email_rules, file_transfer_rules, llm_rules, mcp_rules, \
     microsoft_rules, odoo_rules, rest_rules, soap_rules, sql_rules
 from zato.common.alerting.seed.rules_fhir import fhir_rules
+from zato.common.alerting.seed.rules_mllp import mllp_channel_rules
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditSource
 from zato.common.audit_log.file_transfer_run import Run_Status_Clean, Run_Status_Empty, Run_Status_Failed, \
@@ -138,6 +139,7 @@ _run_statuses = [
 _inactive_rule_full_names = [
     'alerts_file_transfer_Test_Transfer_Failing',
     'alerts_channels_Channel_Silent',
+    'alerts_mllp_channel_Channel_Silent',
 ]
 
 # ################################################################################################################################
@@ -151,6 +153,7 @@ _inactive_rule_full_names = [
 default_rulesets = [
     ('alerts_common',        common_rules),
     ('alerts_channels',      channels_rules),
+    ('alerts_mllp_channel',  mllp_channel_rules),
     ('alerts_rest',          rest_rules),
     ('alerts_soap',          soap_rules),
     ('alerts_fhir',          fhir_rules),

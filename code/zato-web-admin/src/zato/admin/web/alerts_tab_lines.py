@@ -12,9 +12,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.admin.web.alerts_tab_picks import Email_Empty_Text, email_kinds, Live_Type_Email_Connection, \
     Live_Type_LLM_Connection, llm_kinds, LLM_Empty_Text
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_channels, alert_type_fhir, alert_type_file_transfer, alert_type_rest, \
-    alert_type_soap, Email_Connection_Field, field_display as shared_field_display, field_help, get_defaults, Is_Active_Field, \
-    LLM_Connection_Field, Unit_Field_Suffix
+from zato.common.alerting.object_config import alert_type_channels, alert_type_fhir, alert_type_file_transfer, \
+    alert_type_mllp_channel, alert_type_rest, alert_type_soap, Email_Connection_Field, field_display as shared_field_display, \
+    field_help, get_defaults, Is_Active_Field, LLM_Connection_Field, Unit_Field_Suffix
 from zato.common.api import HTTP_SOAP
 
 # ################################################################################################################################
@@ -49,6 +49,7 @@ Status_Codes_Window_Unit_Field  = 'status_codes_window' + Unit_Field_Suffix
 Connection_Failures_Window_Unit_Field = 'connection_failures_window' + Unit_Field_Suffix
 Faults_Window_Unit_Field        = 'faults_window' + Unit_Field_Suffix
 Outcomes_Window_Unit_Field      = 'outcomes_window' + Unit_Field_Suffix
+Acks_Window_Unit_Field          = 'acks_window' + Unit_Field_Suffix
 
 # The unit selects of the tab, by name
 unit_fields:'anydict' = {
@@ -63,6 +64,7 @@ unit_fields:'anydict' = {
     Connection_Failures_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
     Faults_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
     Outcomes_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
+    Acks_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
 }
 
 # The JSON list of time slots of a channel's silence alert
@@ -80,6 +82,10 @@ Fault_Codes_Default = get_defaults(alert_type_soap)[Fault_Codes_Field]
 # The OperationOutcome issue codes an outgoing FHIR connection alerts on, as typed, with the seeded default the same way
 Outcome_Codes_Field = config_map.Outcome_Codes_Field_Name
 Outcome_Codes_Default = get_defaults(alert_type_fhir)[Outcome_Codes_Field]
+
+# The negative acknowledgment codes an MLLP channel alerts on, as typed, with the seeded default the same way
+Ack_Codes_Field = config_map.Ack_Codes_Field_Name
+Ack_Codes_Default = get_defaults(alert_type_mllp_channel)[Ack_Codes_Field]
 
 # How often an outgoing connection is pinged - fields of the connection's own form rather than alert settings,
 # which the tab edits in place, so they carry no alert prefix and travel outside of the alert settings
@@ -115,9 +121,11 @@ _popover_labels = {
     'connection_failures_window': 'In the last',
     'faults_window':        'In the last',
     'outcomes_window':      'In the last',
+    'acks_window':          'In the last',
     'status_code_threshold': 'Alert after',
     'fault_threshold':      'Alert after',
     'outcome_threshold':    'Alert after',
+    'ack_threshold':        'Alert after',
     'connection_failures':  'Alert after',
     'arrival_overdue':      'Alert after',
     'silence_window':       'Alert after',
@@ -137,7 +145,7 @@ field_how_it_works[Silence_Window_Unit_Field] = 'Whether the silence a channel t
 
 for _window_unit_field in (Server_Errors_Window_Unit_Field, Latency_Window_Unit_Field, Auth_Failures_Window_Unit_Field,
     Client_Errors_Window_Unit_Field, Status_Codes_Window_Unit_Field, Connection_Failures_Window_Unit_Field,
-    Faults_Window_Unit_Field, Outcomes_Window_Unit_Field):
+    Faults_Window_Unit_Field, Outcomes_Window_Unit_Field, Acks_Window_Unit_Field):
     field_how_it_works[_window_unit_field] = field_how_it_works[Window_Unit_Field]
 
 field_display[Health_Check_Run_Every_Field] = ('Ping every', '')
@@ -380,6 +388,53 @@ def _operation_outcomes_line() -> 'anydict':
 
 # ################################################################################################################################
 
+# The negative acknowledgments an MLLP channel alerts on - counted by the code of the ACK the channel sent back
+def _negative_acks_line() -> 'anydict':
+    out = {
+        'name': 'negative_acks',
+        'section': Section_Failures,
+        'kind': Line_Kind_Popover,
+        'label': 'Negative acks',
+        'title': 'Negative acks',
+        'fields': [Ack_Codes_Field, 'ack_threshold', 'acks_window'],
+        'rows': [[Ack_Codes_Field], ['ack_threshold', 'acks_window']],
+        'unit_field': Acks_Window_Unit_Field,
+        'text_fields': {Ack_Codes_Field: Ack_Codes_Default},
+        'summary': 'Alert after {ack_threshold|ack|acks} with ' + f'{{{Ack_Codes_Field}}} ' + \
+            f'in the last {{{Acks_Window_Unit_Field}@acks_window}}',
+        'how_it_works': 'Which acknowledgment codes the channel sent back raise an alert - AE and CE say the service ' + \
+            'failed to process a message, AR and CR that the message was rejected - each one a chip, typed and added ' + \
+            'with Enter, removed with its cross - how many acknowledgments with one of them do, and how long the window ' + \
+            'they are counted over. The alerts read the channel\'s audit log, so the audit log option under Logging ' + \
+            'and errors has to be on for anything to be counted.',
+    }
+    return out
+
+# ################################################################################################################################
+
+# A channel that receives nothing - what it receives is a request for an HTTP channel and a message for an MLLP one
+def _silence_line(noun:'str') -> 'anydict':
+    out = {
+        'name': 'silence',
+        'section': Section_Traffic,
+        'kind': Line_Kind_Popover,
+        'label': f'No {noun}s received',
+        'title': f'No {noun}s received',
+        'fields': ['traffic_expected', 'silence_window', Silence_Slots_Field],
+        'rows': [['traffic_expected', 'silence_window', Silence_Slots_Field]],
+        'unit_field': Silence_Window_Unit_Field,
+        'slots_field': Silence_Slots_Field,
+        'off_field': 'traffic_expected',
+        'summary_off': 'Alerts off',
+        'summary': f'Alert after {{{Silence_Window_Unit_Field}@silence_window}} without a {noun}' + \
+            f'{{{Silence_Slots_Field}#range of the day with its own settings|ranges of the day with their own settings}}',
+        'how_it_works': f'Whether a channel that receives no {noun}s raises an alert and after how long, ' + \
+            'all day or in ranges of the day with a switch and a silence of their own.',
+    }
+    return out
+
+# ################################################################################################################################
+
 # The lines of an outgoing HTTP connection of any kind - a line of the kind's own, the SOAP faults or the FHIR operation
 # outcomes, goes right after the status codes
 def _http_lines(*, extra_failure_line:'anydict | None'=None) -> 'anylist':
@@ -516,23 +571,18 @@ type_lines:'anydict' = {
                 'and how long the window they are counted over.',
         },
         _slow_responses_line(),
-        {
-            'name': 'silence',
-            'section': Section_Traffic,
-            'kind': Line_Kind_Popover,
-            'label': 'No requests received',
-            'title': 'No requests received',
-            'fields': ['traffic_expected', 'silence_window', Silence_Slots_Field],
-            'rows': [['traffic_expected', 'silence_window', Silence_Slots_Field]],
-            'unit_field': Silence_Window_Unit_Field,
-            'slots_field': Silence_Slots_Field,
-            'off_field': 'traffic_expected',
-            'summary_off': 'Alerts off',
-            'summary': f'Alert after {{{Silence_Window_Unit_Field}@silence_window}} without a request' + \
-                f'{{{Silence_Slots_Field}#range of the day with its own settings|ranges of the day with their own settings}}',
-            'how_it_works': 'Whether a channel that receives no requests raises an alert and after how long, ' + \
-                'all day or in ranges of the day with a switch and a silence of their own.',
-        },
+        _silence_line('request'),
+    ],
+    alert_type_mllp_channel: [
+        _active_line(),
+        _use_llm_line(),
+        _llm_line(),
+        _email_line(),
+        _failures_in_a_row_line(),
+        _error_rate_line(),
+        _negative_acks_line(),
+        _slow_responses_line(),
+        _silence_line('message'),
     ],
     alert_type_rest: _http_lines(),
     alert_type_soap: _http_lines(extra_failure_line=_soap_faults_line()),

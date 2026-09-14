@@ -108,6 +108,7 @@ _type_titles = {
     'file_transfer': 'File transfer',
     'scheduler':     'Scheduler',
     'channels':      'Channels',
+    'mllp_channel':  'MLLP channels',
     'common':        'Common',
 }
 
@@ -134,6 +135,7 @@ _type_cells = {
         'arrival_overdue'],
     'scheduler':     ['error_rate', 'window', 'overdue_multiplier', 'start_delay', 'use_llm'],
     'channels':      ['consecutive_failures', 'error_rate', 'window', 'max_latency', 'use_llm'],
+    'mllp_channel':  ['consecutive_failures', 'error_rate', 'window', 'ack_codes', 'max_latency', 'use_llm'],
     'common':        ['certificate_warning', 'outstanding_backlog', 'feed_silence', None, None],
 }
 

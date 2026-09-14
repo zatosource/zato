@@ -77,12 +77,14 @@ alert_type_channels = 'channels'
 alert_type_rest = 'rest'
 alert_type_soap = 'soap'
 alert_type_fhir = 'fhir'
+alert_type_mllp_channel = 'mllp_channel'
 
 conn_type_to_alert_type:'strstrdict' = {
     GENERIC.CONNECTION.TYPE.OUTCONN_SFTP:     alert_type_file_transfer,
     GENERIC.CONNECTION.TYPE.OUTCONN_FTP:      alert_type_file_transfer,
     GENERIC.CONNECTION.TYPE.OUTCONN_SMB:      alert_type_file_transfer,
     GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: alert_type_fhir,
+    GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: alert_type_mllp_channel,
 }
 
 # The HTTPSOAP rows that carry alert settings of their own, by connection and transport -
@@ -178,6 +180,9 @@ field_display = {
     'outcome_codes':        ('Outcome codes', ''),
     'outcome_threshold':    ('Outcomes', ''),
     'outcomes_window':      ('Outcomes window', ''),
+    'ack_codes':            ('Ack codes', ''),
+    'ack_threshold':        ('Acknowledgments', ''),
+    'acks_window':          ('Acks window', ''),
     'traffic_expected':     ('Alert on silence', ''),
     'silence_window':       ('Silence', ''),
     'silence_slots':        ('Time ranges', ''),
@@ -229,6 +234,10 @@ field_help = {
                             'a wrong request, not-found a missing resource, security, login, forbidden and expired a refused caller.',
     'outcome_threshold':    'How many OperationOutcomes with one of the issue codes in the window raise an alert.',
     'outcomes_window':      'How long the window the OperationOutcomes are counted over is.',
+    'ack_codes':            'The negative acknowledgment codes that count, comma-separated - AE and CE say the service failed ' + \
+                            'to process a message, AR and CR that the message was rejected.',
+    'ack_threshold':        'How many negative acknowledgments with one of the codes in the window raise an alert.',
+    'acks_window':          'How long the window the acknowledgments are counted over is.',
     'traffic_expected':     'Whether a channel that receives no requests for the time below raises an alert.',
     'silence_window':       'How long the channel may go without a request, in minutes, hours or days.',
     'silence_slots':        'The ranges of the day with a silence and a switch of their own.',

@@ -17,7 +17,8 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting.config_map_fields import _call_measures as _call_measures, \
-    _file_transfer_measures as _file_transfer_measures, Explain_With_LLM_Key as Explain_With_LLM_Key, \
+    _file_transfer_measures as _file_transfer_measures, Ack_Codes_Default as Ack_Codes_Default, \
+    Ack_Codes_Field_Name as Ack_Codes_Field_Name, Explain_With_LLM_Key as Explain_With_LLM_Key, \
     Fault_Codes_Default as Fault_Codes_Default, Fault_Codes_Field_Name as Fault_Codes_Field_Name, \
     Kind_Duration as Kind_Duration, Kind_Number as Kind_Number, Kind_Ruleset_Toggle as Kind_Ruleset_Toggle, \
     Kind_Text as Kind_Text, Kind_Time_Slots as Kind_Time_Slots, Kind_Toggle as Kind_Toggle, \
@@ -77,6 +78,7 @@ type_to_ruleset = {
     'file_transfer': 'alerts_file_transfer',
     'scheduler':     'alerts_scheduler',
     'channels':      'alerts_channels',
+    'mllp_channel':  'alerts_mllp_channel',
     'common':        'alerts_common',
 }
 
@@ -97,7 +99,8 @@ type_sources:'dict[str, strlist]' = {
     'odoo':          [AuditSource.Odoo],
     'file_transfer': [AuditSource.File_Outgoing],
     'scheduler':     [AuditSource.Scheduler],
-    'channels':      [AuditSource.REST_Channel, AuditSource.SOAP_Channel, AuditSource.MLLP_Channel],
+    'channels':      [AuditSource.REST_Channel, AuditSource.SOAP_Channel],
+    'mllp_channel':  [AuditSource.MLLP_Channel],
 }
 
 # ################################################################################################################################

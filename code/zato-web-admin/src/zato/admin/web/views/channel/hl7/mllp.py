@@ -21,10 +21,12 @@ from django.http import HttpResponse, JsonResponse
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web import alerts_tab
 from zato.admin.web.forms import populate_form_initial
 from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm, RowEditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, \
     get_http_channel_security_id, get_security_id_from_select, SecurityList
+from zato.common.alerting.object_config import alert_type_mllp_channel, Field_Prefix
 from zato.common.api import GENERIC, generic_attrs, Groups, HL7, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.destination.model import count_entries
 from zato.common.hl7.mllp.fields import Channel_Defaults, resolve_max_message_size
@@ -51,6 +53,10 @@ _REST_Channel_Name_Prefix = 'hl7.rest.'
 
 # .. the multi-step wizard template, serving both the create and the edit page ..
 _Wizard_Template = 'zato/channel/hl7/mllp-wizard.html'
+
+# .. the alert settings a channel carries and the names they travel under between the wizard and the backend ..
+_alert_type = alert_type_mllp_channel
+_alert_field_names = alerts_tab.get_storage_field_names(_alert_type)
 
 # .. what the security selects carry in front of a definition's id, an id alone being
 # .. what a channel stores under security_id ..
@@ -221,7 +227,7 @@ class _CreateEdit(CreateEdit):
         'fix_off_by_one_field_index',
         'destinations', 'respond_from', 'delivery_mode',
         'use_rest', 'rest_only', 'rest_channel_id', 'rest_url_path', 'rest_security_id',
-    ) + generic_attrs
+    ) + generic_attrs + _alert_field_names
     output_required = 'id', 'name'
 
 # ################################################################################################################################
@@ -230,6 +236,12 @@ class _CreateEdit(CreateEdit):
         """ A field the page leaves empty arrives with no value at all, so what travels on is
         what the field defaults to - a channel stores its own defaults rather than nulls.
         """
+
+        # The Alerts popup's fields arrive as text and are stored typed - booleans, integers and stripped text
+        if name.startswith(Field_Prefix):
+            out = alerts_tab.pre_process_alert_item(_alert_type, name, value)
+            return out
+
         if value is None:
             if name in Channel_Defaults:
                 default = Channel_Defaults[name]
@@ -265,6 +277,13 @@ class _CreateEdit(CreateEdit):
         # The backing REST channel is named after the MLLP channel and needs nothing else from it,
         # so it is settled here and its id travels with the one and only save of the MLLP channel.
         initial_input_dict['rest_channel_id'] = self._sync_rest_channel()
+
+# ################################################################################################################################
+
+    def pre_process_input_dict(self, input_dict:'stranydict') -> 'None':
+
+        # A duration is stored as seconds, which is what its count and unit join into
+        alerts_tab.join_durations(_alert_type, input_dict)
 
 # ################################################################################################################################
 
@@ -673,13 +692,17 @@ def wizard_create(req:'any_') -> 'TemplateResponse':
     security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, [SEC_DEF_TYPE.BASIC_AUTH])
     mtls_security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, [SEC_DEF_TYPE.MTLS])
 
+    form = CreateForm(req=req, security_list=security_list, mtls_security_list=mtls_security_list)
+
     return_data = {
         'cluster_id': req.zato.cluster_id,
-        'form': CreateForm(req=req, security_list=security_list, mtls_security_list=mtls_security_list),
+        'form': form,
         'is_edit': False,
         'item_id': '',
         'rest_channel_id': 0,
         'security_key_list': [],
+        'alerts_tab': alerts_tab.get_alerts_tab_context(form, _alert_type),
+        'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
     }
 
     out = TemplateResponse(req, _Wizard_Template, return_data)
@@ -729,6 +752,9 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     # .. the edit endpoint reads its input under the edit- prefix, which is what the form
     # .. is built with and what the wizard's own fieldPrefix mirrors ..
     form = EditForm(prefix='edit', req=req, security_list=security_list, mtls_security_list=mtls_security_list)
+
+    # A duration is stored as seconds and edited as a count with a unit
+    alerts_tab.split_durations(_alert_type, item_dict)
     populate_form_initial(form, item_dict)
 
     return_data = {
@@ -741,6 +767,8 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
         # keeps the REST channel it already has rather than being given a second one
         'rest_channel_id': rest_channel_id,
         'security_key_list': _get_rest_security_key_list(req, item_dict['name']),
+        'alerts_tab': alerts_tab.get_alerts_tab_context(form, _alert_type),
+        'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
     }
 
     out = TemplateResponse(req, _Wizard_Template, return_data)

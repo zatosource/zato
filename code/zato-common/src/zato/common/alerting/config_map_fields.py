@@ -13,9 +13,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # Zato
-from zato.common.alerting.collectors.common import Measure_Auth_Failures, Measure_Client_Errors, Measure_Connection_Failures, \
-    Measure_Error_Rate, Measure_File_Runs, Measure_Latency, Measure_Operation_Outcomes, Measure_Server_Errors, Measure_Silence, \
-    Measure_SOAP_Faults, Measure_Status_Codes
+from zato.common.alerting.collectors.common import Measure_Ack_Codes, Measure_Auth_Failures, Measure_Client_Errors, \
+    Measure_Connection_Failures, Measure_Error_Rate, Measure_File_Runs, Measure_Latency, Measure_Operation_Outcomes, \
+    Measure_Server_Errors, Measure_Silence, Measure_SOAP_Faults, Measure_Status_Codes
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,6 +50,10 @@ Fault_Codes_Default = 'fault_codes'
 # The FHIR OperationOutcome issue codes an outgoing FHIR connection alerts on - the field and the rule default it reads and writes
 Outcome_Codes_Field_Name = 'outcome_codes'
 Outcome_Codes_Default = 'outcome_codes'
+
+# The negative acknowledgment codes an MLLP channel alerts on - the field and the rule default it reads and writes
+Ack_Codes_Field_Name = 'ack_codes'
+Ack_Codes_Default = 'ack_codes'
 
 # The rule default a type's window field reads and writes - how far back the
 # error-rate and failure-count facts of the type's sources are measured over.
@@ -251,6 +255,29 @@ type_fields:'dict[str, list[stranydict]]' = {
             'default': 'client_error_threshold', 'is_percent': False},
         {'name': 'client_errors_window', 'kind': Kind_Duration, 'rules': ['Client_Errors'],
             'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Client_Errors]},
+        {'name': 'traffic_expected', 'kind': Kind_Toggle, 'rules': ['Channel_Silent']},
+        {'name': Silence_Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Channel_Silent'],
+            'default': 'silence_seconds', 'is_percent': False, 'measures': [Measure_Silence]},
+        {'name': Silence_Slots_Field_Name, 'kind': Kind_Time_Slots},
+        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
+    ],
+    'mllp_channel': [
+        {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Channel_Failing'],
+            'default': 'max_consecutive_failures', 'is_percent': False},
+        {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
+            'default': 'error_rate_threshold', 'is_percent': True},
+        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Error_Rate]},
+        {'name': Ack_Codes_Field_Name, 'kind': Kind_Text, 'rules': ['Negative_Acks'],
+            'default': Ack_Codes_Default},
+        {'name': 'ack_threshold', 'kind': Kind_Number, 'rules': ['Negative_Acks'],
+            'default': 'ack_threshold', 'is_percent': False},
+        {'name': 'acks_window', 'kind': Kind_Duration, 'rules': ['Negative_Acks'],
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Ack_Codes]},
+        {'name': 'max_latency', 'kind': Kind_Number, 'rules': ['Slow_Responses'],
+            'default': 'max_avg_duration_ms', 'is_percent': False},
+        {'name': 'latency_window', 'kind': Kind_Duration, 'rules': ['Slow_Responses'],
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Latency]},
         {'name': 'traffic_expected', 'kind': Kind_Toggle, 'rules': ['Channel_Silent']},
         {'name': Silence_Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Channel_Silent'],
             'default': 'silence_seconds', 'is_percent': False, 'measures': [Measure_Silence]},

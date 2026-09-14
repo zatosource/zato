@@ -13,6 +13,8 @@ look come from the wizard kit. The view provides:
 * item_id           - the id of the channel being edited, empty on create
 * rest_channel_id   - the id of the backing REST channel, zero when there is none
 * security_key_list - the definitions the REST bridge authenticates with
+* alerts_tab        - the fields of the alert settings, from alerts_tab.get_alerts_tab_context
+* alerts_tab_config - the lines the Alerts popover is built of, from alerts_tab.get_alerts_tab_config
 
 One page serves both actions. On edit the form carries the edit- prefix
 its endpoint reads its input under, which the wizard's own fieldPrefix
@@ -32,9 +34,14 @@ a failed one opens when its details are asked for {% endcomment %}
 <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-chips.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-resize.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
+{% comment %} How the popovers of the Alerts lines lay their fields out - their look is the wizard's {% endcomment %}
+<link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
 <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
 <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard.css">
@@ -55,6 +62,13 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/chips.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select-placement.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots-fields.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab-slots.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/review.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-descriptions.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-matchers.js"></script>
@@ -63,8 +77,10 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/destinations.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/destination-panels.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/review.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/alerts.js"></script>
 
 {{ security_key_list|json_script:"mllp-wizard-security-key-list" }}
+{{ alerts_tab_config|json_script:"mllp-wizard-alerts-tab-config" }}
 
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
@@ -178,6 +194,11 @@ $(document).ready(function() {
                             <div class="decision-line" id="mllp-wizard-line-reply">
                                 <label class="decision-line-label" for="mllp-wizard-slot-reply-chip">The reply is produced by</label>
                                 <span class="decision-line-slot" id="mllp-wizard-slot-reply"></span>
+                            </div>
+
+                            <div class="decision-line" id="mllp-wizard-line-alerts">
+                                <label class="decision-line-label" for="mllp-wizard-edit-alerts">Alerts</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-wizard-edit-alerts"><span class="zato-link-face summary-link-text" id="mllp-wizard-summary-alerts"></span><span class="zato-soft-hint">{{ alerts_tab.edit_hint }}</span></a></span>
                             </div>
 
                         </div>
@@ -329,6 +350,15 @@ $(document).ready(function() {
                     {{ form.destinations }}
                     {{ form.respond_from }}
                     {{ form.delivery_mode }}
+
+                    <!-- The alert settings - the Alerts popover's lines take their switches and picks
+                         from here and their popovers read and write the rest -->
+                    {% for field in alerts_tab.fields %}
+                    {{ field }}
+                    {% endfor %}
+
+                    <!-- Where the popover's panel of lines waits while the popover is closed -->
+                    <div id="mllp-wizard-alerts-holder"></div>
 
                 </div>
 
