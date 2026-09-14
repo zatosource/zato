@@ -412,22 +412,23 @@ def _negative_acks_line() -> 'anydict':
 
 # ################################################################################################################################
 
-# A channel that receives nothing - what it receives is a request for an HTTP channel and a message for an MLLP one
+# A channel that receives nothing - what it receives is a request for an HTTP channel and a message for an MLLP one.
+# The summary says only whether the alerts are on and how many rules there are - the all-day one and one per range of
+# the day with its own settings - the rules themselves are for the popover to explain.
 def _silence_line(noun:'str') -> 'anydict':
     out = {
         'name': 'silence',
         'section': Section_Traffic,
         'kind': Line_Kind_Popover,
-        'label': f'No {noun}s received',
-        'title': f'No {noun}s received',
+        'label': f'On no {noun}s',
+        'title': f'On no {noun}s',
         'fields': ['traffic_expected', 'silence_window', Silence_Slots_Field],
         'rows': [['traffic_expected', 'silence_window', Silence_Slots_Field]],
         'unit_field': Silence_Window_Unit_Field,
         'slots_field': Silence_Slots_Field,
         'off_field': 'traffic_expected',
         'summary_off': 'Alerts off',
-        'summary': f'Alert after {{{Silence_Window_Unit_Field}@silence_window}} without a {noun}' + \
-            f'{{{Silence_Slots_Field}#range of the day with its own settings|ranges of the day with their own settings}}',
+        'summary': f'Alerts on ({{{Silence_Slots_Field}#rule|rules}})',
         'how_it_works': f'Whether a channel that receives no {noun}s raises an alert and after how long, ' + \
             'all day or in ranges of the day with a switch and a silence of their own.',
     }
@@ -462,8 +463,8 @@ def _http_lines(*, extra_failure_line:'anydict | None'=None) -> 'anylist':
 
 # The lines of the tab for each alert type, in the order they are read. In a summary, `{field}` is the field's value,
 # `{field|singular|plural}` the value with the right noun after it, `{unit_field@count_field}` the count with the unit
-# select's noun after it and `{slots_field#singular|plural}` the number of time slots with the right noun after it,
-# left out when there are none. A popover line's `rows` say which fields share a row, its `unit_field` follows the last
+# select's noun after it and `{slots_field#singular|plural}` the number of rules a slots field stands for - the all-day
+# one plus one per time slot - with the right noun after it. A popover line's `rows` say which fields share a row, its `unit_field` follows the last
 # of its numbers, its `slots_field` is a list of time slots and it reads as its `summary_off` while its `off_field` is off.
 # A line with a `depends_on` toggle is dimmed while that toggle is off. A line's `text_fields` are lists of names
 # edited as chips and stored comma-separated, each with the seeded default it starts from. A line with `page_fields` edits fields of the page's own

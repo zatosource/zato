@@ -234,13 +234,13 @@ class TestAlertsTabForm:
 
         silence_line = config['lines'][-1]
 
-        assert silence_line['label'] == 'No requests received'
+        assert silence_line['label'] == 'On no requests'
         assert silence_line['fields'] == ['traffic_expected', 'silence_window', 'silence_slots']
         assert silence_line['off_field'] == 'traffic_expected'
         assert silence_line['summary_off'] == 'Alerts off'
         assert silence_line['unit_field'] == Silence_Window_Unit_Field
         assert silence_line['slots_field'] == 'silence_slots'
-        assert '{silence_slots#' in silence_line['summary']
+        assert silence_line['summary'] == 'Alerts on ({silence_slots#rule|rules})'
 
         lines_by_name = _lines_by_name(config)
 

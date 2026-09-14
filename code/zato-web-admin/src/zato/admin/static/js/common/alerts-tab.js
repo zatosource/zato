@@ -67,10 +67,11 @@ $.fn.zato.alerts_tab.config = {
 
     // The summary of a popover line - `{field}` is a value, `{field|singular|plural}` a
     // value with the right noun after it, `{unit_field@count_field}` a count with the
-    // unit select's noun after it and `{slots_field#singular|plural}` the number of time
-    // slots with the right noun after it, left out when there are none
+    // unit select's noun after it and `{slots_field#singular|plural}` the number of rules
+    // a slots field stands for with the right noun after it - the all-day rule plus one
+    // per time slot
     summaryToken: /\{([a-z_]+)(?:@([a-z_]+))?(?:#([^|}]+)\|([^}]+))?(?:\|([^|}]+)\|([^}]+))?\}/g,
-    slotsSummarySeparator: ', ',
+    allDayRules: 1,
 
     // The class a slots field carries so the popover leaves the kit's controls to the kit's own styles
     slotsFieldClass: 'micro-form-field-own',
@@ -399,16 +400,10 @@ $.fn.zato.alerts_tab.formatToken = function(fieldName, countFieldName, slotsSing
     var value = field.val();
     var out;
 
-    // The ranges of the day a slots field holds, said only when there are any
+    // The rules a slots field stands for - the all-day one and one per range of the day it holds
     if(slotsSingular !== undefined) {
-        var slotsCount = JSON.parse(value).length;
-
-        if(slotsCount === 0) {
-            out = '';
-        }
-        else {
-            out = tab.config.slotsSummarySeparator + $.fn.zato.count_text(slotsCount, slotsSingular, slotsPlural);
-        }
+        var rulesCount = tab.config.allDayRules + JSON.parse(value).length;
+        out = $.fn.zato.count_text(rulesCount, slotsSingular, slotsPlural);
     }
 
     // A unit select spells its noun both ways - the value is the singular, the label the plural
