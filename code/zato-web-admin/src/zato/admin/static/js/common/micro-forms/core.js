@@ -116,7 +116,7 @@ microForms.defaults = {
     // there, and how close to the window's edge it is shifted to stay whole
     placement: 'bottom-start',
     flipPlacements: ['top-start'],
-    viewportPadding: 8,
+    viewportPadding: 24,
 
     // The attribute an option of a unit select keeps its plural label in
     unitPluralAttr: 'data-plural',
@@ -492,21 +492,40 @@ microForms.setup = function(host, config) {
 
         renderPage();
 
-        // A form left at a size of its own opens at that size, however wide that is
+        // A form left at a size of its own opens at that size, however wide that is,
+        // and one never resized opens at the size its descriptor gives it, if any
         var sizeKey = forms.sizeKey(descriptorName);
 
         if(forms.restoreSize(container, sizeKey)) {
             maxWidth = formsConfig.fitMaxWidth;
         }
+        else if(descriptor.size) {
+            forms.applySize(container, descriptor.size.width, descriptor.size.height);
+            maxWidth = formsConfig.fitMaxWidth;
+        }
 
-        // A form with something to put away once it is gone says so in its descriptor
+        // A form with something to put away once it is gone says so in its descriptor ..
         var onHidden = null;
 
         if(descriptor.onClose) {
             onHidden = descriptor.onClose;
         }
 
-        var instance = forms.showTippy(targetElement, container, onHidden, maxWidth);
+        // .. and so does a floating one, which opens off a point of the window rather
+        // than at its link - the point its descriptor names, or the middle of the
+        // window - and where it was last dragged to after that, kept under a key of its own
+        var positionKey = null;
+        var openAt = null;
+
+        if(descriptor.floating) {
+            positionKey = forms.positionKey(descriptorName);
+
+            if(descriptor.openAt) {
+                openAt = descriptor.openAt;
+            }
+        }
+
+        var instance = forms.showTippy(targetElement, container, onHidden, maxWidth, positionKey, openAt);
         forms.initHelp(container);
         forms.makeResizable(instance, sizeKey);
     };

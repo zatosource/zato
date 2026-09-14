@@ -34,10 +34,14 @@ alerts.config = {
     editLinkId: 'mllp-wizard-edit-alerts',
     summaryId: 'mllp-wizard-summary-alerts',
 
-    // The popover - exactly as wide as its lines, the longest summary standing
-    // on one line beside its label
+    // The popover - a floating one, opening over the wizard's card rather than at
+    // its link, just under the step strip and a hair left of it, exactly as big as
+    // its lines, and after that wherever it was last left
     descriptorName: 'alerts',
     title: 'Alerts',
+    stepsId: 'mllp-wizard-steps',
+    openLeft: -4,
+    openTop: 24,
 
     // The panel of lines, what the tab names its elements under, and where
     // it waits while the popover is closed
@@ -95,6 +99,8 @@ alerts.init = function() {
     wizard.forms.descriptors[config.descriptorName] = {
         title: config.title,
         fitContent: true,
+        floating: true,
+        openAt: alerts._openAt,
         pages: [[{kind: config.linesKind}]],
         onClose: alerts._putAway
     };
@@ -133,6 +139,22 @@ alerts.open = function(anchor) {
 
 alerts.refreshSummary = function() {
     wizard.review.setSummary(alerts.config.summaryId, alerts.summary());
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Where the popover's top left corner goes the first time - off the wizard's step strip
+alerts._openAt = function() {
+
+    var config = alerts.config;
+    var steps = document.getElementById(config.stepsId).getBoundingClientRect();
+
+    var out = {
+        left: steps.left + config.openLeft,
+        top: steps.bottom + config.openTop
+    };
+
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////

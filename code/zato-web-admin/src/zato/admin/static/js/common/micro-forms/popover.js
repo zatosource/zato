@@ -1,6 +1,14 @@
 // Micro-forms - the tippy popover a micro-form is shown in, how it closes
 // and how it is dragged. Loaded after micro-forms/core.js, which calls
 // installPopover from setup.
+//
+// A popover opens under its link, or over it when it does not fit there. A
+// floating one - a descriptor saying floating: true - is not anchored to its
+// link at all, it opens at the point of the window its descriptor's openAt()
+// returns, the top left corner as {left, top}, or in the middle of the window
+// without one, and after that where it was last dragged to, which is kept in
+// the browser's local storage under a key of the host's popup id and the
+// form's name, the way its size is.
 
 (function($) {
 
@@ -10,7 +18,28 @@ var microForms = $.fn.zato.micro_forms;
 
 // ////////////////////////////////////////////////////////////////////////
 
+microForms.popoverConfig = {
+
+    // Where the positions of the floating popovers are kept, one entry per form
+    positionPrefix: 'zato.micro-form.position.',
+
+    // How far down the window the top of a floating popover with no point of its
+    // own stands the first time, as a share of the window's height - the middle
+    // of the window is where a reader looks, and a tall popover still has room
+    // to grow down
+    centeredTop: 0.18,
+
+    // How a floating popover hangs off the point it opens at - centered on the
+    // middle of the window, its top left corner on a point of its own
+    centeredPlacement: 'bottom',
+    cornerPlacement: 'bottom-start'
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 microForms.installPopover = function(host, forms) {
+
+    var popoverConfig = microForms.popoverConfig;
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -20,13 +49,16 @@ microForms.installPopover = function(host, forms) {
     // A popover that does not fit under its link goes over it, and one too tall
     // for either is shifted up, over the link if it comes to that, as far as it
     // takes to stay whole within the window - nothing ever runs off the page.
-    forms.showTippy = function(targetElement, contentElement, onHidden, maxWidth) {
+    // With a positionKey the popover is a floating one, opening where it was last
+    // left, at the point openAt() returns, or in the middle of the window, and
+    // keeping where it is dragged to.
+    forms.showTippy = function(targetElement, contentElement, onHidden, maxWidth, positionKey, openAt) {
 
         var formsConfig = forms.config;
 
         forms.close();
 
-        var instance = tippy(targetElement, {
+        var props = {
             content: contentElement,
             allowHTML: true,
             trigger: 'manual',
@@ -39,12 +71,7 @@ microForms.installPopover = function(host, forms) {
             animation: 'fade',
             duration: [150, 150],
             placement: formsConfig.placement,
-            popperOptions: {
-                modifiers: [
-                    {name: 'flip', options: {fallbackPlacements: formsConfig.flipPlacements}},
-                    {name: 'preventOverflow', options: {padding: formsConfig.viewportPadding, altAxis: true, tether: false}}
-                ]
-            },
+            popperOptions: {modifiers: forms._popperModifiers(true)},
             appendTo: document.body,
             theme: formsConfig.theme,
             maxWidth: maxWidth,
@@ -74,17 +101,18 @@ microForms.installPopover = function(host, forms) {
                 document.addEventListener('keydown', handleEscape, true);
 
                 // .. and so does a click anywhere outside of it, a menu of its own
-                // controls and a popover open over it being as good as inside.
+                // controls and a popover open over it being as good as inside - a
+                // popover under it, the one it opened from, is outside like the rest.
                 var handleOutsideMousedown = function(event) {
                     var isInPopper = tippyInstance.popper.contains(event.target);
                     var isOnTarget = targetElement.contains(event.target);
                     var isInMenu = event.target.closest(formsConfig.menuSelector) !== null;
-                    var isInPopover = event.target.closest(formsConfig.popoverSelector) !== null;
+                    var isInPopoverAbove = forms._isInPopoverAbove(tippyInstance, event.target);
 
                     if(!isInPopper) {
                         if(!isOnTarget) {
                             if(!isInMenu) {
-                                if(!isInPopover) {
+                                if(!isInPopoverAbove) {
                                     forms.close();
                                 }
                             }
@@ -108,15 +136,17 @@ microForms.installPopover = function(host, forms) {
 
             onShown: function(tippyInstance) {
 
-                // The side the popover opened on is its side for good, whatever its content grows into
+                // The side the popover opened on is its side for good, whatever its content
+                // grows into - the shift keeping it within the window stays with it, or the
+                // popover would jump back to where it did not fit
                 var placement = tippyInstance.popperInstance.state.placement;
                 tippyInstance.setProps({
                     placement: placement,
-                    popperOptions: {modifiers: [{name: 'flip', enabled: false}]}
+                    popperOptions: {modifiers: forms._popperModifiers(false)}
                 });
 
                 // The title is the drag handle - the whole popover follows it
-                forms._makeDraggable(tippyInstance);
+                forms._makeDraggable(tippyInstance, positionKey);
 
                 // The input the popover was opened for takes the cursor,
                 // its value left as it stands ..
@@ -139,12 +169,153 @@ microForms.installPopover = function(host, forms) {
                     firstInput.focus();
                 }
             }
-        });
+        };
+
+        // A floating popover hangs off a point of the window rather than off its link -
+        // the corner it was last dragged to, else the corner its host names, else the
+        // middle of the window - and it never flips, the point being exactly where it belongs
+        if(positionKey !== null) {
+
+            var position = forms.loadPosition(positionKey);
+
+            if(position === null) {
+                if(openAt !== null) {
+                    position = openAt();
+                }
+            }
+
+            var referenceRect;
+
+            if(position === null) {
+                var centerLeft = window.innerWidth / 2;
+                var centerTop = window.innerHeight * popoverConfig.centeredTop;
+
+                referenceRect = forms._pointRect(centerLeft, centerTop);
+                props.placement = popoverConfig.centeredPlacement;
+            }
+            else {
+                referenceRect = forms._pointRect(position.left, position.top);
+                props.placement = popoverConfig.cornerPlacement;
+            }
+
+            props.getReferenceClientRect = function() {
+                return referenceRect;
+            };
+
+            props.popperOptions = {modifiers: forms._popperModifiers(false)};
+        }
+
+        var instance = tippy(targetElement, props);
 
         forms._instance = instance;
         instance.show();
 
         var out = instance;
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // A point of the window as the rectangle popper positions against
+    forms._pointRect = function(left, top) {
+
+        var out = {
+            width: 0,
+            height: 0,
+            top: top,
+            bottom: top,
+            left: left,
+            right: left,
+            x: left,
+            y: top
+        };
+
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // The storage key of a floating form's position
+    forms.positionKey = function(descriptorName) {
+        var out = popoverConfig.positionPrefix + forms.config.popupId + '.' + descriptorName;
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Where a floating form was last dragged to, its top left corner in the window,
+    // or null when it was never moved. The browser is free to refuse the storage
+    // altogether, in which case the form opens in the middle of the window.
+    forms.loadPosition = function(positionKey) {
+
+        var stored = null;
+
+        try {
+            stored = window.localStorage.getItem(positionKey);
+        }
+        catch(storageError) {
+            return null;
+        }
+
+        if(stored === null) {
+            return null;
+        }
+
+        var out = JSON.parse(stored);
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    forms.savePosition = function(positionKey, box) {
+
+        var rect = box.getBoundingClientRect();
+
+        var position = {
+            left: rect.left,
+            top: rect.top
+        };
+
+        try {
+            window.localStorage.setItem(positionKey, JSON.stringify(position));
+        }
+        catch(storageError) {
+            return;
+        }
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // How popper places a popover - flipping to the other side while it may still
+    // pick a side, and shifting along both axes, off its link if it comes to that,
+    // to keep the popover whole within the window
+    forms._popperModifiers = function(flipEnabled) {
+
+        var formsConfig = forms.config;
+
+        var out = [
+            {name: 'flip', enabled: flipEnabled, options: {fallbackPlacements: formsConfig.flipPlacements}},
+            {name: 'preventOverflow', options: {padding: formsConfig.viewportPadding, altAxis: true, tether: false}}
+        ];
+
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Whether an element stands in a popover that opened over this one - popovers
+    // join the page in the order they open, so such a popover follows this one on it
+    forms._isInPopoverAbove = function(tippyInstance, element) {
+
+        var popover = element.closest(forms.config.popoverSelector);
+
+        if(popover === null) {
+            return false;
+        }
+
+        var position = tippyInstance.popper.compareDocumentPosition(popover);
+
+        var out = (position & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
         return out;
     };
 
@@ -184,8 +355,9 @@ microForms.installPopover = function(host, forms) {
 
     // Lets the popover be dragged around by its header, through the shared
     // popup drag machinery. The offset is applied to the tippy box itself,
-    // so tippy's own positioning stays untouched.
-    forms._makeDraggable = function(tippyInstance) {
+    // so tippy's own positioning stays untouched. A floating popover, one
+    // with a positionKey, keeps where it is let go, to open there next time.
+    forms._makeDraggable = function(tippyInstance, positionKey) {
 
         var handle = tippyInstance.popper.querySelector('.zato-popup-header');
         if(!handle) {
@@ -216,6 +388,12 @@ microForms.installPopover = function(host, forms) {
 
                 var movedEvent = new CustomEvent(forms.config.movedEvent);
                 document.dispatchEvent(movedEvent);
+            },
+
+            on_end: function() {
+                if(positionKey !== null) {
+                    forms.savePosition(positionKey, box);
+                }
             }
         });
     };
