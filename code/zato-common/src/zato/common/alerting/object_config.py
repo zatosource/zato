@@ -78,6 +78,7 @@ alert_type_rest = 'rest'
 alert_type_soap = 'soap'
 alert_type_fhir = 'fhir'
 alert_type_mllp_channel = 'mllp_channel'
+alert_type_mllp_outgoing = 'mllp_outgoing'
 
 conn_type_to_alert_type:'strstrdict' = {
     GENERIC.CONNECTION.TYPE.OUTCONN_SFTP:     alert_type_file_transfer,
@@ -85,6 +86,7 @@ conn_type_to_alert_type:'strstrdict' = {
     GENERIC.CONNECTION.TYPE.OUTCONN_SMB:      alert_type_file_transfer,
     GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: alert_type_fhir,
     GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: alert_type_mllp_channel,
+    GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: alert_type_mllp_outgoing,
 }
 
 # The HTTPSOAP rows that carry alert settings of their own, by connection and transport -

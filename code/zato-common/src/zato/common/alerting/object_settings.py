@@ -16,7 +16,7 @@ from __future__ import annotations
 # Zato
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import alert_type_by_http_soap, alert_type_channels, alert_type_fhir, \
-    alert_type_mllp_channel, alert_type_rest, alert_type_soap, apply_defaults, channel_sources, conn_type_to_alert_type, \
+    alert_type_mllp_channel, alert_type_mllp_outgoing, alert_type_rest, alert_type_soap, apply_defaults, channel_sources, conn_type_to_alert_type, \
     from_storage, get_alert_type, Email_Connection_Field, Is_Active_Field, LLM_Connection_Field
 from zato.common.audit_log.common import AuditSource
 from zato.common.alerting.time_slots import resolve_silence
@@ -58,6 +58,7 @@ _object_sources_by_type = {
     alert_type_soap: [AuditSource.SOAP_Outgoing],
     alert_type_fhir: [AuditSource.FHIR],
     alert_type_mllp_channel: [AuditSource.MLLP_Channel],
+    alert_type_mllp_outgoing: [AuditSource.MLLP_Outgoing],
 }
 
 # ################################################################################################################################

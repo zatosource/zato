@@ -13,8 +13,8 @@ from zato.admin.web.alerts_tab_picks import Email_Empty_Text, email_kinds, Live_
     Live_Type_LLM_Connection, llm_kinds, LLM_Empty_Text
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import alert_type_channels, alert_type_fhir, alert_type_file_transfer, \
-    alert_type_mllp_channel, alert_type_rest, alert_type_soap, Email_Connection_Field, field_display as shared_field_display, \
-    field_help, get_defaults, Is_Active_Field, LLM_Connection_Field, Unit_Field_Suffix
+    alert_type_mllp_channel, alert_type_mllp_outgoing, alert_type_rest, alert_type_soap, Email_Connection_Field, \
+    field_display as shared_field_display, field_help, get_defaults, Is_Active_Field, LLM_Connection_Field, Unit_Field_Suffix
 from zato.common.api import HTTP_SOAP
 
 # ################################################################################################################################
@@ -388,8 +388,31 @@ def _operation_outcomes_line() -> 'anydict':
 
 # ################################################################################################################################
 
-# The negative acknowledgments an MLLP channel alerts on - counted by the code of the ACK the channel sent back
-def _negative_acks_line() -> 'anydict':
+# The two sides of an MLLP acknowledgment - a channel sends one back to its caller, an outgoing connection
+# is answered one by the remote system - and what its help says about each
+Ack_Side_Channel = 'channel'
+Ack_Side_Outgoing = 'outgoing'
+
+_ack_side_texts:'anydict' = {
+    Ack_Side_Channel: {
+        'sent': 'the channel sent back',
+        'failed': 'the service failed to process a message',
+        'rejected': 'the message was rejected',
+        'owner': 'channel',
+        'logging': 'Logging and errors',
+    },
+    Ack_Side_Outgoing: {
+        'sent': 'the remote system answered',
+        'failed': 'the remote application failed to process a message',
+        'rejected': 'it rejected the message',
+        'owner': 'connection',
+        'logging': 'Logging',
+    },
+}
+
+# The negative acknowledgments an MLLP channel or outgoing connection alerts on - counted by the code of the ACK
+def _negative_acks_line(side:'str') -> 'anydict':
+    texts = _ack_side_texts[side]
     out = {
         'name': 'negative_acks',
         'section': Section_Failures,
@@ -402,12 +425,25 @@ def _negative_acks_line() -> 'anydict':
         'text_fields': {Ack_Codes_Field: Ack_Codes_Default},
         'summary': 'Alert after {ack_threshold|ack|acks} with ' + f'{{{Ack_Codes_Field}}} ' + \
             f'in the last {{{Acks_Window_Unit_Field}@acks_window}}',
-        'how_it_works': 'Which acknowledgment codes the channel sent back raise an alert - AE and CE say the service ' + \
-            'failed to process a message, AR and CR that the message was rejected - each one a chip, typed and added ' + \
+        'how_it_works': f'Which acknowledgment codes {texts["sent"]} raise an alert - AE and CE say {texts["failed"]}, ' + \
+            f'AR and CR that {texts["rejected"]} - each one a chip, typed and added ' + \
             'with Enter, removed with its cross - how many acknowledgments with one of them do, and how long the window ' + \
-            'they are counted over. The alerts read the channel\'s audit log, so the audit log option under Logging ' + \
-            'and errors has to be on for anything to be counted.',
+            f'they are counted over. The alerts read the {texts["owner"]}\'s audit log, so the audit log option under ' + \
+            f'{texts["logging"]} has to be on for anything to be counted.',
     }
+    return out
+
+# ################################################################################################################################
+
+# The messages an outgoing MLLP connection got no acknowledgment for at all - the wire failed before one arrived
+def _mllp_connection_failures_line() -> 'anydict':
+    out = _connection_failures_line()
+    out['summary'] = 'Alert after {connection_failures|unacknowledged message|unacknowledged messages} ' + \
+        f'in the last {{{Connection_Failures_Window_Unit_Field}@connection_failures_window}}'
+    out['how_it_works'] = 'How many messages that got no acknowledgment at all - a timeout waiting for it, a refused ' + \
+        'or reset connection, a connection closed before it arrived, a TLS handshake that failed - raise an alert, ' + \
+        'and how long the window they are counted over. A negative acknowledgment is not counted here, ' + \
+        'the Negative acks line reads those.'
     return out
 
 # ################################################################################################################################
@@ -581,9 +617,20 @@ type_lines:'anydict' = {
         _email_line(),
         _failures_in_a_row_line(),
         _error_rate_line(),
-        _negative_acks_line(),
+        _negative_acks_line(Ack_Side_Channel),
         _slow_responses_line(),
         _silence_line('message'),
+    ],
+    alert_type_mllp_outgoing: [
+        _active_line(),
+        _use_llm_line(),
+        _llm_line(),
+        _email_line(),
+        _failures_in_a_row_line(),
+        _error_rate_line(),
+        _negative_acks_line(Ack_Side_Outgoing),
+        _mllp_connection_failures_line(),
+        _slow_responses_line(),
     ],
     alert_type_rest: _http_lines(),
     alert_type_soap: _http_lines(extra_failure_line=_soap_faults_line()),

@@ -79,6 +79,7 @@ type_to_ruleset = {
     'scheduler':     'alerts_scheduler',
     'channels':      'alerts_channels',
     'mllp_channel':  'alerts_mllp_channel',
+    'mllp_outgoing': 'alerts_mllp_outgoing',
     'common':        'alerts_common',
 }
 
@@ -101,6 +102,7 @@ type_sources:'dict[str, strlist]' = {
     'scheduler':     [AuditSource.Scheduler],
     'channels':      [AuditSource.REST_Channel, AuditSource.SOAP_Channel],
     'mllp_channel':  [AuditSource.MLLP_Channel],
+    'mllp_outgoing': [AuditSource.MLLP_Outgoing],
 }
 
 # ################################################################################################################################

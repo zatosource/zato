@@ -109,6 +109,7 @@ _type_titles = {
     'scheduler':     'Scheduler',
     'channels':      'Channels',
     'mllp_channel':  'MLLP channels',
+    'mllp_outgoing': 'MLLP outgoing',
     'common':        'Common',
 }
 
@@ -136,6 +137,7 @@ _type_cells = {
     'scheduler':     ['error_rate', 'window', 'overdue_multiplier', 'start_delay', 'use_llm'],
     'channels':      ['consecutive_failures', 'error_rate', 'window', 'max_latency', 'use_llm'],
     'mllp_channel':  ['consecutive_failures', 'error_rate', 'window', 'ack_codes', 'max_latency', 'use_llm'],
+    'mllp_outgoing': ['consecutive_failures', 'error_rate', 'window', 'ack_codes', 'connection_failures', 'max_latency', 'use_llm'],
     'common':        ['certificate_warning', 'outstanding_backlog', 'feed_silence', None, None],
 }
 

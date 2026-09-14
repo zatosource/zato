@@ -120,16 +120,36 @@ _fhir_outcome_fields:'list[stranydict]' = [
         'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Operation_Outcomes]},
 ]
 
-_http_traffic_fields:'list[stranydict]' = [
+# The calls that got no response at all - the HTTP connections and the outgoing MLLP ones count them alike
+_connection_failure_fields:'list[stranydict]' = [
     {'name': 'connection_failures', 'kind': Kind_Number, 'rules': ['Connection_Failures'],
         'default': 'connection_failure_threshold', 'is_percent': False},
     {'name': 'connection_failures_window', 'kind': Kind_Duration, 'rules': ['Connection_Failures'],
         'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Connection_Failures]},
+]
+
+# How long the responses take - every type that has a Slow_Responses rule reads these two
+_latency_fields:'list[stranydict]' = [
     {'name': 'max_latency', 'kind': Kind_Number, 'rules': ['Slow_Responses'],
         'default': 'max_avg_duration_ms', 'is_percent': False},
     {'name': 'latency_window', 'kind': Kind_Duration, 'rules': ['Slow_Responses'],
         'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Latency]},
+]
+
+_use_llm_fields:'list[stranydict]' = [
     {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
+]
+
+_http_traffic_fields:'list[stranydict]' = _connection_failure_fields + _latency_fields + _use_llm_fields
+
+# The negative acknowledgments of MLLP - the ones a channel sent back or the ones an outgoing connection was answered
+_ack_fields:'list[stranydict]' = [
+    {'name': Ack_Codes_Field_Name, 'kind': Kind_Text, 'rules': ['Negative_Acks'],
+        'default': Ack_Codes_Default},
+    {'name': 'ack_threshold', 'kind': Kind_Number, 'rules': ['Negative_Acks'],
+        'default': 'ack_threshold', 'is_percent': False},
+    {'name': 'acks_window', 'kind': Kind_Duration, 'rules': ['Negative_Acks'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Ack_Codes]},
 ]
 
 type_fields:'dict[str, list[stranydict]]' = {
@@ -268,22 +288,20 @@ type_fields:'dict[str, list[stranydict]]' = {
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
             'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Error_Rate]},
-        {'name': Ack_Codes_Field_Name, 'kind': Kind_Text, 'rules': ['Negative_Acks'],
-            'default': Ack_Codes_Default},
-        {'name': 'ack_threshold', 'kind': Kind_Number, 'rules': ['Negative_Acks'],
-            'default': 'ack_threshold', 'is_percent': False},
-        {'name': 'acks_window', 'kind': Kind_Duration, 'rules': ['Negative_Acks'],
-            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Ack_Codes]},
-        {'name': 'max_latency', 'kind': Kind_Number, 'rules': ['Slow_Responses'],
-            'default': 'max_avg_duration_ms', 'is_percent': False},
-        {'name': 'latency_window', 'kind': Kind_Duration, 'rules': ['Slow_Responses'],
-            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Latency]},
+    ] + _ack_fields + _latency_fields + [
         {'name': 'traffic_expected', 'kind': Kind_Toggle, 'rules': ['Channel_Silent']},
         {'name': Silence_Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Channel_Silent'],
             'default': 'silence_seconds', 'is_percent': False, 'measures': [Measure_Silence]},
         {'name': Silence_Slots_Field_Name, 'kind': Kind_Time_Slots},
-        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
-    ],
+    ] + _use_llm_fields,
+    'mllp_outgoing': [
+        {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
+            'default': 'max_consecutive_failures', 'is_percent': False},
+        {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
+            'default': 'error_rate_threshold', 'is_percent': True},
+        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
+            'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Error_Rate]},
+    ] + _ack_fields + _connection_failure_fields + _latency_fields + _use_llm_fields,
     'common': [
         {'name': 'certificate_warning', 'kind': Kind_Number, 'rules': ['Certificate_Expiring'],
             'default': 'cert_warning_days', 'is_percent': False},

@@ -18,6 +18,9 @@
 
 var wizard = $.fn.zato.outgoing.hl7.mllp.wizard;
 
+// The Alerts line of step 2 and its popover - the kit's, named under the page's prefix
+wizard.alerts = $.fn.zato.wizard_alerts.create({wizard: wizard, idPrefix: 'mllp-outconn-wizard'});
+
 // ////////////////////////////////////////////////////////////////////////
 
 wizard.config_own = {
@@ -36,6 +39,7 @@ wizard.config_own = {
         destination: 'Destination',
         framing: 'Framing and timing',
         delivery: 'Delivery',
+        alerts: 'Alerts',
         logging: 'Logging and audit'
     },
 
@@ -50,6 +54,10 @@ wizard.config_own = {
     // What the two mounts of the live check say on their buttons
     probeRunLabel: 'Send a test message',
     probeBusyLabel: 'Sending ..',
+
+    // Which set of live form updates the page subscribes to
+    createAction: 'create',
+    editAction: 'edit',
 
     // The fields the live check carries with it - what it takes to reach an
     // endpoint and read one acknowledgment back from it
@@ -141,8 +149,20 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         // The popovers behind the summary links of both steps ..
         wizard.forms.initRows();
 
+        // .. the Alerts line of step 2 - the summaries refresh as the review
+        // renders, the Alerts one among them, so its line has to be there first ..
+        wizard.alerts.init();
+
         // .. the logging card folded away under step 2 ..
         wizard.review.initOptionCards();
+
+        // .. the email and LLM connections the Alerts popup picks from kept fresh
+        // while the page is open - no reloading to pick up new ones ..
+        var ownConfig = wizard.config_own;
+        var action = wizard.state.isEdit ? ownConfig.editAction : ownConfig.createAction;
+
+        $.fn.zato.live_form_updates.register(action, $.fn.zato.alerts_tab.live_configs(wizard.config.fieldPrefix));
+        $.fn.zato.live_form_updates.start(action);
 
         // .. and the live check, mounted once at the foot of step 1 where
         // everything it needs has just been answered, and once more at the
@@ -275,6 +295,12 @@ wizard.helpDescriptions = function() {
         'for a while rather than queueing up work for an endpoint that is down. ' +
         'The connection resumes when one trial message succeeds.';
 
+    // .. the Alerts line and, within its popover, the lines of the Alerts tab ..
+    out['mllp-outconn-wizard-edit-alerts'] = 'When the platform sends an email about this connection - after how many ' +
+        'failed sends in a row, at what share of failures, on which negative acknowledgments, after how many ' +
+        'messages went unacknowledged and how slow the acknowledgments may get - and who explains what happened.';
+    $.extend(out, wizard.alerts.descriptions());
+
     // .. and what is folded away under them.
     out['mllp-outconn-wizard-edit-options'] = 'What this connection writes about the messages it sends - ' +
         'the server log and the audit log. The line says what is currently set.';
@@ -301,7 +327,7 @@ wizard.titleHelp = function() {
         'and say which system it reaches, with a test message that can be sent ' +
         'before anything is saved. ' +
         'On <span class="wizard-title-help-step">02</span> you choose what happens to a ' +
-        'message the far side did not take. ' +
+        'message the far side did not take and when to be alerted about it. ' +
         '<span class="wizard-title-help-step">03</span> is a review before the ' +
         'connection is created.</p>' +
 

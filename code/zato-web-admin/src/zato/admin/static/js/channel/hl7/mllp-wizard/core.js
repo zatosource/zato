@@ -19,6 +19,9 @@
 
 var wizard = $.fn.zato.channel.hl7.mllp.wizard;
 
+// The Alerts line of step 2 and its popover - the kit's, named under the page's prefix
+wizard.alerts = $.fn.zato.wizard_alerts.create({wizard: wizard, idPrefix: 'mllp-wizard'});
+
 // ////////////////////////////////////////////////////////////////////////
 
 wizard.config_own = {
