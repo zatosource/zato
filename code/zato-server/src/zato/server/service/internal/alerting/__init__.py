@@ -211,6 +211,34 @@ class AlertingRun(AdminService):
 
 # ################################################################################################################################
 
+    def _get_tool_counts(self) -> 'strintdict':
+        """ How many tools each active MCP gateway exposes right now, by gateway name - read off the runtime
+        tool registry, which is what agents get from tools/list, so a gateway not built yet is not here.
+        """
+
+        # Our response to produce
+        out:'strintdict' = {}
+
+        for gateway_name, gateway_config in self.server.config_manager.gateway_mcp.items():
+
+            wrapper = gateway_config.conn
+
+            # A gateway switched off exposes nothing to anyone
+            if not wrapper.config['is_active']:
+                continue
+
+            # A gateway whose build failed or is underway has no registry to count
+            tool_registry = wrapper.tool_registry
+
+            if tool_registry is None:
+                continue
+
+            out[gateway_name] = tool_registry.get_tool_count()
+
+        return out
+
+# ################################################################################################################################
+
     def handle(self) -> 'None':
 
         # The job's extra data arrives as a dict - an empty extra arrives as something else,
@@ -274,13 +302,17 @@ class AlertingRun(AdminService):
         # The daily expectations of the schedules.
         schedule_expectations = self._get_schedule_expectations()
 
+        # How many tools each MCP gateway exposes.
+        tool_counts = self._get_tool_counts()
+
         # What each object's own Alerts tab says - its thresholds, toggles, window and email connection.
         with closing(self.odb.session()) as session:
             object_settings = load_object_settings(session, self.server.cluster_id)
 
         result = run_sweep(engine, rules, metrics_by_name, AuditSource.MLLP_Channel, transports, audit_log, self.cid, now,
             defaults=defaults, dashboard_url=dashboard_url, template_dir=template_dir, job_intervals=job_intervals,
-            arrival_windows=arrival_windows, schedule_expectations=schedule_expectations, object_settings=object_settings)
+            arrival_windows=arrival_windows, schedule_expectations=schedule_expectations, tool_counts=tool_counts,
+            object_settings=object_settings)
 
         rule_label       = pluralize(result.rule_count, 'rule')
         fact_label       = pluralize(result.fact_count, 'fact')

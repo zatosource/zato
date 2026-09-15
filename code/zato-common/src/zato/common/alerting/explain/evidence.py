@@ -68,6 +68,8 @@ Label_Caller = 'Caller'
 Label_Callers = 'Callers'
 Label_Endpoint = 'Endpoint'
 Label_Endpoints = 'Endpoints'
+Label_Tool = 'Tool'
+Label_Tools = 'Tools'
 
 # What the Baseline calls one row - a health check's rows are pings, everyone else's are events
 Noun_Event = 'event'
@@ -93,6 +95,9 @@ _failures_intro_calls = 'Newest first. Each failure is one call the connection m
 _failures_intro_llm = 'Newest first. Each row is one call the connection made, with its model, finish reason and ' + \
     'token usage next to its status - a truncated completion or a refusal is a call the provider answered with HTTP 200. ' + \
     'Identical rows are grouped, the count says how many calls went the same way in the window.'
+_failures_intro_gateway = 'Newest first. Each row is one request an agent made to the gateway, with the error text, ' + \
+    'the JSON-RPC error code, what refused the response or whether the size cap cut it. Identical rows are grouped, ' + \
+    'each group names the tools called and the callers whose requests it holds.'
 
 # What the Failures section says when there is nothing in it.
 _no_failures = 'No failed events in the window.'
@@ -121,11 +126,22 @@ def is_health_check_source(source:'str') -> 'bool':
 
 # ################################################################################################################################
 
+def is_gateway_source(source:'str') -> 'bool':
+    """ Whether a source's rows are the requests an MCP gateway received - they name the tool called and the caller.
+    """
+    out = source == AuditSource.MCP
+    return out
+
+# ################################################################################################################################
+
 def is_outgoing_source(source:'str') -> 'bool':
     """ Whether a source's rows are the calls an outgoing connection made, or its health check's pings -
     the rows that carry a status line and name the endpoint they called.
     """
     if is_channel_source(source):
+        return False
+
+    if is_gateway_source(source):
         return False
 
     out = source in response_event_type_by_source
@@ -140,6 +156,8 @@ def _failures_intro_of(source:'str') -> 'str':
         out = _failures_intro_pings
     elif source == AuditSource.LLM:
         out = _failures_intro_llm
+    elif is_gateway_source(source):
+        out = _failures_intro_gateway
     elif is_outgoing_source(source):
         out = _failures_intro_calls
     else:
@@ -228,7 +246,9 @@ def group_failures(rows:'dictlist', source:'str'='') -> 'dictlist':
     each caller once.
     """
     by_text:'dict[str, stranydict]' = {}
-    is_channel = is_channel_source(source)
+
+    # A gateway's rows name the tool called and the caller, the way a channel's name the service and the caller
+    is_channel = is_channel_source(source) or is_gateway_source(source)
     is_outgoing = is_outgoing_source(source)
     has_status = groups_by_status(source)
 
@@ -329,6 +349,9 @@ def _render_group(number:'int', group:'stranydict', is_collapsed:'bool', is_trim
     if is_channel_source(source):
         names_line = _format_names(group['files'], group['files_total'], is_collapsed, Label_Service, Label_Services)
         callers_line = _format_names(group['callers'], len(group['callers']), is_collapsed, Label_Caller, Label_Callers)
+    elif is_gateway_source(source):
+        names_line = _format_names(group['files'], group['files_total'], is_collapsed, Label_Tool, Label_Tools)
+        callers_line = _format_names(group['callers'], len(group['callers']), is_collapsed, Label_Caller, Label_Callers)
     elif is_outgoing_source(source):
         names_line = _format_names(group['files'], group['files_total'], is_collapsed, Label_Endpoint, Label_Endpoints)
     else:
@@ -428,6 +451,8 @@ def _left_out_line(dropped_count:'int', is_collapsed:'bool', source:'str'='') ->
     if is_collapsed:
         if is_channel_source(source):
             parts.append('service and caller lists shortened to their first and last entries')
+        elif is_gateway_source(source):
+            parts.append('tool and caller lists shortened to their first and last entries')
         else:
             parts.append('file lists shortened to their first and last entries')
 

@@ -14,6 +14,8 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
+from zato.cli.enmasse.util.alerts import group_alerts
+from zato.common.alerting.object_config import Alerts_Key, conn_type_to_alert_type
 from zato.common.api import GENERIC, Groups, MCP
 from zato.common.odb.model import GenericObject, to_json
 from zato.common.odb.query.generic import connection_list
@@ -78,6 +80,9 @@ GATEWAY_OPAQUE_FIELDS = list(GATEWAY_OPTIONAL_FIELDS)
 
 # The documented default of each field - a stored value equal to its default is not exported.
 _field_defaults = GatewayMCPImporter.connection_extra_field_defaults
+
+# The alert type a gateway's own settings are grouped under
+_alert_type = conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.GATEWAY_MCP]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -190,6 +195,10 @@ class GatewayMCPExporter:
                     continue
 
                 item[field] = value
+
+            # The alert settings the gateway sets of its own go under one alerts mapping
+            if alerts := group_alerts(row, _alert_type):
+                item[Alerts_Key] = alerts
 
             exported.append(item)
 

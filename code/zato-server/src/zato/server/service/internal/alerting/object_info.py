@@ -14,6 +14,7 @@ from zato.common.api import FileTransfer
 from zato.common.alerting.explain.channel_info import describe_channel
 from zato.common.alerting.explain.fhir_info import describe_outgoing_fhir
 from zato.common.alerting.explain.llm_info import describe_outgoing_llm
+from zato.common.alerting.explain.mcp_info import describe_mcp_gateway
 from zato.common.alerting.explain.mllp_channel_info import describe_mllp_channel
 from zato.common.alerting.explain.mllp_outgoing_info import describe_mllp_outgoing
 from zato.common.alerting.explain.outgoing_info import describe_outgoing_http
@@ -73,7 +74,7 @@ def get_object_info(service:'AdminService', source:'str', object_name:'str') -> 
     """ The Object section of the evidence - the object's definition as label and value pairs,
     secrets left out - along with the name the baseline is read under and whether test
     transfers are on for the object. An outgoing REST, SOAP, FHIR, LLM or MLLP connection, a channel,
-    an MLLP channel, a file transfer connection or one of its schedules are read off the ODB,
+    an MLLP channel, an MCP gateway, a file transfer connection or one of its schedules are read off the ODB,
     any other source contributes its name alone.
     """
     if source == AuditSource.MLLP_Outgoing:
@@ -103,6 +104,13 @@ def get_object_info(service:'AdminService', source:'str', object_name:'str') -> 
 
         if llm_info is not None:
             return llm_info, object_name, False
+
+    if source == AuditSource.MCP:
+        with closing(service.odb.session()) as session:
+            mcp_info = describe_mcp_gateway(session, service.server.cluster_id, object_name)
+
+        if mcp_info is not None:
+            return mcp_info, object_name, False
 
     if source in (AuditSource.File_Outgoing, AuditSource.Test_Transfer):
         out = _get_file_transfer_info(service, object_name)

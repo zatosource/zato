@@ -268,6 +268,20 @@ def join_size(count:'float', unit_name:'str') -> 'int':
 
 # ################################################################################################################################
 
+def format_size(byte_count:'float') -> 'str':
+    """ A size as a person reads it - `100 megabytes`, `1 gigabyte`, `2.5 gigabytes`, the unit in the singular for one.
+    """
+    count, unit_name = split_size(byte_count)
+
+    if count == 1:
+        out = f'{count} {unit_name}'
+    else:
+        out = f'{count} {unit_name}s'
+
+    return out
+
+# ################################################################################################################################
+
 def split_duration(seconds:'int') -> 'tuple[int | float, str]':
     """ A number of seconds as a count and the largest unit dividing it evenly - 86400 is one day,
     600 is ten minutes. Seconds no unit divides evenly are a fraction of the smallest unit.

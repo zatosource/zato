@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_fhir, alert_type_file_transfer, alert_type_llm, \
+from zato.common.alerting.object_config import alert_type_fhir, alert_type_file_transfer, alert_type_llm, alert_type_mcp, \
     alert_type_mllp_channel, alert_type_mllp_outgoing, alert_type_rest, apply_defaults, conn_type_to_alert_type, decode_email_connection, \
     Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, Email_Connection_Default, Email_Connection_Field, encode_email_connection, \
     field_display, field_help, Field_Prefix, from_storage, get_defaults, get_field_kinds, get_field_names, Is_Active_Field, \
@@ -122,6 +122,47 @@ class TestFieldNames:
         assert defaults['error_latency'] == 15
         assert defaults['token_budget'] == 10000000
         assert defaults['token_budget_window'] == 86400
+
+# ################################################################################################################################
+
+    def test_an_mcp_gateway_maps_to_the_mcp_type(self) -> 'None':
+        assert conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.GATEWAY_MCP] == alert_type_mcp
+
+        # The MCP type carries the core failure fields, the two latencies in seconds and the fields of the gateway's own
+        mcp_names = get_field_names(alert_type_mcp)
+
+        for name in ('consecutive_failures', 'error_rate', 'window', 'invalid_calls', 'invalid_calls_window', 'rejections',
+            'rejections_window', 'auth_failures', 'auth_failures_window', 'throttled_calls', 'throttled_calls_window',
+            'repeat_calls', 'repeat_calls_window', 'warning_latency', 'error_latency', 'latency_window', 'truncations',
+            'truncations_window', 'volume_budget', 'volume_budget_window', 'traffic_expected', 'silence_window',
+            'silence_slots', 'max_tools', 'use_llm'):
+            assert name in mcp_names, name
+
+        # Nothing of the outgoing connections' own is here
+        for name in ('max_latency', 'status_codes', 'connection_failures', 'token_budget', 'refusals'):
+            assert name not in mcp_names, name
+
+        # The two latencies read in seconds and the budget is a size
+        kinds = get_field_kinds(alert_type_mcp)
+        assert kinds['warning_latency'] == config_map.Kind_Seconds
+        assert kinds['error_latency'] == config_map.Kind_Seconds
+        assert kinds['volume_budget'] == config_map.Kind_Size
+        assert kinds['max_tools'] == config_map.Kind_Number
+
+        defaults = get_defaults(alert_type_mcp)
+        assert defaults['invalid_calls'] == 5
+        assert defaults['rejections'] == 3
+        assert defaults['auth_failures'] == 10
+        assert defaults['throttled_calls'] == 10
+        assert defaults['repeat_calls'] == 20
+        assert defaults['warning_latency'] == 5
+        assert defaults['error_latency'] == 15
+        assert defaults['truncations'] == 5
+        assert defaults['volume_budget'] == 100000000
+        assert defaults['volume_budget_window'] == 86400
+        assert defaults['traffic_expected'] is False
+        assert defaults['silence_window'] == 3600
+        assert defaults['max_tools'] == 25
 
 # ################################################################################################################################
 

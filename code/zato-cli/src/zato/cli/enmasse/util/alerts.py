@@ -86,6 +86,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 #           status_codes: '429, 5xx'
 #           token_budget: 2000000
 #           truncations: 5
+#
+#     mcp_gateway:
+#       - name: orders.gateway
+#         services:
+#           - orders.get
+#         is_audit_log_active: true
+#         alerts:
+#           invalid_calls: 10
+#           repeat_calls: 30
+#           volume_budget: 500000000
 
 # stdlib
 import logging
@@ -99,6 +109,7 @@ from zato.common.alerting.config_map import Ack_Codes_Field_Name, Fault_Codes_Fi
 from zato.common.alerting.fault_codes import parse_fault_codes
 from zato.common.alerting.outcome_codes import parse_outcome_codes
 from zato.common.alerting.status_codes import parse_status_codes
+from zato.common.alerting.validate_numbers import validate_number_settings
 from zato.common.api import EMAIL, GENERIC
 from zato.common.defaults import default_cluster_id
 from zato.common.odb.model import GenericConn, IMAP, SMTP
@@ -242,12 +253,19 @@ def flatten_alerts(connection_def:'anydict', alert_type:'str', connection_type:'
         except ValueError as e:
             raise Exception(f'{e} for {connection_type} connection `{connection_name}`')
 
-    # .. and so is an acknowledgment code that is not one of AE, AR, CE and CR.
+    # .. so is an acknowledgment code that is not one of AE, AR, CE and CR ..
     if Ack_Codes_Field_Name in alerts:
         try:
             _ = parse_ack_codes(alerts[Ack_Codes_Field_Name])
         except ValueError as e:
             raise Exception(f'{e} for {connection_type} connection `{connection_name}`')
+
+    # .. and so is a threshold that is not a number or is negative - a count, a window, a latency in
+    # .. fractional seconds, an amount or a byte count such as a gateway's volume budget.
+    try:
+        validate_number_settings(alert_type, alerts)
+    except ValueError as e:
+        raise Exception(f'{e} for {connection_type} connection `{connection_name}`')
 
     values = object_config.get_defaults(alert_type)
     values.update(alerts)

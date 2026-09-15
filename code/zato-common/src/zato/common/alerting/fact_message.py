@@ -16,9 +16,11 @@ from __future__ import annotations
 # Zato
 from zato.common.alerting.ack_codes import Ack_Code_Counts_Key
 from zato.common.alerting.collectors.common import channel_sources, Measure_Ack_Codes, Measure_Auth_Failures, \
-    Measure_Client_Errors, Measure_Connection_Failures, Measure_Latency, Measure_Operation_Outcomes, Measure_Refusals, \
-    Measure_Server_Errors, Measure_SOAP_Faults, Measure_Status_Codes, Measure_Tokens, Measure_Truncations, \
+    Measure_Client_Errors, Measure_Connection_Failures, Measure_Invalid_Calls, Measure_Latency, Measure_MCP_Truncations, \
+    Measure_Operation_Outcomes, Measure_Refusals, Measure_Rejections, Measure_Repeat_Calls, Measure_Server_Errors, \
+    Measure_SOAP_Faults, Measure_Status_Codes, Measure_Throttled, Measure_Tokens, Measure_Truncations, Measure_Volume, \
     Window_Seconds_By_Measure_Key
+from zato.common.alerting.config_map import format_size
 from zato.common.alerting.fault_codes import Fault_Code_Counts_Key
 from zato.common.alerting.outcome_codes import Outcome_Code_Counts_Key
 from zato.common.alerting.status_codes import Status_Code_Counts_Key
@@ -102,8 +104,12 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
     is_health_check = source in health_sources
 
     # A channel's failed responses are sorted by who is at fault, so its measures
-    # speak of callers and requests rather than of authentication in general.
+    # speak of callers and requests rather than of authentication in general ..
     is_channel = source in channel_sources
+
+    # .. and so do an MCP gateway's, whose rejected credentials are its callers' and whose
+    # truncations are of tool responses rather than of completions.
+    is_gateway = source == AuditSource.MCP
 
     if fact['total_count']:
         percent = round(fact['error_rate'] * 100)
@@ -129,7 +135,7 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
         parts.append(f'average duration {fact["avg_duration_ms"]}ms' + _measure_window_part(fact, Measure_Latency))
 
     if auth_failure_count := fact['auth_failure_count']:
-        if is_channel:
+        if is_channel or is_gateway:
             auth_failure_label = pluralize(auth_failure_count, 'rejected caller')
         else:
             auth_failure_label = pluralize(auth_failure_count, 'authentication failure')
@@ -184,8 +190,36 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
         parts.append(failures_label + _measure_window_part(fact, Measure_Connection_Failures))
 
     if truncation_count := fact['truncation_count']:
-        truncations_label = pluralize(truncation_count, 'truncated completion')
-        parts.append(truncations_label + _measure_window_part(fact, Measure_Truncations))
+        if is_gateway:
+            truncations_label = pluralize(truncation_count, 'truncated response')
+            parts.append(truncations_label + _measure_window_part(fact, Measure_MCP_Truncations))
+        else:
+            truncations_label = pluralize(truncation_count, 'truncated completion')
+            parts.append(truncations_label + _measure_window_part(fact, Measure_Truncations))
+
+    if invalid_call_count := fact['invalid_call_count']:
+        invalid_calls_label = pluralize(invalid_call_count, 'invalid tool call')
+        parts.append(invalid_calls_label + _measure_window_part(fact, Measure_Invalid_Calls))
+
+    if rejection_count := fact['rejection_count']:
+        rejections_label = pluralize(rejection_count, 'rejected response')
+        parts.append(rejections_label + _measure_window_part(fact, Measure_Rejections))
+
+    if throttled_count := fact['throttled_count']:
+        throttled_label = pluralize(throttled_count, 'throttled call')
+        parts.append(throttled_label + _measure_window_part(fact, Measure_Throttled))
+
+    if repeat_call_count := fact['repeat_call_count']:
+        times_label = pluralize(repeat_call_count, 'time')
+        repeat_part = f'session {fact["repeat_call_session"]} called {fact["repeat_call_tool"]} {times_label}'
+        parts.append(repeat_part + _measure_window_part(fact, Measure_Repeat_Calls))
+
+    if volume_bytes := fact['volume_bytes']:
+        parts.append(f'{format_size(volume_bytes)} of responses' + _measure_window_part(fact, Measure_Volume))
+
+    if tool_count := fact['tool_count']:
+        tools_label = pluralize(tool_count, 'tool')
+        parts.append(f'{tools_label} exposed')
 
     if refusal_count := fact['refusal_count']:
         refusals_label = pluralize(refusal_count, 'refusal')

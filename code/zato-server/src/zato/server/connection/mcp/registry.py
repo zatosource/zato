@@ -93,6 +93,15 @@ class ToolRegistry:
 
 # ################################################################################################################################
 
+    def get_tool_count(self) -> 'int':
+        """ How many tools the gateway exposes right now - what agents get from tools/list,
+        which is what the too-many-tools alert measures.
+        """
+        out = len(self._cached_tools)
+        return out
+
+# ################################################################################################################################
+
     def rebuild(self) -> 'None':
         """ Rebuilds the cached tools list by scanning the service store
         for each service in the allow list.

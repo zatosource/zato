@@ -410,6 +410,7 @@ def run_sweep(
     job_intervals:'strintdict | None' = None,
     arrival_windows:'strintdict | None' = None,
     schedule_expectations:'anydict | None' = None,
+    tool_counts:'strintdict | None' = None,
     object_settings:'anydict | None' = None,
     ) -> 'SweepResult':
     """ Runs one full sweep - the fact producers measure everything once, each fact runs
@@ -438,7 +439,7 @@ def run_sweep(
 
     facts = collect_facts(engine, metrics_by_name, metrics_source, now, window_seconds_by_source=window_seconds_by_source,
         window_seconds_by_object=window_seconds_by_object, job_intervals=job_intervals, arrival_windows=arrival_windows,
-        schedule_expectations=schedule_expectations, silence_expected_names=silence_expected_names)
+        schedule_expectations=schedule_expectations, silence_expected_names=silence_expected_names, tool_counts=tool_counts)
     out.fact_count = len(facts)
 
     for rule in rules:

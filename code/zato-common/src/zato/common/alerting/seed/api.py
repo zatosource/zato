@@ -145,6 +145,12 @@ _inactive_rule_full_names = [
     'alerts_mcp_Gateway_Silent',
 ]
 
+# The rules an earlier release shipped and this one no longer does - an upgrade removes them
+# from the store, edited or not, because what they alerted on is no longer what their ruleset means.
+_retired_rule_full_names = [
+    'alerts_mcp_Server_Down',
+]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -574,10 +580,14 @@ def _upgrade_ruleset(backend:'RuleSQLBackend', ruleset_name:'str', zrules_conten
         elif documents[full_name] != shipped_document:
             differing.append(full_name)
 
-    # Nothing missing and nothing differing means nothing to store, and the history stays unread
+    # .. and what it still holds of the rules this release retired.
+    retired = [full_name for full_name in _retired_rule_full_names if full_name in documents]
+
+    # Nothing missing, nothing differing and nothing retired means nothing to store, and the history stays unread
     if not missing:
         if not differing:
-            return False
+            if not retired:
+                return False
 
     historical = _historical_documents(backend, definition)
 
@@ -592,6 +602,11 @@ def _upgrade_ruleset(backend:'RuleSQLBackend', ruleset_name:'str', zrules_conten
     first_held = _first_held_documents(historical)
 
     changed_any = False
+
+    # A retired rule goes whether or not a person touched it
+    for full_name in retired:
+        del documents[full_name]
+        changed_any = True
 
     for full_name in missing:
 

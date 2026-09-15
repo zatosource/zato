@@ -11,7 +11,7 @@ import logging
 import os
 import socket
 import struct
-from datetime import datetime as _datetime_class, timedelta as _timedelta, timezone as _timezone
+from datetime import datetime as _datetime_class, timezone as _timezone
 from email.utils import format_datetime as _format_datetime
 from http.client import FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, OK, TOO_MANY_REQUESTS, \
     UNAUTHORIZED
@@ -30,6 +30,8 @@ from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, Servic
 from zato.common.json_ import dumps
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import current_time_us
+from zato.common.rate_limiting.headers import build_rate_limit_headers, Header_Rate_Limit_Limit, Header_Rate_Limit_Remaining, \
+    Header_Retry_After, Rate_Limit_Result_Key
 from zato.common.soap.common import SOAP_Action_Header, SOAPVersion
 from zato.common.soap.message import SOAPMessage
 from zato.common.typing_ import cast_
@@ -85,11 +87,7 @@ _status_too_many_requests = '{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO
 _socket_SOL_SOCKET = socket.SOL_SOCKET
 _socket_SO_LINGER = socket.SO_LINGER
 _so_linger_on = struct.pack('ii', 1, 0)
-_microseconds_per_second = 1_000_000
 _utc = _timezone.utc
-
-def _datetime_utcnow():
-    return _datetime_class.now(_utc)
 _content_type_json = CONTENT_TYPE['JSON']
 _content_type_sse = 'text/event-stream'
 _transport_plain_http = URL_TYPE.PLAIN_HTTP
@@ -121,10 +119,6 @@ _sec_def_key_prefix_map = {
     SEC_DEF_TYPE.WSS:        'wss{}:',
 }
 
-# Quota introspection headers - set only for limits coming from security definitions,
-# channel-level limits are infrastructure protection and stay silent.
-_header_rate_limit_limit     = 'X-RateLimit-Limit'
-_header_rate_limit_remaining = 'X-RateLimit-Remaining'
 
 # Where the dashboard reads an internal error's own message from.
 _header_zato_message = 'X-Zato-Message'
@@ -459,11 +453,9 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
-    def _service_handles_auth_rejection(self, channel_item:'anydict') -> 'bool':
-        """ Whether the service behind the channel accepts requests whose credentials
-        did not authenticate, responding to and auditing them itself.
+    def _get_service_class(self, channel_item:'anydict') -> 'any_':
+        """ The class of the service behind the channel, None when that service is not deployed.
         """
-
         service_name = channel_item['service_name']
         service_store = self.server.service_store
 
@@ -472,12 +464,24 @@ class RequestDispatcher:
         impl_name = service_store.name_to_impl_name.get(service_name, service_name)
         service_info = service_store.services.get(impl_name)
 
-        # A channel whose service is not deployed has nothing to hand the request to.
         if service_info is None:
+            return None
+
+        out = service_info['service_class']
+        return out
+
+# ################################################################################################################################
+
+    def _service_handles_auth_rejection(self, channel_item:'anydict') -> 'bool':
+        """ Whether the service behind the channel accepts requests whose credentials
+        did not authenticate, responding to and auditing them itself.
+        """
+        service_class = self._get_service_class(channel_item)
+
+        # A channel whose service is not deployed has nothing to hand the request to.
+        if service_class is None:
             out = False
             return out
-
-        service_class = service_info['service_class']
 
         out = service_class.handles_auth_rejection
         return out
@@ -701,14 +705,21 @@ class RequestDispatcher:
 
         if sec_def_rate_limit_result:
             if not sec_def_rate_limit_result.is_allowed:
-                out = self._handle_rate_limit_result(
-                    cid, sec_def_rate_limit_result, request_ctx, remote_addr, channel_item, needs_quota_headers=True)
-                return out
+
+                # .. a service that answers its own 429s, an MCP gateway's endpoint among them, is handed
+                # .. the result and the request goes on to it, so it can audit the throttled caller by name ..
+                if sec_def_rate_limit_result.is_disallowed or not self._service_handles_rate_limit_rejection(channel_item):
+                    out = self._handle_rate_limit_result(
+                        cid, sec_def_rate_limit_result, request_ctx, remote_addr, channel_item, needs_quota_headers=True)
+                    return out
+
+                request_ctx[Rate_Limit_Result_Key] = sec_def_rate_limit_result
 
             # .. the request is allowed, so tell the caller how much of its quota remains ..
-            response_headers = request_ctx['zato.http.response.headers']
-            response_headers[_header_rate_limit_limit] = str(sec_def_rate_limit_result.limit)
-            response_headers[_header_rate_limit_remaining] = str(sec_def_rate_limit_result.remaining)
+            else:
+                response_headers = request_ctx['zato.http.response.headers']
+                response_headers[Header_Rate_Limit_Limit] = str(sec_def_rate_limit_result.limit)
+                response_headers[Header_Rate_Limit_Remaining] = str(sec_def_rate_limit_result.remaining)
 
         # .. AS4 channels run the AS4 inbound pipeline instead of invoking a service directly -
         # the pipeline itself routes accepted payloads to the channel's topic or service ..
@@ -1386,31 +1397,34 @@ class RequestDispatcher:
 
             return out
 
-        # .. otherwise this is rate-limited traffic - return HTTP 429.
-        retry_after_us = rate_limit_result.retry_after_us
-        retry_after_seconds = retry_after_us // _microseconds_per_second
-
-        # Round up if there is any remainder
-        if retry_after_us % _microseconds_per_second:
-            retry_after_seconds += 1
-
-        now = _datetime_utcnow()
-        retry_at = now + _timedelta(seconds=retry_after_seconds)
-        retry_after_date = _format_datetime(retry_at, usegmt=True)
+        # .. otherwise this is rate-limited traffic - return HTTP 429, with the quota headers
+        # accompanying the 429s of security definition checks only.
+        rate_limit_headers = build_rate_limit_headers(rate_limit_result, needs_quota_headers=needs_quota_headers)
 
         logger.info('Rate limiting 429; cid:%s, channel:%s, remote_addr:%s, retry_after:%s',
-            cid, channel_name, remote_addr, retry_after_date)
+            cid, channel_name, remote_addr, rate_limit_headers.headers[Header_Retry_After])
 
         request_ctx['zato.http.response.status'] = _status_too_many_requests
-        request_ctx['zato.http.response.headers']['Retry-After'] = retry_after_date
-
-        # Quota headers accompany 429s from security definition checks only.
-        if needs_quota_headers:
-            request_ctx['zato.http.response.headers'][_header_rate_limit_limit] = str(rate_limit_result.limit)
-            request_ctx['zato.http.response.headers'][_header_rate_limit_remaining] = str(rate_limit_result.remaining)
+        request_ctx['zato.http.response.headers'].update(rate_limit_headers.headers)
 
         out = client_json_error(cid, 'Too many requests')
 
+        return out
+
+# ################################################################################################################################
+
+    def _service_handles_rate_limit_rejection(self, channel_item:'anydict') -> 'bool':
+        """ Whether the service behind the channel answers the callers its security definition's
+        rate limit refused itself - responding 429 to and auditing them, as an MCP gateway does.
+        """
+        service_class = self._get_service_class(channel_item)
+
+        # A channel whose service is not deployed has nothing to hand the request to.
+        if service_class is None:
+            out = False
+            return out
+
+        out = service_class.handles_rate_limit_rejection
         return out
 
 # ################################################################################################################################

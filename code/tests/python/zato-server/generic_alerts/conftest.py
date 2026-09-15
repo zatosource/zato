@@ -18,7 +18,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnClient, GenericConnSec, Job, SecurityBase, Service
+from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnClient, GenericConnSec, GenericObject, HTTPSOAP, Job, \
+    SecurityBase, Service
 from zato.server.service.internal.generic import connection as connection_module
 
 # The test doubles live next to the tests and are imported flat
@@ -53,7 +54,8 @@ def without_config_audit(monkeypatch:'any_') -> 'None':
 @pytest.fixture
 def session_factory() -> 'any_':
     """ A sessionmaker over a fresh in-memory database with the tables the services touch - the connections
-    themselves, the rows a deletion cascades to and the scheduler jobs their health checks link to.
+    themselves, the rows a deletion cascades to, the scheduler jobs their health checks link to, and the channel
+    and the group rows an MCP gateway's create hook looks up.
     """
     engine = create_engine('sqlite://')
 
@@ -64,6 +66,8 @@ def session_factory() -> 'any_':
         GenericConn.__table__,
         GenericConnSec.__table__,
         GenericConnClient.__table__,
+        GenericObject.__table__,
+        HTTPSOAP.__table__,
         Job.__table__,
     ]
     Base.metadata.create_all(engine, tables=tables)

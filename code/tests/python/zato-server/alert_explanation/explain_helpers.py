@@ -364,9 +364,17 @@ def _seed_error_events(source:'str'=AuditSource.REST_Outgoing, object_name:'str'
     """
     audit_log = AuditLog(_server_name)
 
+    # A gateway's rows are its tool calls and their data is always a document with the error inside it
+    if source == AuditSource.MCP:
+        event_type = AuditEvent.MCP_Tools_Call
+        data = json.dumps({'error_message': _error_data})
+    else:
+        event_type = AuditEvent.Response_Received
+        data = _error_data
+
     for index in range(3):
-        _ = audit_log.insert(source, AuditEvent.Response_Received, object_name,
-            cid=f'call-{index}', outcome=AuditOutcome.Error, data=_error_data)
+        _ = audit_log.insert(source, event_type, object_name,
+            cid=f'call-{index}', outcome=AuditOutcome.Error, data=data)
 
 # ################################################################################################################################
 

@@ -194,7 +194,7 @@ _object_order['mcp_gateway']   = ('name', 'is_active', 'url_path', 'services:lis
     'safeguards_secrets_enabled', \
     'safeguards_normalize_unicode', 'safeguards_unicode_mode', 'safeguards_sanitize_markup', \
     'safeguards_markup_mode', 'safeguards_url_policy_enabled', 'safeguards_url_allow_list:list', \
-    'safeguards_url_mode') + _mcp_connection_list_fields
+    'safeguards_url_mode') + _mcp_connection_list_fields + ('alerts:dict',)
 _object_order['rule_engine_api']  = 'name', 'is_active', 'url_path', 'rulesets:list', 'security_groups:list',
 _object_order['outgoing_graphql'] = 'name', 'is_active', 'address', 'security', 'default_query_timeout',
 _object_order['outgoing_grpc']    = 'name', 'is_active', 'address', 'security', 'is_tls', 'tls_ca_certs_file', \

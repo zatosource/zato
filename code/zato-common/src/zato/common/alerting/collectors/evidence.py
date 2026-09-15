@@ -14,15 +14,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import annotations
 
-# stdlib
-from datetime import timedelta
-
 # SQLAlchemy
 from sqlalchemy import and_, func, select
 
 # Zato
 from zato.common.alerting.collectors.common import is_failed, is_object, is_recent, is_source, response_event_type_by_source, \
-    Default_Window_Seconds, Probe_Source_Test_Transfer
+    Probe_Source_Test_Transfer
+from zato.common.alerting.collectors.evidence_mcp import attach_mcp_details, collect_invalid_calls, collect_mcp_truncations, \
+    collect_rejections, collect_repeat_calls, collect_throttled
+from zato.common.alerting.collectors.evidence_rows import row_columns as _row_columns, rows_from as _rows_from, \
+    select_rows as _select_rows, window_start_iso as _window_start_iso, Max_Rows_Per_Measure
 from zato.common.alerting.collectors.file_transfer import Attr_Schedule
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_table, AuditBody, AuditEvent, AuditOutcome, \
     AuditSource
@@ -51,9 +52,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many rows one measure contributes at most - the budget the document is fitted to
-# trims further, this only keeps a very busy connection from being read in full.
-Max_Rows_Per_Measure = 200
+# The cap on how many rows one measure contributes, re-exported for the readers of this module
+Max_Rows_Per_Measure = Max_Rows_Per_Measure
 
 # The run statuses that say a run did not go as it should have.
 _troubled_run_statuses = (
@@ -83,79 +83,6 @@ _llm_evidence_attrs = (LLMAttr.Model, LLMAttr.Finish_Reason, LLMAttr.Input_Token
 
 # The finish reasons an LLM completion alert was counted from - a truncation and a refusal both arrive as an HTTP 200
 _llm_counted_finish_reasons = (LLMFinish.Length, LLMFinish.Refusal)
-
-# The columns every evidence row carries.
-_row_columns = (
-    event_table.c.id,
-    event_table.c.event_time_iso,
-    event_table.c.event_type,
-    event_table.c.endpoint,
-    event_table.c.outcome,
-    event_table.c.status,
-    event_table.c.duration_ms,
-    event_table.c.data,
-    event_table.c.ext_client_id,
-    event_table.c.application_outcome,
-)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _window_start_iso(fact:'stranydict', now:'datetime') -> 'str':
-    """ Where the fact's window starts - a fact measured without a window, e.g. a probe's
-    point-in-time reading, is read over the default window instead.
-    """
-    window_seconds = fact['window_seconds']
-
-    if not window_seconds:
-        window_seconds = Default_Window_Seconds
-
-    start = now - timedelta(seconds=window_seconds)
-    out = start.isoformat()
-
-    return out
-
-# ################################################################################################################################
-
-def _rows_from(result:'anylist') -> 'dictlist':
-    """ The rows of a query as evidence rows.
-    """
-
-    # Our response to produce
-    out:'dictlist' = []
-
-    for event_id, event_time_iso, event_type, endpoint, outcome, status, duration_ms, data, ext_client_id, \
-        application_outcome in result:
-
-        row:'stranydict' = {
-            'id': event_id,
-            'event_time_iso': event_time_iso,
-            'event_type': event_type,
-            'endpoint': endpoint,
-            'outcome': outcome,
-            'status': status,
-            'duration_ms': duration_ms,
-            'data': data,
-            'ext_client_id': ext_client_id,
-            'application_outcome': application_outcome,
-        }
-
-        out.append(row)
-
-    return out
-
-# ################################################################################################################################
-
-def _select_rows(engine:'Engine', conditions:'anylist') -> 'dictlist':
-    """ The newest rows meeting the conditions, newest first, capped per measure.
-    """
-    statement = select(*_row_columns).where(and_(*conditions)).order_by(event_table.c.id.desc()).limit(Max_Rows_Per_Measure)
-
-    with engine.connect() as connection:
-        result = connection.execute(statement).fetchall()
-
-    out = _rows_from(result)
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -253,9 +180,13 @@ def _attach_source_details(engine:'Engine', source:'str', rows:'dictlist') -> 'N
     if source in _status_attr_by_source:
         _attach_status_attr(engine, rows, _status_attr_by_source[source])
 
-    # .. and an LLM row shows its model, finish reason and token usage next to its status.
+    # .. an LLM row shows its model, finish reason and token usage next to its status ..
     if source == AuditSource.LLM:
         _attach_llm_attrs(engine, rows)
+
+    # .. and a gateway's row says what went wrong with the tool call in one line read off its data document.
+    if source == AuditSource.MCP:
+        attach_mcp_details(rows)
 
 # ################################################################################################################################
 
@@ -308,10 +239,24 @@ def collect_llm_completions(engine:'Engine', fact:'stranydict', now:'datetime') 
 
 # ################################################################################################################################
 
+def collect_truncations(engine:'Engine', fact:'stranydict', now:'datetime') -> 'dictlist':
+    """ The rows a truncation count was counted from - an LLM connection's completions the provider cut short,
+    or an MCP gateway's tool responses its size cap cut, the one fact key standing for either.
+    """
+    if fact['source'] == AuditSource.MCP:
+        out = collect_mcp_truncations(engine, fact, now)
+    else:
+        out = collect_llm_completions(engine, fact, now)
+
+    return out
+
+# ################################################################################################################################
+
 def collect_no_rows(engine:'Engine', fact:'stranydict', now:'datetime') -> 'dictlist':
-    """ What a measure that is a sum rather than a count of failures has for rows - none. A token budget alert's
-    evidence is the count and its split into input and output, both of which the fact carries already, and
-    listing every call that added to the sum would say nothing the numbers do not.
+    """ What a measure that is a sum or a reading rather than a count of failures has for rows - none. A token
+    budget alert's evidence is the count and its split into input and output, both of which the fact carries
+    already, and listing every call that added to the sum would say nothing the numbers do not - the same goes
+    for a gateway's response volume and for its tool count, which is read off the gateway rather than the log.
     """
     out:'dictlist' = []
     return out
@@ -460,11 +405,19 @@ measure_to_evidence:'dict[str, callable_]' = {
     'verify_failed_count':        collect_verify_failed,
     'cert_days_left':             collect_all_events,
     'health_state':               collect_all_events,
-    'truncation_count':           collect_llm_completions,
+    'truncation_count':           collect_truncations,
     'refusal_count':              collect_llm_completions,
     'token_count':                collect_no_rows,
     'input_token_count':          collect_no_rows,
     'output_token_count':         collect_no_rows,
+    'invalid_call_count':         collect_invalid_calls,
+    'rejection_count':            collect_rejections,
+    'throttled_count':            collect_throttled,
+    'repeat_call_count':          collect_repeat_calls,
+    'repeat_call_tool':           collect_repeat_calls,
+    'repeat_call_session':        collect_repeat_calls,
+    'volume_bytes':               collect_no_rows,
+    'tool_count':                 collect_no_rows,
 }
 
 # ################################################################################################################################

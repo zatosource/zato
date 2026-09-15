@@ -14,7 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # SQLAlchemy
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
 
 # Zato
 from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
@@ -126,6 +126,13 @@ response_event_type_by_source = {
     AuditSource.MCP:                  AuditEvent.MCP_Tools_Call,
 }
 
+# The one event type a source's failure streak is counted over - a source absent from here has every
+# stream of its own counted and reports the highest. An MCP gateway's auth-failed and rate-limited rows
+# are error rows about its callers, not its backend, so its streak is its tool calls' alone.
+streak_event_type_by_source = {
+    AuditSource.MCP: AuditEvent.MCP_Tools_Call,
+}
+
 # The event a channel writes the moment a call arrives - its newest one says when the channel last heard from anyone.
 # An MCP gateway's is its tool call, so a gateway agents keep initializing against but never call is silent.
 request_event_type_by_source = {
@@ -187,6 +194,46 @@ def is_recent(window_start_iso:'str') -> 'any_':
     """ The predicate picking the rows from the start of a window onwards.
     """
     out = event_table.c.event_time_iso >= window_start_iso
+    return out
+
+# ################################################################################################################################
+
+def is_outcome_row() -> 'any_':
+    """ The predicate picking the rows that say how a call went - every row of a source without a response
+    event type, and the response rows alone of a source with one, so an MCP gateway's initialize, tools/list
+    and auth-failed rows never stand in for its tool calls.
+    """
+    response_sources = list(response_event_type_by_source)
+
+    alternatives = [event_table.c.source.not_in(response_sources)]
+
+    for response_source, response_event_type in response_event_type_by_source.items():
+        alternatives.append(and_(
+            event_table.c.source == response_source,
+            event_table.c.event_type == response_event_type,
+        ))
+
+    out = or_(*alternatives)
+    return out
+
+# ################################################################################################################################
+
+def is_streak_row() -> 'any_':
+    """ The predicate picking the rows a failure streak is counted over - every row of every source but the
+    gateways, whose rejected credentials and throttled callers are error rows of their own types and would
+    otherwise read as the backend failing, so a gateway's streak is counted over its tool calls alone.
+    """
+    streak_sources = list(streak_event_type_by_source)
+
+    alternatives = [event_table.c.source.not_in(streak_sources)]
+
+    for streak_source, streak_event_type in streak_event_type_by_source.items():
+        alternatives.append(and_(
+            event_table.c.source == streak_source,
+            event_table.c.event_type == streak_event_type,
+        ))
+
+    out = or_(*alternatives)
     return out
 
 # ################################################################################################################################

@@ -172,6 +172,21 @@ class LLMFinish:
 
 # ################################################################################################################################
 
+class MCPAttr:
+    """ The attributes an MCP gateway's row carries next to its data document, so SQL can count them -
+    the JSON-RPC method, the request's bytes, the error code of a failed call, what refused a tool's response,
+    whether the size cap cut it and the tokens before and after the cut. The last five appear only when they apply.
+    """
+    Method        = 'method'
+    Request_Size  = 'request_size'
+    Error_Code    = 'error_code'
+    Reject_Kind   = 'reject_kind'
+    Was_Truncated = 'was_truncated'
+    Tokens_Before = 'tokens_before'
+    Tokens_After  = 'tokens_after'
+
+# ################################################################################################################################
+
 # The searchable attributes each source's events carry in the event_attr table -
 # the free-text search covers them and the Dashboard renders them as columns of their own.
 source_attr_names = {
@@ -183,6 +198,9 @@ source_attr_names = {
 
     # The model a completion was asked of and why the provider stopped generating - stop, length, refusal, tool_use.
     AuditSource.LLM: (LLMAttr.Model, LLMAttr.Finish_Reason),
+
+    # The JSON-RPC method of a gateway's request, the error code of a failed call and what refused a tool's response.
+    AuditSource.MCP: (MCPAttr.Method, MCPAttr.Error_Code, MCPAttr.Reject_Kind),
 
     # The channel type the invocation came in through.
     AuditSource.Service: ('channel',),
@@ -308,6 +326,10 @@ class AuditEvent:
     # A call that failed on credentials rather than networking - its own type
     # because its remedy is different, so alerting counts it separately.
     Auth_Failed          = 'auth-failed'
+
+    # A call an authenticated caller's own rate limit refused with a 429 - written by the services that
+    # answer their own 429s, an MCP gateway's endpoint among them, so alerting can count throttled callers.
+    Rate_Limited         = 'rate-limited'
 
     # What the probe jobs write - a certificate's days left, a remote service's
     # own health state and a test transfer's outcome.

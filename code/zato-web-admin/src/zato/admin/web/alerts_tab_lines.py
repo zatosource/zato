@@ -77,31 +77,23 @@ Token_Budget_Unit_Field = 'token_budget' + Unit_Field_Suffix
 # The unit select of the one size - whether a response volume is in kilobytes, megabytes or gigabytes
 Volume_Budget_Unit_Field = 'volume_budget' + Unit_Field_Suffix
 
+# Every window's unit select, each one a duration in minutes, hours or days
+_window_unit_fields = (Window_Unit_Field, Server_Errors_Window_Unit_Field, Latency_Window_Unit_Field,
+    Auth_Failures_Window_Unit_Field, Client_Errors_Window_Unit_Field, Silence_Window_Unit_Field,
+    Status_Codes_Window_Unit_Field, Connection_Failures_Window_Unit_Field, Faults_Window_Unit_Field,
+    Outcomes_Window_Unit_Field, Acks_Window_Unit_Field, Truncations_Window_Unit_Field, Refusals_Window_Unit_Field,
+    Token_Budget_Window_Unit_Field, Invalid_Calls_Window_Unit_Field, Rejections_Window_Unit_Field,
+    Throttled_Calls_Window_Unit_Field, Repeat_Calls_Window_Unit_Field, Volume_Budget_Window_Unit_Field)
+
 # The unit selects of the tab, by name
 unit_fields:'anydict' = {
     Token_Budget_Unit_Field: {'choices': amount_unit_choices, 'initial': config_map.Amount_Unit_Smallest},
     Volume_Budget_Unit_Field: {'choices': size_unit_choices, 'initial': config_map.Size_Unit_Smallest},
     Arrival_Overdue_Unit_Field: {'choices': duration_unit_choices, 'initial': Arrival_Overdue_Unit_Default},
-    Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Server_Errors_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Latency_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Auth_Failures_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Client_Errors_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Silence_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Status_Codes_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Connection_Failures_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Faults_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Outcomes_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Acks_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Truncations_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Refusals_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Token_Budget_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Invalid_Calls_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Rejections_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Throttled_Calls_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Repeat_Calls_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
-    Volume_Budget_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
 }
+
+for _window_unit_field in _window_unit_fields:
+    unit_fields[_window_unit_field] = {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest}
 
 # The JSON list of time slots of a channel's silence alert
 Silence_Slots_Field = config_map.Silence_Slots_Field_Name
@@ -194,17 +186,12 @@ for _popover_name, _popover_label in _popover_labels.items():
     field_display[_popover_name] = (_popover_label, _popover_unit)
 
 field_how_it_works = dict(field_help)
-field_how_it_works[Window_Unit_Field] = 'Whether the window is in minutes, hours or days.'
+
+for _window_unit_field in _window_unit_fields:
+    field_how_it_works[_window_unit_field] = 'Whether the window is in minutes, hours or days.'
+
 field_how_it_works[Arrival_Overdue_Unit_Field] = 'Whether the time a file may fail to arrive for is in minutes, hours or days.'
 field_how_it_works[Silence_Window_Unit_Field] = 'Whether the silence a channel tolerates is in minutes, hours or days.'
-
-for _window_unit_field in (Server_Errors_Window_Unit_Field, Latency_Window_Unit_Field, Auth_Failures_Window_Unit_Field,
-    Client_Errors_Window_Unit_Field, Status_Codes_Window_Unit_Field, Connection_Failures_Window_Unit_Field,
-    Faults_Window_Unit_Field, Outcomes_Window_Unit_Field, Acks_Window_Unit_Field, Truncations_Window_Unit_Field,
-    Refusals_Window_Unit_Field, Token_Budget_Window_Unit_Field, Invalid_Calls_Window_Unit_Field,
-    Rejections_Window_Unit_Field, Throttled_Calls_Window_Unit_Field, Repeat_Calls_Window_Unit_Field,
-    Volume_Budget_Window_Unit_Field):
-    field_how_it_works[_window_unit_field] = field_how_it_works[Window_Unit_Field]
 
 field_how_it_works[Token_Budget_Unit_Field] = 'Whether the budget is in thousands, millions or billions of tokens.'
 field_how_it_works[Volume_Budget_Unit_Field] = 'Whether the volume is in kilobytes, megabytes or gigabytes.'

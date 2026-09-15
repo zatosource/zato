@@ -384,6 +384,10 @@ class Service:
     # it responds to and audits such requests itself, and their security context stays empty.
     handles_auth_rejection:'bool' = False
 
+    # A service with this flag on receives the requests its channel's security definition rate limit refused -
+    # it answers them 429 and audits them itself, finding the check result under Rate_Limit_Result_Key in request_ctx.
+    handles_rate_limit_rejection:'bool' = False
+
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
     aws = AWSFacade()
     cloud = Cloud()

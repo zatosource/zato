@@ -18,11 +18,14 @@ from zato.common.alerting.collectors.backlogs import collect_feed_silent_facts, 
 from zato.common.alerting.collectors.channels import collect_channel_silence_facts, collect_channel_status_facts
 from zato.common.alerting.collectors.common import new_fact, Default_Begin_Event_Type, Default_End_Event_Type, \
     Default_Window_Seconds, Health_Window_Seconds, Measure_Ack_Codes, Measure_Auth_Failures, Measure_Client_Errors, \
-    Measure_Connection_Failures, Measure_Error_Rate, Measure_File_Runs, Measure_Latency, Measure_Operation_Outcomes, \
-    Measure_Refusals, Measure_Server_Errors, Measure_SOAP_Faults, Measure_Status_Codes, Measure_Tokens, Measure_Truncations, \
-    Window_Seconds_By_Measure_Key
+    Measure_Connection_Failures, Measure_Error_Rate, Measure_File_Runs, Measure_Invalid_Calls, Measure_Latency, \
+    Measure_MCP_Truncations, Measure_Operation_Outcomes, Measure_Refusals, Measure_Rejections, Measure_Repeat_Calls, \
+    Measure_Server_Errors, Measure_SOAP_Faults, Measure_Status_Codes, Measure_Throttled, Measure_Tokens, Measure_Truncations, \
+    Measure_Volume, Window_Seconds_By_Measure_Key
 from zato.common.alerting.collectors.file_transfer import collect_file_transfer_facts
 from zato.common.alerting.collectors.llm import collect_llm_completion_facts, collect_llm_token_facts
+from zato.common.alerting.collectors.mcp import collect_invalid_call_facts, collect_mcp_truncation_facts, \
+    collect_rejection_facts, collect_repeat_call_facts, collect_throttled_facts, collect_tool_count_facts, collect_volume_facts
 from zato.common.alerting.collectors.mllp import collect_ack_code_facts, collect_mllp_connection_failure_facts
 from zato.common.alerting.collectors.outgoing import collect_outgoing_status_facts
 from zato.common.alerting.collectors.probes import collect_certificate_facts, collect_health_facts, \
@@ -105,6 +108,12 @@ _collector_by_measure:'dict[str, callable_]' = {
     Measure_Tokens:              collect_llm_token_facts,
     Measure_Truncations:         collect_llm_completion_facts,
     Measure_Refusals:            collect_llm_completion_facts,
+    Measure_Invalid_Calls:       collect_invalid_call_facts,
+    Measure_Rejections:          collect_rejection_facts,
+    Measure_Throttled:           collect_throttled_facts,
+    Measure_Repeat_Calls:        collect_repeat_call_facts,
+    Measure_MCP_Truncations:     collect_mcp_truncation_facts,
+    Measure_Volume:              collect_volume_facts,
 }
 
 # The fact keys each windowed measure owns - what a run over one measure's window is allowed
@@ -125,6 +134,12 @@ _keys_by_measure:'dict[str, tuple[str, ...]]' = {
     Measure_Tokens:              ('token_count', 'input_token_count', 'output_token_count'),
     Measure_Truncations:         ('truncation_count',),
     Measure_Refusals:            ('refusal_count',),
+    Measure_Invalid_Calls:       ('invalid_call_count',),
+    Measure_Rejections:          ('rejection_count',),
+    Measure_Throttled:           ('throttled_count',),
+    Measure_Repeat_Calls:        ('repeat_call_count', 'repeat_call_tool', 'repeat_call_session'),
+    Measure_MCP_Truncations:     ('truncation_count',),
+    Measure_Volume:              ('volume_bytes',),
 }
 
 # ################################################################################################################################
@@ -265,13 +280,15 @@ def collect_facts(
     arrival_windows:'strintdict | None' = None,
     schedule_expectations:'anydict | None' = None,
     silence_expected_names:'strset | None' = None,
+    tool_counts:'strintdict | None' = None,
     ) -> 'dictlist':
     """ Runs every fact producer and merges their measures into one fact
     per (source, object) pair - the input the alert rules match over. The per-source
     windows come from the rules' window_seconds defaults, by source and then by measure -
     a source without one is measured over window_seconds, the health sources over their own hour,
     and an object with windows of its own, by source, then by object name and then by measure, over those.
-    The silence of a channel is measured for the channels named as expecting traffic alone.
+    The silence of a channel is measured for the channels named as expecting traffic alone, and the tool
+    counts of the MCP gateways arrive from the gateways themselves rather than the audit log.
     """
     if window_seconds_by_source is None:
         window_seconds_by_source = {}
@@ -290,6 +307,9 @@ def collect_facts(
 
     if silence_expected_names is None:
         silence_expected_names = set()
+
+    if tool_counts is None:
+        tool_counts = {}
 
     # The health sources keep their hour unless a rule names them
     window_seconds_by_source = dict(window_seconds_by_source)
@@ -337,6 +357,7 @@ def collect_facts(
     scheduler_facts = collect_scheduler_facts(engine, scheduler_window_seconds, now, job_intervals)
     file_transfer_facts = collect_file_transfer_facts(engine, now, arrival_windows, schedule_expectations, run_window_seconds,
         run_window_seconds_by_object)
+    tool_count_facts = collect_tool_count_facts(tool_counts)
 
     fact_lists = windowed_fact_lists + [
         consecutive_facts,
@@ -348,6 +369,7 @@ def collect_facts(
         test_transfer_facts,
         scheduler_facts,
         file_transfer_facts,
+        tool_count_facts,
     ]
 
     out = _merge_facts(fact_lists)

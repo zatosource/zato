@@ -52,6 +52,10 @@ LLM_Type = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
 LLM_Name = 'support.assistant'
 LLM_Address = 'https://api.openai.com/v1'
 LLM_Model = 'gpt-4o'
+MCP_Type = GENERIC.CONNECTION.TYPE.GATEWAY_MCP
+MCP_Name = 'orders.gateway'
+MCP_URL_Path = '/mcp/orders'
+MCP_Services = ['orders.get', 'orders.list']
 
 # The id the scheduler stand-in gives every job it is asked to create
 Job_Id = 4321
@@ -102,6 +106,7 @@ def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') 
     server = SimpleNamespace(
         name='test-server',
         cluster_id=Cluster_Id,
+        odb=service.odb,
         get_config_session=lambda **kwargs: session_factory(),
         encrypt=lambda value: value,
         decrypt=lambda value: value,
@@ -208,6 +213,30 @@ def llm_input(**overrides:'any_') -> 'stranydict':
 
     return out
 
+# ################################################################################################################################
+
+def mcp_input(**overrides:'any_') -> 'stranydict':
+    """ What every create and edit of an MCP gateway sends - the alert settings are not among these.
+    """
+    out:'stranydict' = {
+        'name': MCP_Name,
+        'type_': MCP_Type,
+        'is_active': True,
+        'is_internal': False,
+        'is_channel': True,
+        'is_outconn': False,
+        'pool_size': 1,
+        'url_path': MCP_URL_Path,
+        'services': MCP_Services,
+        'security_groups': [],
+        'is_audit_log_active': True,
+        'validate_input': True,
+        'cluster_id': Cluster_Id,
+    }
+    out.update(overrides)
+
+    return out
+
 # ##############################################################################################################################
 
 def create(session_factory:'any_', **overrides:'any_') -> 'int':
@@ -247,6 +276,18 @@ def create_llm(session_factory:'any_', **overrides:'any_') -> 'int':
     """ Creates one outgoing LLM connection and returns its id.
     """
     service = new_service(Create, session_factory, llm_input(**overrides))
+    service.handle()
+
+    out = service.response.payload.id
+    return out
+
+# ##############################################################################################################################
+
+def create_mcp(session_factory:'any_', **overrides:'any_') -> 'int':
+    """ Creates one MCP gateway and returns its id - the REST channel the gateway rides on is created through
+    the stand-in invoke, so nothing but the generic connection lands in the database.
+    """
+    service = new_service(Create, session_factory, mcp_input(**overrides))
     service.handle()
 
     out = service.response.payload.id

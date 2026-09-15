@@ -14,6 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # Zato
+from zato.common.alerting.config_map import format_size, type_fields, Kind_Size
 from zato.common.alerting.object_config import field_display, from_storage, get_defaults, Email_Connection_Field, \
     Is_Active_Field, LLM_Connection_Field
 
@@ -50,6 +51,14 @@ _toggle_values = {
     False: Off,
 }
 
+# The fields stored as bytes, whichever type they belong to - they read as a size a person can follow
+_size_field_names:'set[str]' = set()
+
+for _type_field_list in type_fields.values():
+    for _field in _type_field_list:
+        if _field['kind'] == Kind_Size:
+            _size_field_names.add(_field['name'])
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -61,6 +70,8 @@ def format_setting(name:'str', value:'object') -> 'str':
 
     if isinstance(value, bool):
         out = f'{label} {_toggle_values[value]}'
+    elif name in _size_field_names:
+        out = f'{label} {format_size(value)}'
     elif unit:
         out = f'{label} {value} {unit}'
     else:

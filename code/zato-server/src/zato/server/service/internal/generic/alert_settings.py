@@ -16,10 +16,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.alerting import config_map
 from zato.common.alerting.ack_codes import parse_ack_codes
 from zato.common.alerting.fault_codes import parse_fault_codes
-from zato.common.alerting.object_config import conn_type_to_alert_type, get_defaults, get_field_names, storage_name
+from zato.common.alerting.object_config import conn_type_to_alert_type, from_storage, get_defaults, get_field_names, \
+    storage_name
 from zato.common.alerting.outcome_codes import parse_outcome_codes
 from zato.common.alerting.status_codes import parse_status_codes
 from zato.common.alerting.time_slots import validate_silence_slots
+from zato.common.alerting.validate_numbers import validate_number_settings
 from zato.server.connection.http_soap import BadRequest
 
 # ################################################################################################################################
@@ -79,14 +81,20 @@ def prepare_generic_alert_settings(service:'AdminService', conn_type:'str', data
     if config_map.Silence_Slots_Field_Name in field_names:
         _ = validate_silence_slots(out[storage_name(config_map.Silence_Slots_Field_Name)])
 
-    # .. and so is a status code that is neither three digits nor a class such as 5xx, a fault code
-    # .. that is not a name such as Receiver and an outcome code that is not one such as not-found.
+    # .. so is a status code that is neither three digits nor a class such as 5xx, a fault code
+    # .. that is not a name such as Receiver and an outcome code that is not one such as not-found ..
     for name, parser in _parsers.items():
         if name in field_names:
             try:
                 _ = parser(out[storage_name(name)])
             except ValueError as e:
                 raise BadRequest(service.cid, str(e))
+
+    # .. and so is a threshold that is not a number or is negative.
+    try:
+        validate_number_settings(alert_type, from_storage(alert_type, out))
+    except ValueError as e:
+        raise BadRequest(service.cid, str(e))
 
     return out
 
