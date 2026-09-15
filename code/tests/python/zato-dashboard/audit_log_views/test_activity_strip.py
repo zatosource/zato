@@ -17,7 +17,7 @@ from json import dumps, loads
 
 # Zato
 from zato.admin.web.views.audit_log import strip
-from zato.admin.web.views.audit_log.views import _strip_max_buckets, _strip_min_buckets
+from zato.admin.web.views.audit_log.poll import _strip_max_buckets, _strip_min_buckets
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource, \
     ModuleCtx as AuditLogCtx
 from zato.common.ext.bunch import Bunch
