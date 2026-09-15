@@ -126,7 +126,7 @@ class _CreateEdit(CreateEdit):
     def pre_process_input_dict(self, input_dict:'stranydict') -> 'None':
 
         # A duration is stored as seconds, which is what its count and unit join into
-        alerts_tab.join_durations(_alert_type, input_dict)
+        alerts_tab.join_unit_fields(_alert_type, input_dict)
 
 # ################################################################################################################################
 
@@ -208,7 +208,7 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     form = EditForm(req, prefix='edit')
 
     # A duration is stored as seconds and edited as a count with a unit
-    alerts_tab.split_durations(_alert_type, item_dict)
+    alerts_tab.split_unit_fields(_alert_type, item_dict)
     populate_form_initial(form, item_dict)
 
     return_data = {

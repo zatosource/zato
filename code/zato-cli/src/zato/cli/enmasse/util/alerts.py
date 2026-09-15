@@ -77,6 +77,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 #         alerts:
 #           ack_codes: 'AR, CR'
 #           connection_failures: 5
+#
+#     llm:
+#       - name: support.assistant
+#         address: https://api.openai.com/v1
+#         model: gpt-4o
+#         alerts:
+#           status_codes: '429, 5xx'
+#           token_budget: 2000000
+#           truncations: 5
 
 # stdlib
 import logging

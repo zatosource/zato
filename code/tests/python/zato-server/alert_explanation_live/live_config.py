@@ -55,5 +55,9 @@ class LiveServer:
     # the code it was acknowledged with - what the outgoing MLLP proof sends its messages through
     mllp_send_service = 'explain.live.mllp.send'
 
+    # The hot-deployed service that asks a named outgoing LLM connection for one completion and reports what came
+    # back or the error the provider answered with - what the outgoing LLM proof makes its calls through
+    llm_invoke_service = 'explain.live.llm.invoke'
+
 # ################################################################################################################################
 # ################################################################################################################################

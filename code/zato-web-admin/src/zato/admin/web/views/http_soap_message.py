@@ -121,7 +121,7 @@ def get_edit_create_message(params:'any_', prefix:'str'='', user_profile:'any_'=
             value = params.get(prefix + name, '')
             message[name] = alerts_tab.pre_process_alert_item(alert_type, name, value)
 
-        alerts_tab.join_durations(alert_type, message)
+        alerts_tab.join_unit_fields(alert_type, message)
 
     # The declarative invocation fields exist only in the forms of outgoing connections
     for name in _invocation_field_names:
@@ -172,7 +172,7 @@ def fill_row_from_item(
             if name in item:
                 http_soap[name] = item[name]
 
-        alerts_tab.split_durations(alert_type, http_soap)
+        alerts_tab.split_unit_fields(alert_type, http_soap)
 
     for name in generic_attrs:
         setattr(http_soap, name, item.get(name))

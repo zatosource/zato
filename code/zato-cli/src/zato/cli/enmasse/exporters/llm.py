@@ -10,6 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.cli.enmasse.util.alerts import group_alerts
+from zato.common.alerting.object_config import Alerts_Key, conn_type_to_alert_type
 from zato.common.api import GENERIC, LLM
 from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
@@ -43,6 +45,9 @@ _field_defaults = {
     'max_history_turns': LLM.DEFAULT.MAX_HISTORY_TURNS,
     'chat_expiry': LLM.DEFAULT.CHAT_EXPIRY,
 }
+
+# The alert type an LLM connection's own settings are grouped under
+_alert_type = conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_LLM]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,6 +98,10 @@ class LLMExporter:
                     default = _field_defaults[field]
                     if value != default:
                         item[field] = value
+
+            # The alert settings the connection sets of its own go under one alerts mapping
+            if alerts := group_alerts(row, _alert_type):
+                item[Alerts_Key] = alerts
 
             exported.append(item)
 

@@ -22,7 +22,12 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/chips.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/index.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/config.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/units.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/save.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/editor.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/cards.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/init.js"></script>
 {% endblock %}
 
 {% block dashboard_tiles %}{% endblock %}
@@ -88,8 +93,12 @@
                 <input type="number" id="id_alert-rules-row-error_rate">
                 <input type="number" id="id_alert-rules-row-max_latency">
                 <input type="number" id="id_alert-rules-row-max_query_time">
-                <input type="number" id="id_alert-rules-row-warning_latency">
-                <input type="number" id="id_alert-rules-row-error_latency">
+                <input type="number" step="any" id="id_alert-rules-row-warning_latency">
+                <input type="number" step="any" id="id_alert-rules-row-error_latency">
+                <input type="number" id="id_alert-rules-row-truncations">
+                <input type="number" id="id_alert-rules-row-refusals">
+                <input type="number" step="any" id="id_alert-rules-row-token_budget">
+                <select id="id_alert-rules-row-token_budget_unit" class="alert-rules-amount-unit"></select>
                 <input type="number" id="id_alert-rules-row-max_tool_call_time">
                 <input type="checkbox" id="id_alert-rules-row-health_alerts">
                 <input type="number" id="id_alert-rules-row-max_call_time">

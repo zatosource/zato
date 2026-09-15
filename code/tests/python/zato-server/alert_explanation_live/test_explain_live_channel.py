@@ -8,9 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The explain service end to end for a REST channel and for a SOAP channel - a real quickstart server
 # with a hot-deployed service that raises, a channel of each transport in front of it with the audit log on,
-# real HTTP calls that the channel rejects and that the service fails on, one real sweep inside the server,
-# and the explained alerts read off the server's own databases and received by a real SMTP receiver.
-# Both proofs share every step, each describing its channel to the steps through one object.
+# imported through enmasse the way a deployment's is, real HTTP calls that the channel rejects and that the
+# service fails on, one real sweep inside the server, and the explained alerts read off the server's own
+# databases and received by a real SMTP receiver. Both proofs share every step, each describing its channel
+# to the steps through one object.
 
 # stdlib
 import os
@@ -34,6 +35,7 @@ from zato.common.test.client import AdminClient
 
 # Test helpers
 from live_config import LiveServer
+from live_enmasse import deactivate_document, import_document
 from live_trace import Channel_Channel, Channel_Explain, Channel_SMTP, Received, Sent, separator, trace
 from test_explain_live import _assert_sound_explanation, _email_to, _trace_delivery
 
@@ -48,14 +50,16 @@ if 0:
 
 @dataclass
 class _ChannelDescription:
-    """ One channel the proof runs against - what it is called, where it answers, how it is created,
-    what a call to it looks like on the wire, under which audit source it logs and what its failures say.
+    """ One channel the proof runs against - what it is called, where it answers, which enmasse section it goes in
+    under and with what of its own, what a call to it looks like on the wire, under which audit source it logs and
+    what its failures say.
     """
     label:'str'
     name:'str'
     url_path:'str'
     source:'str'
-    create_args:'stranydict'
+    section:'str'
+    enmasse_args:'stranydict'
     headers:'strstrdict'
     body:'any_'
     fault_text:'str'
@@ -94,13 +98,13 @@ def _run_channel_proof(channel:'_ChannelDescription', smtp_receiver:'any_') -> '
     client = _new_admin_client()
 
     # The server's own notification connection delivers to the receiver ..
-    _point_smtp_at_receiver(client, smtp_receiver)
+    _point_smtp_at_receiver(smtp_receiver)
 
     # .. the callers of the channel authenticate with this definition ..
-    security_id = _ensure_basic_auth(client)
+    _ensure_basic_auth()
 
     # .. the channel itself, with the audit log on and thresholds of its own ..
-    channel_id = _create_channel(client, channel, security_id)
+    channel_document = _create_channel(channel)
 
     # .. and the sweep explains through the LLM connection and mails from the address below.
     notification_config = _new_notification_config()
@@ -176,7 +180,7 @@ def _run_channel_proof(channel:'_ChannelDescription', smtp_receiver:'any_') -> '
         else:
             raise AssertionError(f'Expected an email carrying {explanation["explanation"]!r}')
 
-    _ = client.delete('zato.http-soap.delete', id=channel_id)
+    deactivate_document(channel_document)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -234,8 +238,8 @@ _rest_channel = _ChannelDescription(
     name='explain.live.orders',
     url_path='/explain-live/orders',
     source=AuditSource.REST_Channel,
-    create_args={
-        'transport': 'plain_http',
+    section='channel_rest',
+    enmasse_args={
         'data_format': 'json',
     },
     headers={},
@@ -248,8 +252,8 @@ _soap_channel = _ChannelDescription(
     name='explain.live.orders.soap',
     url_path='/explain-live/orders/soap',
     source=AuditSource.SOAP_Channel,
-    create_args={
-        'transport': 'soap',
+    section='channel_soap',
+    enmasse_args={
         'data_format': 'xml',
         'soap_action': _soap_action,
         'soap_version': _soap_version,
@@ -288,96 +292,76 @@ def _unwrap(response:'anydict') -> 'any_':
 
 # ################################################################################################################################
 
-def _find_by_name(client:'AdminClient', service_name:'str', name:'str') -> 'anydict | None':
-    """ One object of a get-list service by its name, or None when the server has none of that name.
-    A list service answers with the list itself, unwrapped.
-    """
-    items, _ = client.get_list(service_name, cluster_id=default_cluster_id)
-
-    for item in items:
-        if item['name'] == name:
-            return item
-
-    return None
-
-# ################################################################################################################################
-
-def _point_smtp_at_receiver(client:'AdminClient', smtp_receiver:'any_') -> 'None':
+def _point_smtp_at_receiver(smtp_receiver:'any_') -> 'None':
     """ The SMTP connection the alerts leave through - the one under the default notification name,
-    active and pointed at the receiver. A fresh quickstart has none, so the first proof creates it
+    active and pointed at the receiver. A fresh quickstart has none, so the first proof's import creates it
     and the next one, with a receiver of its own, points the same connection at that one.
     """
     conn_name = get_notification_conn_name()
 
-    args = {
-        'cluster_id': default_cluster_id,
-        'name': conn_name,
-        'is_active': True,
-        'host': '127.0.0.1',
-        'port': smtp_receiver.port,
-        'timeout': 10,
-        'is_debug': False,
-        'username': '',
-        'mode': EMAIL.SMTP.MODE.PLAIN,
-        'ping_address': '',
+    document = {
+        'email_smtp': [{
+            'name': conn_name,
+            'is_active': True,
+            'host': '127.0.0.1',
+            'port': smtp_receiver.port,
+            'timeout': 10,
+            'is_debug': False,
+            'username': '',
+            'mode': EMAIL.SMTP.MODE.PLAIN,
+            'ping_address': '',
+        }],
     }
 
-    existing = _find_by_name(client, 'zato.email.smtp.get-list', conn_name)
-
-    if existing is None:
-        _ = client.create('zato.email.smtp.create', **args)
-    else:
-        _ = client.edit('zato.email.smtp.edit', id=existing['id'], **args)
+    import_document(document)
 
     trace(Channel_SMTP, Sent, f'connection `{conn_name}` now delivers to 127.0.0.1:{smtp_receiver.port}')
     separator(Channel_SMTP)
 
 # ################################################################################################################################
 
-def _ensure_basic_auth(client:'AdminClient') -> 'int':
-    """ The Basic Auth definition the channels' callers authenticate with - created by the first proof,
-    found by the next one.
+def _ensure_basic_auth() -> 'None':
+    """ The Basic Auth definition the channels' callers authenticate with - the first proof's import creates it
+    and the next one's finds it in place.
     """
-    existing = _find_by_name(client, 'zato.security.basic-auth.get-list', _security_name)
+    document = {
+        'security': [{
+            'name': _security_name,
+            'type': 'basic_auth',
+            'is_active': True,
+            'username': _security_username,
+            'password': _security_password,
+            'realm': 'Zato',
+        }],
+    }
 
-    if existing is not None:
-        return existing['id']
-
-    response = _unwrap(client.create('zato.security.basic-auth.create',
-        cluster_id=default_cluster_id,
-        name=_security_name,
-        is_active=True,
-        username=_security_username,
-        realm='Zato',
-    ))
-    out = response['id']
-
-    _ = client.invoke('zato.security.basic-auth.change-password', {'id': out, 'password': _security_password})
-
-    return out
+    import_document(document)
 
 # ################################################################################################################################
 
-def _create_channel(client:'AdminClient', channel:'_ChannelDescription', security_id:'int') -> 'int':
-    """ The channel in front of the service that raises - the audit log on, the LLM explaining
-    its alerts and a threshold of its own for the rejected callers, so five of them are enough.
+def _create_channel(channel:'_ChannelDescription') -> 'anydict':
+    """ The channel in front of the service that raises - the audit log on, the LLM explaining its alerts and
+    a threshold of its own for the rejected callers, so five of them are enough. What is returned is the document
+    the channel went in with, for the proof to deactivate it with once it is through.
     """
-    response = _unwrap(client.create('zato.http-soap.create',
-        cluster_id=default_cluster_id,
-        name=channel.name,
-        is_active=True,
-        is_internal=False,
-        connection='channel',
-        url_path=channel.url_path,
-        service=LiveServer.raising_service,
-        security_id=security_id,
-        is_audit_log_active=True,
-        alert_is_active=True,
-        alert_use_llm=True,
-        alert_auth_failures=_channel_call_count,
-        **channel.create_args,
-    ))
-    out = response['id']
+    definition = {
+        'name': channel.name,
+        'is_active': True,
+        'service': LiveServer.raising_service,
+        'url_path': channel.url_path,
+        'security': _security_name,
+        'is_audit_log_active': True,
+        'alerts': {
+            'is_active': True,
+            'use_llm': True,
+            'auth_failures': _channel_call_count,
+        },
+    }
+    definition.update(channel.enmasse_args)
+
+    out = {channel.section: [definition]}
+
+    import_document(out)
 
     trace(Channel_Channel, Sent, f'{channel.label} channel `{channel.name}` at {channel.url_path} -> {LiveServer.raising_service}')
     separator(Channel_Channel)

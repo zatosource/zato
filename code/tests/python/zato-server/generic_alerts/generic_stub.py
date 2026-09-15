@@ -48,6 +48,10 @@ MLLP_Service = 'adt.process'
 MLLP_Outgoing_Type = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP
 MLLP_Outgoing_Name = 'lab.results'
 MLLP_Outgoing_Address = 'lab.example.com:2575'
+LLM_Type = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
+LLM_Name = 'support.assistant'
+LLM_Address = 'https://api.openai.com/v1'
+LLM_Model = 'gpt-4o'
 
 # The id the scheduler stand-in gives every job it is asked to create
 Job_Id = 4321
@@ -179,6 +183,31 @@ def mllp_outgoing_input(**overrides:'any_') -> 'stranydict':
 
     return out
 
+# ################################################################################################################################
+
+def llm_input(**overrides:'any_') -> 'stranydict':
+    """ What every create and edit of an outgoing LLM connection sends - the alert settings are not among these.
+    """
+    out:'stranydict' = {
+        'name': LLM_Name,
+        'type_': LLM_Type,
+        'is_active': True,
+        'is_internal': False,
+        'is_channel': False,
+        'is_outconn': True,
+        'address': LLM_Address,
+        'model': LLM_Model,
+        'pool_size': 1,
+        'timeout': 60,
+        'max_tokens': 4096,
+        'max_history_turns': 20,
+        'chat_expiry': 86400,
+        'cluster_id': Cluster_Id,
+    }
+    out.update(overrides)
+
+    return out
+
 # ##############################################################################################################################
 
 def create(session_factory:'any_', **overrides:'any_') -> 'int':
@@ -207,6 +236,17 @@ def create_mllp_outgoing(session_factory:'any_', **overrides:'any_') -> 'int':
     """ Creates one outgoing MLLP connection and returns its id.
     """
     service = new_service(Create, session_factory, mllp_outgoing_input(**overrides))
+    service.handle()
+
+    out = service.response.payload.id
+    return out
+
+# ##############################################################################################################################
+
+def create_llm(session_factory:'any_', **overrides:'any_') -> 'int':
+    """ Creates one outgoing LLM connection and returns its id.
+    """
+    service = new_service(Create, session_factory, llm_input(**overrides))
     service.handle()
 
     out = service.response.payload.id

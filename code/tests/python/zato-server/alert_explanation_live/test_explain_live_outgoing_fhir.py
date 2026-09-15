@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The explain service end to end for an outgoing FHIR connection whose upstream answers with OperationOutcomes - a real
 # quickstart server with REST channels of its own in front of the service that answers every call with an
-# OperationOutcome of `exception` on a 500, the way a FHIR server answers for a resource it failed on. Real calls
+# OperationOutcome of `exception` on a 500, the way a FHIR server answers for a resource it failed on, the channels
+# and the connections all imported through enmasse. Real calls
 # through the connection from inside the server, one real sweep, and the explained alert read off the server's own
 # databases and received by a real SMTP receiver. The second proof gives a connection a health check, fired by the
 # suite's own scheduler every second, and reads the pair each check writes under the connection's health source.
@@ -33,9 +34,10 @@ from zato.common.test.client import AdminClient
 
 # Test helpers
 from live_config import LiveServer
+from live_enmasse import deactivate_document, import_document
 from live_trace import Channel_Explain, Channel_Outgoing, Received, Sent, separator, trace
 from test_explain_live import _assert_sound_explanation, _email_to, _trace_delivery
-from test_explain_live_channel import _find_by_name, _new_admin_client, _new_notification_config, _point_smtp_at_receiver, \
+from test_explain_live_channel import _new_admin_client, _new_notification_config, _point_smtp_at_receiver, \
      _server_audit_engine, _unwrap
 from test_explain_live_outgoing import _status_separator, _wrapper_wait_step, _wrapper_wait_timeout
 
@@ -43,7 +45,7 @@ from test_explain_live_outgoing import _status_separator, _wrapper_wait_step, _w
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,15 +62,15 @@ class TestExplainLiveOutgoingFHIROutcomes:
         client = _new_admin_client()
 
         # The server's own notification connection delivers to the receiver ..
-        _point_smtp_at_receiver(client, smtp_receiver)
+        _point_smtp_at_receiver(smtp_receiver)
 
         # .. a REST channel of the same server, in front of the service that answers with OperationOutcomes,
         # is the upstream every read of a Patient through the connection reaches ..
-        channel_id = _create_outcome_channel(client, _patient_channel_name, _patient_channel_path)
+        channel_document = _create_outcome_channel(_patient_channel_name, _patient_channel_path)
 
         # .. and the connection points at it, with the audit log on and an outcome threshold four calls go past.
         address = _upstream_address()
-        conn_id = _create_outcome_outgoing(client, _outcome_name, address)
+        outgoing_document = _create_outcome_outgoing(_outcome_name, address)
 
         # The sweep explains through the LLM connection and mails from the address below
         notification_config = _new_notification_config()
@@ -146,8 +148,8 @@ class TestExplainLiveOutgoingFHIROutcomes:
         else:
             raise AssertionError(f'Expected an email carrying {explained["explanation"]!r}')
 
-        _ = client.delete('zato.generic.connection.delete', id=conn_id)
-        _ = client.delete('zato.http-soap.delete', id=channel_id)
+        deactivate_document(outgoing_document)
+        deactivate_document(channel_document)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -165,15 +167,15 @@ class TestExplainLiveOutgoingFHIRHealthCheck:
         client = _new_admin_client()
 
         # The server's own notification connection delivers to the receiver ..
-        _point_smtp_at_receiver(client, smtp_receiver)
+        _point_smtp_at_receiver(smtp_receiver)
 
         # .. a REST channel of the same server answers the connection's pings - a GET of the CapabilityStatement -
         # with the same OperationOutcome on a 500, so every check of the connection fails with an issue code ..
-        channel_id = _create_outcome_channel(client, _capability_channel_name, _capability_channel_path)
+        channel_document = _create_outcome_channel(_capability_channel_name, _capability_channel_path)
 
         # .. and a FHIR connection with a health check every second and three failed checks bringing it down.
         address = _upstream_address()
-        conn_id = _create_outcome_outgoing(client, _checked_name, address, is_checked=True)
+        outgoing_document = _create_outcome_outgoing(_checked_name, address, is_checked=True)
 
         # The sweep explains through the LLM connection and mails from the address below
         notification_config = _new_notification_config()
@@ -233,9 +235,9 @@ class TestExplainLiveOutgoingFHIRHealthCheck:
         else:
             raise AssertionError(f'Expected an email carrying {explained["explanation"]!r}')
 
-        # Deleting the connection deletes its check job with it, so the scheduler stops pinging
-        _ = client.delete('zato.generic.connection.delete', id=conn_id)
-        _ = client.delete('zato.http-soap.delete', id=channel_id)
+        # The check job of an inactive connection is inactive with it, so the scheduler stops pinging
+        deactivate_document(outgoing_document)
+        deactivate_document(channel_document)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -297,29 +299,26 @@ def _upstream_address() -> 'str':
 
 # ################################################################################################################################
 
-def _create_outcome_channel(client:'AdminClient', name:'str', url_path:'str') -> 'int':
+def _create_outcome_channel(name:'str', url_path:'str') -> 'anydict':
     """ A REST channel of the live server in front of the service that answers with OperationOutcomes - no security
-    of its own, so every call gets through to the service and comes back as the outcome it builds.
+    of its own, so every call gets through to the service and comes back as the outcome it builds. What is returned
+    is the document the channel went in with, for the proof to deactivate it with once it is through.
     """
-    existing = _find_by_name(client, 'zato.http-soap.get-list', name)
+    out = {
+        'channel_rest': [{
+            'name': name,
+            'is_active': True,
+            'service': LiveServer.outcome_service,
+            'url_path': url_path,
+            'data_format': 'json',
+            'is_audit_log_active': False,
+            'alerts': {
+                'is_active': False,
+            },
+        }],
+    }
 
-    if existing is not None:
-        return existing['id']
-
-    response = _unwrap(client.create('zato.http-soap.create',
-        cluster_id=default_cluster_id,
-        name=name,
-        is_active=True,
-        is_internal=False,
-        connection='channel',
-        transport='plain_http',
-        data_format='json',
-        url_path=url_path,
-        service=LiveServer.outcome_service,
-        is_audit_log_active=False,
-        alert_is_active=False,
-    ))
-    out = response['id']
+    import_document(out)
 
     trace(Channel_Outgoing, Sent, f'outcome channel `{name}` at {url_path} -> {LiveServer.outcome_service}')
     separator(Channel_Outgoing)
@@ -328,36 +327,33 @@ def _create_outcome_channel(client:'AdminClient', name:'str', url_path:'str') ->
 
 # ################################################################################################################################
 
-def _create_outcome_outgoing(client:'AdminClient', name:'str', address:'str', *, is_checked:'bool'=False) -> 'int':
+def _create_outcome_outgoing(name:'str', address:'str', *, is_checked:'bool'=False) -> 'anydict':
     """ A FHIR connection of the proof - the audit log on, the LLM explaining its alerts, no security of its own,
     the default outcome codes and a threshold low enough for four outcomes to fire its rule. A checked one is
-    pinged every second and a streak of three failed checks brings it down.
+    pinged every second and a streak of three failed checks brings it down. What is returned is the document
+    it went in with, for the proof to deactivate it with once it is through.
     """
-    request = {
-        'cluster_id': default_cluster_id,
-        'type_': _fhir_type,
+    definition = {
         'name': name,
         'is_active': True,
-        'is_internal': False,
-        'is_channel': False,
-        'is_outconn': True,
         'address': address,
         'pool_size': HL7.Default.pool_size,
-        'security_id': 0,
-        'auth_type': HL7.Const.FHIR_Auth_Type.No_Auth.id,
         'is_audit_log_active': True,
-        'alert_is_active': True,
-        'alert_use_llm': True,
-        'alert_outcome_threshold': _outcome_threshold,
-        'alert_consecutive_failures': _consecutive_failures,
+        'alerts': {
+            'is_active': True,
+            'use_llm': True,
+            'outcome_threshold': _outcome_threshold,
+            'consecutive_failures': _consecutive_failures,
+        },
     }
 
     if is_checked:
-        request['health_check_run_every'] = _run_every
-        request['health_check_run_unit'] = _run_unit
+        definition['health_check_run_every'] = _run_every
+        definition['health_check_run_unit'] = _run_unit
 
-    response = _unwrap(client.create('zato.generic.connection.create', **request))
-    out = response['id']
+    out = {'outgoing_fhir': [definition]}
+
+    import_document(out)
 
     if is_checked:
         trace(Channel_Outgoing, Sent, f'fhir connection `{name}` -> {address}, checked every {_run_every} {_run_unit}')

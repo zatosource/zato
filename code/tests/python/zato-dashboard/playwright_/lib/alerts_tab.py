@@ -139,6 +139,34 @@ def set_popover_value(page:'Page', page_prefix:'str', form_type:'str', line_name
 
 # ################################################################################################################################
 
+def set_popover_value_with_unit(
+    page:'Page',
+    page_prefix:'str',
+    form_type:'str',
+    line_name:'str',
+    field_name:'str',
+    value:'str',
+    unit_field_name:'str',
+    unit:'str',
+) -> 'None':
+    """ Opens the popover of a line, types a new count into one of its inputs, picks the unit in the select right
+    after it and accepts, which writes both back into the hidden fields of the same names.
+    """
+
+    # Open the popover through the line's summary link ..
+    page.click(f'#{panel_id(page_prefix, form_type)}-edit-{line_name}')
+    _ = page.wait_for_selector(_Popover_Selector, state='visible', timeout=_Popover_Timeout)
+
+    # .. type the count and pick the unit - a plain select, so its value is set the plain way ..
+    page.fill(f'#{_Popover_Input_Prefix}{field_name}', value)
+    _ = page.select_option(f'#{_Popover_Input_Prefix}{unit_field_name}', unit)
+
+    # .. and accept, which closes the popover.
+    page.click(_Popover_Ok_Selector)
+    _ = page.wait_for_selector(_Popover_Selector, state='hidden', timeout=_Popover_Timeout)
+
+# ################################################################################################################################
+
 def set_chips_value(page:'Page', page_prefix:'str', form_type:'str', line_name:'str', field_name:'str', value:'str') -> 'None':
     """ Opens the popover of a line, replaces the chips of one of its list fields with the comma-separated
     names given and accepts, which writes the names back into the hidden field of the same name.

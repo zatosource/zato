@@ -319,7 +319,7 @@ class TestSources:
 
     def test_the_channels_are_the_channels_alone(self) -> 'None':
         assert channel_sources == (AuditSource.REST_Channel, AuditSource.SOAP_Channel)
-        assert outgoing_sources == (AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing, AuditSource.FHIR)
+        assert outgoing_sources == (AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing, AuditSource.FHIR, AuditSource.LLM)
 
     def test_a_channel_and_a_connection_of_one_name_each_get_facts_of_their_own_source(self) -> 'None':
         audit_log = AuditLog(_server_name)

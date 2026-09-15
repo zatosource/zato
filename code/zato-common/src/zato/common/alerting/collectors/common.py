@@ -81,6 +81,12 @@ Measure_Operation_Outcomes = 'operation_outcomes'
 # was answered, with each negative code
 Measure_Ack_Codes = 'ack_codes'
 
+# The measures of an outgoing LLM connection's completions - how many tokens they used, input and output added up,
+# how many were cut short by the token limit and how many the provider refused, the last two arriving as an HTTP 200
+Measure_Tokens      = 'tokens'
+Measure_Truncations = 'truncations'
+Measure_Refusals    = 'refusals'
+
 # The key a merged fact carries the window of each of its measures under
 Window_Seconds_By_Measure_Key = 'window_seconds_by_measure'
 
@@ -100,6 +106,10 @@ response_event_type_by_source = {
     AuditSource.SOAP_Outgoing_Health: AuditEvent.Response_Received,
     AuditSource.FHIR:                 AuditEvent.Response_Received,
     AuditSource.FHIR_Health:          AuditEvent.Response_Received,
+
+    # An LLM connection writes one row per call, the response one, so nothing is lost by naming it here,
+    # and the outgoing status collector reads every source it counts through this map
+    AuditSource.LLM:                  AuditEvent.Response_Received,
 }
 
 # The event a channel writes the moment a call arrives - its newest one says when the channel last heard from anyone.
@@ -121,8 +131,9 @@ all_channel_sources = (AuditSource.REST_Channel, AuditSource.SOAP_Channel, Audit
 silence_sources = all_channel_sources
 
 # The outgoing connections whose responses are counted by their status code - the HTTPSOAP rows carrying
-# alert settings under the rest and soap types and the FHIR generic connections under the fhir type
-outgoing_sources = (AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing, AuditSource.FHIR)
+# alert settings under the rest and soap types, the FHIR generic connections under the fhir type and the LLM
+# ones under the llm type, whose wrapper writes one row per call with the provider's status
+outgoing_sources = (AuditSource.REST_Outgoing, AuditSource.SOAP_Outgoing, AuditSource.FHIR, AuditSource.LLM)
 
 # The sources whose acknowledgments are counted by their code - the acks an MLLP channel sent back and
 # the ones an outgoing MLLP connection was answered, each read off its own response event
@@ -218,6 +229,15 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
         'outcome_count': 0,
         'ack_code_counts': {},
         'ack_count': 0,
+
+        # The completions of an LLM connection - the tokens its calls used within the window, in all and
+        # split into the prompt's and the answer's, how many answers the provider cut short for running out
+        # of tokens and how many it declined to give, both of which arrive as an HTTP 200.
+        'token_count': 0,
+        'input_token_count': 0,
+        'output_token_count': 0,
+        'truncation_count': 0,
+        'refusal_count': 0,
 
         # How many days the object's TLS certificate has left. Zero means unmeasured,
         # which is why the certificate rules also require a value of at least one.

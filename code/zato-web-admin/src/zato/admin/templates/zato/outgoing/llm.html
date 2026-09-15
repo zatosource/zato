@@ -1,4 +1,5 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
 {% block html_title %}LLM outconns{% endblock %}
 
@@ -8,6 +9,18 @@
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-chips.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-resize.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -25,6 +38,24 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+
+    {% comment %} Form tabs and the Alerts tab {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/chips.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/decision-lines.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select-placement.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots-fields.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab-slots.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
+    {{ alerts_tab_config|json_script:"out-llm-alerts-tab-config" }}
 
     {% comment %} LLM {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/llm.js"></script>
@@ -53,8 +84,10 @@
             'timeout',
             'max_tokens',
             'max_history_turns',
-            'chat_expiry'
-        ]
+            'chat_expiry',
+
+            {% comment %} The Alerts tab {% endcomment %}
+        ].concat($.fn.zato.alerts_tab.columns());
     }
     </script>
 
@@ -97,6 +130,11 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} The Alerts tab {% endcomment %}
+                        {% for field_name in alerts_tab_config.storage_field_names %}
+                        <th class='ignore'>&nbsp;</th>
+                        {% endfor %}
                 </thead>
 
                 <tbody>
@@ -120,6 +158,11 @@
                         <td class='ignore'>{{ item.max_tokens }}</td>
                         <td class='ignore'>{{ item.max_history_turns }}</td>
                         <td class='ignore'>{{ item.chat_expiry }}</td>
+
+                        {% comment %} The Alerts tab {% endcomment %}
+                        {% for field_name in alerts_tab_config.storage_field_names %}
+                        <td class='ignore'>{{ item|get_item:field_name }}</td>
+                        {% endfor %}
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -137,6 +180,13 @@
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "out-llm-create" %}" method="post" id="create-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-llm-create-tab-panel-config" role="tabpanel">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:14%"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
@@ -195,12 +245,17 @@
                             {{ create_form.chat_expiry }}
                             </td>
                         </tr>
+                    </table>
+                    </div>
 
+                    {% include "zato/shared/alerts-tab.html" with panel_id="out-llm-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
+
+                    <table class="form-data">
                         <tr>
-                            <td style="text-align:left;vertical-align:middle">
+                            <td class="form-label-cell">
                                 <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
                             </td>
-                            <td colspan="3" style="text-align:right">
+                            <td class="form-buttons-cell">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -214,6 +269,13 @@
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "out-llm-edit" %}" method="post" id="edit-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-llm-edit-tab-panel-config" role="tabpanel">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:14%"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>
@@ -267,12 +329,17 @@
                             {{ edit_form.chat_expiry }}
                             </td>
                         </tr>
+                    </table>
+                    </div>
 
+                    {% include "zato/shared/alerts-tab.html" with panel_id="out-llm-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
+
+                    <table class="form-data">
                         <tr>
-                            <td style="text-align:left;vertical-align:middle">
+                            <td class="form-label-cell">
                                 <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
                             </td>
-                            <td colspan="3" style="text-align:right">
+                            <td class="form-buttons-cell">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

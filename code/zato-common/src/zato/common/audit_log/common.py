@@ -150,6 +150,28 @@ def get_source_label(source:'str') -> 'str':
 
 # ################################################################################################################################
 
+class LLMAttr:
+    """ The attributes an LLM call's row carries - the model asked, why the provider stopped generating
+    and the tokens the call used, the two counts as numbers so they can be added up in SQL.
+    """
+    Model         = 'model'
+    Finish_Reason = 'finish_reason'
+    Input_Tokens  = 'input_tokens'
+    Output_Tokens = 'output_tokens'
+
+# ################################################################################################################################
+
+class LLMFinish:
+    """ The one vocabulary a completion's finish reason is written in, whichever provider answered -
+    the clients map each provider's own reasons onto these and the collectors count the middle two.
+    """
+    Stop     = 'stop'
+    Length   = 'length'
+    Refusal  = 'refusal'
+    Tool_Use = 'tool_use'
+
+# ################################################################################################################################
+
 # The searchable attributes each source's events carry in the event_attr table -
 # the free-text search covers them and the Dashboard renders them as columns of their own.
 source_attr_names = {
@@ -158,6 +180,9 @@ source_attr_names = {
     AuditSource.FHIR: ('resource_type', 'method'),
     AuditSource.Scheduler: ('current_run', 'delay_ms', 'job_id'),
     AuditSource.File_Outgoing: ('operation', 'schedule', 'file_name', 'service', 'checksum', 'current_run'),
+
+    # The model a completion was asked of and why the provider stopped generating - stop, length, refusal, tool_use.
+    AuditSource.LLM: (LLMAttr.Model, LLMAttr.Finish_Reason),
 
     # The channel type the invocation came in through.
     AuditSource.Service: ('channel',),

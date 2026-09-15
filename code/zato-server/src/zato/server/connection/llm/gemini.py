@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from http.client import OK
 
 # Zato
-from zato.server.connection.llm.common import LLMClient, LLMError, Role_System, Role_User
+from zato.common.audit_log.common import LLMFinish
+from zato.server.connection.llm.common import LLMClient, LLMError, normalize_finish_reason, Role_System, Role_User
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,19 +80,22 @@ class GeminiClient(LLMClient):
 
         # .. anything other than an OK response is an error carrying the provider's body verbatim ..
         if response.status_code != OK:
-            raise LLMError(f'Gemini request to `{url}` failed with HTTP {response.status_code} ({self.name})', response.text)
+            raise LLMError(f'Gemini request to `{url}` failed with HTTP {response.status_code} ({self.name})', response.text,
+                response.status_code, response.reason)
 
         data = response.json()
 
-        # .. a blocked prompt arrives as an in-band error inside an OK response - it must raise, never pass as success ..
+        # .. a blocked prompt arrives as an in-band error inside an OK response - it must raise, never pass as success,
+        # .. and it is a refusal to the alerting collectors, so the error says so ..
         if prompt_feedback := data.get('promptFeedback'):
             if block_reason := prompt_feedback.get('blockReason'):
-                raise LLMError(f'Gemini blocked the prompt with reason `{block_reason}` ({self.name})', response.text)
+                raise LLMError(f'Gemini blocked the prompt with reason `{block_reason}` ({self.name})', response.text,
+                    response.status_code, response.reason, LLMFinish.Refusal)
 
         # .. no candidates in an OK response is an in-band error too ..
         candidates = data.get('candidates')
         if not candidates:
-            raise LLMError(f'Gemini returned no candidates ({self.name})', response.text)
+            raise LLMError(f'Gemini returned no candidates ({self.name})', response.text, response.status_code, response.reason)
 
         # .. the answer's text is spread across the first candidate's parts ..
         first_candidate = candidates[0]
@@ -104,11 +108,16 @@ class GeminiClient(LLMClient):
 
         text = ''.join(text_parts)
 
+        # .. why the model stopped, in the shared vocabulary - MAX_TOKENS means the answer was cut short
+        # .. and SAFETY or one of its kin means the candidate was withheld ..
+        finish_reason = normalize_finish_reason(first_candidate.get('finishReason'))
+
         # .. map the token usage ..
         usage = data['usageMetadata']
 
         out = {
             'text': text,
+            'finish_reason': finish_reason,
             'usage': {
                 'input_tokens': usage['promptTokenCount'],
                 'output_tokens': usage['candidatesTokenCount'],
@@ -128,7 +137,8 @@ class GeminiClient(LLMClient):
         response = self.session.get(url, headers=headers, timeout=self.timeout)
 
         if response.status_code != OK:
-            raise LLMError(f'Gemini ping of `{url}` failed with HTTP {response.status_code} ({self.name})', response.text)
+            raise LLMError(f'Gemini ping of `{url}` failed with HTTP {response.status_code} ({self.name})', response.text,
+                response.status_code, response.reason)
 
 # ################################################################################################################################
 # ################################################################################################################################

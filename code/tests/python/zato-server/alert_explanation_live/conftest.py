@@ -32,6 +32,7 @@ from shutil import copytree
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mcp_llm_live')))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'email_imap_scheduler')))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'alert_explanation')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'llm', 'lib')))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib')))
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
@@ -50,6 +51,7 @@ from zato.common.test.sftp_ import SFTPTestServer
 import ollama_containers as containers
 from _imap_test_server import IMAPTestServer
 from hl7_client.smtp_receiver import SMTPReceiver
+from llm_test_server import LLMTestServer
 from live_config import IMAP_Password, LiveServer
 from live_trace import is_on as is_trace_on
 
@@ -95,7 +97,8 @@ _enmasse_template_path = os.path.join(os.path.dirname(__file__), 'live_server_en
 # The services the proofs point their channels at - every call to the first one raises, every call to the second
 # one is answered with a FHIR OperationOutcome on a 500, the way a FHIR server answers for a resource it failed on,
 # every HL7 message the third one receives fails in it, so the MLLP channel in front of it answers with an AR,
-# and the fourth one sends a message through a named outgoing MLLP connection, the way a service of the server does
+# the fourth one sends a message through a named outgoing MLLP connection, the way a service of the server does, and
+# the fifth one asks a named outgoing LLM connection for a completion, reporting what came back or what went wrong
 _live_services_source = '''# -*- coding: utf-8 -*-
 
 # stdlib
@@ -143,6 +146,26 @@ class MLLPSend(Service):
         request = self.request.raw_request
         ack = self.mllp[request['outconn']].send(request['data'])
         self.response.payload = {{'ack_code': ack.ack_code, 'is_accepted': ack.is_accepted, 'ack_text': ack.ack_text}}
+
+class LLMInvoke(Service):
+    """ Asks the named outgoing LLM connection for one completion and reports its text, its finish reason and its usage,
+    or the error the provider answered with - so that the outgoing LLM proof calls the way a service of the server calls,
+    and a 429 is a reply to the test rather than a 500 from the channel.
+    """
+    name = '{llm_invoke_service_name}'
+
+    def handle(self):
+        request = self.request.raw_request
+        try:
+            response = self.llm[request['outconn']].invoke(request['text'])
+        except Exception as e:
+            self.response.payload = {{'error': str(e)}}
+        else:
+            self.response.payload = {{
+                'text': response['text'],
+                'finish_reason': response['finish_reason'],
+                'usage': response['usage'],
+            }}
 '''
 
 # ################################################################################################################################
@@ -170,6 +193,7 @@ def _build_live_server_config(
         reject_service_name=LiveServer.reject_service,
         reject_text=LiveServer.reject_text,
         send_service_name=LiveServer.mllp_send_service,
+        llm_invoke_service_name=LiveServer.llm_invoke_service,
     )
 
     with open(source_path, 'w') as source_file:
@@ -390,6 +414,20 @@ def sftp_server() -> 'any_':
     """ A real SSH server with an SFTP subsystem, serving a directory of its own.
     """
     server = SFTPTestServer()
+    server.start()
+
+    yield server
+
+    server.stop()
+
+# ################################################################################################################################
+
+@pytest.fixture()
+def llm_test_server() -> 'any_':
+    """ A live LLM provider simulator over plain HTTP - what an outgoing LLM connection of the live server calls,
+    answering each path the way the proof configures it.
+    """
+    server = LLMTestServer()
     server.start()
 
     yield server

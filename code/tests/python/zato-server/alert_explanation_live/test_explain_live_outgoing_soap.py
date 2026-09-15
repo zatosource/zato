@@ -7,10 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The explain service end to end for an outgoing SOAP connection whose upstream answers with faults - a real
-# quickstart server with a SOAP channel of its own in front of the service that always raises, so every call
-# through the connection comes back as a Receiver fault on a 500. Real calls through the connection from inside
-# the server, one real sweep, and the explained alert read off the server's own databases and received by a real
-# SMTP receiver. The health check proof of a SOAP connection lives next door, in test_explain_live_outgoing.
+# quickstart server with a SOAP channel of its own in front of the service that always raises, both imported
+# through enmasse, so every call through the connection comes back as a Receiver fault on a 500. Real calls
+# through the connection from inside the server, one real sweep, and the explained alert read off the server's
+# own databases and received by a real SMTP receiver. The health check proof of a SOAP connection lives next door,
+# in test_explain_live_outgoing.
 
 # stdlib
 import os
@@ -32,12 +33,13 @@ from zato.common.test.client import AdminClient
 
 # Test helpers
 from live_config import LiveServer
+from live_enmasse import deactivate_document, get_id_by_name, import_document
 from live_trace import Channel_Explain, Channel_Outgoing, Received, Sent, separator, trace
 from test_explain_live import _assert_sound_explanation, _email_to, _trace_delivery
-from test_explain_live_channel import _find_by_name, _new_admin_client, _new_notification_config, _point_smtp_at_receiver, \
+from test_explain_live_channel import _new_admin_client, _new_notification_config, _point_smtp_at_receiver, \
      _server_audit_engine, _soap_fault_string, _unwrap
-from test_explain_live_outgoing import _outgoing_timeout, _soap_action, _status_separator, _wrapper_not_found, \
-     _wrapper_wait_step, _wrapper_wait_timeout
+from test_explain_live_outgoing import _http_soap_list_service, _outgoing_timeout, _soap_action, _status_separator, \
+     _wrapper_not_found, _wrapper_wait_step, _wrapper_wait_timeout
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,15 +62,16 @@ class TestExplainLiveOutgoingSOAPFaults:
         client = _new_admin_client()
 
         # The server's own notification connection delivers to the receiver ..
-        _point_smtp_at_receiver(client, smtp_receiver)
+        _point_smtp_at_receiver(smtp_receiver)
 
         # .. a SOAP channel of the same server, in front of the service that raises, is the upstream every call
         # of the connection reaches and comes back from with a fault ..
-        channel_id = _create_faulting_channel(client)
+        channel_document = _create_faulting_channel()
 
         # .. and the connection points at it, with the audit log on and a fault threshold four calls go past.
         host = f'http://{LiveServer.host}:{LiveServer.server_port}'
-        conn_id = _create_faulting_outgoing(client, host)
+        outgoing_document = _create_faulting_outgoing(host)
+        conn_id = get_id_by_name(client, _http_soap_list_service, _faulting_name)
 
         # The sweep explains through the LLM connection and mails from the address below
         notification_config = _new_notification_config()
@@ -142,8 +145,8 @@ class TestExplainLiveOutgoingSOAPFaults:
         else:
             raise AssertionError(f'Expected an email carrying {explained["explanation"]!r}')
 
-        _ = client.delete('zato.http-soap.delete', id=conn_id)
-        _ = client.delete('zato.http-soap.delete', id=channel_id)
+        deactivate_document(outgoing_document)
+        deactivate_document(channel_document)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -182,31 +185,28 @@ _faulting_words = ['fault', 'receiver', 'server', 'backend', 'exception', 'raise
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _create_faulting_channel(client:'AdminClient') -> 'int':
+def _create_faulting_channel() -> 'anydict':
     """ A SOAP channel of the live server in front of the service that raises - no security of its own,
     so every call gets through to the service and comes back as the fault the server builds for it.
+    What is returned is the document the channel went in with, for the proof to deactivate it with once it is through.
     """
-    existing = _find_by_name(client, 'zato.http-soap.get-list', _faulting_channel_name)
+    out = {
+        'channel_soap': [{
+            'name': _faulting_channel_name,
+            'is_active': True,
+            'service': LiveServer.raising_service,
+            'url_path': _faulting_channel_path,
+            'soap_action': _soap_action,
+            'soap_version': _soap_version,
+            'data_format': 'xml',
+            'is_audit_log_active': False,
+            'alerts': {
+                'is_active': False,
+            },
+        }],
+    }
 
-    if existing is not None:
-        return existing['id']
-
-    response = _unwrap(client.create('zato.http-soap.create',
-        cluster_id=default_cluster_id,
-        name=_faulting_channel_name,
-        is_active=True,
-        is_internal=False,
-        connection='channel',
-        transport='soap',
-        data_format='xml',
-        url_path=_faulting_channel_path,
-        soap_action=_soap_action,
-        soap_version=_soap_version,
-        service=LiveServer.raising_service,
-        is_audit_log_active=False,
-        alert_is_active=False,
-    ))
-    out = response['id']
+    import_document(out)
 
     trace(Channel_Outgoing, Sent, f'faulting channel `{_faulting_channel_name}` at {_faulting_channel_path} -> '
         f'{LiveServer.raising_service}')
@@ -216,29 +216,31 @@ def _create_faulting_channel(client:'AdminClient') -> 'int':
 
 # ################################################################################################################################
 
-def _create_faulting_outgoing(client:'AdminClient', host:'str') -> 'int':
+def _create_faulting_outgoing(host:'str') -> 'anydict':
     """ The SOAP connection of the proof - the audit log on, the LLM explaining its alerts, no security of its own,
-    the default fault codes and a threshold low enough for four faults to fire its rule.
+    the default fault codes and a threshold low enough for four faults to fire its rule. What is returned is the
+    document it went in with, for the proof to deactivate it with once it is through.
     """
-    response = _unwrap(client.create('zato.http-soap.create',
-        cluster_id=default_cluster_id,
-        name=_faulting_name,
-        is_active=True,
-        is_internal=False,
-        connection='outgoing',
-        transport='soap',
-        data_format='xml',
-        host=host,
-        url_path=_faulting_channel_path,
-        soap_action=_soap_action,
-        soap_version=_soap_version,
-        timeout=_outgoing_timeout,
-        is_audit_log_active=True,
-        alert_is_active=True,
-        alert_use_llm=True,
-        alert_fault_threshold=_fault_threshold,
-    ))
-    out = response['id']
+    out = {
+        'outgoing_soap': [{
+            'name': _faulting_name,
+            'is_active': True,
+            'host': host,
+            'url_path': _faulting_channel_path,
+            'soap_action': _soap_action,
+            'soap_version': _soap_version,
+            'data_format': 'xml',
+            'timeout': _outgoing_timeout,
+            'is_audit_log_active': True,
+            'alerts': {
+                'is_active': True,
+                'use_llm': True,
+                'fault_threshold': _fault_threshold,
+            },
+        }],
+    }
+
+    import_document(out)
 
     trace(Channel_Outgoing, Sent, f'faulting connection `{_faulting_name}` -> {host}{_faulting_channel_path}')
     separator(Channel_Outgoing)

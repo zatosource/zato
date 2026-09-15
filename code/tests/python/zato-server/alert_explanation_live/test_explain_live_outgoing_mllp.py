@@ -8,9 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The explain service end to end for an outgoing MLLP connection whose receiving system rejects every message - a
 # real quickstart server, a real hl7apy MLLP receiver answering AR to everything it is sent, an outgoing connection
-# with the audit log on pointing at it, real HL7 messages sent through the connection from a hot-deployed service the
-# way a service of the server sends them, one real sweep, and the explained alert read off the server's own databases
-# and received by a real SMTP receiver.
+# with the audit log on pointing at it, imported through enmasse, real HL7 messages sent through the connection from
+# a hot-deployed service the way a service of the server sends them, one real sweep, and the explained alert read off
+# the server's own databases and received by a real SMTP receiver.
 
 # stdlib
 import os
@@ -24,7 +24,7 @@ from sqlalchemy.orm import sessionmaker
 from zato.common.alerting.explain.evidence import Heading_Failures, Heading_Object
 from zato.common.alerting.explain.settings_info import Label_Alerts, Off, On
 from zato.common.alerting.explain.store import ExplanationStore
-from zato.common.api import Alerting, GENERIC
+from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_table
 from zato.common.defaults import default_cluster_id
 from zato.common.hl7.mllp.reply import Rejection_Ack_Code
@@ -33,9 +33,10 @@ from zato.common.test.client import AdminClient
 # Test helpers
 from hl7_client.mllp_receiver import MLLPReceiver
 from live_config import LiveServer
+from live_enmasse import deactivate_document, import_document
 from live_trace import Channel_Explain, Channel_Outgoing, Received, Sent, separator, trace
 from test_explain_live import _assert_sound_explanation, _email_to, _trace_delivery
-from test_explain_live_channel import _find_by_name, _new_admin_client, _new_notification_config, _point_smtp_at_receiver, \
+from test_explain_live_channel import _new_admin_client, _new_notification_config, _point_smtp_at_receiver, \
      _server_audit_engine, _unwrap
 
 # ################################################################################################################################
@@ -59,7 +60,7 @@ class TestExplainLiveOutgoingMLLP:
         client = _new_admin_client()
 
         # The server's own notification connection delivers to the receiver ..
-        _point_smtp_at_receiver(client, smtp_receiver)
+        _point_smtp_at_receiver(smtp_receiver)
 
         # .. the receiving system is a real hl7apy MLLP server turning every message away with an AR ..
         receiver = MLLPReceiver(ack_code=Rejection_Ack_Code)
@@ -68,7 +69,7 @@ class TestExplainLiveOutgoingMLLP:
         try:
 
             # .. and the connection with the audit log on points at it, with an ack threshold four messages go past.
-            conn_id = _create_rejected_outgoing(client, receiver.address)
+            outgoing_document = _create_rejected_outgoing(receiver.address)
 
             # The sweep explains through the LLM connection and mails from the address below - as does the server's
             # own sweep job, which the suite's scheduler fires on its interval by now, and whichever of the two
@@ -151,15 +152,13 @@ class TestExplainLiveOutgoingMLLP:
             else:
                 raise AssertionError(f'Expected an email carrying {explained["explanation"]!r}')
 
-            _ = client.delete('zato.generic.connection.delete', id=conn_id)
+            deactivate_document(outgoing_document)
 
         finally:
             receiver.stop()
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-_mllp_type = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP
 
 # The connection of the proof and the system whose messages it sends
 _conn_name = 'explain.live.outgoing.mllp'
@@ -186,31 +185,27 @@ _reject_words = ['reject', 'receiv', 'remote', 'system', 'fail', 'error', 'negat
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _create_rejected_outgoing(client:'AdminClient', address:'str') -> 'int':
+def _create_rejected_outgoing(address:'str') -> 'anydict':
     """ The outgoing MLLP connection of the proof - pointing at the receiver, the audit log on, the LLM explaining
-    its alerts, the default ack codes and a threshold low enough for four rejects to fire its rule.
+    its alerts, the default ack codes and a threshold low enough for four rejects to fire its rule. What is returned
+    is the document it went in with, for the proof to deactivate it with once it is through.
     """
-    existing = _find_by_name(client, 'zato.generic.connection.get-list', _conn_name)
+    out = {
+        'outgoing_mllp': [{
+            'name': _conn_name,
+            'is_active': True,
+            'address': address,
+            'pool_size': 1,
+            'is_audit_log_active': True,
+            'alerts': {
+                'is_active': True,
+                'use_llm': True,
+                'ack_threshold': _ack_threshold,
+            },
+        }],
+    }
 
-    if existing is not None:
-        return existing['id']
-
-    response = _unwrap(client.create('zato.generic.connection.create',
-        cluster_id=default_cluster_id,
-        type_=_mllp_type,
-        name=_conn_name,
-        is_active=True,
-        is_internal=False,
-        is_channel=False,
-        is_outconn=True,
-        pool_size=1,
-        address=address,
-        is_audit_log_active=True,
-        alert_is_active=True,
-        alert_use_llm=True,
-        alert_ack_threshold=_ack_threshold,
-    ))
-    out = response['id']
+    import_document(out)
 
     trace(Channel_Outgoing, Sent, f'mllp connection `{_conn_name}` -> {address}')
     separator(Channel_Outgoing)

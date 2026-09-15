@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.common.alerting.object_config import conn_type_to_alert_type
 from zato.common.api import GENERIC, LLM
 from zato.common.llm_models import default_model_list
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
@@ -53,6 +54,9 @@ class LLMImporter(GenericConnectionImporter):
 
     connection_secret_keys = ['secret', 'password', 'api_key']
     connection_required_attrs = ['name', 'address']
+
+    # The alerts mapping of an LLM connection follows the LLM type - the REST-like settings plus the completion and token ones
+    alert_type = conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_LLM]
 
 # ################################################################################################################################
 

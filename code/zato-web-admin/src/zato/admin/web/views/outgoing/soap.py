@@ -133,7 +133,7 @@ class Index(_Index):
         setattr(item, _health_check.Field_Run_Unit, health_check_unit_for_form(run_unit))
 
         # The edit form shows a duration as a count with a unit, not as the seconds it is stored as
-        alerts_tab.split_durations(_alert_type, item)
+        alerts_tab.split_unit_fields(_alert_type, item)
 
         return item
 
@@ -237,7 +237,7 @@ class _CreateEdit(CreateEdit):
             input_dict.pop(widget_name, None)
 
         # A duration is stored as seconds, which is what its count and unit join into
-        alerts_tab.join_durations(_alert_type, input_dict)
+        alerts_tab.join_unit_fields(_alert_type, input_dict)
 
 # ################################################################################################################################
 

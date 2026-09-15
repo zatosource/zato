@@ -81,11 +81,40 @@ microForms.installFields = function(host, forms) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Keeps a unit select reading with its count - `1 hour`, `2 hours`. An option's value is the
+    // Keeps a unit select reading with its count - `1 hour`, `2 hours`, `1.5 millions`. An option's value is the
     // noun in the singular and its label the plural. Returns the relabel function.
     forms.bindUnitLabels = function(countInput, unitSelect) {
 
         var pluralAttr = forms.config.unitPluralAttr;
+
+        // A select is as wide as its widest label, so it would shrink as `millions` turns into `million`
+        // and pull the popover in with it - once it is on the page it is made as wide as its plurals
+        // need and stays that wide whatever the count says
+        var lockWidth = function() {
+
+            if(unitSelect.style.width !== '') {
+                return;
+            }
+
+            // A select of a kit of its own, e.g. a time slot's, has its options refilled as the slot
+            // changes and sits in a popover with a width of its own, so it keeps sizing itself
+            if(!unitSelect.classList.contains('micro-form-unit')) {
+                return;
+            }
+
+            // Not on the page yet, so there is no width to read
+            if(!unitSelect.isConnected) {
+                return;
+            }
+
+            var options = unitSelect.querySelectorAll('option');
+
+            for(var idx = 0; idx < options.length; idx++) {
+                options[idx].textContent = options[idx].getAttribute(pluralAttr);
+            }
+
+            unitSelect.style.width = unitSelect.offsetWidth + 'px';
+        };
 
         var relabel = function() {
 
@@ -95,7 +124,8 @@ microForms.installFields = function(host, forms) {
                 countText = countInput.placeholder;
             }
 
-            var isOne = parseInt(countText) === 1;
+            // One alone is singular - a fraction of one is not
+            var isOne = parseFloat(countText) === 1;
             var options = unitSelect.querySelectorAll('option');
 
             for(var idx = 0; idx < options.length; idx++) {
@@ -104,12 +134,18 @@ microForms.installFields = function(host, forms) {
                 if(!option.hasAttribute(pluralAttr)) {
                     option.setAttribute(pluralAttr, option.textContent);
                 }
+            }
+
+            lockWidth();
+
+            for(idx = 0; idx < options.length; idx++) {
+                var relabelled = options[idx];
 
                 if(isOne) {
-                    option.textContent = option.value;
+                    relabelled.textContent = relabelled.value;
                 }
                 else {
-                    option.textContent = option.getAttribute(pluralAttr);
+                    relabelled.textContent = relabelled.getAttribute(pluralAttr);
                 }
             }
         };
@@ -117,8 +153,21 @@ microForms.installFields = function(host, forms) {
         countInput.addEventListener('input', relabel);
         relabel();
 
+        // The popover relabels every unit select once it is on the page, which is when the width can be locked
+        unitSelect.relabelUnits = relabel;
+
         var out = relabel;
         return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Locks the width of every unit select of a popover that is on the page - see bindUnitLabels
+    forms.lockUnitWidths = function(container) {
+
+        container.querySelectorAll('select.micro-form-unit').forEach(function(unitSelect) {
+            unitSelect.relabelUnits();
+        });
     };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -209,6 +258,12 @@ microForms.installFields = function(host, forms) {
                 input.type = 'number';
                 input.className = 'micro-form-number';
                 input.min = forms.config.numberMin;
+
+                // A fractional count - 7.5 seconds, 2.5 millions - steps by its spec's step and may go below one
+                if(fieldSpec.fractional) {
+                    input.step = fieldSpec.step;
+                    input.min = forms.config.fractionalMin;
+                }
             }
             else {
                 input.type = 'text';

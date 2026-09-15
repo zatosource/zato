@@ -8,8 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_fhir, alert_type_file_transfer, alert_type_mllp_channel, \
-    alert_type_mllp_outgoing, alert_type_rest, apply_defaults, conn_type_to_alert_type, decode_email_connection, \
+from zato.common.alerting.object_config import alert_type_fhir, alert_type_file_transfer, alert_type_llm, \
+    alert_type_mllp_channel, alert_type_mllp_outgoing, alert_type_rest, apply_defaults, conn_type_to_alert_type, decode_email_connection, \
     Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, Email_Connection_Default, Email_Connection_Field, encode_email_connection, \
     field_display, field_help, Field_Prefix, from_storage, get_defaults, get_field_kinds, get_field_names, Is_Active_Field, \
     Kind_Active, Kind_Email, Kind_LLM, LLM_Connection_Default, LLM_Connection_Field, storage_name, to_storage
@@ -89,6 +89,39 @@ class TestFieldNames:
 
         assert get_defaults(alert_type_fhir)['outcome_codes'] == \
             'exception, transient, timeout, throttled, lock-error, no-store, too-costly'
+
+# ################################################################################################################################
+
+    def test_an_outgoing_llm_connection_maps_to_the_llm_type(self) -> 'None':
+        assert conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_LLM] == alert_type_llm
+
+        # The LLM type carries the REST type's failure fields, with its own two latencies in place of the one ..
+        llm_names = get_field_names(alert_type_llm)
+        for name in get_field_names(alert_type_rest):
+            if name == 'max_latency':
+                continue
+            assert name in llm_names, name
+
+        assert 'max_latency' not in llm_names
+        assert 'warning_latency' in llm_names
+        assert 'error_latency' in llm_names
+
+        # .. and the six that are the LLM's own
+        for name in ('truncations', 'truncations_window', 'refusals', 'refusals_window', 'token_budget', 'token_budget_window'):
+            assert name in llm_names, name
+
+        # The two latencies read in seconds and the budget is an amount
+        kinds = get_field_kinds(alert_type_llm)
+        assert kinds['warning_latency'] == config_map.Kind_Seconds
+        assert kinds['error_latency'] == config_map.Kind_Seconds
+        assert kinds['token_budget'] == config_map.Kind_Amount
+
+        defaults = get_defaults(alert_type_llm)
+        assert defaults['status_codes'] == '429, 401, 403, 5xx'
+        assert defaults['warning_latency'] == 10
+        assert defaults['error_latency'] == 15
+        assert defaults['token_budget'] == 10000000
+        assert defaults['token_budget_window'] == 86400
 
 # ################################################################################################################################
 

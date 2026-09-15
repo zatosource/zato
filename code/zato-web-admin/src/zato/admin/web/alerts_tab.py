@@ -13,11 +13,12 @@ from django import forms
 
 # Zato
 from zato.admin.web.alerts_tab_lines import Checkbox_On_Value, Edit_Hint, field_display, field_how_it_works, Line_Kind_Pick, \
-    Line_Kind_Popover, Line_Kind_Toggle, Tab_Label, type_lines, unit_fields
+    Line_Kind_Popover, Line_Kind_Toggle, Tab_Label, type_lines as shared_type_lines, unit_fields
+from zato.admin.web.alerts_tab_lines_llm import llm_lines
 from zato.admin.web.alerts_tab_picks import get_empty_html, get_pick_choices, Pick_Select_Class
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import Field_Prefix, get_defaults as get_storage_defaults, get_field_kinds, \
-    get_field_names, Is_Active_Field, storage_name, Unit_Field_Suffix
+from zato.common.alerting.object_config import alert_type_llm, Field_Prefix, get_defaults as get_storage_defaults, \
+    get_field_kinds, get_field_names, Is_Active_Field, storage_name, Unit_Field_Suffix
 from zato.common.alerting.time_slots import Slot_Is_On, Slot_Seconds, Slot_Time_From, Slot_Time_To
 
 # ################################################################################################################################
@@ -30,6 +31,25 @@ if 0:
     anylist = anylist
     strlist = strlist
     strtuple = strtuple
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The lines of every alert type - the ones alerts_tab_lines.py builds and the LLM ones built from them in a module of their own
+type_lines:'anydict' = dict(shared_type_lines)
+type_lines[alert_type_llm] = llm_lines()
+
+# The kinds of field stored as one number and edited as a count with a unit select - a duration's seconds
+# and an amount's ones - each with what splits the stored number for the form and what joins the form's two back
+_unit_kinds:'anydict' = {
+    config_map.Kind_Duration: (config_map.split_duration, config_map.join_duration),
+    config_map.Kind_Amount: (config_map.split_amount, config_map.join_amount),
+}
+
+# The kinds of field that accept a fraction - seconds such as 7.5 and amounts such as 2.5 millions - and the step
+# their number inputs carry so the browser takes the fraction
+fractional_kinds = [config_map.Kind_Seconds, config_map.Kind_Amount]
+Fractional_Step = 'any'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,6 +91,21 @@ def get_page_lines(alert_type:'str') -> 'anylist':
 
 # ################################################################################################################################
 
+def get_line_unit_field_names(line:'anydict') -> 'strlist':
+    """ The unit selects of one line - the ones its fields carry of their own, then the one after its last number.
+    """
+    out:'strlist' = []
+
+    if 'field_units' in line:
+        out.extend(line['field_units'].values())
+
+    if 'unit_field' in line:
+        out.append(line['unit_field'])
+
+    return out
+
+# ################################################################################################################################
+
 def get_page_field_names(alert_type:'str') -> 'strlist':
     """ The fields of the page's own form the tab edits, the unit selects included.
     """
@@ -78,9 +113,7 @@ def get_page_field_names(alert_type:'str') -> 'strlist':
 
     for line in get_page_lines(alert_type):
         out.extend(line['fields'])
-
-        if 'unit_field' in line:
-            out.append(line['unit_field'])
+        out.extend(get_line_unit_field_names(line))
 
     return out
 
@@ -96,21 +129,20 @@ def get_unit_field_names(alert_type:'str') -> 'strlist':
         if is_page_line(line):
             continue
 
-        if 'unit_field' in line:
-            out.append(line['unit_field'])
+        out.extend(get_line_unit_field_names(line))
 
     return out
 
 # ################################################################################################################################
 
-def get_duration_field_names(alert_type:'str') -> 'strlist':
-    """ The fields of an alert type stored as seconds and edited as a count with a unit.
+def get_unit_kind_fields(alert_type:'str') -> 'anylist':
+    """ The fields of an alert type stored as one number and edited as a count with a unit - its durations and its amounts.
     """
-    out:'strlist' = []
+    out:'anylist' = []
 
     for field in get_type_fields(alert_type):
-        if field['kind'] == config_map.Kind_Duration:
-            out.append(field['name'])
+        if field['kind'] in _unit_kinds:
+            out.append(field)
 
     return out
 
@@ -144,12 +176,14 @@ def get_field_label(name:'str') -> 'str':
 # ################################################################################################################################
 
 def get_form_defaults(alert_type:'str') -> 'anydict':
-    """ The default value of each field of an alert type as the form shows it, a duration as a count and a unit.
+    """ The default value of each field of an alert type as the form shows it, a duration and an amount as a count and a unit.
     """
     out = get_storage_defaults(alert_type)
 
-    for name in get_duration_field_names(alert_type):
-        count, unit_name = config_map.split_duration(out[name])
+    for field in get_unit_kind_fields(alert_type):
+        name = field['name']
+        split, _ = _unit_kinds[field['kind']]
+        count, unit_name = split(out[name])
         out[name] = count
         out[name + Unit_Field_Suffix] = unit_name
 
@@ -189,17 +223,20 @@ def get_checkbox_field_names(alert_type:'str') -> 'strtuple':
 
 def pre_process_alert_item(alert_type:'str', name:'str', value:'any_') -> 'any_':
     """ One field of the tab as the backend stores it - a checkbox as a boolean, a number as an integer,
-    a text without the whitespace around it.
+    a fractional one as a float that reads as an integer when it is whole, a text without the whitespace around it.
     """
     field_kinds = get_field_kinds(alert_type)
     own_name = name[len(Field_Prefix):]
 
     is_number = False
+    is_fraction = False
     is_text = False
 
     if own_name in field_kinds:
         if field_kinds[own_name] in (config_map.Kind_Number, config_map.Kind_Duration):
             is_number = True
+        elif field_kinds[own_name] in fractional_kinds:
+            is_fraction = True
         elif field_kinds[own_name] == config_map.Kind_Text:
             is_text = True
 
@@ -207,6 +244,8 @@ def pre_process_alert_item(alert_type:'str', name:'str', value:'any_') -> 'any_'
         out = value == Checkbox_On_Value
     elif is_number:
         out = int(value)
+    elif is_fraction:
+        out = config_map.to_screen_value(float(value), False)
     elif is_text:
         out = value.strip()
     else:
@@ -216,29 +255,33 @@ def pre_process_alert_item(alert_type:'str', name:'str', value:'any_') -> 'any_'
 
 # ################################################################################################################################
 
-def join_durations(alert_type:'str', input_dict:'anydict') -> 'None':
-    """ Turns each duration's count and unit in a form's input into the seconds it is stored as, in place.
+def join_unit_fields(alert_type:'str', input_dict:'anydict') -> 'None':
+    """ Turns each duration's and each amount's count and unit in a form's input into the one number it is stored as,
+    in place - a duration's seconds, an amount's ones.
     """
-    for name in get_duration_field_names(alert_type):
-        count_name = storage_name(name)
-        unit_name = storage_name(name + Unit_Field_Suffix)
+    for field in get_unit_kind_fields(alert_type):
+        count_name = storage_name(field['name'])
+        unit_name = storage_name(field['name'] + Unit_Field_Suffix)
+        _, join = _unit_kinds[field['kind']]
 
         if count_name in input_dict:
             if unit_name in input_dict:
-                input_dict[count_name] = config_map.join_duration(input_dict[count_name], input_dict[unit_name])
+                input_dict[count_name] = join(input_dict[count_name], input_dict[unit_name])
                 del input_dict[unit_name]
 
 # ################################################################################################################################
 
-def split_durations(alert_type:'str', item:'any_') -> 'None':
-    """ Turns each duration's seconds on a listed object into the count and the unit the edit form shows, in place.
+def split_unit_fields(alert_type:'str', item:'any_') -> 'None':
+    """ Turns each duration's seconds and each amount's ones on a listed object into the count and the unit
+    the edit form shows, in place.
     """
-    for name in get_duration_field_names(alert_type):
-        count_name = storage_name(name)
-        unit_name = storage_name(name + Unit_Field_Suffix)
+    for field in get_unit_kind_fields(alert_type):
+        count_name = storage_name(field['name'])
+        unit_name = storage_name(field['name'] + Unit_Field_Suffix)
+        split, _ = _unit_kinds[field['kind']]
 
         if count_name in item:
-            count, unit = config_map.split_duration(item[count_name])
+            count, unit = split(item[count_name])
             item[count_name] = count
             item[unit_name] = unit
 
@@ -296,6 +339,9 @@ def add_alerts_fields(form:'any_', alert_type:'str', request:'any_') -> 'None':
             form_field = forms.CharField(required=False, initial=default, widget=forms.HiddenInput())
         elif field['kind'] == config_map.Kind_Text:
             form_field = forms.CharField(required=False, initial=default, widget=forms.TextInput())
+        elif field['kind'] in fractional_kinds:
+            form_field = forms.FloatField(
+                required=False, initial=default, widget=forms.NumberInput(attrs={'step': Fractional_Step}))
         else:
             form_field = forms.IntegerField(required=False, initial=default, min_value=1, widget=forms.NumberInput())
 
@@ -366,9 +412,8 @@ def get_alerts_tab_context(form:'any_', alert_type:'str') -> 'anydict':
                 hidden_field_name = to_form_name(field_name)
                 hidden_fields.append(form[hidden_field_name])
 
-            if 'unit_field' in line:
-                unit_field_name = to_form_name(line['unit_field'])
-                hidden_fields.append(form[unit_field_name])
+            for unit_field_name in get_line_unit_field_names(line):
+                hidden_fields.append(form[to_form_name(unit_field_name)])
 
         section_by_label[section_label]['lines'].append(row)
 
@@ -443,6 +488,9 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
             if 'unit_field' in line:
                 entry['unit_field'] = line['unit_field']
 
+            if 'field_units' in line:
+                entry['field_units'] = line['field_units']
+
             if 'slots_field' in line:
                 entry['slots_field'] = line['slots_field']
 
@@ -504,6 +552,8 @@ def get_alerts_tab_config(alert_type:'str') -> 'anydict':
         'slots_kind': config_map.Kind_Time_Slots,
         'duration_kind': config_map.Kind_Duration,
         'text_kind': config_map.Kind_Text,
+        'fractional_kinds': fractional_kinds,
+        'fractional_step': Fractional_Step,
         'duration_units': duration_units,
         'storage_field_names': storage_field_names,
         'checkbox_field_names': checkbox_field_names,

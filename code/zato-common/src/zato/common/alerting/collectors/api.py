@@ -19,8 +19,10 @@ from zato.common.alerting.collectors.channels import collect_channel_silence_fac
 from zato.common.alerting.collectors.common import new_fact, Default_Begin_Event_Type, Default_End_Event_Type, \
     Default_Window_Seconds, Health_Window_Seconds, Measure_Ack_Codes, Measure_Auth_Failures, Measure_Client_Errors, \
     Measure_Connection_Failures, Measure_Error_Rate, Measure_File_Runs, Measure_Latency, Measure_Operation_Outcomes, \
-    Measure_Server_Errors, Measure_SOAP_Faults, Measure_Status_Codes, Window_Seconds_By_Measure_Key
+    Measure_Refusals, Measure_Server_Errors, Measure_SOAP_Faults, Measure_Status_Codes, Measure_Tokens, Measure_Truncations, \
+    Window_Seconds_By_Measure_Key
 from zato.common.alerting.collectors.file_transfer import collect_file_transfer_facts
+from zato.common.alerting.collectors.llm import collect_llm_completion_facts, collect_llm_token_facts
 from zato.common.alerting.collectors.mllp import collect_ack_code_facts, collect_mllp_connection_failure_facts
 from zato.common.alerting.collectors.outgoing import collect_outgoing_status_facts
 from zato.common.alerting.collectors.probes import collect_certificate_facts, collect_health_facts, \
@@ -87,7 +89,8 @@ def _collect_connection_failure_facts(
 
 # The windowed collectors by the measure that drives each - every one takes the engine, the window,
 # the moment and the optional source and object to narrow to. The channel status collector answers three
-# measures and the outgoing one four, so each runs once per measure and each run keeps the keys of its own measure alone.
+# measures, the outgoing one four and the LLM completion one two, so each runs once per measure and each run keeps
+# the keys of its own measure alone.
 _collector_by_measure:'dict[str, callable_]' = {
     Measure_Error_Rate:          collect_error_rate_facts,
     Measure_Latency:             collect_latency_facts,
@@ -99,6 +102,9 @@ _collector_by_measure:'dict[str, callable_]' = {
     Measure_Operation_Outcomes:  collect_outgoing_status_facts,
     Measure_Connection_Failures: _collect_connection_failure_facts,
     Measure_Ack_Codes:           collect_ack_code_facts,
+    Measure_Tokens:              collect_llm_token_facts,
+    Measure_Truncations:         collect_llm_completion_facts,
+    Measure_Refusals:            collect_llm_completion_facts,
 }
 
 # The fact keys each windowed measure owns - what a run over one measure's window is allowed
@@ -116,6 +122,9 @@ _keys_by_measure:'dict[str, tuple[str, ...]]' = {
     Measure_Operation_Outcomes:  ('fault_counts',),
     Measure_Connection_Failures: ('connection_failure_count',),
     Measure_Ack_Codes:           ('fault_counts',),
+    Measure_Tokens:              ('token_count', 'input_token_count', 'output_token_count'),
+    Measure_Truncations:         ('truncation_count',),
+    Measure_Refusals:            ('refusal_count',),
 }
 
 # ################################################################################################################################

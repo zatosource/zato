@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from http.client import OK, responses as http_responses
 from logging import getLogger
 from time import monotonic
 from traceback import format_exc
@@ -15,11 +16,12 @@ from traceback import format_exc
 from zato.common.api import LLM
 from zato.common.audit_log.api import AuditLog, AuditSource
 from zato.common.audit_log.calls import record_remote_call
+from zato.common.audit_log.common import classify_transport_error, LLMAttr
 from zato.common.llm_models import default_model_list, get_model_list
 from zato.common.skills.api import load_skill
 from zato.common.typing_ import cast_
 from zato.server.connection.llm.claude import ClaudeClient
-from zato.server.connection.llm.common import Role_Assistant, Role_System, Role_User
+from zato.server.connection.llm.common import LLMError, Role_Assistant, Role_System, Role_User
 from zato.server.connection.llm.gemini import GeminiClient
 from zato.server.connection.llm.openai_ import OpenAIClient
 from zato.server.connection.llm.store import ChatHistoryStore
@@ -80,6 +82,10 @@ _chat_lock_ttl_margin = 30
 # How long a competing call waits for the per-chat lock, in seconds
 _chat_lock_block = 10
 
+# The status a completion that came back is written under - every client raises on anything but an OK,
+# so a call that returned was answered with this status line, `200 OK`, as REST outgoing writes its own
+_status_ok = f'{OK} {http_responses[OK]}'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -95,27 +101,60 @@ class OutconnLLMWrapper(Wrapper):
 
 # ################################################################################################################################
 
+    def _record_call(self, is_ok:'bool', duration_ms:'int', status:'str', attrs:'stranydict') -> 'None':
+        """ Writes the one audit row a provider call leaves behind - the success and the failure
+        branches of _invoke_client both build their row through here. Every row names the model,
+        so the audit log screen can search by it whether or not the provider ever answered.
+        """
+        attrs[LLMAttr.Model] = self.config['model']
+
+        record_remote_call(self.audit_log, AuditSource.LLM, self.config['name'],
+            is_ok=is_ok, duration_ms=duration_ms, status=status, endpoint=self.config['address'], attrs=attrs)
+
+# ################################################################################################################################
+
     def _invoke_client(self, messages:'anylist') -> 'stranydict':
-        """ Sends one message list to the provider and records the call's outcome
-        and duration as an audit event - the completing event the alerting
-        collectors measure error rates and latency over.
+        """ Sends one message list to the provider and records the call's outcome, duration, status,
+        finish reason and token usage as an audit event - the completing event the alerting collectors
+        measure status codes, connection failures, latency, truncations, refusals and token budgets over.
         """
         start = monotonic()
 
-        # A failed call is recorded too, before the caller learns about it
+        # A failed call is recorded too, before the caller learns about it ..
         try:
             with self.client() as client:
                 client = cast_('LLMClient', client)
                 out = client.invoke(messages)
         except Exception as e:
             duration_ms = int((monotonic() - start) * 1000)
-            record_remote_call(self.audit_log, AuditSource.LLM, self.config['name'],
-                is_ok=False, duration_ms=duration_ms, status=str(e), endpoint=self.config['address'])
+
+            # .. an HTTP failure is written under its status line, so a 429 reads `429 Too Many Requests`
+            # .. and the status code collector counts it, while a request that never got a response
+            # .. is written under its transport status, `timeout` or `connection-error` ..
+            if isinstance(e, LLMError) and e.status_code:
+                status = f'{e.status_code} {e.reason}'
+            else:
+                status = classify_transport_error(e)
+
+            # .. a Gemini prompt block is an error with a finish reason - a refusal the collectors count ..
+            attrs:'stranydict' = {}
+            if isinstance(e, LLMError) and e.finish_reason:
+                attrs[LLMAttr.Finish_Reason] = e.finish_reason
+
+            self._record_call(False, duration_ms, status, attrs)
             raise
 
         duration_ms = int((monotonic() - start) * 1000)
-        record_remote_call(self.audit_log, AuditSource.LLM, self.config['name'],
-            is_ok=True, duration_ms=duration_ms, endpoint=self.config['address'])
+
+        # .. a completion that came back is written with why it stopped and what it cost,
+        # .. the two counts as numbers so the token collector can add them up in SQL.
+        usage = out['usage']
+        attrs = {
+            LLMAttr.Finish_Reason: out['finish_reason'],
+            LLMAttr.Input_Tokens: usage['input_tokens'],
+            LLMAttr.Output_Tokens: usage['output_tokens'],
+        }
+        self._record_call(True, duration_ms, _status_ok, attrs)
 
         return out
 

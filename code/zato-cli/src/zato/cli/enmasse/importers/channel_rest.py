@@ -375,7 +375,7 @@ class ChannelImporter:
         channel.transport = URL_TYPE.PLAIN_HTTP
         channel.url_path = channel_def['url_path']
         channel.method = channel_def.get('method', '') or ''
-        channel.is_active = True
+        channel.is_active = channel_def.get('is_active', True)
         channel.is_internal = False
         channel.soap_action = '' # Must be an empty string
 

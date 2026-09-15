@@ -20,7 +20,8 @@
 //
 // A spec's keys: field (the Django form field name), label, kind - one of
 // text, number, select, checkbox or a kind the host registered - plus the
-// optional unitField, width, placeholder, hint and labelAbove.
+// optional unitField, width, placeholder, hint and labelAbove, and for a
+// number that takes a fraction, fractional with the step it goes by.
 //
 // A descriptor's keys: title, pages, plus the optional width (a CSS width
 // for the popover) and fitContent (a popover as wide as its content).
@@ -124,8 +125,9 @@ microForms.defaults = {
     // Fired on the document as a popover is dragged
     movedEvent: 'zato:popup-moved',
 
-    // The lowest a number field goes
+    // The lowest a number field goes, and the lowest a fractional one goes - 0.5 thousands is a count too
     numberMin: 1,
+    fractionalMin: 0,
 
     // Button labels inside the popovers
     backLabel: 'Back',
@@ -488,6 +490,12 @@ microForms.setup = function(host, config) {
             // before the first show the popover is not attached yet and the
             // wiring happens right after showTippy instead
             forms.initHelp(container);
+
+            // A page rendered into a popover already on show locks its unit selects now,
+            // the first page does so right after showTippy
+            if(container.isConnected) {
+                forms.lockUnitWidths(container);
+            }
         };
 
         renderPage();
@@ -527,6 +535,7 @@ microForms.setup = function(host, config) {
 
         var instance = forms.showTippy(targetElement, container, onHidden, maxWidth, positionKey, openAt);
         forms.initHelp(container);
+        forms.lockUnitWidths(container);
         forms.makeResizable(instance, sizeKey);
     };
 

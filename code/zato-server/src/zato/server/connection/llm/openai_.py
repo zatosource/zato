@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from http.client import OK
 
 # Zato
-from zato.server.connection.llm.common import LLMClient, LLMError
+from zato.server.connection.llm.common import LLMClient, LLMError, normalize_finish_reason
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,7 +57,8 @@ class OpenAIClient(LLMClient):
 
         # .. anything other than an OK response is an error carrying the provider's body verbatim ..
         if response.status_code != OK:
-            raise LLMError(f'OpenAI request to `{url}` failed with HTTP {response.status_code} ({self.name})', response.text)
+            raise LLMError(f'OpenAI request to `{url}` failed with HTTP {response.status_code} ({self.name})', response.text,
+                response.status_code, response.reason)
 
         # .. extract the answer's text ..
         data = response.json()
@@ -66,11 +67,15 @@ class OpenAIClient(LLMClient):
         message = first_choice['message']
         text = message['content']
 
+        # .. why the model stopped, in the shared vocabulary - a length means the answer was cut short ..
+        finish_reason = normalize_finish_reason(first_choice.get('finish_reason'))
+
         # .. map the token usage ..
         usage = data['usage']
 
         out = {
             'text': text,
+            'finish_reason': finish_reason,
             'usage': {
                 'input_tokens': usage['prompt_tokens'],
                 'output_tokens': usage['completion_tokens'],
@@ -90,7 +95,8 @@ class OpenAIClient(LLMClient):
         response = self.session.get(url, headers=headers, timeout=self.timeout)
 
         if response.status_code != OK:
-            raise LLMError(f'OpenAI ping of `{url}` failed with HTTP {response.status_code} ({self.name})', response.text)
+            raise LLMError(f'OpenAI ping of `{url}` failed with HTTP {response.status_code} ({self.name})', response.text,
+                response.status_code, response.reason)
 
 # ################################################################################################################################
 # ################################################################################################################################

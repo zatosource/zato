@@ -20,7 +20,8 @@ from zato.common.alerting.config_map_fields import _call_measures as _call_measu
     _file_transfer_measures as _file_transfer_measures, Ack_Codes_Default as Ack_Codes_Default, \
     Ack_Codes_Field_Name as Ack_Codes_Field_Name, Explain_With_LLM_Key as Explain_With_LLM_Key, \
     Fault_Codes_Default as Fault_Codes_Default, Fault_Codes_Field_Name as Fault_Codes_Field_Name, \
-    Kind_Duration as Kind_Duration, Kind_Number as Kind_Number, Kind_Ruleset_Toggle as Kind_Ruleset_Toggle, \
+    Kind_Amount as Kind_Amount, Kind_Duration as Kind_Duration, Kind_Number as Kind_Number, \
+    Kind_Ruleset_Toggle as Kind_Ruleset_Toggle, Kind_Seconds as Kind_Seconds, \
     Kind_Text as Kind_Text, Kind_Time_Slots as Kind_Time_Slots, Kind_Toggle as Kind_Toggle, \
     Outcome_Codes_Default as Outcome_Codes_Default, Outcome_Codes_Field_Name as Outcome_Codes_Field_Name, \
     Silence_Slots_Field_Name as Silence_Slots_Field_Name, Silence_Window_Field_Name as Silence_Window_Field_Name, \
@@ -58,8 +59,20 @@ Duration_Units = [
 ]
 Duration_Unit_Smallest = Duration_Units[0][0]
 
+# The units an amount is shown in, smallest first - the noun in the singular and how many ones it stands for.
+# A screen picks the largest unit the amount reaches, so 10000000 reads as ten millions and 1500000 as 1.5 millions.
+Amount_Units = [
+    ('thousand', 1000),
+    ('million', 1000000),
+    ('billion', 1000000000),
+]
+Amount_Unit_Smallest = Amount_Units[0][0]
+
 # Percent fields are stored as fractions - the screen says 10, the rule says 0.1.
 Percent_Multiplier = 100
+
+# Seconds fields are stored as milliseconds - the screen says 12.5, the rule says 12500.
+Milliseconds_Per_Second = 1000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -151,6 +164,67 @@ def to_rule_value(value:'float', is_percent:'bool') -> 'float | int':
 
 # ################################################################################################################################
 
+def to_screen_number(field:'stranydict', value:'float') -> 'float | int':
+    """ One rule value of a number field in the units its screen speaks - a seconds field's milliseconds
+    become seconds, a percent field's fraction becomes percent, everything else stands as it is.
+    """
+    if field['kind'] == Kind_Seconds:
+        out = to_screen_value(value / Milliseconds_Per_Second, False)
+    else:
+        out = to_screen_value(value, field['is_percent'])
+
+    return out
+
+# ################################################################################################################################
+
+def to_rule_number(field:'stranydict', value:'float') -> 'float | int':
+    """ One screen value of a number field in the units its rules speak - a seconds field's seconds
+    become whole milliseconds, a percent field's percent becomes a fraction, everything else stands as it is.
+    """
+    if field['kind'] == Kind_Seconds:
+        out = round(value * Milliseconds_Per_Second)
+    else:
+        out = to_rule_value(value, field['is_percent'])
+
+    return out
+
+# ################################################################################################################################
+
+def split_amount(count:'float') -> 'tuple[int | float, str]':
+    """ An amount as a fractional count and the largest unit it reaches - 10000000 is ten millions,
+    1500000 is 1.5 millions and 500, below the smallest unit, is 0.5 thousands.
+    """
+
+    # Our response to produce - the smallest unit unless the amount reaches a larger one
+    unit_size = Amount_Units[0][1]
+    out_unit = Amount_Unit_Smallest
+
+    for unit_name, candidate_size in Amount_Units:
+        if count >= candidate_size:
+            unit_size = candidate_size
+            out_unit = unit_name
+
+    out_count = to_screen_value(count / unit_size, False)
+
+    return out_count, out_unit
+
+# ################################################################################################################################
+
+def join_amount(count:'float', unit_name:'str') -> 'int':
+    """ A count of one unit back as whole ones - what split_amount took apart.
+    """
+
+    # Our response to produce
+    out = 0
+
+    for candidate_name, unit_size in Amount_Units:
+        if candidate_name == unit_name:
+            out = round(count * unit_size)
+
+    return out
+
+# ################################################################################################################################
+
 def split_duration(seconds:'int') -> 'tuple[int | float, str]':
     """ A number of seconds as a count and the largest unit dividing it evenly - 86400 is one day,
     600 is ten minutes. Seconds no unit divides evenly are a fraction of the smallest unit.
@@ -205,7 +279,7 @@ def read_number(documents:'stranydict', ruleset_name:'str', field:'stranydict') 
 
             if defaults:
                 if entry := defaults.get(field['default']):
-                    out = to_screen_value(entry['value'], field['is_percent'])
+                    out = to_screen_number(field, entry['value'])
                     break
 
     return out
@@ -325,8 +399,8 @@ def read_window_seconds_by_measure(documents:'stranydict', type_name:'str') -> '
 # ################################################################################################################################
 
 def read_type_values(type_name:'str', documents:'stranydict') -> 'stranydict':
-    """ Every screen value of one type, keyed by field name - numbers in screen units,
-    durations in seconds, toggles as booleans. A field whose rule is gone is absent rather than invented.
+    """ Every screen value of one type, keyed by field name - numbers in screen units, seconds fields in seconds,
+    durations in seconds, amounts in ones, toggles as booleans. A field whose rule is gone is absent rather than invented.
     """
 
     # Our response to produce
@@ -383,7 +457,7 @@ def write_number(documents:'stranydict', ruleset_name:'str', field:'stranydict',
     # Our response to produce
     out = False
 
-    rule_value = to_rule_value(value, field['is_percent'])
+    rule_value = to_rule_number(field, value)
 
     for rule_name in field['rules']:
 

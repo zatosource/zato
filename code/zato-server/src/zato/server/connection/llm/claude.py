@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from http.client import OK
 
 # Zato
-from zato.server.connection.llm.common import LLMClient, LLMError, Role_System
+from zato.server.connection.llm.common import LLMClient, LLMError, normalize_finish_reason, Role_System
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,7 +75,8 @@ class ClaudeClient(LLMClient):
 
         # .. anything other than an OK response is an error carrying the provider's body verbatim ..
         if response.status_code != OK:
-            raise LLMError(f'Claude request to `{url}` failed with HTTP {response.status_code} ({self.name})', response.text)
+            raise LLMError(f'Claude request to `{url}` failed with HTTP {response.status_code} ({self.name})', response.text,
+                response.status_code, response.reason)
 
         # .. the answer's text is spread across content blocks, only the textual ones carry it ..
         data = response.json()
@@ -87,11 +88,15 @@ class ClaudeClient(LLMClient):
 
         text = ''.join(text_parts)
 
+        # .. why the model stopped, in the shared vocabulary - max_tokens means the answer was cut short ..
+        finish_reason = normalize_finish_reason(data.get('stop_reason'))
+
         # .. map the token usage ..
         usage = data['usage']
 
         out = {
             'text': text,
+            'finish_reason': finish_reason,
             'usage': {
                 'input_tokens': usage['input_tokens'],
                 'output_tokens': usage['output_tokens'],
@@ -111,7 +116,8 @@ class ClaudeClient(LLMClient):
         response = self.session.get(url, headers=headers, timeout=self.timeout)
 
         if response.status_code != OK:
-            raise LLMError(f'Claude ping of `{url}` failed with HTTP {response.status_code} ({self.name})', response.text)
+            raise LLMError(f'Claude ping of `{url}` failed with HTTP {response.status_code} ({self.name})', response.text,
+                response.status_code, response.reason)
 
 # ################################################################################################################################
 # ################################################################################################################################

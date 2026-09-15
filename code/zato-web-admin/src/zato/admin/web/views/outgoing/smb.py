@@ -57,7 +57,7 @@ class Index(_Index):
         item.scheduler_schedule_count = len(schedules)
 
         # The edit form shows a duration as a count with a unit, not as the seconds it is stored as
-        alerts_tab.split_durations(_alert_type, item)
+        alerts_tab.split_unit_fields(_alert_type, item)
 
         return item
 
@@ -110,7 +110,7 @@ class _CreateEdit(CreateEdit):
     def pre_process_input_dict(self, input_dict:'stranydict') -> 'None':
 
         # A duration is stored as seconds, which is what its count and unit join into
-        alerts_tab.join_durations(_alert_type, input_dict)
+        alerts_tab.join_unit_fields(_alert_type, input_dict)
 
     def post_process_return_data(self, return_data:'stranydict') -> 'stranydict':
         # The Scheduler link of a newly added row needs the connection's name in its URL form.

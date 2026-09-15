@@ -16,8 +16,9 @@ from __future__ import annotations
 # Zato
 from zato.common.alerting.ack_codes import Ack_Code_Counts_Key
 from zato.common.alerting.collectors.common import channel_sources, Measure_Ack_Codes, Measure_Auth_Failures, \
-    Measure_Client_Errors, Measure_Connection_Failures, Measure_Latency, Measure_Operation_Outcomes, Measure_Server_Errors, \
-    Measure_SOAP_Faults, Measure_Status_Codes, Window_Seconds_By_Measure_Key
+    Measure_Client_Errors, Measure_Connection_Failures, Measure_Latency, Measure_Operation_Outcomes, Measure_Refusals, \
+    Measure_Server_Errors, Measure_SOAP_Faults, Measure_Status_Codes, Measure_Tokens, Measure_Truncations, \
+    Window_Seconds_By_Measure_Key
 from zato.common.alerting.fault_codes import Fault_Code_Counts_Key
 from zato.common.alerting.outcome_codes import Outcome_Code_Counts_Key
 from zato.common.alerting.status_codes import Status_Code_Counts_Key
@@ -181,6 +182,19 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
         else:
             failures_label = f'{connection_failure_count} timeouts or connection failures'
         parts.append(failures_label + _measure_window_part(fact, Measure_Connection_Failures))
+
+    if truncation_count := fact['truncation_count']:
+        truncations_label = pluralize(truncation_count, 'truncated completion')
+        parts.append(truncations_label + _measure_window_part(fact, Measure_Truncations))
+
+    if refusal_count := fact['refusal_count']:
+        refusals_label = pluralize(refusal_count, 'refusal')
+        parts.append(refusals_label + _measure_window_part(fact, Measure_Refusals))
+
+    if token_count := fact['token_count']:
+        tokens_label = f'{token_count:,} tokens'
+        split_part = f'({fact["input_token_count"]:,} in, {fact["output_token_count"]:,} out)'
+        parts.append(f'{tokens_label} {split_part}' + _measure_window_part(fact, Measure_Tokens))
 
     if cert_days_left := fact['cert_days_left']:
         days_label = pluralize(cert_days_left, 'day')

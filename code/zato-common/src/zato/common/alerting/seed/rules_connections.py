@@ -245,69 +245,6 @@ then
 
 # ################################################################################################################################
 
-llm_rules = """
-rule
-    Connection_Down
-docs
-    An LLM connection that failed three consecutive times is considered down and raises an error email alert.
-defaults
-    max_consecutive_failures = 3
-when
-    alert.source is 'llm' and
-    alert.consecutive_failures is at least default.max_consecutive_failures
-then
-    outcome.action = 'email'
-    outcome.severity = 'error'
-
-rule
-    Slow_Completions
-docs
-    An LLM connection whose average completion time within the window exceeds ten seconds raises a warning email alert.
-    Above fifteen seconds the error rule takes over, which is why this one is bounded from above.
-defaults
-    warning_avg_duration_ms = 10000
-    error_avg_duration_ms = 15000
-when
-    alert.source is 'llm' and
-    alert.avg_duration_ms is at least default.warning_avg_duration_ms and
-    alert.avg_duration_ms is less than default.error_avg_duration_ms
-then
-    outcome.action = 'email'
-    outcome.severity = 'warning'
-
-rule
-    Slow_Completions_Error
-docs
-    An LLM connection whose average completion time within the window exceeds fifteen seconds raises an error email alert.
-defaults
-    error_avg_duration_ms = 15000
-when
-    alert.source is 'llm' and
-    alert.avg_duration_ms is at least default.error_avg_duration_ms
-then
-    outcome.action = 'email'
-    outcome.severity = 'error'
-
-rule
-    Error_Rate
-docs
-    An LLM connection whose failed-completion share reaches a tenth of its recent traffic raises an email alert.
-defaults
-    error_rate_threshold = 0.1
-    min_events = 10
-    window_seconds = 300
-when
-    alert.source is 'llm' and
-    alert.total_count is at least default.min_events and
-    alert.error_rate is at least default.error_rate_threshold
-then
-    outcome.action = 'email'
-    outcome.severity = 'warning'
-
-""".strip()
-
-# ################################################################################################################################
-
 mcp_rules = """
 rule
     Server_Down

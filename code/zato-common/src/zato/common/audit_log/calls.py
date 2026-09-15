@@ -22,7 +22,9 @@ from zato.common.util.api import new_cid_server
 
 if 0:
     from zato.common.audit_log.api import AuditLog
+    from zato.common.typing_ import strdictnone
     AuditLog = AuditLog
+    strdictnone = strdictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,11 +40,13 @@ def record_remote_call(
     duration_ms:'int' = 0,
     status:'str' = '',
     endpoint:'str' = '',
+    attrs:'strdictnone' = None,
     ) -> 'None':
     """ Records one completed remote call of an outgoing connection - the completing
     event the usage and alerting queries look for, with the outcome and duration
     the collectors measure. Calls with no service context get a correlation id
-    of their own.
+    of their own. The attrs are the call's searchable attributes, what an LLM
+    call says about its model, its finish reason and its token usage.
     """
 
     # A wrapper-level call carries no service context, so the id is minted here
@@ -69,6 +73,7 @@ def record_remote_call(
         outcome=outcome,
         status=status,
         duration_ms=duration_ms,
+        attrs=attrs,
     )
 
 # ################################################################################################################################

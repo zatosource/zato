@@ -269,7 +269,8 @@ class TestWriteHelpers:
     def test_a_number_writes_into_every_rule_holding_the_default(self) -> 'None':
         field = _field('llm', 'error_latency')
 
-        # Both LLM slowness rules hold the error threshold, so both take the write
+        # Both LLM slowness rules hold the error threshold, so both take the write - the screen's seconds
+        # landing as the rules' milliseconds
         documents = {}
         for rule_name in field['rules']:
             full_name = config_map.rule_full_name('alerts_llm', rule_name)
@@ -278,7 +279,7 @@ class TestWriteHelpers:
                 'defaults': {'error_avg_duration_ms': {'value': 15000}},
             }
 
-        changed = config_map.write_number(documents, 'alerts_llm', field, 20000)
+        changed = config_map.write_number(documents, 'alerts_llm', field, 20)
         assert changed is True
 
         for rule_document in documents.values():

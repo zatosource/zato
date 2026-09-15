@@ -21,6 +21,7 @@ $.fn.zato.outgoing.llm.config = {
 // /////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
+    $.fn.zato.alerts_tab.init({config_id: 'out-llm-alerts-tab-config'});
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.LLM;
@@ -60,6 +61,10 @@ $(document).ready(function() {
             $.fn.zato.cleanup_elem_css_attention($(this));
         }
     });
+
+    // The Alerts tab's connection picks follow what is created on other pages while the dialog is open
+    $.fn.zato.live_form_updates.register('create', $.fn.zato.alerts_tab.live_configs(''));
+    $.fn.zato.live_form_updates.register('edit', $.fn.zato.alerts_tab.live_configs('edit-'));
 
     // Another page, e.g. an Alerts tab, may link here to have a connection created right away
     $.fn.zato.data_table.maybe_open_create_form($.fn.zato.outgoing.llm.create);
@@ -254,26 +259,68 @@ $.fn.zato.outgoing.llm.collapse_more_options = function(form_type) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The two tabs of a create or edit dialog - the connection's own fields and the Alerts tab
+$.fn.zato.outgoing.llm.tab_labels = function() {
+    var out = {
+        config: 'Config',
+        alerts: $.fn.zato.alerts_tab.tab_label()
+    };
+    return out;
+}
+
+// Where a create or edit dialog opens - a little above the middle of the window, so the taller
+// Alerts tab has room to grow under it, and never past the window's edges
+$.fn.zato.outgoing.llm.dialog_position = {
+    my: 'center',
+    at: 'center center-12%',
+    of: window,
+    collision: 'fit'
+};
+
+$.fn.zato.outgoing.llm._reset_tabs = function(action) {
+    $('#' + action + '-div').dialog('option', 'position', $.fn.zato.outgoing.llm.dialog_position);
+    $.fn.zato.form_tabs.reset({
+        div_id:       '#' + action + '-div',
+        panel_prefix: 'out-llm-' + action + '-tab-panel-',
+        default_tab:  'config',
+        tab_labels:   $.fn.zato.outgoing.llm.tab_labels()
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.llm.create = function() {
+    $.fn.zato.outgoing.llm._reset_tabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing LLM connection', null);
     $.fn.zato.outgoing.llm.sync_model_select('create');
     $.fn.zato.outgoing.llm.collapse_more_options('create');
     $.fn.zato.outgoing.llm.update_secret_required('create');
+    $.fn.zato.alerts_tab.bind({
+        panel_id: 'out-llm-create-tab-panel-alerts',
+        field_prefix: ''
+    });
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
         divId: '#create-div',
-        descriptions: $.fn.zato.outgoing.llm.field_descriptions
+        fieldSelector: 'table.form-data tr, .decision-line',
+        descriptions: $.extend({}, $.fn.zato.outgoing.llm.field_descriptions, $.fn.zato.alerts_tab.descriptions())
     });
 }
 
 $.fn.zato.outgoing.llm.edit = function(id) {
+    $.fn.zato.outgoing.llm._reset_tabs('edit');
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing LLM connection', id);
     $.fn.zato.outgoing.llm.sync_model_select('edit');
     $.fn.zato.outgoing.llm.collapse_more_options('edit');
+    $.fn.zato.alerts_tab.bind({
+        panel_id: 'out-llm-edit-tab-panel-alerts',
+        field_prefix: 'edit-'
+    });
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',
         divId: '#edit-div',
-        descriptions: $.fn.zato.outgoing.llm.field_descriptions
+        fieldSelector: 'table.form-data tr, .decision-line',
+        descriptions: $.extend({}, $.fn.zato.outgoing.llm.field_descriptions, $.fn.zato.alerts_tab.descriptions())
     });
 }
 
@@ -305,6 +352,9 @@ $.fn.zato.outgoing.llm.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.max_tokens);
     row += String.format("<td class='ignore'>{0}</td>", item.max_history_turns);
     row += String.format("<td class='ignore'>{0}</td>", item.chat_expiry);
+
+    // The Alerts tab
+    row += $.fn.zato.alerts_tab.hidden_cells(item);
 
     if(include_tr) {
         row += '</tr>';

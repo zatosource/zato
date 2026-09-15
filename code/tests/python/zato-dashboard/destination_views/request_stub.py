@@ -17,6 +17,9 @@ from json import dumps
 from django.http import QueryDict
 
 # Zato
+from zato.admin.web import alerts_tab
+from zato.admin.web.alerts_tab_lines import Checkbox_On_Value
+from zato.common.alerting.object_config import alert_type_mllp_channel, storage_name
 from zato.common.ext.bunch import Bunch, bunchify
 
 # ################################################################################################################################
@@ -166,11 +169,34 @@ def new_destination_list(
 # ################################################################################################################################
 # ################################################################################################################################
 
+def new_alert_post_data() -> 'stranydict':
+    """ The Alerts tab's fields the way the wizard posts them - each at its default as text, a checkbox
+    that is on as the word the browser sends and one that is off left out, the way a browser leaves it out.
+    """
+    out = {}
+
+    checkbox_names = alerts_tab.get_checkbox_field_names(alert_type_mllp_channel)
+
+    for name, value in alerts_tab.get_form_defaults(alert_type_mllp_channel).items():
+        field_name = storage_name(name)
+
+        if field_name in checkbox_names:
+            if value:
+                out[field_name] = Checkbox_On_Value
+        else:
+            out[field_name] = str(value)
+
+    return out
+
+# ################################################################################################################################
+
 def new_channel_post_data(prefix:'str'='', **overrides:'any_') -> 'stranydict':
     """ Returns the form one MLLP channel is saved with - everything the create and edit
     views read, at its default, with whatever the test varies on top.
     """
-    values = {
+    values = new_alert_post_data()
+
+    values.update({
         'name': 'test.mllp.channel',
         'is_internal': False,
         'is_active': True,
@@ -189,7 +215,7 @@ def new_channel_post_data(prefix:'str'='', **overrides:'any_') -> 'stranydict':
         'end_seq': '1c0d',
         'default_character_encoding': 'utf-8',
         'security_id': '',
-    }
+    })
 
     values.update(overrides)
 

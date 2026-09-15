@@ -21,7 +21,7 @@ from datetime import timedelta
 # Zato
 from zato.common.alerting.collectors.common import all_channel_sources, response_event_type_by_source, \
     Window_Seconds_By_Measure_Key
-from zato.common.audit_log.common import get_source_label, health_sources
+from zato.common.audit_log.common import get_source_label, health_sources, AuditSource
 from zato.common.util.api import pluralize
 
 # ################################################################################################################################
@@ -90,6 +90,9 @@ _failures_intro_pings = 'Newest first. Each failure is one ping of the connectio
     'Identical errors are grouped, the count says how many pings failed the same way in the window.'
 _failures_intro_calls = 'Newest first. Each failure is one call the connection made. ' + \
     'Identical errors are grouped, the count says how many calls failed the same way in the window.'
+_failures_intro_llm = 'Newest first. Each row is one call the connection made, with its model, finish reason and ' + \
+    'token usage next to its status - a truncated completion or a refusal is a call the provider answered with HTTP 200. ' + \
+    'Identical rows are grouped, the count says how many calls went the same way in the window.'
 
 # What the Failures section says when there is nothing in it.
 _no_failures = 'No failed events in the window.'
@@ -135,6 +138,8 @@ def _failures_intro_of(source:'str') -> 'str':
     """
     if is_health_check_source(source):
         out = _failures_intro_pings
+    elif source == AuditSource.LLM:
+        out = _failures_intro_llm
     elif is_outgoing_source(source):
         out = _failures_intro_calls
     else:

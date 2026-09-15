@@ -15,7 +15,8 @@ from __future__ import annotations
 # Zato
 from zato.common.alerting.collectors.common import Measure_Ack_Codes, Measure_Auth_Failures, Measure_Client_Errors, \
     Measure_Connection_Failures, Measure_Error_Rate, Measure_File_Runs, Measure_Latency, Measure_Operation_Outcomes, \
-    Measure_Server_Errors, Measure_Silence, Measure_SOAP_Faults, Measure_Status_Codes
+    Measure_Refusals, Measure_Server_Errors, Measure_Silence, Measure_SOAP_Faults, Measure_Status_Codes, Measure_Tokens, \
+    Measure_Truncations
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,12 +29,16 @@ if 0:
 # ################################################################################################################################
 
 # The kinds a screen field comes in - a number backed by rule defaults, a duration backed
-# by a rule default counted in seconds and shown as a count with a unit, a toggle backed
+# by a rule default counted in seconds and shown as a count with a unit, a number of seconds backed
+# by a rule default counted in milliseconds and shown fractional, an amount backed by a rule default counted
+# in ones and shown as a fractional count with a unit of thousands, millions or billions, a toggle backed
 # by the active flags of whole rules, a ruleset toggle backed by one key every rule
 # document of the ruleset carries, a JSON list of time slots kept per object and backed by no rule,
 # or a text backed by a rule default that is a string, e.g. the status codes a connection alerts on.
 Kind_Number         = 'number'
 Kind_Duration       = 'duration'
+Kind_Seconds        = 'seconds'
+Kind_Amount         = 'amount'
 Kind_Toggle         = 'toggle'
 Kind_Ruleset_Toggle = 'ruleset_toggle'
 Kind_Time_Slots     = 'time_slots'
@@ -142,6 +147,37 @@ _use_llm_fields:'list[stranydict]' = [
 
 _http_traffic_fields:'list[stranydict]' = _connection_failure_fields + _latency_fields + _use_llm_fields
 
+# What is an LLM connection's own - completions the provider cut short at the token limit, completions it refused,
+# both of which arrive as an HTTP 200, and the tokens every call used, added up over a window of their own
+_llm_completion_fields:'list[stranydict]' = [
+    {'name': 'truncations', 'kind': Kind_Number, 'rules': ['Truncated_Completions'],
+        'default': 'truncation_threshold', 'is_percent': False},
+    {'name': 'truncations_window', 'kind': Kind_Duration, 'rules': ['Truncated_Completions'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Truncations]},
+    {'name': 'refusals', 'kind': Kind_Number, 'rules': ['Refusals'],
+        'default': 'refusal_threshold', 'is_percent': False},
+    {'name': 'refusals_window', 'kind': Kind_Duration, 'rules': ['Refusals'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Refusals]},
+]
+
+# How long completions take, in seconds on the screen and in milliseconds in the rules
+_llm_latency_fields:'list[stranydict]' = [
+    {'name': 'warning_latency', 'kind': Kind_Seconds, 'rules': ['Slow_Completions'],
+        'default': 'warning_avg_duration_ms', 'is_percent': False},
+    {'name': 'error_latency', 'kind': Kind_Seconds, 'rules': ['Slow_Completions_Error', 'Slow_Completions'],
+        'default': 'error_avg_duration_ms', 'is_percent': False},
+    {'name': 'latency_window', 'kind': Kind_Duration, 'rules': ['Slow_Completions', 'Slow_Completions_Error'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Latency]},
+]
+
+# The tokens a connection may use in its window - a count in ones the screen shows in thousands, millions or billions
+_llm_token_fields:'list[stranydict]' = [
+    {'name': 'token_budget', 'kind': Kind_Amount, 'rules': ['Token_Budget'],
+        'default': 'token_budget', 'is_percent': False},
+    {'name': 'token_budget_window', 'kind': Kind_Duration, 'rules': ['Token_Budget'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Tokens]},
+]
+
 # The negative acknowledgments of MLLP - the ones a channel sent back or the ones an outgoing connection was answered
 _ack_fields:'list[stranydict]' = [
     {'name': Ack_Codes_Field_Name, 'kind': Kind_Text, 'rules': ['Negative_Acks'],
@@ -167,19 +203,8 @@ type_fields:'dict[str, list[stranydict]]' = {
             'default': 'max_avg_duration_ms', 'is_percent': False},
         {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
     ],
-    'llm': [
-        {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
-            'default': 'max_consecutive_failures', 'is_percent': False},
-        {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
-            'default': 'error_rate_threshold', 'is_percent': True},
-        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
-            'default': Window_Seconds_Default, 'is_percent': False, 'measures': _call_measures},
-        {'name': 'warning_latency', 'kind': Kind_Number, 'rules': ['Slow_Completions'],
-            'default': 'warning_avg_duration_ms', 'is_percent': False},
-        {'name': 'error_latency', 'kind': Kind_Number, 'rules': ['Slow_Completions_Error', 'Slow_Completions'],
-            'default': 'error_avg_duration_ms', 'is_percent': False},
-        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
-    ],
+    'llm': _http_failure_fields + _connection_failure_fields + _llm_completion_fields + _llm_latency_fields + \
+        _llm_token_fields + _use_llm_fields,
     'mcp': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Server_Down'],
             'default': 'max_consecutive_failures', 'is_percent': False},

@@ -7,11 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The explain service end to end for outgoing REST connections - a real quickstart server with three connections
-# of its own, the audit log on, each pointed at a different kind of trouble: a channel of the same server that
-# rejects the connection's calls, a port nothing listens on, and a socket that accepts and never answers.
-# Real calls through each connection, one real sweep inside the server, and the explained alerts read off
-# the server's own databases and received by a real SMTP receiver. Then the same for a SOAP connection whose
-# health check, fired by the suite's own scheduler every second, is refused until its streak brings it down.
+# of its own imported through enmasse, the audit log on, each pointed at a different kind of trouble: a channel of
+# the same server that rejects the connection's calls, a port nothing listens on, and a socket that accepts and
+# never answers. Real calls through each connection, one real sweep inside the server, and the explained alerts
+# read off the server's own databases and received by a real SMTP receiver. Then the same for a SOAP connection
+# whose health check, fired by the suite's own scheduler every second, is refused until its streak brings it down.
 
 # stdlib
 import os
@@ -36,9 +36,10 @@ from zato.common.test.client import AdminClient
 
 # Test helpers
 from live_config import LiveServer
+from live_enmasse import deactivate_document, get_id_by_name, import_document
 from live_trace import Channel_Explain, Channel_Outgoing, Received, Sent, separator, trace
 from test_explain_live import _assert_sound_explanation, _email_to, _trace_delivery
-from test_explain_live_channel import _ensure_basic_auth, _find_by_name, _new_admin_client, _new_notification_config, \
+from test_explain_live_channel import _ensure_basic_auth, _new_admin_client, _new_notification_config, \
      _point_smtp_at_receiver, _security_name, _server_audit_engine, _unwrap
 
 # ################################################################################################################################
@@ -78,11 +79,11 @@ class TestExplainLiveOutgoing:
         client = _new_admin_client()
 
         # The server's own notification connection delivers to the receiver ..
-        _point_smtp_at_receiver(client, smtp_receiver)
+        _point_smtp_at_receiver(smtp_receiver)
 
         # .. a guarded channel of the same server is the upstream the rejected connection calls without credentials ..
-        security_id = _ensure_basic_auth(client)
-        channel_id = _create_guarded_channel(client, security_id)
+        _ensure_basic_auth()
+        channel_document = _create_guarded_channel()
 
         # .. nothing listens on this port, so the refused connection cannot connect ..
         refused_port = _find_closed_port()
@@ -98,10 +99,12 @@ class TestExplainLiveOutgoing:
                 _silent.name: f'http://{LiveServer.host}:{silent_port}',
             }
 
-            # The three connections, each with the audit log on and thresholds of its own
+            # The three connections in one import, each with the audit log on and thresholds of its own
+            outgoing_document = _create_outgoings(hosts)
+
             conn_ids = {}
             for outgoing in _outgoings:
-                conn_ids[outgoing.name] = _create_outgoing(client, outgoing, hosts[outgoing.name])
+                conn_ids[outgoing.name] = get_id_by_name(client, _http_soap_list_service, outgoing.name)
 
             # The sweep explains through the LLM connection and mails from the address below
             notification_config = _new_notification_config()
@@ -174,10 +177,8 @@ class TestExplainLiveOutgoing:
                 else:
                     raise AssertionError(f'Expected an email carrying {explanation["explanation"]!r}')
 
-        for conn_id in conn_ids.values():
-            _ = client.delete('zato.http-soap.delete', id=conn_id)
-
-        _ = client.delete('zato.http-soap.delete', id=channel_id)
+        deactivate_document(outgoing_document)
+        deactivate_document(channel_document)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -195,14 +196,14 @@ class TestExplainLiveOutgoingSOAP:
         client = _new_admin_client()
 
         # The server's own notification connection delivers to the receiver ..
-        _point_smtp_at_receiver(client, smtp_receiver)
+        _point_smtp_at_receiver(smtp_receiver)
 
         # .. nothing listens on this port, so every ping of the connection's health check is refused.
         refused_port = _find_closed_port()
         host = f'http://{LiveServer.host}:{refused_port}'
 
         # A SOAP connection with a health check every second and three failed checks bringing it down
-        conn_id = _create_soap_outgoing(client, host)
+        soap_document = _create_soap_outgoing(host)
 
         # The sweep explains through the LLM connection and mails from the address below
         notification_config = _new_notification_config()
@@ -260,8 +261,8 @@ class TestExplainLiveOutgoingSOAP:
         else:
             raise AssertionError(f'Expected an email carrying {explained["explanation"]!r}')
 
-        # Deleting the connection deletes its check job with it, so the scheduler stops pinging
-        _ = client.delete('zato.http-soap.delete', id=conn_id)
+        # The check job of an inactive connection is inactive with it, so the scheduler stops pinging
+        deactivate_document(soap_document)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -286,6 +287,9 @@ _wrapper_wait_step = 0.5
 
 # What the server says when a connection's wrapper is not there yet
 _wrapper_not_found = 'not found'
+
+# The list service a proof learns the id of a channel or an outgoing connection it imported through
+_http_soap_list_service = 'zato.http-soap.get-list'
 
 # The channel the rejected connection calls - the service behind it never runs, no call gets past the guard
 _guarded_channel_name = 'explain.live.upstream.guarded'
@@ -381,30 +385,27 @@ def _new_silent_listener() -> 'socket.socket':
 
 # ################################################################################################################################
 
-def _create_guarded_channel(client:'AdminClient', security_id:'int') -> 'int':
+def _create_guarded_channel() -> 'anydict':
     """ A channel of the live server that only callers with the partner's credentials get through -
-    the rejected connection calls it with none and is turned away with a 401 each time.
+    the rejected connection calls it with none and is turned away with a 401 each time. What is returned
+    is the document the channel went in with, for the proof to deactivate it with once it is through.
     """
-    existing = _find_by_name(client, 'zato.http-soap.get-list', _guarded_channel_name)
+    out = {
+        'channel_rest': [{
+            'name': _guarded_channel_name,
+            'is_active': True,
+            'service': LiveServer.raising_service,
+            'url_path': _guarded_channel_path,
+            'security': _security_name,
+            'data_format': 'json',
+            'is_audit_log_active': False,
+            'alerts': {
+                'is_active': False,
+            },
+        }],
+    }
 
-    if existing is not None:
-        return existing['id']
-
-    response = _unwrap(client.create('zato.http-soap.create',
-        cluster_id=default_cluster_id,
-        name=_guarded_channel_name,
-        is_active=True,
-        is_internal=False,
-        connection='channel',
-        transport='plain_http',
-        data_format='json',
-        url_path=_guarded_channel_path,
-        service=LiveServer.raising_service,
-        security_id=security_id,
-        is_audit_log_active=False,
-        alert_is_active=False,
-    ))
-    out = response['id']
+    import_document(out)
 
     trace(Channel_Outgoing, Sent, f'guarded channel `{_guarded_channel_name}` at {_guarded_channel_path} behind {_security_name}')
     separator(Channel_Outgoing)
@@ -413,32 +414,40 @@ def _create_guarded_channel(client:'AdminClient', security_id:'int') -> 'int':
 
 # ################################################################################################################################
 
-def _create_outgoing(client:'AdminClient', outgoing:'_OutgoingDescription', host:'str') -> 'int':
-    """ One outgoing connection of the proof - the audit log on, the LLM explaining its alerts, no security
-    of its own, a short timeout and thresholds low enough for four calls to fire its rule.
+def _create_outgoings(hosts:'anydict') -> 'anydict':
+    """ The outgoing connections of the proof in one import - each with the audit log on, the LLM explaining its
+    alerts, no security of its own, a short timeout and thresholds low enough for four calls to fire its rule.
+    What is returned is the document they went in with, for the proof to deactivate them with once it is through.
     """
-    response = _unwrap(client.create('zato.http-soap.create',
-        cluster_id=default_cluster_id,
-        name=outgoing.name,
-        is_active=True,
-        is_internal=False,
-        connection='outgoing',
-        transport='plain_http',
-        data_format='json',
-        host=host,
-        url_path=outgoing.url_path,
-        timeout=_outgoing_timeout,
-        is_audit_log_active=True,
-        alert_is_active=True,
-        alert_use_llm=True,
-        alert_status_codes=_status_codes,
-        alert_status_code_threshold=_status_code_threshold,
-        alert_connection_failures=_connection_failures_threshold,
-    ))
-    out = response['id']
+    definitions = []
 
-    trace(Channel_Outgoing, Sent, f'{outgoing.label} connection `{outgoing.name}` -> {host}{outgoing.url_path}')
+    for outgoing in _outgoings:
+        host = hosts[outgoing.name]
+
+        definitions.append({
+            'name': outgoing.name,
+            'is_active': True,
+            'host': host,
+            'url_path': outgoing.url_path,
+            'data_format': 'json',
+            'timeout': _outgoing_timeout,
+            'is_audit_log_active': True,
+            'alerts': {
+                'is_active': True,
+                'use_llm': True,
+                'status_codes': _status_codes,
+                'status_code_threshold': _status_code_threshold,
+                'connection_failures': _connection_failures_threshold,
+            },
+        })
+
+        trace(Channel_Outgoing, Sent, f'{outgoing.label} connection `{outgoing.name}` -> {host}{outgoing.url_path}')
+
     separator(Channel_Outgoing)
+
+    out = {'outgoing_rest': definitions}
+
+    import_document(out)
 
     return out
 
@@ -534,31 +543,33 @@ def _get_stored_explanations(outgoing:'_OutgoingDescription') -> 'anylist':
 
 # ################################################################################################################################
 
-def _create_soap_outgoing(client:'AdminClient', host:'str') -> 'int':
+def _create_soap_outgoing(host:'str') -> 'anydict':
     """ The SOAP connection of the proof - the audit log on, the LLM explaining its alerts, no security of its own,
-    a health check every second and a streak of three failed checks bringing it down.
+    a health check every second and a streak of three failed checks bringing it down. What is returned is the
+    document it went in with, for the proof to deactivate it with once it is through.
     """
-    response = _unwrap(client.create('zato.http-soap.create',
-        cluster_id=default_cluster_id,
-        name=_soap_name,
-        is_active=True,
-        is_internal=False,
-        connection='outgoing',
-        transport='soap',
-        data_format='xml',
-        host=host,
-        url_path=_soap_url_path,
-        soap_action=_soap_action,
-        soap_version=_soap_version,
-        timeout=_outgoing_timeout,
-        is_audit_log_active=True,
-        health_check_run_every=_soap_run_every,
-        health_check_run_unit=_soap_run_unit,
-        alert_is_active=True,
-        alert_use_llm=True,
-        alert_consecutive_failures=_soap_consecutive_failures,
-    ))
-    out = response['id']
+    out = {
+        'outgoing_soap': [{
+            'name': _soap_name,
+            'is_active': True,
+            'host': host,
+            'url_path': _soap_url_path,
+            'soap_action': _soap_action,
+            'soap_version': _soap_version,
+            'data_format': 'xml',
+            'timeout': _outgoing_timeout,
+            'is_audit_log_active': True,
+            'health_check_run_every': _soap_run_every,
+            'health_check_run_unit': _soap_run_unit,
+            'alerts': {
+                'is_active': True,
+                'use_llm': True,
+                'consecutive_failures': _soap_consecutive_failures,
+            },
+        }],
+    }
+
+    import_document(out)
 
     trace(Channel_Outgoing, Sent, f'soap connection `{_soap_name}` -> {host}{_soap_url_path}, '
         f'checked every {_soap_run_every} {_soap_run_unit}')

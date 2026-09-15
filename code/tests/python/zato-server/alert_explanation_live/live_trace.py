@@ -7,10 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The live proof - with the trace on, every exchange with the IMAP server, the SFTP server, the REST and MLLP channels
-# - each HL7 message with the code of the acknowledgment it received - and the outgoing REST, SOAP, FHIR and MLLP
+# - each HL7 message with the code of the acknowledgment it received - and the outgoing REST, SOAP, FHIR, MLLP and LLM
 # connections of the live server - each FHIR call with its status and issue code, each HL7 message sent with the code
-# it was answered - the LLM and the SMTP receiver is printed as it happens, one channel tag per line and nothing else,
-# so the run reads as a transcript rather than as a log.
+# it was answered, each LLM call with its status and finish reason - the LLM and the SMTP receiver is printed as it
+# happens, one channel tag per line and nothing else, so the run reads as a transcript rather than as a log.
 
 # stdlib
 import os
@@ -29,6 +29,7 @@ Channel_Outgoing = 'OUTGOING'
 Channel_LLM     = 'LLM'
 Channel_SMTP    = 'SMTP'
 Channel_Explain = 'EXPLAIN'
+Channel_Enmasse = 'ENMASSE'
 
 # What a line the test sent and one the server answered with open with
 Sent     = '>>'

@@ -163,7 +163,7 @@ class OutgoingRESTImporter:
         outgoing.connection = CONNECTION.OUTGOING
         outgoing.transport = URL_TYPE.PLAIN_HTTP
         outgoing.cluster = self.importer.get_cluster(session)
-        outgoing.is_active = True
+        outgoing.is_active = outgoing_def.get('is_active', True)
         outgoing.is_internal = False
         outgoing.soap_action = '' # Must be an empty string
 

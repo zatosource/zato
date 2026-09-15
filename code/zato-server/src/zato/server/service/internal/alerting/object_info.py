@@ -13,6 +13,7 @@ from contextlib import closing
 from zato.common.api import FileTransfer
 from zato.common.alerting.explain.channel_info import describe_channel
 from zato.common.alerting.explain.fhir_info import describe_outgoing_fhir
+from zato.common.alerting.explain.llm_info import describe_outgoing_llm
 from zato.common.alerting.explain.mllp_channel_info import describe_mllp_channel
 from zato.common.alerting.explain.mllp_outgoing_info import describe_mllp_outgoing
 from zato.common.alerting.explain.outgoing_info import describe_outgoing_http
@@ -36,24 +37,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The configuration keys of an LLM connection that go into the Object section - addressing,
-# timeouts and security identifiers only, never the credentials themselves.
-_object_config_keys = (
-    'name',
-    'is_active',
-    'address',
-    'method',
-    'model',
-    'data_format',
-    'content_type',
-    'timeout',
-    'pool_size',
-    'validate_tls',
-    'security_name',
-    'sec_type',
-    'username',
-)
 
 # The sources whose alerts read an outgoing REST or SOAP connection's Object - the connection's own traffic
 # and its health check, which calls the same address
@@ -89,8 +72,8 @@ _test_transfers_field = 'test_transfers'
 def get_object_info(service:'AdminService', source:'str', object_name:'str') -> 'tuple[anylist, str, bool]':
     """ The Object section of the evidence - the object's definition as label and value pairs,
     secrets left out - along with the name the baseline is read under and whether test
-    transfers are on for the object. An LLM connection is read off its facade, an outgoing REST, SOAP, FHIR or
-    MLLP connection, a channel, an MLLP channel, a file transfer connection or one of its schedules off the ODB,
+    transfers are on for the object. An outgoing REST, SOAP, FHIR, LLM or MLLP connection, a channel,
+    an MLLP channel, a file transfer connection or one of its schedules are read off the ODB,
     any other source contributes its name alone.
     """
     if source == AuditSource.MLLP_Outgoing:
@@ -115,8 +98,11 @@ def get_object_info(service:'AdminService', source:'str', object_name:'str') -> 
             return fhir_info, object_name, False
 
     if source == AuditSource.LLM:
-        out = _config_to_info(service.llm.conn_dict[object_name])
-        return out, object_name, False
+        with closing(service.odb.session()) as session:
+            llm_info = describe_outgoing_llm(session, service.server.cluster_id, object_name)
+
+        if llm_info is not None:
+            return llm_info, object_name, False
 
     if source in (AuditSource.File_Outgoing, AuditSource.Test_Transfer):
         out = _get_file_transfer_info(service, object_name)
@@ -139,22 +125,6 @@ def get_object_info(service:'AdminService', source:'str', object_name:'str') -> 
 
     out = [('Name', object_name)]
     return out, object_name, False
-
-# ################################################################################################################################
-
-def _config_to_info(config:'anydict') -> 'anylist':
-    """ The keys of interest of an LLM connection's configuration as label and value pairs - only the ones
-    the configuration has, e.g. a connection with no security definition has no security_name at all.
-    """
-
-    # Our response to produce
-    out:'anylist' = []
-
-    for key in _object_config_keys:
-        if key in config:
-            out.append((key, config[key]))
-
-    return out
 
 # ################################################################################################################################
 

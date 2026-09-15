@@ -15,7 +15,7 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_by_http_soap, alert_type_channels, alert_type_fhir, \
+from zato.common.alerting.object_config import alert_type_by_http_soap, alert_type_channels, alert_type_fhir, alert_type_llm, \
     alert_type_mllp_channel, alert_type_mllp_outgoing, alert_type_rest, alert_type_soap, apply_defaults, channel_sources, conn_type_to_alert_type, \
     from_storage, get_alert_type, Email_Connection_Field, Is_Active_Field, LLM_Connection_Field
 from zato.common.audit_log.common import AuditSource
@@ -57,6 +57,7 @@ _object_sources_by_type = {
     alert_type_rest: [AuditSource.REST_Outgoing],
     alert_type_soap: [AuditSource.SOAP_Outgoing],
     alert_type_fhir: [AuditSource.FHIR],
+    alert_type_llm: [AuditSource.LLM],
     alert_type_mllp_channel: [AuditSource.MLLP_Channel],
     alert_type_mllp_outgoing: [AuditSource.MLLP_Outgoing],
 }
@@ -165,11 +166,12 @@ def build_rule_values(
             if rule_name not in field['rules']:
                 continue
 
-        # A text stands in for its default as it is, a number in rule units
+        # A text stands in for its default as it is, a number in rule units - a percent as a fraction,
+        # seconds as milliseconds
         if field['kind'] == config_map.Kind_Text:
             out[default_name] = values[field['name']]
         else:
-            out[default_name] = config_map.to_rule_value(values[field['name']], field['is_percent'])
+            out[default_name] = config_map.to_rule_number(field, values[field['name']])
 
     # The silence slot of the moment says how long a channel may stay silent right now
     if alert_type in _silence_types:

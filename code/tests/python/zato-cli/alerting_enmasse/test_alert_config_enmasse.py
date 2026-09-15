@@ -88,6 +88,26 @@ alert_rules:
     test_transfers: false
     arrival_overdue: 2
     use_llm: true
+  - type: llm
+    is_active: true
+    consecutive_failures: 4
+    error_rate: 15
+    window: 600
+    status_codes: 429, 5xx
+    status_code_threshold: 2
+    status_codes_window: 600
+    connection_failures: 2
+    connection_failures_window: 600
+    truncations: 5
+    truncations_window: 900
+    refusals: 2
+    refusals_window: 900
+    warning_latency: 7.5
+    error_latency: 12
+    latency_window: 900
+    token_budget: 2000000
+    token_budget_window: 3600
+    use_llm: true
 
 alert_notifications:
   slack_webhook: https://hooks.slack.example.com/services/T000/B000/XXX
@@ -208,9 +228,9 @@ class TestAlertRulesImport:
 
         created, updated = alert_config_importer.sync_alert_rules(yaml_config['alert_rules'], backend)
 
-        # Rules are never created, only updated - and both entries moved values
+        # Rules are never created, only updated - and all three entries moved values
         assert created == []
-        assert len(updated) == 2
+        assert len(updated) == 3
 
         # The sweep loads its rules from the live versions, so it already
         # runs with the imported thresholds, in rule units
@@ -250,6 +270,29 @@ class TestAlertRulesImport:
         assert documents['alerts_file_transfer_Test_Transfer_Failing']['is_active'] is False
         assert is_rule_active(documents['alerts_file_transfer_Transfer_Failures']) is True
 
+        # The LLM's codes text landed on its rule as it was typed, the seconds as milliseconds with the fraction kept,
+        # and the budget as the plain count with its own window
+        llm_status_rule = rules_by_full_name['alerts_llm_Status_Codes']
+        assert llm_status_rule.defaults['status_codes'] == '429, 5xx'
+        assert llm_status_rule.defaults['status_code_threshold'] == 2
+        assert llm_status_rule.defaults['window_seconds'] == 600
+
+        llm_slow_rule = rules_by_full_name['alerts_llm_Slow_Completions']
+        assert llm_slow_rule.defaults['warning_avg_duration_ms'] == 7500
+        assert llm_slow_rule.defaults['error_avg_duration_ms'] == 12000
+        assert llm_slow_rule.defaults['window_seconds'] == 900
+
+        llm_slow_error_rule = rules_by_full_name['alerts_llm_Slow_Completions_Error']
+        assert llm_slow_error_rule.defaults['error_avg_duration_ms'] == 12000
+
+        llm_truncations_rule = rules_by_full_name['alerts_llm_Truncated_Completions']
+        assert llm_truncations_rule.defaults['truncation_threshold'] == 5
+        assert llm_truncations_rule.defaults['window_seconds'] == 900
+
+        llm_budget_rule = rules_by_full_name['alerts_llm_Token_Budget']
+        assert llm_budget_rule.defaults['token_budget'] == 2000000
+        assert llm_budget_rule.defaults['window_seconds'] == 3600
+
 # ################################################################################################################################
 
     def test_a_re_import_stores_no_new_versions(
@@ -260,7 +303,7 @@ class TestAlertRulesImport:
     ) -> 'None':
 
         _, updated = alert_config_importer.sync_alert_rules(yaml_config['alert_rules'], backend)
-        assert len(updated) == 2
+        assert len(updated) == 3
 
         # The versions the first import produced
         versions = {}
@@ -463,6 +506,17 @@ class TestAlertConfigExport:
         # The file transfer window ships as one day, in seconds
         file_transfer_entry = exported_by_type['file_transfer']
         assert file_transfer_entry['window'] == 86400
+
+        # The LLM entry ships its codes with the 429 first, its latencies in seconds and its budget as a plain count
+        llm_entry = exported_by_type['llm']
+        assert llm_entry['status_codes'] == '429, 401, 403, 5xx'
+        assert llm_entry['truncations'] == 3
+        assert llm_entry['refusals'] == 3
+        assert llm_entry['warning_latency'] == 10
+        assert llm_entry['error_latency'] == 15
+        assert llm_entry['token_budget'] == 10000000
+        assert llm_entry['token_budget_window'] == 86400
+        assert 'max_latency' not in llm_entry
 
 # ################################################################################################################################
 # ################################################################################################################################

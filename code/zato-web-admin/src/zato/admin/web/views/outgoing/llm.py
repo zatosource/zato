@@ -11,11 +11,13 @@ import logging
 from json import dumps
 
 # Zato
+from zato.admin.web import alerts_tab
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.llm import CreateForm, EditForm
 from zato.admin.web.util import get_server_user_conf_directory
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
      method_allowed, ping_connection, SKIP_VALUE
+from zato.common.alerting.object_config import alert_type_llm, Field_Prefix
 from zato.common.api import GENERIC, LLM
 from zato.common.llm_models import get_model_list
 
@@ -34,6 +36,10 @@ _provider_address = {
     LLM.PROVIDER.GEMINI.id: LLM.ADDRESS.GEMINI,
 }
 
+# The alert settings of the connection follow the llm type
+_alert_type = alert_type_llm
+_alert_field_names = alerts_tab.get_storage_field_names(_alert_type)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -47,8 +53,20 @@ class Index(_Index):
 
     input_required = 'cluster_id', 'type_'
     output_required = 'id', 'name', 'is_active'
-    output_optional = ('address', 'model', 'pool_size', 'timeout', 'max_tokens', 'max_history_turns', 'chat_expiry')
+    output_optional = ('address', 'model', 'pool_size', 'timeout', 'max_tokens', 'max_history_turns', 'chat_expiry') + \
+        _alert_field_names
     output_repeated = True
+
+# ################################################################################################################################
+
+    def on_before_append_item(self, item):
+
+        # The edit form shows a duration as a count with a unit, not as the seconds it is stored as
+        alerts_tab.split_unit_fields(_alert_type, item)
+
+        return item
+
+# ################################################################################################################################
 
     def handle(self):
 
@@ -57,13 +75,19 @@ class Index(_Index):
         user_conf_directory = get_server_user_conf_directory()
         catalog_models = get_model_list(user_conf_directory)
 
+        create_form = CreateForm(self.req)
+        edit_form = EditForm(self.req, prefix='edit')
+
         return {
             'show_search_form': True,
-            'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
+            'create_form': create_form,
+            'edit_form': edit_form,
             'change_password_form': ChangePasswordForm(),
             'llm_models_json': dumps(catalog_models),
             'llm_addresses_json': dumps(_provider_address),
+            'create_alerts_tab': alerts_tab.get_alerts_tab_context(create_form, _alert_type),
+            'edit_alerts_tab': alerts_tab.get_alerts_tab_context(edit_form, _alert_type),
+            'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
         }
 
 # ################################################################################################################################
@@ -73,8 +97,11 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name', 'address', 'model'
-    input_optional = ('is_active', 'pool_size', 'timeout', 'max_tokens', 'max_history_turns', 'chat_expiry', 'secret')
+    input_optional = ('is_active', 'pool_size', 'timeout', 'max_tokens', 'max_history_turns', 'chat_expiry', 'secret') + \
+        _alert_field_names
     output_required = 'id', 'name'
+
+# ################################################################################################################################
 
     def populate_initial_input_dict(self, initial_input_dict):
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
@@ -82,12 +109,29 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outconn'] = True
 
+# ################################################################################################################################
+
     def pre_process_item(self, name, value):
+
         # The key is empty when a self-hosted endpoint needs none and on the edit path,
         # which has no key field at all - either way there is nothing to send to the backend.
         if name == 'secret' and not value:
             return SKIP_VALUE
+
+        # The Alerts tab's fields arrive as text and are stored typed - booleans, integers and stripped text
+        if name.startswith(Field_Prefix):
+            value = alerts_tab.pre_process_alert_item(_alert_type, name, value)
+
         return value
+
+# ################################################################################################################################
+
+    def pre_process_input_dict(self, input_dict):
+
+        # A duration is stored as seconds, which is what its count and unit join into
+        alerts_tab.join_unit_fields(_alert_type, input_dict)
+
+# ################################################################################################################################
 
     def success_message(self, item):
         return 'Successfully {} outgoing LLM connection `{}`'.format(self.verb, item.name)

@@ -8,9 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The explain service end to end for an MLLP channel whose service fails on every message - a real quickstart server
 # with its MLLP listener on a port decided before it started, an MLLP channel with the audit log on in front of the
-# service that raises, real HL7 messages sent over a socket the way a sending system sends them, each acknowledged
-# negatively with an AR, one real sweep, and the explained alert read off the server's own databases and received by
-# a real SMTP receiver.
+# service that raises, imported through enmasse, real HL7 messages sent over a socket the way a sending system sends
+# them, each acknowledged negatively with an AR, one real sweep, and the explained alert read off the server's own
+# databases and received by a real SMTP receiver.
 
 # stdlib
 import os
@@ -25,25 +25,25 @@ from sqlalchemy.orm import sessionmaker
 from zato.common.alerting.explain.evidence import Heading_Failures, Heading_Object
 from zato.common.alerting.explain.settings_info import Label_Alerts, On
 from zato.common.alerting.explain.store import ExplanationStore
-from zato.common.api import Alerting, GENERIC
+from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_table
 from zato.common.defaults import default_cluster_id
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 from zato.common.hl7.mllp.reply import Rejection_Ack_Code
-from zato.common.test.client import AdminClient
 
 # Test helpers
 from live_config import LiveServer
+from live_enmasse import deactivate_document, import_document
 from live_trace import Channel_Channel, Channel_Explain, Received, Sent, separator, trace
 from test_explain_live import _assert_sound_explanation, _email_to, _trace_delivery
-from test_explain_live_channel import _find_by_name, _new_admin_client, _new_notification_config, _point_smtp_at_receiver, \
-     _server_audit_engine, _unwrap
+from test_explain_live_channel import _new_admin_client, _new_notification_config, _point_smtp_at_receiver, \
+     _server_audit_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,11 +60,11 @@ class TestExplainLiveChannelMLLP:
         client = _new_admin_client()
 
         # The server's own notification connection delivers to the receiver ..
-        _point_smtp_at_receiver(client, smtp_receiver)
+        _point_smtp_at_receiver(smtp_receiver)
 
         # .. and an MLLP channel with the audit log on takes every message from the sending application and hands
         # it to the service that fails on each, with an ack threshold four messages go past.
-        channel_id = _create_reject_channel(client)
+        channel_document = _create_reject_channel()
 
         # The sweep explains through the LLM connection and mails from the address below
         notification_config = _new_notification_config()
@@ -142,12 +142,10 @@ class TestExplainLiveChannelMLLP:
         else:
             raise AssertionError(f'Expected an email carrying {explained["explanation"]!r}')
 
-        _ = client.delete('zato.generic.connection.delete', id=channel_id)
+        deactivate_document(channel_document)
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-_mllp_type = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
 
 # The channel of the proof and the sending system whose messages reach it
 _channel_name = 'explain.live.channel.mllp'
@@ -179,34 +177,29 @@ _reject_words = ['reject', 'service', 'fail', 'error', 'handler', 'process', 'ex
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _create_reject_channel(client:'AdminClient') -> 'int':
+def _create_reject_channel() -> 'anydict':
     """ An MLLP channel of the live server matching one sending application, in front of the service that fails
     on every message - the audit log on, the LLM explaining its alerts, the sender told why each message failed,
-    the default ack codes and a threshold low enough for four rejects to fire its rule.
+    the default ack codes and a threshold low enough for four rejects to fire its rule. What is returned is the
+    document the channel went in with, for the proof to deactivate it with once it is through.
     """
-    existing = _find_by_name(client, 'zato.generic.connection.get-list', _channel_name)
+    out = {
+        'channel_mllp': [{
+            'name': _channel_name,
+            'is_active': True,
+            'service': LiveServer.reject_service,
+            'msh3_sending_app': _sending_application,
+            'should_return_errors': True,
+            'is_audit_log_active': True,
+            'alerts': {
+                'is_active': True,
+                'use_llm': True,
+                'ack_threshold': _ack_threshold,
+            },
+        }],
+    }
 
-    if existing is not None:
-        return existing['id']
-
-    response = _unwrap(client.create('zato.generic.connection.create',
-        cluster_id=default_cluster_id,
-        type_=_mllp_type,
-        name=_channel_name,
-        is_active=True,
-        is_internal=False,
-        is_channel=True,
-        is_outconn=False,
-        pool_size=1,
-        service=LiveServer.reject_service,
-        msh3_sending_app=_sending_application,
-        should_return_errors=True,
-        is_audit_log_active=True,
-        alert_is_active=True,
-        alert_use_llm=True,
-        alert_ack_threshold=_ack_threshold,
-    ))
-    out = response['id']
+    import_document(out)
 
     trace(Channel_Channel, Sent, f'mllp channel `{_channel_name}` MSH-3 = {_sending_application} -> {LiveServer.reject_service}')
     separator(Channel_Channel)

@@ -80,6 +80,9 @@ alert_type_fhir = 'fhir'
 alert_type_mllp_channel = 'mllp_channel'
 alert_type_mllp_outgoing = 'mllp_outgoing'
 
+# An outgoing LLM connection's settings follow the cluster-level llm type, so the connection and the alerts_llm ruleset are one type
+alert_type_llm = 'llm'
+
 conn_type_to_alert_type:'strstrdict' = {
     GENERIC.CONNECTION.TYPE.OUTCONN_SFTP:     alert_type_file_transfer,
     GENERIC.CONNECTION.TYPE.OUTCONN_FTP:      alert_type_file_transfer,
@@ -87,6 +90,7 @@ conn_type_to_alert_type:'strstrdict' = {
     GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: alert_type_fhir,
     GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: alert_type_mllp_channel,
     GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: alert_type_mllp_outgoing,
+    GENERIC.CONNECTION.TYPE.OUTCONN_LLM:      alert_type_llm,
 }
 
 # The HTTPSOAP rows that carry alert settings of their own, by connection and transport -
@@ -159,8 +163,8 @@ field_display = {
     'error_rate':           ('Error rate', '%'),
     'max_latency':          ('Max latency', 'ms'),
     'max_query_time':       ('Max query time', 'ms'),
-    'warning_latency':      ('Warning latency', 'ms'),
-    'error_latency':        ('Error latency', 'ms'),
+    'warning_latency':      ('Warning latency', 's'),
+    'error_latency':        ('Error latency', 's'),
     'max_tool_call_time':   ('Max tool-call time', 'ms'),
     'health_alerts':        ('Health alerts', ''),
     'max_call_time':        ('Max call time', 'ms'),
@@ -185,6 +189,12 @@ field_display = {
     'ack_codes':            ('Ack codes', ''),
     'ack_threshold':        ('Acknowledgments', ''),
     'acks_window':          ('Acks window', ''),
+    'truncations':          ('Truncated completions', ''),
+    'truncations_window':   ('Truncations window', ''),
+    'refusals':             ('Refusals', ''),
+    'refusals_window':      ('Refusals window', ''),
+    'token_budget':         ('Token budget', ''),
+    'token_budget_window':  ('Token budget window', ''),
     'traffic_expected':     ('Alert on silence', ''),
     'silence_window':       ('Silence', ''),
     'silence_slots':        ('Time ranges', ''),
@@ -208,8 +218,8 @@ field_help = {
     'error_rate':           'The share of failed calls, in percent, that raises an alert.',
     'max_latency':          'Calls slower than this many milliseconds count as slow.',
     'max_query_time':       'Queries slower than this many milliseconds count as slow.',
-    'warning_latency':      'Completions slower than this many milliseconds raise a warning.',
-    'error_latency':        'Completions slower than this many milliseconds are errors.',
+    'warning_latency':      'Completions slower than this many seconds raise a warning - a fraction such as 7.5 is fine.',
+    'error_latency':        'Completions slower than this many seconds are errors - a fraction such as 12.5 is fine.',
     'max_tool_call_time':   'Tool calls slower than this many milliseconds count as slow.',
     'health_alerts':        'Whether the Microsoft service health feed raises alerts of its own.',
     'max_call_time':        'Calls slower than this many milliseconds count as slow.',
@@ -240,6 +250,15 @@ field_help = {
                             'to process a message, AR and CR that the message was rejected.',
     'ack_threshold':        'How many negative acknowledgments with one of the codes in the window raise an alert.',
     'acks_window':          'How long the window the acknowledgments are counted over is.',
+    'truncations':          'How many completions cut short by the token limit in the window raise an alert - the provider ' + \
+                            'stopped generating because max tokens was reached, so the reply arrived with a 200 but is incomplete.',
+    'truncations_window':   'How long the window the truncated completions are counted over is.',
+    'refusals':             'How many refused completions in the window raise an alert - the provider declined to answer ' + \
+                            'or a content filter blocked the prompt or the reply, most of them arriving with a 200.',
+    'refusals_window':      'How long the window the refusals are counted over is.',
+    'token_budget':         'How many tokens, input and output added up across every call, raise an alert - a count in ' + \
+                            'thousands, millions or billions, a fraction such as 2.5 is fine.',
+    'token_budget_window':  'How long the window the tokens are added up over is.',
     'traffic_expected':     'Whether a channel that receives no requests for the time below raises an alert.',
     'silence_window':       'How long the channel may go without a request, in minutes, hours or days.',
     'silence_slots':        'The ranges of the day with a silence and a switch of their own.',

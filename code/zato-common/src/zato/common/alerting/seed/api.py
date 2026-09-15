@@ -22,9 +22,10 @@ from logging import getLogger
 # Zato
 from zato.common.alerting.config_map import Explain_With_LLM_Key
 from zato.common.alerting.seed.rules_common import channels_rules, common_rules, scheduler_rules
-from zato.common.alerting.seed.rules_connections import email_rules, file_transfer_rules, llm_rules, mcp_rules, \
+from zato.common.alerting.seed.rules_connections import email_rules, file_transfer_rules, mcp_rules, \
     microsoft_rules, odoo_rules, rest_rules, soap_rules, sql_rules
 from zato.common.alerting.seed.rules_fhir import fhir_rules
+from zato.common.alerting.seed.rules_llm import llm_rules
 from zato.common.alerting.seed.rules_mllp import mllp_channel_rules, mllp_outgoing_rules
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditSource
@@ -211,6 +212,12 @@ def alerting_vocabulary() -> 'anydict':
             'how many responses an outgoing FHIR connection received as an OperationOutcome with an issue code it alerts on'),
         _term('connection_failure_count', TermType.Number,
             'how many calls of an outgoing connection failed before any response arrived'),
+        _term('token_count',            TermType.Number,
+            'how many tokens, input and output added up, an LLM connection used within the window'),
+        _term('truncation_count',       TermType.Number,
+            'how many completions of an LLM connection were cut short by the token limit within the window'),
+        _term('refusal_count',          TermType.Number,
+            'how many completions of an LLM connection the provider refused within the window'),
         _term('cert_days_left',         TermType.Number, 'how many days the TLS certificate has left, zero when unmeasured'),
         _term('health_state',           TermType.Choice, 'the health state the remote service reports about itself',
             values=_health_states),

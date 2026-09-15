@@ -34,6 +34,12 @@ duration_unit_choices:'anylist' = []
 for _unit_name, _ in config_map.Duration_Units:
     duration_unit_choices.append((_unit_name, _unit_name + 's'))
 
+# The units of an amount the same way - thousand and thousands, million and millions, billion and billions
+amount_unit_choices:'anylist' = []
+
+for _unit_name, _ in config_map.Amount_Units:
+    amount_unit_choices.append((_unit_name, _unit_name + 's'))
+
 # The unit of the time a file may fail to arrive for, stored with the number
 Arrival_Overdue_Unit_Field   = 'arrival_overdue' + Unit_Field_Suffix
 Arrival_Overdue_Unit_Default = 'hour'
@@ -50,9 +56,16 @@ Connection_Failures_Window_Unit_Field = 'connection_failures_window' + Unit_Fiel
 Faults_Window_Unit_Field        = 'faults_window' + Unit_Field_Suffix
 Outcomes_Window_Unit_Field      = 'outcomes_window' + Unit_Field_Suffix
 Acks_Window_Unit_Field          = 'acks_window' + Unit_Field_Suffix
+Truncations_Window_Unit_Field   = 'truncations_window' + Unit_Field_Suffix
+Refusals_Window_Unit_Field      = 'refusals_window' + Unit_Field_Suffix
+Token_Budget_Window_Unit_Field  = 'token_budget_window' + Unit_Field_Suffix
+
+# The unit select of the one amount - whether a token budget is in thousands, millions or billions
+Token_Budget_Unit_Field = 'token_budget' + Unit_Field_Suffix
 
 # The unit selects of the tab, by name
 unit_fields:'anydict' = {
+    Token_Budget_Unit_Field: {'choices': amount_unit_choices, 'initial': config_map.Amount_Unit_Smallest},
     Arrival_Overdue_Unit_Field: {'choices': duration_unit_choices, 'initial': Arrival_Overdue_Unit_Default},
     Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
     Server_Errors_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
@@ -65,6 +78,9 @@ unit_fields:'anydict' = {
     Faults_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
     Outcomes_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
     Acks_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
+    Truncations_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
+    Refusals_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
+    Token_Budget_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
 }
 
 # The JSON list of time slots of a channel's silence alert
@@ -122,11 +138,19 @@ _popover_labels = {
     'faults_window':        'In the last',
     'outcomes_window':      'In the last',
     'acks_window':          'In the last',
+    'truncations_window':   'In the last',
+    'refusals_window':      'In the last',
+    'token_budget_window':  'In the last',
     'status_code_threshold': 'Alert after',
     'fault_threshold':      'Alert after',
     'outcome_threshold':    'Alert after',
     'ack_threshold':        'Alert after',
     'connection_failures':  'Alert after',
+    'truncations':          'Alert after',
+    'refusals':             'Alert after',
+    'token_budget':         'Alert above',
+    'warning_latency':      'Warning above',
+    'error_latency':        'Error above',
     'arrival_overdue':      'Alert after',
     'silence_window':       'Alert after',
     'traffic_expected':     'Alerts on',
@@ -145,8 +169,11 @@ field_how_it_works[Silence_Window_Unit_Field] = 'Whether the silence a channel t
 
 for _window_unit_field in (Server_Errors_Window_Unit_Field, Latency_Window_Unit_Field, Auth_Failures_Window_Unit_Field,
     Client_Errors_Window_Unit_Field, Status_Codes_Window_Unit_Field, Connection_Failures_Window_Unit_Field,
-    Faults_Window_Unit_Field, Outcomes_Window_Unit_Field, Acks_Window_Unit_Field):
+    Faults_Window_Unit_Field, Outcomes_Window_Unit_Field, Acks_Window_Unit_Field, Truncations_Window_Unit_Field,
+    Refusals_Window_Unit_Field, Token_Budget_Window_Unit_Field):
     field_how_it_works[_window_unit_field] = field_how_it_works[Window_Unit_Field]
+
+field_how_it_works[Token_Budget_Unit_Field] = 'Whether the budget is in thousands, millions or billions of tokens.'
 
 field_display[Health_Check_Run_Every_Field] = ('Ping every', '')
 field_how_it_works[Health_Check_Run_Every_Field] = 'How often the connection is pinged, e.g. every 5 minutes. ' + \
@@ -169,7 +196,7 @@ Section_Traffic = 'Traffic'
 
 # The core lines every type's tab opens with - the Active switch, the LLM switch with its connection and the email connection
 
-def _active_line() -> 'anydict':
+def active_line() -> 'anydict':
     out = {
         'name': 'active',
         'section': Section_Core,
@@ -180,7 +207,7 @@ def _active_line() -> 'anydict':
     }
     return out
 
-def _use_llm_line() -> 'anydict':
+def use_llm_line() -> 'anydict':
     out = {
         'name': 'use_llm',
         'section': Section_Core,
@@ -191,7 +218,7 @@ def _use_llm_line() -> 'anydict':
     }
     return out
 
-def _llm_line() -> 'anydict':
+def llm_line() -> 'anydict':
     out = {
         'name': 'llm',
         'section': Section_Core,
@@ -207,7 +234,7 @@ def _llm_line() -> 'anydict':
     }
     return out
 
-def _email_line() -> 'anydict':
+def email_line() -> 'anydict':
     out = {
         'name': 'email',
         'section': Section_Core,
@@ -224,7 +251,7 @@ def _email_line() -> 'anydict':
 
 # The lines a connection's failed calls are measured by - how many in a row and what share of the recent traffic
 
-def _failures_in_a_row_line() -> 'anydict':
+def failures_in_a_row_line() -> 'anydict':
     out = {
         'name': 'failures_in_a_row',
         'section': Section_Failures,
@@ -238,7 +265,7 @@ def _failures_in_a_row_line() -> 'anydict':
     }
     return out
 
-def _error_rate_line() -> 'anydict':
+def error_rate_line() -> 'anydict':
     out = {
         'name': 'error_rate',
         'section': Section_Failures,
@@ -298,7 +325,8 @@ def _health_check_line() -> 'anydict':
 
 # ################################################################################################################################
 
-def _status_codes_line() -> 'anydict':
+# The status codes an outgoing connection alerts on - each type's line starts from the codes its own seeded rule carries
+def status_codes_line(codes_default:'str'=Status_Codes_Default) -> 'anydict':
     out = {
         'name': 'status_codes',
         'section': Section_Failures,
@@ -308,7 +336,7 @@ def _status_codes_line() -> 'anydict':
         'fields': [Status_Codes_Field, 'status_code_threshold', 'status_codes_window'],
         'rows': [[Status_Codes_Field], ['status_code_threshold', 'status_codes_window']],
         'unit_field': Status_Codes_Window_Unit_Field,
-        'text_fields': {Status_Codes_Field: Status_Codes_Default},
+        'text_fields': {Status_Codes_Field: codes_default},
         'summary': 'Alert after {status_code_threshold|response|responses} with ' + f'{{{Status_Codes_Field}}} ' + \
             f'in the last {{{Status_Codes_Window_Unit_Field}@status_codes_window}}',
         'how_it_works': 'Which status codes raise an alert - three-digit codes such as 401 or 403 and whole classes ' + \
@@ -319,7 +347,7 @@ def _status_codes_line() -> 'anydict':
 
 # ################################################################################################################################
 
-def _connection_failures_line() -> 'anydict':
+def connection_failures_line() -> 'anydict':
     out = {
         'name': 'connection_failures',
         'section': Section_Failures,
@@ -437,7 +465,7 @@ def _negative_acks_line(side:'str') -> 'anydict':
 
 # The messages an outgoing MLLP connection got no acknowledgment for at all - the wire failed before one arrived
 def _mllp_connection_failures_line() -> 'anydict':
-    out = _connection_failures_line()
+    out = connection_failures_line()
     out['summary'] = 'Alert after {connection_failures|unacknowledged message|unacknowledged messages} ' + \
         f'in the last {{{Connection_Failures_Window_Unit_Field}@connection_failures_window}}'
     out['how_it_works'] = 'How many messages that got no acknowledgment at all - a timeout waiting for it, a refused ' + \
@@ -476,20 +504,20 @@ def _silence_line(noun:'str') -> 'anydict':
 # outcomes, goes right after the status codes
 def _http_lines(*, extra_failure_line:'anydict | None'=None) -> 'anylist':
     out = [
-        _active_line(),
-        _use_llm_line(),
-        _llm_line(),
-        _email_line(),
+        active_line(),
+        use_llm_line(),
+        llm_line(),
+        email_line(),
         _health_check_line(),
-        _failures_in_a_row_line(),
-        _error_rate_line(),
-        _status_codes_line(),
+        failures_in_a_row_line(),
+        error_rate_line(),
+        status_codes_line(),
     ]
 
     if extra_failure_line:
         out.append(extra_failure_line)
 
-    out.append(_connection_failures_line())
+    out.append(connection_failures_line())
     out.append(_slow_responses_line())
 
     return out
@@ -506,11 +534,13 @@ def _http_lines(*, extra_failure_line:'anydict | None'=None) -> 'anylist':
 # edited as chips and stored comma-separated, each with the seeded default it starts from. A line with `page_fields` edits fields of the page's own
 # form rather than alert settings - they carry no alert prefix and the page sends them on its own - it reads as its
 # `summary_empty` while its first field is empty, and one that is `always_on` is not dimmed when Active is off.
+# The lines of an outgoing LLM connection are built from these in alerts_tab_lines_llm.py and alerts_tab.py lists them
+# next to the types here.
 type_lines:'anydict' = {
     alert_type_file_transfer: [
-        _active_line(),
-        _use_llm_line(),
-        _llm_line(),
+        active_line(),
+        use_llm_line(),
+        llm_line(),
         {
             'name': 'test_transfers',
             'section': Section_Core,
@@ -519,7 +549,7 @@ type_lines:'anydict' = {
             'fields': ['test_transfers'],
             'how_it_works': field_how_it_works['test_transfers'],
         },
-        _email_line(),
+        email_line(),
         {
             'name': 'failures_in_a_row',
             'section': Section_Thresholds,
@@ -559,12 +589,12 @@ type_lines:'anydict' = {
         },
     ],
     alert_type_channels: [
-        _active_line(),
-        _use_llm_line(),
-        _llm_line(),
-        _email_line(),
-        _failures_in_a_row_line(),
-        _error_rate_line(),
+        active_line(),
+        use_llm_line(),
+        llm_line(),
+        email_line(),
+        failures_in_a_row_line(),
+        error_rate_line(),
         {
             'name': 'server_errors',
             'section': Section_Failures,
@@ -611,23 +641,23 @@ type_lines:'anydict' = {
         _silence_line('request'),
     ],
     alert_type_mllp_channel: [
-        _active_line(),
-        _use_llm_line(),
-        _llm_line(),
-        _email_line(),
-        _failures_in_a_row_line(),
-        _error_rate_line(),
+        active_line(),
+        use_llm_line(),
+        llm_line(),
+        email_line(),
+        failures_in_a_row_line(),
+        error_rate_line(),
         _negative_acks_line(Ack_Side_Channel),
         _slow_responses_line(),
         _silence_line('message'),
     ],
     alert_type_mllp_outgoing: [
-        _active_line(),
-        _use_llm_line(),
-        _llm_line(),
-        _email_line(),
-        _failures_in_a_row_line(),
-        _error_rate_line(),
+        active_line(),
+        use_llm_line(),
+        llm_line(),
+        email_line(),
+        failures_in_a_row_line(),
+        error_rate_line(),
         _negative_acks_line(Ack_Side_Outgoing),
         _mllp_connection_failures_line(),
         _slow_responses_line(),

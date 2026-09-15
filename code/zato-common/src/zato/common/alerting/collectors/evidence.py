@@ -26,6 +26,7 @@ from zato.common.alerting.collectors.common import is_failed, is_object, is_rece
 from zato.common.alerting.collectors.file_transfer import Attr_Schedule
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_table, AuditBody, AuditEvent, AuditOutcome, \
     AuditSource
+from zato.common.audit_log.common import LLMAttr, LLMFinish
 from zato.common.audit_log.file_transfer_run import Run_Status_Failed, Run_Status_Interrupted, Run_Status_List_Failed, \
     Run_Status_No_Directory, Run_Status_Partial
 from zato.common.hl7.audit import Attr_Ack_Status
@@ -75,6 +76,13 @@ _body_kind_by_source = {
 _status_attr_by_source = {
     AuditSource.MLLP_Outgoing: Attr_Ack_Status,
 }
+
+# The attributes an LLM row shows in the evidence next to its status, in this order - the model asked, why the
+# provider stopped and what the call cost, so a `200 OK` that was a truncation reads as one.
+_llm_evidence_attrs = (LLMAttr.Model, LLMAttr.Finish_Reason, LLMAttr.Input_Tokens, LLMAttr.Output_Tokens)
+
+# The finish reasons an LLM completion alert was counted from - a truncation and a refusal both arrive as an HTTP 200
+_llm_counted_finish_reasons = (LLMFinish.Length, LLMFinish.Refusal)
 
 # The columns every evidence row carries.
 _row_columns = (
@@ -194,6 +202,61 @@ def _attach_status_attr(engine:'Engine', rows:'dictlist', attr_name:'str') -> 'N
     for event_id, value in result:
         by_id[event_id]['data'] = value
 
+# ##############################################################################################################################
+
+def _attach_llm_attrs(engine:'Engine', rows:'dictlist') -> 'None':
+    """ Puts what an LLM row's attributes say onto the row as its data - `model=gpt-4o, finish_reason=length,
+    input_tokens=1200, output_tokens=300` - so the evidence tells a truncated `200 OK` from a plain one and
+    names the model and the cost of every call it lists. A row with no attributes keeps whatever data it had.
+    """
+    if not rows:
+        return
+
+    by_id = {row['id']: row for row in rows}
+
+    statement = select(event_attr_table.c.event_id, event_attr_table.c.name, event_attr_table.c.value).where(and_(
+        event_attr_table.c.event_id.in_(list(by_id)),
+        event_attr_table.c.name.in_(list(_llm_evidence_attrs)),
+    ))
+
+    with engine.connect() as connection:
+        result = connection.execute(statement).fetchall()
+
+    # The attributes of each row by name, so they can be written out in one order whatever order they were read in
+    attrs_by_id:'dict[int, dict[str, str]]' = {}
+
+    for event_id, name, value in result:
+        attrs_by_id.setdefault(event_id, {})[name] = value
+
+    for event_id, attrs in attrs_by_id.items():
+
+        parts:'strlist' = []
+
+        for name in _llm_evidence_attrs:
+            if name in attrs:
+                parts.append(f'{name}={attrs[name]}')
+
+        by_id[event_id]['data'] = ', '.join(parts)
+
+# ################################################################################################################################
+
+def _attach_source_details(engine:'Engine', source:'str', rows:'dictlist') -> 'None':
+    """ Reads onto the rows whatever their source keeps outside the event row itself - a body, a status attr
+    or, for an LLM connection, the attributes of each call.
+    """
+
+    # A source whose rows say what went wrong in a body has it read onto them ..
+    if source in _body_kind_by_source:
+        _attach_bodies(engine, rows, _body_kind_by_source[source])
+
+    # .. one whose rows may say it in an attr alone has that read onto the rows with nothing in their status ..
+    if source in _status_attr_by_source:
+        _attach_status_attr(engine, rows, _status_attr_by_source[source])
+
+    # .. and an LLM row shows its model, finish reason and token usage next to its status.
+    if source == AuditSource.LLM:
+        _attach_llm_attrs(engine, rows)
+
 # ################################################################################################################################
 
 def collect_failed_events(engine:'Engine', fact:'stranydict', now:'datetime') -> 'dictlist':
@@ -210,15 +273,47 @@ def collect_failed_events(engine:'Engine', fact:'stranydict', now:'datetime') ->
     ]
 
     out = _select_rows(engine, conditions)
+    _attach_source_details(engine, source, out)
 
-    # A source whose rows say what went wrong in a body has it read onto them ..
-    if source in _body_kind_by_source:
-        _attach_bodies(engine, out, _body_kind_by_source[source])
+    return out
 
-    # .. and one whose rows may say it in an attr alone has that read onto the rows with nothing in their status
-    if source in _status_attr_by_source:
-        _attach_status_attr(engine, out, _status_attr_by_source[source])
+# ################################################################################################################################
 
+def collect_llm_completions(engine:'Engine', fact:'stranydict', now:'datetime') -> 'dictlist':
+    """ The completions of the fact's LLM connection the provider cut short or declined within its window - the rows
+    whose finish reason attr is `length` or `refusal`, whatever their outcome, because a truncation and a refusal are
+    OK rows while a Gemini prompt block is an Error one with a refusal for its reason. What the truncation and the
+    refusal counts were counted from.
+    """
+    conditions = [
+        is_source(fact['source']),
+        is_object(fact['object_name']),
+        event_attr_table.c.name == LLMAttr.Finish_Reason,
+        event_attr_table.c.value.in_(list(_llm_counted_finish_reasons)),
+        is_recent(_window_start_iso(fact, now)),
+    ]
+
+    attr_join = event_table.join(event_attr_table, event_table.c.id == event_attr_table.c.event_id)
+
+    statement = select(*_row_columns).select_from(attr_join).where(and_(*conditions))
+    statement = statement.order_by(event_table.c.id.desc()).limit(Max_Rows_Per_Measure)
+
+    with engine.connect() as connection:
+        result = connection.execute(statement).fetchall()
+
+    out = _rows_from(result)
+    _attach_llm_attrs(engine, out)
+
+    return out
+
+# ################################################################################################################################
+
+def collect_no_rows(engine:'Engine', fact:'stranydict', now:'datetime') -> 'dictlist':
+    """ What a measure that is a sum rather than a count of failures has for rows - none. A token budget alert's
+    evidence is the count and its split into input and output, both of which the fact carries already, and
+    listing every call that added to the sum would say nothing the numbers do not.
+    """
+    out:'dictlist' = []
     return out
 
 # ################################################################################################################################
@@ -365,6 +460,11 @@ measure_to_evidence:'dict[str, callable_]' = {
     'verify_failed_count':        collect_verify_failed,
     'cert_days_left':             collect_all_events,
     'health_state':               collect_all_events,
+    'truncation_count':           collect_llm_completions,
+    'refusal_count':              collect_llm_completions,
+    'token_count':                collect_no_rows,
+    'input_token_count':          collect_no_rows,
+    'output_token_count':         collect_no_rows,
 }
 
 # ################################################################################################################################

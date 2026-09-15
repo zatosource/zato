@@ -261,6 +261,19 @@ $.fn.zato.alerts_tab.buildSpec = function(fieldName, row, line) {
         }
     }
 
+    // Seconds and amounts take a fraction - 7.5 seconds, 2.5 millions
+    if(settings.fractional_kinds.indexOf(fieldKind) !== -1) {
+        out.fractional = true;
+        out.step = settings.fractional_step;
+    }
+
+    // A field with a unit select of its own, e.g. a token budget in thousands, millions or billions
+    if(line.field_units) {
+        if(line.field_units[fieldName]) {
+            out.unitField = line.field_units[fieldName];
+        }
+    }
+
     return out;
 }
 
@@ -406,9 +419,10 @@ $.fn.zato.alerts_tab.formatToken = function(fieldName, countFieldName, slotsSing
         out = $.fn.zato.count_text(rulesCount, slotsSingular, slotsPlural);
     }
 
-    // A unit select spells its noun both ways - the value is the singular, the label the plural
+    // A unit select spells its noun both ways - the value is the singular, the label the plural - and a count
+    // may be a fraction, 1.5 millions, so it is read as one
     else if(countFieldName !== undefined) {
-        var count = parseInt(tab.field(countFieldName).val());
+        var count = parseFloat(tab.field(countFieldName).val());
         var option = field.find('option:selected');
         out = $.fn.zato.count_text(count, option.val(), option.text());
     }
@@ -418,7 +432,7 @@ $.fn.zato.alerts_tab.formatToken = function(fieldName, countFieldName, slotsSing
     }
 
     else {
-        out = $.fn.zato.count_text(parseInt(value), singular, plural);
+        out = $.fn.zato.count_text(parseFloat(value), singular, plural);
     }
 
     return out;
