@@ -358,6 +358,7 @@ review.refreshSummaries = function() {
     });
 
     review.setSummary('mcp-wizard-summary-size-caps', review._sizeCapsSummary());
+    review.setSummary(wizard.alerts.config.summaryId, wizard.alerts.summary());
     review.setSummary('mcp-wizard-summary-options', review._optionsSummary());
     review.setSummary('mcp-wizard-summary-gateway-options', review._gatewayOptionsSummary());
     review.setSummary('mcp-wizard-summary-compaction', review._compactionSummary());
@@ -505,6 +506,12 @@ review._editSizeCaps = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+review._editAlerts = function() {
+    wizard.alerts.open(document.getElementById(wizard.alerts.config.editLinkId));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // The four option cards are folded away behind the More options line, so
 // that line goes first - a card inside a closed body has nothing to open on.
 review._openOptions = function() {
@@ -638,6 +645,7 @@ review.render = function() {
         {label: groups.security,       step: 0, listRows: securityListRows, rows: securityRows,
             edit: review._editSecurity},
         {label: groups.shaping,        step: 1, rows: shapingRows, edit: review._editSizeCaps},
+        {label: groups.alerts,         step: 1, rows: wizard.alerts.reviewRows(), edit: review._editAlerts},
         {label: groups.gatewayOptions, step: 1, rows: gatewayOptionsRows, edit: review._editGatewayOptions},
         {label: groups.compaction,     step: 1, rows: compactionRows, edit: review._editCompaction},
         {label: groups.pii,            step: 1, rows: review._piiReviewRows(), edit: review._editPII},

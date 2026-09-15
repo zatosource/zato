@@ -15,10 +15,11 @@ from django import forms
 from zato.admin.web.alerts_tab_lines import Checkbox_On_Value, Edit_Hint, field_display, field_how_it_works, Line_Kind_Pick, \
     Line_Kind_Popover, Line_Kind_Toggle, Tab_Label, type_lines as shared_type_lines, unit_fields
 from zato.admin.web.alerts_tab_lines_llm import llm_lines
+from zato.admin.web.alerts_tab_lines_mcp import mcp_lines
 from zato.admin.web.alerts_tab_picks import get_empty_html, get_pick_choices, Pick_Select_Class
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import alert_type_llm, Field_Prefix, get_defaults as get_storage_defaults, \
-    get_field_kinds, get_field_names, Is_Active_Field, storage_name, Unit_Field_Suffix
+from zato.common.alerting.object_config import alert_type_llm, alert_type_mcp, Field_Prefix, \
+    get_defaults as get_storage_defaults, get_field_kinds, get_field_names, Is_Active_Field, storage_name, Unit_Field_Suffix
 from zato.common.alerting.time_slots import Slot_Is_On, Slot_Seconds, Slot_Time_From, Slot_Time_To
 
 # ################################################################################################################################
@@ -35,20 +36,23 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The lines of every alert type - the ones alerts_tab_lines.py builds and the LLM ones built from them in a module of their own
+# The lines of every alert type - the ones alerts_tab_lines.py builds and the LLM and MCP ones built from them
+# in modules of their own
 type_lines:'anydict' = dict(shared_type_lines)
 type_lines[alert_type_llm] = llm_lines()
+type_lines[alert_type_mcp] = mcp_lines()
 
-# The kinds of field stored as one number and edited as a count with a unit select - a duration's seconds
-# and an amount's ones - each with what splits the stored number for the form and what joins the form's two back
+# The kinds of field stored as one number and edited as a count with a unit select - a duration's seconds,
+# an amount's ones and a size's bytes - each with what splits the stored number for the form and what joins the form's two back
 _unit_kinds:'anydict' = {
     config_map.Kind_Duration: (config_map.split_duration, config_map.join_duration),
     config_map.Kind_Amount: (config_map.split_amount, config_map.join_amount),
+    config_map.Kind_Size: (config_map.split_size, config_map.join_size),
 }
 
-# The kinds of field that accept a fraction - seconds such as 7.5 and amounts such as 2.5 millions - and the step
-# their number inputs carry so the browser takes the fraction
-fractional_kinds = [config_map.Kind_Seconds, config_map.Kind_Amount]
+# The kinds of field that accept a fraction - seconds such as 7.5, amounts such as 2.5 millions and sizes such as
+# 1.5 gigabytes - and the step their number inputs carry so the browser takes the fraction
+fractional_kinds = [config_map.Kind_Seconds, config_map.Kind_Amount, config_map.Kind_Size]
 Fractional_Step = 'any'
 
 # ################################################################################################################################

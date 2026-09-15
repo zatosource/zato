@@ -83,6 +83,9 @@ alert_type_mllp_outgoing = 'mllp_outgoing'
 # An outgoing LLM connection's settings follow the cluster-level llm type, so the connection and the alerts_llm ruleset are one type
 alert_type_llm = 'llm'
 
+# An MCP gateway's settings follow the mcp type - the gateway is the only writer of the mcp audit source
+alert_type_mcp = 'mcp'
+
 conn_type_to_alert_type:'strstrdict' = {
     GENERIC.CONNECTION.TYPE.OUTCONN_SFTP:     alert_type_file_transfer,
     GENERIC.CONNECTION.TYPE.OUTCONN_FTP:      alert_type_file_transfer,
@@ -91,6 +94,7 @@ conn_type_to_alert_type:'strstrdict' = {
     GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: alert_type_mllp_channel,
     GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: alert_type_mllp_outgoing,
     GENERIC.CONNECTION.TYPE.OUTCONN_LLM:      alert_type_llm,
+    GENERIC.CONNECTION.TYPE.GATEWAY_MCP:      alert_type_mcp,
 }
 
 # The HTTPSOAP rows that carry alert settings of their own, by connection and transport -
@@ -165,7 +169,17 @@ field_display = {
     'max_query_time':       ('Max query time', 'ms'),
     'warning_latency':      ('Warning latency', 's'),
     'error_latency':        ('Error latency', 's'),
-    'max_tool_call_time':   ('Max tool-call time', 'ms'),
+    'invalid_calls':        ('Invalid tool calls', ''),
+    'invalid_calls_window': ('Invalid tool calls window', ''),
+    'rejections':           ('Rejected responses', ''),
+    'rejections_window':    ('Rejected responses window', ''),
+    'throttled_calls':      ('Throttled calls', ''),
+    'throttled_calls_window': ('Throttled calls window', ''),
+    'repeat_calls':         ('Repeated calls', ''),
+    'repeat_calls_window':  ('Repeated calls window', ''),
+    'volume_budget':        ('Response volume', ''),
+    'volume_budget_window': ('Response volume window', ''),
+    'max_tools':            ('Max tools', ''),
     'health_alerts':        ('Health alerts', ''),
     'max_call_time':        ('Max call time', 'ms'),
     'auth_failures':        ('Auth failures', ''),
@@ -189,7 +203,7 @@ field_display = {
     'ack_codes':            ('Ack codes', ''),
     'ack_threshold':        ('Acknowledgments', ''),
     'acks_window':          ('Acks window', ''),
-    'truncations':          ('Truncated completions', ''),
+    'truncations':          ('Truncated responses', ''),
     'truncations_window':   ('Truncations window', ''),
     'refusals':             ('Refusals', ''),
     'refusals_window':      ('Refusals window', ''),
@@ -218,9 +232,24 @@ field_help = {
     'error_rate':           'The share of failed calls, in percent, that raises an alert.',
     'max_latency':          'Calls slower than this many milliseconds count as slow.',
     'max_query_time':       'Queries slower than this many milliseconds count as slow.',
-    'warning_latency':      'Completions slower than this many seconds raise a warning - a fraction such as 7.5 is fine.',
-    'error_latency':        'Completions slower than this many seconds are errors - a fraction such as 12.5 is fine.',
-    'max_tool_call_time':   'Tool calls slower than this many milliseconds count as slow.',
+    'warning_latency':      'Calls slower than this many seconds raise a warning - a fraction such as 7.5 is fine.',
+    'error_latency':        'Calls slower than this many seconds are errors - a fraction such as 12.5 is fine.',
+    'invalid_calls':        'How many tool calls in the window naming a tool the gateway does not expose, or passing ' + \
+                            'arguments its schema refuses, raise an alert - the agent\'s mistake rather than the backend\'s.',
+    'invalid_calls_window': 'How long the window the invalid tool calls are counted over is.',
+    'rejections':           'How many tool responses in the window refused by a safeguard in reject mode or by the size cap ' + \
+                            'in block mode raise an alert.',
+    'rejections_window':    'How long the window the rejected responses are counted over is.',
+    'throttled_calls':      'How many requests in the window answered 429 by a security definition\'s rate limit raise an alert.',
+    'throttled_calls_window': 'How long the window the throttled requests are counted over is.',
+    'repeat_calls':         'How many times one session may call one tool in the window before an alert - an agent ' + \
+                            'stuck in a loop calls the same tool over and over.',
+    'repeat_calls_window':  'How long the window the repeated calls are counted over is.',
+    'volume_budget':        'How many bytes of tool responses, added up across every call in the window, raise an alert - ' + \
+                            'a count in kilobytes, megabytes or gigabytes, a fraction such as 2.5 is fine.',
+    'volume_budget_window': 'How long the window the response bytes are added up over is.',
+    'max_tools':            'How many tools the gateway may expose before an alert - the most capable models degrade past ' + \
+                            '20 to 25 tools, and the alert stays open until the count drops.',
     'health_alerts':        'Whether the Microsoft service health feed raises alerts of its own.',
     'max_call_time':        'Calls slower than this many milliseconds count as slow.',
     'auth_failures':        'How many authentication failures in the window raise an alert.',
@@ -250,17 +279,18 @@ field_help = {
                             'to process a message, AR and CR that the message was rejected.',
     'ack_threshold':        'How many negative acknowledgments with one of the codes in the window raise an alert.',
     'acks_window':          'How long the window the acknowledgments are counted over is.',
-    'truncations':          'How many completions cut short by the token limit in the window raise an alert - the provider ' + \
-                            'stopped generating because max tokens was reached, so the reply arrived with a 200 but is incomplete.',
-    'truncations_window':   'How long the window the truncated completions are counted over is.',
+    'truncations':          'How many responses cut short in the window raise an alert - a completion the provider stopped ' + \
+                            'generating at its token limit, or a tool response the gateway\'s size cap trimmed, so the reply ' + \
+                            'arrived with a 200 but is incomplete.',
+    'truncations_window':   'How long the window the truncated responses are counted over is.',
     'refusals':             'How many refused completions in the window raise an alert - the provider declined to answer ' + \
                             'or a content filter blocked the prompt or the reply, most of them arriving with a 200.',
     'refusals_window':      'How long the window the refusals are counted over is.',
     'token_budget':         'How many tokens, input and output added up across every call, raise an alert - a count in ' + \
                             'thousands, millions or billions, a fraction such as 2.5 is fine.',
     'token_budget_window':  'How long the window the tokens are added up over is.',
-    'traffic_expected':     'Whether a channel that receives no requests for the time below raises an alert.',
-    'silence_window':       'How long the channel may go without a request, in minutes, hours or days.',
+    'traffic_expected':     'Whether a channel or a gateway that receives no requests for the time below raises an alert.',
+    'silence_window':       'How long the channel or the gateway may go without a request, in minutes, hours or days.',
     'silence_slots':        'The ranges of the day with a silence and a switch of their own.',
     'warning_failures':     'How many failures in the window raise a warning.',
     'error_failures':       'How many failures in the window count as errors.',

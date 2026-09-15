@@ -60,7 +60,9 @@ _type_cells = {
     'sql':           ['consecutive_failures', 'error_rate', 'window', 'max_query_time', 'use_llm'],
     'llm':           ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'truncations', 'refusals', 'token_budget',
         'warning_latency', 'error_latency', 'use_llm'],
-    'mcp':           ['consecutive_failures', 'error_rate', 'window', 'max_tool_call_time', 'use_llm'],
+    'mcp':           ['consecutive_failures', 'error_rate', 'window', 'invalid_calls', 'rejections', 'auth_failures',
+        'throttled_calls', 'repeat_calls', 'warning_latency', 'error_latency', 'truncations', 'volume_budget', 'max_tools',
+        'use_llm'],
     'microsoft':     ['consecutive_failures', 'error_rate', 'window', 'health_alerts', 'max_call_time', 'use_llm'],
     'email':         ['consecutive_failures', 'error_rate', 'window', 'auth_failures', 'use_llm'],
     'odoo':          ['consecutive_failures', 'error_rate', 'window', 'auth_failures', 'max_call_time', 'use_llm'],
@@ -113,6 +115,15 @@ def _format_amount(count:'int') -> 'str':
 
 # ################################################################################################################################
 
+def _format_size(size:'int') -> 'str':
+    """ What a size cell reads as - the count with the largest unit it reaches, e.g. 100 megabytes or 1.5 gigabytes.
+    """
+    unit_count, unit_name = config_map.split_size(size)
+    out = pluralize(unit_count, unit_name)
+    return out
+
+# ################################################################################################################################
+
 def _build_config_cell(field_name:'str', kind:'str', values:'stranydict') -> 'stranydict | None':
     """ One cell of one type's row - the label, the value in screen units and what
     the cell displays. A field whose rule is gone renders as a placeholder.
@@ -153,6 +164,10 @@ def _build_config_cell(field_name:'str', kind:'str', values:'stranydict') -> 'st
         out['kind'] = 'amount'
         out['value'] = value
         out['display'] = _format_amount(value)
+    elif kind == config_map.Kind_Size:
+        out['kind'] = 'size'
+        out['value'] = value
+        out['display'] = _format_size(value)
     elif kind == config_map.Kind_Text:
         out['kind'] = 'text'
         out['value'] = value

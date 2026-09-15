@@ -14,9 +14,10 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting.collectors.common import Measure_Ack_Codes, Measure_Auth_Failures, Measure_Client_Errors, \
-    Measure_Connection_Failures, Measure_Error_Rate, Measure_File_Runs, Measure_Latency, Measure_Operation_Outcomes, \
-    Measure_Refusals, Measure_Server_Errors, Measure_Silence, Measure_SOAP_Faults, Measure_Status_Codes, Measure_Tokens, \
-    Measure_Truncations
+    Measure_Connection_Failures, Measure_Error_Rate, Measure_File_Runs, Measure_Invalid_Calls, Measure_Latency, \
+    Measure_MCP_Truncations, Measure_Operation_Outcomes, Measure_Refusals, Measure_Rejections, Measure_Repeat_Calls, \
+    Measure_Server_Errors, Measure_Silence, Measure_SOAP_Faults, Measure_Status_Codes, Measure_Throttled, Measure_Tokens, \
+    Measure_Truncations, Measure_Volume
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,14 +32,16 @@ if 0:
 # The kinds a screen field comes in - a number backed by rule defaults, a duration backed
 # by a rule default counted in seconds and shown as a count with a unit, a number of seconds backed
 # by a rule default counted in milliseconds and shown fractional, an amount backed by a rule default counted
-# in ones and shown as a fractional count with a unit of thousands, millions or billions, a toggle backed
-# by the active flags of whole rules, a ruleset toggle backed by one key every rule
+# in ones and shown as a fractional count with a unit of thousands, millions or billions, a size backed by
+# a rule default counted in bytes and shown as a fractional count with a unit of kilobytes, megabytes or gigabytes,
+# a toggle backed by the active flags of whole rules, a ruleset toggle backed by one key every rule
 # document of the ruleset carries, a JSON list of time slots kept per object and backed by no rule,
 # or a text backed by a rule default that is a string, e.g. the status codes a connection alerts on.
 Kind_Number         = 'number'
 Kind_Duration       = 'duration'
 Kind_Seconds        = 'seconds'
 Kind_Amount         = 'amount'
+Kind_Size           = 'size'
 Kind_Toggle         = 'toggle'
 Kind_Ruleset_Toggle = 'ruleset_toggle'
 Kind_Time_Slots     = 'time_slots'
@@ -188,6 +191,68 @@ _ack_fields:'list[stranydict]' = [
         'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Ack_Codes]},
 ]
 
+# What an MCP gateway is held to - every count is over its tool calls. The failures an agent causes,
+# the tool calls a schema refused and the responses the gateway itself refused, then the callers -
+# the rejected, the throttled and the ones looping over one tool - then the traffic and the one number
+# with no window at all, how many tools the gateway exposes.
+_mcp_failure_fields:'list[stranydict]' = [
+    {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Gateway_Failing'],
+        'default': 'max_consecutive_failures', 'is_percent': False},
+    {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
+        'default': 'error_rate_threshold', 'is_percent': True},
+    {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Error_Rate]},
+    {'name': 'invalid_calls', 'kind': Kind_Number, 'rules': ['Invalid_Tool_Calls'],
+        'default': 'invalid_call_threshold', 'is_percent': False},
+    {'name': 'invalid_calls_window', 'kind': Kind_Duration, 'rules': ['Invalid_Tool_Calls'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Invalid_Calls]},
+    {'name': 'rejections', 'kind': Kind_Number, 'rules': ['Rejected_Responses'],
+        'default': 'rejection_threshold', 'is_percent': False},
+    {'name': 'rejections_window', 'kind': Kind_Duration, 'rules': ['Rejected_Responses'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Rejections]},
+]
+
+_mcp_caller_fields:'list[stranydict]' = [
+    {'name': 'auth_failures', 'kind': Kind_Number, 'rules': ['Rejected_Callers'],
+        'default': 'auth_failure_threshold', 'is_percent': False},
+    {'name': 'auth_failures_window', 'kind': Kind_Duration, 'rules': ['Rejected_Callers'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Auth_Failures]},
+    {'name': 'throttled_calls', 'kind': Kind_Number, 'rules': ['Throttled_Callers'],
+        'default': 'throttled_threshold', 'is_percent': False},
+    {'name': 'throttled_calls_window', 'kind': Kind_Duration, 'rules': ['Throttled_Callers'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Throttled]},
+    {'name': 'repeat_calls', 'kind': Kind_Number, 'rules': ['Repeated_Calls'],
+        'default': 'repeat_call_threshold', 'is_percent': False},
+    {'name': 'repeat_calls_window', 'kind': Kind_Duration, 'rules': ['Repeated_Calls'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Repeat_Calls]},
+]
+
+_mcp_traffic_fields:'list[stranydict]' = [
+    {'name': 'warning_latency', 'kind': Kind_Seconds, 'rules': ['Slow_Tool_Calls'],
+        'default': 'warning_avg_duration_ms', 'is_percent': False},
+    {'name': 'error_latency', 'kind': Kind_Seconds, 'rules': ['Slow_Tool_Calls_Error', 'Slow_Tool_Calls'],
+        'default': 'error_avg_duration_ms', 'is_percent': False},
+    {'name': 'latency_window', 'kind': Kind_Duration, 'rules': ['Slow_Tool_Calls', 'Slow_Tool_Calls_Error'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Latency]},
+    {'name': 'truncations', 'kind': Kind_Number, 'rules': ['Truncated_Responses'],
+        'default': 'truncation_threshold', 'is_percent': False},
+    {'name': 'truncations_window', 'kind': Kind_Duration, 'rules': ['Truncated_Responses'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_MCP_Truncations]},
+    {'name': 'volume_budget', 'kind': Kind_Size, 'rules': ['Response_Volume'],
+        'default': 'volume_budget', 'is_percent': False},
+    {'name': 'volume_budget_window', 'kind': Kind_Duration, 'rules': ['Response_Volume'],
+        'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Volume]},
+    {'name': 'traffic_expected', 'kind': Kind_Toggle, 'rules': ['Gateway_Silent']},
+    {'name': Silence_Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Gateway_Silent'],
+        'default': 'silence_seconds', 'is_percent': False, 'measures': [Measure_Silence]},
+    {'name': Silence_Slots_Field_Name, 'kind': Kind_Time_Slots},
+]
+
+_mcp_configuration_fields:'list[stranydict]' = [
+    {'name': 'max_tools', 'kind': Kind_Number, 'rules': ['Too_Many_Tools'],
+        'default': 'max_tools', 'is_percent': False},
+]
+
 type_fields:'dict[str, list[stranydict]]' = {
     'rest': _http_failure_fields + _http_traffic_fields,
     'soap': _http_failure_fields + _soap_fault_fields + _http_traffic_fields,
@@ -205,17 +270,7 @@ type_fields:'dict[str, list[stranydict]]' = {
     ],
     'llm': _http_failure_fields + _connection_failure_fields + _llm_completion_fields + _llm_latency_fields + \
         _llm_token_fields + _use_llm_fields,
-    'mcp': [
-        {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Server_Down'],
-            'default': 'max_consecutive_failures', 'is_percent': False},
-        {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
-            'default': 'error_rate_threshold', 'is_percent': True},
-        {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
-            'default': Window_Seconds_Default, 'is_percent': False, 'measures': _call_measures},
-        {'name': 'max_tool_call_time', 'kind': Kind_Number, 'rules': ['Slow_Tool_Calls'],
-            'default': 'max_avg_duration_ms', 'is_percent': False},
-        {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
-    ],
+    'mcp': _mcp_failure_fields + _mcp_caller_fields + _mcp_traffic_fields + _mcp_configuration_fields + _use_llm_fields,
     'microsoft': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
             'default': 'max_consecutive_failures', 'is_percent': False},

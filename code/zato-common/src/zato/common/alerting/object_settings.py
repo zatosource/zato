@@ -16,8 +16,9 @@ from __future__ import annotations
 # Zato
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import alert_type_by_http_soap, alert_type_channels, alert_type_fhir, alert_type_llm, \
-    alert_type_mllp_channel, alert_type_mllp_outgoing, alert_type_rest, alert_type_soap, apply_defaults, channel_sources, conn_type_to_alert_type, \
-    from_storage, get_alert_type, Email_Connection_Field, Is_Active_Field, LLM_Connection_Field
+    alert_type_mcp, alert_type_mllp_channel, alert_type_mllp_outgoing, alert_type_rest, alert_type_soap, apply_defaults, \
+    channel_sources, conn_type_to_alert_type, from_storage, get_alert_type, Email_Connection_Field, Is_Active_Field, \
+    LLM_Connection_Field
 from zato.common.audit_log.common import AuditSource
 from zato.common.alerting.time_slots import resolve_silence
 from zato.common.odb.model import GenericConn, HTTPSOAP
@@ -41,12 +42,17 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The rules the silence slot of the moment speaks for, and the default it hands its seconds to
-_silence_rules = ['Channel_Silent']
+# The rule the silence slot of the moment speaks for in each type that has one, and the default it hands its seconds to -
+# the HTTP channels and the MLLP channels fall silent as channels, an MCP gateway as a gateway
+_silence_rules_by_type = {
+    alert_type_channels: ['Channel_Silent'],
+    alert_type_mllp_channel: ['Channel_Silent'],
+    alert_type_mcp: ['Gateway_Silent'],
+}
 _silence_default = 'silence_seconds'
 
-# The types whose objects have a silence - the HTTP channels and the MLLP channels
-_silence_types = (alert_type_channels, alert_type_mllp_channel)
+# The types whose objects have a silence
+_silence_types = tuple(_silence_rules_by_type)
 
 # The audit sources whose objects carry settings of a type, where that is not every source the type
 # matches on - the channels type matches on three channel kinds, and REST and SOAP channels have an Alerts tab,
@@ -58,6 +64,7 @@ _object_sources_by_type = {
     alert_type_soap: [AuditSource.SOAP_Outgoing],
     alert_type_fhir: [AuditSource.FHIR],
     alert_type_llm: [AuditSource.LLM],
+    alert_type_mcp: [AuditSource.MCP],
     alert_type_mllp_channel: [AuditSource.MLLP_Channel],
     alert_type_mllp_outgoing: [AuditSource.MLLP_Outgoing],
 }
@@ -204,14 +211,16 @@ def get_muted_rule_names(alert_type:'str', values:'stranydict', now:'datetime | 
     if alert_type in _silence_types:
         if now is not None:
 
+            silence_rules = _silence_rules_by_type[alert_type]
+
             # The slot of the moment decides, whatever the all-day switch says ..
-            for rule_name in _silence_rules:
+            for rule_name in silence_rules:
                 if rule_name in out:
                     out.remove(rule_name)
 
             # .. and a slot switched off mutes the silence rule for this sweep alone.
             if not resolve_silence(values, now).is_on:
-                out.extend(_silence_rules)
+                out.extend(silence_rules)
 
     return out
 

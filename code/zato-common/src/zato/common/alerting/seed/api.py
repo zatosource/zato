@@ -22,10 +22,11 @@ from logging import getLogger
 # Zato
 from zato.common.alerting.config_map import Explain_With_LLM_Key
 from zato.common.alerting.seed.rules_common import channels_rules, common_rules, scheduler_rules
-from zato.common.alerting.seed.rules_connections import email_rules, file_transfer_rules, mcp_rules, \
-    microsoft_rules, odoo_rules, rest_rules, soap_rules, sql_rules
+from zato.common.alerting.seed.rules_connections import email_rules, file_transfer_rules, microsoft_rules, odoo_rules, \
+    rest_rules, soap_rules, sql_rules
 from zato.common.alerting.seed.rules_fhir import fhir_rules
 from zato.common.alerting.seed.rules_llm import llm_rules
+from zato.common.alerting.seed.rules_mcp import mcp_rules
 from zato.common.alerting.seed.rules_mllp import mllp_channel_rules, mllp_outgoing_rules
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditSource
@@ -141,6 +142,7 @@ _inactive_rule_full_names = [
     'alerts_file_transfer_Test_Transfer_Failing',
     'alerts_channels_Channel_Silent',
     'alerts_mllp_channel_Channel_Silent',
+    'alerts_mcp_Gateway_Silent',
 ]
 
 # ################################################################################################################################
@@ -218,6 +220,19 @@ def alerting_vocabulary() -> 'anydict':
             'how many completions of an LLM connection were cut short by the token limit within the window'),
         _term('refusal_count',          TermType.Number,
             'how many completions of an LLM connection the provider refused within the window'),
+        _term('invalid_call_count',     TermType.Number,
+            'how many tool calls of an MCP gateway named a tool it does not expose or arguments its schema refused'),
+        _term('rejection_count',        TermType.Number,
+            'how many tool responses of an MCP gateway a safeguard or the size cap rejected within the window'),
+        _term('throttled_count',        TermType.Number,
+            'how many calls of an MCP gateway a security definition\'s rate limit answered with a 429 within the window'),
+        _term('repeat_call_count',      TermType.Number,
+            'how many times the one session that called one tool of an MCP gateway the most did so within the window'),
+        _term('repeat_call_tool',       TermType.Text,   'the tool the session calling one tool the most called'),
+        _term('repeat_call_session',    TermType.Text,   'the session that called one tool of an MCP gateway the most'),
+        _term('volume_bytes',           TermType.Number,
+            'how many bytes of tool responses an MCP gateway returned within the window'),
+        _term('tool_count',             TermType.Number, 'how many tools an MCP gateway exposes'),
         _term('cert_days_left',         TermType.Number, 'how many days the TLS certificate has left, zero when unmeasured'),
         _term('health_state',           TermType.Choice, 'the health state the remote service reports about itself',
             values=_health_states),

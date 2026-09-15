@@ -63,6 +63,11 @@ screen.openEditor = function(link) {
             fieldInput.val(amountParts.count);
             editor.field(screen.unitFieldName(edit.dataset.field)).val(amountParts.unit.value);
         }
+        else if(edit.dataset.kind === 'size') {
+            var sizeParts = screen.splitSize(parseInt(edit.dataset.value));
+            fieldInput.val(sizeParts.count);
+            editor.field(screen.unitFieldName(edit.dataset.field)).val(sizeParts.unit.value);
+        }
         else {
             fieldInput.val(edit.dataset.value);
         }

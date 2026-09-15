@@ -13,6 +13,9 @@
 
 var wizard = $.fn.zato.gateway.mcp.wizard;
 
+// The Alerts line of step 2 and its popover - the kit's, named under the page's prefix
+wizard.alerts = $.fn.zato.wizard_alerts.create({wizard: wizard, idPrefix: 'mcp-wizard'});
+
 // ////////////////////////////////////////////////////////////////////////
 
 wizard.config_own = {
@@ -29,6 +32,7 @@ wizard.config_own = {
         skills: 'Skills',
         security: 'Security',
         shaping: 'Response shaping',
+        alerts: 'Alerts',
         gatewayOptions: 'Gateway options',
         compaction: 'Compaction',
         pii: 'PII removal',
@@ -125,8 +129,9 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         var action = wizard.state.isEdit ? 'edit' : 'create';
         var itemId = wizard.state.isEdit ? wizard.state.itemId : null;
 
-        // The size caps line and the option cards of step 2 ..
+        // The size caps line, the Alerts line and the option cards of step 2 ..
         wizard.forms.initRows();
+        wizard.alerts.init();
         wizard.review.initOptionCards();
 
         // .. the PII multi-selects, the URL allow list chips and the master
@@ -144,9 +149,16 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         $.fn.zato.gateway.mcp.security_badge_picker.load(ownConfig.pickerAction, itemId);
         $.fn.zato.gateway.mcp.skills_badge_picker.load(ownConfig.pickerAction, itemId);
 
-        // .. and a live uniqueness indicator for the URL path - the name
-        // has its own check through the kit config above.
+        // .. a live uniqueness indicator for the URL path - the name
+        // has its own check through the kit config above ..
         $.fn.zato.validate_unique(wizard.fieldSelector('url_path'), 'http_soap', 'url_path');
+
+        // .. and the email and LLM connections the Alerts popup picks from stay fresh
+        // while the page is open - no reloading to pick up new ones.
+        var liveConfigs = $.fn.zato.alerts_tab.live_configs(wizard.config.fieldPrefix);
+
+        $.fn.zato.live_form_updates.register(action, liveConfigs);
+        $.fn.zato.live_form_updates.start(action);
     },
 
 // ////////////////////////////////////////////////////////////////////////
@@ -278,6 +290,16 @@ wizard.helpDescriptions = function() {
     // .. the size caps line of step 2 ..
     out['mcp-wizard-edit-size-caps'] = 'How large a tool response may grow and what happens to one over the cap. ' +
         'The line says what is currently set.';
+
+    // .. the Alerts line and the inputs of its popover ..
+    out['mcp-wizard-edit-alerts'] = 'Whether the gateway raises alerts and which ones - tool calls failing in a row, ' +
+        'the share of them in the recent traffic, invalid tool calls, rejected responses, rejected and throttled callers, ' +
+        'one session calling one tool over and over, slow tool calls, truncated responses, the volume of responses, ' +
+        'a gateway that receives no tool calls at all and one that exposes too many tools. ' +
+        'All but the last read the gateway\'s audit log, so the audit log option under More options has to be on ' +
+        'for anything to be measured.';
+
+    $.extend(out, wizard.alerts.descriptions());
 
     // .. and the options folded away under it.
     out['mcp-wizard-edit-options'] = 'Input validation and the audit log, the compaction of responses, ' +

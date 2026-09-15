@@ -313,7 +313,9 @@ class TestEachTypeReachesItsRule:
 
         case('alerts_sql_Slow_Queries', AuditSource.SQL_Outgoing, avg_duration_ms=6000)
         case('alerts_llm_Slow_Completions', AuditSource.LLM, avg_duration_ms=12000)
-        case('alerts_mcp_Server_Down', AuditSource.MCP, consecutive_failures=3)
+        case('alerts_mcp_Gateway_Failing', AuditSource.MCP, consecutive_failures=3)
+        case('alerts_mcp_Repeated_Calls', AuditSource.MCP, repeat_call_count=20)
+        case('alerts_mcp_Too_Many_Tools', AuditSource.MCP, tool_count=25)
         case('alerts_microsoft_Service_Degraded', AuditSource.Microsoft_Health, health_state='degraded')
         case('alerts_email_Auth_Failures', AuditSource.Email_SMTP, auth_failure_count=3)
         case('alerts_odoo_Connection_Down', AuditSource.Odoo, consecutive_failures=3)

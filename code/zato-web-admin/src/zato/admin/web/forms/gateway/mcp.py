@@ -10,8 +10,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
+from zato.admin.web import alerts_tab
+from zato.common.alerting.object_config import alert_type_mcp
 from zato.common.util.safeguards.names import get_detector_choices, get_land_choices
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 _mode_choices = (
@@ -83,6 +93,12 @@ class CreateForm(forms.Form):
     safeguards_url_allow_list = forms.CharField(required=False, widget=forms.TextInput(
         attrs={'style':'width:100%', 'placeholder':'example.com'}))
     safeguards_url_mode = forms.ChoiceField(choices=_url_mode_choices)
+
+    def __init__(self, prefix:'any_'=None, req:'any_'=None) -> 'None':
+        super().__init__(prefix=prefix)
+
+        # The alert settings the wizard's Alerts popup edits, the email and LLM connections it picks from read off the request
+        alerts_tab.add_alerts_fields(self, alert_type_mcp, req)
 
 # ################################################################################################################################
 

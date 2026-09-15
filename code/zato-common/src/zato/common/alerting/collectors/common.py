@@ -87,6 +87,16 @@ Measure_Tokens      = 'tokens'
 Measure_Truncations = 'truncations'
 Measure_Refusals    = 'refusals'
 
+# The measures of an MCP gateway's tool calls - the calls naming a tool the gateway does not have or arguments
+# its schema refuses, the responses a safeguard or the size cap refused, the callers a rate limit answered 429,
+# one session calling one tool over and over, the responses the size cap cut short and the bytes of every response
+Measure_Invalid_Calls    = 'invalid_calls'
+Measure_Rejections       = 'rejections'
+Measure_Throttled        = 'throttled_calls'
+Measure_Repeat_Calls     = 'repeat_calls'
+Measure_MCP_Truncations  = 'mcp_truncations'
+Measure_Volume           = 'volume'
+
 # The key a merged fact carries the window of each of its measures under
 Window_Seconds_By_Measure_Key = 'window_seconds_by_measure'
 
@@ -110,13 +120,19 @@ response_event_type_by_source = {
     # An LLM connection writes one row per call, the response one, so nothing is lost by naming it here,
     # and the outgoing status collector reads every source it counts through this map
     AuditSource.LLM:                  AuditEvent.Response_Received,
+
+    # An MCP gateway writes one row per request, and only its tool calls say how the backend fares -
+    # an initialize or a tools/list row counted alongside them would water down every rate
+    AuditSource.MCP:                  AuditEvent.MCP_Tools_Call,
 }
 
 # The event a channel writes the moment a call arrives - its newest one says when the channel last heard from anyone.
+# An MCP gateway's is its tool call, so a gateway agents keep initializing against but never call is silent.
 request_event_type_by_source = {
     AuditSource.REST_Channel: AuditEvent.Request_Received,
     AuditSource.SOAP_Channel: AuditEvent.Request_Received,
     AuditSource.MLLP_Channel: AuditEvent.Message_Received,
+    AuditSource.MCP:          AuditEvent.MCP_Tools_Call,
 }
 
 # The channels - the sources whose rows are the calls a service received, and whose HTTPSOAP rows carry
@@ -127,8 +143,9 @@ channel_sources = (AuditSource.REST_Channel, AuditSource.SOAP_Channel)
 # mllp_channel type - the sources whose rows name the service that answered and the caller that asked ..
 all_channel_sources = (AuditSource.REST_Channel, AuditSource.SOAP_Channel, AuditSource.MLLP_Channel)
 
-# .. and whose silence is measured, each off its own request event
-silence_sources = all_channel_sources
+# .. and whose silence is measured, each off its own request event - the MCP gateways among them,
+# whose generic rows carry alert settings under the mcp type
+silence_sources = all_channel_sources + (AuditSource.MCP,)
 
 # The outgoing connections whose responses are counted by their status code - the HTTPSOAP rows carrying
 # alert settings under the rest and soap types, the FHIR generic connections under the fhir type and the LLM
@@ -238,6 +255,20 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
         'output_token_count': 0,
         'truncation_count': 0,
         'refusal_count': 0,
+
+        # The tool calls of an MCP gateway - how many named a tool the gateway does not have or passed arguments
+        # its schema refused, how many responses a safeguard or the size cap refused, how many callers a rate
+        # limit answered 429, how many times one session called one tool the most and which session and tool
+        # that was, the bytes of every response added up and how many tools the gateway exposes right now.
+        # The responses the size cap cut short count under truncation_count above.
+        'invalid_call_count': 0,
+        'rejection_count': 0,
+        'throttled_count': 0,
+        'repeat_call_count': 0,
+        'repeat_call_tool': '',
+        'repeat_call_session': '',
+        'volume_bytes': 0,
+        'tool_count': 0,
 
         # How many days the object's TLS certificate has left. Zero means unmeasured,
         # which is why the certificate rules also require a value of at least one.

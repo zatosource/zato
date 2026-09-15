@@ -245,53 +245,6 @@ then
 
 # ################################################################################################################################
 
-mcp_rules = """
-rule
-    Server_Down
-docs
-    An MCP connection that failed three consecutive times is considered down and raises an error email alert.
-defaults
-    max_consecutive_failures = 3
-when
-    alert.source is 'mcp' and
-    alert.consecutive_failures is at least default.max_consecutive_failures
-then
-    outcome.action = 'email'
-    outcome.severity = 'error'
-
-rule
-    Slow_Tool_Calls
-docs
-    An MCP connection whose average tool-call time within the window exceeds five seconds raises an email alert.
-defaults
-    max_avg_duration_ms = 5000
-when
-    alert.source is 'mcp' and
-    alert.avg_duration_ms is at least default.max_avg_duration_ms
-then
-    outcome.action = 'email'
-    outcome.severity = 'warning'
-
-rule
-    Error_Rate
-docs
-    An MCP connection whose failed-call share reaches a tenth of its recent traffic raises an email alert.
-defaults
-    error_rate_threshold = 0.1
-    min_events = 10
-    window_seconds = 300
-when
-    alert.source is 'mcp' and
-    alert.total_count is at least default.min_events and
-    alert.error_rate is at least default.error_rate_threshold
-then
-    outcome.action = 'email'
-    outcome.severity = 'warning'
-
-""".strip()
-
-# ################################################################################################################################
-
 microsoft_rules = """
 rule
     Connection_Down

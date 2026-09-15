@@ -33,6 +33,10 @@ $(document).ready(function() {
         screen.fillUnitSelect(select, config.amountUnits);
     });
 
+    document.querySelectorAll('#alert-rules-row-fields select.alert-rules-size-unit').forEach(function(select) {
+        screen.fillUnitSelect(select, config.sizeUnits);
+    });
+
     // The popover editor, one micro-form per row
     $.fn.zato.micro_forms.setup(screen.editor, {
         descriptors: screen.descriptors(),

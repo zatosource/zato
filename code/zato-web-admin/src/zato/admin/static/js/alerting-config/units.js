@@ -1,9 +1,10 @@
-// Alert rules - durations and amounts.
+// Alert rules - durations, amounts and sizes.
 //
 // A duration is a number of seconds the screen shows as a count with a
 // unit, an amount a count in ones shown as a fractional count with a
-// unit. Both are edited the same way - a number with a hidden unit select
-// next to it - and both go back to the backend as the plain number.
+// unit, a size a count in bytes shown the same way. All three are edited
+// the same way - a number with a hidden unit select next to it - and all
+// three go back to the backend as the plain number.
 
 (function($) {
 
@@ -108,6 +109,54 @@ screen.joinAmount = function(count, unitValue) {
 // What an amount cell reads as - 10 millions, 1.5 millions
 screen.formatAmount = function(count) {
     var parts = screen.splitAmount(count);
+    var out = $.fn.zato.count_text(parts.count, parts.unit.singular, parts.unit.plural);
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+//
+// Sizes
+//
+// ////////////////////////////////////////////////////////////////////////
+
+// The unit a select value stands for
+screen.sizeUnit = function(unitValue) {
+
+    var out = config.sizeUnits[0];
+
+    config.sizeUnits.forEach(function(unit) {
+        if(unit.value === unitValue) {
+            out = unit;
+        }
+    });
+
+    return out;
+};
+
+// A number of bytes as a count and the largest unit it reaches - a size below
+// the smallest unit is a fraction of it
+screen.splitSize = function(bytes) {
+
+    var out = {count: bytes / config.sizeUnits[0].size, unit: config.sizeUnits[0]};
+
+    config.sizeUnits.forEach(function(unit) {
+        if(bytes >= unit.size) {
+            out = {count: bytes / unit.size, unit: unit};
+        }
+    });
+
+    return out;
+};
+
+// A count of one unit back as bytes
+screen.joinSize = function(count, unitValue) {
+    var out = Math.round(count * screen.sizeUnit(unitValue).size);
+    return out;
+};
+
+// What a size cell reads as - 100 megabytes, 1 gigabyte, 2.5 gigabytes
+screen.formatSize = function(bytes) {
+    var parts = screen.splitSize(bytes);
     var out = $.fn.zato.count_text(parts.count, parts.unit.singular, parts.unit.plural);
     return out;
 };

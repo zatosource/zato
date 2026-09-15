@@ -40,6 +40,12 @@ amount_unit_choices:'anylist' = []
 for _unit_name, _ in config_map.Amount_Units:
     amount_unit_choices.append((_unit_name, _unit_name + 's'))
 
+# The units of a size the same way - kilobyte and kilobytes, megabyte and megabytes, gigabyte and gigabytes
+size_unit_choices:'anylist' = []
+
+for _unit_name, _ in config_map.Size_Units:
+    size_unit_choices.append((_unit_name, _unit_name + 's'))
+
 # The unit of the time a file may fail to arrive for, stored with the number
 Arrival_Overdue_Unit_Field   = 'arrival_overdue' + Unit_Field_Suffix
 Arrival_Overdue_Unit_Default = 'hour'
@@ -59,13 +65,22 @@ Acks_Window_Unit_Field          = 'acks_window' + Unit_Field_Suffix
 Truncations_Window_Unit_Field   = 'truncations_window' + Unit_Field_Suffix
 Refusals_Window_Unit_Field      = 'refusals_window' + Unit_Field_Suffix
 Token_Budget_Window_Unit_Field  = 'token_budget_window' + Unit_Field_Suffix
+Invalid_Calls_Window_Unit_Field   = 'invalid_calls_window' + Unit_Field_Suffix
+Rejections_Window_Unit_Field      = 'rejections_window' + Unit_Field_Suffix
+Throttled_Calls_Window_Unit_Field = 'throttled_calls_window' + Unit_Field_Suffix
+Repeat_Calls_Window_Unit_Field    = 'repeat_calls_window' + Unit_Field_Suffix
+Volume_Budget_Window_Unit_Field   = 'volume_budget_window' + Unit_Field_Suffix
 
 # The unit select of the one amount - whether a token budget is in thousands, millions or billions
 Token_Budget_Unit_Field = 'token_budget' + Unit_Field_Suffix
 
+# The unit select of the one size - whether a response volume is in kilobytes, megabytes or gigabytes
+Volume_Budget_Unit_Field = 'volume_budget' + Unit_Field_Suffix
+
 # The unit selects of the tab, by name
 unit_fields:'anydict' = {
     Token_Budget_Unit_Field: {'choices': amount_unit_choices, 'initial': config_map.Amount_Unit_Smallest},
+    Volume_Budget_Unit_Field: {'choices': size_unit_choices, 'initial': config_map.Size_Unit_Smallest},
     Arrival_Overdue_Unit_Field: {'choices': duration_unit_choices, 'initial': Arrival_Overdue_Unit_Default},
     Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
     Server_Errors_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
@@ -81,6 +96,11 @@ unit_fields:'anydict' = {
     Truncations_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
     Refusals_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
     Token_Budget_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
+    Invalid_Calls_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
+    Rejections_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
+    Throttled_Calls_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
+    Repeat_Calls_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
+    Volume_Budget_Window_Unit_Field: {'choices': duration_unit_choices, 'initial': config_map.Duration_Unit_Smallest},
 }
 
 # The JSON list of time slots of a channel's silence alert
@@ -141,6 +161,11 @@ _popover_labels = {
     'truncations_window':   'In the last',
     'refusals_window':      'In the last',
     'token_budget_window':  'In the last',
+    'invalid_calls_window': 'In the last',
+    'rejections_window':    'In the last',
+    'throttled_calls_window': 'In the last',
+    'repeat_calls_window':  'In the last',
+    'volume_budget_window': 'In the last',
     'status_code_threshold': 'Alert after',
     'fault_threshold':      'Alert after',
     'outcome_threshold':    'Alert after',
@@ -148,7 +173,13 @@ _popover_labels = {
     'connection_failures':  'Alert after',
     'truncations':          'Alert after',
     'refusals':             'Alert after',
+    'invalid_calls':        'Alert after',
+    'rejections':           'Alert after',
+    'throttled_calls':      'Alert after',
+    'repeat_calls':         'Alert at',
     'token_budget':         'Alert above',
+    'volume_budget':        'Alert above',
+    'max_tools':            'Alert above',
     'warning_latency':      'Warning above',
     'error_latency':        'Error above',
     'arrival_overdue':      'Alert after',
@@ -170,10 +201,13 @@ field_how_it_works[Silence_Window_Unit_Field] = 'Whether the silence a channel t
 for _window_unit_field in (Server_Errors_Window_Unit_Field, Latency_Window_Unit_Field, Auth_Failures_Window_Unit_Field,
     Client_Errors_Window_Unit_Field, Status_Codes_Window_Unit_Field, Connection_Failures_Window_Unit_Field,
     Faults_Window_Unit_Field, Outcomes_Window_Unit_Field, Acks_Window_Unit_Field, Truncations_Window_Unit_Field,
-    Refusals_Window_Unit_Field, Token_Budget_Window_Unit_Field):
+    Refusals_Window_Unit_Field, Token_Budget_Window_Unit_Field, Invalid_Calls_Window_Unit_Field,
+    Rejections_Window_Unit_Field, Throttled_Calls_Window_Unit_Field, Repeat_Calls_Window_Unit_Field,
+    Volume_Budget_Window_Unit_Field):
     field_how_it_works[_window_unit_field] = field_how_it_works[Window_Unit_Field]
 
 field_how_it_works[Token_Budget_Unit_Field] = 'Whether the budget is in thousands, millions or billions of tokens.'
+field_how_it_works[Volume_Budget_Unit_Field] = 'Whether the volume is in kilobytes, megabytes or gigabytes.'
 
 field_display[Health_Check_Run_Every_Field] = ('Ping every', '')
 field_how_it_works[Health_Check_Run_Every_Field] = 'How often the connection is pinged, e.g. every 5 minutes. ' + \
@@ -190,6 +224,7 @@ Section_Health = 'Health check'
 Section_Failures = 'Failures'
 Section_Callers = 'Callers'
 Section_Traffic = 'Traffic'
+Section_Configuration = 'Configuration'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -476,10 +511,11 @@ def _mllp_connection_failures_line() -> 'anydict':
 
 # ################################################################################################################################
 
-# A channel that receives nothing - what it receives is a request for an HTTP channel and a message for an MLLP one.
-# The summary says only whether the alerts are on and how many rules there are - the all-day one and one per range of
-# the day with its own settings - the rules themselves are for the popover to explain.
-def _silence_line(noun:'str') -> 'anydict':
+# A channel that receives nothing - what it receives is a request for an HTTP channel, a message for an MLLP one
+# and a tool call for an MCP gateway, the owner being what the help calls the object. The summary says only whether
+# the alerts are on and how many rules there are - the all-day one and one per range of the day with its own settings -
+# the rules themselves are for the popover to explain.
+def silence_line(noun:'str', owner:'str'='channel') -> 'anydict':
     out = {
         'name': 'silence',
         'section': Section_Traffic,
@@ -493,7 +529,7 @@ def _silence_line(noun:'str') -> 'anydict':
         'off_field': 'traffic_expected',
         'summary_off': 'Alerts off',
         'summary': f'Alerts on ({{{Silence_Slots_Field}#rule|rules}})',
-        'how_it_works': f'Whether a channel that receives no {noun}s raises an alert and after how long, ' + \
+        'how_it_works': f'Whether a {owner} that receives no {noun}s raises an alert and after how long, ' + \
             'all day or in ranges of the day with a switch and a silence of their own.',
     }
     return out
@@ -638,7 +674,7 @@ type_lines:'anydict' = {
                 'and how long the window they are counted over.',
         },
         _slow_responses_line(),
-        _silence_line('request'),
+        silence_line('request'),
     ],
     alert_type_mllp_channel: [
         active_line(),
@@ -649,7 +685,7 @@ type_lines:'anydict' = {
         error_rate_line(),
         _negative_acks_line(Ack_Side_Channel),
         _slow_responses_line(),
-        _silence_line('message'),
+        silence_line('message'),
     ],
     alert_type_mllp_outgoing: [
         active_line(),

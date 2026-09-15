@@ -126,6 +126,10 @@ screen.saveRow = function() {
             var amountUnitValue = editor.field(screen.unitFieldName(edit.dataset.field)).val();
             values[edit.dataset.field] = screen.joinAmount(parseFloat(fieldInput.val()), amountUnitValue);
         }
+        else if(edit.dataset.kind === 'size') {
+            var sizeUnitValue = editor.field(screen.unitFieldName(edit.dataset.field)).val();
+            values[edit.dataset.field] = screen.joinSize(parseFloat(fieldInput.val()), sizeUnitValue);
+        }
         else {
             values[edit.dataset.field] = parseFloat(fieldInput.val());
         }
@@ -153,6 +157,10 @@ screen.saveRow = function() {
             else if(edit.dataset.kind === 'amount') {
                 edit.dataset.value = value;
                 summary.textContent = screen.formatAmount(value);
+            }
+            else if(edit.dataset.kind === 'size') {
+                edit.dataset.value = value;
+                summary.textContent = screen.formatSize(value);
             }
             else {
                 edit.dataset.value = value;

@@ -21,7 +21,7 @@ from zato.common.alerting.config_map_fields import _call_measures as _call_measu
     Ack_Codes_Field_Name as Ack_Codes_Field_Name, Explain_With_LLM_Key as Explain_With_LLM_Key, \
     Fault_Codes_Default as Fault_Codes_Default, Fault_Codes_Field_Name as Fault_Codes_Field_Name, \
     Kind_Amount as Kind_Amount, Kind_Duration as Kind_Duration, Kind_Number as Kind_Number, \
-    Kind_Ruleset_Toggle as Kind_Ruleset_Toggle, Kind_Seconds as Kind_Seconds, \
+    Kind_Ruleset_Toggle as Kind_Ruleset_Toggle, Kind_Seconds as Kind_Seconds, Kind_Size as Kind_Size, \
     Kind_Text as Kind_Text, Kind_Time_Slots as Kind_Time_Slots, Kind_Toggle as Kind_Toggle, \
     Outcome_Codes_Default as Outcome_Codes_Default, Outcome_Codes_Field_Name as Outcome_Codes_Field_Name, \
     Silence_Slots_Field_Name as Silence_Slots_Field_Name, Silence_Window_Field_Name as Silence_Window_Field_Name, \
@@ -67,6 +67,15 @@ Amount_Units = [
     ('billion', 1000000000),
 ]
 Amount_Unit_Smallest = Amount_Units[0][0]
+
+# The units a size is shown in, smallest first - the noun in the singular and how many bytes it stands for.
+# A screen picks the largest unit the size reaches, so 100000000 reads as 100 megabytes and 1500000000 as 1.5 gigabytes.
+Size_Units = [
+    ('kilobyte', 1000),
+    ('megabyte', 1000000),
+    ('gigabyte', 1000000000),
+]
+Size_Unit_Smallest = Size_Units[0][0]
 
 # Percent fields are stored as fractions - the screen says 10, the rule says 0.1.
 Percent_Multiplier = 100
@@ -190,16 +199,16 @@ def to_rule_number(field:'stranydict', value:'float') -> 'float | int':
 
 # ################################################################################################################################
 
-def split_amount(count:'float') -> 'tuple[int | float, str]':
-    """ An amount as a fractional count and the largest unit it reaches - 10000000 is ten millions,
-    1500000 is 1.5 millions and 500, below the smallest unit, is 0.5 thousands.
+def _split_by_units(count:'float', units:'list[tuple[str, int]]') -> 'tuple[int | float, str]':
+    """ A count as a fractional count and the largest of the given units it reaches - the smallest unit
+    when it reaches none of them.
     """
 
-    # Our response to produce - the smallest unit unless the amount reaches a larger one
-    unit_size = Amount_Units[0][1]
-    out_unit = Amount_Unit_Smallest
+    # Our response to produce - the smallest unit unless the count reaches a larger one
+    unit_size = units[0][1]
+    out_unit = units[0][0]
 
-    for unit_name, candidate_size in Amount_Units:
+    for unit_name, candidate_size in units:
         if count >= candidate_size:
             unit_size = candidate_size
             out_unit = unit_name
@@ -210,17 +219,51 @@ def split_amount(count:'float') -> 'tuple[int | float, str]':
 
 # ################################################################################################################################
 
-def join_amount(count:'float', unit_name:'str') -> 'int':
-    """ A count of one unit back as whole ones - what split_amount took apart.
+def _join_by_units(count:'float', unit_name:'str', units:'list[tuple[str, int]]') -> 'int':
+    """ A count of one of the given units back as whole ones - zero for a unit that is not one of them.
     """
 
     # Our response to produce
     out = 0
 
-    for candidate_name, unit_size in Amount_Units:
+    for candidate_name, unit_size in units:
         if candidate_name == unit_name:
             out = round(count * unit_size)
 
+    return out
+
+# ################################################################################################################################
+
+def split_amount(count:'float') -> 'tuple[int | float, str]':
+    """ An amount as a fractional count and the largest unit it reaches - 10000000 is ten millions,
+    1500000 is 1.5 millions and 500, below the smallest unit, is 0.5 thousands.
+    """
+    out = _split_by_units(count, Amount_Units)
+    return out
+
+# ################################################################################################################################
+
+def join_amount(count:'float', unit_name:'str') -> 'int':
+    """ A count of one unit back as whole ones - what split_amount took apart.
+    """
+    out = _join_by_units(count, unit_name, Amount_Units)
+    return out
+
+# ################################################################################################################################
+
+def split_size(byte_count:'float') -> 'tuple[int | float, str]':
+    """ A size as a fractional count and the largest unit it reaches - 100000000 is 100 megabytes,
+    1500000000 is 1.5 gigabytes and 500, below the smallest unit, is 0.5 kilobytes.
+    """
+    out = _split_by_units(byte_count, Size_Units)
+    return out
+
+# ################################################################################################################################
+
+def join_size(count:'float', unit_name:'str') -> 'int':
+    """ A count of one unit back as whole bytes - what split_size took apart.
+    """
+    out = _join_by_units(count, unit_name, Size_Units)
     return out
 
 # ################################################################################################################################

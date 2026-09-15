@@ -10,7 +10,7 @@
 // answers with its Running badge while the request is on its way.
 //
 // This file holds what the screen is configured with and the lookups every
-// other file of the screen shares - units.js the durations and amounts,
+// other file of the screen shares - units.js the durations, amounts and sizes,
 // save.js the requests, editor.js the popover, cards.js the rows and
 // init.js the wiring once the page is there.
 
@@ -95,7 +95,12 @@ config.fields = {
     truncations: {label: 'Truncated completions', kind: 'number'},
     refusals: {label: 'Refusals', kind: 'number'},
     token_budget: {label: 'Token budget', kind: 'amount'},
-    max_tool_call_time: {label: 'Max tool-call time (ms)', kind: 'number'},
+    invalid_calls: {label: 'Invalid tool calls', kind: 'number'},
+    rejections: {label: 'Rejected responses', kind: 'number'},
+    throttled_calls: {label: 'Throttled calls', kind: 'number'},
+    repeat_calls: {label: 'Repeated calls', kind: 'number'},
+    volume_budget: {label: 'Response volume', kind: 'size'},
+    max_tools: {label: 'Max tools', kind: 'number'},
     health_alerts: {label: 'Health alerts', kind: 'checkbox'},
     max_call_time: {label: 'Max call time (ms)', kind: 'number'},
     auth_failures: {label: 'Auth failures', kind: 'number'},
@@ -138,10 +143,18 @@ config.amountUnits = [
     {value: 'billion', singular: 'billion', plural: 'billions', size: 1000000000}
 ];
 
-// The hidden select a duration's or an amount's unit is edited through sits next to its number under this suffix
+// The units a size is edited and shown in, smallest first - a cell picks the largest one
+// the size reaches, so 100000000 bytes read as 100 megabytes and 1500000000 as 1.5 gigabytes
+config.sizeUnits = [
+    {value: 'kilobyte', singular: 'kilobyte', plural: 'kilobytes', size: 1000},
+    {value: 'megabyte', singular: 'megabyte', plural: 'megabytes', size: 1000000},
+    {value: 'gigabyte', singular: 'gigabyte', plural: 'gigabytes', size: 1000000000}
+];
+
+// The hidden select a duration's, an amount's or a size's unit is edited through sits next to its number under this suffix
 config.unitFieldSuffix = '_unit';
 
-// The step a fractional number - seconds, an amount - goes by, so the browser takes 7.5 and 2.5
+// The step a fractional number - seconds, an amount, a size - goes by, so the browser takes 7.5 and 2.5
 config.fractionalStep = 'any';
 
 // What a field means, said once and shown wherever the field is edited
@@ -155,7 +168,12 @@ config.fieldHelp = {
     truncations: 'How many completions cut short by the token limit in the window raise an alert - the provider stopped generating because max tokens was reached, so the reply arrived with a 200 but is incomplete.',
     refusals: 'How many refused completions in the window raise an alert - the provider declined to answer or a content filter blocked the prompt or the reply, most of them arriving with a 200.',
     token_budget: 'How many tokens, input and output added up across every call, raise an alert - a count in thousands, millions or billions, a fraction such as 2.5 is fine.',
-    max_tool_call_time: 'Tool calls slower than this many milliseconds count as slow.',
+    invalid_calls: 'How many invalid tool calls in the window raise an alert - the agent named a tool the gateway does not expose or passed arguments its schema refused.',
+    rejections: 'How many rejected responses in the window raise an alert - a safeguard in reject mode or the size cap in block mode refused what a tool returned.',
+    throttled_calls: 'How many throttled calls in the window raise an alert - requests a security definition\'s rate limit answered with a 429.',
+    repeat_calls: 'How many times one session may call one tool in the window before an alert - an agent stuck in a loop.',
+    volume_budget: 'How many bytes of tool responses added up across every call raise an alert - a size in kilobytes, megabytes or gigabytes, a fraction such as 1.5 is fine.',
+    max_tools: 'How many tools a gateway may expose before an alert - the most capable models degrade past 20 to 25.',
     health_alerts: 'Whether the Microsoft service health feed raises alerts of its own.',
     max_call_time: 'Calls slower than this many milliseconds count as slow.',
     auth_failures: 'How many authentication failures in a row raise an alert.',
@@ -189,7 +207,7 @@ config.types = {
     soap: {title: 'SOAP outgoing', fields: ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'fault_codes', 'max_latency', 'use_llm']},
     sql: {title: 'SQL', fields: ['consecutive_failures', 'error_rate', 'window', 'max_query_time', 'use_llm']},
     llm: {title: 'LLM', fields: ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'truncations', 'refusals', 'token_budget', 'warning_latency', 'error_latency', 'use_llm']},
-    mcp: {title: 'MCP', fields: ['consecutive_failures', 'error_rate', 'window', 'max_tool_call_time', 'use_llm']},
+    mcp: {title: 'MCP', fields: ['consecutive_failures', 'error_rate', 'window', 'invalid_calls', 'rejections', 'auth_failures', 'throttled_calls', 'repeat_calls', 'warning_latency', 'error_latency', 'truncations', 'volume_budget', 'max_tools', 'use_llm']},
     microsoft: {title: 'Microsoft cloud', fields: ['consecutive_failures', 'error_rate', 'window', 'health_alerts', 'max_call_time', 'use_llm']},
     email: {title: 'Email', fields: ['consecutive_failures', 'error_rate', 'window', 'auth_failures', 'use_llm']},
     odoo: {title: 'Odoo', fields: ['consecutive_failures', 'error_rate', 'window', 'auth_failures', 'max_call_time', 'use_llm']},
@@ -212,7 +230,7 @@ config.typeHelp = {
     soap: 'Alert rules for SOAP outgoing connections - failures in a row, error rates, status codes, SOAP faults and slow calls.',
     sql: 'Alert rules for SQL connection pools - failures in a row, error rates and slow queries.',
     llm: 'Alert rules for LLM connections - failures in a row, error rates, status codes, truncated completions, refusals, the token budget and slow completions.',
-    mcp: 'Alert rules for MCP servers - failures in a row, error rates and slow tool calls.',
+    mcp: 'Alert rules for MCP gateways - failures in a row, error rates, invalid tool calls, rejected responses, rejected and throttled callers, repeated calls, slow tool calls, truncated responses, the response volume and the tool count.',
     microsoft: 'Alert rules for Microsoft cloud connections - failures in a row, error rates, service health and slow calls.',
     email: 'Alert rules for SMTP and IMAP connections - failures in a row, error rates and authentication failures.',
     odoo: 'Alert rules for Odoo connections - failures in a row, error rates, authentication failures and slow calls.',
@@ -259,12 +277,12 @@ screen.descriptors = function() {
         $.each(typeConfig.fields, function(_ignored, fieldName) {
             var fieldConfig = config.fields[fieldName];
 
-            // A duration is edited as a count with the unit select right after it, an amount the same way
-            // only its count takes a fraction, and seconds are a fractional number alone
+            // A duration is edited as a count with the unit select right after it, an amount and a size the same way
+            // only their counts take a fraction, and seconds are a fractional number alone
             if(fieldConfig.kind === 'duration') {
                 entries.push({field: fieldName, label: fieldConfig.label, kind: 'number', unitField: screen.unitFieldName(fieldName)});
             }
-            else if(fieldConfig.kind === 'amount') {
+            else if(fieldConfig.kind === 'amount' || fieldConfig.kind === 'size') {
                 entries.push({field: fieldName, label: fieldConfig.label, kind: 'number', unitField: screen.unitFieldName(fieldName),
                     fractional: true, step: config.fractionalStep});
             }

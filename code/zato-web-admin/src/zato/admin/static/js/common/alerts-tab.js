@@ -261,13 +261,14 @@ $.fn.zato.alerts_tab.buildSpec = function(fieldName, row, line) {
         }
     }
 
-    // Seconds and amounts take a fraction - 7.5 seconds, 2.5 millions
+    // Seconds, amounts and sizes take a fraction - 7.5 seconds, 2.5 millions, 1.5 gigabytes
     if(settings.fractional_kinds.indexOf(fieldKind) !== -1) {
         out.fractional = true;
         out.step = settings.fractional_step;
     }
 
     // A field with a unit select of its own, e.g. a token budget in thousands, millions or billions
+    // or a response volume in kilobytes, megabytes or gigabytes
     if(line.field_units) {
         if(line.field_units[fieldName]) {
             out.unitField = line.field_units[fieldName];
