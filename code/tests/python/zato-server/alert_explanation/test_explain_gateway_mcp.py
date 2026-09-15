@@ -48,6 +48,7 @@ _tool_count = 3
 
 # The security definitions that may call the gateway, the members of its one security group
 _group_id = 77
+_group_name = 'mcp.' + _gateway_name
 _caller_names = ['agent.alpha', 'agent.beta']
 _caller_ids = [501, 502]
 
@@ -78,8 +79,9 @@ _loop_count = 4
 
 # ################################################################################################################################
 
-def _seed_gateway(session_maker:'any_') -> 'None':
-    """ One MCP gateway with its tools, one security group with two members and alert settings of its own.
+def _seed_gateway(session_maker:'any_', *, groups_as_names:'bool'=False) -> 'None':
+    """ One MCP gateway with its tools, one security group with two members and alert settings of its own - the group
+    stored under its id the way the dashboard stores it, or under its name the way enmasse does.
     """
     session = session_maker()
     cluster = session.query(Cluster).filter(Cluster.id==_cluster_id).one()
@@ -90,7 +92,7 @@ def _seed_gateway(session_maker:'any_') -> 'None':
 
     group = GenericObject()
     group.id = _group_id
-    group.name = 'mcp.' + _gateway_name
+    group.name = _group_name
     group.type_ = Groups.Type.Group_Parent
     group.subtype = Groups.Type.API_Clients
     group.cluster = cluster
@@ -106,11 +108,16 @@ def _seed_gateway(session_maker:'any_') -> 'None':
         member.cluster = cluster
         session.add(member)
 
+    if groups_as_names:
+        security_groups = [_group_name]
+    else:
+        security_groups = [_group_id]
+
     opaque = {
         'url_path': _url_path,
         'services': _services,
         'rest_connections': _rest_connections,
-        'security_groups': [_group_id],
+        'security_groups': security_groups,
         'is_audit_log_active': True,
         'validate_input': True,
         'max_response_size': _max_response_size,
@@ -261,6 +268,21 @@ class TestGatewayMCP:
         assert 'Alerts: on' in section
         assert f'Repeated calls {_own_repeat_calls}' in section
         assert f'Max tools {_own_max_tools}' in section
+
+# ################################################################################################################################
+
+    def test_a_gateway_imported_through_enmasse_names_its_callers_too(self, llm_address:'any_', repo_dir:'str') -> 'None':
+
+        _seed_invalid_calls()
+
+        session = _new_session()
+        _seed_gateway(session, groups_as_names=True)
+
+        prompt = _explain(session, repo_dir, llm_address, ['invalid_call_count'], {'invalid_call_count': 3})
+        section = _object_section(prompt)
+
+        # The group is stored under its name rather than its id, and the callers are found all the same
+        assert f'Callers: {", ".join(_caller_names)}' in section
 
 # ################################################################################################################################
 

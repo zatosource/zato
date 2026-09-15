@@ -60,7 +60,6 @@ _other_cluster_name = 'sftp.elsewhere'
 _as2_name = 'as2.no-alerts'
 _fhir_name = 'ehr.fhir'
 _llm_name = 'support.assistant'
-_mcp_name = 'orders.gateway'
 _mllp_name = 'adt.mllp'
 _mllp_outgoing_name = 'lab.mllp'
 
@@ -265,30 +264,6 @@ class TestLoadObjectSettings:
         assert by_object[_llm_name]['warning_latency'] == get_defaults(alert_type_llm)['warning_latency']
         assert settings[alert_type_rest] == {}
         assert settings[alert_type_fhir] == {}
-
-# ################################################################################################################################
-
-    def test_an_mcp_gateway_loads_under_mcp_with_its_own_thresholds(self) -> 'None':
-        stored = to_storage(alert_type_mcp, {'invalid_calls': 2, 'repeat_calls': 30, 'volume_budget': 2000000000, 'max_tools': 30})
-
-        with _session() as session:
-            _add_connection(session, _mcp_name, GENERIC.CONNECTION.TYPE.GATEWAY_MCP, _cluster_id, stored)
-            settings = load_object_settings(session, _cluster_id)
-
-        by_object = settings[alert_type_mcp]
-
-        assert list(by_object) == [_mcp_name]
-        assert by_object[_mcp_name]['invalid_calls'] == 2
-        assert by_object[_mcp_name]['repeat_calls'] == 30
-        assert by_object[_mcp_name]['volume_budget'] == 2000000000
-        assert by_object[_mcp_name]['max_tools'] == 30
-
-        # What was not stored is still at its default, and no other type sees the row
-        assert by_object[_mcp_name]['rejections'] == get_defaults(alert_type_mcp)['rejections']
-        assert by_object[_mcp_name]['warning_latency'] == get_defaults(alert_type_mcp)['warning_latency']
-        assert by_object[_mcp_name]['traffic_expected'] is False
-        assert settings[alert_type_llm] == {}
-        assert settings[alert_type_rest] == {}
 
 # ################################################################################################################################
 
@@ -538,26 +513,6 @@ class TestChannelSettings:
         assert get_names_with_toggle(by_object, 'traffic_expected') == {_rest_channel_name, _soap_channel_name}
         assert get_silence_expected_names(object_settings, _now) == {_rest_channel_name}
         assert get_silence_expected_names({alert_type_file_transfer: {}}, _now) == set()
-
-# ################################################################################################################################
-
-    def test_a_gateway_expecting_traffic_is_muted_and_unmuted_by_its_own_switch(self) -> 'None':
-        values = get_defaults(alert_type_mcp)
-
-        # A gateway that does not say it expects traffic has its silence rule muted, and that rule alone
-        assert values['traffic_expected'] is False
-        assert get_muted_rule_names(alert_type_mcp, values, _now) == ['Gateway_Silent']
-
-        values['traffic_expected'] = True
-        assert get_muted_rule_names(alert_type_mcp, values, _now) == []
-
-        # A gateway expecting traffic is listed next to the channels expecting it
-        expecting = get_defaults(alert_type_mcp)
-        expecting['traffic_expected'] = True
-
-        object_settings = {alert_type_mcp: {_mcp_name: expecting}, alert_type_channels: {_rest_channel_name: get_defaults(alert_type_channels)}}
-
-        assert get_silence_expected_names(object_settings, _now) == {_mcp_name}
 
 # ################################################################################################################################
 

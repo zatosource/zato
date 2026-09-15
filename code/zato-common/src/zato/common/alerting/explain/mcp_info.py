@@ -112,9 +112,39 @@ def _tool_lines(opaque:'stranydict') -> 'anylist':
 
 # ################################################################################################################################
 
-def _caller_names(session:'SASession', cluster_id:'int', group_ids:'list') -> 'strlist':
+def _group_ids(session:'SASession', cluster_id:'int', groups:'list') -> 'list':
+    """ The ids of the gateway's security groups - a gateway saved through the dashboard stores their ids,
+    one imported through enmasse stores their names, so the names are looked up.
+    """
+    out:'list' = []
+    names:'strlist' = []
+
+    for group in groups:
+        if isinstance(group, int):
+            out.append(group)
+        else:
+            names.append(group)
+
+    if names:
+        group_rows = session.query(GenericObject.id).\
+            filter(GenericObject.cluster_id==cluster_id).\
+            filter(GenericObject.type_==Groups.Type.Group_Parent).\
+            filter(GenericObject.subtype==Groups.Type.API_Clients).\
+            filter(GenericObject.name.in_(names)).\
+            all()
+
+        for (group_id,) in group_rows:
+            out.append(group_id)
+
+    return out
+
+# ################################################################################################################################
+
+def _caller_names(session:'SASession', cluster_id:'int', groups:'list') -> 'strlist':
     """ The names of the security definitions that may call the gateway - the members of its security groups.
     """
+    group_ids = _group_ids(session, cluster_id, groups)
+
     if not group_ids:
         return []
 

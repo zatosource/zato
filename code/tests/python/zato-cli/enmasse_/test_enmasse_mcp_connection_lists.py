@@ -121,6 +121,34 @@ class TestConnectionListWriter(TestCase):
         self.assertNotIn('odoo_connections', written)
 
 # ################################################################################################################################
+
+    def test_the_alerts_round_trip_after_the_lists(self:'any_') -> 'None':
+
+        # A gateway carrying an allow list and alert settings of its own ..
+        alerts = {
+            'invalid_calls': 3,
+            'repeat_calls': 5,
+            'volume_budget': 200000000,
+        }
+        gateway = {
+            'name': 'enmasse.mcp.writer.2',
+            'url_path': '/mcp/enmasse-writer-2',
+            'rest_connections': ['billing.backend'],
+            'alerts': alerts,
+        }
+
+        # .. keeps the alerts as the mapping they went in as ..
+        parsed = self._write_and_read_back({'mcp_gateway': [gateway]})
+        written = parsed['mcp_gateway'][0]
+
+        self.assertEqual(written['alerts'], alerts)
+
+        # .. written after every list, as the last key of the gateway.
+        keys = list(written)
+        self.assertEqual(keys[-1], 'alerts')
+        self.assertLess(keys.index('rest_connections'), keys.index('alerts'))
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
