@@ -84,7 +84,7 @@ class TestExplainLiveGatewayMCP:
         calls = _get_tool_calls()
 
         for row in calls:
-            trace(Channel_MCP, Received, f'tool call audit log: {row["event_time_iso"]} {row["endpoint"]!r} '
+            trace(Channel_MCP, Received, f'tool call audit log: {row["event_time_iso"]} {row["endpoint"]!r} ' +
                 f'{row["outcome"]!r} {row["sub_key"]!r} {row["ext_client_id"]!r}')
 
         separator(Channel_MCP)
@@ -130,7 +130,7 @@ class TestExplainLiveGatewayMCP:
         # .. the failures of the invalid calls group under the unknown tool's name, with the tool and the caller ..
         invalid_evidence = by_rule[_invalid_calls_rule]['evidence']
 
-        assert Heading_Failures in evidence
+        assert Heading_Failures in invalid_evidence
         assert _unknown_tool in invalid_evidence
         assert 'error_code=-32601' in invalid_evidence
         assert f'Count: {_invalid_call_count}' in invalid_evidence

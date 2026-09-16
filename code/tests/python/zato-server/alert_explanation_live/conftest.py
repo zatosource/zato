@@ -23,9 +23,10 @@ import sys
 import tempfile
 import time
 import warnings
+from importlib import import_module
+from shutil import copytree
 from urllib.request import urlopen
 from uuid import uuid4
-from shutil import copytree
 
 # The Ollama container helpers live in the LLM MCP suite, the IMAP server in the IMAP scheduler suite,
 # the SMTP receiver with the zato-common suites and the explain helpers in the simulator-backed explain suite.
@@ -46,14 +47,17 @@ from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Port_Env_Name
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 from zato.common.test.sftp_ import SFTPTestServer
+from zato.common.typing_ import cast_
 
 # Test helpers
-import ollama_containers as containers
-from _imap_test_server import IMAPTestServer
 from hl7_client.smtp_receiver import SMTPReceiver
 from llm_test_server import LLMTestServer
 from live_config import IMAP_Password, LiveServer
 from live_trace import is_on as is_trace_on
+
+containers = cast_('any_', import_module('ollama_containers'))
+imap_test_server = cast_('any_', import_module('_imap_test_server'))
+IMAPTestServer = imap_test_server.IMAPTestServer
 
 # ################################################################################################################################
 # ################################################################################################################################

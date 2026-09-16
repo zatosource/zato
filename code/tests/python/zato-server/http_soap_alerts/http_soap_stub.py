@@ -72,6 +72,14 @@ def full_input(class_:'any_', input_data:'stranydict') -> 'Bunch':
 def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') -> 'any_':
     """ A service with its collaborators standing in - the sessions are real, the server is not.
     """
+    def get_config_session(**kwargs:'any_') -> 'any_':
+        out = session_factory()
+        return out
+
+    def encrypt(value:'any_') -> 'any_':
+        out = value
+        return out
+
     service:'any_' = object.__new__(class_)
 
     service.cid = 'cid-http-soap-alerts'
@@ -84,8 +92,8 @@ def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') 
 
     server = SimpleNamespace(
         cluster_id=Cluster_Id,
-        get_config_session=lambda **kwargs: session_factory(),
-        encrypt=lambda value: value,
+        get_config_session=get_config_session,
+        encrypt=encrypt,
         fs_server_config=SimpleNamespace(misc=SimpleNamespace(return_internal_objects='True')),
     )
     service.server = server
@@ -210,8 +218,11 @@ def get_list(session_factory:'any_', connection:'str', transport:'str') -> 'list
 def get(session_factory:'any_', item_id:'int') -> 'anydict':
     """ What Get returns for one object.
     """
+    def require_any(*names:'str') -> 'None':
+        pass
+
     service = new_service(Get, session_factory, {'cluster_id': Cluster_Id, 'id': item_id, 'name': None})
-    service.request.input.require_any = lambda *names: None
+    service.request.input.require_any = require_any
     service.handle()
 
     out = service.response.payload

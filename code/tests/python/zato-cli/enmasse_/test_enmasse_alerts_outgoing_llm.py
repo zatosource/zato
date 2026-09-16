@@ -34,6 +34,7 @@ from zato.cli.enmasse.util import FileWriter
 from zato.common.alerting.object_config import Alerts_Key, storage_name
 from zato.common.api import EMAIL, GENERIC
 from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, SecurityBase, SMTP
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -137,7 +138,7 @@ def session() -> 'any_':
     cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
     session.add(cluster)
 
-    smtp = SMTP()
+    smtp = cast_('any_', SMTP())
     smtp.name = _smtp_name
     smtp.is_active = True
     smtp.host = 'smtp.example.com'
@@ -149,7 +150,7 @@ def session() -> 'any_':
     smtp.cluster = cluster
     session.add(smtp)
 
-    explainer = GenericConn()
+    explainer = cast_('any_', GenericConn())
     explainer.name = _explainer_name
     explainer.type_ = _llm_type
     explainer.is_active = True

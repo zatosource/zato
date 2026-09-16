@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from copy import deepcopy
 
 # lxml
-from lxml import etree
+import lxml.etree as etree
 
 # Zato
 from zato.common.as4.common import NS, Severity

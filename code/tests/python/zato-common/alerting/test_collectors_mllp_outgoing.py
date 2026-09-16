@@ -33,8 +33,9 @@ from zato.common.util.api import utcnow
 
 if 0:
     from datetime import datetime
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import intnone, stranydict
     datetime = datetime
+    intnone = intnone
     stranydict = stranydict
 
 # ################################################################################################################################
@@ -105,7 +106,7 @@ def _seed_message(
 
 # ################################################################################################################################
 
-def _seed_delivery(audit_log:'AuditLog', cid:'str', *, error:'str' = '') -> 'int':
+def _seed_delivery(audit_log:'AuditLog', cid:'str', *, error:'str' = '') -> 'intnone':
     """ Stores the delivery a channel made through the connection as one of its destinations - a request-sent
     row under the connection's name that no measure of the connection is to read.
     """

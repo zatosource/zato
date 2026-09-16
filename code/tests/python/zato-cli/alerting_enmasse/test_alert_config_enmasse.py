@@ -38,6 +38,7 @@ from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, In
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
+from zato.common.typing_ import cast_
 from zato.common.util.scheduler import ensure_alerting_job_exists
 
 # ################################################################################################################################
@@ -180,7 +181,7 @@ def odb_session() -> 'any_':
     cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
     session.add(cluster)
 
-    llm = GenericConn()
+    llm = cast_('any_', GenericConn())
     llm.name = _llm_name
     llm.type_ = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
     llm.is_active = True

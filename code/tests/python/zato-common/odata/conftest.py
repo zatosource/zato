@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.join(_here, 'lib'))
 sys.path.insert(0, os.path.join(_here, '..', 'soap', 'lib'))
 
 # lxml
-from lxml import etree
+import lxml.etree as etree
 
 # pytest
 import pytest

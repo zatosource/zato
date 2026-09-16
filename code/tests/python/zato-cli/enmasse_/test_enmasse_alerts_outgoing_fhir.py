@@ -35,6 +35,7 @@ from zato.common.alerting.object_config import Alerts_Key, storage_name
 from zato.common.api import EMAIL, GENERIC, HTTP_SOAP, SchedulerLink
 from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, IntervalBasedJob, Job, \
     SecurityBase, Service, SMTP
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,7 +137,7 @@ def session() -> 'any_':
     session.add(Service(None, _health_check.Dispatch_Service, True, 'zato.server.service.internal.connection.HealthCheckRun',
         True, cluster))
 
-    smtp = SMTP()
+    smtp = cast_('any_', SMTP())
     smtp.name = _smtp_name
     smtp.is_active = True
     smtp.host = 'smtp.example.com'
@@ -148,7 +149,7 @@ def session() -> 'any_':
     smtp.cluster = cluster
     session.add(smtp)
 
-    llm = GenericConn()
+    llm = cast_('any_', GenericConn())
     llm.name = _llm_name
     llm.type_ = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
     llm.is_active = True

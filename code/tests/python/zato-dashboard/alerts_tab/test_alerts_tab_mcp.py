@@ -206,6 +206,8 @@ class TestMCPGatewayPopup:
 
         # The size cell of the rules page reads the same way
         cell = _build_config_cell('volume_budget', config_map.Kind_Size, {'volume_budget': 100000000})
+        assert cell is not None
+
         assert cell['kind'] == 'size'
         assert cell['display'] == '100 megabytes'
 

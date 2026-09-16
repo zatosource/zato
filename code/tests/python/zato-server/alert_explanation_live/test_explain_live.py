@@ -13,6 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
+from importlib import import_module
 from time import monotonic
 
 # Redis
@@ -40,10 +41,20 @@ from zato.server.generic.api.outconn_llm import OutconnLLMWrapper
 from zato.server.generic.api.outconn_sftp import SFTPClient
 
 # Test helpers
-from explain_helpers import _alert_id, _cluster_id, _email_from, _get_explained_events, _llm_conn_name, _new_payload, \
-    _new_service, _new_session, _server_name, _EmailAPI
 from live_config import IMAP_Password, LiveServer
 from live_trace import Channel_Explain, Channel_IMAP, Channel_LLM, Channel_SFTP, Channel_SMTP, Received, Sent, separator, trace
+
+explain_helpers = cast_('any_', import_module('explain_helpers'))
+_alert_id = explain_helpers._alert_id
+_cluster_id = explain_helpers._cluster_id
+_email_from = explain_helpers._email_from
+_get_explained_events = explain_helpers.get_explained_events
+_llm_conn_name = explain_helpers._llm_conn_name
+_new_payload = explain_helpers.new_payload
+_new_service = explain_helpers.new_service
+_new_session = explain_helpers.new_session
+_server_name = explain_helpers._server_name
+_EmailAPI = explain_helpers._EmailAPI
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -326,7 +337,7 @@ def _seed_sftp_connection(session_maker:'any_', sftp_server:'any_') -> 'None':
         storage_name('use_llm'): True,
     }
 
-    row = GenericConn()
+    row = cast_('any_', GenericConn())
     row.name = _sftp_conn_name
     row.type_ = GENERIC.CONNECTION.TYPE.OUTCONN_SFTP
     row.is_active = True
@@ -510,7 +521,8 @@ class TestExplainLive:
         wrapper = _new_llm_wrapper(ollama, redis_server, repo_dir)
 
         _seed_sftp_connection(session, sftp_server)
-        _produce_sftp_failures(sftp_server, wrapper.server)
+        server = cast_('any_', wrapper.server)
+        _produce_sftp_failures(sftp_server, server)
 
         payload = _new_payload(AlertAction.Email_Digest, {}, Probe_Source_Test_Transfer,
             email_to=_email_to, object_name=_sftp_conn_name, measures=['test_transfer_failed'])

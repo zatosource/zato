@@ -25,8 +25,9 @@ from zato.common.alerting.explain.store import ExplanationStore
 # Test helpers
 from chat_simulators import SlackTestHandler
 from explain_helpers import _alert_id, _alert_link, _alert_message, _cluster_id, _conn_name, _email_from, _email_to, \
-    _error_data, _explanation_text, _get_explained_events, _llm_conn_name, _new_payload, _new_service, _new_session, \
-    _seed_error_events, _slack_channel, _slack_token, _EmailAPI, _LLMFacade, _SlackFacade, _TeamsFacade, LLMTestHandler
+    _error_data, _explanation_text, _llm_conn_name, _slack_channel, _slack_token, _EmailAPI, _LLMFacade, _SlackFacade, \
+    _TeamsFacade, get_explained_events as _get_explained_events, LLMTestHandler, new_payload as _new_payload, \
+    new_service as _new_service, new_session as _new_session, seed_error_events as _seed_error_events
 from teams_simulator import TeamsGraphTestHandler
 
 # ################################################################################################################################

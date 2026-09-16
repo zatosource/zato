@@ -470,11 +470,12 @@ class TestChannelRules:
         ]
 
         for rule_name, measures in cases:
+            rule = rules_by_full_name[f'{_channels_ruleset_name}_{rule_name}']
+
             for source in (AuditSource.REST_Channel, AuditSource.SOAP_Channel):
                 fact = new_fact(source, 'orders.api')
                 fact.update(measures)
 
-                rule = rules_by_full_name[f'{_channels_ruleset_name}_{rule_name}']
                 assert rule.match({Fact_Entity: fact}), f'Expected {rule_name} to match {fact}'
 
             # An MLLP channel is judged by the rules of its own ruleset, never by the HTTP channel ones

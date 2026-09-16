@@ -68,7 +68,10 @@ class TestNoIncidentsURLs:
 
         for package in [views_package, internal_package]:
 
-            package_directory = os.path.dirname(package.__file__)
+            package_file = package.__file__
+            assert package_file
+
+            package_directory = os.path.dirname(package_file)
 
             for root, _, file_names in os.walk(package_directory):
                 for file_name in file_names:

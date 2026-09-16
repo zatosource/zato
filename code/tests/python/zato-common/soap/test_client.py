@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.x509 import load_der_x509_certificate
 
 # lxml
-from lxml import etree
+import lxml.etree as etree
 
 # requests
 from requests.exceptions import SSLError
@@ -34,7 +34,8 @@ from zato.common.typing_ import cast_
 
 # Test helpers
 from certs import certificate_pem_path, private_key_pem_path
-from client_fixtures import _cdc_message, _ns_cdc, _receiver_x509, _sender_x509
+from client_fixtures import cdc_message as _cdc_message, _ns_cdc, receiver_x509 as _receiver_x509, \
+    sender_x509 as _sender_x509
 
 # ################################################################################################################################
 # ################################################################################################################################

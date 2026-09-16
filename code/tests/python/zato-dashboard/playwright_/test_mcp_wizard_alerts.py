@@ -102,7 +102,7 @@ class TestMCPWizardAlerts:
         # The popover puts the cursor into its first input once its transition ends - typing
         # into another field before that would be pulled back into the first one
         repeat_input = '#alerts-tab-tippy-repeat_calls'
-        page.wait_for_function(
+        _ = page.wait_for_function(
             f'document.activeElement && document.activeElement.id === "{repeat_input[1:]}"', timeout=_UI_Timeout)
 
         page.fill(repeat_input, _Created_Repeat_Calls)
@@ -125,7 +125,7 @@ class TestMCPWizardAlerts:
         _ = page.wait_for_selector(_Alerts_Line_Popover, state='visible', timeout=_UI_Timeout)
 
         volume_input = '#alerts-tab-tippy-volume_budget'
-        page.wait_for_function(
+        _ = page.wait_for_function(
             f'document.activeElement && document.activeElement.id === "{volume_input[1:]}"', timeout=_UI_Timeout)
 
         page.fill(volume_input, _Created_Volume_Budget)

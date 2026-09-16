@@ -278,7 +278,7 @@ def _new_admin_client() -> 'AdminClient':
 
 # ################################################################################################################################
 
-def _unwrap(response:'anydict') -> 'any_':
+def unwrap(response:'anydict') -> 'any_':
     """ Some services wrap their response in a single zato_* root element.
     """
     out = response
@@ -390,6 +390,8 @@ def _produce_channel_failures(channel:'_ChannelDescription') -> 'None':
     url = f'http://{LiveServer.host}:{LiveServer.server_port}{channel.url_path}'
 
     # A REST call carries its body as JSON, a SOAP call as the envelope text with its own headers
+    request_args:'anydict'
+
     if channel.headers:
         request_args = {'data': channel.body, 'headers': channel.headers}
     else:

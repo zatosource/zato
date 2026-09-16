@@ -39,7 +39,7 @@ from live_trace import Channel_Explain, Channel_Outgoing, Received, Sent, separa
 from llm_test_server import Input_Tokens, Output_Tokens
 from test_explain_live import _assert_sound_explanation, _email_to, _trace_delivery
 from test_explain_live_channel import _new_admin_client, _new_notification_config, _point_smtp_at_receiver, \
-     _server_audit_engine, _unwrap
+     _server_audit_engine, unwrap as _unwrap
 from test_explain_live_outgoing import _status_separator, _wrapper_wait_step, _wrapper_wait_timeout
 
 # ################################################################################################################################
@@ -349,7 +349,7 @@ def _produce_truncations(client:'AdminClient') -> 'None':
 
         response = _invoke_through(client, _truncated_name, f'Write the full quarterly report {index + 1}')
 
-        trace(Channel_Outgoing, Received, f'completion {index + 1}: finish_reason={response["finish_reason"]} '
+        trace(Channel_Outgoing, Received, f'completion {index + 1}: finish_reason={response["finish_reason"]} ' +
             f'usage={response["usage"]} text={response["text"]!r}')
         separator(Channel_Outgoing)
 
@@ -403,7 +403,7 @@ def _trace_responses(responses:'anylist') -> 'None':
     for row in responses:
         attrs = row['attrs']
         finish_reason = attrs.get(LLMAttr.Finish_Reason, '')
-        trace(Channel_Outgoing, Received, f'llm audit log: {row["event_time_iso"]} {row["status"]!r} '
+        trace(Channel_Outgoing, Received, f'llm audit log: {row["event_time_iso"]} {row["status"]!r} ' +
             f'model={attrs[LLMAttr.Model]} finish_reason={finish_reason!r} duration={row["duration_ms"]}ms')
 
     separator(Channel_Outgoing)

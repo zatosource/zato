@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption,
 import httpx
 
 # lxml
-from lxml import etree
+import lxml.etree as etree
 
 # pytest
 import pytest

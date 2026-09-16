@@ -280,7 +280,7 @@ class TestChannelHL7MLLPWizard:
         # The popover puts the cursor into its first input once its transition ends - typing
         # into another field before that would be pulled back into the codes input
         codes_input = '#alerts-tab-tippy-ack_codes'
-        page.wait_for_function(
+        _ = page.wait_for_function(
             f'document.activeElement && document.activeElement.id === "{codes_input[1:]}"', timeout=_Popover_Timeout)
 
         # Two chips go, one is typed back in, and the threshold is raised

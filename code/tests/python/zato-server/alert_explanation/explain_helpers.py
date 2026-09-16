@@ -46,7 +46,7 @@ from zato.server.service.internal.alerting import Explain
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, stranydict
+    from zato.common.typing_ import any_, anydict, anylist, stranydict, strlistnone
     any_ = any_
 
 # ################################################################################################################################
@@ -269,7 +269,7 @@ class _EmailAPI:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _new_session() -> 'any_':
+def new_session() -> 'any_':
     """ A sessionmaker over a fresh in-memory database with the tables the explain service reads.
     """
     engine = create_engine('sqlite://')
@@ -297,14 +297,14 @@ def _new_session() -> 'any_':
 
 # ################################################################################################################################
 
-def _new_payload(
+def new_payload(
     action:'str',
     action_config:'anydict',
     source:'str'=AuditSource.REST_Outgoing,
     *,
-    email_to:'list | None'=None,
+    email_to:'strlistnone'=None,
     object_name:'str'=_conn_name,
-    measures:'list | None'=None,
+    measures:'strlistnone'=None,
     ) -> 'stranydict':
     """ The payload the alerting engine hands the explain service - the alert, the fact it was
     raised from, the rule's own action and the deployment-level targets to deliver with.
@@ -359,7 +359,7 @@ def _new_payload(
 
 # ################################################################################################################################
 
-def _seed_error_events(source:'str'=AuditSource.REST_Outgoing, object_name:'str'=_conn_name) -> 'None':
+def seed_error_events(source:'str'=AuditSource.REST_Outgoing, object_name:'str'=_conn_name) -> 'None':
     """ Enough failed calls in the audit log for the evidence document to have something to say.
     """
     audit_log = AuditLog(_server_name)
@@ -378,7 +378,7 @@ def _seed_error_events(source:'str'=AuditSource.REST_Outgoing, object_name:'str'
 
 # ################################################################################################################################
 
-def _new_service(
+def new_service(
     payload:'stranydict',
     session:'any_',
     repo_dir:'str',
@@ -424,7 +424,7 @@ def _new_service(
 
 # ################################################################################################################################
 
-def _stored_explanation(session_maker:'any_') -> 'dict':
+def stored_explanation(session_maker:'any_') -> 'anydict':
     store = ExplanationStore(session_maker, _cluster_id)
     out = store.get(f'explanation.{_alert_id}')
 
@@ -433,7 +433,7 @@ def _stored_explanation(session_maker:'any_') -> 'dict':
 
 # ################################################################################################################################
 
-def _object_section(document:'str') -> 'str':
+def object_section(document:'str') -> 'str':
     start = document.index(Heading_Object)
     end = document.index(Heading_Failures)
     out = document[start:end]
@@ -441,7 +441,7 @@ def _object_section(document:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _get_explained_events() -> 'list':
+def get_explained_events() -> 'anylist':
     """ Every alert-explained event the audit log holds.
     """
     engine = get_audit_engine()

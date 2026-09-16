@@ -18,7 +18,7 @@ from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives.serialization import Encoding
 
 # lxml
-from lxml import etree
+import lxml.etree as etree
 
 # Zato
 from zato.common.soap.common import SOAPVersion

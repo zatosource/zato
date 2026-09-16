@@ -38,7 +38,7 @@ from live_enmasse import deactivate_document, import_document
 from live_trace import Channel_Explain, Channel_Outgoing, Received, Sent, separator, trace
 from test_explain_live import _assert_sound_explanation, _email_to, _trace_delivery
 from test_explain_live_channel import _new_admin_client, _new_notification_config, _point_smtp_at_receiver, \
-     _server_audit_engine, _unwrap
+     _server_audit_engine, unwrap as _unwrap
 from test_explain_live_outgoing import _status_separator, _wrapper_wait_step, _wrapper_wait_timeout
 
 # ################################################################################################################################
@@ -87,7 +87,7 @@ class TestExplainLiveOutgoingFHIROutcomes:
         responses = _get_outcome_responses(AuditSource.FHIR, _outcome_name)
 
         for row in responses:
-            trace(Channel_Outgoing, Received, f'outcome audit log: {row["event_time_iso"]} {row["status"]!r} '
+            trace(Channel_Outgoing, Received, f'outcome audit log: {row["event_time_iso"]} {row["status"]!r} ' +
                 f'{row["application_outcome"]!r} {row["data"]!r}')
 
         separator(Channel_Outgoing)
@@ -445,7 +445,7 @@ def _wait_for_pings(count:'int') -> 'anylist':
 
         # Each new ping is traced once, when it first shows up
         for row in out[seen:]:
-            trace(Channel_Outgoing, Received, f'fhir ping: {row["event_time_iso"]} {row["status"]!r} '
+            trace(Channel_Outgoing, Received, f'fhir ping: {row["event_time_iso"]} {row["status"]!r} ' +
                 f'{row["application_outcome"]!r}')
 
         seen = len(out)

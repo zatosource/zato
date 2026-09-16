@@ -24,7 +24,7 @@ from cryptography.x509 import BasicConstraints, CertificateBuilder, Name, NameAt
 from cryptography.x509.oid import NameOID
 
 # lxml
-from lxml import etree
+import lxml.etree as etree
 
 # pytest
 import pytest
@@ -283,7 +283,7 @@ def sign_smp_metadata(data:'bytes', signing_key:'any_', certificate:'any_') -> '
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _LocalSchemaResolver(etree.Resolver):
+class _LocalSchemaResolver(cast_('any_', etree.Resolver)):
     """ Resolves the absolute schemaLocation URLs inside the official XSDs
     to their local fixture copies, keeping schema validation fully offline.
     """

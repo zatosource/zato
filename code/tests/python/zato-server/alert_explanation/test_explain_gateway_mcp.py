@@ -22,10 +22,12 @@ from zato.common.api import GENERIC, Groups
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.common import MCPAttr
 from zato.common.odb.model import Cluster, GenericConn, GenericObject, HTTPBasicAuth
+from zato.common.typing_ import cast_
 
 # Test helpers
-from explain_helpers import _cluster_id, _llm_conn_name, _new_payload, _new_service, _new_session, _object_section, \
-    _server_name, _stored_explanation, _LLMFacade, LLMTestHandler
+from explain_helpers import _cluster_id, _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
+    new_payload as _new_payload, new_service as _new_service, new_session as _new_session, \
+    object_section as _object_section, stored_explanation as _stored_explanation
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,7 +92,7 @@ def _seed_gateway(session_maker:'any_', *, groups_as_names:'bool'=False) -> 'Non
         security = HTTPBasicAuth(caller_id, caller_name, True, caller_name, 'MCP agents', 'secret', cluster)
         session.add(security)
 
-    group = GenericObject()
+    group = cast_('any_', GenericObject())
     group.id = _group_id
     group.name = _group_name
     group.type_ = Groups.Type.Group_Parent
@@ -100,7 +102,7 @@ def _seed_gateway(session_maker:'any_', *, groups_as_names:'bool'=False) -> 'Non
 
     # A member is stored as `<sec type>-<security id>-<group id>`
     for caller_id in _caller_ids:
-        member = GenericObject()
+        member = cast_('any_', GenericObject())
         member.name = f'basic_auth-{caller_id}-{_group_id}'
         member.type_ = Groups.Type.Group_Member
         member.subtype = Groups.Type.API_Clients
@@ -129,7 +131,7 @@ def _seed_gateway(session_maker:'any_', *, groups_as_names:'bool'=False) -> 'Non
         storage_name('use_llm'): True,
     }
 
-    row = GenericConn()
+    row = cast_('any_', GenericConn())
     row.name = _gateway_name
     row.type_ = GENERIC.CONNECTION.TYPE.GATEWAY_MCP
     row.is_active = True

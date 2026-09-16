@@ -28,6 +28,7 @@ from zato.cli.enmasse.importers.smb import SMBImporter
 from zato.common.alerting.object_config import Alerts_Key, storage_name
 from zato.common.api import EMAIL, GENERIC
 from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, HTTPSOAP, IMAP, SecurityBase, Service, SMTP
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,7 +157,7 @@ def session() -> 'any_':
     service = Service(None, _service_name, True, 'enmasse.alerts.Service', False, cluster)
     session.add(service)
 
-    smtp = SMTP()
+    smtp = cast_('any_', SMTP())
     smtp.name = _smtp_name
     smtp.is_active = True
     smtp.host = 'smtp.example.com'
@@ -174,7 +175,7 @@ def session() -> 'any_':
     imap_generic = _new_imap(_imap_generic_name, EMAIL.IMAP.ServerType.Generic, cluster)
     session.add(imap_generic)
 
-    llm = GenericConn()
+    llm = cast_('any_', GenericConn())
     llm.name = _llm_name
     llm.type_ = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
     llm.is_active = True
@@ -194,7 +195,7 @@ def session() -> 'any_':
 # ################################################################################################################################
 
 def _new_imap(name:'str', server_type:'str', cluster:'Cluster') -> 'IMAP':
-    out = IMAP()
+    out = cast_('any_', IMAP())
     out.name = name
     out.is_active = True
     out.host = 'imap.example.com'

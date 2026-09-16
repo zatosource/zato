@@ -165,7 +165,7 @@ class TestLLMChat:
 
         # The key carries the configured expiry
         redis_key = 'zato:cache:' + store.get_key('chat-123')
-        ttl = cast_('int', cache_api.redis.ttl(redis_key))
+        ttl = cache_api.redis.ttl(redis_key)
         assert 0 < ttl <= _Default_Chat_Expiry
 
 # ################################################################################################################################

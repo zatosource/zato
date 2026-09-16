@@ -30,6 +30,7 @@ from sqlalchemy import select
 from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.common import TransportStatus
 from zato.common.json_internal import loads
+from zato.common.typing_ import cast_
 
 # Test support
 from fhir_stub import fhir_audit_env, new_fhir_client, operation_outcome, unreached_address, Connection_Name, FHIRStandIn
@@ -99,7 +100,7 @@ def test_a_good_response_carries_its_status_and_no_outcome(tmp_path:'os.PathLike
     with fhir_audit_env(tmp_path), FHIRStandIn(OK, _patient_body) as stand_in:
 
         client = new_fhir_client(stand_in.address)
-        result = client._do_request('get', _patient_path, cid=_cid)
+        result = cast_('strdict', client._do_request('get', _patient_path, cid=_cid))
 
         assert result['resourceType'] == 'Patient'
 
@@ -290,7 +291,7 @@ def test_needs_audit_off_writes_nothing(tmp_path:'os.PathLike') -> 'None':
     with fhir_audit_env(tmp_path), FHIRStandIn(OK, _patient_body) as stand_in:
 
         client = new_fhir_client(stand_in.address)
-        result = client._do_request('get', _patient_path, needs_audit=False, cid=_cid)
+        result = cast_('strdict', client._do_request('get', _patient_path, needs_audit=False, cid=_cid))
 
         assert result['id'] == '1'
         assert _get_events() == []

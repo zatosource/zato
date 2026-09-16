@@ -37,7 +37,7 @@ from live_enmasse import deactivate_document, get_id_by_name, import_document
 from live_trace import Channel_Explain, Channel_Outgoing, Received, Sent, separator, trace
 from test_explain_live import _assert_sound_explanation, _email_to, _trace_delivery
 from test_explain_live_channel import _new_admin_client, _new_notification_config, _point_smtp_at_receiver, \
-     _server_audit_engine, _soap_fault_string, _unwrap
+     _server_audit_engine, _soap_fault_string, unwrap as _unwrap
 from test_explain_live_outgoing import _http_soap_list_service, _outgoing_timeout, _soap_action, _status_separator, \
      _wrapper_not_found, _wrapper_wait_step, _wrapper_wait_timeout
 
@@ -208,7 +208,7 @@ def _create_faulting_channel() -> 'anydict':
 
     import_document(out)
 
-    trace(Channel_Outgoing, Sent, f'faulting channel `{_faulting_channel_name}` at {_faulting_channel_path} -> '
+    trace(Channel_Outgoing, Sent, f'faulting channel `{_faulting_channel_name}` at {_faulting_channel_path} -> ' +
         f'{LiveServer.raising_service}')
     separator(Channel_Outgoing)
 
@@ -305,7 +305,7 @@ def _get_fault_responses() -> 'anylist':
         out = [dict(row._mapping) for row in connection.execute(query)]
 
     for row in out:
-        trace(Channel_Outgoing, Received, f'faulting audit log: {row["event_time_iso"]} {row["status"]!r} '
+        trace(Channel_Outgoing, Received, f'faulting audit log: {row["event_time_iso"]} {row["status"]!r} ' +
             f'{row["application_outcome"]!r} {row["data"]!r}')
 
     separator(Channel_Outgoing)

@@ -23,8 +23,9 @@ from zato.common.audit_log.common import TransportStatus
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP
 
 # Test helpers
-from explain_helpers import _cluster_id, _llm_conn_name, _new_payload, _new_service, _new_session, _object_section, \
-    _server_name, _stored_explanation, _LLMFacade, LLMTestHandler
+from explain_helpers import _cluster_id, _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
+    new_payload as _new_payload, new_service as _new_service, new_session as _new_session, \
+    object_section as _object_section, stored_explanation as _stored_explanation
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -40,7 +40,7 @@ from live_enmasse import deactivate_document, get_id_by_name, import_document
 from live_trace import Channel_Explain, Channel_Outgoing, Received, Sent, separator, trace
 from test_explain_live import _assert_sound_explanation, _email_to, _trace_delivery
 from test_explain_live_channel import _ensure_basic_auth, _new_admin_client, _new_notification_config, \
-     _point_smtp_at_receiver, _security_name, _server_audit_engine, _unwrap
+     _point_smtp_at_receiver, _security_name, _server_audit_engine, unwrap as _unwrap
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -571,7 +571,7 @@ def _create_soap_outgoing(host:'str') -> 'anydict':
 
     import_document(out)
 
-    trace(Channel_Outgoing, Sent, f'soap connection `{_soap_name}` -> {host}{_soap_url_path}, '
+    trace(Channel_Outgoing, Sent, f'soap connection `{_soap_name}` -> {host}{_soap_url_path}, ' +
         f'checked every {_soap_run_every} {_soap_run_unit}')
     separator(Channel_Outgoing)
 

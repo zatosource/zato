@@ -311,7 +311,7 @@ class TestWriteHelpers:
     def test_a_duration_writes_its_seconds_into_every_window_rule(self) -> 'None':
         field = _field('file_transfer', 'window')
 
-        documents = {
+        documents:'stranydict' = {
             'alerts_file_transfer_Transfer_Failures': {
                 'name': 'Transfer_Failures',
                 'defaults': {'window_seconds': {'value': 86400}},

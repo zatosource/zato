@@ -14,7 +14,7 @@ from base64 import b64encode
 from http.client import BAD_GATEWAY, INTERNAL_SERVER_ERROR, OK
 
 # lxml
-from lxml import etree
+import lxml.etree as etree
 
 # requests
 from requests.exceptions import ReadTimeout, SSLError
@@ -35,7 +35,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.xml_.mime_ import new_content_id, Part
 
 # Test helpers
-from client_fixtures import _cdc_message, _sender_x509
+from client_fixtures import cdc_message as _cdc_message, sender_x509 as _sender_x509
 
 # ################################################################################################################################
 # ################################################################################################################################

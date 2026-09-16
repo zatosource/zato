@@ -32,6 +32,7 @@ from zato.cli.enmasse.util import FileWriter
 from zato.common.alerting.object_config import Alerts_Key, storage_name
 from zato.common.api import EMAIL, GENERIC
 from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -121,7 +122,7 @@ def session() -> 'any_':
     service = Service(None, _service_name, True, 'enmasse.alerts.soap.Service', False, cluster)
     session.add(service)
 
-    smtp = SMTP()
+    smtp = cast_('any_', SMTP())
     smtp.name = _smtp_name
     smtp.is_active = True
     smtp.host = 'smtp.example.com'
@@ -133,7 +134,7 @@ def session() -> 'any_':
     smtp.cluster = cluster
     session.add(smtp)
 
-    llm = GenericConn()
+    llm = cast_('any_', GenericConn())
     llm.name = _llm_name
     llm.type_ = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
     llm.is_active = True

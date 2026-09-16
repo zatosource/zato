@@ -11,7 +11,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # does, is still understood as long as the message goes on with a segment the structure knows.
 
 # Zato
+from zato.common.typing_ import cast_
 from zato.hl7v2 import parse_hl7
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.hl7v2.v2_9.messages import ADT_A01 as adt_a01
+    adt_a01 = adt_a01
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,6 +38,7 @@ class TestParseMissingSegment:
     def test_an_admission_without_evn_parses_and_its_patient_is_read(self) -> 'None':
 
         message = parse_hl7(_msh + _pid)
+        message = cast_('adt_a01', message)
 
         assert message.pid.patient_identifier_list[0].id_number == _mrn
         assert message.msh.message_control_id == 'MSG000001'
@@ -39,12 +48,17 @@ class TestParseMissingSegment:
         with_evn = parse_hl7(_msh + _evn + _pid)
         without_evn = parse_hl7(_msh + _pid)
 
+        with_evn = cast_('adt_a01', with_evn)
+        without_evn = cast_('adt_a01', without_evn)
+
         assert with_evn.pid.patient_identifier_list[0].id_number == without_evn.pid.patient_identifier_list[0].id_number
         assert with_evn.evn.recorded_date_time == '20260115103000'
 
     def test_validation_on_does_not_refuse_the_missing_evn_either(self) -> 'None':
 
         message = parse_hl7(_msh + _pid, validate=True)
+        message = cast_('adt_a01', message)
+
         assert message.pid.patient_identifier_list[0].id_number == _mrn
 
 # ################################################################################################################################

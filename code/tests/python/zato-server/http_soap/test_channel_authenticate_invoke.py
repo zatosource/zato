@@ -45,8 +45,8 @@ def _make_meta(
     http_method:'str'='GET',
     http_accept:'str'='accept_any_internal',
     path_info:'str'='/test/path',
-    wsgi_raw_uri:'str'='/test/path',
-    wsgi_remote_port:'str'='12345',
+    raw_uri:'str'='/test/path',
+    remote_port:'str'='12345',
 ) -> '_RequestMeta':
     """ Builds a _RequestMeta with sane defaults.
     """
@@ -54,8 +54,8 @@ def _make_meta(
         http_method=http_method,
         http_accept=http_accept,
         path_info=path_info,
-        wsgi_raw_uri=wsgi_raw_uri,
-        wsgi_remote_port=wsgi_remote_port,
+        raw_uri=raw_uri,
+        remote_port=remote_port,
     )
     return out
 

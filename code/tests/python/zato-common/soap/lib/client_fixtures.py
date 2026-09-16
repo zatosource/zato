@@ -20,7 +20,8 @@ from certs import certificate_pem_path, private_key_pem_path
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, stranydict
+    stranydict = stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,7 +31,7 @@ _ns_cdc = 'urn:cdc:iisb:2011'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _sender_x509(parties:'any_', sign:'any_', encrypt:'any_'):
+def sender_x509(parties:'any_', sign:'any_', encrypt:'any_') -> 'stranydict':
     """ The X.509 security config an outgoing connection presents - paths to our key material
     plus the receiver's certificate.
     """
@@ -46,7 +47,7 @@ def _sender_x509(parties:'any_', sign:'any_', encrypt:'any_'):
 
 # ################################################################################################################################
 
-def _receiver_x509(parties:'any_', sign:'any_', encrypt:'any_'):
+def receiver_x509(parties:'any_', sign:'any_', encrypt:'any_') -> 'stranydict':
     """ The X.509 config the server enforces - paths to our decryption key plus the sender's pinned certificate.
     """
     out = {
@@ -60,7 +61,7 @@ def _receiver_x509(parties:'any_', sign:'any_', encrypt:'any_'):
 
 # ################################################################################################################################
 
-def _cdc_message():
+def cdc_message() -> 'SOAPMessage':
     """ A CDC IIS style request carrying only business fields - never any credentials.
     """
     out = SOAPMessage()

@@ -37,7 +37,7 @@ from live_enmasse import deactivate_document, import_document
 from live_trace import Channel_Explain, Channel_Outgoing, Received, Sent, separator, trace
 from test_explain_live import _assert_sound_explanation, _email_to, _trace_delivery
 from test_explain_live_channel import _new_admin_client, _new_notification_config, _point_smtp_at_receiver, \
-     _server_audit_engine, _unwrap
+     _server_audit_engine, unwrap as _unwrap
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,7 +90,8 @@ class TestExplainLiveOutgoingMLLP:
             acks = _get_acks_received()
 
             for row in acks:
-                trace(Channel_Outgoing, Received, f'ack audit log: {row["event_time_iso"]} {row["application_outcome"]!r} '
+                trace(Channel_Outgoing, Received,
+                    f'ack audit log: {row["event_time_iso"]} {row["application_outcome"]!r} ' +
                     f'{row["msg_id"]!r}')
 
             separator(Channel_Outgoing)

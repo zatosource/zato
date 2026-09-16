@@ -27,7 +27,9 @@ from test_config_map import _field, backend, rule_database_engine
 
 if 0:
     from zato.common.rule_engine.sql import RuleSQLBackend
+    from zato.common.typing_ import stranydict
     RuleSQLBackend = RuleSQLBackend
+    stranydict = stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -198,7 +200,7 @@ class TestSecondsOfMCP:
         assert warning_field['kind'] == config_map.Kind_Seconds
         assert error_field['kind'] == config_map.Kind_Seconds
 
-        documents = {
+        documents:'stranydict' = {
             config_map.rule_full_name(_mcp_ruleset, 'Slow_Tool_Calls'): {
                 'name': 'Slow_Tool_Calls',
                 'defaults': {

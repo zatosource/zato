@@ -89,6 +89,21 @@ def full_input(class_:'any_', input_data:'stranydict') -> 'Bunch':
 def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') -> 'any_':
     """ A service with its collaborators standing in - the sessions are real, the server is not.
     """
+    def generate_secret() -> 'bytes':
+        return b'auto-secret'
+
+    def evaluate(key:'str', value:'any_', encrypt:'bool') -> 'any_':
+        out = value
+        return out
+
+    def get_config_session(**kwargs:'any_') -> 'any_':
+        out = session_factory()
+        return out
+
+    def identity(value:'any_') -> 'any_':
+        out = value
+        return out
+
     service:'any_' = object.__new__(class_)
 
     service.cid = 'cid-generic-alerts'
@@ -98,18 +113,18 @@ def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') 
     service.config_dispatcher = MagicMock()
     service.logger = logging.getLogger('test-generic-alerts')
     service.invoke = MagicMock(return_value={'id': Job_Id})
-    service.crypto = SimpleNamespace(encrypt=_encrypt, generate_secret=lambda: b'auto-secret')
+    service.crypto = SimpleNamespace(encrypt=_encrypt, generate_secret=generate_secret)
 
     # The declared input of Create and Edit is empty, so every raw value is evaluated through here
-    service._io = SimpleNamespace(eval_=lambda key, value, encrypt: value)
+    service._io = SimpleNamespace(eval_=evaluate)
 
     server = SimpleNamespace(
         name='test-server',
         cluster_id=Cluster_Id,
         odb=service.odb,
-        get_config_session=lambda **kwargs: session_factory(),
-        encrypt=lambda value: value,
-        decrypt=lambda value: value,
+        get_config_session=get_config_session,
+        encrypt=identity,
+        decrypt=identity,
         config_manager=SimpleNamespace(sdk_connector_types={}),
         fs_server_config=SimpleNamespace(misc=SimpleNamespace(return_internal_objects='True')),
     )

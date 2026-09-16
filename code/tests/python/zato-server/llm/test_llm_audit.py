@@ -457,6 +457,7 @@ class TestFailureRows:
         # Point the one client at a port nothing listens on
         wrapper.config['address'] = f'http://127.0.0.1:{_closed_port()}/v1'
         with wrapper.client() as client:
+            client = cast_('any_', client)
             client.address = wrapper.config['address']
 
         with pytest.raises(Exception):

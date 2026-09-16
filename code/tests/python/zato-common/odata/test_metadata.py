@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # lxml
-from lxml import etree
+import lxml.etree as etree
 
 # pytest
 import pytest

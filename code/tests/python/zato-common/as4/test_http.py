@@ -13,7 +13,7 @@ from http.client import ACCEPTED, OK
 import httpx
 
 # lxml
-from lxml import etree
+import lxml.etree as etree
 
 # pytest
 import pytest
