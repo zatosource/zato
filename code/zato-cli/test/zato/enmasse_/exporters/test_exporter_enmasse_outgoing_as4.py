@@ -23,6 +23,7 @@ from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.exporters.outgoing_as4 import OutgoingAS4Exporter
 from zato.cli.enmasse.importers.outgoing_as4 import OutgoingAS4Importer
+from zato.cli.enmasse.util.secrets import Secret_Prefixes
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -127,6 +128,12 @@ class TestEnmasseOutgoingAS4Exporter(TestCase):
 
         # The audit log of this connection was never turned off, so the flag stays out of the export
         self.assertNotIn('is_audit_log_active', conn)
+
+        # No exported value carries an encryption prefix - encrypted material never leaves the database
+        for exported in exported_connections:
+            for value in exported.values():
+                if isinstance(value, str):
+                    self.assertFalse(value.startswith(Secret_Prefixes), f'Encrypted value exported: {value!r}')
 
 # ################################################################################################################################
 

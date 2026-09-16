@@ -753,6 +753,10 @@ test-pubsub-backend-perf-mass: ## Pub/sub SQL backend mass-recovery test at full
 test-enmasse: ## Enmasse round-trip tests.
 	$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_*.py' -v
 
+test-enmasse-secrets-live: ## Enmasse secret rotation tests against live external services.
+	Zato_Test_Live_SQL=1 Zato_Test_FTP=1 Zato_Test_SFTP=1 Zato_Test_SMB=1 Zato_Test_MongoDB=1 \
+		$(ZATO_PY) -m unittest $(CURDIR)/code/zato-cli/test/zato/enmasse_/test_secret_rotation_live.py -v
+
 test-cli: ## CLI tests.
 	$(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-cli/test_odb_sqlite_default.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_cli_odb \
@@ -1437,7 +1441,7 @@ Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub-backend test-mongodb test-es \
 	test-sql-cloud-live test-oracle-db test-microsoft-cloud test-salesforce test-bearer test-pubsub-backend-amqp test-as2-live \
 	test-as2-interop test-ibm-mq test-kafka test-sdk test-hl7-languages test-pubsub-outgoing \
-	test-hl7-mllp-outconns test-pubsub-core test-hl7
+	test-hl7-mllp-outconns test-pubsub-core test-hl7 test-enmasse-secrets-live
 
 # The browser suite end to end
 Zato_Test_Browser := test-ui

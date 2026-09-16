@@ -89,5 +89,8 @@ class AS2Importer(GenericConnectionImporter):
     connection_secret_keys = []
     connection_required_attrs = ['name', 'as2_from', 'as2_to', 'endpoint_url']
 
+    # The private keys live encrypted in the opaque attributes, where the wrapper reads them from
+    opaque_secret_keys = AS2.Secret_Fields
+
 # ################################################################################################################################
 # ################################################################################################################################

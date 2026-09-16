@@ -48,27 +48,4 @@ class MicrosoftPowerAutomateImporter(GenericConnectionImporter):
     connection_required_attrs = ['name', 'client_id', 'tenant_id', 'environment_id']
 
 # ################################################################################################################################
-
-    def _process_secret(self, connection_def):
-
-        for key in ['secret', 'password']:
-            if value := connection_def.get(key):
-                connection_def['client_secret'] = value
-                break
-
-        return connection_def
-
-# ################################################################################################################################
-
-    def create_definition(self, connection_def, session):
-        connection_def = self._process_secret(connection_def)
-        return super().create_definition(connection_def, session)
-
-# ################################################################################################################################
-
-    def update_definition(self, connection_def, session):
-        connection_def = self._process_secret(connection_def)
-        return super().update_definition(connection_def, session)
-
-# ################################################################################################################################
 # ################################################################################################################################

@@ -227,6 +227,9 @@ class ServerInvoker(AdminService):
         elif func_name == 'save_demo_config':
             states = self.request.raw['states']
             response = func(states)
+        elif func_name == 'get_sdk_secret_field_names':
+            type_ = self.request.raw['type_']
+            response = func(type_)
         else:
             response = func()
 

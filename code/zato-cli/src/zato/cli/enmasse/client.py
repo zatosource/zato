@@ -18,12 +18,14 @@ from sqlalchemy.exc import SQLAlchemyError
 
 # Zato
 from zato.cli.enmasse.util import get_value_from_environment
+from zato.cli.enmasse.util.secrets import Session_Key_Crypto_Manager, Session_Key_Server_Dir
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.defaults import default_server_base_dir
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.odb.model import to_json
 from zato.common.odb.query import service_list
-from zato.common.util.api import get_config, get_odb_session_from_server_config, get_repo_dir_from_component_dir, utcnow
+from zato.common.util.api import get_client_from_server_conf, get_config, get_odb_session_from_server_config, \
+    get_repo_dir_from_component_dir, utcnow
 from zato.common.util.cli import read_stdin_data
 
 # ################################################################################################################################
@@ -35,11 +37,15 @@ logger.setLevel(logging.INFO)
 # Default timeout for waiting for services to become available
 Default_Service_Wait_Timeout = 10
 
+# How many seconds a server client waits for the server to respond, unless the command line says otherwise
+Default_Initial_Wait_Time = 10
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, strnone
+    from zato.client import ZatoClient
+    from zato.common.typing_ import any_, anydict, strnone, strtuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,8 +81,41 @@ def get_session_from_server_dir(server_dir:'str', stdin_data:'strnone'=None) -> 
         secrets_conf=secrets_conf,
     )
 
-    # Create and return an ODB session from server configuration
-    return get_odb_session_from_server_config(config, crypto_manager, False)
+    # Create an ODB session from server configuration ..
+    session = get_odb_session_from_server_config(config, crypto_manager, False)
+
+    # .. the importers encrypt and decrypt secrets through the session they receive,
+    # .. and the custom connector importer asks the server of this directory about its connector types.
+    session.info[Session_Key_Crypto_Manager] = crypto_manager
+    session.info[Session_Key_Server_Dir] = server_dir
+
+    return session
+
+# ################################################################################################################################
+
+def get_server_client(server_dir:'str', initial_wait_time:'int'=Default_Initial_Wait_Time) -> 'ZatoClient':
+    """ Returns a client for the server of the given directory, waiting until the server responds to pings.
+    """
+    out = get_client_from_server_conf(
+        server_dir=server_dir,
+        require_server=True,
+        initial_wait_time=initial_wait_time
+    )
+    return out
+
+# ################################################################################################################################
+
+def get_sdk_secret_field_names(server_dir:'str', type_:'str') -> 'strtuple':
+    """ Returns the names of the secret fields the running server's connector class of the given type declares.
+    """
+    client = get_server_client(server_dir)
+    response = client.invoke('zato.server.invoker', {'func_name':'get_sdk_secret_field_names', 'type_':type_})
+
+    if not response.ok:
+        raise Exception(f'Could not look up secret fields of `{type_}` from {client.address} -> {response.details}')
+
+    out = tuple(response.data['names'])
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

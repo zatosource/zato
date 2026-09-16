@@ -28,6 +28,7 @@ from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.ftp import FTPImporter
+from zato.cli.enmasse.util.secrets import decrypt_secret, is_encrypted
 from zato.common.api import FileTransfer, GENERIC, SchedulerLink
 from zato.common.odb.model import GenericConn, Job
 from zato.common.test.ftp_ import FTPTestServer
@@ -194,7 +195,9 @@ class TestEnmasseFTPFromYAML(TestCase):
             'host': opaque.host,
             'port': instance.port,
             'username': instance.username,
-            'secret': instance.secret,
+
+            # The server decrypts the secret before a wrapper sees its config
+            'secret': decrypt_secret(self.session, instance.secret),
             'use_ssl': opaque.use_ssl,
         })
 
@@ -233,7 +236,8 @@ class TestEnmasseFTPFromYAML(TestCase):
             self.assertEqual(opaque.host, self.ftp_server.host)
             self.assertEqual(instance.port, self.ftp_server.port)
             self.assertEqual(instance.username, self.ftp_server.username)
-            self.assertEqual(instance.secret, self.ftp_server.password)
+            self.assertTrue(is_encrypted(instance.secret))
+            self.assertEqual(decrypt_secret(self.session, instance.secret), self.ftp_server.password)
 
             # Nothing turned SSL on for these two.
             self.assertIs(opaque.use_ssl, False)

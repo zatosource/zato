@@ -13,6 +13,8 @@ import logging
 from zato.cli.enmasse.util import preprocess_item
 from zato.cli.enmasse.util.alerts import flatten_alerts
 from zato.cli.enmasse.util.invocation import sync_health_check_job
+from zato.cli.enmasse.util.secrets import Common_Secret_Keys, encrypt_opaque_secrets, encrypt_secret, ensure_encrypted, \
+    is_secret_to_write, load_opaque, redact_secrets
 from zato.common.api import FileTransfer, SCHEDULER, SchedulerLink
 from zato.common.odb.model import GenericConn, Job, to_json
 from zato.common.odb.query.generic import connection_list
@@ -26,7 +28,7 @@ from zato.common.util.sql import parse_instance_opaque_attr, set_instance_opaque
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.cli.enmasse.importer import EnmasseYAMLImporter
-    from zato.common.typing_ import any_, anydict, anylist, listtuple
+    from zato.common.typing_ import any_, anydict, anylist, listtuple, strlist, strnone, strtuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,6 +45,10 @@ class GenericConnectionImporter:
     connection_extra_field_defaults = {}
     connection_secret_keys = ['password', 'secret', 'api_token']
     connection_required_attrs = ['name', 'address', 'username']
+
+    # The secrets a wrapper of this type reads from the opaque attributes rather than from the secret column -
+    # they are stored encrypted in the opaque attributes and never in the column.
+    opaque_secret_keys:'strtuple' = ()
 
     # File transfer connections carry a list of schedules, each with a linked scheduler job
     supports_schedules = False
@@ -116,15 +122,97 @@ class GenericConnectionImporter:
             if name in db_defs:
                 update_def = yaml_def.copy()
                 update_def['id'] = db_defs[name]['id']
-                logger.info('Adding to update: %s', update_def)
+                logger.info('Adding to update: %s', self._redact(update_def))
                 to_update.append(update_def)
 
             # Create new definition
             else:
-                logger.info('Adding to create: %s', yaml_def)
+                logger.info('Adding to create: %s', self._redact(yaml_def))
                 to_create.append(yaml_def)
 
         return to_create, to_update
+
+# ################################################################################################################################
+
+    def _redact(self, definition:'anydict') -> 'anydict':
+        """ Returns a copy of the definition fit for a log line - every secret this type knows of is replaced by a marker.
+        """
+        keys = tuple(self.connection_secret_keys) + self.opaque_secret_keys
+        out = redact_secrets(definition, keys)
+        return out
+
+# ################################################################################################################################
+
+    def _get_secret_from_def(self, connection_def:'anydict', is_create:'bool') -> 'strnone':
+        """ Returns the first secret the definition carries under one of this type's secret keys, or None.
+        """
+        for key in self.connection_secret_keys:
+            value = connection_def.get(key)
+            if is_secret_to_write(value, is_create):
+                return value
+
+        return None
+
+# ################################################################################################################################
+
+    def _set_secret_column(self, connection:'any_', connection_def:'anydict', session:'SASession', is_create:'bool') -> 'None':
+        """ Writes the secret the definition gives to the secret column, encrypted. When the definition gives none,
+        the stored one is kept and encrypted in place if it is still in clear text. The column is nullable.
+        """
+        secret = self._get_secret_from_def(connection_def, is_create)
+
+        if secret is not None:
+            connection.secret = encrypt_secret(session, secret)
+        elif connection.secret is not None:
+            connection.secret = ensure_encrypted(session, connection.secret)
+
+# ################################################################################################################################
+
+    def _prepare_opaque_secrets(
+        self,
+        connection:'any_',
+        merged_def:'anydict',
+        session:'SASession',
+        is_create:'bool',
+    ) -> 'None':
+        """ Makes the definition about to land in the opaque attributes hold each secret in exactly one place.
+        A secret a wrapper of this type reads from the opaque attributes is encrypted there, and one the definition
+        does not give in a usable form is dropped so the stored value stays, encrypted in place if it is in clear text.
+        Every other secret key leaves the definition - its value lives in the secret column and nowhere else.
+        """
+        stored = load_opaque(connection.opaque1)
+        opaque_secret_keys = self.get_opaque_secret_keys(session)
+        encrypt_opaque_secrets(merged_def, stored, opaque_secret_keys, session, is_create)
+
+        # A None is not a secret and a wrapper's fallback read expects the key to exist, so only actual values leave
+        for name in self._get_column_secret_keys(opaque_secret_keys):
+            if name in merged_def:
+                if merged_def[name] is not None:
+                    del merged_def[name]
+
+# ################################################################################################################################
+
+    def get_opaque_secret_keys(self, session:'SASession') -> 'strtuple':
+        """ Returns the names of the secrets this type keeps in the opaque attributes.
+        May be overridden by subclasses whose secret names are not known until runtime.
+        """
+        return self.opaque_secret_keys
+
+# ################################################################################################################################
+
+    def _get_column_secret_keys(self, opaque_secret_keys:'strtuple') -> 'strtuple':
+        """ Returns the names whose value belongs in the secret column and must therefore never reach the opaque attributes.
+        """
+        out:'strlist' = []
+
+        for name in tuple(self.connection_secret_keys) + Common_Secret_Keys:
+            if name in opaque_secret_keys:
+                continue
+            if name in out:
+                continue
+            out.append(name)
+
+        return tuple(out)
 
 # ################################################################################################################################
 
@@ -155,11 +243,8 @@ class GenericConnectionImporter:
         for attr in self.connection_required_attrs:
             setattr(connection, attr, connection_def[attr])
 
-        # Set secret using a list of possible keys with priority order
-        for key in self.connection_secret_keys:
-            if key in connection_def and connection_def[key]:
-                connection.secret = connection_def[key]
-                break
+        # The secret column holds the first usable secret the definition gives, encrypted
+        self._set_secret_column(connection, connection_def, session, is_create=True)
 
         # Build extra_fields using the defaults
         extra_fields = {}
@@ -171,6 +256,10 @@ class GenericConnectionImporter:
         # Merge extra_fields with connection_def to ensure defaults are included
         merged_def = connection_def.copy()
         merged_def.update(extra_fields)
+
+        # Each secret lands in one place only - encrypted in the opaque attributes if a wrapper reads it there,
+        # otherwise nowhere but the secret column
+        self._prepare_opaque_secrets(connection, merged_def, session, is_create=True)
 
         # Set any opaque attributes from the configuration
         set_instance_opaque_attrs(connection, merged_def)
@@ -220,11 +309,9 @@ class GenericConnectionImporter:
         for attr in self.connection_required_attrs:
             setattr(connection, attr, connection_def[attr])
 
-        # Set secret - using global list of possible keys with priority order
-        for key in self.connection_secret_keys:
-            if key in connection_def and connection_def[key]:
-                connection.secret = connection_def[key]
-                break
+        # The secret column holds the first usable secret the definition gives, encrypted,
+        # or keeps the stored one when the definition gives none
+        self._set_secret_column(connection, connection_def, session, is_create=False)
 
         # Build extra_fields using the defaults
         extra_fields = {}
@@ -240,6 +327,10 @@ class GenericConnectionImporter:
         # its ID landing in the opaque attributes with everything else
         if self.health_check_conn_type:
             sync_health_check_job(self.importer, session, merged_def, connection, self.health_check_conn_type)
+
+        # Each secret lands in one place only - encrypted in the opaque attributes if a wrapper reads it there,
+        # otherwise nowhere but the secret column
+        self._prepare_opaque_secrets(connection, merged_def, session, is_create=False)
 
         set_instance_opaque_attrs(connection, merged_def)
 

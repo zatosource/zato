@@ -7,8 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.cli.enmasse.client import get_sdk_secret_field_names
 from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
+from zato.cli.enmasse.util.secrets import get_server_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -16,7 +18,7 @@ from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.cli.enmasse.importer import EnmasseYAMLImporter
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, strtuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,6 +79,29 @@ class CustomConnectorImporter(GenericConnectionImporter):
             'is_channel': False,
             'is_outconn': True,
         }
+
+        # The names of the Secret fields the connector class declares, once the running server has been asked
+        self.secret_field_names:'strtuple | None' = None
+
+# ################################################################################################################################
+
+    def get_opaque_secret_keys(self, session:'SASession') -> 'strtuple':
+        """ Returns the names of the Secret fields the connector class declares. Only the running server knows
+        the class, so it is asked once per type. A server that cannot be reached fails the import - an SDK connector
+        type cannot exist without a server and an import must not guess.
+        """
+        if self.secret_field_names is None:
+            server_dir = get_server_dir(session)
+            self.secret_field_names = get_sdk_secret_field_names(server_dir, self.connection_type)
+
+        return self.secret_field_names
+
+# ################################################################################################################################
+
+    def _get_column_secret_keys(self, opaque_secret_keys:'strtuple') -> 'strtuple':
+        """ Nothing is moved to the secret column, so no declared field ever leaves the opaque attributes.
+        """
+        return ()
 
 # ################################################################################################################################
 

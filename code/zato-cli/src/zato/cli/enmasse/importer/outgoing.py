@@ -16,6 +16,7 @@ import logging
 # Zato
 from zato.cli.enmasse.importers.amqp import OutgoingAMQPImporter
 from zato.cli.enmasse.importers.odata import ODataImporter
+from zato.cli.enmasse.util.secrets import Known_Secret_Keys, redact_secrets
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,7 +52,7 @@ class OutgoingSync:
 
         # Examine each Odoo item
         for idx, item in enumerate(odoo_list):
-            logger.info('Odoo connection item %d: %s', idx, item)
+            logger.info('Odoo connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         odoo_created, odoo_updated = self.odoo_importer.sync_odoo_definitions(odoo_list, session)
 
@@ -75,7 +76,7 @@ class OutgoingSync:
 
         # Examine each SMTP item
         for idx, item in enumerate(smtp_list):
-            logger.info('SMTP connection item %d: %s', idx, item)
+            logger.info('SMTP connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         smtp_created, smtp_updated = self.smtp_importer.sync_smtp_definitions(smtp_list, session)
 
@@ -99,7 +100,7 @@ class OutgoingSync:
 
         # Examine each IMAP item
         for idx, item in enumerate(imap_list):
-            logger.info('IMAP connection item %d: %s', idx, item)
+            logger.info('IMAP connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         imap_created, imap_updated = self.imap_importer.sync_imap_definitions(imap_list, session)
 
@@ -123,7 +124,7 @@ class OutgoingSync:
 
         # Examine each SQL connection pool item
         for idx, item in enumerate(sql_list):
-            logger.info('SQL connection pool item %d: %s', idx, item)
+            logger.info('SQL connection pool item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         sql_created, sql_updated = self.sql_importer.sync_sql_definitions(sql_list, session)
 
@@ -147,7 +148,7 @@ class OutgoingSync:
 
         # Examine each Confluence connection item
         for idx, item in enumerate(confluence_list):
-            logger.info('Confluence connection item %d: %s', idx, item)
+            logger.info('Confluence connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         confluence_created, confluence_updated = self.confluence_importer.sync_definitions(confluence_list, session)
 
@@ -171,7 +172,7 @@ class OutgoingSync:
 
         # Examine each Jira connection item
         for idx, item in enumerate(jira_list):
-            logger.info('Jira connection item %d: %s', idx, item)
+            logger.info('Jira connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         jira_created, jira_updated = self.jira_importer.sync_definitions(jira_list, session)
 
@@ -195,7 +196,7 @@ class OutgoingSync:
 
         # Examine each Salesforce connection item
         for idx, item in enumerate(salesforce_list):
-            logger.info('Salesforce connection item %d: %s', idx, item)
+            logger.info('Salesforce connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         salesforce_created, salesforce_updated = self.salesforce_importer.sync_definitions(salesforce_list, session)
 
@@ -220,7 +221,7 @@ class OutgoingSync:
 
         # Examine each LDAP connection item
         for idx, item in enumerate(ldap_list):
-            logger.info('LDAP connection item %d: %s', idx, item)
+            logger.info('LDAP connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         ldap_created, ldap_updated = self.ldap_importer.sync_definitions(ldap_list, session)
 
@@ -244,7 +245,7 @@ class OutgoingSync:
 
         # Examine each LLM connection item
         for idx, item in enumerate(llm_list):
-            logger.info('LLM connection item %d: %s', idx, item)
+            logger.info('LLM connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         llm_created, llm_updated = self.llm_importer.sync_definitions(llm_list, session)
 
@@ -268,7 +269,7 @@ class OutgoingSync:
 
         # Examine each outgoing AS2 connection item
         for idx, item in enumerate(as2_list):
-            logger.info('Outgoing AS2 connection item %d: %s', idx, item)
+            logger.info('Outgoing AS2 connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         as2_created, as2_updated = self.as2_importer.sync_definitions(as2_list, session)
 
@@ -294,7 +295,7 @@ class OutgoingSync:
 
         # Examine each connection item
         for idx, item in enumerate(item_list):
-            logger.info('%s connection item %d: %s', label, idx, item)
+            logger.info('%s connection item %d: %s', label, idx, redact_secrets(item, Known_Secret_Keys))
 
         items_created, items_updated = importer.sync_definitions(item_list, session)
 
@@ -370,7 +371,7 @@ class OutgoingSync:
 
         # Examine each SFTP connection item
         for idx, item in enumerate(sftp_list):
-            logger.info('SFTP connection item %d: %s', idx, item)
+            logger.info('SFTP connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         sftp_created, sftp_updated = self.sftp_importer.sync_definitions(sftp_list, session)
 
@@ -394,7 +395,7 @@ class OutgoingSync:
 
         # Examine each SMB connection item
         for idx, item in enumerate(smb_list):
-            logger.info('SMB connection item %d: %s', idx, item)
+            logger.info('SMB connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         smb_created, smb_updated = self.smb_importer.sync_definitions(smb_list, session)
 
@@ -422,7 +423,7 @@ class OutgoingSync:
 
         # Examine each FTP connection item.
         for idx, item in enumerate(ftp_list):
-            logger.info('FTP connection item %d: %s', idx, item)
+            logger.info('FTP connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         ftp_created, ftp_updated = self.ftp_importer.sync_definitions(ftp_list, session)
 
@@ -447,7 +448,7 @@ class OutgoingSync:
 
         # Examine each MongoDB connection item
         for idx, item in enumerate(mongodb_list):
-            logger.info('MongoDB connection item %d: %s', idx, item)
+            logger.info('MongoDB connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         mongodb_created, mongodb_updated = self.mongodb_importer.sync_definitions(mongodb_list, session)
 
@@ -469,7 +470,7 @@ class OutgoingSync:
         logger.info(f'Processing {count} outgoing HL7 MLLP {noun}')
 
         for idx, item in enumerate(outgoing_mllp_list):
-            logger.info('Outgoing HL7 MLLP item %d: %s', idx, item)
+            logger.info('Outgoing HL7 MLLP item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         created, updated = self.outgoing_mllp_importer.sync_definitions(outgoing_mllp_list, session)
         self.outgoing_mllp_defs = self.outgoing_mllp_importer.connection_defs
@@ -491,7 +492,7 @@ class OutgoingSync:
         logger.info(f'Processing {count} outgoing HL7 FHIR {noun}')
 
         for idx, item in enumerate(outgoing_fhir_list):
-            logger.info('Outgoing HL7 FHIR item %d: %s', idx, item)
+            logger.info('Outgoing HL7 FHIR item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         created, updated = self.outgoing_fhir_importer.sync_definitions(outgoing_fhir_list, session)
         self.outgoing_fhir_defs = self.outgoing_fhir_importer.connection_defs
@@ -513,7 +514,7 @@ class OutgoingSync:
         logger.info(f'Processing {count} IBM MQ outgoing {noun}')
 
         for idx, item in enumerate(outgoing_ibm_mq_list):
-            logger.info('IBM MQ outgoing item %d: %s', idx, item)
+            logger.info('IBM MQ outgoing item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         created, updated = self.outgoing_ibm_mq_importer.sync_definitions(outgoing_ibm_mq_list, session)
         self.outgoing_ibm_mq_defs = self.outgoing_ibm_mq_importer.connection_defs
@@ -532,7 +533,7 @@ class OutgoingSync:
         logger.info(f'Processing {count} Kafka outgoing {noun}')
 
         for idx, item in enumerate(outgoing_kafka_list):
-            logger.info('Kafka outgoing item %d: %s', idx, item)
+            logger.info('Kafka outgoing item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         created, updated = self.outgoing_kafka_importer.sync_definitions(outgoing_kafka_list, session)
         self.outgoing_kafka_defs = self.outgoing_kafka_importer.connection_defs
@@ -551,7 +552,7 @@ class OutgoingSync:
         logger.info(f'Processing {count} GraphQL outgoing {noun}')
 
         for idx, item in enumerate(outgoing_graphql_list):
-            logger.info('GraphQL outgoing item %d: %s', idx, item)
+            logger.info('GraphQL outgoing item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         created, updated = self.outgoing_graphql_importer.sync_definitions(outgoing_graphql_list, session)
         self.outgoing_graphql_defs = self.outgoing_graphql_importer.connection_defs
@@ -570,7 +571,7 @@ class OutgoingSync:
         logger.info(f'Processing {count} gRPC outgoing {noun}')
 
         for idx, item in enumerate(outgoing_grpc_list):
-            logger.info('gRPC outgoing item %d: %s', idx, item)
+            logger.info('gRPC outgoing item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         created, updated = self.outgoing_grpc_importer.sync_definitions(outgoing_grpc_list, session)
         self.outgoing_grpc_defs = self.outgoing_grpc_importer.connection_defs
@@ -592,7 +593,7 @@ class OutgoingSync:
 
         # Examine each Microsoft 365 connection item
         for idx, item in enumerate(microsoft_cloud_list):
-            logger.info('Microsoft 365 connection item %d: %s', idx, item)
+            logger.info('Microsoft 365 connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         microsoft_cloud_created, microsoft_cloud_updated = self.microsoft_cloud_importer.sync_definitions(
             microsoft_cloud_list, session)
@@ -618,7 +619,7 @@ class OutgoingSync:
 
         # Examine each Microsoft Teams connection item
         for idx, item in enumerate(microsoft_teams_list):
-            logger.info('Microsoft Teams connection item %d: %s', idx, item)
+            logger.info('Microsoft Teams connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         microsoft_teams_created, microsoft_teams_updated = self.microsoft_teams_importer.sync_definitions(
             microsoft_teams_list, session)
@@ -644,7 +645,7 @@ class OutgoingSync:
 
         # Examine each Slack connection item
         for idx, item in enumerate(slack_list):
-            logger.info('Slack connection item %d: %s', idx, item)
+            logger.info('Slack connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         slack_created, slack_updated = self.slack_importer.sync_definitions(slack_list, session)
 
@@ -669,7 +670,7 @@ class OutgoingSync:
 
         # Examine each Microsoft Fabric connection item
         for idx, item in enumerate(microsoft_fabric_list):
-            logger.info('Microsoft Fabric connection item %d: %s', idx, item)
+            logger.info('Microsoft Fabric connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         created, updated = self.microsoft_fabric_importer.sync_definitions(microsoft_fabric_list, session)
 
@@ -694,7 +695,7 @@ class OutgoingSync:
 
         # Examine each Microsoft Power Automate connection item
         for idx, item in enumerate(microsoft_power_automate_list):
-            logger.info('Microsoft Power Automate connection item %d: %s', idx, item)
+            logger.info('Microsoft Power Automate connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         created, updated = self.microsoft_power_automate_importer.sync_definitions(microsoft_power_automate_list, session)
 
@@ -719,7 +720,7 @@ class OutgoingSync:
 
         # Examine each Elasticsearch connection item
         for idx, item in enumerate(es_list):
-            logger.info('Elasticsearch connection item %d: %s', idx, item)
+            logger.info('Elasticsearch connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         es_created, es_updated = self.es_importer.sync_definitions(es_list, session)
 

@@ -63,6 +63,7 @@ from zato.cli.enmasse.importers.pubsub_subscription import PubSubSubscriptionImp
 from zato.cli.enmasse.importers.channel_openapi import ChannelOpenAPIImporter
 from zato.cli.enmasse.importer.config import ConfigSync
 from zato.cli.enmasse.importer.outgoing import OutgoingSync
+from zato.cli.enmasse.util.secrets import Known_Secret_Keys, redact_secrets
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -393,7 +394,7 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
 
         # Process each group item
         for idx, item in enumerate(group_list):
-            logger.info('Group item %d: %s', idx, item)
+            logger.info('Group item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         processed_groups = self.group_importer.sync_groups(group_list, session)
 
@@ -472,7 +473,7 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
 
         # Examine each scheduler job item
         for idx, item in enumerate(job_list):
-            logger.info('Scheduler job item %d: %s', idx, item)
+            logger.info('Scheduler job item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         job_created, job_updated = self.scheduler_importer.sync_job_definitions(job_list, session)
 
@@ -521,7 +522,7 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         logger.info(f'Processing {count} HL7 MLLP channel {noun}')
 
         for idx, item in enumerate(channel_mllp_list):
-            logger.info('HL7 MLLP channel item %d: %s', idx, item)
+            logger.info('HL7 MLLP channel item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         created, updated = self.channel_mllp_importer.sync_definitions(channel_mllp_list, session)
         self.channel_mllp_defs = self.channel_mllp_importer.connection_defs
@@ -543,7 +544,7 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         logger.info(f'Processing {count} IBM MQ channel {noun}')
 
         for idx, item in enumerate(channel_ibm_mq_list):
-            logger.info('IBM MQ channel item %d: %s', idx, item)
+            logger.info('IBM MQ channel item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         created, updated = self.channel_ibm_mq_importer.sync_definitions(channel_ibm_mq_list, session)
         self.channel_ibm_mq_defs = self.channel_ibm_mq_importer.connection_defs
@@ -562,7 +563,7 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         logger.info(f'Processing {count} Kafka channel {noun}')
 
         for idx, item in enumerate(channel_kafka_list):
-            logger.info('Kafka channel item %d: %s', idx, item)
+            logger.info('Kafka channel item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         created, updated = self.channel_kafka_importer.sync_definitions(channel_kafka_list, session)
         self.channel_kafka_defs = self.channel_kafka_importer.connection_defs
@@ -581,7 +582,7 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         logger.info(f'Processing {count} MCP gateway {noun}')
 
         for idx, item in enumerate(gateway_mcp_list):
-            logger.info('MCP gateway item %d: %s', idx, item)
+            logger.info('MCP gateway item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         created, updated = self.gateway_mcp_importer.sync_definitions(gateway_mcp_list, session)
         self.gateway_mcp_defs = self.gateway_mcp_importer.connection_defs
@@ -600,7 +601,7 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         logger.info(f'Processing {count} Rule engine API {noun}')
 
         for idx, item in enumerate(rule_engine_api_list):
-            logger.info('Rule engine API item %d: %s', idx, item)
+            logger.info('Rule engine API item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         created, updated = self.rule_engine_api_importer.sync_definitions(rule_engine_api_list, session)
         self.rule_engine_api_defs = self.rule_engine_api_importer.connection_defs
@@ -622,7 +623,7 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
 
         # Examine each pubsub topic item
         for idx, item in enumerate(topic_list):
-            logger.info('Pubsub topic item %d: %s', idx, item)
+            logger.info('Pubsub topic item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         topic_created, topic_updated = self.pubsub_topic_importer.sync_pubsub_topic_definitions(topic_list, session)
 
@@ -646,7 +647,7 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
 
         # Examine each pubsub permission item
         for idx, item in enumerate(permission_list):
-            logger.info('Pubsub permission item %d: %s', idx, item)
+            logger.info('Pubsub permission item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         permission_created, permission_updated = self.pubsub_permission_importer.sync_pubsub_permission_definitions(permission_list, session)
 
@@ -670,7 +671,7 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
 
         # Examine each pubsub subscription item
         for idx, item in enumerate(subscription_list):
-            logger.info('Pubsub subscription item %d: %s', idx, item)
+            logger.info('Pubsub subscription item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
 
         subscription_created, subscription_updated = self.pubsub_subscription_importer.sync_pubsub_subscription_definitions(subscription_list, session)
 

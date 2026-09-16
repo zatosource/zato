@@ -33,6 +33,7 @@ from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.mongodb import MongoDBImporter
+from zato.cli.enmasse.util.secrets import decrypt_secret, is_encrypted
 from zato.common.api import GENERIC, MongoDB
 from zato.common.odb.model import GenericConn
 from zato.common.typing_ import cast_
@@ -75,11 +76,15 @@ class ModuleCtx:
 # ################################################################################################################################
 
 class _TestServer:
-    """ A minimal stand-in for ParallelServer - the wrapper only needs the decrypt method
-    and the test passwords are never encrypted, which is why they are returned as they are.
+    """ A minimal stand-in for ParallelServer - the wrapper only needs the decrypt method,
+    which decrypts through the same crypto manager the importer encrypted with.
     """
+    def __init__(self, session:'any_') -> 'None':
+        self.session = session
+
     def decrypt(self, value:'str') -> 'str':
-        return value
+        out = decrypt_secret(self.session, value)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -218,7 +223,7 @@ class TestEnmasseMongoDBFromYAML(TestCase):
             'is_tls_validation_enabled': True,
         })
 
-        wrapper = OutconnMongoDBWrapper(config, cast_('any_', _TestServer()))
+        wrapper = OutconnMongoDBWrapper(config, cast_('any_', _TestServer(self.session)))
 
         return wrapper
 
@@ -252,7 +257,8 @@ class TestEnmasseMongoDBFromYAML(TestCase):
             self.assertEqual(opaque.server_list, self.get_server_list())
             self.assertEqual(opaque.auth_source, MongoDB.Default.Auth_Source)
             self.assertEqual(instance.username, self.mongodb_server.username)
-            self.assertEqual(instance.secret, self.mongodb_server.password)
+            self.assertTrue(is_encrypted(instance.secret))
+            self.assertEqual(decrypt_secret(self.session, instance.secret), self.mongodb_server.password)
 
 # ################################################################################################################################
 

@@ -11,6 +11,7 @@ import logging
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
+from zato.cli.enmasse.util.secrets import encrypt_secret, ensure_encrypted, is_usable_secret
 from zato.common.api import AMQP, AMQP_Subtype
 from zato.common.crypto.api import CryptoManager
 from zato.common.json_internal import dumps
@@ -136,11 +137,13 @@ class ChannelAMQPImporter:
         channel.frame_max = _default_frame_max
         channel.heartbeat = _default_heartbeat
 
-        # Set the password if provided, otherwise generate one
+        # Set the password if provided, otherwise generate one, and store it encrypted either way
         if 'password' in channel_def:
-            channel.password = channel_def['password']
+            password = channel_def['password']
         else:
-            channel.password = CryptoManager.generate_password(to_str=True)
+            password = CryptoManager.generate_password(to_str=True)
+
+        channel.password = encrypt_secret(session, password)
 
         # The subtype, e.g. Azure Service Bus, is kept in the opaque attributes
         channel.opaque1 = dumps({'subtype': self.subtype_key})
@@ -166,16 +169,19 @@ class ChannelAMQPImporter:
         for key, value in channel_def.items():
 
             # .. skipping the fields that must not be set directly ..
-            if key in ('id', 'type', 'service'):
+            if key in ('id', 'type', 'service', 'password'):
                 continue
-
-            # .. the password is updated only if it was provided ..
-            if key == 'password':
-                if not value:
-                    continue
 
             # .. and everything else is set as-is.
             setattr(channel, key, value)
+
+        # The password is updated only if a usable one was given, otherwise the stored one is kept
+        # and encrypted in place if it is still in clear text.
+        password = channel_def.get('password')
+        if is_usable_secret(password):
+            channel.password = encrypt_secret(session, password)
+        else:
+            channel.password = ensure_encrypted(session, channel.password)
 
         # The subtype, e.g. Azure Service Bus, is kept in the opaque attributes
         channel.opaque1 = dumps({'subtype': self.subtype_key})
@@ -308,11 +314,13 @@ class OutgoingAMQPImporter:
         connection.frame_max = _default_frame_max
         connection.heartbeat = _default_heartbeat
 
-        # Set the password if provided, otherwise generate one
+        # Set the password if provided, otherwise generate one, and store it encrypted either way
         if 'password' in connection_def:
-            connection.password = connection_def['password']
+            password = connection_def['password']
         else:
-            connection.password = CryptoManager.generate_password(to_str=True)
+            password = CryptoManager.generate_password(to_str=True)
+
+        connection.password = encrypt_secret(session, password)
 
         # The subtype, e.g. Azure Service Bus, is kept in the opaque attributes
         connection.opaque1 = dumps({'subtype': self.subtype_key})
@@ -338,16 +346,19 @@ class OutgoingAMQPImporter:
         for key, value in connection_def.items():
 
             # .. skipping the fields that must not be set directly ..
-            if key in ('id', 'type', 'delivery_mode'):
+            if key in ('id', 'type', 'delivery_mode', 'password'):
                 continue
-
-            # .. the password is updated only if it was provided ..
-            if key == 'password':
-                if not value:
-                    continue
 
             # .. and everything else is set as-is.
             setattr(connection, key, value)
+
+        # The password is updated only if a usable one was given, otherwise the stored one is kept
+        # and encrypted in place if it is still in clear text.
+        password = connection_def.get('password')
+        if is_usable_secret(password):
+            connection.password = encrypt_secret(session, password)
+        else:
+            connection.password = ensure_encrypted(session, connection.password)
 
         # The subtype, e.g. Azure Service Bus, is kept in the opaque attributes
         connection.opaque1 = dumps({'subtype': self.subtype_key})

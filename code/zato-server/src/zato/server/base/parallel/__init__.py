@@ -2303,6 +2303,20 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
+    def get_sdk_secret_field_names(self, type_:'str') -> 'strdict':
+        """ Returns the names of the Secret fields an SDK connector type declares - an empty list
+        if the type is not a registered connector type. Invoked by enmasse, which has no access
+        to connector classes because they exist only inside a running server.
+        """
+        from zato.server.generic.api.outconn_sdk import get_secret_field_names
+
+        names = list(get_secret_field_names(self.config_manager, type_))
+
+        out = {'names': names}
+        return out
+
+# ################################################################################################################################
+
     def _import_demo_config_on_first_start(self) -> 'None':
 
         from zato.server.demo_config import import_demo_config_on_first_start

@@ -88,8 +88,10 @@ class OutgoingAS4Exporter:
             if opaque.get('validate_tls') is False:
                 exported_conn['validate_tls'] = False
 
-            # Every AS4 field with a value is exported under its own name.
+            # Every AS4 field with a value is exported under its own name, except the keystore secrets.
             for name in AS4.Common_Fields + AS4.Outgoing_Fields:
+                if name in AS4.Secret_Fields:
+                    continue
                 if value := opaque.get(name):
                     exported_conn[name] = value
 

@@ -25,6 +25,7 @@ from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.util import FileWriter
+from zato.cli.enmasse.util.secrets import Secret_Prefixes
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -133,6 +134,13 @@ class TestEnmasseCustomConnectorsExport(TestCase):
 
         self.assertEqual(billing_1['address'], 'https://billing.example.com')
         self.assertTrue(billing_1['is_sandbox'])
+
+        # No exported value carries an encryption prefix - encrypted material never leaves the database
+        for items in (exported['custom_crm'], exported['custom_billing']):
+            for item in items:
+                for value in item.values():
+                    if isinstance(value, str):
+                        self.assertFalse(value.startswith(Secret_Prefixes), f'Encrypted value exported: {value!r}')
 
 # ################################################################################################################################
 

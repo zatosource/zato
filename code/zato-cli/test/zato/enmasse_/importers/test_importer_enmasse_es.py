@@ -33,6 +33,7 @@ from es_server import start_es, stop_es
 from zato.cli.enmasse.client import get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.es import ElasticSearchImporter
+from zato.cli.enmasse.util.secrets import decrypt_secret
 from zato.common.api import ES, GENERIC
 from zato.common.odb.model import GenericConn
 from zato.common.typing_ import cast_
@@ -74,11 +75,15 @@ class ModuleCtx:
 # ################################################################################################################################
 
 class _TestServer:
-    """ A minimal stand-in for ParallelServer - the wrapper only needs the decrypt method
-    and the test passwords are never encrypted, which is why they are returned as they are.
+    """ A minimal stand-in for ParallelServer - the wrapper only needs the decrypt method,
+    which decrypts through the same crypto manager the importer encrypted with.
     """
+    def __init__(self, session:'any_') -> 'None':
+        self.session = session
+
     def decrypt(self, value:'str') -> 'str':
-        return value
+        out = decrypt_secret(self.session, value)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -213,7 +218,7 @@ class TestEnmasseElasticSearchFromYAML(TestCase):
             'tls_cert_key_file': '',
         })
 
-        wrapper = OutconnESWrapper(config, cast_('any_', _TestServer()))
+        wrapper = OutconnESWrapper(config, cast_('any_', _TestServer(self.session)))
 
         return wrapper
 

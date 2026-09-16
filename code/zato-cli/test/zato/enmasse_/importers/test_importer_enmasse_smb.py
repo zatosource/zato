@@ -27,6 +27,7 @@ from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.smb import SMBImporter
+from zato.cli.enmasse.util.secrets import decrypt_secret, is_encrypted
 from zato.common.api import FileTransfer, GENERIC, SchedulerLink
 from zato.common.odb.model import GenericConn, Job
 from zato.common.test.smb_ import SMBTestServer
@@ -175,7 +176,9 @@ class TestEnmasseSMBFromYAML(TestCase):
             'host': opaque.host,
             'port': instance.port,
             'username': instance.username,
-            'secret': instance.secret,
+
+            # The server decrypts the secret before a wrapper sees its config
+            'secret': decrypt_secret(self.session, instance.secret),
         })
 
         client = SMBClient(config, cast_('any_', None))
@@ -212,7 +215,8 @@ class TestEnmasseSMBFromYAML(TestCase):
             self.assertEqual(opaque.host, self.smb_server.host)
             self.assertEqual(instance.port, self.smb_server.port)
             self.assertEqual(instance.username, self.smb_server.username)
-            self.assertEqual(instance.secret, self.smb_server.password)
+            self.assertTrue(is_encrypted(instance.secret))
+            self.assertEqual(decrypt_secret(self.session, instance.secret), self.smb_server.password)
 
         # The first connection turned content storage on, the second one left it off by default
         ascii_instance = self.session.query(GenericConn).filter_by(

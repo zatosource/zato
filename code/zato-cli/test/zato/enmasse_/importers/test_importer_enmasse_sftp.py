@@ -27,6 +27,7 @@ from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.sftp import SFTPImporter
+from zato.cli.enmasse.util.secrets import decrypt_secret, is_encrypted
 from zato.common.api import FileTransfer, GENERIC, SchedulerLink
 from zato.common.odb.model import GenericConn, Job
 from zato.common.test.sftp_ import SFTPTestServer
@@ -179,13 +180,18 @@ class TestEnmasseSFTPFromYAML(TestCase):
         # The private key and host key checking mode live in the instance's opaque attributes
         opaque = parse_instance_opaque_attr(instance)
 
+        # The server decrypts the secret before a wrapper sees its config, and a key-based connection has none
+        secret = instance.secret
+        if secret is not None:
+            secret = decrypt_secret(self.session, secret)
+
         config = bunchify({
             'id': instance.id,
             'name': instance.name,
             'is_active': True,
             'address': instance.address,
             'username': instance.username,
-            'secret': instance.secret,
+            'secret': secret,
             'private_key': opaque.private_key,
             'strict_host_key_checking': opaque.strict_host_key_checking,
 
@@ -234,7 +240,8 @@ class TestEnmasseSFTPFromYAML(TestCase):
             type_=GENERIC.CONNECTION.TYPE.OUTCONN_SFTP
         ).one()
 
-        self.assertEqual(password_based.secret, self.sftp_server.password)
+        self.assertTrue(is_encrypted(password_based.secret))
+        self.assertEqual(decrypt_secret(self.session, password_based.secret), self.sftp_server.password)
 
 # ################################################################################################################################
 

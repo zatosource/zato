@@ -22,6 +22,7 @@ from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.outgoing_as4 import OutgoingAS4Importer
+from zato.cli.enmasse.util.secrets import decrypt_secret, is_encrypted
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
@@ -210,9 +211,13 @@ class TestEnmasseOutgoingAS4FromYAML(TestCase):
         outgoing = self.session.query(HTTPSOAP).filter_by(id=outgoing.id).one()
         opaque = loads(outgoing.opaque1)
 
-        # The updated fields carry their new values ..
+        # The updated fields carry their new values, the private key stored encrypted ..
         self.assertEqual(opaque['as4_action'], 'IE3F32')
-        self.assertEqual(opaque['as4_signing_key'], '-----BEGIN PRIVATE KEY-----\nrotated\n-----END PRIVATE KEY-----')
+        self.assertTrue(is_encrypted(opaque['as4_signing_key']))
+        self.assertEqual(
+            decrypt_secret(self.session, opaque['as4_signing_key']),
+            '-----BEGIN PRIVATE KEY-----\nrotated\n-----END PRIVATE KEY-----'
+        )
 
         # .. while the fields the update did not mention are preserved.
         self.assertEqual(opaque['as4_profile'], 'ics2')
