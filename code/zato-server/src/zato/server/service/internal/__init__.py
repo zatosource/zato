@@ -13,10 +13,12 @@ from copy import deepcopy
 from json import loads
 from traceback import format_exc
 # Zato
-from zato.common.api import SECRET_SHADOW, ZATO_NONE
+from zato.common.api import GENERIC, SECRET_SHADOW, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
+from zato.common.const import SECRETS
 from zato.common.ext_db.api import is_ext_object_id, to_local_id
 from zato.common.odb.model import Cluster
+from zato.common.typing_ import cast_
 from zato.common.util.api import get_response_value, make_cid_public
 from zato.common.util.sql import search as sql_search
 from zato.server.service import AsIs, Int, Service
@@ -34,6 +36,12 @@ logger = logging.getLogger('zato_admin')
 
 success_code = 0
 success = '<error_code>{}</error_code>'.format(success_code)
+
+# The keys a listing never carries - the raw opaque column is among them because its JSON may hold a token of its own.
+Listing_Secret_Keys = ('password', 'secret', 'static_token', GENERIC.ATTR_NAME)
+
+# A value starting with either of these is encrypted already and is stored as it is.
+Secret_Prefixes = (SECRETS.PREFIX, SECRETS.Encrypted_Indicator)
 
 # ################################################################################################################################
 
@@ -171,6 +179,44 @@ class AdminService(Service):
             result = search_func(session, cluster_id, *args)
 
         return result
+
+# ################################################################################################################################
+
+    def strip_listing_secrets(self, items:'anylist') -> 'anylist':
+        """ Removes every secret from the items of a listing and returns them as a list of dicts.
+        A listing never carries a secret, encrypted or not, because the browser must never receive it.
+        """
+        out:'anylist' = []
+
+        for item in items:
+
+            # A row straight from a query is converted to a dict first, the same way the payload does it ..
+            if hasattr(item, '_asdict'):
+                item = item._asdict()
+
+            # .. and the secrets are popped from what is a dict or a Bunch by now.
+            for key in Listing_Secret_Keys:
+                _ = item.pop(key, None)
+
+            out.append(item)
+
+        return out
+
+# ################################################################################################################################
+
+    def encrypt_input_secret(self, value:'str') -> 'str':
+        """ Returns the value encrypted for storage - an empty one, and one that is encrypted already, come back as they are.
+        """
+        if not value:
+            return value
+
+        if value.startswith(Secret_Prefixes):
+            return value
+
+        encrypted = self.server.encrypt(value)
+        out = cast_('str', encrypted)
+
+        return out
 
 # ################################################################################################################################
 

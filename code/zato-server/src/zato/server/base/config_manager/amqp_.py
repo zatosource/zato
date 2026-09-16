@@ -37,6 +37,7 @@ class AMQP(ConfigManagerImpl):
         self:'ConfigManager', # type: ignore
         msg:'Bunch',
     ) -> 'None':
+        msg.password = self.server.decrypt(msg.password)
         msg.is_active = True
         self.amqp_api.create(msg.name, msg, self.invoke, needs_start=True)
 
@@ -57,6 +58,7 @@ class AMQP(ConfigManagerImpl):
         self:'ConfigManager', # type: ignore
         msg:'Bunch',
     ) -> 'None':
+        msg.password = self.server.decrypt(msg.password)
         with self.update_lock:
             del self.amqp_out_name_to_def[msg.old_name]
             self.amqp_out_name_to_def[msg.name] = msg.name
@@ -88,6 +90,7 @@ class AMQP(ConfigManagerImpl):
         self:'ConfigManager', # type: ignore
         msg:'Bunch',
     ) -> 'None':
+        msg.password = self.server.decrypt(msg.password)
         with self.update_lock:
             self.amqp_api.edit_channel(msg.name, msg)
 

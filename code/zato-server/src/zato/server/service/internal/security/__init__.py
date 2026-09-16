@@ -94,7 +94,9 @@ class GetList(AdminService):
                         if not needs_internal:
                             continue
 
-                    self.response.payload.append(definition)
+                    # The row becomes a dict with no secret in it before it is appended
+                    stripped = self.strip_listing_secrets([definition])
+                    self.response.payload.append(stripped[0])
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -16,6 +16,10 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.amqp.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'address', 'username', 'password', 'queue', 'pool_size', 'service', 'prefetch_count']);
+
+    // A blank password on the edit form keeps the stored one
+    $.fn.zato.data_table.remove_field_required('#id_edit-password');
+
     var unique_constraints = [
         {field: 'name', entity_type: 'channel_amqp', attr_name: 'name'}
     ];
@@ -38,7 +42,8 @@ $.fn.zato.channel.amqp.get_field_descriptions = function() {
         'id_name': 'A unique name for this channel. Used to identify it in logs and the dashboard.',
         'id_address': 'Address of the broker as host:port, e.g. ' + config.address_example + '.',
         'id_username': 'Username the channel authenticates with when connecting to the broker.',
-        'id_password': 'Password for the username above. Sent to the broker during connection setup.',
+        'id_password': 'Password for the username above. Sent to the broker during connection setup. ' +
+            'When updating a channel, a blank field keeps the current password.',
         'id_queue': 'Queue to consume messages from. Each message taken off this queue invokes ' +
             'the service below.',
         'id_service': 'Service invoked for each message from the queue. ' +

@@ -68,7 +68,7 @@ class Index(_Index):
     paginate = True
 
     input_required = 'cluster_id',
-    output_required = 'id', 'name', 'is_active', 'address', 'username', 'password', 'queue', 'consumer_tag_prefix', 'service_name', \
+    output_required = 'id', 'name', 'is_active', 'address', 'username', 'queue', 'consumer_tag_prefix', 'service_name', \
         'pool_size', 'ack_mode', 'prefetch_count', 'data_format'
     output_repeated = True
 

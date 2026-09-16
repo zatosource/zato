@@ -43,6 +43,7 @@ from zato.common.odb.model import APIKeySecurity, GenericConn, HTTPBasicAuth, OA
 from zato.common.typing_ import cast_  # noqa: E402
 from zato.common.util.open_ import open_w  # noqa: E402
 from zato.common.util.tcp import get_free_port  # noqa: E402
+from zato.server.service.internal import Listing_Secret_Keys  # noqa: E402
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -135,6 +136,28 @@ class ModuleCtx:
         'zato.security.oauth.get-list',
     )
 
+    # The prefix of every object the listing test creates
+    Listing_Prefix = 'enmasse.listing.'
+
+    # The service every listing test object is bound to, where one is needed
+    Listing_Service = 'demo.ping'
+
+    # Every listing service that a definition with a password can appear in
+    Listing_Services = (
+        'zato.security.basic-auth.get-list',
+        'zato.security.apikey.get-list',
+        'zato.security.oauth.get-list',
+        'zato.security.ntlm.get-list',
+        'zato.security.wss.get-list',
+        'zato.security.get-list',
+        'zato.outgoing.sql.get-list',
+        'zato.email.smtp.get-list',
+        'zato.email.imap.get-list',
+        'zato.outgoing.odoo.get-list',
+        'zato.channel.amqp.get-list',
+        'zato.outgoing.amqp.get-list',
+    )
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -219,8 +242,8 @@ class EnmasseSecretRotationLiveTestCase(TestCase):
 # ################################################################################################################################
 
     def _assert_listing_hides(self, service_names:'tuple', request:'anydict', *secrets:'str') -> 'None':
-        """ Asserts that none of the listing services returns any of the secrets in clear text - a listing may carry
-        a password only in its encrypted form, the same way it does for rows the Dashboard created.
+        """ Asserts that none of the listing services returns any of the secrets, nor any key a secret is kept under -
+        a listing carries no password in any form, encrypted or not.
         """
         for service_name in service_names:
             response = self.client.invoke(service_name, request)
@@ -233,11 +256,26 @@ class EnmasseSecretRotationLiveTestCase(TestCase):
                 self.assertNotIn(secret, text, f'{service_name} returned a secret')
 
             for item in items:
-                for key in ('password', 'secret'):
-                    if key in item:
-                        value = item[key]
-                        if value is not None:
-                            self.assertTrue(value.startswith(Secret_Prefixes), f'{service_name} returned {key} in clear text')
+                for key in Listing_Secret_Keys:
+                    self.assertNotIn(key, item, f'{service_name} returned key `{key}`')
+
+# ################################################################################################################################
+
+    def _assert_no_secret_in(self, service_name:'str', value:'any_', passwords:'strlist') -> 'None':
+        """ Walks a response recursively - dicts, lists and strings - and fails on any trace of a secret in it.
+        """
+        if isinstance(value, dict):
+            for key, inner in value.items():
+                self.assertNotIn(key, Listing_Secret_Keys, f'{service_name} returned key `{key}`')
+                self._assert_no_secret_in(service_name, inner, passwords)
+
+        elif isinstance(value, list):
+            for inner in value:
+                self._assert_no_secret_in(service_name, inner, passwords)
+
+        elif isinstance(value, str):
+            self.assertFalse(value.startswith(Secret_Prefixes), f'{service_name} returned an encrypted value `{value}`')
+            self.assertNotIn(value, passwords, f'{service_name} returned a password in clear text')
 
 # ################################################################################################################################
 
@@ -465,6 +503,131 @@ class EnmasseSecretRotationLiveTestCase(TestCase):
         self.assertEqual(self._get(ModuleCtx.Group_Channel_Path, auth=auth_a), ModuleCtx.Status_Forbidden)
 
         self._assert_row_encrypted(HTTPBasicAuth, ModuleCtx.Basic_Auth_Name, 'password')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def _listing_yaml(self, passwords:'strlist') -> 'stranydict':
+        """ Builds one YAML with a definition of every type whose listing could show a password,
+        each with a distinct password appended to the list given.
+        """
+        prefix = ModuleCtx.Listing_Prefix
+
+        def _password() -> 'str':
+            out = 'enmasse-listing-' + CryptoManager.generate_hex_string()
+            passwords.append(out)
+            return out
+
+        # None of these hosts exists - the ports are free ones, so nothing listens on them
+        host = '127.0.0.1'
+        amqp_address = f'amqp://{host}:{get_free_port()}//'
+
+        out:'stranydict' = {
+            'security': [
+                {
+                    'name': prefix + 'basic_auth',
+                    'type': 'basic_auth',
+                    'username': prefix + 'basic_auth.user',
+                    'password': _password(),
+                },
+                {
+                    'name': prefix + 'apikey',
+                    'type': 'apikey',
+                    'header': ModuleCtx.API_Key_Header,
+                    'password': _password(),
+                },
+                {
+                    'name': prefix + 'ntlm',
+                    'type': 'ntlm',
+                    'username': prefix + 'ntlm.user',
+                    'password': _password(),
+                },
+                {
+                    'name': prefix + 'wss',
+                    'type': 'wss',
+                    'username': prefix + 'wss.user',
+                    'password': _password(),
+                    'mode': 'username_token',
+                    'use_digest': False,
+                },
+                {
+                    'name': prefix + 'bearer',
+                    'type': 'bearer_token',
+                    'is_static_token': True,
+                    'static_token': _password(),
+                },
+            ],
+            'sql': [{
+                'name': prefix + 'sql',
+                'type': 'mysql',
+                'host': host,
+                'port': get_free_port(),
+                'db_name': 'enmasse_listing',
+                'username': prefix + 'sql.user',
+                'password': _password(),
+            }],
+            'email_smtp': [{
+                'name': prefix + 'smtp',
+                'host': host,
+                'port': get_free_port(),
+                'username': prefix + 'smtp.user',
+                'password': _password(),
+            }],
+            'email_imap': [{
+                'name': prefix + 'imap',
+                'host': host,
+                'port': get_free_port(),
+                'username': prefix + 'imap.user',
+                'password': _password(),
+            }],
+            'odoo': [{
+                'name': prefix + 'odoo',
+                'host': host,
+                'port': get_free_port(),
+                'user': prefix + 'odoo.user',
+                'password': _password(),
+                'database': 'enmasse_listing',
+            }],
+            'channel_amqp': [{
+                'name': prefix + 'channel_amqp',
+                'is_active': False,
+                'address': amqp_address,
+                'username': prefix + 'channel_amqp.user',
+                'password': _password(),
+                'queue': prefix + 'queue',
+                'service': ModuleCtx.Listing_Service,
+            }],
+            'outgoing_amqp': [{
+                'name': prefix + 'outgoing_amqp',
+                'is_active': False,
+                'address': amqp_address,
+                'username': prefix + 'outgoing_amqp.user',
+                'password': _password(),
+            }],
+        }
+
+        return out
+
+# ################################################################################################################################
+
+    def test_listings_hide_secrets(self) -> 'None':
+        """ No listing service returns a password of any definition it lists, in any form.
+        """
+        passwords:'strlist' = []
+        self._import(self._listing_yaml(passwords))
+
+        request = {'cluster_id': self.client.cluster_id}
+
+        for service_name in ModuleCtx.Listing_Services:
+            response = self.client.invoke(service_name, request)
+            self.assertTrue(response.ok, f'{service_name} failed: {response.details}')
+
+            # Every definition the YAML created is expected in its listing, so a listing that is empty
+            # is a listing that did not see the import at all
+            items = cast_('anylist', response.data)
+            self.assertTrue(items, f'{service_name} returned no items')
+
+            self._assert_no_secret_in(service_name, items, passwords)
 
 # ################################################################################################################################
 # ################################################################################################################################
