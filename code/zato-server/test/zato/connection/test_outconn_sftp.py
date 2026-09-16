@@ -17,6 +17,7 @@ from zato.common.ext.bunch import Bunch, bunchify
 # Zato
 from zato.common.audit_log.api import AuditLog, ModuleCtx as AuditLogCtx
 from zato.common.crypto.api import CryptoManager
+from zato.common.file_transfer.api import Default_Verify_How
 from zato.common.test.sftp_ import SFTPTestServer
 from zato.common.typing_ import cast_
 from zato.common.util.tcp import get_free_port
@@ -68,6 +69,7 @@ class _TestWrapper:
     def __init__(self, client:'SFTPClient') -> 'None':
         self.client_object        = client
         self.should_store_content = False
+        self.verify_how           = Default_Verify_How
         self.audit_log            = AuditLog('test-outconn-sftp')
 
         self.config = Bunch()
