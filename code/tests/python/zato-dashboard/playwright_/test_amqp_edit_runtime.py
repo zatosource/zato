@@ -17,12 +17,15 @@ from zato.cli.enmasse.client import get_server_client
 from zato.common.api import AMQP
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import create_amqp_channel, create_outgoing_amqp, find_row_by_name, \
-    navigate_to_page, submit_edit_form
+    navigate_to_page, reveal_more_options, submit_edit_form
 from zato.common.test.rabbitmq_ import drain_queue, get_queue_depth, publish_to_exchange
 from zato.common.util.tcp import get_free_port
 
 # The broker fixture is resolved by pytest through this import
 from amqp_fixtures import rabbitmq_broker # noqa: F401 # pyright: ignore[reportUnusedImport]
+
+# Restarts the test server in place so the runtime is rebuilt from the ODB alone
+from server_restart import restart_server
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -178,6 +181,28 @@ def _rename(
     _open_edit_dialog(page, namespace, item_id)
 
     page.fill('#id_edit-name', new_name)
+    submit_edit_form(page, timeout)
+
+# ################################################################################################################################
+
+def _set_active(
+    page:'Page',
+    base_url:'str',
+    page_url:'str',
+    namespace:'str',
+    item_id:'str',
+    is_active:'bool',
+    timeout:'int',
+    ) -> 'None':
+    """ Reloads a page, opens the edit dialog of an item, sets its Active box and saves the form.
+    """
+    navigate_to_page(page, base_url, page_url)
+    _open_edit_dialog(page, namespace, item_id)
+
+    # The Active box sits among the collapsed options of the dialog
+    reveal_more_options(page, 'edit-div', '#id_edit-is_active')
+    page.set_checked('#id_edit-is_active', is_active)
+
     submit_edit_form(page, timeout)
 
 # ################################################################################################################################
@@ -378,6 +403,136 @@ class TestAMQPEditRuntime:
 
         messages = drain_queue(amqp_url, queue)
         assert messages == [payload], f'Expected exactly `{payload}` on the queue, got: {messages}'
+
+# ################################################################################################################################
+
+    def test_amqp_channel_inactive_flag(
+        self,
+        logged_in_page:'Page',
+        zato_dashboard:'anydict',
+        rabbitmq_broker:'anydict', # noqa: F811
+        ) -> 'None':
+        """ A channel created with its Active box unticked runs no consumers, ticking the box through an edit
+        attaches its whole pool, and unticking it again detaches every consumer.
+        """
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        amqp_url = rabbitmq_broker['amqp_url']
+        queue = rabbitmq_broker['queue']
+        address = _get_broker_address(rabbitmq_broker)
+
+        name = _Test_Name_Prefix + 'channel.inactive'
+
+        # Create the channel inactive ..
+        item_id = create_amqp_channel(
+            page, base_url, name, address, _Broker_Username, _Broker_Password, queue, _Channel_Service, is_active=False)
+
+        # .. nothing attaches to the queue ..
+        _assert_consumer_count_holds(amqp_url, queue, 0)
+
+        # .. activate it and the whole pool attaches ..
+        _set_active(
+            page, base_url, _Channel_AMQP_Page_Url, _Channel_AMQP_Namespace, item_id, True, _Channel_Change_Timeout)
+        _wait_for_consumer_count(amqp_url, queue, _Channel_Pool_Size)
+
+        # .. deactivate it and every consumer detaches ..
+        _set_active(
+            page, base_url, _Channel_AMQP_Page_Url, _Channel_AMQP_Namespace, item_id, False, _Channel_Change_Timeout)
+        _wait_for_consumer_count(amqp_url, queue, 0)
+        _assert_consumer_count_holds(amqp_url, queue, 0)
+
+        # .. and the inactive channel can be deleted.
+        _delete(page, base_url, _Channel_AMQP_Page_Url, _Channel_AMQP_Namespace, item_id, name, _Channel_Change_Timeout)
+
+# ################################################################################################################################
+
+    def test_outgoing_amqp_inactive_flag(
+        self,
+        logged_in_page:'Page',
+        zato_dashboard:'anydict',
+        rabbitmq_broker:'anydict', # noqa: F811
+        ) -> 'None':
+        """ An outgoing connection created with its Active box unticked refuses to publish,
+        and it publishes as soon as the box is ticked through an edit.
+        """
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        client = get_server_client(zato_dashboard['server_dir'])
+
+        amqp_url = rabbitmq_broker['amqp_url']
+        exchange = rabbitmq_broker['exchange']
+        routing_key = rabbitmq_broker['routing_key']
+        queue = rabbitmq_broker['queue']
+        address = _get_broker_address(rabbitmq_broker)
+
+        name = _Test_Name_Prefix + 'outconn.inactive'
+
+        # Create the connection inactive ..
+        item_id = create_outgoing_amqp(
+            page, base_url, name, address, _Broker_Username, _Broker_Password, is_active=False)
+
+        # .. a publish through it is refused ..
+        payload = 'inactive-payload-' + CryptoManager.generate_hex_string()
+        response = _publish(client, name, exchange, routing_key, payload)
+        assert not response.ok, f'Publish through the inactive `{name}` should have failed -> {response.data}'
+
+        # .. activate it ..
+        _set_active(
+            page, base_url, _Outgoing_AMQP_Page_Url, _Outgoing_AMQP_Namespace, item_id, True, _Outconn_Change_Timeout)
+
+        # .. drain anything left on the fixture queue ..
+        _ = drain_queue(amqp_url, queue, timeout=1)
+
+        # .. the same publish now lands on the queue ..
+        response = _publish(client, name, exchange, routing_key, payload)
+        assert response.ok, f'Publish through `{name}` failed after it was activated -> {response.details}'
+
+        messages = drain_queue(amqp_url, queue)
+        assert messages == [payload], f'Expected exactly `{payload}` on the queue, got: {messages}'
+
+        # .. and the connection can be deleted.
+        _delete(
+            page, base_url, _Outgoing_AMQP_Page_Url, _Outgoing_AMQP_Namespace, item_id, name, _Outconn_Change_Timeout)
+
+# ################################################################################################################################
+
+    def test_inactive_channel_survives_restart(
+        self,
+        logged_in_page:'Page',
+        zato_dashboard:'anydict',
+        rabbitmq_broker:'anydict', # noqa: F811
+        ) -> 'None':
+        """ An inactive channel is rebuilt from the ODB at startup without a consumer and without a warning,
+        and ticking its Active box after the restart attaches its whole pool.
+        """
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        amqp_url = rabbitmq_broker['amqp_url']
+        queue = rabbitmq_broker['queue']
+        address = _get_broker_address(rabbitmq_broker)
+
+        name = _Test_Name_Prefix + 'channel.inactive.restart'
+
+        # Create the channel inactive ..
+        item_id = create_amqp_channel(
+            page, base_url, name, address, _Broker_Username, _Broker_Password, queue, _Channel_Service, is_active=False)
+
+        # .. restart the server so the channel comes back from the ODB alone ..
+        restart_server(zato_dashboard)
+
+        # .. still nothing attaches to the queue ..
+        _assert_consumer_count_holds(amqp_url, queue, 0)
+
+        # .. activating it after the restart attaches the whole pool ..
+        _set_active(
+            page, base_url, _Channel_AMQP_Page_Url, _Channel_AMQP_Namespace, item_id, True, _Channel_Change_Timeout)
+        _wait_for_consumer_count(amqp_url, queue, _Channel_Pool_Size)
+
+        # .. and its deletion detaches every consumer.
+        _delete(page, base_url, _Channel_AMQP_Page_Url, _Channel_AMQP_Namespace, item_id, name, _Channel_Change_Timeout)
+        _wait_for_consumer_count(amqp_url, queue, 0)
 
 # ################################################################################################################################
 # ################################################################################################################################

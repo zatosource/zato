@@ -328,10 +328,11 @@ health-clean: ## Clean health build artifacts and zato-libs entries.
 # ############################################################################
 
 qa-reqs-install: rust-lint-tools-install
-	$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python -r $(CURDIR)/code/qa-requirements.txt
-	npx --yes playwright install chromium
-	mkdir -p $(CURDIR)/code/eggs/requests/ || true
-	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
+	$(CURDIR)/code/support-linux/bin/uv pip install --python $(ZATO_PY) -r $(CURDIR)/code/qa-requirements.txt
+# The runtime pins come last so anything the QA install had to move is put back
+	$(CURDIR)/code/support-linux/bin/uv pip install --python $(ZATO_PY) -r $(CURDIR)/code/requirements.txt
+	cp -r $(CURDIR)/code/patches/. $(SITE_PACKAGES)/
+	$(ZATO_PY) -m playwright install chromium
 	sudo snap install k6
 
 rust-lint-tools-install: ## Install the cargo subcommands the Rust lint pipeline needs - dylint, deny, vet and geiger.

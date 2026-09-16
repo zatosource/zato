@@ -8,6 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import annotations
 
+# stdlib
+from logging import getLogger
+from traceback import format_exc
+
 # Zato
 from zato.common.audit_log.common import AuditBody, AuditEvent, AuditOutcome, AuditSource
 from zato.common.json_internal import dumps
@@ -25,6 +29,8 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # The request context key under which a service invoking another one leaves its own name.
 Invoking_Service_Key = 'zato.request_ctx.invoking_service'
@@ -122,16 +128,20 @@ def record_service_request(
     attrs  = {Attribute_Channel: channel}
     bodies = {AuditBody.Request: request_text}
 
-    _ = audit_log.insert(
-        AuditSource.Service,
-        AuditEvent.Service_Request,
-        service_name,
-        cid=cid,
-        endpoint=caller,
-        size=request_size,
-        attrs=attrs,
-        bodies=bodies,
-    )
+    # A refused audit write drops this one event with a logged warning, the service runs regardless.
+    try:
+        _ = audit_log.insert(
+            AuditSource.Service,
+            AuditEvent.Service_Request,
+            service_name,
+            cid=cid,
+            endpoint=caller,
+            size=request_size,
+            attrs=attrs,
+            bodies=bodies,
+        )
+    except Exception:
+        logger.warning('Audit event dropped for service `%s`:\n%s', service_name, format_exc())
 
 # ################################################################################################################################
 
@@ -161,19 +171,23 @@ def record_service_response(
         outcome = AuditOutcome.OK
         status = _empty
 
-    _ = audit_log.insert(
-        AuditSource.Service,
-        AuditEvent.Service_Response,
-        service_name,
-        cid=cid,
-        endpoint=caller,
-        size=response_size,
-        outcome=outcome,
-        status=status,
-        duration_ms=duration_milliseconds,
-        attrs=attrs,
-        bodies=bodies,
-    )
+    # A refused audit write drops this one event with a logged warning, the response goes out regardless.
+    try:
+        _ = audit_log.insert(
+            AuditSource.Service,
+            AuditEvent.Service_Response,
+            service_name,
+            cid=cid,
+            endpoint=caller,
+            size=response_size,
+            outcome=outcome,
+            status=status,
+            duration_ms=duration_milliseconds,
+            attrs=attrs,
+            bodies=bodies,
+        )
+    except Exception:
+        logger.warning('Audit event dropped for service `%s`:\n%s', service_name, format_exc())
 
 # ################################################################################################################################
 # ################################################################################################################################
