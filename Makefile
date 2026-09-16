@@ -8,19 +8,19 @@
 	analytics update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
-	test-server test-rest test-rest-core test-rest-mutation test-scheduler test-rate-limiting test-enmasse test-cli \
+	test-server test-rest test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-core test-pubsub-backend test-pubsub-backend-amqp test-pubsub-outgoing \
 	test-pubsub-backend-perf test-pubsub-backend-amqp-perf test-pubsub-backend-perf-mass test-pubsub-system-perf \
-	test-mcp _test-mcp test-mcp-local-docker test-bearer _test-bearer test-graphql test-grpc \
+	test-mcp test-bearer test-graphql test-grpc \
 	test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap \
 	test-llm test-llm-core test-llm-live test-llm-ui test-llm-local-docker \
-	test-sql test-sql-cloud test-sql-cloud-live test-oracle-db test-aws test-sdk test-microsoft-cloud test-salesforce _test-salesforce \
+	test-sql test-oracle-db test-aws test-sdk test-microsoft-cloud test-salesforce \
 	test-hl7 test-hl7-core test-hl7-fhir test-hl7-mllp-channels test-hl7-mllp-outconns test-hl7-languages test-hl7-volume \
-	test-ui test-ui-playwright test-ui-web-admin test-ui-pubsub test-ui-openapi test-ui-analytics test-ui-audit-log \
+	test-ui test-ui-pubsub test-ui-openapi test-ui-analytics test-ui-audit-log \
 	test-ui-webapp test-ui-rule-engine-dashboard \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
-	test-audit-log test-rest-outgoing-audit test-alerting test-destinations test-analytics test-demo-seed test-logging \
-	test-ibm-mq test-kafka _test-kafka test-mongodb test-mongodb-live test-mongodb-simulated test-es test-ftp \
+	test-audit-log test-alerting test-destinations test-analytics test-demo-seed test-logging \
+	test-ibm-mq test-kafka test-mongodb test-mongodb-live test-mongodb-simulated test-es test-ftp \
 	test-rule-engine test-rule-engine-core test-rule-engine-perf test-rule-engine-jobs \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
 	test-all test test-all-reset test-clean-test-all test-perf \
@@ -62,6 +62,12 @@ RUFF := $(CURDIR)/code/bin/ruff
 PYRIGHT := $(CURDIR)/code/bin/pyright
 
 TS := ts '%Y-%m-%d %H:%M:%S'
+
+# What a test target's recipe lines end with - the output timestamped on the console and
+# appended to /tmp/logs-<target name>.txt, which Zato_Log_Reset on the first line truncates.
+# Written as a line suffix rather than a wrapper target so that a target stays one target.
+Zato_Log       = 2>&1 | $(TS) | tee -a /tmp/logs-$@.txt
+Zato_Log_Reset = rm -f /tmp/logs-$@.txt
 
 Zato_Test_Python := $(ZATO_PY)
 include $(CURDIR)/code/tests/check.mk
@@ -494,23 +500,24 @@ test-server: ## Server unit and integration tests.
 		$(FAIL_FAST) $(PYTEST_ARGS)
 	$(MAKE) -C $(CURDIR)/code/zato-server fuzzy timeout=$(timeout)
 
-test-rest: ## Every REST target - the umbrella, nothing is run here directly.
-	$(MAKE) test-rest-core test-rest-mutation test-rest-outgoing-audit 2>&1 | tee /tmp/logs-test-rest.txt
-
-test-rest-core: ## REST channel and outgoing connection unit tests.
+test-rest: ## Every REST test - the channel unit suites, the outgoing audit log and mutation testing.
+	$(Zato_Log_Reset)
+	$(RUFF) check $(CURDIR)/code/tests/python/zato-server/rest_outgoing_audit/ $(Zato_Log)
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/http_soap/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS)
-
-test-rest-mutation: ## REST mutation testing - the unit suite run once per mutant of the channel module.
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/rest_outgoing_audit/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_outgoing_audit -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	rm -f $(COSMIC_RAY_SESSION)
 	@echo ">>> cosmic-ray init - finding the mutants of $(notdir $(COSMIC_RAY_CONFIG))"
-	$(COSMIC_RAY) init $(COSMIC_RAY_CONFIG) $(COSMIC_RAY_SESSION)
+	$(COSMIC_RAY) init $(COSMIC_RAY_CONFIG) $(COSMIC_RAY_SESSION) $(Zato_Log)
 	@echo ">>> cosmic-ray baseline - the suite once with nothing mutated"
-	$(COSMIC_RAY) baseline $(COSMIC_RAY_CONFIG)
+	$(COSMIC_RAY) baseline $(COSMIC_RAY_CONFIG) $(Zato_Log)
 	@echo ">>> cosmic-ray exec - the suite once per mutant, progress every 10s"
-	$(ZATO_PY) $(COSMIC_RAY_EXEC) $(COSMIC_RAY) $(COSMIC_RAY_CONFIG) $(COSMIC_RAY_SESSION)
+	$(ZATO_PY) $(COSMIC_RAY_EXEC) $(COSMIC_RAY) $(COSMIC_RAY_CONFIG) $(COSMIC_RAY_SESSION) $(Zato_Log)
 	@$(ZATO_PY) -c "\
 	import sqlite3; \
 	conn = sqlite3.connect('$(COSMIC_RAY_SESSION)'); \
@@ -522,7 +529,7 @@ test-rest-mutation: ## REST mutation testing - the unit suite run once per mutan
 	total = killed + survived; \
 	print(f'Killed: {killed}/{total} ({killed/total*100:.1f}%)') if total else print('No results'); \
 	print(f'Survived: {survived}/{total}') if survived else None; \
-	"
+	" $(Zato_Log)
 
 test-scheduler: ## All scheduler tests.
 	$(MAKE) scheduler-build
@@ -773,24 +780,26 @@ test-cli: ## CLI tests.
 		$(FAIL_FAST) $(PYTEST_ARGS)
 	$(MAKE) -C $(CURDIR)/code/zato-cli test
 
-test-mcp: ## All MCP tests.
-	$(MAKE) _test-mcp 2>&1 | tee /tmp/logs-test-mcp.txt
-
-_test-mcp:
+test-mcp: ## Every MCP test - the offline suites, the browser lifecycle, a real LLM and the local container.
+	$(Zato_Log_Reset)
 	$(RUFF) check \
 		$(CURDIR)/code/tests/python/zato-server/mcp/ \
 		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
-		2>&1 | $(TS)
+		$(CURDIR)/code/tests/python/zato-server/mcp_llm_live/ \
+		$(CURDIR)/code/tests/python/zato-server/mcp_local_docker/ \
+		$(Zato_Log)
 	$(PYRIGHT) \
 		$(CURDIR)/code/tests/python/zato-server/mcp/ \
 		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
-		2>&1 | $(TS)
+		$(CURDIR)/code/tests/python/zato-server/mcp_llm_live/ \
+		$(CURDIR)/code/tests/python/zato-server/mcp_local_docker/ \
+		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/mcp/ \
 		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
+		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_gateway_create.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_wizard.py \
@@ -799,54 +808,38 @@ _test-mcp:
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_mcp_gateway.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-server/mcp_llm_live/ \
-		2>&1 | $(TS)
-	$(PYRIGHT) \
-		$(CURDIR)/code/tests/python/zato-server/mcp_llm_live/ \
-		2>&1 | $(TS)
+		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/mcp_llm_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp_llm -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
-	$(MAKE) test-mcp-local-docker
-
-test-mcp-local-docker: ## MCP gateway test against the local zato-4.1 container, skips when the container is absent.
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-server/mcp_local_docker/ \
-		2>&1 | $(TS)
-	$(PYRIGHT) \
-		$(CURDIR)/code/tests/python/zato-server/mcp_local_docker/ \
-		2>&1 | $(TS)
+		$(Zato_Log)
+# Skips on its own when the local zato-4.1 container is not there
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/mcp_local_docker/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp_local_docker -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
+		$(Zato_Log)
 
 llm-console: ## Browser console for the local LLM - starts Ollama, the model and Open WebUI.
 	$(ZATO_PY) -u $(CURDIR)/code/tests/python/zato-server/mcp_llm_live/console.py
 
 test-bearer: ## Inbound bearer token live tests.
-	$(MAKE) _test-bearer 2>&1 | tee /tmp/logs-test-bearer.txt
-
-_test-bearer:
+	$(Zato_Log_Reset)
 	$(RUFF) check \
 		$(CURDIR)/code/tests/python/zato-server/security/ \
 		$(CURDIR)/code/tests/python/zato-server/bearer_inbound_live/ \
-		2>&1 | $(TS)
+		$(Zato_Log)
 	$(PYRIGHT) \
 		$(CURDIR)/code/tests/python/zato-server/security/ \
 		$(CURDIR)/code/tests/python/zato-server/bearer_inbound_live/ \
-		2>&1 | $(TS)
+		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/security/ \
 		$(CURDIR)/code/tests/python/zato-server/bearer_inbound_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_bearer -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
+		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_crud.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_groups.py \
@@ -854,7 +847,7 @@ _test-bearer:
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_mcp_gateway.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
+		$(Zato_Log)
 
 test-graphql: ## GraphQL live tests.
 	$(ZATO_PY) -m pytest \
@@ -960,14 +953,16 @@ test-llm-local-docker: ## Outgoing LLM test against the local zato-4.1 container
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		2>&1 | $(TS)
 
-test-sql: ## Every SQL target - the umbrella, nothing is run here directly.
-	$(MAKE) test-sql-cloud test-sql-cloud-live 2>&1 | tee /tmp/logs-test-sql.txt
-
-test-sql-cloud: ## Snowflake and Redshift SQL tests against local protocol simulators - fully offline.
+test-sql: ## Every SQL test - Snowflake and Redshift against local protocol simulators, offline and through a live Zato server.
+	$(Zato_Log_Reset)
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/sql_cloud/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sql_cloud -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS)
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/sql_cloud_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sql_cloud_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-aws: ## AWS connection tests through a live Zato server against a simulated AWS environment.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -979,12 +974,6 @@ test-sdk: ## Connector SDK tests through a live Zato server against a suite-owne
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/sdk_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sdk_live -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS)
-
-test-sql-cloud-live: ## Snowflake and Redshift tests through a live Zato server against local protocol simulators.
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/sql_cloud_live/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sql_cloud_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-oracle-db: ## Outgoing Oracle DB connection tests against a live Oracle container, including a live Zato server and concurrent queries from greenlets.
@@ -1000,25 +989,23 @@ test-microsoft-cloud: ## Microsoft 365 connection tests through a live Zato serv
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-salesforce: ## Salesforce connection tests - a live Zato server against a simulated instance, and the Dashboard lifecycle.
-	$(MAKE) _test-salesforce 2>&1 | tee /tmp/logs-test-salesforce.txt
-
-_test-salesforce:
+	$(Zato_Log_Reset)
 	$(RUFF) check \
 		$(CURDIR)/code/tests/python/zato-server/salesforce_live/ \
-		2>&1 | $(TS)
+		$(Zato_Log)
 	$(PYRIGHT) \
 		$(CURDIR)/code/tests/python/zato-server/salesforce_live/ \
-		2>&1 | $(TS)
+		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/salesforce_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_salesforce_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
+		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_cloud_salesforce_lifecycle.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
+		$(Zato_Log)
 
 test-hl7: ## Every HL7 target - the umbrella, nothing is run here directly.
 	$(MAKE) test-hl7-core test-hl7-fhir test-hl7-mllp-channels test-hl7-mllp-outconns \
@@ -1084,12 +1071,19 @@ test-hl7-fhir: ## HL7 to FHIR conversion tests - fully offline, proven against d
 # The whole of playwright_/ is one run - test-ui-openapi, test-ui-pubsub and test-ui-analytics
 # are slices of that same directory, kept as separate targets for day to day work only, which
 # is why the umbrella below does not name them - test-ui-playwright already covers every one
-test-ui: ## Every dashboard target - the umbrella, nothing is run here directly.
-	$(MAKE) test-ui-playwright test-ui-web-admin test-ui-webapp test-ui-rule-engine-dashboard \
-		test-ui-audit-log 2>&1 | tee /tmp/logs-test-ui.txt
-
-test-ui-web-admin: ## Web-admin access checks.
-	$(MAKE) -C $(CURDIR)/code/zato-web-admin test
+test-ui: ## Every dashboard test - the UI kit, the rule engine screens, the audit log, the whole Playwright suite and the web-admin access checks.
+	$(Zato_Log_Reset)
+	$(MAKE) test-ui-webapp test-ui-rule-engine-dashboard test-ui-audit-log $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log); \
+	status=$$?; \
+	if [ $$status -eq 3 ]; then \
+		echo "pytest exited with code 3 (internal error) - the test run itself broke, this is not an ordinary test failure, look for INTERNALERROR lines above"; \
+	fi; \
+	exit $$status
+	$(MAKE) -C $(CURDIR)/code/zato-web-admin test $(Zato_Log)
 
 test-ui-openapi:
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1141,17 +1135,6 @@ test-ui-pubsub:
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-ui-playwright: ## The whole Playwright suite in one run.
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright \
-		$(FAIL_FAST) $(PYTEST_ARGS) 2>&1; \
-	status=$$?; \
-	if [ $$status -eq 3 ]; then \
-		echo "pytest exited with code 3 (internal error) - the test run itself broke, this is not an ordinary test failure, look for INTERNALERROR lines above"; \
-	fi; \
-	exit $$status
-
 test-ibm-mq: ## IBM MQ queue bridge tests against a live queue manager, plain and TLS.
 	$(RUFF) check $(CURDIR)/code/tests/python/zato-server/ibm_mq/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1160,19 +1143,19 @@ test-ibm-mq: ## IBM MQ queue bridge tests against a live queue manager, plain an
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-kafka: ## Kafka end-to-end tests against a live broker in Docker, driven through the Dashboard.
-	$(MAKE) _test-kafka 2>&1 | tee /tmp/logs-test-kafka.txt
-
-_test-kafka:
+	$(Zato_Log_Reset)
 	$(RUFF) check \
 		$(CURDIR)/code/tests/python/zato-common/lib/live_kafka/ \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/lib/kafka_channel.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/lib/kafka_outconn.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/fixtures/services/kafka_test_services.py \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_kafka_end_to_end.py
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_kafka_end_to_end.py \
+		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_kafka_end_to_end.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_kafka \
-		$(FAIL_FAST) $(PYTEST_ARGS)
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
 
 test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, plain and TLS, plus live Redis tests.
 	$(RUFF) check $(CURDIR)/code/tests/python/zato-common/audit_log/
@@ -1184,13 +1167,6 @@ test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, pl
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/audit_log/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_log \
-		$(FAIL_FAST) $(PYTEST_ARGS)
-
-test-rest-outgoing-audit: ## Outgoing REST and SOAP audit log tests - what a call and what a health check each write, fully offline.
-	$(RUFF) check $(CURDIR)/code/tests/python/zato-server/rest_outgoing_audit/
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/rest_outgoing_audit/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_outgoing_audit -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-alerting: ## Alerting engine tests - rules, actions, dedup, lifecycle and collectors, fully offline.
@@ -1427,41 +1403,40 @@ test-request-response: ## Unified service I/O tests - messages, request.raw, req
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 # Every test target, ordered from the cheapest to the most expensive. Only leaves are listed -
-# the umbrellas test-hl7, test-rest, test-rule-engine, test-llm, test-ui, test-sql, test-pubsub and
-# test-mongodb, and the slices test-ui-pubsub, test-ui-openapi and test-ui-analytics, are aggregates
-# or parts of what the leaves below already cover, so naming them here as well would run the same
-# tests two or three times over. Prerequisites, not recursive make calls, so that a target reached
-# twice - test-ui-webapp, which test-ui-rule-engine-dashboard also needs - runs once.
+# the umbrellas test-hl7, test-rule-engine, test-llm, test-pubsub and test-mongodb, and the slices
+# test-ui-pubsub, test-ui-openapi and test-ui-analytics, are aggregates or parts of what the leaves
+# below already cover, so naming them here as well would run the same tests two or three times over.
+# Prerequisites, not recursive make calls, so that a target reached twice - test-ui-webapp, which
+# test-ui-rule-engine-dashboard also needs - runs once.
 
 # Static analysis, nothing is executed
 Zato_Test_Static := test-lint
 
-# Offline unit suites, no server, no container, no browser. test-ui-webapp is missing on purpose,
-# test-ui-rule-engine-dashboard has it as a prerequisite and would otherwise run it a second time.
+# Offline unit suites, no server, no container, no browser
 Zato_Test_Offline := \
-	test-message-filters test-demo-seed test-sql-cloud test-truncate test-safeguards \
+	test-message-filters test-demo-seed test-truncate test-safeguards \
 	test-edifact test-rule-engine-jobs test-alerting test-x12 test-request-response test-destinations \
-	test-as4 test-soap test-as2 test-rule-engine-core test-hl7-fhir test-llm-core test-rest-core \
-	test-rest-outgoing-audit test-mongodb-simulated
+	test-as4 test-soap test-as2 test-rule-engine-core test-hl7-fhir test-llm-core test-mongodb-simulated
 
 # Rust toolchain suites and the database matrices
 Zato_Test_Toolchain := \
 	test-distlock test-common test-rate-limiting test-cli test-scheduler \
-	test-ui-rule-engine-dashboard test-audit-log test-analytics test-ui-audit-log
+	test-audit-log test-analytics
 
 # Suites needing a live server or an external service
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub-backend test-mongodb-live test-es \
-	test-sql-cloud-live test-oracle-db test-microsoft-cloud test-salesforce test-bearer test-pubsub-backend-amqp test-as2-live \
+	test-sql test-oracle-db test-microsoft-cloud test-salesforce test-bearer test-pubsub-backend-amqp test-as2-live \
 	test-as2-interop test-ibm-mq test-kafka test-sdk test-hl7-languages test-pubsub-outgoing \
 	test-hl7-mllp-outconns test-pubsub-core test-hl7-core test-hl7-mllp-channels \
 	test-llm-live test-llm-local-docker test-enmasse
 
-# The browser suite end to end
-Zato_Test_Browser := test-ui-playwright test-ui-web-admin
+# The browser suite end to end, which also brings in the UI kit, the rule engine screens
+# and the audit log matrix - all three run inside test-ui, so none is listed on its own
+Zato_Test_Browser := test-ui
 
-# Mutation and fuzzing, the longest of all
-Zato_Test_Heavy := test-rest-mutation test-server
+# Mutation and fuzzing, the longest of all. test-rest carries the cosmic-ray run
+Zato_Test_Heavy := test-rest test-server
 
 # Throughput and load suites, left out of test-all because their floors depend on
 # what else the machine is doing - run them on their own with make test-perf
