@@ -52,9 +52,10 @@ class TestWhatTheSenderIsAnswered:
 
 # ################################################################################################################################
 
-    def test_a_channel_that_could_not_deliver_answers_with_an_application_error(self) -> 'None':
+    def test_a_channel_that_could_not_deliver_answers_with_a_transient_failure(self) -> 'None':
         """ A destination the channel replies from failing raises out of the fan-out, which is
-        what the listener's own try/except turns into the negative acknowledgment.
+        what the listener's own try/except turns into the negative acknowledgment - AR, since the
+        message itself was fine and only its delivery was not, AE is reserved for HL7ApplicationError.
         """
 
         def callback(data:'any_', cid:'str') -> 'None':
@@ -65,7 +66,7 @@ class TestWhatTheSenderIsAnswered:
         replies = handle_one_message(route)
 
         assert len(replies) == 1
-        assert 'MSA|AE|' in replies[0]
+        assert 'MSA|AR|' in replies[0]
 
 # ################################################################################################################################
 
@@ -147,7 +148,7 @@ class TestWhatTheSenderIsAnswered:
 
         replies = handle_one_message(route)
 
-        assert 'MSA|AE|' in replies[0]
+        assert 'MSA|AR|' in replies[0]
         assert 'Connection refused' not in replies[0]
 
 # ################################################################################################################################
