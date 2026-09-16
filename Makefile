@@ -755,7 +755,7 @@ test-enmasse: ## Enmasse round-trip tests.
 
 test-enmasse-secrets-live: ## Enmasse secret rotation tests against live external services.
 	Zato_Test_Live_SQL=1 Zato_Test_FTP=1 Zato_Test_SFTP=1 Zato_Test_SMB=1 Zato_Test_MongoDB=1 \
-		$(ZATO_PY) -m unittest $(CURDIR)/code/zato-cli/test/zato/enmasse_/test_secret_rotation_live.py -v
+		$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_secret_rotation_live.py' -v
 
 test-cli: ## CLI tests.
 	$(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-cli/test_odb_sqlite_default.py \
