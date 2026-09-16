@@ -32,12 +32,17 @@ _adt_a01_with_lf = (
     'PV1|1|I|ICU^101^A\n'
 )
 
-# A message whose MSH-9 names a message type no structure is known for - there is nothing
-# to build it into, so the parser refuses it however tolerantly it is asked to read
+# A message whose MSH-9 names a message type no structure is known for - a channel parses
+# without validation, so there is no structure to build it into and its segments come back
+# as they arrived
 _unknown_message_type = (
     'MSH|^~\\&|HIS|GENERAL_HOSPITAL|LAB_SYSTEM|CENTRAL_LAB|20260115103000||ZZZ^Q99|MSG000003|P|2.9\r'
     'PID|1||NHS7788990^^^NHS^NH||SMITH^JOHN^A||19850315|M\r'
 )
+
+# A header cut short of the encoding characters - there is nothing to read the payload's
+# delimiters from, so no amount of tolerance makes segments out of it
+_msh_without_delimiters = 'MSH'
 
 # A batch payload - a channel hands these to the service as raw text, unparsed
 _batch = (
@@ -72,10 +77,19 @@ class TestParseWithChannelDefaults:
         assert out.startswith('BHS|')
         assert 'MSG000002' in out
 
+    def test_an_unknown_message_type_parses_as_raw_segments(self) -> 'None':
+
+        out = parse_with_channel_defaults(_unknown_message_type)
+        message = cast_('HL7Message', out)
+
+        assert message.get('MSH.9') == 'ZZZ'
+        assert message.get('MSH.10') == 'MSG000003'
+        assert message.get('PID.8') == 'M'
+
     def test_a_payload_that_does_not_parse_raises(self) -> 'None':
 
-        with pytest.raises(Exception):
-            _ = parse_with_channel_defaults(_unknown_message_type)
+        with pytest.raises(ValueError):
+            _ = parse_with_channel_defaults(_msh_without_delimiters)
 
     def test_segments_without_a_header_come_back_as_a_fragment(self) -> 'None':
 

@@ -761,10 +761,9 @@ test-pubsub-backend-perf-mass: ## Pub/sub SQL backend mass-recovery test at full
 # Every enmasse suite lives here - the importers, the exporters and the round trips for
 # every connection type. Targets for a given connection type do not carry enmasse tests
 # of their own, discovery below already covers them and running them twice proves nothing.
-test-enmasse: ## Enmasse tests - every importer, every exporter and the round trips.
+test-enmasse: ## Enmasse tests - every importer, every exporter, the round trips and secret rotation against live services.
 	$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_*.py' -v
-
-test-enmasse-secrets-live: ## Enmasse secret rotation tests against live external services.
+# Secret rotation needs the live services switched on, which the discovery above leaves off
 	Zato_Test_Live_SQL=1 Zato_Test_FTP=1 Zato_Test_SFTP=1 Zato_Test_SMB=1 Zato_Test_MongoDB=1 \
 		$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_secret_rotation_live.py' -v
 
@@ -1447,7 +1446,7 @@ Zato_Test_Offline := \
 
 # Rust toolchain suites and the database matrices
 Zato_Test_Toolchain := \
-	test-distlock test-common test-rate-limiting test-cli test-enmasse test-scheduler \
+	test-distlock test-common test-rate-limiting test-cli test-scheduler \
 	test-ui-rule-engine-dashboard test-audit-log test-analytics test-ui-audit-log
 
 # Suites needing a live server or an external service
@@ -1456,7 +1455,7 @@ Zato_Test_Live := \
 	test-sql-cloud-live test-oracle-db test-microsoft-cloud test-salesforce test-bearer test-pubsub-backend-amqp test-as2-live \
 	test-as2-interop test-ibm-mq test-kafka test-sdk test-hl7-languages test-pubsub-outgoing \
 	test-hl7-mllp-outconns test-pubsub-core test-hl7-core test-hl7-mllp-channels \
-	test-llm-live test-llm-local-docker test-enmasse-secrets-live
+	test-llm-live test-llm-local-docker test-enmasse
 
 # The browser suite end to end
 Zato_Test_Browser := test-ui-playwright test-ui-web-admin

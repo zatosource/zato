@@ -33,8 +33,9 @@ _channel_name = 'test-mllp-counters'
 _sender_ip   = '203.0.113.10'
 _sender_port = 40000
 
-# A message whose MSH-9 names a structure the parser does not know, which is what makes
-# the parse step reject it with a negative acknowledgment.
+# A message whose MSH-9 names a structure the parser does not know. A channel that validates
+# has nothing to build such a message into, so its parse step rejects it with a negative
+# acknowledgment - one that reads tolerantly instead takes its segments as they came.
 _unknown_structure_message = (
     'MSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ZZZ^Z99|CTRL_PARSE_1|P|2.5\r'
     'PID|||12345^^^MRN||Doe^John||19800101|M'
@@ -121,8 +122,8 @@ class TestChannelCounters(TestCase):
         negative acknowledgment counts on the matched channel's own state.
         """
 
-        # The route parses on input, which is the step the message under test fails at
-        settings = RouteSettings()
+        # The route parses and validates on input, which is the step the message under test fails at
+        settings = RouteSettings(should_validate=True)
         server, router, callback = self._make_server(settings)
 
         message_text = _unknown_structure_message.decode('utf-8')
