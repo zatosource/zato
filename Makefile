@@ -355,8 +355,20 @@ ruff:
 	$(RUFF) check $(CURDIR)/code
 
 pyright:
-	@echo "Running pyright from $(CURDIR)/code on zato-common/src/zato/hl7v2/ tests/python/"
-	cd $(CURDIR)/code && $(PYRIGHT) zato-common/src/zato/hl7v2/ tests/python/
+	@echo "Running every configured Python type check from $(CURDIR)/code"
+	cd $(CURDIR)/code && $(PYRIGHT) \
+		zato-common/src/zato/hl7v2/ \
+		zato-common/src/zato/common/hl7/fhir/fields.py \
+		zato-common/src/zato/common/pubsub/outgoing.py \
+		zato-common/src/zato/common/pubsub/sql/ \
+		zato-common/src/zato/common/rule_engine/jobs/ \
+		zato-common/src/zato/common/rule_engine/notify/ \
+		zato-common/src/zato/common/test/config_pubsub_outgoing.py \
+		zato-common/src/zato/common/test/rabbitmq_.py \
+		zato-server/src/zato/server/connection/outgoing_delivery.py \
+		zato-server/src/zato/server/generic/api/outconn_hl7_fhir.py \
+		zato-server/src/zato/server/service/internal/pubsub/outgoing.py \
+		tests/python/
 
 test-lint: ruff pyright format clippy ## Static analysis only - no test is executed. The first stage of test-all.
 
@@ -498,7 +510,6 @@ test-server: ## Server unit and integration tests.
 
 test-rest: ## Every REST test - the channel unit suites, the outgoing audit log and mutation testing.
 	$(Zato_Log_Reset)
-	$(RUFF) check $(CURDIR)/code/tests/python/zato-server/rest_outgoing_audit/ $(Zato_Log)
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/http_soap/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest -W ignore::DeprecationWarning \
@@ -542,70 +553,6 @@ test-rate-limiting: ## All rate limiting tests.
 
 test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing delivery.
 	$(Zato_Log_Reset)
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
-		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_concurrent/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_ack_atomicity/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_endpoint_delete/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sec_delete/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sec_edit/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete_mismatch/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_subscribe_atomic/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete_atomic/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename_atomic/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_unsub_atomic/ \
-		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_topic.py \
-		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_subscription.py \
-		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission.py \
-		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission_revoke.py \
-		$(CURDIR)/code/tests/python/zato-server/service/test_service_publish.py \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
-		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_concurrent/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_ack_atomicity/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_endpoint_delete/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sec_delete/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sec_edit/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete_mismatch/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_subscribe_atomic/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete_atomic/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename_atomic/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_unsub_atomic/ \
-		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_topic.py \
-		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_subscription.py \
-		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission.py \
-		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission_revoke.py \
-		$(CURDIR)/code/tests/python/zato-server/service/test_service_publish.py \
-		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
 		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
@@ -643,44 +590,12 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_config_store -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-	$(RUFF) check \
-		$(CURDIR)/code/zato-common/src/zato/common/pubsub/sql/ \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/ \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/zato-common/src/zato/common/pubsub/sql/ \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/ \
-		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_sqlite.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend \
 		-W "ignore:This process:DeprecationWarning" \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-	$(RUFF) check \
-		$(CURDIR)/code/zato-common/src/zato/common/hl7/fhir/fields.py \
-		$(CURDIR)/code/zato-common/src/zato/common/pubsub/outgoing.py \
-		$(CURDIR)/code/zato-common/src/zato/common/test/config_pubsub_outgoing.py \
-		$(CURDIR)/code/zato-server/src/zato/server/connection/outgoing_delivery.py \
-		$(CURDIR)/code/zato-server/src/zato/server/generic/api/outconn_hl7_fhir.py \
-		$(CURDIR)/code/zato-server/src/zato/server/service/internal/pubsub/outgoing.py \
-		$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/outgoing.py \
-		$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_outgoing/ \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/zato-common/src/zato/common/hl7/fhir/fields.py \
-		$(CURDIR)/code/zato-common/src/zato/common/pubsub/outgoing.py \
-		$(CURDIR)/code/zato-common/src/zato/common/test/config_pubsub_outgoing.py \
-		$(CURDIR)/code/zato-server/src/zato/server/connection/outgoing_delivery.py \
-		$(CURDIR)/code/zato-server/src/zato/server/generic/api/outconn_hl7_fhir.py \
-		$(CURDIR)/code/zato-server/src/zato/server/service/internal/pubsub/outgoing.py \
-		$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/outgoing.py \
-		$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_outgoing/ \
-		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
 		$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/ \
@@ -693,16 +608,6 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-	$(RUFF) check \
-		$(CURDIR)/code/zato-common/src/zato/common/test/rabbitmq_.py \
-		$(CURDIR)/code/tests/python/zato-common/lib/live_amqp/ \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp/ \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/zato-common/src/zato/common/test/rabbitmq_.py \
-		$(CURDIR)/code/tests/python/zato-common/lib/live_amqp/ \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp/ \
-		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_amqp \
@@ -710,12 +615,6 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 
 test-pubsub-perf: ## Every pub/sub performance test - SQL, AMQP, system-level load and mass recovery.
 	$(Zato_Log_Reset)
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/ \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/ \
-		$(Zato_Log)
 	basetemp="$${TMPDIR:-/tmp}/zato-pubsub-backend-perf-$$USER"; \
 	trap 'rm -rf "$$basetemp"' EXIT INT TERM; \
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
@@ -725,36 +624,16 @@ test-pubsub-perf: ## Every pub/sub performance test - SQL, AMQP, system-level lo
 		-W "ignore:This process:DeprecationWarning" \
 		--basetemp="$$basetemp" \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_system_perf/ \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_system_perf/ \
-		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_system_perf/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_system_perf \
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-common/lib/live_amqp/ \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp_perf/ \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/tests/python/zato-common/lib/live_amqp/ \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp_perf/ \
-		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp_perf/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_amqp_perf \
 		-o log_cli=false \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/ \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/ \
-		$(Zato_Log)
 	basetemp="$${TMPDIR:-/tmp}/zato-pubsub-backend-perf-$$USER"; \
 	trap 'rm -rf "$$basetemp"' EXIT INT TERM; \
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
@@ -782,18 +661,6 @@ test-cli: ## CLI tests.
 
 test-mcp: ## Every MCP test - the offline suites, the browser lifecycle, a real LLM and the local container.
 	$(Zato_Log_Reset)
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-server/mcp/ \
-		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
-		$(CURDIR)/code/tests/python/zato-server/mcp_llm_live/ \
-		$(CURDIR)/code/tests/python/zato-server/mcp_local_docker/ \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/tests/python/zato-server/mcp/ \
-		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
-		$(CURDIR)/code/tests/python/zato-server/mcp_llm_live/ \
-		$(CURDIR)/code/tests/python/zato-server/mcp_local_docker/ \
-		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/mcp/ \
 		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
@@ -826,14 +693,6 @@ llm-console: ## Browser console for the local LLM - starts Ollama, the model and
 
 test-bearer: ## Inbound bearer token live tests.
 	$(Zato_Log_Reset)
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-server/security/ \
-		$(CURDIR)/code/tests/python/zato-server/bearer_inbound_live/ \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/tests/python/zato-server/security/ \
-		$(CURDIR)/code/tests/python/zato-server/bearer_inbound_live/ \
-		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/security/ \
 		$(CURDIR)/code/tests/python/zato-server/bearer_inbound_live/ \
@@ -903,16 +762,6 @@ test-soap: ## SOAP messaging and channel tests - fully offline, no external serv
 
 test-llm: ## Every outgoing LLM test - the offline simulator, browser lifecycle, real Ollama and local container.
 	$(Zato_Log_Reset)
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-server/llm/ \
-		$(CURDIR)/code/tests/python/zato-server/llm_live/ \
-		$(CURDIR)/code/tests/python/zato-server/llm_local_docker/ \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/tests/python/zato-server/llm/ \
-		$(CURDIR)/code/tests/python/zato-server/llm_live/ \
-		$(CURDIR)/code/tests/python/zato-server/llm_local_docker/ \
-		$(Zato_Log)
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/llm/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_llm -W ignore::DeprecationWarning \
@@ -972,12 +821,6 @@ test-microsoft-cloud: ## Microsoft 365 connection tests through a live Zato serv
 
 test-salesforce: ## Salesforce connection tests - a live Zato server against a simulated instance, and the Dashboard lifecycle.
 	$(Zato_Log_Reset)
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-server/salesforce_live/ \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/tests/python/zato-server/salesforce_live/ \
-		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/salesforce_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_salesforce_live -W ignore::DeprecationWarning \
@@ -1039,14 +882,6 @@ test-hl7: ## Every HL7 test - parsing, FHIR, MLLP channels, outgoing connections
 
 test-ui: ## Every dashboard test - the UI kit, the rule engine screens, the audit log, the whole Playwright suite and the web-admin access checks.
 	$(Zato_Log_Reset)
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-common/webapp_ui/ \
-		$(CURDIR)/code/tests/python/zato-rule-engine-dashboard/ui/ \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/tests/python/zato-common/webapp_ui/ \
-		$(CURDIR)/code/tests/python/zato-rule-engine-dashboard/ui/ \
-		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/webapp_ui/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_webapp_ui \
@@ -1069,7 +904,6 @@ test-ui: ## Every dashboard test - the UI kit, the rule engine screens, the audi
 	$(MAKE) -C $(CURDIR)/code/zato-web-admin test $(Zato_Log)
 
 test-ibm-mq: ## IBM MQ queue bridge tests against a live queue manager, plain and TLS.
-	$(RUFF) check $(CURDIR)/code/tests/python/zato-server/ibm_mq/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/ibm_mq/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ibm_mq \
@@ -1077,13 +911,6 @@ test-ibm-mq: ## IBM MQ queue bridge tests against a live queue manager, plain an
 
 test-kafka: ## Kafka end-to-end tests against a live broker in Docker, driven through the Dashboard.
 	$(Zato_Log_Reset)
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-common/lib/live_kafka/ \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/lib/kafka_channel.py \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/lib/kafka_outconn.py \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/fixtures/services/kafka_test_services.py \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_kafka_end_to_end.py \
-		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_kafka_end_to_end.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_kafka \
@@ -1091,8 +918,6 @@ test-kafka: ## Kafka end-to-end tests against a live broker in Docker, driven th
 		$(Zato_Log)
 
 test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, plain and TLS, plus live Redis tests.
-	$(RUFF) check $(CURDIR)/code/tests/python/zato-common/audit_log/
-	$(RUFF) check $(CURDIR)/code/tests/python/zato-common/redis_/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/redis_/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_redis \
@@ -1103,24 +928,12 @@ test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, pl
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-alerting: ## Alerting engine tests - rules, actions, dedup, lifecycle and collectors, fully offline.
-	$(RUFF) check $(CURDIR)/code/tests/python/zato-common/alerting/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/alerting/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_alerting -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-ftp: ## FTP and FTPS tests - the outconn, enmasse and scheduler suites against live FTP servers, plus the audit and delivery suites against stubs.
-	$(RUFF) check \
-		$(CURDIR)/code/zato-common/src/zato/common/test/ftp_.py \
-		$(CURDIR)/code/zato-common/src/zato/common/test/file_transfer_harness/ftp_adapter.py \
-		$(CURDIR)/code/zato-server/src/zato/server/connection/ftp.py \
-		$(CURDIR)/code/zato-server/src/zato/server/generic/api/outconn_ftp.py \
-		$(CURDIR)/code/zato-server/test/zato/connection/test_outconn_ftp.py \
-		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/ftp_stub.py \
-		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_ftp_audit.py \
-		$(CURDIR)/code/tests/python/zato-server/file_transfer_scheduler/test_ftp_only.py \
-		$(CURDIR)/code/zato-cli/src/zato/cli/enmasse/importers/ftp.py \
-		$(CURDIR)/code/zato-cli/src/zato/cli/enmasse/exporters/ftp.py
 	Zato_Test_FTP=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-server/test/zato/connection/test_outconn_ftp.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ftp -W ignore::DeprecationWarning \
@@ -1137,8 +950,6 @@ test-ftp: ## FTP and FTPS tests - the outconn, enmasse and scheduler suites agai
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-destinations: ## Channel destination tests - the destination list, payload overrides, delivery order, retries, the dispatchers, the per-hop trail and the Dashboard views, fully offline.
-	$(RUFF) check $(CURDIR)/code/tests/python/zato-common/destination/ $(CURDIR)/code/tests/python/zato-server/destinations/ \
-		$(CURDIR)/code/tests/python/zato-dashboard/destination_views/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/destination/ \
 		$(CURDIR)/code/tests/python/zato-server/destinations/ \
@@ -1150,7 +961,6 @@ test-destinations: ## Channel destination tests - the destination list, payload 
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-demo-seed: ## Demo-data seeder tests - the seeded week of traffic, alerts and config history, fully offline.
-	$(RUFF) check $(CURDIR)/code/tests/python/zato-common/demo_seed/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/demo_seed/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_demo_seed -W ignore::DeprecationWarning \
@@ -1158,10 +968,6 @@ test-demo-seed: ## Demo-data seeder tests - the seeded week of traffic, alerts a
 
 test-mongodb: ## Every MongoDB test - live plain and TLS servers plus the in-process simulator.
 	$(Zato_Log_Reset)
-	$(RUFF) check \
-		$(CURDIR)/code/tests/python/zato-server/mongodb/ \
-		$(CURDIR)/code/tests/python/zato-server/mongodb_simulated/ \
-		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/mongodb/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mongodb \
@@ -1172,14 +978,12 @@ test-mongodb: ## Every MongoDB test - live plain and TLS servers plus the in-pro
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-redis-service: ## Redis tests for the self.redis service API against a local redis-server process, started by the tests.
-	$(RUFF) check $(CURDIR)/code/tests/python/zato-server/redis_service/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/redis_service/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_redis_service \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-es: ## Elasticsearch connection tests against a live server, plain and TLS.
-	$(RUFF) check $(CURDIR)/code/tests/python/zato-server/es/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/es/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_es \
@@ -1187,22 +991,6 @@ test-es: ## Elasticsearch connection tests against a live server, plain and TLS.
 
 test-rule-engine: ## Every rule engine test - grammar, matching, SQL, dashboard views, jobs and performance.
 	$(Zato_Log_Reset)
-	$(RUFF) check \
-		$(CURDIR)/code/zato-common/src/zato/common/rule_engine/ \
-		$(CURDIR)/code/zato-common/test/zato/common/rule_engine/ \
-		$(CURDIR)/code/tests/python/zato-common/rule_engine_sql/ \
-		$(CURDIR)/code/zato-rule-engine-dashboard/src/zato/rule_engine_dashboard/ \
-		$(CURDIR)/code/tests/python/zato-rule-engine-dashboard/rule_views/ \
-		$(CURDIR)/code/zato-common/src/zato/common/rule_engine/notify/ \
-		$(CURDIR)/code/zato-common/src/zato/common/rule_engine/jobs/ \
-		$(CURDIR)/code/tests/python/zato-common/rule_engine_jobs/ \
-		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/ \
-		$(Zato_Log)
-	$(PYRIGHT) \
-		$(CURDIR)/code/zato-common/src/zato/common/rule_engine/notify/ \
-		$(CURDIR)/code/zato-common/src/zato/common/rule_engine/jobs/ \
-		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/ \
-		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-common/test/zato/common/rule_engine/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine \
@@ -1233,7 +1021,6 @@ test-rule-engine: ## Every rule engine test - grammar, matching, SQL, dashboard 
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-analytics: ## Analytics rollup, view and baseline tests against live SQLite, MySQL and PostgreSQL, plain and TLS.
-	$(RUFF) check $(CURDIR)/code/tests/python/zato-common/analytics/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/analytics/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_analytics \
@@ -1252,9 +1039,6 @@ test-distlock: ## Distlock tests.
 	$(MAKE) -C $(CURDIR)/code/zato-distlock test
 
 test-truncate: ## Truncation and graceful trimming tests with 100% branch coverage.
-	$(RUFF) check \
-		$(CURDIR)/code/zato-common/src/zato/common/util/truncate/ \
-		$(CURDIR)/code/tests/python/zato-common/truncate/
 	$(ZATO_PY) -m coverage run --branch --source=zato.common.util.truncate \
 		--data-file=$(CURDIR)/code/tests/.coverage_truncate -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/truncate/ \
@@ -1263,9 +1047,6 @@ test-truncate: ## Truncation and graceful trimming tests with 100% branch covera
 	$(ZATO_PY) -m coverage report --data-file=$(CURDIR)/code/tests/.coverage_truncate --show-missing --fail-under=100
 
 test-message-filters: ## Message filter and projection tests with 100% branch coverage.
-	$(RUFF) check \
-		$(CURDIR)/code/zato-common/src/zato/common/util/message_filters/ \
-		$(CURDIR)/code/tests/python/zato-common/message_filters/
 	$(ZATO_PY) -m coverage run --branch --source=zato.common.util.message_filters \
 		--data-file=$(CURDIR)/code/tests/.coverage_message_filters -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/message_filters/ \
@@ -1274,9 +1055,6 @@ test-message-filters: ## Message filter and projection tests with 100% branch co
 	$(ZATO_PY) -m coverage report --data-file=$(CURDIR)/code/tests/.coverage_message_filters --show-missing --fail-under=100
 
 test-safeguards: ## Response safeguard tests with 100% branch coverage.
-	$(RUFF) check \
-		$(CURDIR)/code/zato-common/src/zato/common/util/safeguards/ \
-		$(CURDIR)/code/tests/python/zato-common/safeguards/
 	$(ZATO_PY) -m coverage run --branch --source=zato.common.util.safeguards \
 		--data-file=$(CURDIR)/code/tests/.coverage_safeguards -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/safeguards/ \

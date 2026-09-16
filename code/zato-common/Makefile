@@ -16,7 +16,6 @@ build:
 test:
 	@$(PY) -c "from zato import input_output" 2>/dev/null || \
 		{ echo "I/O module not built yet, run 'make build' first"; exit 1; }
-	. $$HOME/.cargo/env && cd $(CRATE_DIR) && cargo clippy -- -D warnings
 	. $$HOME/.cargo/env && cd $(CRATE_DIR) && cargo test
 
 clippy:

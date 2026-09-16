@@ -40,7 +40,7 @@ if 0:
     from requests import Response
     from zato.common.ext.bunch import Bunch
     from zato.common.pubsub.sql.backend import PublishResult
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, stranydict, strdictnone
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
 
@@ -143,18 +143,18 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
     def _do_request( # noqa: PLR0913
         self,
-        method,
-        path,
-        data=None,
-        params=None,
-        extra_headers=None,
+        method:'str',
+        path:'str',
+        data:'strdictnone'=None,
+        params:'strdictnone'=None,
+        extra_headers:'strdictnone'=None,
         *,
-        returning_status=False,
-        returning_response=False,
-        needs_audit=True,
-        is_health_check=False,
-        cid='',
-        ): # type: ignore[override]
+        returning_status:'bool'=False,
+        returning_response:'bool'=False,
+        needs_audit:'bool'=True,
+        is_health_check:'bool'=False,
+        cid:'str'='',
+        ) -> 'any_':
         """ Every fhirpy operation funnels through here - reads, saves, deletes and raw execute calls alike - which
         makes it the one place the audit pair is written from. The request is performed here rather than by fhirpy
         so that the response is in hand when the pair is written - its status line, its outcome and, on a failure,
@@ -179,23 +179,27 @@ class _HL7FHIRConnection(SyncFHIRClient):
         if needs_audit:
             if not cid:
                 cid = new_cid_server()
+
             attrs = self._record_request(cid, method, path, data, is_health_check)
             request_start = monotonic()
 
-        # .. a failure before any response arrived names how it failed - a timeout is a timeout ..
-        try:
-            response = requests.request(method, url, json=data, headers=headers, **self.requests_config)
-        except Exception as e:
-            if needs_audit:
+            # A failure before any response arrived names how it failed - a timeout is a timeout.
+            try:
+                response = requests.request(method, url, json=data, headers=headers, **self.requests_config)
+            except Exception as e:
                 duration_ms = int((monotonic() - request_start) * _ms_per_second)
                 self._record_transport_error(cid, e, duration_ms, attrs, is_health_check)
-            raise
 
-        # .. a response that came back is written with its status line and, on a failure, the issue code it carries.
-        if needs_audit:
+                raise
+
+            # A response that came back is written with its status line and application outcome.
             duration_ms = int((monotonic() - request_start) * _ms_per_second)
             application_outcome = self._get_application_outcome(response)
             self._record_response(cid, response, application_outcome, duration_ms, attrs, is_health_check)
+
+        # .. calls without auditing only send the request.
+        else:
+            response = requests.request(method, url, json=data, headers=headers, **self.requests_config)
 
         # A health check reads the response as it is
         if returning_response:
@@ -220,7 +224,14 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
 # ################################################################################################################################
 
-    def _record_request(self, cid, method, path, data, is_health_check):
+    def _record_request(
+        self,
+        cid:'str',
+        method:'str',
+        path:'str',
+        data:'strdictnone',
+        is_health_check:'bool',
+        ) -> 'stranydict':
         """ The first event of a call's pair - the request as it went out, stored as the resubmit convention document.
         """
         outconn_name = self.zato_config['name']
@@ -263,7 +274,14 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
 # ################################################################################################################################
 
-    def _record_transport_error(self, cid, e, duration_ms, attrs, is_health_check):
+    def _record_transport_error(
+        self,
+        cid:'str',
+        exception:'Exception',
+        duration_ms:'int',
+        attrs:'stranydict',
+        is_health_check:'bool',
+        ) -> 'None':
         """ The second event of a call's pair when no response arrived - its status names how the call failed.
         """
         _ = self.zato_audit_log.insert(
@@ -272,15 +290,23 @@ class _HL7FHIRConnection(SyncFHIRClient):
             self.zato_config['name'],
             cid=cid,
             outcome=AuditOutcome.Error,
-            status=classify_transport_error(e),
+            status=classify_transport_error(exception),
             duration_ms=duration_ms,
-            data=str(e),
+            data=str(exception),
             attrs=attrs,
         )
 
 # ################################################################################################################################
 
-    def _record_response(self, cid, response, application_outcome, duration_ms, attrs, is_health_check):
+    def _record_response(
+        self,
+        cid:'str',
+        response:'Response',
+        application_outcome:'str',
+        duration_ms:'int',
+        attrs:'stranydict',
+        is_health_check:'bool',
+        ) -> 'None':
         """ The second event of a call's pair - the response with the HTTP status it came with in whole, so a 500 reads
         as itself, and the issue code of the OperationOutcome it carries, if any, as its application outcome.
         """
@@ -305,7 +331,7 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
 # ################################################################################################################################
 
-    def _get_application_outcome(self, response):
+    def _get_application_outcome(self, response:'Response') -> 'str':
         """ The issue code of the OperationOutcome a failed response carries - `exception`, `not-found` - or nothing
         for a good response or one whose body is not an OperationOutcome, so a plain 503 counts by its status alone.
         """
@@ -332,7 +358,7 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
 # ################################################################################################################################
 
-    def _raise_for_status(self, response):
+    def _raise_for_status(self, response:'Response') -> 'None':
         """ The exceptions fhirpy 2.2.0 raises for each status - what every caller of this client expects.
         """
         status_code = response.status_code
@@ -367,7 +393,7 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
 # ################################################################################################################################
 
-    def _build_request_headers(self):
+    def _build_request_headers(self) -> 'stranydict':
 
         # This is constant
         headers = {
@@ -441,6 +467,7 @@ class _HL7FHIRConnection(SyncFHIRClient):
         status itself and writes the pair under the connection's health source.
         """
         out = self._do_request(_ping_method, _ping_path, returning_response=True, is_health_check=is_health_check, cid=cid)
+        out = cast_('Response', out)
         return out
 
 # ################################################################################################################################
