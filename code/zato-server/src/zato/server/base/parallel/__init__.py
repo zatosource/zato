@@ -987,7 +987,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # Let the config manager know the broker client is ready
         self.config_manager.set_config_dispatcher(self.config_dispatcher)
-        self.config_manager.after_config_dispatcher_set()
 
         self._after_init_accepted(locally_deployed)
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
