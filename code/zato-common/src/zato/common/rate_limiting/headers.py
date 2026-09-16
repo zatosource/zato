@@ -43,6 +43,15 @@ Rate_Limit_Result_Key = 'zato.http.rate_limit.result'
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _datetime_utcnow() -> 'datetime':
+    """ The clock a Retry-After date is computed from - a function so tests can pin it.
+    """
+    out = datetime.now(timezone.utc)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass(init=False)
 class RateLimitHeaders:
     """ What a 429 tells its caller - the whole seconds until a retry may succeed and the headers to send.
@@ -74,7 +83,7 @@ def build_rate_limit_headers(rate_limit_result:'SlottedCheckResult', *, needs_qu
     out.retry_after_seconds = get_retry_after_seconds(rate_limit_result)
     out.headers = {}
 
-    now = datetime.now(timezone.utc)
+    now = _datetime_utcnow()
     retry_at = now + timedelta(seconds=out.retry_after_seconds)
     out.headers[Header_Retry_After] = format_datetime(retry_at, usegmt=True)
 

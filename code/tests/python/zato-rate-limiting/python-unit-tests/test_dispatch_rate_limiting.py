@@ -42,6 +42,9 @@ def _make_dispatcher():
     url_data = MagicMock()
     request_handler = MagicMock()
 
+    # No service is deployed, so none of them answers its own 429s and the channel does it instead
+    server.service_store.services.get.return_value = None
+
     dispatcher = RequestDispatcher(
         server=server,
         url_data=url_data,
@@ -259,7 +262,7 @@ class DispatchRateLimitedTestCase(unittest.TestCase):
 
 class DispatchRetryAfterTestCase(unittest.TestCase):
 
-    @patch('zato.server.connection.http_soap.channel._datetime_utcnow')
+    @patch('zato.common.rate_limiting.headers._datetime_utcnow')
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
@@ -291,7 +294,7 @@ class DispatchRetryAfterTestCase(unittest.TestCase):
 
         self.assertEqual(retry_after, 'Sun, 15 Jun 2025 12:00:03 GMT')
 
-    @patch('zato.server.connection.http_soap.channel._datetime_utcnow')
+    @patch('zato.common.rate_limiting.headers._datetime_utcnow')
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
@@ -328,7 +331,7 @@ class DispatchRetryAfterTestCase(unittest.TestCase):
 
 class DispatchLoggingTestCase(unittest.TestCase):
 
-    @patch('zato.server.connection.http_soap.channel._datetime_utcnow')
+    @patch('zato.common.rate_limiting.headers._datetime_utcnow')
     @patch('zato.server.connection.http_soap.channel.logger')
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
@@ -441,7 +444,7 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
         mock_check_security.assert_not_called()
         dispatcher.server.rate_limiting_manager.check_sec_def.assert_not_called()
 
-    @patch('zato.server.connection.http_soap.channel._datetime_utcnow')
+    @patch('zato.common.rate_limiting.headers._datetime_utcnow')
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
@@ -476,7 +479,7 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
         mock_check_security.assert_not_called()
         dispatcher.server.rate_limiting_manager.check_sec_def.assert_not_called()
 
-    @patch('zato.server.connection.http_soap.channel._datetime_utcnow')
+    @patch('zato.common.rate_limiting.headers._datetime_utcnow')
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
