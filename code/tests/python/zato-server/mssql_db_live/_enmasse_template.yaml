@@ -1,0 +1,9 @@
+sql:
+
+  - name: test.mssql.db
+    type: mssql
+    host: {{mssql_host}}
+    port: {{mssql_port}}
+    db_name: {{mssql_db_name}}
+    username: {{mssql_username}}
+    password: "{{mssql_password}}"

@@ -10,7 +10,50 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 
 # Zato
+from zato.common.oracledb import NumberIn, RowsOut, StringIn, StringOut
 from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OracleDBCallProcOut(Service):
+    """ Calls a procedure that hands a value back through an OUT parameter.
+    """
+    name = 'test.oracle.db.callproc-out'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        proc_name = self.request.raw_request['proc_name']
+        employee_id = self.request.raw_request['employee_id']
+
+        conn = self.out.sql[conn_name]
+
+        name_out = StringOut()
+        out_values = conn.callproc(proc_name, [NumberIn(employee_id), name_out])
+
+        self.response.payload = json.dumps({'out_values': out_values, 'name': name_out.get()})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OracleDBCallProcRows(Service):
+    """ Calls a procedure that hands rows back through a REF CURSOR.
+    """
+    name = 'test.oracle.db.callproc-rows'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        proc_name = self.request.raw_request['proc_name']
+        department = self.request.raw_request['department']
+
+        conn = self.out.sql[conn_name]
+
+        rows_out = RowsOut()
+        out_values = conn.callproc(proc_name, [StringIn(department), rows_out])
+
+        self.response.payload = json.dumps({'out_values': out_values, 'rows': rows_out.get()})
 
 # ################################################################################################################################
 # ################################################################################################################################

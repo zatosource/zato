@@ -13,6 +13,9 @@ import subprocess
 from time import sleep, time
 from typing import NamedTuple
 
+# pytds
+import pytds
+
 # SQLAlchemy
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
@@ -26,7 +29,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from certificates import CertificatePaths
-    from zato.common.typing_ import optional, stranydict, strlist
+    from zato.common.typing_ import any_, optional, stranydict, strlist
 
     CertificatePaths = CertificatePaths
     certificatepathsnone = optional[CertificatePaths]
@@ -37,17 +40,27 @@ if 0:
 class ModuleCtx:
 
     # Docker images the databases run from
+    MSSQL_Image      = 'mcr.microsoft.com/mssql/server:2022-latest'
     MySQL_Image      = 'mysql:8.4'
     Oracle_Image     = 'gvenzl/oracle-free:23-slim'
     PostgreSQL_Image = 'postgres:16'
 
     # Database types the servers report in their connection details
+    Type_MSSQL      = 'mssql'
     Type_MySQL      = 'mysql'
     Type_Oracle     = 'oracle'
     Type_PostgreSQL = 'postgresql'
 
     # The service name the Oracle image serves its pluggable database under
     Oracle_Service_Name = 'FREEPDB1'
+
+    # The administrator user, the edition and the system database of the MS SQL image
+    MSSQL_Admin_Username = 'sa'
+    MSSQL_Edition        = 'Developer'
+    MSSQL_Master_DB      = 'master'
+
+    # How long a single MS SQL login attempt may take
+    MSSQL_Login_Timeout = 3
 
     # How long to wait for a database to accept connections
     Ready_Timeout = 300
@@ -114,6 +127,66 @@ def _wait_until_ready(engine_url:'str', connect_args:'stranydict', ping_query:'s
             sleep(ModuleCtx.Ready_Sleep)
 
     raise Exception(f'Database at {engine_url} did not become ready, last error: {last_error}')
+
+# ################################################################################################################################
+
+def connect_mssql(port:'int', password:'str', db_name:'str', autocommit:'bool') -> 'any_':
+    """ Opens a pytds connection to one of our MS SQL containers as the administrator user.
+    """
+    out = pytds.connect(
+        dsn='localhost',
+        port=port,
+        user=ModuleCtx.MSSQL_Admin_Username,
+        password=password,
+        database=db_name,
+        login_timeout=ModuleCtx.MSSQL_Login_Timeout,
+        autocommit=autocommit,
+    )
+
+    return out
+
+# ################################################################################################################################
+
+def _wait_until_ready_mssql(port:'int', password:'str') -> 'None':
+    """ Retries connecting through pytds until MS SQL accepts logins or the timeout is reached.
+    """
+    deadline = time() + ModuleCtx.Ready_Timeout
+    last_error = ''
+    attempt_count = 0
+
+    while time() < deadline:
+        try:
+            connection = connect_mssql(port, password, ModuleCtx.MSSQL_Master_DB, False)
+            with connection.cursor() as cursor:
+                cursor.execute(ModuleCtx.Ping_Query)
+                _ = cursor.fetchall()
+            connection.close()
+            return
+        except Exception as e:
+            last_error = str(e)
+
+            # The server takes a while to initialize on its first start,
+            # so a long wait reports that it is still alive and what it last saw.
+            attempt_count += 1
+
+            if attempt_count % ModuleCtx.Ready_Report_Every == 0:
+                print(f'Still waiting for the database, attempt {attempt_count}, last error: {last_error}', flush=True)
+
+            sleep(ModuleCtx.Ready_Sleep)
+
+    raise Exception(f'MS SQL at localhost:{port} did not become ready, last error: {last_error}')
+
+# ################################################################################################################################
+
+def _create_mssql_database(port:'int', password:'str', db_name:'str') -> 'None':
+    """ Creates the application database - the image ships with the system databases only.
+    """
+    connection = connect_mssql(port, password, ModuleCtx.MSSQL_Master_DB, True)
+
+    with connection.cursor() as cursor:
+        cursor.execute(f'create database {db_name}')
+
+    connection.close()
 
 # ################################################################################################################################
 
@@ -331,6 +404,50 @@ def start_oracle(
     print(f'Oracle container {container_name} is ready', flush=True)
 
     details = _base_details(ModuleCtx.Type_Oracle, port, username, password, service_name)
+
+    out = DatabaseServer(container_name=container_name, details=details)
+    return out
+
+# ################################################################################################################################
+
+def start_mssql(
+    *,
+    container_name:'str',
+    port:'int',
+    password:'str',
+    db_name:'str',
+    ) -> 'DatabaseServer':
+    """ Starts an MS SQL Server container running the Developer edition. The application
+    database is created inside it and the administrator user connects to it.
+    """
+
+    # Starting a container is silent and can take a while, e.g. when the image needs to be pulled first,
+    # which is why each phase reports itself.
+    print(f'Starting MS SQL container {container_name} on port {port}', flush=True)
+
+    _remove_stale_container(container_name)
+
+    command:'strlist' = [
+        'docker', 'run', '-d', '--rm',
+        '--name', container_name,
+        '-e', 'ACCEPT_EULA=Y',
+        '-e', 'MSSQL_SA_PASSWORD=' + password,
+        '-e', 'MSSQL_PID=' + ModuleCtx.MSSQL_Edition,
+        '-p', f'{port}:1433',
+        ModuleCtx.MSSQL_Image,
+    ]
+
+    _ = subprocess.run(command, check=True, capture_output=True)
+
+    # Wait until the database accepts logins from the host ..
+    print(f'Waiting for MS SQL container {container_name} to accept connections', flush=True)
+    _wait_until_ready_mssql(port, password)
+
+    # .. and create the application database the tests run against.
+    _create_mssql_database(port, password, db_name)
+    print(f'MS SQL container {container_name} is ready', flush=True)
+
+    details = _base_details(ModuleCtx.Type_MSSQL, port, ModuleCtx.MSSQL_Admin_Username, password, db_name)
 
     out = DatabaseServer(container_name=container_name, details=details)
     return out

@@ -41,6 +41,12 @@ if 0:
 MAX_BACKUPS = 1000
 _first_prefix = '0' * (len(str(MAX_BACKUPS)) - 1) # So it runs from, e.g.,  000 to 999
 
+# What an IDE plugin's connection test receives in reply.
+_msg_server_reached = 'OK, server reached'
+
+# What an IDE plugin receives once its file is in the pickup directory.
+_msg_deployed = 'OK, deployed to server'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -57,7 +63,7 @@ class DeploymentCtx:
 class Create(AdminService):
     """ Creates all the filesystem directories and files out of a deployment package stored in the ODB.
     """
-    input = 'payload', 'payload_name', '-is_startup'
+    input = '-payload', '-payload_name', '-is_startup'
     output = AsIs('-services_deployed'), '-zato_ide_deploy_create_response'
 
 # ################################################################################################################################
@@ -419,6 +425,14 @@ class Create(AdminService):
         payload = self.request.input.payload
         payload_name = self.request.input.payload_name
 
+        # A request with nothing to deploy is a connection test from an IDE plugin,
+        # so we confirm that we are reachable and return early.
+        if not payload_name:
+            self.response.payload.zato_ide_deploy_create_response = Bunch()
+            self.response.payload.zato_ide_deploy_create_response.success = True
+            self.response.payload.zato_ide_deploy_create_response.msg = _msg_server_reached
+            return
+
         # If it's just a file name, it means it must've been uploaded via the plugin,
         # so we need to save it in our local deployment directory and it will be picked up
         # by a background listener, which will in turn invokes again, but this time the file
@@ -444,7 +458,7 @@ class Create(AdminService):
             # All went fine
             self.response.payload.zato_ide_deploy_create_response = Bunch()
             self.response.payload.zato_ide_deploy_create_response.success = True
-            self.response.payload.zato_ide_deploy_create_response.msg = 'OK, deployed to server'
+            self.response.payload.zato_ide_deploy_create_response.msg = _msg_deployed
 
             # Now, we can return early
             return

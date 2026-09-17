@@ -27,11 +27,11 @@ from zato.common.audit_log.api import AuditEvent, AuditSource
 
 if 0:
     from zato.common.audit_log.api import AuditLog
-    from zato.common.typing_ import anylistnone, intnone, strdictnone
+    from zato.common.typing_ import any_, anylistnone, intnone
     AuditLog = AuditLog
+    any_ = any_
     anylistnone = anylistnone
     intnone = intnone
-    strdictnone = strdictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,14 +66,19 @@ def record_sql_execution(
     cid:'str',
     endpoint:'str',
     outcome:'str',
-    params:'strdictnone' = None,
+    params:'any_' = None,
     rows:'anylistnone' = None,
+    row_count:'intnone' = None,
     duration_ms:'int' = 0,
     error:'str' = '',
     ) -> 'intnone':
     """ Writes one audit event describing one executed SQL statement. The level says
     how much travels with the event - the statement alone, the statement with its
     parameters, or everything including the rows that came back. Returns the event id.
+
+    A stored procedure call is a statement like any other - its parameters are a positional
+    list rather than a dict and its rows may come in several result sets, which is what
+    row_count is for, the caller knows how many rows there are in total.
     """
 
     # The statement itself is on record at every level
@@ -89,7 +94,12 @@ def record_sql_execution(
     # a failed statement has none to speak of.
     if level == Level_Full and rows is not None:
         summary['rows'] = rows
-        summary['row_count'] = len(rows)
+
+        # A flat list of rows counts itself, several result sets are counted by the caller
+        if row_count is None:
+            row_count = len(rows)
+
+        summary['row_count'] = row_count
 
     # A failed statement says what went wrong right in its data
     if error:

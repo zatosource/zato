@@ -29,12 +29,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib')))
 
 # PyPI
-import oracledb
 import pytest
 
 # Zato
-from _hr_data import Create_Procs, Create_Table, Drop_Table, Insert_Row, Seed_Rows
-from live_sql.containers import start_oracle, stop_container
+from _hr_data import Create_Procs, Create_Table, Insert_Row, Seed_Rows
+from live_sql.containers import connect_mssql, start_mssql, stop_container
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,7 +48,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.oracle_db_live.conftest')
+logger = logging.getLogger('zato.test.mssql_db_live.conftest')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,25 +64,20 @@ _server_wait_timeout  = 120
 _quickstart_timeout   = 180
 _ping_poll_interval   = 0.5
 
-# The environment variable that enables Oracle DB connection pools and the value
-# the suite supplies when the variable is not already set.
-License_Key_Name  = 'Zato_License_Key'
-License_Key_Value = 'test.license.key'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleCtx:
 
-    # The host port and the name of the Oracle container
-    Oracle_Port      = 21521
-    Oracle_Container = 'zato-test-oracle-db'
+    # The host port and the name of the MS SQL container
+    MSSQL_Port      = 21433
+    MSSQL_Container = 'zato-test-mssql-db'
 
-    # The application user inside the pluggable database
-    Oracle_Username = 'zato_oracle_db'
+    # The database the HR data lives in
+    DB_Name = 'zato_hr'
 
     # The name of the outgoing connection the enmasse template defines
-    Connection_Name = 'test.oracle.db'
+    Connection_Name = 'test.mssql.db'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -118,7 +112,7 @@ class _SessionState:
         if self.quickstart_directory:
             server_log_path = os.path.join(self.quickstart_directory, 'server1', 'logs', 'server.log')
             if os.path.exists(server_log_path):
-                _ = shutil.copy(server_log_path, '/tmp/server-logs-oracle-db-live.txt')
+                _ = shutil.copy(server_log_path, '/tmp/server-logs-mssql-db-live.txt')
 
         self.kill_server()
 
@@ -196,7 +190,7 @@ def _import_enmasse(server_directory:'str', placeholders:'anydict', needs_reload
     telling a running server to reload it when asked to.
     """
     rendered_yaml = _render_template(placeholders)
-    rendered_path = os.path.join(server_directory, 'enmasse-oracle.yaml')
+    rendered_path = os.path.join(server_directory, 'enmasse-mssql.yaml')
 
     with open(rendered_path, 'w') as rendered_file:
         _ = rendered_file.write(rendered_yaml)
@@ -215,16 +209,25 @@ def _import_enmasse(server_directory:'str', placeholders:'anydict', needs_reload
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_license_key_env() -> 'anydict':
-    """ Returns a copy of the environment with the license key variable present,
-    which is what enables Oracle DB connection pools.
+def _seed_hr_schema(port:'int', password:'str', db_name:'str') -> 'None':
+    """ Creates the HR table, fills it with the known rows and creates the procedures the tests call.
     """
-    out = os.environ.copy()
+    connection = connect_mssql(port, password, db_name, True)
 
-    if not out.get(License_Key_Name):
-        out[License_Key_Name] = License_Key_Value
+    with connection.cursor() as cursor:
 
-    return out
+        # Create the table ..
+        cursor.execute(Create_Table)
+
+        # .. fill it with the rows the tests expect ..
+        for row in Seed_Rows:
+            cursor.execute(Insert_Row, row)
+
+        # .. and create the procedures that read them.
+        for create_proc in Create_Procs:
+            cursor.execute(create_proc)
+
+    connection.close()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -232,7 +235,7 @@ def get_license_key_env() -> 'anydict':
 def _start_server(server_directory:'str', server_port:'int', broker_port:'int') -> 'None':
     """ Starts the Zato server and waits for it to be ready.
     """
-    server_env = get_license_key_env()
+    server_env = os.environ.copy()
     server_env['Zato_Config_Bind_Port'] = str(server_port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
@@ -245,11 +248,12 @@ def _start_server(server_directory:'str', server_port:'int', broker_port:'int') 
     )
 
     popen_time = time.monotonic()
+    server_stdout = _state.server_process.stdout
 
     def _stream_output() -> 'None':
-        stdout = _state.server_process.stdout # type: ignore[union-attr]
-        readline = stdout.readline # pyright: ignore[reportOptionalMemberAccess]
-        for line in iter(readline, b''):
+        if not server_stdout:
+            return
+        for line in iter(server_stdout.readline, b''):
             text = line.decode('utf-8', errors='replace').rstrip()
             elapsed = time.monotonic() - popen_time
             logger.debug('[SERVER %6.1fs] %s', elapsed, text)
@@ -265,17 +269,22 @@ def _start_server(server_directory:'str', server_port:'int', broker_port:'int') 
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def oracle_server() -> 'servergen':
-    """ An Oracle Database server started on demand in a container.
+def mssql_server() -> 'servergen':
+    """ An MS SQL server started on demand in a container, with the HR data already in place.
     """
-    password = 'test.oracle.' + CryptoManager.generate_hex_string()
 
-    server = start_oracle(
-        container_name=ModuleCtx.Oracle_Container,
-        port=ModuleCtx.Oracle_Port,
-        username=ModuleCtx.Oracle_Username,
+    # The password has to satisfy the server's complexity policy - upper and lower case letters, digits and a symbol
+    password = 'Test.mssql.' + CryptoManager.generate_hex_string()
+
+    server = start_mssql(
+        container_name=ModuleCtx.MSSQL_Container,
+        port=ModuleCtx.MSSQL_Port,
         password=password,
+        db_name=ModuleCtx.DB_Name,
     )
+
+    _seed_hr_schema(ModuleCtx.MSSQL_Port, password, ModuleCtx.DB_Name)
+
     yield server
 
     stop_container(server.container_name)
@@ -283,40 +292,9 @@ def oracle_server() -> 'servergen':
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def oracle_hr_schema(oracle_server:'DatabaseServer') -> 'None':
-    """ The HR table, its rows and the procedures the callproc tests call, created through
-    a direct connection of the suite's own - the container can be reused between runs,
-    so everything starts from scratch.
-    """
-    details = oracle_server.details
-
-    connection = oracledb.connect(
-        user=details['username'],
-        password=details['password'],
-        host=details['host'],
-        port=int(details['port']),
-        service_name=details['name'],
-    )
-
-    with connection.cursor() as cursor:
-        cursor.execute(Drop_Table)
-        cursor.execute(Create_Table)
-
-        for row in Seed_Rows:
-            cursor.execute(Insert_Row, row)
-
-        for create_proc in Create_Procs:
-            cursor.execute(create_proc)
-
-    connection.commit()
-    connection.close()
-
-# ################################################################################################################################
-
-@pytest.fixture(scope='session')
-def zato_server(oracle_server:'DatabaseServer') -> 'any_':
+def zato_server(mssql_server:'DatabaseServer') -> 'any_':
     """ Session-scoped fixture that creates a Zato environment with an outgoing
-    Oracle connection pointing at the container, then starts its server.
+    MS SQL connection pointing at the container, then starts its server.
     """
 
     # Kill any leftover Zato servers ..
@@ -327,18 +305,18 @@ def zato_server(oracle_server:'DatabaseServer') -> 'any_':
 
     invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
 
-    details = oracle_server.details
+    details = mssql_server.details
 
     placeholders = {
-        'oracle_host':     details['host'],
-        'oracle_port':     details['port'],
-        'oracle_username': details['username'],
-        'oracle_password': details['password'],
-        'oracle_db_name':  details['name'],
+        'mssql_host':     details['host'],
+        'mssql_port':     details['port'],
+        'mssql_username': details['username'],
+        'mssql_password': details['password'],
+        'mssql_db_name':  details['name'],
     }
 
     # Create quickstart ..
-    _state.quickstart_directory = tempfile.mkdtemp(prefix='zato_oracle_db_live_qs_')
+    _state.quickstart_directory = tempfile.mkdtemp(prefix='zato_mssql_db_live_qs_')
 
     quickstart_env = os.environ.copy()
     _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
@@ -372,7 +350,7 @@ def zato_server(oracle_server:'DatabaseServer') -> 'any_':
 
     # Hot-deploy the test services ..
     pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
-    _ = shutil.copy2(_services_path, os.path.join(pickup_directory, 'oracle_db_test_services.py'))
+    _ = shutil.copy2(_services_path, os.path.join(pickup_directory, 'mssql_db_test_services.py'))
 
     # Patch server.conf so CLI commands use the dynamic port ..
     server_conf_path = os.path.join(server_directory, 'config', 'repo', 'server.conf')

@@ -677,6 +677,32 @@ def create_mtls_definition(page:'Page', base_url:'str', name:'str', fields:'anyd
 
 # ################################################################################################################################
 
+def delete_mtls_definition(page:'Page', base_url:'str', name:'str') -> 'None':
+    """ Deletes an mTLS security definition of the given name via the UI confirmation dialog.
+    """
+
+    # The page may be anywhere, e.g. in the IDE after an invocation, so go to the definitions
+    # page first, filtered by the name so the row is there to be read.
+    navigate_to_page(page, base_url, f'/zato/security/mtls/?cluster=1&query={name}')
+
+    # .. read the server-side ID off the row ..
+    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
+    row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+    id_cell = row.query_selector('td[class*="item_id_"]')
+    item_id = id_cell.text_content().strip()
+
+    # .. trigger the delete confirmation ..
+    page.evaluate(f'$.fn.zato.security.mtls.delete_("{item_id}")')
+    _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+
+    # .. confirm ..
+    page.click('#popup_ok')
+
+    # .. and wait for the row removal animation.
+    _ = page.wait_for_selector(f'#tr_{item_id}', state='detached', timeout=5000)
+
+# ################################################################################################################################
+
 def create_spnego_definition(page:'Page', base_url:'str', name:'str', fields:'anydict | None'=None) -> 'anydict':
     """ Creates a Kerberos (SPNEGO) security definition via the UI and returns its details.
     The principal and keytab path are required, the fields dictionary may add optional

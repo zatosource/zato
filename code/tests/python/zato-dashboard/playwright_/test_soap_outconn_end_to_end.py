@@ -18,6 +18,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.soap.common import NS
 from zato.common.util.xml_.core import qname
 from certs import build_tls_material
+from rest_channel import create_mtls_definition, delete_mtls_definition
 from soap_outconn import create_soap_outconn, delete_soap_outconn, invoke_soap_outconn_from_ide, \
     wait_for_soap_invoker_service
 from wss_definition import change_wss_password, create_wss_definition, delete_wss_definition
@@ -490,6 +491,69 @@ class TestSOAPOutconnEndToEnd:
 
         # Clean up.
         delete_soap_outconn(page, outconn_id)
+
+# ################################################################################################################################
+
+    def test_mutual_tls_via_definition(
+        self, logged_in_page:'Page', zato_dashboard:'anydict', soap_test_server_mtls:'any_') -> 'None':
+        """ An mTLS security definition attached to the connection carries the client certificate,
+        its key and the CA to verify the endpoint against - the connection itself has no TLS
+        material of its own and validation stays on, so the handshake only succeeds if the
+        definition's material is what the connection presents and verifies with.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        wait_for_soap_invoker_service(page, base_url)
+
+        material = soap_test_server_mtls.tls_material
+
+        name = _Test_Name_Prefix + 'mtls-def'
+        path = '/end-to-end-mutual-tls-definition'
+        soap_test_server_mtls.configure(path)
+
+        # Create the definition in the browser with the paths to the live material ..
+        _ = create_mtls_definition(page, base_url, name, {
+            'cert_path': material.client_certificate_path,
+            'key_path': material.client_key_path,
+            'ca_certs_path': material.ca_path,
+        })
+
+        # .. create the connection with that definition attached and nothing else TLS-related,
+        # validation left at its default of on ..
+        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server_mtls.address, {
+            'url_path': path,
+            'soap_version': '1.2',
+            'security': f'mTLS/{name}',
+        })
+
+        # .. and invoke it - the endpoint refuses the handshake without the client certificate
+        # and the client refuses the endpoint's certificate unless the pinned CA is in use.
+        result = _invoke_with_retry(page, base_url, name, 'submitSingleMessage',
+            namespace='urn:cdc:iisb:2014',
+            fields={'facilityID': 'FAC-01'},
+            response_fields=['status'],
+        )
+
+        assert result['fields']['status'] == 'ok', f'Expected an ok response, got: {result}'
+
+        # A ping may arrive after the invocation and overwrite last_request, so look
+        # for the newest SOAP request recorded on this test's path instead.
+        envelope = None
+        for record in reversed(soap_test_server_mtls.recorded_requests):
+            if record['path'] != path:
+                continue
+            if record['envelope'] is None:
+                continue
+            envelope = record['envelope']
+            break
+
+        assert envelope is not None, f'Expected a SOAP request recorded on `{path}`'
+
+        # Clean up.
+        delete_soap_outconn(page, outconn_id)
+        delete_mtls_definition(page, base_url, name)
 
 # ################################################################################################################################
 

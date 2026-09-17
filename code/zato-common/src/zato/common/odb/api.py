@@ -45,6 +45,7 @@ from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      MTLSSecurity, NTLM, OAuth, SecurityBase, Server, Service, SPNEGOSecurity, WSSecurity
 from zato.common.odb.ssl_config import get_ssl_connect_args
+from zato.common.oracledb import RowsOut
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query import generic as query_generic
 from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, new_cid_server, \
@@ -59,7 +60,8 @@ if 0:
     from sqlalchemy.orm import Session as SASession
     from zato.common.crypto.api import CryptoManager
     from zato.common.odb.model import Cluster as ClusterModel, Server as ServerModel
-    from zato.common.typing_ import any_, anylistnone, anyset, callable_, commondict, strdict, strdictnone
+    from zato.common.typing_ import any_, anylist, anylistnone, anyset, callable_, callnone, commondict, intnone, \
+        strdict, strdictnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -73,6 +75,39 @@ unittest_fs_sql_config = {
         'ping_query': 'SELECT 1+1'
     }
 }
+
+# What a stored procedure call amounts to as a statement - this is how it reads in the audit log
+Proc_Statement_MSSQL  = 'EXEC {}'
+Proc_Statement_Oracle = 'BEGIN {}(); END;'
+
+# ################################################################################################################################
+
+def _rows_as_is(out:'any_') -> 'any_':
+    """ Everything a statement returned is its rows.
+    """
+    return out
+
+def _count_rows_in_result_sets(result_sets:'anylist') -> 'int':
+    """ A procedure's result sets are lists of rows - the count is over all of them.
+    """
+    row_count = sum(len(result_set) for result_set in result_sets)
+    return row_count
+
+def _count_oracle_out_rows(params:'anylist') -> 'int':
+    """ Each OUT parameter of an Oracle procedure is one row, except a REF CURSOR, which is as many as it held.
+    """
+    row_count = 0
+
+    for elem in params:
+        if not elem.is_out:
+            continue
+
+        if isinstance(elem, RowsOut):
+            row_count += len(elem.rows)
+        else:
+            row_count += 1
+
+    return row_count
 
 # ################################################################################################################################
 
@@ -140,6 +175,7 @@ class SessionWrapper:
         self.config = {}    # type: dict
         self.is_sqlite = False # type: bool
         self.is_oracle_db = False # type: bool
+        self.is_ms_sql_direct = False # type: bool
         self.logger = logging.getLogger(self.__class__.__name__)
 
         # Statement auditing - off unless the pool store attached a writer
@@ -174,10 +210,10 @@ class SessionWrapper:
             else:
                 self.sql_audit_endpoint = '{}:{}/{}'.format(config['host'], config['port'], config['db_name'])
 
-        is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
+        self.is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
 
-        if is_ms_sql_direct:
-            self._Session = SimpleSession(self.pool.engine) # type: ignore
+        if self.is_ms_sql_direct:
+            self._Session = SimpleSession(self.pool.engine, self) # type: ignore
         else:
             if use_scoped_session:
                 self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
@@ -189,11 +225,62 @@ class SessionWrapper:
         self.is_sqlite = self.pool.engine and self.pool.engine.name == 'sqlite'
         self.is_oracle_db = self.pool.engine and self.pool.engine.name.startswith('oracle')
 
-    def execute(self, query:'str', params:'strdictnone'=None) -> 'any_':
+    def _record_failure(self, statement:'str', cid:'str', params:'any_', duration_ms:'int') -> 'None':
+        """ Puts a failed statement on record, before the caller learns about it.
+        """
+
+        # The statement's own content is on record only where the connection opted in ..
+        if self.sql_audit_level != SQL_Audit_Off:
+            _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, statement,
+                cid=cid, endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.Error,
+                params=params, duration_ms=duration_ms, error=format_exc())
+
+        # .. while the completing event with the outcome and duration is always written -
+        # it is what the alerting collectors measure.
+        record_remote_call(self.audit_log, AuditSource.SQL_Outgoing, self.config['name'],
+            cid=cid, is_ok=False, duration_ms=duration_ms, endpoint=self.sql_audit_endpoint)
+
+    def _record_success(
+        self,
+        statement:'str',
+        cid:'str',
+        params:'any_',
+        rows:'anylistnone',
+        row_count:'intnone',
+        duration_ms:'int',
+        ) -> 'None':
+        """ Puts a statement that ran to completion on record.
+        """
+
+        # The statement's own content is on record only where the connection opted in ..
+        if self.sql_audit_level != SQL_Audit_Off:
+            _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, statement,
+                cid=cid, endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.OK,
+                params=params, rows=rows, row_count=row_count, duration_ms=duration_ms)
+
+        # .. while the completing event with the outcome and duration is always written -
+        # it is what the alerting collectors measure.
+        record_remote_call(self.audit_log, AuditSource.SQL_Outgoing, self.config['name'],
+            cid=cid, is_ok=True, duration_ms=duration_ms, endpoint=self.sql_audit_endpoint)
+
+    def _run_audited(
+        self,
+        statement:'str',
+        func:'callable_',
+        *,
+        params:'any_'=None,
+        rows_func:'callnone'=None,
+        row_count_func:'callnone'=None,
+        ) -> 'any_':
+        """ Runs func, which is one statement, and puts it on record at the connection's audit level.
+        The statement is how the call reads in the audit log, rows_func says which part of what
+        func returned are the rows to keep at the full level - none by default - and row_count_func
+        says how many rows there are when they do not form a flat list.
+        """
 
         # A wrapper with no writer attached - the ODB's own - runs statements as it always did
         if not self.audit_log:
-            out = self._execute(query, params)
+            out = func()
             return out
 
         # The statement event and the completion event of one statement pair up on this id
@@ -203,39 +290,65 @@ class SessionWrapper:
 
         # A failed statement is recorded too, before the caller learns about it
         try:
-            out = self._execute(query, params)
+            out = func()
         except Exception:
             duration_ms = int((monotonic() - start) * 1000)
-
-            # The statement's own content is on record only where the connection opted in ..
-            if self.sql_audit_level != SQL_Audit_Off:
-                _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
-                    cid=cid, endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.Error,
-                    params=params, duration_ms=duration_ms, error=format_exc())
-
-            # .. while the completing event with the outcome and duration is always written -
-            # it is what the alerting collectors measure.
-            record_remote_call(self.audit_log, AuditSource.SQL_Outgoing, self.config['name'],
-                cid=cid, is_ok=False, duration_ms=duration_ms, endpoint=self.sql_audit_endpoint)
+            self._record_failure(statement, cid, params, duration_ms)
             raise
 
         duration_ms = int((monotonic() - start) * 1000)
 
-        # The statement's own content is on record only where the connection opted in ..
-        if self.sql_audit_level != SQL_Audit_Off:
-            _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
-                cid=cid, endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.OK,
-                params=params, rows=out, duration_ms=duration_ms)
+        # Only what the caller pointed to is kept as rows - a ping, for one, keeps none
+        rows = None
+        row_count = None
 
-        # .. while the completing event with the outcome and duration is always written -
-        # it is what the alerting collectors measure.
-        record_remote_call(self.audit_log, AuditSource.SQL_Outgoing, self.config['name'],
-            cid=cid, is_ok=True, duration_ms=duration_ms, endpoint=self.sql_audit_endpoint)
+        if rows_func:
+            rows = rows_func(out)
 
+        if row_count_func:
+            row_count = row_count_func(out)
+
+        self._record_success(statement, cid, params, rows, row_count, duration_ms)
+
+        return out
+
+    def _yield_audited(self, statement:'str', generator_func:'callable_', params:'any_') -> 'any_':
+        """ The streaming counterpart of _run_audited - the clock starts when the caller first asks
+        for a result set and the statement is on record once the last one was handed over. Streamed
+        rows are never kept, there is no point in streaming them if they were to be held in memory anyway.
+        """
+
+        # The statement event and the completion event of one statement pair up on this id
+        cid = new_cid_server()
+
+        start = monotonic()
+
+        # A failed statement is recorded too, before the caller learns about it
+        try:
+            for result_set in generator_func():
+                yield result_set
+        except Exception:
+            duration_ms = int((monotonic() - start) * 1000)
+            self._record_failure(statement, cid, params, duration_ms)
+            raise
+
+        duration_ms = int((monotonic() - start) * 1000)
+        self._record_success(statement, cid, params, None, None, duration_ms)
+
+    def execute(self, query:'str', params:'strdictnone'=None) -> 'any_':
+
+        # Everything a statement returned is its rows
+        out = self._run_audited(query, lambda: self._execute(query, params), params=params, rows_func=_rows_as_is)
         return out
 
     def _execute(self, query:'str', params:'strdictnone'=None) -> 'any_':
 
+        # A direct MS SQL engine runs the statement itself and already returns rows as dicts ..
+        if self.is_ms_sql_direct:
+            result = self.pool.engine.execute(query, params)
+            return result
+
+        # .. while an SQLAlchemy result has to be turned into them.
         with closing(self.session()) as session:
             result = session.execute(query, params)
             column_names = result.keys() # type: ignore
@@ -260,42 +373,8 @@ class SessionWrapper:
         else:
             query = get_ping_query(fs_sql_config, self.config)
 
-        # The statement event and the completion event of one ping pair up on this id
-        cid = new_cid_server()
-
-        start = monotonic()
-
-        # A failed ping is recorded too, before the caller learns about it
-        try:
-            out = self.pool.ping(fs_sql_config)
-        except Exception:
-            duration_ms = int((monotonic() - start) * 1000)
-
-            # The ping's own statement is on record only where the connection opted in ..
-            if self.sql_audit_level != SQL_Audit_Off:
-                _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
-                    cid=cid, endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.Error,
-                    duration_ms=duration_ms, error=format_exc())
-
-            # .. while the completing event with the outcome and duration is always written -
-            # it is what the alerting collectors measure.
-            record_remote_call(self.audit_log, AuditSource.SQL_Outgoing, self.config['name'],
-                cid=cid, is_ok=False, duration_ms=duration_ms, endpoint=self.sql_audit_endpoint)
-            raise
-
-        duration_ms = int((monotonic() - start) * 1000)
-
-        # The ping's own statement is on record only where the connection opted in ..
-        if self.sql_audit_level != SQL_Audit_Off:
-            _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
-                cid=cid, endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.OK,
-                duration_ms=duration_ms)
-
-        # .. while the completing event with the outcome and duration is always written -
-        # it is what the alerting collectors measure.
-        record_remote_call(self.audit_log, AuditSource.SQL_Outgoing, self.config['name'],
-            cid=cid, is_ok=True, duration_ms=duration_ms, endpoint=self.sql_audit_endpoint)
-
+        # A ping returns its response time, which is not rows
+        out = self._run_audited(query, lambda: self.pool.ping(fs_sql_config))
         return out
 
     def _get_one(self, needs_one:'bool', *args:'any_', **kwargs:'any_') -> 'any_':
@@ -326,12 +405,64 @@ class SessionWrapper:
         out = self._get_one(False, *args, **kwargs)
         return out
 
-    def callproc(self, proc_name:'str', params:'anylistnone'=None) -> 'any_':
+    def callproc(self, proc_name:'str', params:'anylistnone'=None, use_yield:'bool'=False) -> 'any_':
+        """ Calls a stored procedure and puts the call on record like any other statement.
+        With MS SQL the result sets come back as a list, or one by one with use_yield,
+        with Oracle the values of the OUT parameters come back, in the order they were given.
+        """
 
-        if not self.is_oracle_db:
-            raise Exception('This method works with Oracle DB only.')
+        if params is None:
+            params = []
 
-        params = params or []
+        if self.is_ms_sql_direct:
+            out = self._callproc_mssql(proc_name, params, use_yield)
+            return out
+
+        elif self.is_oracle_db:
+            out = self._callproc_oracle(proc_name, params)
+            return out
+
+        else:
+            raise Exception('This method works with Oracle DB and MS SQL only.')
+
+    def _callproc_mssql(self, proc_name:'str', params:'anylist', use_yield:'bool') -> 'any_':
+
+        # This is how the call reads in the audit log
+        statement = Proc_Statement_MSSQL.format(proc_name)
+
+        # Streamed result sets are handed over one by one, and the call is on record once the last one was ..
+        if use_yield:
+
+            # .. unless nothing is on record for this connection at all, in which case the engine's own generator will do.
+            if not self.audit_log:
+                out = self.pool.engine.callproc(proc_name, params, True)
+            else:
+                out = self._yield_audited(statement, lambda: self.pool.engine.callproc(proc_name, params, True), params)
+
+            return out
+
+        # .. while result sets returned all at once are all rows, counted across the sets.
+        out = self._run_audited(statement, lambda: self.pool.engine.callproc(proc_name, params, False),
+            params=params, rows_func=_rows_as_is, row_count_func=_count_rows_in_result_sets)
+
+        return out
+
+    def _callproc_oracle(self, proc_name:'str', params:'anylist') -> 'any_':
+
+        # This is how the call reads in the audit log
+        statement = Proc_Statement_Oracle.format(proc_name)
+
+        # The audit log keeps the plain input values - an OUT parameter has none and reads as None
+        input_values = [elem.value for elem in params]
+
+        # What the procedure gave back through its OUT parameters is its rows, and a REF CURSOR among them
+        # counts for as many rows as it held.
+        out = self._run_audited(statement, lambda: self._run_oracle_proc(proc_name, params),
+            params=input_values, rows_func=_rows_as_is, row_count_func=lambda _out: _count_oracle_out_rows(params))
+
+        return out
+
+    def _run_oracle_proc(self, proc_name:'str', params:'anylist') -> 'anylist':
 
         with closing(self.session()) as session:
 
@@ -342,10 +473,15 @@ class SessionWrapper:
             cursor.callproc(proc_name, _params)
 
             result = []
-            for idx, item in enumerate(_params):
-                input_item = params[idx]
-                if input_item.is_out:
-                    result.append(item.getvalue())
+            for elem in params:
+                if elem.is_out:
+
+                    # A REF CURSOR is read in full while its connection is still checked out -
+                    # once the session closes, the connection goes back to the pool and the cursor with it.
+                    if isinstance(elem, RowsOut):
+                        _ = elem.fetch()
+
+                    result.append(elem.get())
 
             return result
 
