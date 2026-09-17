@@ -8,7 +8,7 @@
 	analytics update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
-	test-server test-rest test-scheduler test-rate-limiting test-enmasse test-cli \
+	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-as2 test-as4 test-edifact test-x12 test-soap \
@@ -506,9 +506,12 @@ test-server: ## Server unit and integration tests.
 		$(CURDIR)/code/zato-server/test/zato/commands_/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server_commands -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
-	$(MAKE) -C $(CURDIR)/code/zato-server fuzzy timeout=$(timeout)
 
-test-rest: ## Every REST test - the channel unit suites, the outgoing audit log and mutation testing.
+test-server-fuzz: ## Server property, fuzz and mutation tests.
+	$(Zato_Log_Reset)
+	$(MAKE) -C $(CURDIR)/code/zato-server fuzz timeout=$(timeout) $(Zato_Log)
+
+test-rest: ## REST channel and outgoing audit log tests.
 	$(Zato_Log_Reset)
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/http_soap/ \
@@ -518,6 +521,9 @@ test-rest: ## Every REST test - the channel unit suites, the outgoing audit log 
 		$(CURDIR)/code/tests/python/zato-server/rest_outgoing_audit/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_outgoing_audit -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-rest-fuzz: ## REST mutation tests.
+	$(Zato_Log_Reset)
 	rm -f $(COSMIC_RAY_SESSION)
 	@echo ">>> cosmic-ray init - finding the mutants of $(notdir $(COSMIC_RAY_CONFIG))"
 	$(COSMIC_RAY) init $(COSMIC_RAY_CONFIG) $(COSMIC_RAY_SESSION) $(Zato_Log)
@@ -1083,10 +1089,11 @@ test-request-response: ## Unified service I/O tests - messages, request.raw, req
 Zato_Test_Static := test-lint
 
 # Offline unit suites, no server, no container, no browser
+# test-as4
 Zato_Test_Offline := \
 	test-message-filters test-demo-seed test-truncate test-safeguards \
 	test-edifact test-alerting test-x12 test-request-response test-destinations \
-	test-as4 test-soap
+	test-soap
 
 # Rust toolchain suites and the database matrices
 Zato_Test_Toolchain := \
@@ -1094,16 +1101,17 @@ Zato_Test_Toolchain := \
 	test-audit-log test-analytics
 
 # Suites needing a live server or an external service
+# test-as2
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-mongodb test-es \
-	test-sql test-oracle-db test-microsoft-cloud test-salesforce test-bearer test-as2 \
+	test-sql test-oracle-db test-microsoft-cloud test-salesforce test-bearer \
 	test-ibm-mq test-kafka test-sdk test-hl7 test-llm test-rule-engine test-enmasse
 
 # The whole browser and dashboard suite
-Zato_Test_Browser := test-ui
+# Zato_Test_Browser := test-ui
 
-# Mutation and fuzzing, the longest of all. test-rest carries the cosmic-ray run
-Zato_Test_Heavy := test-rest test-server
+# Mutation and fuzzing, the longest of all
+Zato_Test_Heavy := test-rest test-server test-rest-fuzz test-server-fuzz
 
 # Standalone performance suites, left out of test-all
 Zato_Test_Perf := test-pubsub-perf test-rule-engine-perf

@@ -23,6 +23,7 @@ from zato.common.json_internal import loads
 from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr
 from zato.common.util.http_ import get_form_data as util_get_form_data
+from zato.edifact import parse_edifact, wire_text_from
 from zato.server.generic.api.outconn_sdk import ConnectorContainer, type_prefix as sdk_type_prefix
 
 # Zato
@@ -45,6 +46,7 @@ if 0:
     # Zato
     from zato.common.odb.api import PoolStore
     from zato.common.typing_ import any_, anylistnone, callable_, stranydict, strnone
+    from zato.edifact import EDIInterchange
     from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.chat.slack import SlackClient
@@ -73,6 +75,7 @@ if 0:
     ConfigDict = ConfigDict
     ConfigManager = ConfigManager
     ConfigStore = ConfigStore
+    EDIInterchange = EDIInterchange
     IOProcessor = IOProcessor
     EMailAPI = EMailAPI
     GraphQLFacade = GraphQLFacade
@@ -167,7 +170,7 @@ class Request:
 
     __slots__ = ('service', 'logger', 'payload', 'raw', 'input', 'cid', 'data_format', 'transport',
         'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_request_ctx', 'channel_params',
-        'merge_channel_params', 'http', 'amqp', 'soap', 'enforce_string_encoding', 'headers')
+        'merge_channel_params', 'http', 'amqp', 'soap', 'enforce_string_encoding', 'headers', '_edifact')
 
     def __init__(
         self,
@@ -195,6 +198,9 @@ class Request:
         self.encrypt_func = None
         self.encrypt_secrets = True
         self.bytes_to_str_encoding = cast_('str', None)
+
+        # The parsed EDIFACT interchange, populated on first access
+        self._edifact:'EDIInterchange | None' = None
 
 # ################################################################################################################################
 
@@ -275,6 +281,25 @@ class Request:
     @text.setter
     def text(self, value:'any_') -> 'any_':
         self.raw = value
+
+# ################################################################################################################################
+
+    @property
+    def edifact(self) -> 'EDIInterchange':
+        """ The incoming EDIFACT interchange, parsed on first access from whatever the channel delivered.
+        """
+        if self._edifact is None:
+            self._edifact = self._get_edifact()
+
+        return self._edifact
+
+# ################################################################################################################################
+
+    def _get_edifact(self) -> 'EDIInterchange':
+        wire_text = wire_text_from(self.raw, self.payload)
+        out = parse_edifact(wire_text)
+
+        return out
 
 # ################################################################################################################################
 

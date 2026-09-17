@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.edifact.base import EDIComponent, EDIComposite, EDIElement, EDIGenericMessage, EDIGenericSegment, EDIGroup, \
      EDIGroupAttr, EDIMessage, EDIRepeatableList, EDISegment, EDISegmentAttr, EDIValidationError, Usage
 from zato.edifact.envelope import EDIEnvelopeError, EDIInterchange, parse_edifact
+from zato.edifact.inbound import wire_text_from
 from zato.edifact.service import UNB, UNH, UNT, UNZ
 from zato.edifact.syntax import EDISyntaxError, RawSegment, Separators, default_separators
 
@@ -41,6 +42,7 @@ __all__ = [
     'Usage',
     'default_separators',
     'parse_edifact',
+    'wire_text_from',
 ]
 
 # ################################################################################################################################
