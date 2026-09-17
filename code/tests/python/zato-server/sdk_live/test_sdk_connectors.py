@@ -344,7 +344,10 @@ def test_enmasse_export_round_trip(zato_server:'stranydict') -> 'None':
     assert item['name'] == _conn_name
     assert item['host'] == '127.0.0.1'
     assert item['port'] == zato_server['echo_port']
-    assert item['api_key'] == _api_key_enmasse
+
+    # .. except for the ones the connector declares as secrets - these are stored encrypted
+    # and never leave the database through enmasse.
+    assert 'api_key' not in item
 
 # ################################################################################################################################
 # ################################################################################################################################

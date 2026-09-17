@@ -17,7 +17,7 @@
 	test-hl7 test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-alerting test-destinations test-analytics test-demo-seed test-logging \
-	test-ibm-mq test-kafka test-mongodb test-es test-ftp test-rule-engine \
+	test-ibm-mq test-kafka test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
 	test-all test test-all-reset test-clean-test-all test-perf \
 	health-ruff health-clippy \
@@ -989,7 +989,7 @@ test-es: ## Elasticsearch connection tests against a live server, plain and TLS.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_es \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-rule-engine: ## Every rule engine test - grammar, matching, SQL, dashboard views, jobs and performance.
+test-rule-engine: ## Rule engine tests - grammar, matching, SQL, dashboard views and jobs.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-common/test/zato/common/rule_engine/ \
@@ -1007,6 +1007,9 @@ test-rule-engine: ## Every rule engine test - grammar, matching, SQL, dashboard 
 		$(CURDIR)/code/tests/python/zato-common/rule_engine_jobs/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine_jobs \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-rule-engine-perf: ## Rule engine SQL backend performance tests.
+	$(Zato_Log_Reset)
 	basetemp="$${TMPDIR:-/tmp}/zato-rule-engine-perf-$$USER"; \
 	trap 'rm -rf "$$basetemp"' EXIT INT TERM; \
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1102,8 +1105,8 @@ Zato_Test_Browser := test-ui
 # Mutation and fuzzing, the longest of all. test-rest carries the cosmic-ray run
 Zato_Test_Heavy := test-rest test-server
 
-# Standalone pub/sub throughput and load suite, left out of test-all
-Zato_Test_Perf := test-pubsub-perf
+# Standalone performance suites, left out of test-all
+Zato_Test_Perf := test-pubsub-perf test-rule-engine-perf
 
 Zato_Test_All := \
 	$(Zato_Test_Static) $(Zato_Test_Offline) $(Zato_Test_Toolchain) \
