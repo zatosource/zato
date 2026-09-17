@@ -9,7 +9,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.cli import ZatoCommand
 from zato.common.api import ZATO_INFO_FILE
+from zato.common.json_ import loads
+from zato.common.typing_ import cast_
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from argparse import Namespace
+    Namespace = Namespace
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Invoke(ZatoCommand):
@@ -28,7 +38,7 @@ class Invoke(ZatoCommand):
 
 # ################################################################################################################################
 
-    def execute(self, args):
+    def execute(self, args:'Namespace') -> 'None':
 
         # Zato
         from zato.common.util.api import get_client_from_server_conf
@@ -47,7 +57,14 @@ class Invoke(ZatoCommand):
         if response.ok:
             self.logger.info(response.data or '(None)')
         else:
-            self.logger.error(response.details)
+
+            # The body is the channel's error envelope and its details are the text meant for people to read.
+            body = cast_('str', response.details)
+            error = loads(body)
+            if details := error.get('details'):
+                self.logger.error(details)
+            else:
+                self.logger.error(body)
 
         if args.verbose:
             self.logger.debug('inner.text:[{}]'.format(response.inner.text))
