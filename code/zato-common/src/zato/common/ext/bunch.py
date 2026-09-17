@@ -20,7 +20,7 @@ class Bunch(dict):
             try:
                 return self[key]
             except KeyError:
-                raise AttributeError(key)
+                raise AttributeError(key, name=key, obj=self)
 
     def to_dict(self):
         return dict(self)

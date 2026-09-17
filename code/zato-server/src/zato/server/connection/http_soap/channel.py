@@ -37,6 +37,7 @@ from zato.common.soap.message import SOAPMessage
 from zato.common.typing_ import cast_
 from zato.common.util.api import utcnow
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
+from zato.common.util.exception import explain_exception
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
 from zato.common.util.logging_ import current_cid, current_service_name
 from zato.common.util.url_dispatcher import normalize_path_info, to_internal_accept
@@ -886,11 +887,8 @@ class RequestDispatcher:
                 headers[_header_zato_message] = _as_single_line(str(e.args))
 
                 # The full traceback goes to the server log through _log_dispatch_error -
-                # callers, the dashboard included, get the actual error message alone.
-                if e.args:
-                    response = str(e.args[0])
-                else:
-                    response = e.__class__.__name__
+                # callers, the dashboard included, get the error and the line in their service where it happened.
+                response = explain_exception(e, cid)
             else:
                 response = e.args if self.return_tracebacks else self.default_error_message
 

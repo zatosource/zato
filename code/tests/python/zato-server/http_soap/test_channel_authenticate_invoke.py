@@ -1465,8 +1465,9 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
         self.assertIn('X-Zato-Message', env['zato.http.response.headers'])
         self.assertIn('500', env['zato.http.response.status'])
 
-        # The response carries the actual message alone - the traceback goes to the server log only.
-        self.assertIn('Test error message', result)
+        # The response carries the error and the CID - the traceback goes to the server log only.
+        self.assertIn('RuntimeError: Test error message', result)
+        self.assertIn(f'CID: {_test_cid}', result)
         self.assertNotIn('Traceback', result)
 
 # ################################################################################################################################

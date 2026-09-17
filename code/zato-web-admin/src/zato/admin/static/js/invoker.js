@@ -135,28 +135,6 @@ $.fn.zato.invoker.draw_attention = function(elementList) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.invoker.format_error_traceback = function(responseData) {
-
-    const responseString = JSON.stringify(responseData);
-
-    let hasErrorMarker = responseString.indexOf('··· Error ···') !== -1;
-
-    if (!hasErrorMarker) {
-        return responseData;
-    }
-
-    let formatted = responseString;
-    formatted = formatted.replace(/^\["/, '');
-    formatted = formatted.replace(/"\]$/, '');
-    formatted = formatted.replace(/\\n/g, '\n');
-    formatted = formatted.replace(/\\"/g, '\"');
-    formatted = formatted.replace(/\\\\/g, '\\');
-
-    return formatted;
-};
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.invoker.on_form_ended_common_impl = function(
     options,
     status,
@@ -210,15 +188,13 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
 
     $('#result-header').text(status);
 
-    const formattedResponse = $.fn.zato.invoker.format_error_traceback(responseData);
-
     // .val() rather than .text() - the highlight overlay repaints only through the .val() hook,
     // and .text() does not update a textarea whose value was already set programmatically
-    if (typeof formattedResponse === 'string') {
-        $('#data-response').val(formattedResponse);
+    if (typeof responseData === 'string') {
+        $('#data-response').val(responseData);
     }
     else {
-        $('#data-response').val(JSON.stringify(formattedResponse));
+        $('#data-response').val(JSON.stringify(responseData));
     }
 
     let requestText = $('#data-request').val();
