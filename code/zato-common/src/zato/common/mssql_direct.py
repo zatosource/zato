@@ -22,7 +22,9 @@ from zato.common.api import MS_SQL
 # ################################################################################################################################
 
 if 0:
+    from zato.common.odb.api import SessionWrapper
     from zato.common.typing_ import anylist, stranydict, strdictnone, strset
+    SessionWrapper = SessionWrapper
     stranydict = stranydict
 
 # ################################################################################################################################
@@ -113,10 +115,12 @@ def get_queue_pool(pool_kwargs):
 # ################################################################################################################################
 
 class SimpleSession:
-    """ A simple object simulating SQLAlchemy sessions.
+    """ A simple object simulating SQLAlchemy sessions. Statements and procedure calls go back
+    through the wrapper that owns the session, which is what puts them in the audit log.
     """
-    def __init__(self, api:'MSSQLDirectAPI') -> 'None':
+    def __init__(self, api:'MSSQLDirectAPI', wrapper:'SessionWrapper') -> 'None':
         self.api = api
+        self.wrapper = wrapper
 
     def __call__(self):
         return self
@@ -126,10 +130,10 @@ class SimpleSession:
         """
 
     def execute(self, *args, **kwargs):
-        return self.api.execute(*args, **kwargs)
+        return self.wrapper.execute(*args, **kwargs)
 
     def callproc(self, *args, **kwargs):
-        return self.api.callproc(*args, **kwargs)
+        return self.wrapper.callproc(*args, **kwargs)
 
     def ping(self, *args, **kwargs):
         return self.api.ping(*args, **kwargs)
@@ -235,9 +239,6 @@ class MSSQLDirectAPI:
         has_exception = False
 
         try:
-
-            # Obtain a connection from pool
-            conn = self.connect()
 
             # Get a new cursor
             cursor = conn.cursor()

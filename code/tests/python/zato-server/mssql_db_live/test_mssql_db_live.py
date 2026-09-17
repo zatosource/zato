@@ -234,6 +234,24 @@ class TestMSSQLStoredProcedures:
 
 # ################################################################################################################################
 
+    def test_conn_callproc_returns_the_same_result_sets(self, zato_server:'anydict') -> 'None':
+        """ Calling a procedure straight through the connection gives the same result sets as calling it through a session.
+        """
+        client = _get_client(zato_server)
+
+        through_conn = _callproc(client, 'test.mssql.db.conn-callproc', Proc_Get_Department_Summary, [])
+        through_session = _callproc(client, 'test.mssql.db.callproc', Proc_Get_Department_Summary, [])
+
+        assert len(through_conn) == 2
+        assert through_conn == through_session
+
+        head_counts, employees = through_conn
+
+        assert head_counts == get_department_head_counts()
+        assert employees == get_all_employees()
+
+# ################################################################################################################################
+
     def test_callproc_with_yield_returns_the_same_rows(self, zato_server:'anydict') -> 'None':
         """ Consuming the result sets one by one gives the same rows as receiving them all at once.
         """

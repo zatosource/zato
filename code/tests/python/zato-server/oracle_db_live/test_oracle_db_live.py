@@ -13,6 +13,10 @@ from base64 import b64encode
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+# Zato
+from _hr_data import Department_Sales, get_employee_name, get_employees_by_department, Proc_Get_Employee_Name, \
+    Proc_Get_Employees_By_Department
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -134,6 +138,47 @@ class TestOracleDBQueries:
         })
 
         assert result['response_time'] > 0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestOracleDBProcedures:
+
+    def test_callproc_with_out_parameter(self, zato_server:'anydict', oracle_hr_schema:'None') -> 'None':
+        """ A procedure hands a value back through its OUT parameter, and conn.callproc returns the OUT values as a list.
+        """
+        client = _get_client(zato_server)
+        employee_id = 2
+
+        result = client.invoke('test.oracle.db.callproc-out', {
+            'conn_name': _connection_name,
+            'proc_name': Proc_Get_Employee_Name,
+            'employee_id': employee_id,
+        })
+
+        expected = get_employee_name(employee_id)
+
+        assert result['name'] == expected
+        assert result['out_values'] == [expected]
+
+# ################################################################################################################################
+
+    def test_callproc_with_ref_cursor(self, zato_server:'anydict', oracle_hr_schema:'None') -> 'None':
+        """ A procedure hands rows back through a REF CURSOR, and each row is a dict keyed by column name.
+        """
+        client = _get_client(zato_server)
+
+        result = client.invoke('test.oracle.db.callproc-rows', {
+            'conn_name': _connection_name,
+            'proc_name': Proc_Get_Employees_By_Department,
+            'department': Department_Sales,
+        })
+
+        expected = get_employees_by_department(Department_Sales)
+
+        assert result['rows'] == expected
+        assert result['out_values'] == [expected]
+        assert len(result['rows']) == 2
 
 # ################################################################################################################################
 # ################################################################################################################################

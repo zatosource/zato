@@ -29,9 +29,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib')))
 
 # PyPI
+import oracledb
 import pytest
 
 # Zato
+from _hr_data import Create_Procs, Create_Table, Drop_Table, Insert_Row, Seed_Rows
 from live_sql.containers import start_oracle, stop_container
 
 # ################################################################################################################################
@@ -277,6 +279,37 @@ def oracle_server() -> 'servergen':
     yield server
 
     stop_container(server.container_name)
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def oracle_hr_schema(oracle_server:'DatabaseServer') -> 'None':
+    """ The HR table, its rows and the procedures the callproc tests call, created through
+    a direct connection of the suite's own - the container can be reused between runs,
+    so everything starts from scratch.
+    """
+    details = oracle_server.details
+
+    connection = oracledb.connect(
+        user=details['username'],
+        password=details['password'],
+        host=details['host'],
+        port=int(details['port']),
+        service_name=details['name'],
+    )
+
+    with connection.cursor() as cursor:
+        cursor.execute(Drop_Table)
+        cursor.execute(Create_Table)
+
+        for row in Seed_Rows:
+            cursor.execute(Insert_Row, row)
+
+        for create_proc in Create_Procs:
+            cursor.execute(create_proc)
+
+    connection.commit()
+    connection.close()
 
 # ################################################################################################################################
 

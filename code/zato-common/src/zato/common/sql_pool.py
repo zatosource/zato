@@ -194,6 +194,7 @@ class SessionWrapper:
         self.config = {}    # type: dict
         self.is_sqlite = False # type: bool
         self.is_oracle_db = False # type: bool
+        self.is_ms_sql_direct = False # type: bool
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def init_session(self, *args, **kwargs):
@@ -206,10 +207,10 @@ class SessionWrapper:
         self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
 
-        is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
+        self.is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
 
-        if is_ms_sql_direct:
-            self._Session = sa.SimpleSession(self.pool.engine) # type: ignore
+        if self.is_ms_sql_direct:
+            self._Session = sa.SimpleSession(self.pool.engine, self) # type: ignore
         else:
             if use_scoped_session:
                 self._Session = sa.scoped_session(sa.sessionmaker(bind=self.pool.engine, query_cls=sa.WritableTupleQuery))
@@ -223,6 +224,12 @@ class SessionWrapper:
 
     def execute(self, query:'str', params:'strdictnone'=None) -> 'any_':
 
+        # A direct MS SQL engine runs the statement itself and already returns rows as dicts ..
+        if self.is_ms_sql_direct:
+            result = self.pool.engine.execute(query, params)
+            return result
+
+        # .. while an SQLAlchemy result has to be turned into them.
         with closing(self.session()) as session:
             result = session.execute(query, params)
             column_names = result.keys() # type: ignore
@@ -248,12 +255,17 @@ class SessionWrapper:
     def one_or_none(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.one(*args, zato_needs_one=True, **kwargs)
 
-    def callproc(self, proc_name:'str', params:'anylistnone'=None) -> 'any_':
-
-        if not self.is_oracle_db:
-            raise Exception('This method works with Oracle DB only.')
+    def callproc(self, proc_name:'str', params:'anylistnone'=None, use_yield:'bool'=False) -> 'any_':
 
         params = params or []
+
+        # A direct MS SQL engine calls procedures itself
+        if self.is_ms_sql_direct:
+            out = self.pool.engine.callproc(proc_name, params, use_yield)
+            return out
+
+        if not self.is_oracle_db:
+            raise Exception('This method works with Oracle DB and MS SQL only.')
 
         with closing(self.session()) as session:
 

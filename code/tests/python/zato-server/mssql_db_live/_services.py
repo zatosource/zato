@@ -41,6 +41,25 @@ class MSSQLCallProc(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class MSSQLConnCallProc(Service):
+    """ Calls a stored procedure straight through the outgoing MS SQL connection, with no session in between.
+    """
+    name = 'test.mssql.db.conn-callproc'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        proc_name = self.request.raw_request['proc_name']
+        params = self.request.raw_request['params']
+
+        conn = self.out.sql[conn_name]
+        result = conn.callproc(proc_name, params)
+
+        self.response.payload = json.dumps(result)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class MSSQLCallProcYield(Service):
     """ Calls a stored procedure through the outgoing MS SQL connection, consuming its result sets one by one.
     """
