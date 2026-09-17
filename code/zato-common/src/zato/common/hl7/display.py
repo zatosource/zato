@@ -438,6 +438,13 @@ def parse_display_tree(data:'str') -> 'tuple[stranydict, bool]':
         out = build_segment_display_tree(data)
         return out, False
 
+    # A header the parser accepts without a message type in it has no identity to name
+    # the message with, so it is a fragment as well - the parser walks an unknown structure
+    # as raw segments rather than refusing it.
+    if not get_message_type(message):
+        out = build_segment_display_tree(data)
+        return out, False
+
     out = build_display_tree(message)
     return out, True
 

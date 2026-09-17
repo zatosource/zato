@@ -12,7 +12,9 @@ from json import loads
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item, security_needs_update
-from zato.common.api import CONNECTION, URL_TYPE
+from zato.cli.enmasse.util.secrets import encrypt_kept_opaque_secrets, encrypt_opaque_secrets, load_opaque, redact_secrets, \
+    secret_needs_update
+from zato.common.api import AS4, CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, Service, to_json
 from zato.common.util.sql import get_security_by_id, set_instance_opaque_attrs
 
@@ -142,6 +144,15 @@ class ChannelAS4Importer:
                     if key in _comparison_skip_keys:
                         continue
 
+                    # The keystore secrets are stored encrypted, so they are compared through decryption,
+                    # and one the YAML does not give in a usable form is not compared at all.
+                    if key in AS4.Secret_Fields:
+                        if secret_needs_update(session, value, db_def.get(key)):
+                            logger.info('Secret mismatch for %s.%s', name, key)
+                            needs_update = True
+                            break
+                        continue
+
                     # A field the database row does not have yet means an update too.
                     if key not in db_def:
                         logger.info('Field %s.%s not in DB yet, will update', name, key)
@@ -213,7 +224,7 @@ class ChannelAS4Importer:
     def create_channel_as4(self, channel_def:'anydict', session:'SASession') -> 'any_':
         name = channel_def['name']
         logger.info('Creating AS4 channel: %s', name)
-        logger.info('Channel definition: %s', channel_def)
+        logger.info('Channel definition: %s', redact_secrets(channel_def, AS4.Secret_Fields))
 
         service = self._get_service(channel_def, session)
         cluster = self.importer.get_cluster(session)
@@ -236,8 +247,10 @@ class ChannelAS4Importer:
         # Handle security definition
         self._assign_security(channel, channel_def, session)
 
-        # Fields that are not columns go into the opaque attributes.
-        set_instance_opaque_attrs(channel, _with_audit_log_flag(channel_def))
+        # Fields that are not columns go into the opaque attributes, the keystore secrets encrypted.
+        to_store = _with_audit_log_flag(channel_def)
+        encrypt_opaque_secrets(to_store, {}, AS4.Secret_Fields, session, is_create=True)
+        set_instance_opaque_attrs(channel, to_store)
 
         session.add(channel)
 
@@ -249,7 +262,7 @@ class ChannelAS4Importer:
 
         channel_id = channel_def['id']
         logger.info('Updating AS4 channel with id=%s', channel_id)
-        logger.info('Channel definition: %s', channel_def)
+        logger.info('Channel definition: %s', redact_secrets(channel_def, AS4.Secret_Fields))
 
         channel = session.query(HTTPSOAP).filter_by(id=channel_id).one()
 
@@ -267,13 +280,44 @@ class ChannelAS4Importer:
         # Handle security definition
         self._assign_security(channel, channel_def, session)
 
-        # Fields that are not columns go into the opaque attributes,
-        # merged with whatever the row already keeps there.
-        set_instance_opaque_attrs(channel, _with_audit_log_flag(channel_def))
+        # Fields that are not columns go into the opaque attributes, merged with whatever the row already keeps there -
+        # a keystore secret the YAML gives lands encrypted, one it does not give keeps its stored value.
+        to_store = _with_audit_log_flag(channel_def)
+        encrypt_opaque_secrets(to_store, load_opaque(channel.opaque1), AS4.Secret_Fields, session, is_create=False)
+        set_instance_opaque_attrs(channel, to_store)
 
         session.add(channel)
 
         return channel
+
+# ################################################################################################################################
+
+    def _encrypt_kept_secrets(
+        self,
+        channel_list:'anylist',
+        to_update:'anylist',
+        db_defs:'anydict',
+        session:'SASession',
+    ) -> 'None':
+        """ Encrypts in place the keystore secrets of every channel the YAML names but found nothing to update in,
+        so a row that still holds them in clear text does not stay that way.
+        """
+        updated_names = {item['name'] for item in to_update}
+
+        for item in channel_list:
+            name = item['name']
+
+            if name in updated_names:
+                continue
+
+            db_def = db_defs.get(name)
+            if not db_def:
+                continue
+
+            channel = session.query(HTTPSOAP).filter_by(id=db_def['id']).one()
+
+            if encrypt_kept_opaque_secrets(session, channel, AS4.Secret_Fields):
+                logger.info('Encrypted the stored keystore secrets of AS4 channel %s in place', name)
 
 # ################################################################################################################################
 
@@ -300,6 +344,8 @@ class ChannelAS4Importer:
                 instance = self.update_channel_as4(item, session)
                 logger.info('Updated AS4 channel: name=%s id=%s', instance.name, instance.id)
                 out_updated.append(instance)
+
+            self._encrypt_kept_secrets(channel_list, to_update, db_channels, session)
 
             logger.info('Committing changes: created=%d updated=%d', len(out_created), len(out_updated))
             session.commit()

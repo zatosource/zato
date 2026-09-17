@@ -14,6 +14,7 @@ from prometheus_client import Counter, Gauge, Histogram, Info, REGISTRY
 
 # Zato
 from zato.common.analytics.api import Latency_Buckets_Ms
+from zato.common.audit_log.common import transport_statuses, TransportStatus
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -24,6 +25,16 @@ Error_Source_Gateway     = 'gateway'
 Error_Source_Upstream    = 'upstream'
 Error_Source_Auth        = 'auth'
 Error_Source_Rate_Limit  = 'rate_limit'
+
+# A call that failed before any response arrived names how it failed - the same four names the audit log
+# writes it under, so a timeout, a refused connection and a TLS failure are three numbers rather than one
+Error_Source_Timeout          = TransportStatus.Timeout
+Error_Source_Connection_Error = TransportStatus.Connection_Error
+Error_Source_TLS_Error        = TransportStatus.TLS_Error
+Error_Source_Error            = TransportStatus.Error
+
+# The status class of a call that never received a response
+Status_Class_Transport = '0xx'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,9 +57,9 @@ def get_status_code_class(status_code:'str') -> 'str':
     """ Converts a raw HTTP status code to its class, e.g. '200' -> '2xx', '503' -> '5xx'.
     """
 
-    # Non-numeric codes like 'timeout' or 'connection_error' map to '0xx' ..
+    # Non-numeric codes - the transport statuses, 'timeout' or 'connection-error' - map to '0xx' ..
     if not status_code.isdigit():
-        out = '0xx'
+        out = Status_Class_Transport
 
     # .. otherwise, use the first digit to form the class.
     else:
@@ -59,17 +70,22 @@ def get_status_code_class(status_code:'str') -> 'str':
 
 # ################################################################################################################################
 
-def get_error_source_from_status_class(status_class:'str') -> 'str':
-    """ Derives an error_source label value from an HTTP status code class.
+def get_error_source_from_status_class(status_class:'str', transport_status:'str'='') -> 'str':
+    """ Derives an error_source label value from an HTTP status code class - and, for a call that failed
+    before any response arrived, from the transport status the call failed with, so the label keeps its name.
     """
 
     # 2xx and 3xx are successes ..
     if status_class in ('2xx', '3xx'):
         out = Error_Source_None
 
-    # .. 0xx means connection failure or timeout, which is an upstream issue ..
-    elif status_class == '0xx':
-        out = Error_Source_Upstream
+    # .. 0xx means the call never received a response - a timeout, a refused connection, a TLS failure
+    # or another error, each named as the audit log names it, an upstream issue when the caller did not say ..
+    elif status_class == Status_Class_Transport:
+        if transport_status in transport_statuses:
+            out = transport_status
+        else:
+            out = Error_Source_Upstream
 
     # .. anything else is a gateway error by default
     # (auth and rate_limit attribution is done at a higher level).

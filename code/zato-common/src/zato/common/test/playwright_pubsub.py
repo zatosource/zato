@@ -14,6 +14,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -613,7 +614,29 @@ def set_select_value(page:'Page', selector:'str', value:'str') -> 'None':
 
 # ################################################################################################################################
 
-def create_outgoing_amqp(page:'Page', base_url:'str', name:'str', address:'str', username:'str', password:'str') -> 'str':
+def reveal_more_options(page:'Page', dialog_id:'str', probe_selector:'str') -> 'None':
+    """ Makes sure the collapsed "more options" rows of an AMQP dialog are visible, clicking their toggler if needed.
+    """
+
+    probe = cast_('any_', page.query_selector(probe_selector))
+
+    # The rows may have been toggled by a previous dialog interaction, only click when they are hidden.
+    if not probe.is_visible():
+        page.click(f'#{dialog_id} a[href*="more-options-block"]')
+        _ = page.wait_for_selector(probe_selector, state='visible', timeout=5000)
+
+# ################################################################################################################################
+
+def create_outgoing_amqp(
+    page:'Page',
+    base_url:'str',
+    name:'str',
+    address:'str',
+    username:'str',
+    password:'str',
+    *,
+    is_active:'bool' = True,
+    ) -> 'str':
     """ Creates an outgoing AMQP connection via the UI and returns its item_id.
     """
 
@@ -628,6 +651,12 @@ def create_outgoing_amqp(page:'Page', base_url:'str', name:'str', address:'str',
     page.fill('#id_address', address)
     page.fill('#id_username', username)
     page.fill('#id_password', password)
+
+    # .. the form opens with the Active box ticked among the collapsed options,
+    # so it is revealed and unticked only when the connection is to be inactive ..
+    if not is_active:
+        reveal_more_options(page, 'create-div', '#id_is_active')
+        page.uncheck('#id_is_active')
 
     # .. submit and wait for the dialog to close ..
     submit_create_form(page)
@@ -651,6 +680,8 @@ def create_amqp_channel(
     password:'str',
     queue:'str',
     service_name:'str',
+    *,
+    is_active:'bool' = True,
     ) -> 'str':
     """ Creates an AMQP channel via the UI and returns its item_id.
     """
@@ -670,6 +701,12 @@ def create_amqp_channel(
 
     # .. pick the service the channel will invoke ..
     set_select_value(page, '#id_service', service_name)
+
+    # .. the form opens with the Active box ticked among the collapsed options,
+    # so it is revealed and unticked only when the channel is to be inactive ..
+    if not is_active:
+        reveal_more_options(page, 'create-div', '#id_is_active')
+        page.uncheck('#id_is_active')
 
     # .. submit and wait for the dialog to close ..
     submit_create_form(page)

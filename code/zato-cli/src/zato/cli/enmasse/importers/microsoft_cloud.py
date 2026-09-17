@@ -67,27 +67,14 @@ class MicrosoftCloudImporter(GenericConnectionImporter):
 
 # ################################################################################################################################
 
-    def _process_secret(self, connection_def:'stranydict') -> 'stranydict':
-
-        for key in ['secret', 'password']:
-            if value := connection_def.get(key):
-                connection_def['secret_value'] = value
-                break
-
-        return connection_def
-
-# ################################################################################################################################
-
     def create_definition(self, connection_def:'stranydict', session:'SASession') -> 'any_':
         connection_def = self._process_scopes(connection_def)
-        connection_def = self._process_secret(connection_def)
         return super().create_definition(connection_def, session)
 
 # ################################################################################################################################
 
     def update_definition(self, connection_def:'stranydict', session:'SASession') -> 'any_':
         connection_def = self._process_scopes(connection_def)
-        connection_def = self._process_secret(connection_def)
         return super().update_definition(connection_def, session)
 
 # ################################################################################################################################

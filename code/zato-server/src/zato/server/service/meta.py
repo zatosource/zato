@@ -36,8 +36,10 @@ from zato.server.service import AsIs, Bool as BoolIO, Int as IntIO
 # Type checking
 if 0:
     from zato.server.service import Service
+    from zato.server.service.internal import AdminService
 
     # For pyflakes
+    AdminService = AdminService
     Service = Service
 
 # ################################################################################################################################
@@ -359,12 +361,12 @@ class GetListMeta(AdminServiceMeta):
 
     @staticmethod
     def handle(attrs):
-        def handle_impl(self:'Service') -> 'None':
+        def handle_impl(self:'AdminService') -> 'None':
             input = self.request.input
             input.cluster_id = input.get('cluster_id') or self.server.cluster_id
 
             with closing(self.odb.session()) as session:
-                elems = elems_with_opaque(self.get_data(session))
+                elems = self.strip_listing_secrets(elems_with_opaque(self.get_data(session)))
                 self.response.payload[:] = elems
 
             if attrs.response_hook:

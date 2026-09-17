@@ -46,7 +46,7 @@ outgoing_fhir:
   - name: enmasse.fhir.out.2.{test_suffix}
     address: http://127.0.0.1:31202/fhir/r4
     pool_size: 5
-    is_audit_log_active: true
+    is_audit_log_active: false
 
   - name: enmasse.fhir.out.3.{test_suffix}
     address: http://127.0.0.1:31203/fhir/r4
@@ -139,7 +139,7 @@ class TestEnmasseOutgoingFHIRLive(BaseEnmasseTestCase):
 
             self.assertEqual(exported[connection_2_name]['address'], 'http://127.0.0.1:31202/fhir/r4')
             self.assertEqual(exported[connection_2_name]['pool_size'], 5)
-            self.assertEqual(exported[connection_2_name]['is_audit_log_active'], True)
+            self.assertIs(exported[connection_2_name]['is_audit_log_active'], False)
 
             self.assertEqual(exported[connection_3_name]['security'], f'enmasse.fhir.sec.{test_suffix}')
 

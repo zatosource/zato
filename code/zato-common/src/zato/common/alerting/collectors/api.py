@@ -8,20 +8,32 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The merger - runs every fact producer and folds their measures into one fact
 # per (source, object) pair, with zero as the resting value, so a rule can
-# reference any measure without erroring out.
+# reference any measure without erroring out. Each windowed measure is taken over
+# the window of its own line - the type's, a source's or an object's own.
 
 from __future__ import annotations
 
 # Zato
 from zato.common.alerting.collectors.backlogs import collect_feed_silent_facts, collect_outstanding_facts
-from zato.common.alerting.collectors.common import Default_Begin_Event_Type, Default_End_Event_Type, \
-    Default_Window_Seconds, Default_Window_Seconds_By_Source
+from zato.common.alerting.collectors.channels import collect_channel_silence_facts, collect_channel_status_facts
+from zato.common.alerting.collectors.common import new_fact, Default_Begin_Event_Type, Default_End_Event_Type, \
+    Default_Window_Seconds, Health_Window_Seconds, Measure_Ack_Codes, Measure_Auth_Failures, Measure_Client_Errors, \
+    Measure_Connection_Failures, Measure_Error_Rate, Measure_File_Runs, Measure_Invalid_Calls, Measure_Latency, \
+    Measure_MCP_Truncations, Measure_Operation_Outcomes, Measure_Refusals, Measure_Rejections, Measure_Repeat_Calls, \
+    Measure_Server_Errors, Measure_SOAP_Faults, Measure_Status_Codes, Measure_Throttled, Measure_Tokens, Measure_Truncations, \
+    Measure_Volume, Window_Seconds_By_Measure_Key
 from zato.common.alerting.collectors.file_transfer import collect_file_transfer_facts
+from zato.common.alerting.collectors.llm import collect_llm_completion_facts, collect_llm_token_facts
+from zato.common.alerting.collectors.mcp import collect_invalid_call_facts, collect_mcp_truncation_facts, \
+    collect_rejection_facts, collect_repeat_call_facts, collect_throttled_facts, collect_tool_count_facts, collect_volume_facts
+from zato.common.alerting.collectors.mllp import collect_ack_code_facts, collect_mllp_connection_failure_facts
+from zato.common.alerting.collectors.outgoing import collect_outgoing_status_facts
 from zato.common.alerting.collectors.probes import collect_certificate_facts, collect_health_facts, \
     collect_test_transfer_facts
 from zato.common.alerting.collectors.rates import collect_auth_failure_facts, collect_consecutive_failure_facts, \
     collect_error_rate_facts, collect_latency_facts
 from zato.common.alerting.collectors.scheduler import collect_scheduler_facts
+from zato.common.audit_log.common import health_sources, AuditSource
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,13 +41,226 @@ from zato.common.alerting.collectors.scheduler import collect_scheduler_facts
 if 0:
     from datetime import datetime
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import anydict, dictlist, stranydict, strintdict
+    from zato.common.typing_ import anydict, callable_, dictlist, stranydict, strintdict, strset
     anydict = anydict
+    callable_ = callable_
     datetime = datetime
     dictlist = dictlist
     Engine = Engine
     stranydict = stranydict
     strintdict = strintdict
+    strset = strset
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _collect_auth_failure_facts(
+    engine:'Engine',
+    window_seconds:'int',
+    now:'datetime',
+    *,
+    source:'str' = '',
+    object_name:'str' = '',
+    ) -> 'dictlist':
+    """ The authentication failures of every object - the failed authentication events of the sources
+    that write them, and the 401 and 403 responses of the channels, which have no such event of their own.
+    """
+    out = collect_auth_failure_facts(engine, window_seconds, now, source=source, object_name=object_name)
+    out.extend(collect_channel_status_facts(engine, window_seconds, now, source=source, object_name=object_name))
+
+    return out
+
+# ##############################################################################################################################
+
+def _collect_connection_failure_facts(
+    engine:'Engine',
+    window_seconds:'int',
+    now:'datetime',
+    *,
+    source:'str' = '',
+    object_name:'str' = '',
+    ) -> 'dictlist':
+    """ The calls of every outgoing connection that got no response at all - the HTTP ones that failed before
+    a status arrived, and the MLLP messages no acknowledgment came back for.
+    """
+    out = collect_outgoing_status_facts(engine, window_seconds, now, source=source, object_name=object_name)
+    out.extend(collect_mllp_connection_failure_facts(engine, window_seconds, now, source=source, object_name=object_name))
+
+    return out
+
+# ################################################################################################################################
+
+# The windowed collectors by the measure that drives each - every one takes the engine, the window,
+# the moment and the optional source and object to narrow to. The channel status collector answers three
+# measures, the outgoing one four and the LLM completion one two, so each runs once per measure and each run keeps
+# the keys of its own measure alone.
+_collector_by_measure:'dict[str, callable_]' = {
+    Measure_Error_Rate:          collect_error_rate_facts,
+    Measure_Latency:             collect_latency_facts,
+    Measure_Auth_Failures:       _collect_auth_failure_facts,
+    Measure_Client_Errors:       collect_channel_status_facts,
+    Measure_Server_Errors:       collect_channel_status_facts,
+    Measure_Status_Codes:        collect_outgoing_status_facts,
+    Measure_SOAP_Faults:         collect_outgoing_status_facts,
+    Measure_Operation_Outcomes:  collect_outgoing_status_facts,
+    Measure_Connection_Failures: _collect_connection_failure_facts,
+    Measure_Ack_Codes:           collect_ack_code_facts,
+    Measure_Tokens:              collect_llm_token_facts,
+    Measure_Truncations:         collect_llm_completion_facts,
+    Measure_Refusals:            collect_llm_completion_facts,
+    Measure_Invalid_Calls:       collect_invalid_call_facts,
+    Measure_Rejections:          collect_rejection_facts,
+    Measure_Throttled:           collect_throttled_facts,
+    Measure_Repeat_Calls:        collect_repeat_call_facts,
+    Measure_MCP_Truncations:     collect_mcp_truncation_facts,
+    Measure_Volume:              collect_volume_facts,
+}
+
+# The fact keys each windowed measure owns - what a run over one measure's window is allowed
+# to say, so two runs of one collector over two windows never overwrite each other's numbers.
+# The error rate's keys include the fact's window, which is what window_seconds keeps meaning.
+_keys_by_measure:'dict[str, tuple[str, ...]]' = {
+    Measure_Error_Rate:          ('error_rate', 'error_count', 'total_count', 'window_seconds', 'last_error_event_id',
+        'is_resubmittable'),
+    Measure_Latency:             ('avg_duration_ms',),
+    Measure_Auth_Failures:       ('auth_failure_count',),
+    Measure_Client_Errors:       ('client_error_count',),
+    Measure_Server_Errors:       ('server_error_count', 'server_error_rate'),
+    Measure_Status_Codes:        ('status_counts',),
+    Measure_SOAP_Faults:         ('fault_counts',),
+    Measure_Operation_Outcomes:  ('fault_counts',),
+    Measure_Connection_Failures: ('connection_failure_count',),
+    Measure_Ack_Codes:           ('fault_counts',),
+    Measure_Tokens:              ('token_count', 'input_token_count', 'output_token_count'),
+    Measure_Truncations:         ('truncation_count',),
+    Measure_Refusals:            ('refusal_count',),
+    Measure_Invalid_Calls:       ('invalid_call_count',),
+    Measure_Rejections:          ('rejection_count',),
+    Measure_Throttled:           ('throttled_count',),
+    Measure_Repeat_Calls:        ('repeat_call_count', 'repeat_call_tool', 'repeat_call_session'),
+    Measure_MCP_Truncations:     ('truncation_count',),
+    Measure_Volume:              ('volume_bytes',),
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _window_of(windows:'strintdict', measure:'str', default:'int') -> 'int':
+    """ The window of one measure in a per-measure dict, the default when the dict has none for it.
+    """
+    if measure in windows:
+        out = windows[measure]
+    else:
+        out = default
+
+    return out
+
+# ################################################################################################################################
+
+def _keep_measure(fact:'stranydict', measure:'str', window_seconds:'int') -> 'stranydict':
+    """ A fact reduced to what one measure's run may say - the measure's own keys and the window it was taken over.
+    """
+    out = {
+        'source': fact['source'],
+        'object_name': fact['object_name'],
+        Window_Seconds_By_Measure_Key: {measure: window_seconds},
+    }
+
+    for key in _keys_by_measure[measure]:
+        out[key] = fact[key]
+
+    return out
+
+# ################################################################################################################################
+
+def _collect_measure(
+    engine:'Engine',
+    measure:'str',
+    now:'datetime',
+    window_seconds:'int',
+    window_seconds_by_source:'anydict',
+    window_seconds_by_object:'anydict',
+    ) -> 'dictlist':
+    """ One windowed measure over every object - the default window first, then each source with a window
+    of its own for the measure again over that one, then each object with one of its own, the narrower
+    run replacing what the wider one said about the same pair.
+    """
+    collect = _collector_by_measure[measure]
+
+    facts = collect(engine, window_seconds, now)
+
+    # Keyed by pair, so a narrower run replaces the wider one's fact
+    by_object:'dict[tuple[str, str], stranydict]' = {}
+
+    for fact in facts:
+        by_object[(fact['source'], fact['object_name'])] = _keep_measure(fact, measure, window_seconds)
+
+    for source, windows in window_seconds_by_source.items():
+
+        if measure not in windows:
+            continue
+
+        source_window = windows[measure]
+
+        # The default run of this source steps aside whole, a source with a window of its own
+        # is measured over that window and nothing else
+        for key in list(by_object):
+            if key[0] == source:
+                del by_object[key]
+
+        for fact in collect(engine, source_window, now, source=source):
+            by_object[(source, fact['object_name'])] = _keep_measure(fact, measure, source_window)
+
+    for source, windows_by_object in window_seconds_by_object.items():
+        for object_name, windows in windows_by_object.items():
+
+            if measure not in windows:
+                continue
+
+            object_window = windows[measure]
+            key = (source, object_name)
+
+            if key in by_object:
+                del by_object[key]
+
+            for fact in collect(engine, object_window, now, source=source, object_name=object_name):
+                by_object[key] = _keep_measure(fact, measure, object_window)
+
+    # Our response to produce
+    out = list(by_object.values())
+    return out
+
+# ################################################################################################################################
+
+def _merge_facts(fact_lists:'list[dictlist]') -> 'dictlist':
+    """ One merged fact per (source, object) pair - every fact list lands in the same fact of its pair,
+    only the measures a producer actually took overwriting the resting zeroes, and the per-measure
+    windows of every run gathered into one dict.
+    """
+    by_object:'dict[tuple[str, str], stranydict]' = {}
+
+    for fact_list in fact_lists:
+        for fact in fact_list:
+
+            key = (fact['source'], fact['object_name'])
+
+            if key not in by_object:
+                by_object[key] = new_fact(fact['source'], fact['object_name'])
+
+            merged = by_object[key]
+
+            for name, value in fact.items():
+
+                if name == Window_Seconds_By_Measure_Key:
+                    merged[name].update(value)
+                    continue
+
+                # Only the measures this producer actually took overwrite the resting zeroes
+                if value:
+                    merged[name] = value
+
+    out = list(by_object.values())
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,18 +272,29 @@ def collect_facts(
     now:'datetime',
     *,
     window_seconds:'int' = Default_Window_Seconds,
-    window_seconds_by_source:'strintdict | None' = None,
+    window_seconds_by_source:'anydict | None' = None,
+    window_seconds_by_object:'anydict | None' = None,
     begin_event_type:'str' = Default_Begin_Event_Type,
     end_event_type:'str' = Default_End_Event_Type,
     job_intervals:'strintdict | None' = None,
     arrival_windows:'strintdict | None' = None,
     schedule_expectations:'anydict | None' = None,
+    silence_expected_names:'strset | None' = None,
+    tool_counts:'strintdict | None' = None,
     ) -> 'dictlist':
     """ Runs every fact producer and merges their measures into one fact
-    per (source, object) pair - the input the alert rules match over.
+    per (source, object) pair - the input the alert rules match over. The per-source
+    windows come from the rules' window_seconds defaults, by source and then by measure -
+    a source without one is measured over window_seconds, the health sources over their own hour,
+    and an object with windows of its own, by source, then by object name and then by measure, over those.
+    The silence of a channel is measured for the channels named as expecting traffic alone, and the tool
+    counts of the MCP gateways arrive from the gateways themselves rather than the audit log.
     """
     if window_seconds_by_source is None:
-        window_seconds_by_source = Default_Window_Seconds_By_Source
+        window_seconds_by_source = {}
+
+    if window_seconds_by_object is None:
+        window_seconds_by_object = {}
 
     if job_intervals is None:
         job_intervals = {}
@@ -69,80 +305,74 @@ def collect_facts(
     if schedule_expectations is None:
         schedule_expectations = {}
 
-    error_rate_facts = collect_error_rate_facts(engine, window_seconds, now)
-    latency_facts = collect_latency_facts(engine, window_seconds, now)
+    if silence_expected_names is None:
+        silence_expected_names = set()
+
+    if tool_counts is None:
+        tool_counts = {}
+
+    # The health sources keep their hour unless a rule names them
+    window_seconds_by_source = dict(window_seconds_by_source)
+
+    for health_source in health_sources:
+        if health_source not in window_seconds_by_source:
+            window_seconds_by_source[health_source] = {
+                Measure_Error_Rate: Health_Window_Seconds,
+                Measure_Latency: Health_Window_Seconds,
+            }
+
+    # The counters that measure one source each take that source's window
+    if AuditSource.Scheduler in window_seconds_by_source:
+        scheduler_window_seconds = _window_of(window_seconds_by_source[AuditSource.Scheduler], Measure_Error_Rate, window_seconds)
+    else:
+        scheduler_window_seconds = window_seconds
+
+    if AuditSource.File_Outgoing in window_seconds_by_source:
+        run_window_seconds = _window_of(window_seconds_by_source[AuditSource.File_Outgoing], Measure_File_Runs, window_seconds)
+    else:
+        run_window_seconds = window_seconds
+
+    # The schedules measured over a window of their own - the run facts are keyed by schedule name
+    run_window_seconds_by_object:'strintdict' = {}
+
+    if AuditSource.File_Outgoing in window_seconds_by_object:
+        for object_name, windows in window_seconds_by_object[AuditSource.File_Outgoing].items():
+            if Measure_File_Runs in windows:
+                run_window_seconds_by_object[object_name] = windows[Measure_File_Runs]
+
+    # The windowed measures, each over the windows of its own line
+    windowed_fact_lists:'list[dictlist]' = []
+
+    for measure in _collector_by_measure:
+        windowed_fact_lists.append(
+            _collect_measure(engine, measure, now, window_seconds, window_seconds_by_source, window_seconds_by_object))
+
     consecutive_facts = collect_consecutive_failure_facts(engine, now)
-    auth_failure_facts = collect_auth_failure_facts(engine, window_seconds, now)
     outstanding_facts = collect_outstanding_facts(engine, begin_event_type, end_event_type, now)
     silent_facts = collect_feed_silent_facts(metrics_by_name, source)
+    channel_silent_facts = collect_channel_silence_facts(engine, now, silence_expected_names)
     certificate_facts = collect_certificate_facts(engine, now)
     health_facts = collect_health_facts(engine, now)
     test_transfer_facts = collect_test_transfer_facts(engine, now)
-    scheduler_facts = collect_scheduler_facts(engine, window_seconds, now, job_intervals)
-    file_transfer_facts = collect_file_transfer_facts(engine, now, arrival_windows, schedule_expectations)
+    scheduler_facts = collect_scheduler_facts(engine, scheduler_window_seconds, now, job_intervals)
+    file_transfer_facts = collect_file_transfer_facts(engine, now, arrival_windows, schedule_expectations, run_window_seconds,
+        run_window_seconds_by_object)
+    tool_count_facts = collect_tool_count_facts(tool_counts)
 
-    # A source with a window of its own is measured again over that window,
-    # and its own measures replace the default-window ones below.
-    override_error_rate_facts:'dictlist' = []
-    override_latency_facts:'dictlist' = []
-
-    for override_source, override_window in window_seconds_by_source.items():
-        override_error_rate_facts.extend(collect_error_rate_facts(engine, override_window, now, source=override_source))
-        override_latency_facts.extend(collect_latency_facts(engine, override_window, now, source=override_source))
-
-    # The default-window measures of an overridden source step aside
-    overridden_sources = set(window_seconds_by_source)
-
-    kept_error_rate_facts:'dictlist' = []
-    kept_latency_facts:'dictlist' = []
-
-    for fact in error_rate_facts:
-        if fact['source'] not in overridden_sources:
-            kept_error_rate_facts.append(fact)
-
-    for fact in latency_facts:
-        if fact['source'] not in overridden_sources:
-            kept_latency_facts.append(fact)
-
-    error_rate_facts = kept_error_rate_facts
-    latency_facts = kept_latency_facts
-
-    error_rate_facts.extend(override_error_rate_facts)
-    latency_facts.extend(override_latency_facts)
-
-    # One merged fact per (source, object) pair - later measures land in the same fact
-    by_object:'dict[tuple[str, str], stranydict]' = {}
-
-    fact_lists = (
-        error_rate_facts,
-        latency_facts,
+    fact_lists = windowed_fact_lists + [
         consecutive_facts,
-        auth_failure_facts,
         outstanding_facts,
         silent_facts,
+        channel_silent_facts,
         certificate_facts,
         health_facts,
         test_transfer_facts,
         scheduler_facts,
         file_transfer_facts,
-    )
+        tool_count_facts,
+    ]
 
-    for fact_list in fact_lists:
-        for fact in fact_list:
-
-            key = (fact['source'], fact['object_name'])
-
-            if key in by_object:
-                merged = by_object[key]
-
-                # Only the measures this producer actually took overwrite the resting zeroes
-                for name, value in fact.items():
-                    if value:
-                        merged[name] = value
-            else:
-                by_object[key] = fact
-
-    out = list(by_object.values())
+    out = _merge_facts(fact_lists)
     return out
 
 # ################################################################################################################################

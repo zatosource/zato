@@ -15,7 +15,7 @@ from json import loads
 
 # Zato
 from zato.admin.web.views import Action_Message_Max_Length
-from zato.admin.web.views.audit_log.views import _get_error_summary, _get_resubmit_message, _get_resubmit_response
+from zato.admin.web.views.audit_log.resubmit import _get_error_summary, _get_resubmit_message, _get_resubmit_response
 
 # ################################################################################################################################
 # ################################################################################################################################

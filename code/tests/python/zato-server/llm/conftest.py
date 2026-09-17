@@ -32,6 +32,9 @@ if 0:
 
 from llm_test_server import LLMTestServer
 
+# Zato
+from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+
 # How long to wait for the test-managed Redis to accept connections
 _Redis_Wait_Timeout = 30
 _Redis_Poll_Interval = 0.1
@@ -84,6 +87,24 @@ def llm_test_server() -> 'any_':
     yield server
 
     server.stop()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(autouse=True)
+def audit_db_env(tmp_path:'any_') -> 'any_':
+    """ Points the audit database at a per-test SQLite file - the wrapper records every provider call
+    and each test reads back only the rows it wrote itself.
+    """
+    database_path = os.path.join(str(tmp_path), 'audit.db')
+
+    os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
+    os.environ[AuditLogCtx.Env_Name] = database_path
+
+    yield database_path
+
+    del os.environ[AuditLogCtx.Env_Type]
+    del os.environ[AuditLogCtx.Env_Name]
 
 # ################################################################################################################################
 # ################################################################################################################################

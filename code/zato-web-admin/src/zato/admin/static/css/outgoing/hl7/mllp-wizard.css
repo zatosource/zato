@@ -25,5 +25,5 @@
    when the endpoint fails", which do not fit the width a line label
    has by default */
 #mllp-outconn-wizard {
-    --wizard-line-label-width: 19em;
+    --decision-line-label-width: 19em;
 }

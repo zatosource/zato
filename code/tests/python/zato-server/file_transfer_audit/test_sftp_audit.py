@@ -105,10 +105,12 @@ def test_an_upload_writes_one_event_with_the_path_and_size(tmp_path:'os.PathLike
 
         _ = conn.upload(local_path, Remote_Path, _needs_overwrite_check=False)
 
-        # The client was told to move the file ..
-        assert len(sftp_client.commands) == 1
+        # The client was told to move the file and then to look at what arrived ..
+        assert len(sftp_client.commands) == 2
         assert sftp_client.commands[0].startswith('put')
         assert Remote_Path in sftp_client.commands[0]
+        assert sftp_client.commands[1].startswith('ls')
+        assert Remote_Path in sftp_client.commands[1]
 
         # .. and the operation left exactly one trail entry.
         events = _get_events()

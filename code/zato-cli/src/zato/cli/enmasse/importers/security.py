@@ -12,6 +12,9 @@ from uuid import uuid4
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
+from zato.cli.enmasse.util.secrets import Auto_Password_Prefix, decrypt_secret, encrypt_secret, ensure_encrypted, \
+    is_encrypted, is_usable_secret
+from zato.common.crypto.api import CryptoManager
 from zato.common.json_internal import loads
 from zato.common.odb.model import HTTPBasicAuth, APIKeySecurity, MTLSSecurity, NTLM, OAuth, SPNEGOSecurity, to_json, \
     WSSecurity
@@ -25,12 +28,43 @@ from zato.common.util.sql import set_instance_opaque_attrs
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.cli.enmasse.importer import EnmasseYAMLImporter
-    from zato.common.typing_ import any_, anydict, anylist, listtuple
+    from zato.common.typing_ import any_, anydict, anylist, listtuple, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The security types whose password column holds a secret - the other types keep their material in opaque attributes.
+_types_with_password = ('basic_auth', 'apikey', 'ntlm', 'wss', 'bearer_token')
+
+# The keys that never take part in the comparison of a YAML definition with a stored one.
+_comparison_skip_keys = ('type', 'name', 'rate_limiting')
+
+# How many bits of randomness an auto-generated password carries.
+_auto_password_bits = 128
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def password_needs_update(session:'SASession', yaml_password:'any_', db_password:'strnone') -> 'bool':
+    """ Returns True if the password the YAML gives differs from the one stored, once the stored one is decrypted.
+    A YAML password that is not usable is never compared, so it never triggers an update.
+    """
+    if not is_usable_secret(yaml_password):
+        return False
+
+    # The column is nullable, so a row may hold no password at all
+    if db_password is None:
+        return True
+
+    stored = decrypt_secret(session, db_password)
+
+    out = stored != yaml_password
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -111,7 +145,7 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def compare_security_defs(self, yaml_defs:'anylist', db_defs:'anydict') -> 'listtuple':
+    def compare_security_defs(self, yaml_defs:'anylist', db_defs:'anydict', session:'SASession') -> 'listtuple':
 
         to_create = []
         to_update = []
@@ -134,9 +168,6 @@ class SecurityImporter:
 
             if sec_type == 'apikey' and 'header' not in item:
                 item['header'] = 'X-API-Key'
-
-            if 'password' not in item:
-                item['password'] = f'Zato-Auto-Password-{uuid4().hex}'
 
             if sec_type == 'bearer_token':
 
@@ -183,11 +214,20 @@ class SecurityImporter:
 
                 needs_update = False
                 for key, value in item.items():
-                    if key in ('type', 'name', 'password', 'rate_limiting'):
+                    if key in _comparison_skip_keys:
                         continue
                     if key == 'username' and sec_type == 'apikey':
                         continue
                     if key not in db_def:
+                        continue
+
+                    # The stored password is encrypted, so it is compared through decryption,
+                    # and a YAML password that is not usable is not compared at all.
+                    if key == 'password':
+                        if password_needs_update(session, value, db_def[key]):
+                            logger.info('Password mismatch for %s', name)
+                            needs_update = True
+                            break
                         continue
 
                     db_value = db_def[key]
@@ -245,9 +285,12 @@ class SecurityImporter:
             security_def['name'],
             security_def.get('is_active', True),
             security_def['username'],
-            security_def.get('password'),
+            security_def['password'],
             cluster
         )
+
+        # The model's constructor does not store the password it is given
+        auth.password = security_def['password']
 
         set_instance_opaque_attrs(auth, security_def)
         return auth
@@ -325,6 +368,19 @@ class SecurityImporter:
         logger.info('Creating security definition: name=%s type=%s', def_name, sec_type)
         cluster = self.importer.get_cluster(session)
 
+        # The definition is written from a copy so that the YAML item keeps the password as the YAML gave it
+        security_def = dict(security_def)
+
+        # A definition whose type has a password gets a generated one if the YAML gives none,
+        # and whichever it is, it is stored encrypted.
+        if sec_type in _types_with_password:
+            password = security_def.get('password')
+
+            if not password:
+                password = Auto_Password_Prefix + CryptoManager.generate_hex_string(_auto_password_bits)
+
+            security_def['password'] = encrypt_secret(session, password)
+
         if sec_type == 'basic_auth':
             auth = self._create_basic_auth(security_def, cluster)
         elif sec_type == 'apikey':
@@ -349,7 +405,7 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _update_definition(self, definition:'any_', security_def:'anydict') -> 'any_':
+    def _update_definition(self, definition:'any_', security_def:'anydict', session:'SASession') -> 'any_':
 
         sec_type = security_def.get('type')
 
@@ -358,6 +414,12 @@ class SecurityImporter:
                 continue
             if key == 'username' and sec_type == 'apikey':
                 continue
+
+            # The password column always holds an encrypted value - a password the YAML gave is encrypted here
+            # and a stored one that was kept is encrypted in place if it was in clear text. The column is nullable.
+            if key == 'password':
+                if value is not None:
+                    value = ensure_encrypted(session, value)
 
             if hasattr(definition, key):
                 setattr(definition, key, value)
@@ -389,10 +451,18 @@ class SecurityImporter:
 
         model = self.get_class_by_type(sec_type)
 
+        # The definition is updated from a copy so that the YAML item keeps the password as the YAML gave it
+        sec_def = dict(sec_def)
+
         # Remember which of the two mutually exclusive keys came from YAML
         # before database values are merged in below.
         has_yaml_quota_tier = 'quota_tier' in sec_def
         has_yaml_rate_limiting = 'rate_limiting' in sec_def
+
+        # A password the YAML does not give in a usable form never replaces the stored one,
+        # which is merged in from the database below instead.
+        if not is_usable_secret(sec_def.get('password')):
+            _ = sec_def.pop('password', None)
 
         db_def = db_defs[def_name]
 
@@ -415,11 +485,53 @@ class SecurityImporter:
             del sec_def['quota_tier']
 
         definition = session.query(model).filter_by(id=def_id).one()
-        self._update_definition(definition, sec_def)
+        self._update_definition(definition, sec_def, session)
 
         session.add(definition)
         logger.debug('Finished updating security definition: %s', def_name)
         return definition
+
+# ################################################################################################################################
+
+    def _encrypt_kept_passwords(
+        self,
+        security_list:'anylist',
+        to_update:'anylist',
+        db_defs:'anydict',
+        session:'SASession',
+    ) -> 'None':
+        """ Encrypts in place the password of every definition the YAML names that needed no update
+        and whose stored password is still in clear text. Its value does not change, only its form,
+        so this is not an update.
+        """
+        updated_names = {item['name'] for item in to_update}
+
+        for item in security_list:
+            name = item['name']
+
+            if name in updated_names:
+                continue
+
+            db_def = db_defs.get(name)
+
+            # A definition that was just created is not in the snapshot the comparison used
+            if not db_def:
+                continue
+
+            # The column is nullable and not every type has one
+            stored = db_def.get('password')
+            if stored is None:
+                continue
+
+            if is_encrypted(stored):
+                continue
+
+            model = self.get_class_by_type(db_def['type'])
+            definition = session.query(model).filter_by(id=db_def['id']).one()
+            definition.password = encrypt_secret(session, stored)
+            session.add(definition)
+
+            logger.info('Encrypted the stored password of %s in place', name)
 
 # ################################################################################################################################
 
@@ -454,7 +566,7 @@ class SecurityImporter:
             item['quota_tier'] = tier_def['id']
 
         db_defs = self.get_security_defs_from_db(session, self.importer.cluster_id)
-        to_create, to_update = self.compare_security_defs(security_list, db_defs)
+        to_create, to_update = self.compare_security_defs(security_list, db_defs, session)
 
         out_created = []
         out_updated = []
@@ -475,6 +587,8 @@ class SecurityImporter:
                 if instance:
                     logger.info('Updated security definition: name=%s id=%s', instance.name, getattr(instance, 'id', None))
                     out_updated.append(instance)
+
+            self._encrypt_kept_passwords(security_list, to_update, db_defs, session)
 
             logger.info('Committing changes: created=%d updated=%d', len(out_created), len(out_updated))
             session.commit()

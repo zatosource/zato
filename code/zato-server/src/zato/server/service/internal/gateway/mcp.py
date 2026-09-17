@@ -9,13 +9,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-from http.client import FORBIDDEN, NO_CONTENT, NOT_FOUND
+from http.client import FORBIDDEN, NO_CONTENT, NOT_FOUND, TOO_MANY_REQUESTS
 from time import monotonic
 from traceback import format_exc
 
 # Zato
 from zato.common.json_internal import dumps
-from zato.server.connection.mcp.audit import build_audit_event, Method_Auth_Rejected, Method_Session_Delete
+from zato.common.rate_limiting.headers import build_rate_limit_headers, Header_Retry_After, Rate_Limit_Result_Key
+from zato.server.connection.mcp.audit import build_audit_event, build_rate_limit_audit_event, Method_Auth_Rejected, \
+    Method_Session_Delete
 from zato.server.connection.mcp.common import MCPResponse, printable
 from zato.server.connection.mcp.connection_tools.api import build_tool_name, group_registry
 from zato.server.connection.mcp.schema import io_to_json_schema, io_to_output_json_schema
@@ -70,6 +72,9 @@ _default_allowed_origins:'tuple' = ()
 
 # How many milliseconds one second has, for request duration measurements
 _ms_per_second = 1000
+
+# What a caller over its rate limit is told - a plain JSON body, the request's JSON-RPC id being unread
+_too_many_requests_body = {'error': 'Too many requests'}
 
 # What the tool list says about a service that is on a gateway's list but not deployed
 _not_deployed_note = 'Not deployed'
@@ -192,8 +197,12 @@ class MCPEndpoint(AdminService):
     name = 'zato.gateway.mcp.endpoint'
 
     # Requests whose credentials did not authenticate still reach this service -
-    # it rejects them itself and writes their audit event.
+    # it rejects them itself and writes their audit event ..
     handles_auth_rejection = True
+
+    # .. and so do the requests of authenticated callers their own rate limit refused -
+    # it answers them 429 itself and writes their audit event under the caller's name.
+    handles_rate_limit_rejection = True
 
 # ################################################################################################################################
 
@@ -219,6 +228,12 @@ class MCPEndpoint(AdminService):
         logger.info(
             'MCP gateway `%s` authenticated sec_def id=`%s` username=`%s`',
             self.channel.name, channel_security.id, channel_security.username)
+
+        # .. a caller its own definition's rate limit refused is answered 429 here, so its
+        # .. refusal can be audited under the definition's name ..
+        if Rate_Limit_Result_Key in self.request_ctx:
+            self._reject_rate_limited(self.request_ctx[Rate_Limit_Result_Key])
+            return
 
         # Look up the MCP gateway config from the config manager - the entry may be gone
         # if the gateway is being deleted while this request is already in flight,
@@ -357,6 +372,64 @@ class MCPEndpoint(AdminService):
             self._insert_audit_event(
                 wrapper, mcp_response.method, mcp_response.tool_name, audit_session_id, remote_address,
                 mcp_response, payload, duration_ms, len(raw_request))
+
+# ################################################################################################################################
+
+    def _reject_rate_limited(self, rate_limit_result:'any_') -> 'None':
+        """ Answers 429 to a caller its security definition's rate limit refused - the same headers
+        the HTTP channel would have sent - and writes the one audit event of the refusal, when the
+        gateway exists and has its audit log on.
+        """
+        rate_limit_headers = build_rate_limit_headers(rate_limit_result, needs_quota_headers=True)
+
+        logger.info(
+            'MCP gateway `%s` rejected rate-limited request (sec name=`%s` retry_after=`%s`)',
+            self.channel.name, self.channel.security.name, rate_limit_headers.headers[Header_Retry_After])
+
+        self.response.status_code = TOO_MANY_REQUESTS
+        self.response.headers.update(rate_limit_headers.headers)
+        self.response.payload = dumps(_too_many_requests_body)
+        self.response.data_format = _content_type_json
+
+        # The gateway may be gone mid-flight - a refusal on a deleted gateway leaves no event ..
+        gateway_config = self.server.config_manager.gateway_mcp.get(self.channel.name)
+
+        if gateway_config is None:
+            return
+
+        # .. and neither does one on a gateway whose audit log is off.
+        wrapper = gateway_config.conn
+
+        if not wrapper.config.get('is_audit_log_active'):
+            return
+
+        raw_request = self.request.raw
+
+        if isinstance(raw_request, str):
+            raw_request = raw_request.encode('utf8')
+
+        gateway_name = self.channel.name
+        sec_def_name = self.channel.security.name
+
+        assert gateway_name is not None
+        assert sec_def_name is not None
+
+        event = build_rate_limit_audit_event(
+            gateway_name=gateway_name,
+            sec_def_name=sec_def_name,
+            cid=self.cid,
+            session_id=self.request.http.headers.get(_session_header),
+            remote_address=self.request_ctx[_remote_addr_key],
+            retry_after_seconds=rate_limit_headers.retry_after_seconds,
+            request_size=len(raw_request),
+        )
+
+        # A refused audit write drops this one event with a logged warning,
+        # the client's response goes out regardless.
+        try:
+            wrapper.get_audit_log().insert(**event)
+        except Exception:
+            logger.warning('MCP: Audit event dropped for `%s`:\n%s', gateway_name, format_exc())
 
 # ################################################################################################################################
 

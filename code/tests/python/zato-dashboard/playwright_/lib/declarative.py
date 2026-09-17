@@ -48,6 +48,16 @@ Delivery_Timeout = 60.0
 # How long to sleep between the polling attempts above
 _Poll_Interval = 0.5
 
+# The Alerts tab of an outgoing REST connection, where its health check line lives - the panel ids
+# of the http_soap page, the one open popover and its inputs, from alerts-tab.js and micro-forms.js
+_Alerts_Panel_Prefix = 'http-soap-'
+_Alerts_Popover_Selector = '#alerts-tab-popup'
+_Alerts_Popover_Ok_Selector = _Alerts_Popover_Selector + ' button.action-button'
+_Alerts_Popover_Input_Prefix = 'alerts-tab-tippy-'
+
+# How long to wait for a popover to show or hide, in milliseconds
+_Popover_Timeout = 5000
+
 # ################################################################################################################################
 # ################################################################################################################################
 #
@@ -231,28 +241,21 @@ def fill_rest_invocation_tabs(page:'Page', options:'anydict', action:'str'='crea
         else:
             _set_chosen_select(page, f'#id_{prefix}callback_rest', options['callback_name'])
 
-    # .. and the Health check tab, whose callback widgets work the same way.
+    # .. and the health check, a line of the Alerts tab - its popover asks how often to ping and nothing else,
+    # .. each ping's outcome reaching people through the connection's alerts.
     if 'health_check_run_every' in options:
-        activate_rest_tab(page, action, 'health_check')
-        page.fill(f'#id_{prefix}health_check_run_every', options['health_check_run_every'])
+        activate_rest_tab(page, action, 'alerts')
+
+        page.click(f'#{_Alerts_Panel_Prefix}{action}-tab-panel-alerts-edit-health_check')
+        _ = page.wait_for_selector(_Alerts_Popover_Selector, state='visible', timeout=_Popover_Timeout)
+
+        page.fill(f'#{_Alerts_Popover_Input_Prefix}health_check_run_every', options['health_check_run_every'])
 
         if 'health_check_run_unit' in options:
-            _ = page.select_option(f'#id_{prefix}health_check_run_unit', options['health_check_run_unit'])
+            _ = page.select_option(f'#{_Alerts_Popover_Input_Prefix}health_check_run_unit', options['health_check_run_unit'])
 
-        if 'health_check_notify_on' in options:
-            _ = page.select_option(f'#id_{prefix}health_check_notify_on', options['health_check_notify_on'])
-
-        if health_check_callback_type := options.get('health_check_callback_type'):
-            _ = page.select_option(f'#id_{prefix}health_check_callback_type', health_check_callback_type)
-
-            if health_check_callback_type == 'service':
-                _set_chosen_select(
-                    page, f'#id_{prefix}health_check_callback_service', options['health_check_callback_name'])
-            elif health_check_callback_type == 'topic':
-                _ = page.select_option(f'#id_{prefix}health_check_callback_topic', options['health_check_callback_name'])
-            else:
-                _set_chosen_select(
-                    page, f'#id_{prefix}health_check_callback_rest', options['health_check_callback_name'])
+        page.click(_Alerts_Popover_Ok_Selector)
+        _ = page.wait_for_selector(_Alerts_Popover_Selector, state='hidden', timeout=_Popover_Timeout)
 
     # The form goes back to its first tab so the submit flow always starts from the same place
     activate_rest_tab(page, action, 'config')
@@ -346,28 +349,13 @@ def fill_soap_invocation_tabs(page:'Page', options:'anydict', action:'str'='crea
         else:
             _set_chosen_select(page, f'#id_{prefix}callback_rest', options['callback_name'])
 
-    # .. and the Health check tab.
+    # .. and the Health check tab, which asks how often to ping and nothing else.
     if 'health_check_run_every' in options:
         activate_soap_tab(page, action, 'health_check')
         page.fill(f'#id_{prefix}health_check_run_every', options['health_check_run_every'])
 
         if 'health_check_run_unit' in options:
             _ = page.select_option(f'#id_{prefix}health_check_run_unit', options['health_check_run_unit'])
-
-        if 'health_check_notify_on' in options:
-            _ = page.select_option(f'#id_{prefix}health_check_notify_on', options['health_check_notify_on'])
-
-        if health_check_callback_type := options.get('health_check_callback_type'):
-            _ = page.select_option(f'#id_{prefix}health_check_callback_type', health_check_callback_type)
-
-            if health_check_callback_type == 'service':
-                _set_chosen_select(
-                    page, f'#id_{prefix}health_check_callback_service', options['health_check_callback_name'])
-            elif health_check_callback_type == 'topic':
-                _ = page.select_option(f'#id_{prefix}health_check_callback_topic', options['health_check_callback_name'])
-            else:
-                _set_chosen_select(
-                    page, f'#id_{prefix}health_check_callback_rest', options['health_check_callback_name'])
 
     # The form goes back to its first tab so the submit flow always starts from the same place
     activate_soap_tab(page, action, 'main')

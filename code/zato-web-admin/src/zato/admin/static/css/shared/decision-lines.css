@@ -1,0 +1,432 @@
+/*
+ * Decision lines - settings written as sentences, one decision per line.
+ *
+ * A decision line is a question on the left and its answer on the right.
+ * The answer is a chip that opens a pick panel, a strip of options with the
+ * picked one in the accent, a switch, or a summary link opening a popover
+ * micro-form. A wizard step, a dialog tab or a column of a listing page
+ * reads the same way through them. The engine that fills the chips and
+ * opens the panels is static/js/common/decision-lines.js, the panels wear
+ * the shared popup chrome of shared/popup.css with the sandy body of
+ * shared/micro-forms.css, and the colours come from shared/tokens.css.
+ *
+ * Load it next to the popup and the micro-form stylesheets:
+ *
+ *     <link rel="stylesheet" href="/static/css/shared/popup.css">
+ *     <link rel="stylesheet" href="/static/css/shared/micro-forms.css">
+ *     <link rel="stylesheet" href="/static/css/shared/decision-lines.css">
+ *
+ * ---------------------------------------------------------------
+ * Customisation
+ * ---------------------------------------------------------------
+ *
+ * The tokens sit on :root with the defaults a wizard page reads with. A
+ * host overrides them on the container holding its lines, and the ones
+ * of a panel under the panelClass it passes to openPanel, since a panel
+ * is appended to document.body:
+ *
+ *     .alerts-tab-panel {
+ *         --decision-line-label-weight: 400;
+ *         --decision-line-label-size: 12px;
+ *     }
+ *
+ * Token                              Purpose
+ * --decision-line-label-width        How much room the question gets, shared by every line
+ * --decision-line-label-size         The question's font size
+ * --decision-line-label-weight       Its weight
+ * --decision-lines-gap               How far apart the lines of one group sit
+ * --decision-lines-max-width         How wide a column of lines may grow
+ * --decision-chip-height             The chip a line's value wears
+ * --decision-chip-font-size          The chip's text
+ * --decision-chip-bg                 The chip's face
+ * --decision-pick-panel-z-index      Where a panel stands among the page's layers
+ * --decision-pick-panel-list-height  The starting height of a list inside a panel
+ * --decision-pick-panel-min-height   How short a panel may be dragged
+ */
+
+:root {
+    --decision-line-label-width: 14.5em;
+    --decision-line-label-size: 13px;
+    --decision-line-label-weight: 600;
+    --decision-lines-gap: 12px;
+    --decision-lines-max-width: 44em;
+    --decision-chip-height: 24px;
+    --decision-chip-font-size: 12px;
+    --decision-chip-bg: #fff;
+
+    /* A panel dragged up a page reaches the sticky navigation, which sits at 9999,
+       and it is the panel being read at the time, so it goes over the top of it */
+    --decision-pick-panel-z-index: 10000;
+    --decision-pick-panel-list-height: 13em;
+    --decision-pick-panel-min-height: 4em;
+}
+
+/* ------------------------------------------------------------ */
+/* Decision lines - one decision per line                        */
+/* ------------------------------------------------------------ */
+
+.decision-lines {
+    display: flex;
+    flex-direction: column;
+    gap: var(--decision-lines-gap);
+    max-width: var(--decision-lines-max-width);
+}
+
+.decision-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* All the labels of a page share one width, which is what lines the values
+   up in a column. A host whose questions are longer than the default
+   widens the token on its own container rather than on the class. */
+.decision-line-label {
+    flex: 0 0 auto;
+    width: var(--decision-line-label-width);
+    font-size: var(--decision-line-label-size);
+    font-weight: var(--decision-line-label-weight);
+    color: var(--zato-ui-text);
+}
+
+.decision-line-slot {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Decision lines - the chip a line's value wears                */
+/* ------------------------------------------------------------ */
+
+/* The face of a select, since that is what a chip stands for - solid once
+   the line has an answer, dashed while it is still waiting for one */
+.decision-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: var(--decision-chip-height);
+    padding: 0 8px;
+    font-family: inherit;
+    font-size: var(--decision-chip-font-size);
+    color: var(--zato-ui-text);
+    background: var(--decision-chip-bg);
+    border: 1px solid var(--zato-ui-border-strong);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.decision-chip-blank {
+    color: var(--zato-ui-text-faint);
+    border-style: dashed;
+}
+
+.decision-chip:hover {
+    border-color: var(--zato-ui-accent);
+}
+
+/* A chip is a <button>, so formalize.css hands it its own grey 3D button -
+   a gradient at rest, a lighter one on hover, a darker one plus an inset
+   shadow while pressed, bold Helvetica and a white text shadow. Each of
+   those is named back here, in each state formalize writes one for, which
+   is what makes this a plain override and not a blanket !important. The
+   order of the sheets settles the ties. The options strip needs none of
+   this, the shared tab rules already undo it. */
+.decision-chip,
+.decision-chip:hover,
+.decision-chip:focus,
+.decision-chip:active {
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
+    font-weight: 400;
+    outline: none;
+}
+
+.decision-chip-note {
+    font-size: 11px;
+    color: var(--zato-ui-text-faint);
+}
+
+.decision-chip-caret {
+    display: flex;
+    color: var(--zato-ui-text-muted);
+}
+
+/* ------------------------------------------------------------ */
+/* Decision lines - the options strip                            */
+/* ------------------------------------------------------------ */
+
+/* A strip of options is the shared tab component of shared/tabs.css with
+   its tokens repointed - the same faint panel and the same white face on
+   the picked one, in the lighter blue rather than a step strip's, and
+   written the way the rest of a line is: no border, nothing rounded, no
+   capitals */
+.decision-segments {
+
+    /* What an option not picked stands on, and what it stands on once the
+       pointer is there - the two the other way around from a step tab,
+       which is clear at rest and lights up under the pointer */
+    --decision-segment-bg: rgba(255, 255, 255, 0.55);
+    --decision-segment-hover-bg: transparent;
+
+    --tabs-gap: 4px;
+    --tabs-radius: 0;
+    --tabs-border: transparent;
+    --tab-radius: 0;
+    --tab-padding: 5px 14px;
+    --tab-font-size: 12px;
+    --tab-font-weight: 400;
+    --tab-text-transform: none;
+    --tab-letter-spacing: normal;
+
+    /* The one picked is the one written in black, and it sits a touch above
+       the strip - just enough of a shadow to be seen, not to be noticed */
+    --tab-active-color: #000;
+    --tab-active-shadow: 0 1px 4px rgba(0, 0, 0, 0.13), 0 1px 2px rgba(0, 0, 0, 0.08);
+
+    margin-bottom: 0;
+}
+
+.decision-segments > .dashboard-tab:not(.dashboard-tab-active) {
+    background: var(--decision-segment-bg);
+}
+
+.decision-segments > .dashboard-tab:not(.dashboard-tab-active):hover {
+    background: var(--decision-segment-hover-bg);
+}
+
+/* A tab's frame is written into the shared rules rather than into a token,
+   so the states name it away here */
+.decision-segments > .dashboard-tab,
+.decision-segments > .dashboard-tab:hover,
+.decision-segments > .dashboard-tab:focus,
+.decision-segments > .dashboard-tab:active,
+.decision-segments > .dashboard-tab-active,
+.decision-segments > .dashboard-tab-active:hover,
+.decision-segments > .dashboard-tab-active:focus,
+.decision-segments > .dashboard-tab-active:active {
+    border: none;
+    border-radius: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Decision lines - the panel a chip opens                       */
+/* ------------------------------------------------------------ */
+
+/* The panel is a column of header, body and buttons, and the body is what
+   gives way when the corners resize it - that is the whole reason for the
+   flex chain running from here down to the lists */
+.decision-pick-panel {
+    position: absolute;
+    z-index: var(--decision-pick-panel-z-index);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Every button of a panel reads at the one size the kits share */
+.decision-pick-panel .action-button,
+.decision-pick-panel .secondary-button {
+    font-size: var(--zato-ui-button-font-size);
+}
+
+.decision-pick-panel > .micro-form-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.decision-pick-panel-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* A popup is unselectable as a whole, the IDE menus being what the chrome
+   was written for, and so are the zones and the badges of a picker - here
+   every word of a body is a word to be read and copied, so all of it is
+   text again, headings and rows alike. Only the popup's own header is left
+   out, since that one is the drag handle. */
+.decision-pick-panel .micro-form-body,
+.decision-pick-panel .micro-form-body * {
+    user-select: text;
+}
+
+/* A heading names the list under it, so it stands away from the one above */
+.decision-pick-panel-content > .micro-form-label {
+    margin-top: 4px;
+    margin-bottom: 6px;
+}
+
+/* A filter, a heading and the buttons keep their height, so the lists are
+   the only thing a resize actually grows */
+.decision-pick-panel-content > .micro-form-field,
+.decision-pick-panel-content > .micro-form-label,
+.decision-pick-panel-content > .badge-picker-filter,
+.decision-pick-panel > .micro-form-body > .micro-form-buttons {
+    flex: 0 0 auto;
+}
+
+/* A panel is appended to document.body, so a page's own reset of the
+   formalize.css focus glow never reaches what a panel holds */
+.decision-pick-panel input:focus,
+.decision-pick-panel select:focus,
+.decision-pick-panel textarea:focus,
+.decision-pick-panel button:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* One height for every list a panel shows, with the bar always in view, so
+   the panel keeps its size no matter what the filter leaves behind. The
+   token is a starting height, not a fixed one - a list is what takes up the
+   room the corners add and gives back the room they take away. */
+.decision-pick-panel-list {
+    flex: 1 1 var(--decision-pick-panel-list-height);
+    min-height: var(--decision-pick-panel-min-height);
+    overflow-y: scroll;
+    background: #fff;
+    border: 1px solid var(--zato-ui-border-strong);
+    border-radius: 3px;
+}
+
+.decision-pick-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.decision-pick-row:hover {
+    background: var(--zato-popup-sand-highlight);
+}
+
+.decision-pick-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* What the picked row says of itself - a click on it takes the pick away */
+.decision-pick-remove {
+    margin-left: 8px;
+    font-size: 11px;
+    color: var(--zato-ui-text-faint);
+}
+
+.decision-pick-row:hover .decision-pick-remove {
+    color: var(--zato-ui-text-muted);
+}
+
+.decision-pick-dot {
+    position: relative;
+    flex: 0 0 auto;
+    width: 13px;
+    height: 13px;
+    border: 1.5px solid var(--zato-ui-border-strong);
+    border-radius: 50%;
+}
+
+.decision-pick-dot-on {
+    border-color: var(--zato-ui-accent);
+}
+
+.decision-pick-dot-on::before {
+    content: '';
+    position: absolute;
+    inset: 2.5px;
+    background: var(--zato-ui-accent);
+    border-radius: 50%;
+}
+
+.decision-pick-panel-empty {
+    padding: 6px 8px;
+    font-size: 12px;
+    color: var(--zato-ui-text-faint);
+}
+
+/* ------------------------------------------------------------ */
+/* Decision lines - a badge picker inside a panel                */
+/* ------------------------------------------------------------ */
+
+/* The zones start at the height the panel lists start at and follow the
+   corners from there, with the bar always in view so the panel never
+   resizes on its own under a filter */
+.decision-pick-panel .badge-picker {
+    flex: 1 1 10.5em;
+    min-height: 0;
+}
+
+/* The bar stays in view whatever the filter leaves behind, in the thin
+   variant - at 11px the standard one took more room from the end of a row
+   than the row's own padding did */
+.decision-pick-panel .badge-zone-body {
+    min-height: 0;
+    max-height: none;
+    overflow-y: scroll;
+    scrollbar-width: thin;
+}
+
+.decision-pick-panel .badge-picker-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.decision-pick-panel .badge-picker-filter .decision-pick-panel-filter {
+    flex: 1;
+}
+
+/* The filter row is built by the badge picker, so its controls carry no
+   field styling of their own - here they take the same box the fields of a
+   micro-form take, instead of the grey bevel formalize.css gives them */
+.decision-pick-panel .badge-picker-filter input[type="text"],
+.decision-pick-panel .badge-picker-filter select {
+    box-sizing: border-box;
+    height: 24px;
+    padding: 0 8px;
+    font-size: 12px;
+    color: var(--zato-ui-text);
+    background: #fff;
+    border: 1px solid var(--zato-ui-border-strong);
+    border-radius: 3px;
+}
+
+.decision-pick-panel .badge-picker-filter input[type="text"]:focus,
+.decision-pick-panel .badge-picker-filter select:focus {
+    border-color: var(--zato-ui-accent);
+}
+
+/* The clear button is a <button>, hence the same list formalize.css writes
+   for the chips above - it reads as one more field of the filter row. The
+   filter row class rides along so the rest state outweighs the font-size
+   multi-select.css gives the button and nothing changes size on hover. */
+.decision-pick-panel .badge-picker-filter .badge-filter-clear,
+.decision-pick-panel .badge-picker-filter .badge-filter-clear:hover,
+.decision-pick-panel .badge-picker-filter .badge-filter-clear:focus,
+.decision-pick-panel .badge-picker-filter .badge-filter-clear:active {
+    height: 24px;
+    padding: 0 8px;
+    font-family: inherit;
+    font-size: var(--zato-ui-button-font-size);
+    font-weight: 400;
+    color: var(--zato-ui-text-muted);
+    background: #fff;
+    background-image: none;
+    border: 1px solid var(--zato-ui-border-strong);
+    border-radius: 3px;
+    box-shadow: none;
+    text-shadow: none;
+    outline: none;
+}
+
+.decision-pick-panel .badge-picker-filter .badge-filter-clear:hover {
+    color: var(--zato-ui-text);
+    border-color: var(--zato-ui-accent);
+}

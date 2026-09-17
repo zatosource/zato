@@ -88,8 +88,10 @@ class ChannelAS4Exporter:
                 if opaque is None:
                     opaque = {}
 
-            # Every AS4 field with a value is exported under its own name.
+            # Every AS4 field with a value is exported under its own name, except the keystore secrets.
             for name in AS4.Common_Fields + AS4.Channel_Fields:
+                if name in AS4.Secret_Fields:
+                    continue
                 if value := opaque.get(name):
                     exported_channel[name] = value
 

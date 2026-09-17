@@ -1,0 +1,338 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# Zato
+from zato.common.alerting import config_map
+from zato.common.alerting.object_config import alert_type_fhir, alert_type_file_transfer, alert_type_llm, alert_type_mcp, \
+    alert_type_mllp_channel, alert_type_mllp_outgoing, alert_type_rest, apply_defaults, conn_type_to_alert_type, decode_email_connection, \
+    Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, Email_Connection_Default, Email_Connection_Field, encode_email_connection, \
+    field_display, field_help, Field_Prefix, from_storage, get_defaults, get_field_kinds, get_field_names, Is_Active_Field, \
+    Kind_Active, Kind_Email, Kind_LLM, LLM_Connection_Default, LLM_Connection_Field, storage_name, to_storage
+from zato.common.api import GENERIC
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_alert_type = alert_type_file_transfer
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestFieldNames:
+
+    def test_field_names_follow_config_map_between_active_and_the_connections(self) -> 'None':
+
+        names = get_field_names(_alert_type)
+
+        assert names[0] == Is_Active_Field
+        assert names[-2] == Email_Connection_Field
+        assert names[-1] == LLM_Connection_Field
+
+        own_names = []
+        for field in config_map.type_fields[_alert_type]:
+            own_names.append(field['name'])
+
+        assert names[1:-2] == own_names
+        assert names == [
+            'is_active', 'consecutive_failures', 'warning_failures', 'error_failures', 'window',
+            'arrival_overdue', 'test_transfers', 'use_llm', 'email_connection', 'llm_connection',
+        ]
+
+# ################################################################################################################################
+
+    def test_field_kinds(self) -> 'None':
+
+        kinds = get_field_kinds(_alert_type)
+
+        assert kinds[Is_Active_Field] == Kind_Active
+        assert kinds[Email_Connection_Field] == Kind_Email
+        assert kinds[LLM_Connection_Field] == Kind_LLM
+        assert kinds['consecutive_failures'] == config_map.Kind_Number
+        assert kinds['window'] == config_map.Kind_Duration
+        assert kinds['test_transfers'] == config_map.Kind_Toggle
+        assert kinds['use_llm'] == config_map.Kind_Ruleset_Toggle
+
+# ################################################################################################################################
+
+    def test_storage_name(self) -> 'None':
+        assert Field_Prefix == 'alert_'
+        assert storage_name('window') == 'alert_window'
+
+# ################################################################################################################################
+
+    def test_connection_types_map_to_the_file_transfer_type(self) -> 'None':
+
+        for conn_type in (GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, GENERIC.CONNECTION.TYPE.OUTCONN_FTP,
+            GENERIC.CONNECTION.TYPE.OUTCONN_SMB):
+            assert conn_type_to_alert_type[conn_type] == _alert_type
+
+        assert GENERIC.CONNECTION.TYPE.OUTCONN_AS2 not in conn_type_to_alert_type
+
+# ################################################################################################################################
+
+    def test_an_outgoing_fhir_connection_maps_to_the_fhir_type(self) -> 'None':
+        assert conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR] == alert_type_fhir
+
+        # The FHIR type is the REST type plus the operation outcomes
+        fhir_names = get_field_names(alert_type_fhir)
+        for name in get_field_names(alert_type_rest):
+            assert name in fhir_names
+
+        assert 'outcome_codes' in fhir_names
+        assert 'outcome_threshold' in fhir_names
+        assert 'outcomes_window' in fhir_names
+
+        assert get_defaults(alert_type_fhir)['outcome_codes'] == \
+            'exception, transient, timeout, throttled, lock-error, no-store, too-costly'
+
+# ################################################################################################################################
+
+    def test_an_outgoing_llm_connection_maps_to_the_llm_type(self) -> 'None':
+        assert conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_LLM] == alert_type_llm
+
+        # The LLM type carries the REST type's failure fields, with its own two latencies in place of the one ..
+        llm_names = get_field_names(alert_type_llm)
+        for name in get_field_names(alert_type_rest):
+            if name == 'max_latency':
+                continue
+            assert name in llm_names, name
+
+        assert 'max_latency' not in llm_names
+        assert 'warning_latency' in llm_names
+        assert 'error_latency' in llm_names
+
+        # .. and the six that are the LLM's own
+        for name in ('truncations', 'truncations_window', 'refusals', 'refusals_window', 'token_budget', 'token_budget_window'):
+            assert name in llm_names, name
+
+        # The two latencies read in seconds and the budget is an amount
+        kinds = get_field_kinds(alert_type_llm)
+        assert kinds['warning_latency'] == config_map.Kind_Seconds
+        assert kinds['error_latency'] == config_map.Kind_Seconds
+        assert kinds['token_budget'] == config_map.Kind_Amount
+
+        defaults = get_defaults(alert_type_llm)
+        assert defaults['status_codes'] == '429, 401, 403, 5xx'
+        assert defaults['warning_latency'] == 10
+        assert defaults['error_latency'] == 15
+        assert defaults['token_budget'] == 10000000
+        assert defaults['token_budget_window'] == 86400
+
+# ################################################################################################################################
+
+    def test_an_mcp_gateway_maps_to_the_mcp_type(self) -> 'None':
+        assert conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.GATEWAY_MCP] == alert_type_mcp
+
+        # The MCP type carries the core failure fields, the two latencies in seconds and the fields of the gateway's own
+        mcp_names = get_field_names(alert_type_mcp)
+
+        for name in ('consecutive_failures', 'error_rate', 'window', 'invalid_calls', 'invalid_calls_window', 'rejections',
+            'rejections_window', 'auth_failures', 'auth_failures_window', 'throttled_calls', 'throttled_calls_window',
+            'repeat_calls', 'repeat_calls_window', 'warning_latency', 'error_latency', 'latency_window', 'truncations',
+            'truncations_window', 'volume_budget', 'volume_budget_window', 'traffic_expected', 'silence_window',
+            'silence_slots', 'max_tools', 'use_llm'):
+            assert name in mcp_names, name
+
+        # Nothing of the outgoing connections' own is here
+        for name in ('max_latency', 'status_codes', 'connection_failures', 'token_budget', 'refusals'):
+            assert name not in mcp_names, name
+
+        # The two latencies read in seconds and the budget is a size
+        kinds = get_field_kinds(alert_type_mcp)
+        assert kinds['warning_latency'] == config_map.Kind_Seconds
+        assert kinds['error_latency'] == config_map.Kind_Seconds
+        assert kinds['volume_budget'] == config_map.Kind_Size
+        assert kinds['max_tools'] == config_map.Kind_Number
+
+        defaults = get_defaults(alert_type_mcp)
+        assert defaults['invalid_calls'] == 5
+        assert defaults['rejections'] == 3
+        assert defaults['auth_failures'] == 10
+        assert defaults['throttled_calls'] == 10
+        assert defaults['repeat_calls'] == 20
+        assert defaults['warning_latency'] == 5
+        assert defaults['error_latency'] == 15
+        assert defaults['truncations'] == 5
+        assert defaults['volume_budget'] == 100000000
+        assert defaults['volume_budget_window'] == 86400
+        assert defaults['traffic_expected'] is False
+        assert defaults['silence_window'] == 3600
+        assert defaults['max_tools'] == 25
+
+# ################################################################################################################################
+
+    def test_an_mllp_channel_maps_to_the_mllp_channel_type(self) -> 'None':
+        assert conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP] == alert_type_mllp_channel
+
+        # The type has the negative acks and nothing HTTP
+        mllp_names = get_field_names(alert_type_mllp_channel)
+
+        assert 'ack_codes' in mllp_names
+        assert 'ack_threshold' in mllp_names
+        assert 'acks_window' in mllp_names
+        assert 'consecutive_failures' in mllp_names
+        assert 'error_rate' in mllp_names
+        assert 'max_latency' in mllp_names
+        assert 'traffic_expected' in mllp_names
+
+        assert 'server_errors' not in mllp_names
+        assert 'auth_failures' not in mllp_names
+        assert 'client_errors' not in mllp_names
+        assert 'status_codes' not in mllp_names
+
+        assert get_defaults(alert_type_mllp_channel)['ack_codes'] == 'AE, AR, CE, CR'
+        assert get_defaults(alert_type_mllp_channel)['ack_threshold'] == 3
+        assert get_defaults(alert_type_mllp_channel)['acks_window'] == 300
+
+# ##############################################################################################################################
+
+    def test_an_outgoing_mllp_connection_maps_to_the_mllp_outgoing_type(self) -> 'None':
+        assert conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP] == alert_type_mllp_outgoing
+
+        # The type has the negative acks and the connection failures, no silence and nothing HTTP
+        mllp_names = get_field_names(alert_type_mllp_outgoing)
+
+        assert 'ack_codes' in mllp_names
+        assert 'ack_threshold' in mllp_names
+        assert 'acks_window' in mllp_names
+        assert 'connection_failures' in mllp_names
+        assert 'connection_failures_window' in mllp_names
+        assert 'consecutive_failures' in mllp_names
+        assert 'error_rate' in mllp_names
+        assert 'max_latency' in mllp_names
+
+        assert 'traffic_expected' not in mllp_names
+        assert 'silence_window' not in mllp_names
+        assert 'server_errors' not in mllp_names
+        assert 'auth_failures' not in mllp_names
+        assert 'status_codes' not in mllp_names
+        assert 'fault_codes' not in mllp_names
+        assert 'outcome_codes' not in mllp_names
+
+        assert get_defaults(alert_type_mllp_outgoing)['ack_codes'] == 'AE, AR, CE, CR'
+        assert get_defaults(alert_type_mllp_outgoing)['ack_threshold'] == 3
+        assert get_defaults(alert_type_mllp_outgoing)['acks_window'] == 300
+        assert get_defaults(alert_type_mllp_outgoing)['connection_failures'] == 3
+        assert get_defaults(alert_type_mllp_outgoing)['connection_failures_window'] == 300
+
+# ################################################################################################################################
+
+    def test_every_field_has_display_and_help(self) -> 'None':
+
+        for name in get_field_names(_alert_type):
+
+            assert name in field_help, name
+
+            # The Active switch and the connections are not values with a label and a unit
+            if name in (Is_Active_Field, Email_Connection_Field, LLM_Connection_Field):
+                continue
+
+            label, unit = field_display[name]
+            assert label
+            assert isinstance(unit, str)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestDefaults:
+
+    def test_defaults_come_from_the_seeded_rules(self) -> 'None':
+
+        defaults = get_defaults(_alert_type)
+
+        assert defaults == {
+            'is_active': True,
+            'consecutive_failures': 3,
+            'warning_failures': 10,
+            'error_failures': 20,
+            'window': 86400,
+            'arrival_overdue': 1,
+            'test_transfers': False,
+            'use_llm': True,
+            'email_connection': Email_Connection_Default,
+            'llm_connection': LLM_Connection_Default,
+        }
+
+# ################################################################################################################################
+
+    def test_defaults_are_a_fresh_copy_each_time(self) -> 'None':
+
+        first = get_defaults(_alert_type)
+        first['window'] = 1
+
+        second = get_defaults(_alert_type)
+        assert second['window'] == 86400
+
+# ################################################################################################################################
+
+    def test_apply_defaults_fills_only_what_is_missing(self) -> 'None':
+
+        item = {'name': 'abc', 'alert_window': 3600, 'alert_is_active': False}
+        apply_defaults(_alert_type, item)
+
+        assert item['name'] == 'abc'
+        assert item['alert_window'] == 3600
+        assert item['alert_is_active'] is False
+        assert item['alert_consecutive_failures'] == 3
+        assert item['alert_email_connection'] == Email_Connection_Default
+
+        for name in get_field_names(_alert_type):
+            assert storage_name(name) in item
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestStorage:
+
+    def test_to_storage_prefixes_only_known_fields(self) -> 'None':
+
+        values = {'window': 60, 'is_active': True, 'unknown': 1}
+        assert to_storage(_alert_type, values) == {'alert_window': 60, 'alert_is_active': True}
+
+# ################################################################################################################################
+
+    def test_from_storage_reads_only_what_the_object_carries(self) -> 'None':
+
+        item = {'name': 'abc', 'alert_window': 60, 'alert_use_llm': False, 'other_field': 'x'}
+        assert from_storage(_alert_type, item) == {'window': 60, 'use_llm': False}
+
+# ################################################################################################################################
+
+    def test_round_trip(self) -> 'None':
+
+        values = get_defaults(_alert_type)
+        values['error_failures'] = 7
+        values['llm_connection'] = 'ops.llm'
+
+        stored = to_storage(_alert_type, values)
+        assert stored['alert_llm_connection'] == 'ops.llm'
+        assert from_storage(_alert_type, stored) == values
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestEmailConnection:
+
+    def test_encode_decode(self) -> 'None':
+
+        value = encode_email_connection(Email_Conn_Type_SMTP, 'ops.smtp')
+        assert value == 'smtp:ops.smtp'
+        assert decode_email_connection(value) == (Email_Conn_Type_SMTP, 'ops.smtp')
+
+        # A name with the separator in it keeps it whole
+        value = encode_email_connection(Email_Conn_Type_IMAP, 'a:b')
+        assert decode_email_connection(value) == (Email_Conn_Type_IMAP, 'a:b')
+
+# ################################################################################################################################
+
+    def test_decode_without_a_kind(self) -> 'None':
+        assert decode_email_connection('ops.smtp') == ('', 'ops.smtp')
+        assert decode_email_connection('') == ('', '')
+
+# ################################################################################################################################
+# ################################################################################################################################

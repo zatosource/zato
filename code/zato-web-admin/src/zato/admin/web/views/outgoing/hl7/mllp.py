@@ -15,9 +15,11 @@ from django.http import JsonResponse
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web import alerts_tab
 from zato.admin.web.forms import populate_form_initial
 from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.common.alerting.object_config import alert_type_mllp_outgoing, Field_Prefix
 from zato.common.api import GENERIC, generic_attrs
 from zato.common.hl7.mllp.ack import new_control_id
 from zato.common.hl7.mllp.client import HL7MLLPClient
@@ -54,6 +56,10 @@ _Probe_Message = (
 # .. the connection's receive timeout is configured in milliseconds and the client takes seconds ..
 _Ms_Per_Second = 1000
 
+# .. the alert settings a connection carries and the names they travel under between the wizard and the backend ..
+_alert_type = alert_type_mllp_outgoing
+_alert_field_names = alerts_tab.get_storage_field_names(_alert_type)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -82,8 +88,8 @@ class Index(_Index):
     def handle(self):
         return {
             'show_search_form': True,
-            'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
+            'create_form': CreateForm(self.req),
+            'edit_form': EditForm(self.req, prefix='edit'),
         }
 
 # ################################################################################################################################
@@ -101,8 +107,26 @@ class _CreateEdit(CreateEdit):
         'max_retries', 'backoff_base_seconds', 'backoff_cap_seconds', 'backoff_jitter_percent',
         'circuit_breaker_threshold_percent', 'circuit_breaker_window_seconds', 'circuit_breaker_reset_seconds',
         'tls_cert_path', 'tls_key_path', 'tls_ca_path',
-    ) + generic_attrs
+    ) + generic_attrs + _alert_field_names
     output_required = 'id', 'name'
+
+# ################################################################################################################################
+
+    def pre_process_item(self, name:'str', value:'any_') -> 'any_':
+
+        # The Alerts popup's fields arrive as text and are stored typed - booleans, integers and stripped text
+        if name.startswith(Field_Prefix):
+            out = alerts_tab.pre_process_alert_item(_alert_type, name, value)
+            return out
+
+        return value
+
+# ################################################################################################################################
+
+    def pre_process_input_dict(self, input_dict:'stranydict') -> 'None':
+
+        # A duration is stored as seconds, which is what its count and unit join into
+        alerts_tab.join_unit_fields(_alert_type, input_dict)
 
 # ################################################################################################################################
 
@@ -150,11 +174,15 @@ class Delete(_Delete):
 def wizard_create(req:'any_') -> 'TemplateResponse':
     """ A multi-step wizard for a new HL7 MLLP outgoing connection.
     """
+    form = CreateForm(req)
+
     return_data = {
         'cluster_id': req.zato.cluster_id,
-        'form': CreateForm(),
+        'form': form,
         'is_edit': False,
         'item_id': '',
+        'alerts_tab': alerts_tab.get_alerts_tab_context(form, _alert_type),
+        'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
     }
 
     out = TemplateResponse(req, _Wizard_Template, return_data)
@@ -177,7 +205,10 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
 
     # .. the edit endpoint reads its input under the edit- prefix, which is what the form
     # .. is built with and what the wizard's own fieldPrefix mirrors ..
-    form = EditForm(prefix='edit')
+    form = EditForm(req, prefix='edit')
+
+    # A duration is stored as seconds and edited as a count with a unit
+    alerts_tab.split_unit_fields(_alert_type, item_dict)
     populate_form_initial(form, item_dict)
 
     return_data = {
@@ -185,6 +216,8 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
         'form': form,
         'is_edit': True,
         'item_id': item_dict['id'],
+        'alerts_tab': alerts_tab.get_alerts_tab_context(form, _alert_type),
+        'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
     }
 
     out = TemplateResponse(req, _Wizard_Template, return_data)

@@ -16,9 +16,10 @@ from zato.common.hl7.fields import ConnectionField, get_column_defaults, get_def
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist, strtuple
+    from zato.common.typing_ import stranydict, strlist, strtuple
 
     # Add dummy assignments to satisfy type checkers
+    stranydict = stranydict
     strlist = strlist
     strtuple = strtuple
 
@@ -27,6 +28,44 @@ if 0:
 
 MLLPField = ConnectionField
 mllp_field_list = list[MLLPField]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The fields a channel matches incoming messages on, in MSH order, each with what the Dashboard's list,
+# the wizard's Match row and an alert's Object section call it.
+Matcher_Labels = [
+    ('msh3_sending_app', 'MSH-3'),
+    ('msh4_sending_facility', 'MSH-4'),
+    ('msh5_receiving_app', 'MSH-5'),
+    ('msh6_receiving_facility', 'MSH-6'),
+    ('msh9_message_type', 'MSH-9.1'),
+    ('msh9_trigger_event', 'MSH-9.2'),
+    ('msh11_processing_id', 'MSH-11'),
+    ('msh12_version_id', 'MSH-12'),
+]
+
+# What a channel with no matcher of its own is said to take.
+Any_Message_Label = 'All messages'
+
+# ################################################################################################################################
+
+def get_match_label(values:'stranydict') -> 'str':
+    """ Says in one line which messages a channel takes - each matcher it fills in narrows
+    what reaches it, and a channel that fills in none of them takes everything.
+    """
+    parts = []
+
+    for name, label in Matcher_Labels:
+        value = values[name]
+        if value:
+            parts.append(f'{label} = {value}')
+
+    if not parts:
+        return Any_Message_Label
+
+    out = ', '.join(parts)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

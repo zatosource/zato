@@ -459,7 +459,7 @@ $.fn.zato.channel.hl7.mllp.row_edit.open = function(link, panel_spec, geometry_k
 
     panel_spec.geometryKey = geometry_key;
 
-    $.fn.zato.wizard_kit.lines.openPanel(link, panel_spec);
+    $.fn.zato.decision_lines.openPanel(link, panel_spec);
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -749,7 +749,7 @@ $.fn.zato.channel.hl7.mllp.match.save = function() {
 
 // The popover itself, the matchers and their form coming from the module both this page
 // and the wizard build them from - all this page adds is where a saved row goes
-$.fn.zato.wizard_kit.forms.setup($.fn.zato.channel.hl7.mllp.match, {
+$.fn.zato.micro_forms.setup($.fn.zato.channel.hl7.mllp.match, {
     descriptors: {'routing': $.fn.zato.channel.hl7.mllp.matchers.descriptor},
     showCancel: true,
     doneLabel: 'Save',

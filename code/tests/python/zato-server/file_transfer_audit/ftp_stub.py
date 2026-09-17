@@ -16,6 +16,7 @@ from contextlib import contextmanager
 # Zato
 from zato.common.audit_log.api import AuditLog
 from zato.common.ext.bunch import Bunch
+from zato.common.file_transfer.api import Default_Verify_How
 from zato.common.typing_ import cast_
 from zato.server.connection.ftp import FTPConnection
 
@@ -26,7 +27,7 @@ from audit_env import Server_Name
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,6 +45,9 @@ File_Content = b'code,label\nA1,First\nA2,Second\n'
 # What the failing client says
 Raised_Error = 'The server went away'
 
+# The modification time fact the stub reports of every file, in the MLST shape the connection parses
+Modify_Fact = '20260820103000'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -57,10 +61,26 @@ class ClientRecorder:
         self.removed:'anylist' = []
         self.renamed:'anylist' = []
 
+        # The bytes of each file written, by its remote path, which is what a stat of the path reports on
+        self.data_by_path:'anydict' = {}
+
 # ################################################################################################################################
 
     def write(self, remote_path:'any_', data:'any_') -> 'None':
         self.written.append((remote_path, data))
+        self.data_by_path[remote_path] = data
+
+# ################################################################################################################################
+
+    def stat(self, remote_path:'any_') -> 'anydict':
+        out = {'type': 'file', 'size': str(len(self.data_by_path[remote_path])), 'modify': Modify_Fact}
+        return out
+
+# ################################################################################################################################
+
+    def read(self, remote_path:'any_') -> 'bytes':
+        out = self.data_by_path[remote_path]
+        return out
 
 # ################################################################################################################################
 
@@ -107,6 +127,7 @@ class WrapperStub:
         self.ftp_client = ftp_client
         self.should_store_content = should_store_content
         self.audit_log = AuditLog(Server_Name)
+        self.verify_how = Default_Verify_How
 
         self.config = Bunch()
         self.config.name = Connection_Name

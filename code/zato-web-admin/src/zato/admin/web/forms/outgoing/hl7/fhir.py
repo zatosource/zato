@@ -10,7 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_select, add_security_select
+from zato.admin.web import alerts_tab
+from zato.admin.web.forms import add_health_check_fields, add_select, add_security_select
+from zato.common.alerting.object_config import alert_type_fhir
 from zato.common.api import HL7
 
 # ################################################################################################################################
@@ -64,12 +66,17 @@ class CreateForm(forms.Form):
 
     security_id = forms.ChoiceField(widget=forms.Select())
 
-    extra = forms.CharField(widget=forms.Textarea(attrs={'style':'height:60px'}), required=False)
+    extra = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:60px'}), required=False)
 
     def __init__(self, req:'any_', security_list:'any_', prefix:'any_'=None) -> 'None':
         super().__init__(prefix=prefix)
         add_select(self, 'auth_type', _const.FHIR_Auth_Type(), needs_initial_select=True)
         add_security_select(self, security_list, field_name='security_id')
+
+        # The Alerts tab - the thresholds, the operation outcomes, the toggles and the email connection,
+        # with the health check schedule the tab edits as fields of this form
+        alerts_tab.add_alerts_fields(self, alert_type_fhir, req)
+        add_health_check_fields(self)
 
 # ################################################################################################################################
 # ################################################################################################################################

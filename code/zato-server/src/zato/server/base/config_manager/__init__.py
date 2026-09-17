@@ -511,13 +511,6 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def after_config_dispatcher_set(self) -> 'None':
-
-        # Pub/sub
-        self.init_pubsub()
-
-# ################################################################################################################################
-
     def filter(self, msg:'bunch_') -> 'bool':
         return True
 
@@ -813,37 +806,13 @@ class ConfigManager(_ConfigManagerBase):
     def init_amqp(self) -> 'None':
         """ Initializes all AMQP connections.
         """
-        '''
-        def _name_matches(def_name:'str') -> 'callable_':
-            def _inner(config:'strdict') -> 'bool':
-                return config['def_name']==def_name
-            return _inner
-
-        for def_name, data in self.config_store.definition_amqp.items():
-
-            channels = self.config_store.channel_amqp.get_config_list(_name_matches(def_name))
-            outconns = self.config_store.out_amqp.get_config_list(_name_matches(def_name))
-
-            for outconn in outconns:
-                self.amqp_out_name_to_def[outconn['name']] = def_name
-
-            # Create a new AMQP connector definition ..
-            config = AMQPConnectorConfig.from_dict(data.config)
-
-            # .. AMQP definitions as such are always active. It is channels or outconns that can be inactive.
-            config.is_active = True
-
-            self.amqp_api.create(def_name, config, self.invoke,
-                channels=self._config_to_dict(channels), outconns=self._config_to_dict(outconns))
-        '''
-
         channels = self.config_store.channel_amqp.get_config_list()
         outconns = self.config_store.out_amqp.get_config_list()
 
         for item in channels:
             name = item['name']
             try:
-                self.amqp_api.create(name, item, self.invoke, needs_start=True)
+                self.amqp_connection_create(item)
                 self.amqp_api.create_channel(name, item)
             except Exception:
                 logger.warning('Could not create AMQP channel `%s`, e:`%s`', name, format_exc())
@@ -851,7 +820,7 @@ class ConfigManager(_ConfigManagerBase):
         for item in outconns:
             name = item['name']
             try:
-                self.amqp_api.create(name, item, self.invoke, needs_start=True)
+                self.amqp_connection_create(item)
                 self.amqp_api.create_outconn(name, item)
             except Exception:
                 logger.warning('Could not create AMQP outconn `%s`, e:`%s`', name, format_exc())

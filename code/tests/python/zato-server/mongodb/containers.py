@@ -47,6 +47,11 @@ class ModuleCtx:
     # How long a single readiness connection attempt may take, in milliseconds
     Ready_Connect_Timeout_MS = 2000
 
+    # MongoDB 8.0.5 and later does not start on Linux kernels 6.19 through 7.0.13 because its vendored TCMalloc
+    # and the kernel disagree on RSEQ - with glibc's own RSEQ registration on, TCMalloc leaves RSEQ alone,
+    # which is the documented workaround and costs only allocator performance in a test container.
+    GLIBC_Tunables = 'GLIBC_TUNABLES=glibc.pthread.rseq=1'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -124,6 +129,7 @@ def start_mongodb(
         '--name', container_name,
         '-e', 'MONGO_INITDB_ROOT_USERNAME=' + username,
         '-e', 'MONGO_INITDB_ROOT_PASSWORD=' + password,
+        '-e', ModuleCtx.GLIBC_Tunables,
         '-p', f'{port}:{ModuleCtx.MongoDB_Port}',
     ]
 

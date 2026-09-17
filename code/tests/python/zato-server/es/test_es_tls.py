@@ -117,6 +117,10 @@ def test_non_tls_client_fails_against_tls_server(es_tls_server:'ESServer') -> 'N
     one_address = f'http://{es_tls_server.host}:{es_tls_server.port}'
     client = get_client(es_tls_server, 'test_non_tls_client_fails_against_tls_server', address_list=one_address)
 
+    # The failure is expected, so there is no point in the transport retrying the call
+    # and logging a full traceback for each attempt - one attempt is enough.
+    client = client.options(max_retries=0)
+
     with pytest.raises((TransportConnectionError, TlsError)):
         _ = client.info()
 

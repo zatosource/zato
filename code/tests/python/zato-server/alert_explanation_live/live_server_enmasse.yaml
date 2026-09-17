@@ -1,0 +1,17 @@
+# The enmasse document the live explain suite's quickstart server imports before it starts -
+# the LLM connection the explanations go through, pointed at the Ollama container, and the notification
+# config of the server's own sweep job, the same one the proofs invoke the sweep with - the job fires
+# on its interval once the suite's scheduler is up, and an alert it reaches first is then explained
+# and delivered the way a proof's own sweep would have explained and delivered it.
+
+llm:
+  - name: "{{llm_conn_name}}"
+    address: "{{llm_address}}"
+    model: "{{llm_model}}"
+    api_key: "not-needed-for-ollama"
+    timeout: 300
+
+alert_notifications:
+  llm_connection: "{{llm_conn_name}}"
+  email_from: "{{email_from}}"
+  email_to: "{{email_to}}"

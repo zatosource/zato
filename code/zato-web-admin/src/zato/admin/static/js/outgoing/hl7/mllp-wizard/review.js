@@ -200,6 +200,7 @@ review.refreshSummaries = function() {
     review.setSummary('mllp-outconn-wizard-summary-pool', review.summaryPool());
     review.setSummary('mllp-outconn-wizard-summary-retries', review.summaryRetries());
     review.setSummary('mllp-outconn-wizard-summary-breaker', review.summaryBreaker());
+    review.setSummary(wizard.alerts.config.summaryId, wizard.alerts.summary());
 
     review.setSummary('mllp-outconn-wizard-summary-options', review.summaryLogging());
     review.setSummary('mllp-outconn-wizard-summary-logging', review.summaryLogging());
@@ -274,6 +275,14 @@ review.render = function() {
                 ['A failed send is retried', review.summaryRetries()],
                 ['Sending pauses', review.summaryBreaker()]
             ]
+        },
+        {
+            label: groups.alerts,
+            step: 1,
+            edit: function() {
+                wizard.alerts.open(document.getElementById(wizard.alerts.config.editLinkId));
+            },
+            rows: wizard.alerts.reviewRows()
         },
         {
             label: groups.logging,

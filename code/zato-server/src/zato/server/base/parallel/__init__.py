@@ -987,7 +987,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # Let the config manager know the broker client is ready
         self.config_manager.set_config_dispatcher(self.config_dispatcher)
-        self.config_manager.after_config_dispatcher_set()
 
         self._after_init_accepted(locally_deployed)
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
@@ -1879,23 +1878,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             # .. the AS4 resend job ..
             as4_resend_job_created = ensure_as4_resend_job_exists(session, self.cluster_id)
 
-            # .. the alerting sweeps and probes are not created for now ..
-            b2b_alerting_job_created = False
-            alerting_job_created = False
-            cert_check_job_created = False
-            ms_health_job_created = False
-            test_transfer_job_created = False
+            # .. the alerting sweeps ..
+            b2b_alerting_job_created = ensure_b2b_alerting_job_exists(session, self.cluster_id)
+            alerting_job_created = ensure_alerting_job_exists(session, self.cluster_id)
 
-            if 0: # alerting_disabled
-
-                # .. the alerting sweeps ..
-                b2b_alerting_job_created = ensure_b2b_alerting_job_exists(session, self.cluster_id)
-                alerting_job_created = ensure_alerting_job_exists(session, self.cluster_id)
-
-                # .. and the alerting probes, of which the test transfer one is created inactive.
-                cert_check_job_created = ensure_cert_check_job_exists(session, self.cluster_id)
-                ms_health_job_created = ensure_ms_health_job_exists(session, self.cluster_id)
-                test_transfer_job_created = ensure_test_transfer_job_exists(session, self.cluster_id)
+            # .. and the alerting probes, of which the test transfer one is created inactive.
+            cert_check_job_created = ensure_cert_check_job_exists(session, self.cluster_id)
+            ms_health_job_created = ensure_ms_health_job_exists(session, self.cluster_id)
+            test_transfer_job_created = ensure_test_transfer_job_exists(session, self.cluster_id)
 
             created_flags = [
                 openapi_created,
@@ -2309,6 +2299,20 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         result = save_demo_config(self, states)
         return result
+
+# ################################################################################################################################
+
+    def get_sdk_secret_field_names(self, type_:'str') -> 'strdict':
+        """ Returns the names of the Secret fields an SDK connector type declares - an empty list
+        if the type is not a registered connector type. Invoked by enmasse, which has no access
+        to connector classes because they exist only inside a running server.
+        """
+        from zato.server.generic.api.outconn_sdk import get_secret_field_names
+
+        names = list(get_secret_field_names(self.config_manager, type_))
+
+        out = {'names': names}
+        return out
 
 # ################################################################################################################################
 

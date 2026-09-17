@@ -12,6 +12,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import ssl
 
+# SQLAlchemy
+from sqlalchemy import text
+
 # Zato
 from zato.common.db_env.common import Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
 
@@ -20,9 +23,11 @@ from zato.common.db_env.common import Type_MySQL, Type_Oracle, Type_PostgreSQL, 
 
 if 0:
     from ssl import SSLContext
+    from sqlalchemy.engine import Connection
     from zato.common.typing_ import any_, stranydict
 
     # Dummy assignments to satisfy type checkers
+    Connection = Connection
     SSLContext = SSLContext
 
 # ################################################################################################################################
@@ -61,6 +66,14 @@ def set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'No
     _ = cursor.execute('pragma synchronous=normal')
     _ = cursor.execute(f'pragma busy_timeout={_sqlite_busy_timeout_ms}')
     cursor.close()
+
+# ################################################################################################################################
+
+def set_sqlite_busy_timeout(connection:'Connection', timeout_ms:'int') -> 'None':
+    """ Sets how long writes on this connection wait for another writer before giving up, in milliseconds.
+    The setting stays with the connection for as long as it lives in its pool.
+    """
+    _ = connection.execute(text(f'pragma busy_timeout={timeout_ms}'))
 
 # ################################################################################################################################
 

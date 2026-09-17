@@ -12,7 +12,8 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.rate_limiting.cidr import SlottedCIDRRule
-from zato.common.rate_limiting.common import hh_mm_to_minutes, RateLimitError, TimeRange
+from zato.common.rate_limiting.common import RateLimitError, TimeRange
+from zato.common.util.time_of_day import hh_mm_to_minutes
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -1,7 +1,7 @@
 /* File transfer schedule wizard - only what this wizard has of its own.
    Everything generic - the card, the step strip, the field rows, the
    decision lines, the popovers, the review and the footer - lives in
-   shared/wizard-kit.css and shared/wizard-lines.css. */
+   shared/wizard-kit.css and shared/decision-lines.css. */
 
 /* ------------------------------------------------------------ */
 /* Schedule wizard - the name row                                */
@@ -20,7 +20,7 @@
 /* The longest question here - "After a file is processed" - is shorter
    than the kit default was sized for, so the values move in closer */
 #file-transfer-wizard {
-    --wizard-line-label-width: 12.5em;
+    --decision-line-label-width: 12.5em;
 }
 
 /* ------------------------------------------------------------ */

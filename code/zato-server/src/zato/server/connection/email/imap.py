@@ -27,7 +27,7 @@ from zato.common.audit_log.attachment import build_attachment
 from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid_server
 from zato.server.connection.cloud.microsoft_365 import Microsoft365Client
-from zato.server.connection.email.common import is_auth_error, BaseConnection
+from zato.server.connection.email.common import is_auth_error, join_addresses, BaseConnection
 from zato.server.store import BaseAPI, BaseStore
 
 # ################################################################################################################################
@@ -36,15 +36,24 @@ from zato.server.store import BaseAPI, BaseStore
 if 0:
     from O365.mailbox import MailBox
     from O365.message import Message as MS365Message
+    from zato.common.api import SMTPMessage
     from zato.common.typing_ import any_, anylist, anylistnone, strnone
     anylistnone = anylistnone
     MailBox = MailBox
     MS365Message = MS365Message
+    SMTPMessage = SMTPMessage
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How a Graph message says what its body is written in
+_body_type_html = 'HTML'
+_body_type_text = 'Text'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -646,6 +655,42 @@ class Microsoft365IMAPConnection(_IMAPConnection):
                 _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config['name'],
                     cid=cid, folder=folder, outcome=AuditOutcome.Error, data=error)
             raise
+
+# ################################################################################################################################
+
+    def send(self, msg:'SMTPMessage') -> 'None':
+        """ Sends one message through the mailbox over Graph - what an alert about an object
+        that names this connection as its email connection leaves through. The message is the
+        same object the SMTP connections send, so a caller does not care which kind it holds.
+        """
+        cid = new_cid_server()
+
+        mailbox = self._get_mailbox()
+
+        native_message = mailbox.new_message()
+        native_message.to.add(msg.to)
+        native_message.subject = msg.subject
+        native_message.body = msg.body
+
+        # A plain-text body is sent as such rather than as the HTML a new Graph message defaults to
+        if msg.is_html:
+            native_message.body_type = _body_type_html
+        else:
+            native_message.body_type = _body_type_text
+
+        # A failed send is recorded too, before the caller learns about it
+        try:
+            _ = native_message.send()
+        except Exception:
+            if self.needs_audit:
+                error = format_exc()
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Request_Sent, self.config.name,
+                    cid=cid, outcome=AuditOutcome.Error, data=error)
+            raise
+
+        if self.needs_audit:
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Request_Sent, self.config.name,
+                cid=cid, outcome=AuditOutcome.OK, data=join_addresses(msg.to))
 
 # ################################################################################################################################
 

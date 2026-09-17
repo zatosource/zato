@@ -1,0 +1,196 @@
+/* ------------------------------------------------------------ */
+/* Alerts tab - the alert settings panel of a create or edit    */
+/* form, fitting the decision lines, the summary links and the  */
+/* micro-forms into a dialog. Loads after those kits.           */
+/* ------------------------------------------------------------ */
+
+/* The tokens sit on the panel, so they never spill to the rest of the dialog */
+.data-popup .alerts-tab-panel {
+    --alerts-tab-padding: 10px 12px 6px;
+    --alerts-tab-off-opacity: 0.45;
+    --alerts-tab-section-space: 14px;
+    --alerts-tab-section-title-size: 12px;
+    --alerts-tab-section-title-weight: 700;
+    --alerts-tab-section-title-space: 8px;
+
+    /* The size and weight of the Main tab's labels */
+    --decision-line-label-size: 12px;
+    --decision-line-label-weight: 400;
+    --decision-lines-gap: 8px;
+    --decision-lines-max-width: none;
+    --alerts-tab-column-gap: 12px;
+
+    /* One height for every line, whatever answers it */
+    --alerts-tab-line-height: 20px;
+
+    --alerts-tab-select-width: 24em;
+    --alerts-tab-select-font-size: 12px;
+    --alerts-tab-empty-font-size: 12px;
+}
+
+/* ------------------------------------------------------------ */
+/* One label column for the whole tab                            */
+/* ------------------------------------------------------------ */
+
+/* Every section, list and line is a subgrid of this, so the label column is one width across the tab */
+.data-popup .alerts-tab-panel .alerts-tab-sections {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: var(--alerts-tab-column-gap);
+}
+
+.data-popup .alerts-tab-panel .alerts-tab-section,
+.data-popup .alerts-tab-panel .decision-lines,
+.data-popup .alerts-tab-panel .decision-line {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+}
+
+.data-popup .alerts-tab-panel .decision-lines {
+    row-gap: var(--decision-lines-gap);
+}
+
+.data-popup .alerts-tab-panel .decision-line {
+    align-items: center;
+}
+
+.data-popup .alerts-tab-panel .alerts-tab-section-title {
+    grid-column: 1 / -1;
+}
+
+.data-popup .alerts-tab-panel .decision-line-label {
+    width: auto;
+}
+
+/* The tab's body is a .form-data, the surface the Main tab's table stands on -
+   style.css draws it as a table, this one is a div, so the padding is its own.
+   The width of .form-data is 100%, so the padding has to sit inside it, or
+   the body runs wider than the dialog by the padding on both sides. */
+.data-popup .alerts-tab-body {
+    box-sizing: border-box;
+    padding: var(--alerts-tab-padding);
+}
+
+.data-popup .alerts-tab-panel .decision-line {
+    min-height: var(--alerts-tab-line-height);
+}
+
+.data-popup .alerts-tab-section {
+    margin-bottom: var(--alerts-tab-section-space);
+}
+
+.data-popup .alerts-tab-section:last-child {
+    margin-bottom: 0;
+}
+
+.data-popup .alerts-tab-section-title {
+    margin-bottom: var(--alerts-tab-section-title-space);
+    font-size: var(--alerts-tab-section-title-size);
+    font-weight: var(--alerts-tab-section-title-weight);
+    color: var(--zato-ui-text);
+}
+
+.data-popup .alerts-tab-panel select.alerts-tab-select {
+    width: var(--alerts-tab-select-width);
+    font-size: var(--alerts-tab-select-font-size);
+}
+
+.data-popup .alerts-tab-panel .alerts-tab-pick-empty {
+    font-size: var(--alerts-tab-empty-font-size);
+    color: var(--zato-ui-text);
+}
+
+/* A summary link is always on show here - on a wizard it goes away once its
+   switch is off, but a line of the tab has no switch of its own */
+.data-popup .alerts-tab-panel a.summary-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.4;
+}
+
+/* With Active off, every line but the Active line itself is dimmed and inert,
+   so a reader sees at once that nothing else is being measured. The Active
+   line is the first of the core settings, so it is the lines that are dimmed,
+   not the sections. A line that stands whether or not the alerts are active,
+   the health check, is left alone as well. */
+.data-popup .alerts-tab-panel.alerts-tab-off .alerts-tab-line:not(.alerts-tab-active-line):not(.alerts-tab-always-on-line) {
+    opacity: var(--alerts-tab-off-opacity);
+    pointer-events: none;
+}
+
+/* A line that depends on another toggle - the LLM connection on Use LLM - is
+   dimmed the same way while that toggle is off. */
+.data-popup .alerts-tab-panel .alerts-tab-line.alerts-tab-line-off {
+    opacity: var(--alerts-tab-off-opacity);
+    pointer-events: none;
+}
+
+/* ------------------------------------------------------------ */
+/* The popovers the numbers are edited in                        */
+/* ------------------------------------------------------------ */
+
+/* The popovers are appended to document.body, hence classes of their own. Every
+   popover of the tab wears .alerts-tab-popover, under which the rules below lay
+   its fields out, and a look - .alerts-tab-micro-form in a dialog, where the
+   labels read in the regular weight, the way the questions do, and a switch is
+   the size the dialog's own are, the .data-popup slider tokens of style.css,
+   rather than the page-wide size of :root. A page whose popovers have a look of
+   their own, a wizard, gives the tab its class instead, so the tab's popovers
+   look like the page's own. */
+.alerts-tab-micro-form {
+    --micro-form-label-weight: 400;
+    --toggle-width: 32px;
+    --toggle-height: 16px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 2px;
+    --toggle-travel: 16px;
+    --toggle-off-background: #999;
+    --toggle-on-background: #2d6392;
+}
+
+.alerts-tab-popover {
+    --alerts-tab-slots-indent: 6px;
+
+    /* Room for the longest unit label */
+    --alerts-tab-unit-select-min-width: 7.5em;
+}
+
+.alerts-tab-popover .micro-form-unit,
+.alerts-tab-popover .time-slot-select {
+    min-width: var(--alerts-tab-unit-select-min-width);
+}
+
+/* A popover here is exactly as wide as its label - "Consecutive failures" -
+   and the count field stretches to that same width, so label, field and the
+   OK button under them share both edges. The width of 0 keeps the field out
+   of the popover's max-content measure, which the label alone then sets, and
+   the min-width of 100% fills the field out to the label once that is known.
+   A number with a unit select after it stays its own width, the two together
+   being wider than the label anyway. A popover with a width of its own - one
+   with chips - is not sized by a label, so its counts keep the width a count has. */
+.alerts-tab-popover.micro-form-fit .micro-form-field > input.micro-form-number {
+    width: 0;
+    min-width: 100%;
+}
+
+/* In a popover with a width of its own the fields sharing a row sit next to each other at the width
+   each has - a count, then a count with its unit select - rather than being spread across the row */
+.alerts-tab-popover:not(.micro-form-fit) .micro-form-row .micro-form-field {
+    flex: 0 0 auto;
+}
+
+/* The field the time slots are in is as wide as they are, which is what sizes the popover */
+.alerts-tab-popover .micro-form-field-own {
+    width: max-content;
+}
+
+.alerts-tab-popover .time-slots {
+    margin-left: var(--alerts-tab-slots-indent);
+}
+
+.alerts-tab-popover .time-slots-add {
+    align-self: flex-start;
+    margin-left: var(--alerts-tab-slots-indent);
+}

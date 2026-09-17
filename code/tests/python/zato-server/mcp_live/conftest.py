@@ -80,6 +80,12 @@ _mcp_username_b     = 'test.mcp.live.user.b'
 _mcp_password_b     = 'test.mcp.live.b.' + rand_string()
 _mcp_sec_def_name_b = 'test.mcp.live.auth.b'
 
+# A member whose definition carries a rate limit - three requests a day and no more, for the 429 tests
+_mcp_username_limited     = 'test.mcp.live.user.limited'
+_mcp_password_limited     = 'test.mcp.live.limited.' + rand_string()
+_mcp_sec_def_name_limited = 'test.mcp.live.auth.limited'
+_mcp_limited_daily_limit  = 3
+
 # Bearer token members of the same group - one static and two claim-filtered JWT definitions
 _mcp_bearer_static_name     = 'test.mcp.live.bearer.static'
 _mcp_bearer_static_token    = 'test.mcp.live.bearer.' + rand_string()
@@ -245,6 +251,21 @@ security:
     type: basic_auth
     username: {_mcp_username_b}
     password: "{_mcp_password_b}"
+  - name: {_mcp_sec_def_name_limited}
+    type: basic_auth
+    username: {_mcp_username_limited}
+    password: "{_mcp_password_limited}"
+    rate_limiting:
+      - cidr_list:
+          - 0.0.0.0/0
+        time_range:
+          - is_all_day: true
+            disabled: false
+            disallowed: false
+            rate: 1000
+            burst: 1000
+            limit: {_mcp_limited_daily_limit}
+            limit_unit: day
   - name: {_mcp_bearer_static_name}
     type: bearer_token
     static_token: "{_mcp_bearer_static_token}"
@@ -272,6 +293,7 @@ groups:
     members:
       - {_mcp_sec_def_name}
       - {_mcp_sec_def_name_b}
+      - {_mcp_sec_def_name_limited}
       - {_mcp_bearer_static_name}
       - {_mcp_bearer_accounting_name}
       - {_mcp_bearer_sales_name}
@@ -587,6 +609,9 @@ def zato_server(request:'any_') -> 'any_':
         'mcp_url_empty_group': mcp_url_empty_group,
         'mcp_auth': (_mcp_username, _mcp_password),
         'mcp_auth_b': (_mcp_username_b, _mcp_password_b),
+        'mcp_auth_limited': (_mcp_username_limited, _mcp_password_limited),
+        'mcp_sec_def_name_limited': _mcp_sec_def_name_limited,
+        'mcp_limited_daily_limit': _mcp_limited_daily_limit,
         'bearer_static_token': _mcp_bearer_static_token,
         'server_directory': server_directory,
         'temp_directory': _temp_directory,

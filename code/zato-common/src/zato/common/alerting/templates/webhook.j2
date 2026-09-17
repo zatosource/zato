@@ -8,8 +8,8 @@
     "link": {{ link | tojson }},
     "severity": {{ severity | tojson }},
     "count": {{ count | tojson }},
-    "action_config": {{ action_config | tojson }}{% if diagnosis %},
-    "diagnosis": {{ diagnosis | tojson }},
+    "action_config": {{ action_config | tojson }}{% if explanation %},
+    "explanation": {{ explanation | tojson }},
     "confidence": {{ confidence | tojson }},
     "remediation": {{ remediation | tojson }}{% endif %}
 }

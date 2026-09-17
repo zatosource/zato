@@ -13,10 +13,32 @@
 /* Alert rules - the rows                                        */
 /* ------------------------------------------------------------ */
 
-/* The wizard kit narrows the section to one wizard's width - full-width
-   rows need the room back */
+/* A dashboard page with no hero and no chart - only the grid with the
+   rows remains, in one column no wider than the rows need */
+.dashboard-hero,
+.dashboard-chart-section {
+    display: none;
+}
+
 .dashboard-grid-section {
+    grid-template-columns: 1fr;
     max-width: 1100px;
+    margin-top: 20px;
+}
+
+/* Every switch of the screen - on the rows and in the popover editors,
+   which are appended to document.body and so carry a class of their own -
+   renders as the smaller slider in the accent, through the site-wide
+   checkbox slider tokens */
+.alert-rules,
+.alert-rules-micro-form {
+    --toggle-width: 27.2px;
+    --toggle-height: 15.2px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 1.6px;
+    --toggle-travel: 12px;
+    --toggle-off-background: var(--zato-ui-border-strong);
+    --toggle-on-background: var(--zato-ui-accent);
 }
 
 .alert-rules-grid {
@@ -36,13 +58,13 @@
 .alert-rules-master-label {
     font-weight: 700;
     font-size: 15px;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
 }
 
 /* Where a failed change explains itself, with room to wrap */
 .alert-rules-error {
     font-size: 12px;
-    color: var(--wizard-error);
+    color: var(--zato-ui-error);
     overflow-wrap: anywhere;
 }
 
@@ -56,6 +78,7 @@
    a short transition of its own. */
 .dashboard-grid-section .alert-rules-set-card {
     min-height: 0;
+    max-height: none;
     padding: 0.55rem 1.3rem;
     display: grid;
     grid-template-columns: 280px 1fr;
@@ -93,7 +116,7 @@
 .alert-rules-set-title {
     font-weight: 700;
     font-size: 13px;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
 }
 
 /* The type sliders wait for their own screen - the badge says what
@@ -192,7 +215,7 @@
    for the moment its JS timer gives it - plain text, not a badge */
 .alert-rules-ok {
     display: none;
-    color: var(--wizard-done);
+    color: var(--zato-ui-done);
     font-size: 11px;
     font-weight: 700;
 }
@@ -213,7 +236,7 @@
 
 /* The badge's own link keeps to the text line so the baseline holds -
    the wizard link it reuses sizes itself for sliders that are not here */
-.alert-rules-set-status .wizard-toggle-edit {
+.alert-rules-set-status .summary-link {
     height: auto;
     line-height: normal;
 }
@@ -243,7 +266,7 @@
    waits for a hover, all on one line that never wraps. The wizard link
    the cell reuses sizes itself for the sliders it usually sits next to,
    so it is re-grounded here where no slider variables are in scope. */
-.alert-rules-param .wizard-toggle-edit {
+.alert-rules-param .summary-link {
     display: flex;
     align-items: baseline;
     gap: 6px;
@@ -254,7 +277,7 @@
 
 .alert-rules-param-label {
     font-size: 11px;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
 }
 
 .alert-rules-param-value {
@@ -282,7 +305,7 @@
 /* A value that does not apply to the type - a quiet placeholder
    holding the column open */
 .alert-rules-param .form_hint {
-    color: var(--wizard-text-muted);
+    color: var(--zato-ui-text-muted);
     opacity: 0.6;
 }
 
@@ -334,7 +357,7 @@
 
 /* A webhook address can run long - the cell keeps its quarter and says
    the rest with an ellipsis */
-.alert-rules-notifications-body .alert-rules-param .wizard-toggle-edit {
+.alert-rules-notifications-body .alert-rules-param .summary-link {
     max-width: 100%;
 }
 

@@ -193,18 +193,12 @@ class Connector:
     def create_channel(self, config:'Bunch') -> 'None':
         raise NotImplementedError('May be implemented in subclasses')
 
-    def edit_channel(self, config:'Bunch') -> 'None':
-        raise NotImplementedError('May be implemented in subclasses')
-
     def delete_channel(self, config:'Bunch') -> 'None':
         raise NotImplementedError('May be implemented in subclasses')
 
 # ################################################################################################################################
 
     def create_outconn(self, config:'Bunch') -> 'None':
-        raise NotImplementedError('May be implemented in subclasses')
-
-    def edit_outconn(self, config:'Bunch') -> 'None':
         raise NotImplementedError('May be implemented in subclasses')
 
     def delete_outconn(self, config:'Bunch') -> 'None':
@@ -408,12 +402,6 @@ class ConnectorStore:
 
 # ################################################################################################################################
 
-    def edit_channel(self, name:'str', config:'Bunch') -> 'None':
-        with self.lock:
-            self.connectors[name].edit_channel(config)
-
-# ################################################################################################################################
-
     def delete_channel(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
             connector = self.connectors[name]
@@ -425,13 +413,6 @@ class ConnectorStore:
         with self.lock:
             connector = self.connectors[name]
             connector.create_outconn(config)
-
-# ################################################################################################################################
-
-    def edit_outconn(self, name:'str', config:'Bunch') -> 'None':
-        with self.lock:
-            connector = self.connectors[name]
-            connector.edit_outconn(config)
 
 # ################################################################################################################################
 

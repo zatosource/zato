@@ -11,11 +11,13 @@ from unittest import TestCase
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.common import MCPAttr
 from zato.common.json_internal import dumps, loads
 from zato.common.test import _test_sec_def_id
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
-from zato.server.connection.mcp.audit import build_audit_event, Method_Session_Delete, Method_Unknown
+from zato.server.connection.mcp.audit import build_audit_event, build_rate_limit_audit_event, Method_Rate_Limited, \
+    Method_Session_Delete, Method_Unknown
 from zato.server.connection.mcp.handler import MCPHandler, _mcp_protocol_version
 from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.session import MCPSessionManager
@@ -159,6 +161,76 @@ class BuildAuditEvent(TestCase):
 
         self.assertNotIn(secret, event['data'])
         self.assertNotIn('02070803628', event['data'])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AuditAttrs(TestCase):
+    """ Tests for the attributes an event carries next to its row - what the alert collectors count in SQL.
+    """
+
+    def test_the_method_and_the_request_size_are_always_attrs(self) -> 'None':
+
+        event = _build()
+
+        self.assertEqual(event['attrs'], {MCPAttr.Method: 'tools/call', MCPAttr.Request_Size: 256})
+
+        event = _build(method='tools/list', tool_name=None)
+        self.assertEqual(event['attrs'], {MCPAttr.Method: 'tools/list', MCPAttr.Request_Size: 256})
+
+    def test_an_invalid_call_carries_its_error_code(self) -> 'None':
+
+        for error_code in (-32601, -32602):
+            body = {'jsonrpc': '2.0', 'id': 1, 'error': {'code': error_code, 'message': 'Refused'}}
+            event = _build(response_body=body)
+
+            self.assertEqual(event['attrs'][MCPAttr.Error_Code], error_code)
+
+        # A tool result flagged isError has no code to carry
+        body = {'jsonrpc': '2.0', 'id': 1, 'result': {'isError': True, 'content': []}}
+        event = _build(response_body=body)
+
+        self.assertEqual(event['outcome'], AuditOutcome.Error)
+        self.assertNotIn(MCPAttr.Error_Code, event['attrs'])
+
+    def test_a_rejection_carries_its_reject_kind(self) -> 'None':
+
+        event = _build(trace={'reject_kind': 'size', 'tokens_before': 9000})
+
+        self.assertEqual(event['attrs'][MCPAttr.Reject_Kind], 'size')
+        self.assertEqual(event['attrs'][MCPAttr.Tokens_Before], 9000)
+        self.assertNotIn(MCPAttr.Was_Truncated, event['attrs'])
+
+    def test_a_truncation_carries_its_flag_and_both_token_counts(self) -> 'None':
+
+        event = _build(trace={'was_truncated': True, 'tokens_before': 9000, 'tokens_after': 2000, 'pii_count': 3})
+
+        self.assertEqual(event['attrs'][MCPAttr.Was_Truncated], True)
+        self.assertEqual(event['attrs'][MCPAttr.Tokens_Before], 9000)
+        self.assertEqual(event['attrs'][MCPAttr.Tokens_After], 2000)
+
+        # What the collectors do not count stays in the data document alone
+        self.assertNotIn('pii_count', event['attrs'])
+        self.assertEqual(loads(event['data'])['pii_count'], 3)
+
+    def test_a_rate_limited_request_audits_under_its_own_event_type(self) -> 'None':
+
+        event = build_rate_limit_audit_event(_gateway_name, _sec_def_name, _cid, _session_id, _remote_address,
+            retry_after_seconds=30, request_size=256)
+
+        self.assertEqual(event['source'], AuditSource.MCP)
+        self.assertEqual(event['event_type'], AuditEvent.Rate_Limited)
+        self.assertEqual(event['object_name'], _gateway_name)
+        self.assertEqual(event['ext_client_id'], _sec_def_name)
+        self.assertEqual(event['sub_key'], _session_id)
+        self.assertEqual(event['outcome'], AuditOutcome.Error)
+        self.assertEqual(event['endpoint'], '')
+        self.assertEqual(event['size'], 0)
+        self.assertEqual(event['attrs'], {MCPAttr.Method: Method_Rate_Limited, MCPAttr.Request_Size: 256})
+
+        data = loads(event['data'])
+        self.assertEqual(data['retry_after_seconds'], 30)
+        self.assertEqual(data['remote_address'], _remote_address)
 
 # ################################################################################################################################
 # ################################################################################################################################

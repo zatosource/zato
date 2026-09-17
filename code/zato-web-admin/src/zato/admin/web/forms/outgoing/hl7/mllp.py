@@ -10,7 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
+from zato.admin.web import alerts_tab
 from zato.admin.web.forms import add_select
+from zato.common.alerting.object_config import alert_type_mllp_outgoing
 from zato.common.api import HL7
 
 # ################################################################################################################################
@@ -100,9 +102,12 @@ class CreateForm(forms.Form):
     tls_key_path  = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     tls_ca_path   = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
 
-    def __init__(self, prefix:'any_'=None, post_data:'any_'=None) -> 'None':
+    def __init__(self, req:'any_', prefix:'any_'=None, post_data:'any_'=None) -> 'None':
         super().__init__(post_data, prefix=prefix)
         add_select(self, 'logging_level', HL7.Const.LoggingLevel(), needs_initial_select=False)
+
+        # The alert settings the wizard's Alerts popup edits, the email and LLM connections it picks from read off the request
+        alerts_tab.add_alerts_fields(self, alert_type_mllp_outgoing, req)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -178,7 +178,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import Alerting
+from zato.common.alerting.seed.api import build_ruleset_document, default_rulesets
 from zato.common.json_internal import dumps, loads
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
@@ -191,46 +191,64 @@ from zato.server.service import Service
 # Who the versions these services store are attributed to.
 _actor = 'test.alerting'
 
+# The seeded rulesets whose rules fire about a channel's traffic - the test's own rule goes live in the channels one
+# and the common one is put aside for the test's duration, so no default rule fires alongside it about the same traffic.
+_channels_ruleset_name = 'alerts_channels'
+_common_ruleset_name = 'alerts_common'
+
+# What the common ruleset holds while the test runs - a version with no rules at all is refused when it is loaded,
+# so the ruleset keeps one rule, about an object that never exists, which is as quiet as no rule.
+_quiet_rule_text = """
+rule
+    Test_Alerting_Quiet
+docs
+    Stands in for the common defaults while the live alerting test runs and never matches anything.
+when
+    alert.object_name is 'test.alerting.nothing'
+then
+    outcome.action = 'email'
+"""
+
 # ################################################################################################################################
 
-def _publish_documents(documents, comment):
-    """ Stores the given rule documents as a new version of the test's own alerts ruleset
-    and makes that version live, returning the version number. The ruleset is created
-    on first use - the sweep picks it up through its name prefix like any other.
+def _publish_documents(ruleset_name, documents, comment):
+    """ Stores the given rule documents as a new version of a seeded alerts ruleset
+    and makes that version live, returning the version number.
     """
     backend = get_backend()
 
-    matches = backend.definitions.find_by_name(name=Alerting.Ruleset_Name, object_type=Definition_Type_Ruleset)
+    definition = backend.definitions.find_by_name(name=ruleset_name, object_type=Definition_Type_Ruleset)[0]
 
-    if matches:
-        definition = matches[0]
-        record = backend.versions.create(
-            definition_id=definition.id,
-            expected_current_version=definition.current_version,
-            document={Documents_Key: documents},
-            author=_actor,
-            comment=comment,
-        )
-        version = record.version
-    else:
-        definition = backend.definitions.create(
-            name=Alerting.Ruleset_Name,
-            object_type=Definition_Type_Ruleset,
-            document={Documents_Key: documents},
-            author=_actor,
-            comment=comment,
-        )
-        version = definition.current_version
+    record = backend.versions.create(
+        definition_id=definition.id,
+        expected_current_version=definition.current_version,
+        document={Documents_Key: documents},
+        author=_actor,
+        comment=comment,
+    )
+    version = record.version
 
     _ = backend.versions.publish(definition_id=definition.id, version=version, actor=_actor)
 
     return version
 
 # ################################################################################################################################
+
+def _seeded_documents(ruleset_name):
+    """ The documents a seeded ruleset ships with, parsed from the same text the seed uses.
+    """
+    for name, zrules_contents in default_rulesets:
+        if name == ruleset_name:
+            document = build_ruleset_document(name, zrules_contents)
+            return document[Documents_Key]
+
+    raise Exception(f'No seeded ruleset named `{ruleset_name}`')
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestAlertingRuleSave(Service):
-    """ Replaces the alerts ruleset's live rules with the ones given as rules text,
+    """ Replaces the live rules of the seeded channel rulesets with the ones given as rules text,
     so the alerting sweep test runs against exactly the rules it configures.
     """
     name = 'test.alerting.rule.save'
@@ -243,11 +261,17 @@ class TestAlertingRuleSave(Service):
 
         text = request['text']
 
-        documents, errors = parse_data_details(text, Alerting.Ruleset_Name)
+        documents, errors = parse_data_details(text, _channels_ruleset_name)
         if errors:
             raise Exception('The test alert rules do not parse -> {}'.format(errors))
 
-        version = _publish_documents(documents, 'Test alert rules')
+        version = _publish_documents(_channels_ruleset_name, documents, 'Test alert rules')
+
+        quiet_documents, quiet_errors = parse_data_details(_quiet_rule_text, _common_ruleset_name)
+        if quiet_errors:
+            raise Exception('The quiet alert rule does not parse -> {}'.format(quiet_errors))
+
+        _ = _publish_documents(_common_ruleset_name, quiet_documents, 'Test alert rules - the common defaults are put aside')
 
         self.response.payload = dumps({'is_ok': True, 'version': version})
 
@@ -255,18 +279,16 @@ class TestAlertingRuleSave(Service):
 # ################################################################################################################################
 
 class TestAlertingRuleDelete(Service):
-    """ Archives the test's own alerts ruleset, so the alerting test leaves
+    """ Puts the seeded rules back into the channel rulesets, so the alerting test leaves
     no configuration behind for the other test modules.
     """
     name = 'test.alerting.rule.delete'
 
     def handle(self):
 
-        backend = get_backend()
-        matches = backend.definitions.find_by_name(name=Alerting.Ruleset_Name, object_type=Definition_Type_Ruleset)
-
-        for definition in matches:
-            backend.definitions.archive(definition_id=definition.id, actor=_actor)
+        for ruleset_name in (_channels_ruleset_name, _common_ruleset_name):
+            documents = _seeded_documents(ruleset_name)
+            _ = _publish_documents(ruleset_name, documents, 'Test alert rules - the seeded defaults are back')
 
         self.response.payload = dumps({'is_ok': True})
 

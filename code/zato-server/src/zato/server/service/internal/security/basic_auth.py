@@ -46,7 +46,8 @@ class GetList(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            data = self.strip_listing_secrets(self.get_data(session))
+            self.response.payload[:] = data
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -11,6 +11,8 @@ machinery and look come from the wizard kit. The view provides:
 * form       - CreateForm on create, EditForm prefilled on edit
 * is_edit    - whether the wizard opened on an existing connection
 * item_id    - the id of the connection being edited, empty on create
+* alerts_tab        - the alert settings' fields, rendered hidden and edited through the Alerts popover
+* alerts_tab_config - what the popover's lines say and which fields they edit, read by alerts-tab.js
 
 One page serves both actions. On edit the form carries the edit- prefix
 its endpoint reads its input under, which the wizard's own fieldPrefix
@@ -29,8 +31,16 @@ a failed one opens when its details are asked for {% endcomment %}
 <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-chips.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-resize.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
+{% comment %} How the popovers of the Alerts lines lay their fields out - their look is the wizard's {% endcomment %}
+<link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
-<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-alerts.css">
 <link rel="stylesheet" type="text/css" href="/static/css/outgoing/hl7/mllp-wizard.css">
 {% endblock %}
 
@@ -39,14 +49,28 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/decision-lines.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/collapse.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/chips.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select-placement.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots-fields.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab-slots.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/wizard-alerts.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/probe.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/review.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/mllp-descriptions.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/mllp-wizard/core.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/mllp-wizard/forms.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/mllp-wizard/review.js"></script>
+
+{{ alerts_tab_config|json_script:"mllp-outconn-wizard-alerts-tab-config" }}
 
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
@@ -122,18 +146,18 @@ $(document).ready(function() {
 
                         <div class="wizard-toggle-row" id="mllp-outconn-wizard-row-framing">
                             <label class="wizard-toggle-label" for="mllp-outconn-wizard-edit-framing">Framing</label>
-                            <a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-framing"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-framing"></span><span class="zato-soft-hint">Click to edit</span></a>
+                            <a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-framing"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-framing"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
 
                         <div class="wizard-toggle-row" id="mllp-outconn-wizard-row-timing">
                             <label class="wizard-toggle-label" for="mllp-outconn-wizard-edit-timing">Timing</label>
-                            <a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-timing"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-timing"></span><span class="zato-soft-hint">Click to edit</span></a>
+                            <a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-timing"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-timing"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
 
                         <div class="wizard-toggle-row" id="mllp-outconn-wizard-row-tls">
                             <label class="wizard-toggle-label" for="mllp-outconn-wizard-toggle-tls">TLS</label>
                             <input type="checkbox" id="mllp-outconn-wizard-toggle-tls">
-                            <a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-tls"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-tls"></span><span class="zato-soft-hint">Click to edit</span></a>
+                            <a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-tls"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-tls"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
 
                     </div>
@@ -141,9 +165,9 @@ $(document).ready(function() {
                     <!-- Everything the check needs has just been answered, so it
                          closes the step - nothing is saved either way -->
                     <div class="wizard-section">
-                        <div class="wizard-line" id="mllp-outconn-wizard-row-check">
-                            <label class="wizard-line-label" for="mllp-outconn-wizard-check">Is anything listening?</label>
-                            <span class="wizard-line-slot" id="mllp-outconn-wizard-slot-check"></span>
+                        <div class="decision-line" id="mllp-outconn-wizard-row-check">
+                            <label class="decision-line-label" for="mllp-outconn-wizard-check">Is anything listening?</label>
+                            <span class="decision-line-slot" id="mllp-outconn-wizard-slot-check"></span>
                         </div>
                     </div>
 
@@ -156,21 +180,27 @@ $(document).ready(function() {
                     <!-- One decision per line, each value the summary of the
                          popover that answers it -->
                     <div class="wizard-section">
-                        <div class="wizard-lines" id="mllp-outconn-wizard-lines">
+                        <div class="decision-lines" id="mllp-outconn-wizard-lines">
 
-                            <div class="wizard-line" id="mllp-outconn-wizard-row-pool">
-                                <label class="wizard-line-label" for="mllp-outconn-wizard-edit-pool">Connections kept open</label>
-                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-pool"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-pool"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            <div class="decision-line" id="mllp-outconn-wizard-row-pool">
+                                <label class="decision-line-label" for="mllp-outconn-wizard-edit-pool">Connections kept open</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-pool"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-pool"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
-                            <div class="wizard-line" id="mllp-outconn-wizard-row-retries">
-                                <label class="wizard-line-label" for="mllp-outconn-wizard-edit-retries">A failed send is retried</label>
-                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-retries"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-retries"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            <div class="decision-line" id="mllp-outconn-wizard-row-retries">
+                                <label class="decision-line-label" for="mllp-outconn-wizard-edit-retries">A failed send is retried</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-retries"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-retries"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
-                            <div class="wizard-line" id="mllp-outconn-wizard-row-breaker">
-                                <label class="wizard-line-label" for="mllp-outconn-wizard-edit-breaker">Sending pauses when the endpoint fails</label>
-                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-breaker"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-breaker"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            <div class="decision-line" id="mllp-outconn-wizard-row-breaker">
+                                <label class="decision-line-label" for="mllp-outconn-wizard-edit-breaker">Sending pauses when the endpoint fails</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-breaker"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-breaker"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
+                            <!-- The alert settings - the popover holds the lines of the Alerts tab -->
+                            <div class="decision-line" id="mllp-outconn-wizard-row-alerts">
+                                <label class="decision-line-label" for="mllp-outconn-wizard-edit-alerts">Alerts</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-alerts"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-alerts"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
                         </div>
@@ -178,9 +208,9 @@ $(document).ready(function() {
 
                     <div class="wizard-section">
 
-                        <div class="wizard-line" id="mllp-outconn-wizard-row-options">
-                            <label class="wizard-line-label" for="mllp-outconn-wizard-edit-options">More options</label>
-                            <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-options"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-options"></span><span class="zato-soft-hint" id="mllp-outconn-wizard-hint-options"></span></a></span>
+                        <div class="decision-line" id="mllp-outconn-wizard-row-options">
+                            <label class="decision-line-label" for="mllp-outconn-wizard-edit-options">More options</label>
+                            <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-options"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-options"></span><span class="zato-soft-hint" id="mllp-outconn-wizard-hint-options"></span></a></span>
                         </div>
 
                         <div class="wizard-collapse-body" id="mllp-outconn-wizard-options-body" hidden>
@@ -205,9 +235,9 @@ $(document).ready(function() {
                     <div class="wizard-review" id="mllp-outconn-wizard-review"></div>
 
                     <div class="wizard-section">
-                        <div class="wizard-line" id="mllp-outconn-wizard-row-review-check">
-                            <label class="wizard-line-label" for="mllp-outconn-wizard-review-check">Is anything listening?</label>
-                            <span class="wizard-line-slot" id="mllp-outconn-wizard-slot-review-check"></span>
+                        <div class="decision-line" id="mllp-outconn-wizard-row-review-check">
+                            <label class="decision-line-label" for="mllp-outconn-wizard-review-check">Is anything listening?</label>
+                            <span class="decision-line-slot" id="mllp-outconn-wizard-slot-review-check"></span>
                         </div>
                     </div>
 
@@ -259,6 +289,15 @@ $(document).ready(function() {
                     {{ form.should_log_messages }}
                     {{ form.logging_level }}
                     {{ form.is_audit_log_active }}
+
+                    <!-- The alert settings - the Alerts popover's lines take their switches and picks
+                         from here and their popovers read and write the rest -->
+                    {% for field in alerts_tab.fields %}
+                    {{ field }}
+                    {% endfor %}
+
+                    <!-- Where the popover's panel of lines waits while the popover is closed -->
+                    <div id="mllp-outconn-wizard-alerts-holder"></div>
 
                 </div>
 

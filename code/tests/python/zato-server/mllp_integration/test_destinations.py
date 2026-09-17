@@ -889,7 +889,7 @@ class TestChannelDestinations:
         control_id = 'DEST-DEAD-001'
         acknowledgment = _send_and_receive(mllp_port, _build_adt_a01(control_id, _dead_sender))
 
-        assert b'MSA|AE|' + control_id.encode() in acknowledgment
+        assert b'MSA|AR|' + control_id.encode() in acknowledgment
 
         cid = _get_message_cid(audit_db_path, _dead_channel, control_id)
         hops = _wait_for_hops(audit_db_path, cid, 3)

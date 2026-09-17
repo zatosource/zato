@@ -119,6 +119,27 @@ class ToolRegistryBuild(TestCase):
 
 # ################################################################################################################################
 
+    def test_the_tool_count_is_the_length_of_the_tools_list(self) -> 'None':
+        """ Verifies that what the too-many-tools alert measures is exactly what tools/list returns,
+        before and after a rebuild.
+        """
+
+        store = _MockServiceStore()
+        store.add_service('crm.get-customer', _ServiceWithDoc)
+        store.add_service('billing.create-invoice', _ServiceNoDoc)
+
+        registry = ToolRegistry(store, ['crm.get-customer', 'billing.create-invoice']) # pyright: ignore[reportArgumentType]
+
+        # Nothing built yet means nothing exposed
+        self.assertEqual(registry.get_tool_count(), 0)
+
+        registry.rebuild()
+
+        self.assertEqual(registry.get_tool_count(), len(registry.get_tools()))
+        self.assertEqual(registry.get_tool_count(), 2)
+
+# ################################################################################################################################
+
     def test_service_without_docstring(self) -> 'None':
         """ Verifies that a service without a docstring gets an empty description.
         """

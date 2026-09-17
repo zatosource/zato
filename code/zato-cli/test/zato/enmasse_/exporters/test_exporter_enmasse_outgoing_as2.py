@@ -23,6 +23,7 @@ from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.exporters.as2 import AS2Exporter
 from zato.cli.enmasse.importers.as2 import AS2Importer
+from zato.cli.enmasse.util.secrets import Secret_Prefixes
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -140,6 +141,12 @@ class TestEnmasseOutgoingAS2Exporter(TestCase):
         # .. and the private keys are never exported.
         self.assertNotIn('as2_signing_key', conn)
         self.assertNotIn('as2_decryption_key', conn)
+
+        # No exported value carries an encryption prefix - encrypted material never leaves the database
+        for exported in exported_connections:
+            for value in exported.values():
+                if isinstance(value, str):
+                    self.assertFalse(value.startswith(Secret_Prefixes), f'Encrypted value exported: {value!r}')
 
 # ################################################################################################################################
 

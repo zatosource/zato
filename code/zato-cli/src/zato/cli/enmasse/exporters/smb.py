@@ -10,6 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.cli.enmasse.util.alerts import group_alerts
+from zato.common.alerting.object_config import Alerts_Key, conn_type_to_alert_type
 from zato.common.api import FileTransfer, GENERIC, SMB
 from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
@@ -40,6 +42,9 @@ OPTIONAL_FIELDS = [
 _field_defaults = {
     'port': SMB.DEFAULT.PORT,
 }
+
+# The alert type whose settings SMB connections carry
+_alert_type = conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_SMB]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,6 +102,10 @@ class SMBExporter:
             # The flag is exported only when it differs from the default of off
             if row.get('should_store_content') is True:
                 item['should_store_content'] = True
+
+            # Alert settings moved away from their defaults travel as one nested mapping
+            if alerts := group_alerts(row, _alert_type):
+                item[Alerts_Key] = alerts
 
             # File transfer schedules travel in their portable YAML shape
             if schedules := row.get(FileTransfer.Scheduler.Schedules_Field):

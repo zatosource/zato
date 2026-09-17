@@ -157,10 +157,7 @@ class TestRESTOutconnDeclarative:
                 'callback_type': 'service',
                 'callback_name': Callback_Store_Service,
                 'health_check_run_every': '45',
-                'health_check_run_unit': 'minutes',
-                'health_check_notify_on': 'all',
-                'health_check_callback_type': 'service',
-                'health_check_callback_name': Callback_Store_Service,
+                'health_check_run_unit': 'minute',
             })
 
         # .. both linked jobs exist on the scheduler page ..
@@ -196,10 +193,10 @@ class TestRESTOutconnDeclarative:
         assert page.input_value('#id_edit-callback_type') == 'service'
         assert page.input_value('#id_edit-callback_service') == Callback_Store_Service
 
+        # .. the health check's fields ride on the Alerts tab, hidden behind their line's popover,
+        # .. so their values are read off the elements rather than off the screen ..
         assert page.input_value('#id_edit-health_check_run_every') == '45'
-        assert page.input_value('#id_edit-health_check_notify_on') == 'all'
-        assert page.input_value('#id_edit-health_check_callback_type') == 'service'
-        assert page.input_value('#id_edit-health_check_callback_service') == Callback_Store_Service
+        assert page.input_value('#id_edit-health_check_run_unit') == 'minute'
 
         # .. change one value through the edit form and save - the field lives
         # on the Request tab, which must be active for the fill to see it ..

@@ -21,6 +21,7 @@ from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.slack import SlackImporter
+from zato.cli.enmasse.util.secrets import decrypt_secret, is_encrypted
 from zato.common.api import GENERIC
 from zato.common.odb.model import GenericConn
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
@@ -132,8 +133,9 @@ class TestEnmasseSlackFromYAML(TestCase):
         updated_instance = self.slack_importer.update_definition(update_def, self.session)
         self.session.commit()
 
-        # Verify the update was applied
-        self.assertEqual(updated_instance.secret, 'xoxb-updated-test-token')
+        # Verify the update was applied and the token is stored encrypted
+        self.assertTrue(is_encrypted(updated_instance.secret))
+        self.assertEqual(decrypt_secret(self.session, updated_instance.secret), 'xoxb-updated-test-token')
 
         # Make sure other fields were preserved
         self.assertEqual(updated_instance.type_, GENERIC.CONNECTION.TYPE.CHAT_SLACK)

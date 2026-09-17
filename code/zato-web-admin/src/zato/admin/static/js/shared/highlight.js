@@ -47,7 +47,16 @@ $.fn.zato.highlight.config = {
     markdown_code_pattern: /`[^`]+`/g,
 
     // What separates a frontmatter key from its value
-    frontmatter_separator: ':'
+    frontmatter_separator: ':',
+
+    // The three kinds of Jinja tag - a comment, an expression and a statement, each
+    // possibly spanning lines, and how long the delimiters that open and close them are
+    jinja_tag_pattern: /(\{#[\s\S]*?#\})|\{\{[\s\S]*?\}\}|\{%[\s\S]*?%\}/g,
+    jinja_delimiter_length: 2,
+
+    // What a Jinja tag holds - a string literal, a number standing on its own, a
+    // keyword of the template language, and a name of what the template is given
+    jinja_token_pattern: /('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")|(?<![\w.])(-?\d+(?:\.\d+)?)(?![\w])|\b(if|elif|else|endif|for|endfor|in|not|and|or|is|set|include|extends|import|block|endblock|macro|endmacro|with|endwith|raw|endraw|true|false|none|True|False|None)\b|([A-Za-z_][\w.]*)/g
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -292,6 +301,71 @@ $.fn.zato.highlight.markdown_line_to_html = function(line) {
     var out = highlight.replace_tokens(line, config.markdown_code_pattern, function(match) {
         return highlight.wrap('highlight-string', match[0]);
     });
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+// The Jinja format
+// ////////////////////////////////////////////////////////////////////////
+
+// A whole Jinja template, an alert notification template included - the text
+// between tags is the notification itself and stays plain, a comment tag is colored
+// whole, and an expression or a statement tag is taken apart into its delimiters
+// and what stands between them.
+$.fn.zato.highlight.jinja_to_html = function(text) {
+
+    var highlight = $.fn.zato.highlight;
+    var config = highlight.config;
+
+    var out = highlight.replace_tokens(text, config.jinja_tag_pattern, function(match) {
+
+        if(match[1]) {
+            return highlight.wrap('highlight-comment', match[1]);
+        }
+
+        var tag_html = highlight.jinja_tag_to_html(match[0]);
+        return tag_html;
+    });
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// One expression or statement tag - the delimiters stay in the background and the
+// inside reads as strings, numbers, keywords and the names of what the template is given.
+$.fn.zato.highlight.jinja_tag_to_html = function(tag) {
+
+    var highlight = $.fn.zato.highlight;
+    var config = highlight.config;
+
+    var delimiter_length = config.jinja_delimiter_length;
+
+    var opening = tag.slice(0, delimiter_length);
+    var closing = tag.slice(tag.length - delimiter_length);
+    var inside = tag.slice(delimiter_length, tag.length - delimiter_length);
+
+    var inside_html = highlight.replace_tokens(inside, config.jinja_token_pattern, function(match) {
+
+        if(match[1]) {
+            return highlight.wrap('highlight-string', match[1]);
+        }
+
+        if(match[2]) {
+            return highlight.wrap('highlight-number', match[2]);
+        }
+
+        if(match[3]) {
+            return highlight.wrap('highlight-keyword', match[3]);
+        }
+
+        return highlight.wrap('highlight-key', match[4]);
+    });
+
+    var out = highlight.wrap('highlight-punctuation', opening) +
+        inside_html +
+        highlight.wrap('highlight-punctuation', closing);
 
     return out;
 };

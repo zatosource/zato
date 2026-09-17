@@ -8,6 +8,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import sys
+
+# Make this directory importable so that test modules can import the suite's seeders from alerting_seeds.
+_conftest_dir = os.path.dirname(__file__)
+sys.path.insert(0, _conftest_dir)
 
 # pytest
 import pytest

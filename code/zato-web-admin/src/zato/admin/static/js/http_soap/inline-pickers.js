@@ -24,10 +24,10 @@ $.fn.zato.http_soap.inline.build_menu_button = function(label) {
 $.fn.zato.http_soap.inline._build_pick_body = function(content, options, current, filter_placeholder, on_pick) {
 
     var inline = $.fn.zato.http_soap.inline;
-    var lines = $.fn.zato.wizard_kit.lines;
+    var lines = $.fn.zato.decision_lines;
 
     var list = document.createElement('div');
-    list.className = 'wizard-panel-list';
+    list.className = 'decision-pick-panel-list';
 
     // The row of one option knows what it stands for and answers the panel when clicked
     var build_row = function(option) {
@@ -77,8 +77,8 @@ $.fn.zato.http_soap.inline._build_pick_body = function(content, options, current
 
     var filter_input = document.createElement('input');
     filter_input.type = 'text';
-    filter_input.className = 'wizard-panel-filter';
-    filter_input.id = 'wizard-panel-filter';
+    filter_input.className = 'decision-pick-panel-filter';
+    filter_input.id = 'decision-pick-panel-filter';
     filter_input.autocomplete = 'off';
     filter_input.placeholder = filter_placeholder;
 
@@ -121,7 +121,7 @@ $.fn.zato.http_soap.inline._build_pick_body = function(content, options, current
 $.fn.zato.http_soap.inline._open_pick_panel = function(link, spec) {
 
     var inline = $.fn.zato.http_soap.inline;
-    var lines = $.fn.zato.wizard_kit.lines;
+    var lines = $.fn.zato.decision_lines;
 
     // Only one panel is on screen at a time
     lines.closePanel();
@@ -158,7 +158,7 @@ $.fn.zato.http_soap.inline.open_service_panel = function(link) {
 
     var on_pick = function(option) {
 
-        $.fn.zato.wizard_kit.lines.closePanel();
+        $.fn.zato.decision_lines.closePanel();
 
         // A channel always runs a service, so picking the one it already runs changes nothing
         if(option.value === instance.service) {
@@ -294,7 +294,7 @@ $.fn.zato.http_soap.inline.open_security_panel = function(link) {
 
     var on_pick = function(option) {
 
-        $.fn.zato.wizard_kit.lines.closePanel();
+        $.fn.zato.decision_lines.closePanel();
 
         // Picking the definition the row already uses changes nothing
         if(option.value === instance[security_attr]) {
@@ -516,7 +516,7 @@ $.fn.zato.http_soap.inline.write_channel_security_cell = function(link, saved) {
 $.fn.zato.http_soap.inline.open_security_menu = function(link) {
 
     var inline = $.fn.zato.http_soap.inline;
-    var lines = $.fn.zato.wizard_kit.lines;
+    var lines = $.fn.zato.decision_lines;
     var url = inline.config.groups_url + link.getAttribute('data-id');
 
     var on_response = function(data, status) {
@@ -543,7 +543,7 @@ $.fn.zato.http_soap.inline.open_security_menu = function(link) {
 $.fn.zato.http_soap.inline._open_security_menu = function(link, items) {
 
     var inline = $.fn.zato.http_soap.inline;
-    var lines = $.fn.zato.wizard_kit.lines;
+    var lines = $.fn.zato.decision_lines;
     var id = link.getAttribute('data-id');
     var instance = $.fn.zato.data_table.data[id];
     var security_attr = inline.config.security_attr;

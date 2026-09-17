@@ -14,8 +14,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import shlex
 from contextlib import contextmanager
 from json import dumps, loads
+from stat import S_IFREG
+from time import time
 from unittest.mock import MagicMock
 
 # SQLAlchemy
@@ -26,6 +29,7 @@ from zato.common.api import GENERIC
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, AuditOutcome, AuditSource, \
     ModuleCtx as AuditLogCtx
 from zato.common.ext.bunch import Bunch
+from zato.common.file_transfer.api import Default_Verify_How
 from zato.common.pubsub.outgoing import audit_disabled_conn_types, deliver_envelope, OutgoingType
 from zato.common.sftp import SFTPOutput
 from zato.server.connection.file_transfer_base import spool_file_payload, Key_Remote_Path, Key_Spool_Path
@@ -39,7 +43,7 @@ from live_sql.env import database_env
 
 if 0:
     from collections.abc import Iterator
-    from zato.common.typing_ import any_, anylist, stranydict
+    from zato.common.typing_ import any_, anydict, anylist, stranydict
 
     envgen = Iterator[None]
 
@@ -66,6 +70,13 @@ _env_prefix = 'Zato_Audit_Log_DB_'
 # The line an SFTP listing answers with when the remote file is already there -
 # what makes the overwriting write delete it first.
 _existing_file_ls_line = '-rw-------    1 user1    group1         336 Mar  3 11:50 report.csv'
+
+# The listing line the SFTP recorder answers an `ls` of a file it holds with - a regular file of the given size,
+# which is what the verification of a stored file reads the size off
+_ls_line = '-rw-r--r--    1 user1    group1    {size} Mar  3 11:50 {name}'
+
+# The modification time the FTP recorder reports of every file, in the MLST shape the connection parses
+_ftp_modify_fact = '20260820103000'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,15 +118,36 @@ def _get_events() -> 'anylist':
 # ################################################################################################################################
 
 class _SFTPClientRecorder:
-    """ Stands in for the SFTP client - it remembers the batch commands it was told to run.
+    """ Stands in for the SFTP client - it remembers the batch commands it was told to run and, like a server
+    would, lists a file it was given back with its size, which is what the verification of the store reads.
     """
 
     def __init__(self) -> 'None':
         self.commands:'anylist' = []
 
+        # The size of each file put, by its remote path
+        self.size_by_path:'anydict' = {}
+
     def execute(self, cid:'str', data:'str', log_level:'int') -> 'SFTPOutput':
         self.commands.append(data)
-        out = SFTPOutput(cid, 1, command=data, is_ok=True, stdout='')
+
+        # A put is remembered by the size of the local file ..
+        parts = shlex.split(data)
+
+        if parts[0] == 'put':
+            local_path = parts[-2]
+            remote_path = parts[-1]
+            self.size_by_path[remote_path] = os.path.getsize(local_path)
+
+        # .. and an ls of a path put earlier lists it back with that very size.
+        stdout = ''
+
+        if parts[0] == 'ls':
+            remote_path = parts[-1]
+            if remote_path in self.size_by_path:
+                stdout = _ls_line.format(size=self.size_by_path[remote_path], name=remote_path)
+
+        out = SFTPOutput(cid, 1, command=data, is_ok=True, stdout=stdout)
         return out
 
 # ################################################################################################################################
@@ -126,13 +158,13 @@ class _SFTPExistingFileClient(_SFTPClientRecorder):
     """
 
     def execute(self, cid:'str', data:'str', log_level:'int') -> 'SFTPOutput':
-        self.commands.append(data)
 
-        # The listing the overwrite check runs answers with the leftover file
-        if data.startswith('ls'):
+        # The listing the overwrite check runs answers with the leftover file, until the put replaces it
+        if data.startswith('ls') and not self.size_by_path:
+            self.commands.append(data)
             out = SFTPOutput(cid, 1, command=data, is_ok=True, stdout=_existing_file_ls_line)
         else:
-            out = SFTPOutput(cid, 1, command=data, is_ok=True, stdout='')
+            out = super().execute(cid, data, log_level)
 
         return out
 
@@ -154,6 +186,7 @@ class _SFTPWrapper:
     def __init__(self, sftp_client:'_SFTPClientRecorder') -> 'None':
         self.sftp_client = sftp_client
         self.should_store_content = False
+        self.verify_how = Default_Verify_How
         self.audit_log = AuditLog(_server_name)
 
         self.config = Bunch()
@@ -167,14 +200,23 @@ class _SFTPWrapper:
 # ################################################################################################################################
 
 class _SMBClientRecorder:
-    """ Stands in for the SMB client - it remembers what it was told to write.
+    """ Stands in for the SMB client - it remembers what it was told to write and reports the size
+    of what it holds, which is what the verification of the store reads.
     """
 
     def __init__(self) -> 'None':
         self.written:'anylist' = []
 
+        # The bytes of each file written, by its remote path
+        self.data_by_path:'anydict' = {}
+
     def write(self, remote_path:'any_', data:'any_') -> 'None':
         self.written.append((remote_path, data))
+        self.data_by_path[remote_path] = data
+
+    def stat(self, remote_path:'any_') -> 'Bunch':
+        out = Bunch(st_mode=S_IFREG, st_size=len(self.data_by_path[remote_path]), st_mtime=time())
+        return out
 
 # ################################################################################################################################
 
@@ -194,6 +236,7 @@ class _SMBWrapper:
     def __init__(self, smb_client:'_SMBClientRecorder') -> 'None':
         self.smb_client = smb_client
         self.should_store_content = False
+        self.verify_how = Default_Verify_How
         self.audit_log = AuditLog(_server_name)
 
         self.config = Bunch()
@@ -207,16 +250,27 @@ class _SMBWrapper:
 # ################################################################################################################################
 
 class _FTPClientRecorder:
-    """ Stands in for the FTP client - it remembers what it was told to write.
+    """ Stands in for the FTP client - it remembers what it was told to write and reports the size
+    of what it holds, which is what the verification of the store reads.
     """
 
     def __init__(self) -> 'None':
         self.written:'anylist' = []
 
+        # The bytes of each file written, by its remote path
+        self.data_by_path:'anydict' = {}
+
 # ################################################################################################################################
 
     def write(self, remote_path:'any_', data:'any_') -> 'None':
         self.written.append((remote_path, data))
+        self.data_by_path[remote_path] = data
+
+# ################################################################################################################################
+
+    def stat(self, remote_path:'any_') -> 'anydict':
+        out = {'type': 'file', 'size': str(len(self.data_by_path[remote_path])), 'modify': _ftp_modify_fact}
+        return out
 
 # ################################################################################################################################
 
@@ -236,6 +290,7 @@ class _FTPWrapper:
     def __init__(self, ftp_client:'_FTPClientRecorder') -> 'None':
         self.ftp_client = ftp_client
         self.should_store_content = False
+        self.verify_how = Default_Verify_How
         self.audit_log = AuditLog(_server_name)
 
         self.config = Bunch()

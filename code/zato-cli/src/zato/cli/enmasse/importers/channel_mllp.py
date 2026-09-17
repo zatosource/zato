@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.common.alerting.object_config import conn_type_to_alert_type
 from zato.common.api import GENERIC, HL7
 from zato.common.destination.constants import Default_Delivery_Mode, Respond_From_Service
 from zato.common.destination.model import count_entries, dump_entries, parse_config
@@ -45,6 +46,10 @@ class ChannelMLLPImporter(GenericConnectionImporter):
 
     connection_secret_keys:'list' = []
     connection_required_attrs = ['name']
+
+    # The alerts mapping of a channel follows the MLLP channel type - the channel settings minus everything HTTP,
+    # plus the negative acknowledgment codes
+    alert_type = conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP]
 
 # ################################################################################################################################
 

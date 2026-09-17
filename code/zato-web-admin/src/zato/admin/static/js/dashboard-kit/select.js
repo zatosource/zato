@@ -1,11 +1,8 @@
 
-/* Dashboard kit - the select and the dropdown menu behind it.
-   One home for the grouped, filterable menu that used to live in rate-limiting.js
-   and for a select built on top of it - a trigger showing what is picked, opening
-   the menu underneath. The menu look is shared/dropdown-menu.css, the trigger wears
-   whatever classes its page hands it - it has no face of its own. */
-
-
+// Dashboard kit - the select and the dropdown menu behind it. The menu look is
+// shared/dropdown-menu.css, the trigger wears whatever classes its page hands it.
+// Where the menu is placed and how the document drives it is in select-placement.js,
+// loaded after this file.
 
 (function() {
     var ns = $.fn.zato.dashboard_kit;
@@ -15,6 +12,13 @@
        a click into the anchor is part of using the menu, not a click away from it */
     var menu_id = 'dashboard-select-menu-active';
     var active_anchor = null;
+
+    ns.select.menuId = menu_id;
+
+    ns.select.activeAnchor = function() {
+        var out = active_anchor;
+        return out;
+    };
 
     /* What to tell whoever opened the current menu once it goes away - optional,
        registered by show_menu and fired exactly once by hide_menu, so a page that
@@ -28,6 +32,8 @@
        active row carries */
     var open_class = 'dashboard-select-trigger-open';
     var active_row_class = 'zato-dropdown-item-active';
+
+    ns.select.activeRowClass = active_row_class;
 
     /* What the All row of a multi-select carries as its value - no real item
        has an empty one */
@@ -112,23 +118,25 @@
         }
 
         row.onclick = function() {
-            config.on_select(item.value);
 
             // A toggling pick leaves the menu up, so several can be picked in one
             // visit, and the rows are redrawn so every mark stays truthful - the
             // pick's own, and the All row's, which stands for no picks at all ..
             if (config.toggle_pick) {
+                config.on_select(item.value);
                 config.rerender();
             }
 
             // .. a kept-open pick takes its row along, the suggestion flavour ..
             else if (config.keep_open) {
+                config.on_select(item.value);
                 row.parentNode.removeChild(row);
             }
 
-            // .. and a plain pick is the menu's last word.
+            // .. and a plain pick puts the menu away before the pick is told of
             else {
                 ns.select.hide_menu();
+                config.on_select(item.value);
             }
         };
 
@@ -264,11 +272,10 @@
         }
 
         // Position below the anchor element, never narrower than the anchor itself
-        var rect = config.anchor.getBoundingClientRect();
+        var anchorWidth = config.anchor.getBoundingClientRect().width;
         menu.style.position = 'fixed';
-        menu.style.top = (rect.bottom + 2) + 'px';
-        menu.style.left = rect.left + 'px';
-        menu.style.minWidth = rect.width + 'px';
+        menu.style.minWidth = anchorWidth + 'px';
+        ns.select.placeMenu(menu, config.anchor);
 
         document.body.appendChild(menu);
 
@@ -632,109 +639,4 @@
     };
 
     // ////////////////////////////////////////////////////////////////////////
-
-    /* A click landing outside both the menu and the anchor it hangs off puts the menu
-       away, and so does Escape. Registered once, serving every menu on the page. */
-    $(document).on('mousedown', function(event) {
-        var menu = document.getElementById(menu_id);
-
-        if (!menu) {
-            return;
-        }
-
-        if (menu.contains(event.target)) {
-            return;
-        }
-
-        if (active_anchor !== null && active_anchor.contains(event.target)) {
-            return;
-        }
-
-        ns.select.hide_menu();
-    });
-
-    /* The row the arrow keys stand on moves one step, wrapping at either end,
-       and is kept in sight when the menu scrolls */
-    var move_active = function(menu, step) {
-        var rows = menu.querySelectorAll('.zato-dropdown-item');
-
-        if (rows.length === 0) {
-            return;
-        }
-
-        var current = -1;
-
-        for (var row_idx = 0; row_idx < rows.length; row_idx++) {
-            if (rows[row_idx].classList.contains(active_row_class)) {
-                current = row_idx;
-            }
-        }
-
-        var next = current + step;
-
-        if (next < 0) {
-            next = rows.length - 1;
-        }
-
-        if (next >= rows.length) {
-            next = 0;
-        }
-
-        if (current !== -1) {
-            rows[current].classList.remove(active_row_class);
-        }
-
-        rows[next].classList.add(active_row_class);
-        rows[next].scrollIntoView({block: 'nearest'});
-    };
-
-    /* The keyboard drives an open menu - arrows walk the rows, Enter picks the one
-       stood on, Escape first empties the filter and only then puts the menu away */
-    $(document).on('keydown', function(event) {
-        var menu = document.getElementById(menu_id);
-
-        if (!menu) {
-            return;
-        }
-
-        if (event.key === 'ArrowDown') {
-            // The page must not scroll under the menu
-            event.preventDefault();
-            move_active(menu, 1);
-            return;
-        }
-
-        if (event.key === 'ArrowUp') {
-            event.preventDefault();
-            move_active(menu, -1);
-            return;
-        }
-
-        if (event.key === 'Enter') {
-            // The trigger stands inside a form - Enter must not submit it
-            event.preventDefault();
-            var active = menu.querySelector('.' + active_row_class);
-
-            if (active) {
-                active.click();
-            }
-
-            return;
-        }
-
-        if (event.key === 'Escape') {
-            var filter_input = menu.querySelector('.dashboard-select-filter');
-
-            // A filter with text in it is what Escape clears first ..
-            if (filter_input && filter_input.value !== '') {
-                filter_input.value = '';
-
-                // .. and the rows are rebuilt the same way typing rebuilds them
-                filter_input.dispatchEvent(new Event('input'));
-                return;
-            }
-
-            ns.select.hide_menu();
-        }
-    });
 })();

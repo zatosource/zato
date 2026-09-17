@@ -216,7 +216,7 @@ $.fn.zato.gateway.mcp.size_caps.save = function() {
 
 // The popover itself, the descriptor coming from the module both this page and the
 // wizard build it from - all this page adds is where a saved row goes
-$.fn.zato.wizard_kit.forms.setup($.fn.zato.gateway.mcp.size_caps, {
+$.fn.zato.micro_forms.setup($.fn.zato.gateway.mcp.size_caps, {
     descriptors: {'size_caps': $.fn.zato.gateway.mcp.size_caps_descriptor},
     showCancel: true,
     doneLabel: 'Save',
@@ -406,7 +406,7 @@ $.fn.zato.gateway.mcp.pickers.open = function(link, spec) {
 
         // Only one panel is on screen at a time - a click elsewhere while
         // the list was in flight may have opened another one by now
-        $.fn.zato.wizard_kit.lines.closePanel();
+        $.fn.zato.decision_lines.closePanel();
 
         var panel_spec = {
             title: spec.title,
@@ -429,7 +429,7 @@ $.fn.zato.gateway.mcp.pickers.open = function(link, spec) {
             }
         };
 
-        $.fn.zato.wizard_kit.lines.openPanel(link, panel_spec);
+        $.fn.zato.decision_lines.openPanel(link, panel_spec);
 
     }, function() {
         $.fn.zato.gateway.mcp.inline.flash(link, $.fn.zato.gateway.mcp.config.load_error_label);

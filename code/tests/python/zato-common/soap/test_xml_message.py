@@ -11,7 +11,7 @@ from base64 import b64encode
 from datetime import date
 
 # lxml
-from lxml import etree
+import lxml.etree as etree
 
 # pytest
 import pytest

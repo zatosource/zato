@@ -49,12 +49,11 @@ class Enmasse(ZatoCommand):
         import sys
 
         # Zato
-        from zato.cli.enmasse.client import get_session_from_server_dir
+        from zato.cli.enmasse.client import get_server_client, get_session_from_server_dir
         from zato.cli.enmasse.config import ModuleCtx
         from zato.cli.enmasse.exporter import EnmasseYAMLExporter
         from zato.cli.enmasse.importer import EnmasseYAMLImporter
         from zato.cli.enmasse.util import FileWriter
-        from zato.common.util.api import get_client_from_server_conf
 
         # Get server path from the command line arguments
         server_path = args.path
@@ -159,11 +158,8 @@ class Enmasse(ZatoCommand):
 
                     # .. build an invoker ..
                     self.logger.info('Building client from server_dir=%s for config reload', server_path)
-                    client = get_client_from_server_conf(
-                        server_dir=server_path,
-                        require_server=True,
-                        initial_wait_time=int(args.initial_wait_time)
-                    )
+                    initial_wait_time = int(args.initial_wait_time)
+                    client = get_server_client(server_path, initial_wait_time)
                     self.logger.info('Client address=%s', client.address)
 
                     # .. reload configuration ..

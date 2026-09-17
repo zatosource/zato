@@ -7,7 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.cli.enmasse.util.invocation import Invocation_Order_Fields_REST, Invocation_Order_Fields_SOAP, Retry_Fields
+from zato.cli.enmasse.util.invocation import Health_Check_Fields, Invocation_Order_Fields_REST, Invocation_Order_Fields_SOAP, \
+    Retry_Fields
 from zato.common.api import MCP
 from zato.common.hl7.fhir.fields import Outgoing_Enmasse_Names as Outgoing_FHIR_Enmasse_Names
 from zato.common.hl7.mllp.fields import Channel_Enmasse_Names, Outgoing_Names
@@ -104,22 +105,23 @@ _object_order['groups']     = 'name', 'quota_tier', 'members:list',
 _object_order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'method', \
     'content_type', 'timeout', 'is_audit_log_active', 'should_include_in_openapi', 'gateway_service_list:list', \
     'groups:list', \
-    'rate_limiting:list', 'response_cache:dict', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor',
+    'rate_limiting:list', 'response_cache:dict', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor', \
+    'alerts:dict',
 _object_order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', \
     'use_mtom', 'method', 'content_type', 'timeout', 'is_audit_log_active', \
-    'groups:list', 'rate_limiting:list', 'response_cache:dict',
+    'groups:list', 'rate_limiting:list', 'response_cache:dict', 'alerts:dict',
 
 _object_order['outgoing_rest'] = ('name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'content_type', \
-    'timeout', 'ping_method', 'tls_verify', 'is_audit_log_active') + Retry_Fields + Invocation_Order_Fields_REST
+    'timeout', 'ping_method', 'tls_verify', 'is_audit_log_active') + Retry_Fields + Invocation_Order_Fields_REST + ('alerts:dict',)
 _object_order['outgoing_soap'] = ('name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', \
     'content_type', 'timeout', 'tls_verify', 'is_audit_log_active', 'use_ws_addressing', 'use_mtom', \
-    'tls_client_cert', 'tls_client_key', 'body_credentials') + Retry_Fields + Invocation_Order_Fields_SOAP
+    'tls_client_cert', 'tls_client_key', 'body_credentials') + Retry_Fields + Invocation_Order_Fields_SOAP + ('alerts:dict',)
 
 _object_order['scheduler'] = 'name', 'is_active', 'service', 'job_type', 'start_date', 'seconds', 'minutes', 'hours', \
     'days', 'extra:list',
 _object_order['ldap']  = 'name', 'is_active', 'username', 'auth_type', 'server_list:list',
 _object_order['llm']   = 'name', 'is_active', 'model', 'address', 'pool_size', 'timeout', 'max_tokens', \
-    'max_history_turns', 'chat_expiry',
+    'max_history_turns', 'chat_expiry', 'alerts:dict',
 _object_order['odata'] = 'name', 'is_active', 'address', 'odata_version', 'auth_type', 'username', 'token_url', \
     'tenant_id', 'client_id', 'scopes', 'needs_csrf_token', 'page_size', 'timeout', 'pool_size',
 
@@ -192,16 +194,16 @@ _object_order['mcp_gateway']   = ('name', 'is_active', 'url_path', 'services:lis
     'safeguards_secrets_enabled', \
     'safeguards_normalize_unicode', 'safeguards_unicode_mode', 'safeguards_sanitize_markup', \
     'safeguards_markup_mode', 'safeguards_url_policy_enabled', 'safeguards_url_allow_list:list', \
-    'safeguards_url_mode') + _mcp_connection_list_fields
+    'safeguards_url_mode') + _mcp_connection_list_fields + ('alerts:dict',)
 _object_order['rule_engine_api']  = 'name', 'is_active', 'url_path', 'rulesets:list', 'security_groups:list',
 _object_order['outgoing_graphql'] = 'name', 'is_active', 'address', 'security', 'default_query_timeout',
 _object_order['outgoing_grpc']    = 'name', 'is_active', 'address', 'security', 'is_tls', 'tls_ca_certs_file', \
     'proto_path', 'stub_module', 'stub_class', 'ping_timeout', 'max_send_message_size', 'max_recv_message_size',
 _object_order['outgoing_kafka']   = 'name', 'is_active', 'address', 'topic',
 
-_object_order['channel_mllp']  = ('name',) + Channel_Enmasse_Names
-_object_order['outgoing_mllp'] = ('name', 'address') + Outgoing_Names
-_object_order['outgoing_fhir'] = ('name', 'address') + Outgoing_FHIR_Enmasse_Names
+_object_order['channel_mllp']  = ('name',) + Channel_Enmasse_Names + ('alerts:dict',)
+_object_order['outgoing_mllp'] = ('name', 'address') + Outgoing_Names + ('alerts:dict',)
+_object_order['outgoing_fhir'] = ('name', 'address') + Outgoing_FHIR_Enmasse_Names + Health_Check_Fields + ('alerts:dict',)
 
 _object_order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', \
     'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_invoke_with',
@@ -216,10 +218,16 @@ _object_order['mongodb']        = 'name', 'is_active', 'server_list', 'username'
     'app_name', 'pool_size_max', 'connect_timeout', 'server_select_timeout', 'is_tls_enabled', 'tls_ca_certs_file', \
     'tls_cert_key_file', 'is_tls_validation_enabled',
 _object_order['sftp']           = 'name', 'is_active', 'address', 'username', 'private_key', 'strict_host_key_checking', \
-    'ignore_host_key_changes', 'should_store_content', 'schedules:list',
-_object_order['smb']            = 'name', 'is_active', 'host', 'port', 'username', 'should_store_content', 'schedules:list',
-_object_order['ftp']            = 'name', 'is_active', 'host', 'port', 'username', 'use_ssl', 'should_store_content', \
+    'ignore_host_key_changes', 'should_store_content', 'alerts:dict', 'schedules:list',
+_object_order['smb']            = 'name', 'is_active', 'host', 'port', 'username', 'should_store_content', 'alerts:dict', \
     'schedules:list',
+_object_order['ftp']            = 'name', 'is_active', 'host', 'port', 'username', 'use_ssl', 'should_store_content', \
+    'alerts:dict', 'schedules:list',
+
+# The alerts mapping of a file transfer connection - the writer keeps the order the exporter builds it in,
+# which is this one, the Active switch first, the type's own fields after it, the email and LLM connections last.
+_object_order['alerts'] = 'is_active', 'consecutive_failures', 'warning_failures', 'error_failures', 'window', \
+    'arrival_overdue', 'test_transfers', 'use_llm', 'email_connection', 'llm_connection',
 
 _object_order['pubsub_topic']        = 'name', 'description'
 _object_order['pubsub_permission']   = 'security', 'pub', 'sub'
@@ -228,13 +236,14 @@ _object_order['pubsub_subscription'] = 'security', 'delivery_type', 'push_rest_e
 
 _object_order['channel_openapi'] = 'name', 'is_active', 'url_path', 'rest_channel_list:list'
 
-_object_order['alert_rules'] = 'type', 'is_active', 'consecutive_failures', 'error_rate', 'alert_threshold', \
-    'max_latency', 'max_query_time', 'warning_latency', 'critical_latency', 'max_tool_call_time', \
-    'max_call_time', 'health_alerts', 'auth_failures', 'warning_failures', 'critical_failures', \
+_object_order['alert_rules'] = 'type', 'is_active', 'consecutive_failures', 'error_rate', \
+    'max_latency', 'max_query_time', 'warning_latency', 'error_latency', 'invalid_calls', 'rejections', \
+    'throttled_calls', 'repeat_calls', 'truncations', 'volume_budget', 'max_tools', \
+    'max_call_time', 'health_alerts', 'auth_failures', 'warning_failures', 'error_failures', 'window', \
     'test_transfers', 'arrival_overdue', 'overdue_multiplier', 'start_delay', 'certificate_warning', \
     'outstanding_backlog', 'feed_silence', 'use_llm',
 _object_order['alert_notifications'] = 'slack_webhook', 'teams_webhook', 'webhook_url', 'email_connection', \
-    'email_to', 'email_from', 'dashboard_url',
+    'email_to', 'email_from', 'dashboard_url', 'llm_connection',
 
 _object_order['audit_retention']  = 'name', 'retention_days', 'content_retention_days', 'archive_dir',
 _object_order['audit_extraction'] = 'name', 'source', 'rules:list',

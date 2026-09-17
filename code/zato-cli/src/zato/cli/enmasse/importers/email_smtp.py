@@ -12,6 +12,7 @@ from uuid import uuid4
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
+from zato.cli.enmasse.util.secrets import encrypt_secret, ensure_encrypted, is_usable_secret, redact_secrets
 from zato.common.odb.model import SMTP, to_json
 from zato.common.odb.query import email_smtp_list
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -82,12 +83,12 @@ class SMTPImporter:
             if name in db_defs:
                 update_def = yaml_def.copy()
                 update_def['id'] = db_defs[name]['id']
-                logger.info('Adding to update: %s', update_def)
+                logger.info('Adding to update: %s', redact_secrets(update_def))
                 to_update.append(update_def)
 
             # Create new definition
             else:
-                logger.info('Adding to create: %s', yaml_def)
+                logger.info('Adding to create: %s', redact_secrets(yaml_def))
                 to_create.append(yaml_def)
 
         return to_create, to_update
@@ -126,11 +127,13 @@ class SMTPImporter:
         # Optional username - empty string if not provided
         smtp_conn.username = smtp_def.get('username', '') or ''
 
-        # Set password if provided, otherwise generate one
+        # Set password if provided, otherwise generate one, and store it encrypted either way
         if 'password' in smtp_def:
-            smtp_conn.password = smtp_def['password']
+            password = smtp_def['password']
         else:
-            smtp_conn.password = uuid4().hex
+            password = uuid4().hex
+
+        smtp_conn.password = encrypt_secret(session, password)
 
         # The audit log is on unless the YAML definition turns it off
         smtp_def['is_audit_log_active'] = smtp_def.get('is_audit_log_active', True)
@@ -159,11 +162,7 @@ class SMTPImporter:
         for key, value in smtp_def.items():
 
             # Skip special fields that shouldn't be directly updated
-            if key not in ['id', 'type']:
-
-                # Special handling for password - only update if provided
-                if key == 'password' and not value:
-                    continue
+            if key not in ['id', 'type', 'password']:
 
                 # Special handling for username - must be empty string not None
                 if key == 'username' and value is None:
@@ -171,6 +170,14 @@ class SMTPImporter:
 
                 # Set the attribute on the SMTP connection object
                 setattr(smtp_conn, key, value)
+
+        # A password is updated only if a usable one was given, otherwise the stored one is kept
+        # and encrypted in place if it is still in clear text. The column is nullable.
+        password = smtp_def.get('password')
+        if is_usable_secret(password):
+            smtp_conn.password = encrypt_secret(session, password)
+        elif smtp_conn.password is not None:
+            smtp_conn.password = ensure_encrypted(session, smtp_conn.password)
 
         # The audit log is on unless the YAML definition turns it off
         smtp_def['is_audit_log_active'] = smtp_def.get('is_audit_log_active', True)

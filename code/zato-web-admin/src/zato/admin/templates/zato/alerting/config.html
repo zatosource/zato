@@ -6,7 +6,10 @@
 <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
-<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-chips.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-resize.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
 <link rel="stylesheet" type="text/css" href="/static/css/alerting-config/index.css">
 {% endblock %}
 
@@ -14,8 +17,17 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/sortable/Sortable.min.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/index.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/chips.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/config.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/units.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/save.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/editor.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/cards.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting-config/init.js"></script>
 {% endblock %}
 
 {% block dashboard_tiles %}{% endblock %}
@@ -49,7 +61,7 @@
                         {% for cell in type.cells %}
                         {% if cell %}
                         <div class="alert-rules-param">
-                            <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="{{ cell.name }}" data-kind="{{ cell.kind }}" data-value="{{ cell.value }}" data-suffix="{{ cell.suffix }}"><span class="alert-rules-param-label">{{ cell.label }}</span><span class="alert-rules-param-value">{{ cell.display }}</span><span class="zato-soft-hint">Click to edit</span></a>
+                            <a href="javascript:void(0)" class="summary-link alert-rules-param-edit" data-field="{{ cell.name }}" data-kind="{{ cell.kind }}" data-value="{{ cell.value }}" data-suffix="{{ cell.suffix }}"><span class="alert-rules-param-label">{{ cell.label }}</span><span class="alert-rules-param-value">{{ cell.display }}</span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                         {% else %}
                         <div class="alert-rules-param"><span class="form_hint">---</span></div>
@@ -70,7 +82,7 @@
                 <div class="alert-rules-set-body alert-rules-notifications-body" id="alert-rules-body-notifications">
                     {% for cell in notification_cells %}
                     <div class="alert-rules-param">
-                        <a href="javascript:void(0)" class="wizard-toggle-edit alert-rules-param-edit" data-field="{{ cell.name }}" data-kind="text" data-value="{{ cell.value }}" data-suffix=""><span class="alert-rules-param-label">{{ cell.label }}</span><span class="alert-rules-param-value">{{ cell.display }}</span><span class="zato-soft-hint">Click to edit</span></a>
+                        <a href="javascript:void(0)" class="summary-link alert-rules-param-edit" data-field="{{ cell.name }}" data-kind="text" data-value="{{ cell.value }}" data-suffix=""><span class="alert-rules-param-label">{{ cell.label }}</span><span class="alert-rules-param-value">{{ cell.display }}</span><span class="zato-soft-hint">Click to edit</span></a>
                     </div>
                     {% endfor %}
                 </div>
@@ -79,17 +91,28 @@
             <div id="alert-rules-row-fields" hidden>
                 <input type="number" id="id_alert-rules-row-consecutive_failures">
                 <input type="number" id="id_alert-rules-row-error_rate">
-                <input type="number" id="id_alert-rules-row-alert_threshold">
                 <input type="number" id="id_alert-rules-row-max_latency">
                 <input type="number" id="id_alert-rules-row-max_query_time">
-                <input type="number" id="id_alert-rules-row-warning_latency">
-                <input type="number" id="id_alert-rules-row-critical_latency">
-                <input type="number" id="id_alert-rules-row-max_tool_call_time">
+                <input type="number" step="any" id="id_alert-rules-row-warning_latency">
+                <input type="number" step="any" id="id_alert-rules-row-error_latency">
+                <input type="number" id="id_alert-rules-row-truncations">
+                <input type="number" id="id_alert-rules-row-refusals">
+                <input type="number" step="any" id="id_alert-rules-row-token_budget">
+                <select id="id_alert-rules-row-token_budget_unit" class="alert-rules-amount-unit"></select>
+                <input type="number" id="id_alert-rules-row-invalid_calls">
+                <input type="number" id="id_alert-rules-row-rejections">
+                <input type="number" id="id_alert-rules-row-throttled_calls">
+                <input type="number" id="id_alert-rules-row-repeat_calls">
+                <input type="number" step="any" id="id_alert-rules-row-volume_budget">
+                <select id="id_alert-rules-row-volume_budget_unit" class="alert-rules-size-unit"></select>
+                <input type="number" id="id_alert-rules-row-max_tools">
                 <input type="checkbox" id="id_alert-rules-row-health_alerts">
                 <input type="number" id="id_alert-rules-row-max_call_time">
                 <input type="number" id="id_alert-rules-row-auth_failures">
                 <input type="number" id="id_alert-rules-row-warning_failures">
-                <input type="number" id="id_alert-rules-row-critical_failures">
+                <input type="number" id="id_alert-rules-row-error_failures">
+                <input type="number" id="id_alert-rules-row-window">
+                <select id="id_alert-rules-row-window_unit" class="alert-rules-unit"></select>
                 <input type="number" id="id_alert-rules-row-arrival_overdue">
                 <input type="checkbox" id="id_alert-rules-row-test_transfers">
                 <input type="number" id="id_alert-rules-row-overdue_multiplier">
@@ -98,6 +121,8 @@
                 <input type="number" id="id_alert-rules-row-outstanding_backlog">
                 <input type="number" id="id_alert-rules-row-feed_silence">
                 <input type="checkbox" id="id_alert-rules-row-use_llm">
+                <input type="text" id="id_alert-rules-row-status_codes">
+                <input type="text" id="id_alert-rules-row-fault_codes">
                 <input type="text" id="id_alert-rules-row-slack_webhook">
                 <input type="text" id="id_alert-rules-row-teams_webhook">
                 <input type="text" id="id_alert-rules-row-webhook_url">
@@ -105,6 +130,7 @@
                 <input type="text" id="id_alert-rules-row-default_to">
                 <input type="text" id="id_alert-rules-row-from">
                 <input type="text" id="id_alert-rules-row-dashboard_url">
+                <input type="text" id="id_alert-rules-row-llm_connection">
             </div>
 
             <div class="alert-rules-footer">

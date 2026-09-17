@@ -62,7 +62,7 @@ class ServerStub:
         self.name = Server_Name
         self.invoked:'any_' = []
 
-    def invoke(self, service_name:'str', item:'any_') -> 'None':
+    def invoke(self, service_name:'str', item:'any_', cid:'str'='') -> 'None':
         self.invoked.append((service_name, item))
 
 # ################################################################################################################################
@@ -71,7 +71,7 @@ class FailingServerStub(ServerStub):
     """ A server whose target service is still down - every invocation fails.
     """
 
-    def invoke(self, service_name:'str', item:'any_') -> 'None':
+    def invoke(self, service_name:'str', item:'any_', cid:'str'='') -> 'None':
         raise Exception(Reprocess_Error)
 
 # ################################################################################################################################
@@ -83,7 +83,7 @@ def _run_reprocess(event_id:'int', server:'ServerStub') -> 'stranydict':
     harness = Bunch()
     harness.cid = Reprocess_Cid
     harness.server = server
-    harness.request = Bunch(input=Bunch(event_id=event_id))
+    harness.request = Bunch(input=Bunch(event_id=event_id, actor=None))
     harness.response = Bunch(payload=Bunch())
 
     ReprocessFileTransfer.handle(cast_('any_', harness))

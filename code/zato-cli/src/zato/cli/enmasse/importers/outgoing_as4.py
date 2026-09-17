@@ -12,7 +12,8 @@ from json import loads
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
-from zato.common.api import CONNECTION, MISC, URL_TYPE
+from zato.cli.enmasse.util.secrets import encrypt_kept_opaque_secrets, encrypt_opaque_secrets, load_opaque, secret_needs_update
+from zato.common.api import AS4, CONNECTION, MISC, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, to_json
 from zato.common.util.sql import set_instance_opaque_attrs
 
@@ -94,7 +95,7 @@ class OutgoingAS4Importer:
 
 # ################################################################################################################################
 
-    def compare_outgoing_as4(self, yaml_defs:'anylist', db_defs:'anydict') -> 'listtuple':
+    def compare_outgoing_as4(self, yaml_defs:'anylist', db_defs:'anydict', session:'SASession') -> 'listtuple':
         to_create:'anylist' = []
         to_update:'anylist' = []
 
@@ -119,6 +120,15 @@ class OutgoingAS4Importer:
                 # Compare standard attributes - the AS4 fields were already unpacked
                 # from opaque attributes into the top-level DB keys.
                 for key, value in item.items():
+
+                    # The keystore secrets are stored encrypted, so they are compared through decryption,
+                    # and one the YAML does not give in a usable form is not compared at all.
+                    if key in AS4.Secret_Fields:
+                        if secret_needs_update(session, value, db_def.get(key)):
+                            logger.info('Secret mismatch for %s.%s', name, key)
+                            needs_update = True
+                            break
+                        continue
 
                     # A field the database row does not have yet means an update too.
                     if key not in db_def:
@@ -171,7 +181,10 @@ class OutgoingAS4Importer:
             outgoing_def = dict(outgoing_def)
             outgoing_def['validate_tls'] = True
 
-        set_instance_opaque_attrs(outgoing, _with_audit_log_flag(outgoing_def))
+        # Fields that are not columns go into the opaque attributes, the keystore secrets encrypted.
+        to_store = _with_audit_log_flag(outgoing_def)
+        encrypt_opaque_secrets(to_store, {}, AS4.Secret_Fields, session, is_create=True)
+        set_instance_opaque_attrs(outgoing, to_store)
 
         session.add(outgoing)
         self.connection_defs[name] = outgoing
@@ -190,9 +203,11 @@ class OutgoingAS4Importer:
         for key, value in outgoing_def.items():
             setattr(outgoing, key, value)
 
-        # Fields that are not columns go into the opaque attributes,
-        # merged with whatever the row already keeps there.
-        set_instance_opaque_attrs(outgoing, _with_audit_log_flag(outgoing_def))
+        # Fields that are not columns go into the opaque attributes, merged with whatever the row already keeps there -
+        # a keystore secret the YAML gives lands encrypted, one it does not give keeps its stored value.
+        to_store = _with_audit_log_flag(outgoing_def)
+        encrypt_opaque_secrets(to_store, load_opaque(outgoing.opaque1), AS4.Secret_Fields, session, is_create=False)
+        set_instance_opaque_attrs(outgoing, to_store)
 
         session.add(outgoing)
         self.connection_defs[name] = outgoing
@@ -201,11 +216,40 @@ class OutgoingAS4Importer:
 
 # ################################################################################################################################
 
+    def _encrypt_kept_secrets(
+        self,
+        outgoing_list:'anylist',
+        to_update:'anylist',
+        db_defs:'anydict',
+        session:'SASession',
+    ) -> 'None':
+        """ Encrypts in place the keystore secrets of every connection the YAML names but found nothing to update in,
+        so a row that still holds them in clear text does not stay that way.
+        """
+        updated_names = {item['name'] for item in to_update}
+
+        for item in outgoing_list:
+            name = item['name']
+
+            if name in updated_names:
+                continue
+
+            db_def = db_defs.get(name)
+            if not db_def:
+                continue
+
+            outgoing = session.query(HTTPSOAP).filter_by(id=db_def['id']).one()
+
+            if encrypt_kept_opaque_secrets(session, outgoing, AS4.Secret_Fields):
+                logger.info('Encrypted the stored keystore secrets of outgoing AS4 connection %s in place', name)
+
+# ################################################################################################################################
+
     def sync_outgoing_as4(self, outgoing_list:'anylist', session:'SASession') -> 'listtuple':
         logger.info('Processing %d outgoing AS4 connections from YAML', len(outgoing_list))
 
         db_outgoing = self.get_outgoing_as4_from_db(session, self.importer.cluster_id)
-        to_create, to_update = self.compare_outgoing_as4(outgoing_list, db_outgoing)
+        to_create, to_update = self.compare_outgoing_as4(outgoing_list, db_outgoing, session)
 
         out_created:'anylist' = []
         out_updated:'anylist' = []
@@ -224,6 +268,8 @@ class OutgoingAS4Importer:
                 instance = self.update_outgoing_as4(item, session)
                 logger.info('Updated outgoing AS4 connection: name=%s id=%s', instance.name, instance.id)
                 out_updated.append(instance)
+
+            self._encrypt_kept_secrets(outgoing_list, to_update, db_outgoing, session)
 
             logger.info('Committing changes: created=%d updated=%d', len(out_created), len(out_updated))
             session.commit()

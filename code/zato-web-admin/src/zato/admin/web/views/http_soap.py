@@ -17,15 +17,14 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerEr
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web import from_user_to_utc, from_utc_to_user
+from zato.admin.web import alerts_tab
 from zato.admin.web.forms import add_http_soap_select, add_select_from_service
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
-    get_js_dt_format, get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
-        method_allowed, ping_json_response, SecurityList
-from zato.admin.web.views.security.tier import get_tier_list
-from zato.common.api import generic_attrs, Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
-     Sec_Def_Type_Name, SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
+    get_js_dt_format, get_security_id_from_select, id_only_service, method_allowed, ping_json_response, SecurityList
+from zato.admin.web.views.http_soap_message import fill_row_from_item, get_edit_create_message
+from zato.common.alerting.object_config import get_alert_type
+from zato.common.api import Groups, MISC, SEC_DEF_TYPE, Sec_Def_Type_Name, SOAP_CHANNEL_VERSIONS, URL_TYPE, ZATO_NONE
 from zato.common.content_type import format_content, get_content_type
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps, loads
@@ -77,142 +76,12 @@ _outgoing_only_security_types = {
     SEC_DEF_TYPE.SPNEGO,
 }
 
-# Names of the fields that describe the declarative invocation profile of an outgoing REST connection
-_invocation_field_names = (
-    'scheduler_run_every',
-    'scheduler_run_unit',
-    'scheduler_start_date',
-    'scheduler_job_id',
-    'request_method',
-    'request_query_string',
-    'request_path_params',
-    'request_headers',
-    'request_data',
-    'request_data_mode',
-    'response_map',
-    'response_map_mode',
-    'callback_type',
-    'callback_name',
-    'health_check_run_every',
-    'health_check_run_unit',
-    'health_check_notify_on',
-    'health_check_job_id',
-    'health_check_callback_type',
-    'health_check_callback_name',
-)
-
-# The retry config of an outgoing connection - each field maps to its shared default
-_retry = HTTP_SOAP.Retry
-
-_retry_field_defaults = {
-    _retry.Field_Max_Retries: _retry.Default_Max_Retries,
-    _retry.Field_Sleep_Time: _retry.Default_Sleep_Time,
-    _retry.Field_Backoff_Threshold: _retry.Default_Backoff_Threshold,
-    _retry.Field_Backoff_Multiplier: _retry.Default_Backoff_Multiplier,
-}
-
-# The callback name arrives from the widget that matches the callback type selected
-_callback_widget_names = {
-    'service': 'callback_service',
-    'topic': 'callback_topic',
-    'rest': 'callback_rest',
-}
-
-# The same pattern applies to the health check tab's callback widgets
-_health_check_callback_widget_names = {
-    'service': 'health_check_callback_service',
-    'topic': 'health_check_callback_topic',
-    'rest': 'health_check_callback_rest',
-}
-
 # The flag a row of the listing turns over where it stands.
 _inline_flag_names = ['is_active']
 
 # Everything a row of the listing may change without the edit form being opened -
 # the security definition and the security groups travel separately.
 _inline_field_names = ['is_active', 'name', 'url_path', 'service']
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _get_edit_create_message(params, prefix='', user_profile=None): # type: ignore
-    """ A bunch of attributes that can be used by both 'edit' and 'create' actions
-    for channels and outgoing connections.
-    """
-    security_id = get_security_id_from_select(params, prefix)
-    security_groups = get_security_groups_from_checkbox_list(params, prefix)
-
-    message = {
-        'is_internal': False,
-        'connection': params['connection'],
-        'transport': params['transport'],
-        'id': params.get('id'),
-        'cluster_id': params['cluster_id'],
-        'name': params[prefix + 'name'],
-        'is_active': bool(params.get(prefix + 'is_active')),
-        'is_audit_log_active': bool(params.get(prefix + 'is_audit_log_active')),
-        'host': params.get(prefix + 'host'),
-        'url_path': params.get(prefix + 'url_path', '/'),
-        'merge_url_params_req': bool(params.get(prefix + 'merge_url_params_req')),
-        'match_slash': bool(params.get(prefix + 'match_slash')),
-        'http_accept': params.get(prefix + 'http_accept'),
-        'url_params_pri': params.get(prefix + 'url_params_pri', URL_PARAMS_PRIORITY.DEFAULT),
-        'params_pri': params.get(prefix + 'params_pri', PARAMS_PRIORITY.DEFAULT),
-        'method': params.get(prefix + 'method'),
-        'soap_action': params.get(prefix + 'soap_action', ''),
-        'soap_version': params.get(prefix + 'soap_version', None),
-        'use_mtom': bool(params.get(prefix + 'use_mtom')),
-        'data_format': params.get(prefix + 'data_format') or None,
-        'service': params.get(prefix + 'service'),
-        'ping_method': params.get(prefix + 'ping_method'),
-        'pool_size': params.get(prefix + 'pool_size'),
-        'timeout': params.get(prefix + 'timeout'),
-        'security_id': security_id,
-        'security_groups': security_groups,
-        'content_type': params.get(prefix + 'content_type'),
-        'validate_tls': params.get(prefix + 'validate_tls'),
-        'data_encoding': params.get(prefix + 'data_encoding'),
-        'gateway_service_list': params.get(prefix + 'gateway_service_list'),
-    }
-
-    # The OpenAPI checkbox exists only in the forms of REST channels
-    if params['connection'] == 'channel':
-        if params['transport'] == 'plain_http':
-            message['should_include_in_openapi'] = bool(params.get(prefix + 'should_include_in_openapi'))
-
-            # The deprecation fields exist only in the forms of REST channels too
-            message['is_deprecated'] = bool(params.get(prefix + 'is_deprecated'))
-            message['deprecation_sunset'] = params.get(prefix + 'deprecation_sunset', '')
-            message['deprecation_successor'] = params.get(prefix + 'deprecation_successor', '')
-
-    # The declarative invocation fields exist only in the forms of outgoing connections
-    for name in _invocation_field_names:
-        message[name] = params.get(prefix + name)
-
-    # The retry fields exist only in the forms of outgoing connections too - they are sent
-    # as integers, with the shared defaults filling in for anything left empty in a form.
-    if params['connection'] == 'outgoing':
-        for name, default in _retry_field_defaults.items():
-            if value := params.get(prefix + name):
-                message[name] = int(value)
-            else:
-                message[name] = default
-
-    # The start date is entered in the user's own timezone and format and it is stored in UTC
-    if scheduler_start_date := message['scheduler_start_date']:
-        message['scheduler_start_date'] = from_user_to_utc(scheduler_start_date, user_profile).isoformat()
-
-    # The callback name comes from whichever widget matches the callback type selected
-    if callback_type := message['callback_type']:
-        widget_name = _callback_widget_names[callback_type]
-        message['callback_name'] = params.get(prefix + widget_name)
-
-    # The health check tab's callback widgets work the same way
-    if health_check_callback_type := message['health_check_callback_type']:
-        widget_name = _health_check_callback_widget_names[health_check_callback_type]
-        message['health_check_callback_name'] = params.get(prefix + widget_name)
-
-    return message
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -329,6 +198,9 @@ def index(req): # type: ignore
     if transport == 'soap':
         colspan += 3
 
+    # The alert type this page's rows carry settings under, empty for a page whose rows carry none
+    alert_type = get_alert_type(connection, transport)
+
     if req.zato.cluster_id:
         for def_item in req.zato.client.invoke('zato.security.get-list', {'cluster_id': req.zato.cluster.id}):
             if connection == 'outgoing':
@@ -340,26 +212,21 @@ def index(req): # type: ignore
 
             _security.append(def_item)
 
-        create_form = CreateForm(_security, SOAP_CHANNEL_VERSIONS, req=req)
-        edit_form = EditForm(_security, SOAP_CHANNEL_VERSIONS, prefix='edit', req=req)
+        create_form = CreateForm(_security, SOAP_CHANNEL_VERSIONS, req=req, alert_type=alert_type)
+        edit_form = EditForm(_security, SOAP_CHANNEL_VERSIONS, prefix='edit', req=req, alert_type=alert_type)
 
         if connection == 'outgoing':
             create_form.fields['url_path'].required = False
             edit_form.fields['url_path'].required = False
 
-        # The callback tabs let outgoing REST connections deliver responses
-        # and health check outcomes to other outgoing REST connections
+        # The callback tab lets outgoing REST connections deliver responses to other outgoing REST connections ..
         if connection == 'outgoing' and transport == URL_TYPE.PLAIN_HTTP:
             add_http_soap_select(create_form, 'callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
             add_http_soap_select(edit_form, 'callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
-            add_http_soap_select(create_form, 'health_check_callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
-            add_http_soap_select(edit_form, 'health_check_callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
 
             # .. and to pub/sub topics, selected by name from the topics that currently exist.
             add_select_from_service(create_form, req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
             add_select_from_service(edit_form, req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
-            add_select_from_service(create_form, req, 'zato.pubsub.topic.get-list', 'health_check_callback_topic', by_id=False)
-            add_select_from_service(edit_form, req, 'zato.pubsub.topic.get-list', 'health_check_callback_topic', by_id=False)
 
         input_dict = {
             'cluster_id': req.zato.cluster_id,
@@ -457,27 +324,7 @@ def index(req): # type: ignore
                 http_soap.pool_size = item.pool_size
                 http_soap.validate_tls = item.get('validate_tls', True)
 
-            for name in generic_attrs:
-                setattr(http_soap, name, item.get(name))
-
-            # The declarative invocation details are opaque attributes so they are absent
-            # from connections that never set them.
-            if connection == 'outgoing' and transport == URL_TYPE.PLAIN_HTTP:
-                for name in _invocation_field_names:
-                    setattr(http_soap, name, item.get(name))
-
-                # The retry fields are opaque attributes too - connections that predate them
-                # carry no values, in which case the shared defaults are displayed.
-                for name, default in _retry_field_defaults.items():
-                    value = item.get(name)
-                    if value is None:
-                        value = default
-                    setattr(http_soap, name, value)
-
-                # The start date is stored in UTC and displayed in the user's own timezone and format
-                if scheduler_start_date := http_soap.get('scheduler_start_date'):
-                    http_soap.scheduler_start_date = from_utc_to_user(
-                        scheduler_start_date + '+00:00', req.zato.user_profile)
+            fill_row_from_item(http_soap, item, alert_type, connection, transport, req.zato.user_profile)
 
             items.append(http_soap)
 
@@ -525,6 +372,17 @@ def index(req): # type: ignore
     # The scheduler tab's start date picker needs the user's date and time format
     return_data.update(get_js_dt_format(req.zato.user_profile))
 
+    # REST and SOAP channels and outgoing REST connections carry the Alerts tab, the template asks this one flag,
+    # and a channel's dialog gets a Main and Alerts strip of its own where an outgoing connection's has one already
+    has_alerts_tab = bool(alert_type)
+    return_data['has_alerts_tab'] = has_alerts_tab
+    return_data['has_channel_tabs'] = has_alerts_tab and connection == 'channel'
+
+    if has_alerts_tab:
+        return_data['create_alerts_tab'] = alerts_tab.get_alerts_tab_context(create_form, alert_type)
+        return_data['edit_alerts_tab'] = alerts_tab.get_alerts_tab_context(edit_form, alert_type)
+        return_data['alerts_tab_config'] = alerts_tab.get_alerts_tab_config(alert_type)
+
     return TemplateResponse(req, 'zato/http_soap/index.html', return_data)
 
 # ################################################################################################################################
@@ -533,7 +391,7 @@ def index(req): # type: ignore
 @method_allowed('POST')
 def create(req): # type: ignore
     try:
-        msg_data = _get_edit_create_message(req.POST, user_profile=req.zato.user_profile)
+        msg_data = get_edit_create_message(req.POST, user_profile=req.zato.user_profile)
         response = req.zato.client.invoke('zato.http-soap.create', msg_data)
         if response.has_data:
             return _edit_create_response(req, response.data.id, 'created',
@@ -551,7 +409,7 @@ def create(req): # type: ignore
 @method_allowed('POST')
 def edit(req): # type: ignore
     try:
-        edit_create_request = _get_edit_create_message(req.POST, 'edit-', user_profile=req.zato.user_profile)
+        edit_create_request = get_edit_create_message(req.POST, 'edit-', user_profile=req.zato.user_profile)
         response = req.zato.client.invoke('zato.http-soap.edit', edit_create_request)
         if response.has_data:
             return _edit_create_response(req, response.data.id, 'updated',
@@ -697,6 +555,7 @@ def _extract_invoke_params(req):
         'request_method': req.POST.get('request_method', 'POST'),
         'query_params': req.POST.get('query_params', ''),
         'path_params': req.POST.get('path_params', ''),
+        'operation': req.POST.get('operation', ''),
     }
 
 # ################################################################################################################################
@@ -747,149 +606,6 @@ def invoke_outconn(req, id):
     except Exception as e:
         logger.error('invoke_outconn error: %s', format_exc())
         return JsonResponse({'data': str(e), 'response_time_human': '', 'content_type': 'text/plain'}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def rate_limiting(req, id): # type: ignore
-    response = req.zato.client.invoke('zato.http-soap.get', {
-        'cluster_id': req.zato.cluster_id,
-        'id': id,
-    })
-
-    rules_response = req.zato.client.invoke('zato.http-soap.rate-limiting.get', {
-        'id': id,
-    })
-
-    # Tiers are offered in a select so a channel can reference one instead of carrying its own rules
-    tier_list = get_tier_list(req)
-
-    return_data = {
-        'cluster_id': req.zato.cluster_id,
-        'channel_id': id,
-        'channel_name': response.data.name,
-        'channel_url_path': response.data.url_path,
-        'transport': response.data.transport,
-        'rules_json': dumps(rules_response.data.rate_limiting),
-        'quota_tier': rules_response.data.quota_tier,
-        'tier_list': tier_list,
-        'zato_template_name': 'zato/http_soap/rate-limiting.html',
-    }
-
-    return TemplateResponse(req, 'zato/http_soap/rate-limiting.html', return_data)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def rate_limiting_save(req, id): # type: ignore
-    try:
-        rules_json = req.POST['rules_json']
-        quota_tier = req.POST['quota_tier']
-        logger.info('rate_limiting_save; channel_id:%s, rules_json:%s, quota_tier:%s', id, rules_json, quota_tier)
-        response = req.zato.client.invoke('zato.http-soap.rate-limiting.save', {
-            'id': id,
-            'rules_json': rules_json,
-            'quota_tier': quota_tier,
-        })
-        logger.info('rate_limiting_save; channel_id:%s, response.ok:%s', id, response.ok)
-        if response.ok:
-            return JsonResponse({'status': 'ok'})
-        else:
-            return JsonResponse({'status': 'error', 'message': response.details}, status=HTTPStatus.BAD_REQUEST)
-    except Exception:
-        msg = 'Rate limiting rules could not be saved, e:`{}`'.format(format_exc())
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def rate_limiting_clear_counters(req, id): # type: ignore
-    try:
-        rule_index = req.POST['rule_index']
-        response = req.zato.client.invoke('zato.http-soap.rate-limiting.clear-counters', {
-            'id': id,
-            'rule_index': rule_index,
-        })
-        if response.ok:
-            return JsonResponse({'status': 'ok'})
-        else:
-            return JsonResponse({'status': 'error', 'message': response.details}, status=HTTPStatus.BAD_REQUEST)
-    except Exception:
-        msg = 'Rate limiting counters could not be cleared, e:`{}`'.format(format_exc())
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def response_caching(req:'any_', id:'str') -> 'TemplateResponse':
-    response = req.zato.client.invoke('zato.http-soap.get', {
-        'cluster_id': req.zato.cluster_id,
-        'id': id,
-    })
-
-    config_response = req.zato.client.invoke('zato.http-soap.response-cache.get', {
-        'id': id,
-    })
-
-    return_data = {
-        'cluster_id': req.zato.cluster_id,
-        'channel_id': id,
-        'channel_name': response.data.name,
-        'channel_url_path': response.data.url_path,
-        'transport': response.data.transport,
-        'config': config_response.data.response_cache,
-        'config_json': dumps(config_response.data.response_cache),
-        'zato_template_name': 'zato/http_soap/response-caching.html',
-    }
-
-    return TemplateResponse(req, 'zato/http_soap/response-caching.html', return_data)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def response_caching_save(req:'any_', id:'str') -> 'any_':
-    try:
-        config_json = req.POST['config_json']
-        logger.info('response_caching_save; channel_id:%s, config_json:%s', id, config_json)
-        response = req.zato.client.invoke('zato.http-soap.response-cache.save', {
-            'id': id,
-            'config_json': config_json,
-        })
-        logger.info('response_caching_save; channel_id:%s, response.ok:%s', id, response.ok)
-        if response.ok:
-            return JsonResponse({'status': 'ok'})
-        else:
-            return JsonResponse({'status': 'error', 'message': response.details}, status=HTTPStatus.BAD_REQUEST)
-    except Exception:
-        exception_details = format_exc()
-        msg = f'Response caching config could not be saved, e:`{exception_details}`'
-        logger.error(msg)
-        return HttpResponseServerError(msg.encode('utf-8'))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def response_caching_clear(req:'any_', id:'str') -> 'any_':
-    try:
-        response = req.zato.client.invoke('zato.http-soap.response-cache.clear', {
-            'id': id,
-        })
-        if response.ok:
-            return JsonResponse({'status': 'ok'})
-        else:
-            return JsonResponse({'status': 'error', 'message': response.details}, status=HTTPStatus.BAD_REQUEST)
-    except Exception:
-        exception_details = format_exc()
-        msg = f'Response cache could not be cleared, e:`{exception_details}`'
-        logger.error(msg)
-        return HttpResponseServerError(msg.encode('utf-8'))
 
 # ################################################################################################################################
 # ################################################################################################################################

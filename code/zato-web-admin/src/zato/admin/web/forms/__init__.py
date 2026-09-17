@@ -22,10 +22,11 @@ from zato.common.api import IO, ZATO_NONE
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, stranydict, strnone
 
     any_ = any_
     stranydict = stranydict
+    strnone = strnone
 
 # ################################################################################################################################
 
@@ -37,7 +38,6 @@ INITIAL_CHOICES = list(iteritems(INITIAL_CHOICES_DICT))[0]
 
 SELECT_SERVICE_FIELDS = [
     'callback_service',
-    'health_check_callback_service',
     'hook_service_id',
     'hook_service_name',
     'on_close_service_name',
@@ -54,50 +54,48 @@ SELECT_SERVICE_FIELDS = [
 
 # ################################################################################################################################
 
+# An option's value is the noun in the singular, which a summary reads a count with - `1 hour`, `2 hours` -
+# and its label the plural. The scheduler names a unit in the plural, so a view translates on the way in and out.
 health_check_run_unit_choices = (
-    ('seconds', 'seconds'),
-    ('minutes', 'minutes'),
-    ('hours', 'hours'),
-    ('days', 'days'),
+    ('second', 'seconds'),
+    ('minute', 'minutes'),
+    ('hour', 'hours'),
+    ('day', 'days'),
 )
 
-health_check_notify_on_choices = (
-    ('failures', 'Failures only'),
-    ('all', 'Every result'),
-)
+health_check_run_unit_default = 'minute'
 
-# The empty first choice means no callback is configured at all
-health_check_callback_type_choices = (
-    ('', '----------'),
-    ('service', 'Service'),
-    ('topic', 'Pub/sub topic'),
-    ('rest', 'REST connection'),
-)
+health_check_unit_to_scheduler = {}
+health_check_unit_from_scheduler = {}
+
+for _unit_singular, _unit_plural in health_check_run_unit_choices:
+    health_check_unit_to_scheduler[_unit_singular] = _unit_plural
+    health_check_unit_from_scheduler[_unit_plural] = _unit_singular
+
+# ################################################################################################################################
+
+def health_check_unit_for_form(unit:'strnone') -> 'str':
+    """ The unit a listed connection's health check shows on the form - a connection without a check shows the default.
+    """
+    if unit:
+        out = health_check_unit_from_scheduler[unit]
+    else:
+        out = health_check_run_unit_default
+
+    return out
+
+# ################################################################################################################################
 
 def add_health_check_fields(form):
     """ Adds the generic health check fields to a create or edit form - any connection type
     with a ping can include them alongside the shared health-check-tab.html template.
+    Each ping's outcome lands in the connection's audit log, which is what its alerts read.
     """
     form.fields['health_check_run_every'] = forms.CharField(
         required=False, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
 
     form.fields['health_check_run_unit'] = forms.ChoiceField(
-        required=False, choices=health_check_run_unit_choices, widget=forms.Select())
-
-    form.fields['health_check_notify_on'] = forms.ChoiceField(
-        required=False, choices=health_check_notify_on_choices, widget=forms.Select())
-
-    form.fields['health_check_callback_type'] = forms.ChoiceField(
-        required=False, choices=health_check_callback_type_choices, widget=forms.Select())
-
-    form.fields['health_check_callback_service'] = forms.ChoiceField(
-        required=False, widget=forms.Select(attrs={'style':'width:100%'}))
-
-    form.fields['health_check_callback_topic'] = forms.ChoiceField(
-        required=False, widget=forms.Select(attrs={'style':'width:100%'}))
-
-    form.fields['health_check_callback_rest'] = forms.ChoiceField(
-        required=False, widget=forms.Select(attrs={'style':'width:100%'}))
+        required=False, choices=health_check_run_unit_choices, initial=health_check_run_unit_default, widget=forms.Select())
 
     form.fields['health_check_job_id'] = forms.CharField(required=False, widget=forms.HiddenInput())
 

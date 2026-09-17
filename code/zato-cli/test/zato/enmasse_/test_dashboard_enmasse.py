@@ -22,6 +22,9 @@ from base64 import b64encode
 from logging import basicConfig, getLogger, WARN
 from unittest import main, TestCase
 
+# Zato
+from zato.common.rule_engine.sql.constants import Env_DB_URL
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -177,9 +180,14 @@ class TestDashboardEnmasse(TestCase):
         config['main']['bind'] = f'0.0.0.0:{cls.port}'
         update_config_file(config, repo_location, 'server.conf')
 
+        # The rule store defaults to an SQLite file relative to the current directory, so the server
+        # and the CLI the test spawns would otherwise read two different stores - pin both to one file.
+        cls.rule_store_url = f'sqlite:///{os.path.join(_tmpdir, "zato-rule-engine-dashboard.db")}'
+
         env = os.environ.copy()
         env['Zato_Config_Bind_Port'] = str(cls.port)
         env['Zato_Broker_HTTP_Port'] = str(broker_port)
+        env[Env_DB_URL] = cls.rule_store_url
         env.pop('COVERAGE_PROCESS_START', None)
 
         _server_proc = subprocess.Popen(
@@ -235,6 +243,13 @@ class TestDashboardEnmasse(TestCase):
         _tmpdir = None
 
 # ################################################################################################################################
+
+    def _cli_env(self):
+        """The environment for a CLI enmasse run - the same rule store the server reads."""
+        env = os.environ.copy()
+        env[Env_DB_URL] = self.rule_store_url
+        env.pop('COVERAGE_PROCESS_START', None)
+        return env
 
     def _invoke_server(self, payload):
         """POST to /zato/api/invoke/zato.server.invoker - the same endpoint the dashboard uses."""
@@ -375,7 +390,7 @@ class TestDashboardEnmasse(TestCase):
 
             result = subprocess.run(
                 [_ZATO_BIN, 'enmasse', self.server_dir, '--verbose', '--import', '--input', tmp_path],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True, text=True, timeout=30, env=self._cli_env(),
             )
             self.assertEqual(result.returncode, 0,
                 f'CLI import failed: {result.stdout[:300]}\n{result.stderr[:300]}')
@@ -404,7 +419,7 @@ class TestDashboardEnmasse(TestCase):
         try:
             result = subprocess.run(
                 [_ZATO_BIN, 'enmasse', self.server_dir, '--verbose', '--export', '--output', export_path],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True, text=True, timeout=30, env=self._cli_env(),
             )
             self.assertEqual(result.returncode, 0,
                 f'CLI export failed: {result.stdout[:300]}\n{result.stderr[:300]}')

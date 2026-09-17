@@ -15,6 +15,8 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.test.sftp_ import SFTPTestServer
 
 # Tests
+from alerts_tab import click_active_slider, get_field_value, is_checked, set_popover_value, summary_text, switch_to_tab, \
+     Field_Consecutive_Failures, Field_Is_Active, Line_Failures_In_A_Row, Tab_Alerts, Tab_Main
 from outgoing_sftp import create_sftp_connection, delete_sftp_connection, expand_more_options, forget_host_key, \
      get_sftp_conn_id, open_edit_dialog, open_sftp_page, row_selector, submit_edit_form
 
@@ -35,6 +37,12 @@ _Test_Name_Prefix = 'test.sftp.' + CryptoManager.generate_hex_string(32) + '.'
 _Dutch_Letters = 'ÁÉÍÓÚË'
 _Greek_Letters = 'ΑΒΓΔΕΖ'
 _Korean_Letters = 'ㄱㄴㄷㄹㅁㅂ'
+
+# The prefix the SFTP page names its tab panels after
+_Page_Prefix = 'out-sftp'
+
+# The threshold the Alerts tab round trip stores, well away from the seeded default of 3
+_Edited_Consecutive_Failures = '7'
 
 _Console_Noise_Patterns = [
     'favicon.ico',
@@ -255,6 +263,76 @@ class TestOutgoingSFTPLifecycle:
         # .. verify gone.
         row_after_delete = page.query_selector(row_selector(name))
         assert row_after_delete is None, f'Row "{name}" should be gone after delete'
+
+# ################################################################################################################################
+
+    def test_alerts_tab_round_trip(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Changes a threshold through its popover and flips the Active slider on the Alerts tab,
+        saves, reopens the edit form and expects both to come back, with the Main tab still holding its own fields.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        # Navigate ..
+        open_sftp_page(page, base_url)
+
+        # .. create a connection, which stores the seeded alert defaults ..
+        name = _Test_Name_Prefix + 'alerts'
+        create_sftp_connection(page, name, 'sftp.example.com:22', 'sftp-user',
+            'sftp-password-' + CryptoManager.generate_hex_string())
+
+        item_id = get_sftp_conn_id(page, name)
+
+        # .. open the edit form and go to the Alerts tab ..
+        open_edit_dialog(page, item_id)
+        switch_to_tab(page, _Page_Prefix, 'edit', Tab_Alerts)
+
+        assert is_checked(page, 'edit', Field_Is_Active), 'The Active slider should be on by default'
+
+        # .. change the threshold through its popover, which rewrites the line's summary ..
+        set_popover_value(page, _Page_Prefix, 'edit', Line_Failures_In_A_Row, Field_Consecutive_Failures,
+            _Edited_Consecutive_Failures)
+
+        assert get_field_value(page, 'edit', Field_Consecutive_Failures) == _Edited_Consecutive_Failures
+        assert _Edited_Consecutive_Failures in summary_text(page, _Page_Prefix, 'edit', Line_Failures_In_A_Row)
+
+        # .. flip the Active slider off and save ..
+        click_active_slider(page, 'edit')
+        assert not is_checked(page, 'edit', Field_Is_Active)
+
+        submit_edit_form(page)
+
+        # .. reopen the edit form - the Alerts tab reads what was saved ..
+        open_edit_dialog(page, item_id)
+        switch_to_tab(page, _Page_Prefix, 'edit', Tab_Alerts)
+
+        assert get_field_value(page, 'edit', Field_Consecutive_Failures) == _Edited_Consecutive_Failures, \
+            'The edited threshold should come back after a save'
+        assert not is_checked(page, 'edit', Field_Is_Active), 'The Active slider should stay off after a save'
+        assert _Edited_Consecutive_Failures in summary_text(page, _Page_Prefix, 'edit', Line_Failures_In_A_Row)
+
+        # .. and the Main tab still holds the connection's own fields ..
+        switch_to_tab(page, _Page_Prefix, 'edit', Tab_Main)
+
+        assert page.input_value('#id_edit-name') == name
+        assert page.input_value('#id_edit-address') == 'sftp.example.com:22'
+        assert page.input_value('#id_edit-username') == 'sftp-user'
+
+        # .. save once more from the Main tab, which must not disturb the Alerts tab's values ..
+        submit_edit_form(page)
+
+        open_edit_dialog(page, item_id)
+        switch_to_tab(page, _Page_Prefix, 'edit', Tab_Alerts)
+
+        assert get_field_value(page, 'edit', Field_Consecutive_Failures) == _Edited_Consecutive_Failures
+        assert not is_checked(page, 'edit', Field_Is_Active)
+
+        page.click('#edit-div button:has-text("Cancel")')
+        _ = page.wait_for_selector('#edit-div', state='hidden')
+
+        # .. delete.
+        delete_sftp_connection(page, item_id)
 
 # ################################################################################################################################
 

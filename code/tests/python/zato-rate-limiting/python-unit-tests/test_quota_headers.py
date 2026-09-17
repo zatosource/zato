@@ -38,6 +38,9 @@ def _make_dispatcher():
     url_data = MagicMock()
     request_handler = MagicMock()
 
+    # No service is deployed, so none of them answers its own 429s and the channel does it instead
+    server.service_store.services.get.return_value = None
+
     dispatcher = RequestDispatcher(
         server=server,
         url_data=url_data,

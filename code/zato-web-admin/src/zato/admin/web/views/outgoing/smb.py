@@ -10,11 +10,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.ext.bunch import Bunch
 
 # Zato
+from zato.admin.web import alerts_tab
 from zato.admin.web.forms.outgoing.smb import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection, slugify, \
      SKIP_VALUE
 from zato.admin.web.views.outgoing.file_transfer_schedule import get_connection_last_run_list, get_schedules, \
      get_schedules_by_conn_id, set_connection_last_run
+from zato.common.alerting.object_config import alert_type_file_transfer, Field_Prefix
 from zato.common.api import FileTransfer, GENERIC
 
 # ################################################################################################################################
@@ -27,8 +29,12 @@ if 0:
 
 # ################################################################################################################################
 
+# The alert settings of the connection follow the file transfer type
+_alert_type = alert_type_file_transfer
+
 _fields_required = ('name',)
-_fields_optional = 'is_active', 'host', 'port', 'username', 'should_store_content', 'verify_how'
+_fields_optional = ('is_active', 'host', 'port', 'username', 'should_store_content', 'verify_how') + \
+    alerts_tab.get_storage_field_names(_alert_type)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,6 +55,10 @@ class Index(_Index):
     def on_before_append_item(self, item:'any_') -> 'any_':
         schedules = get_schedules(item)
         item.scheduler_schedule_count = len(schedules)
+
+        # The edit form shows a duration as a count with a unit, not as the seconds it is stored as
+        alerts_tab.split_unit_fields(_alert_type, item)
+
         return item
 
     def handle_return_data(self, return_data:'stranydict') -> 'stranydict':
@@ -56,10 +66,16 @@ class Index(_Index):
         return return_data
 
     def handle(self):
+        create_form = CreateForm(req=self.req)
+        edit_form = EditForm(prefix='edit', req=self.req)
+
         return {
             'show_search_form': True,
-            'create_form': CreateForm(req=self.req),
-            'edit_form': EditForm(prefix='edit', req=self.req),
+            'create_form': create_form,
+            'edit_form': edit_form,
+            'create_alerts_tab': alerts_tab.get_alerts_tab_context(create_form, _alert_type),
+            'edit_alerts_tab': alerts_tab.get_alerts_tab_context(edit_form, _alert_type),
+            'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
         }
 
 # ################################################################################################################################
@@ -84,7 +100,17 @@ class _CreateEdit(CreateEdit):
         # which is why the field cannot be sent to the backend at all.
         if name == 'secret' and not value:
             return SKIP_VALUE
+
+        # The Alerts tab's fields arrive as text and are stored typed - booleans and integers
+        if name.startswith(Field_Prefix):
+            value = alerts_tab.pre_process_alert_item(_alert_type, name, value)
+
         return value
+
+    def pre_process_input_dict(self, input_dict:'stranydict') -> 'None':
+
+        # A duration is stored as seconds, which is what its count and unit join into
+        alerts_tab.join_unit_fields(_alert_type, input_dict)
 
     def post_process_return_data(self, return_data:'stranydict') -> 'stranydict':
         # The Scheduler link of a newly added row needs the connection's name in its URL form.

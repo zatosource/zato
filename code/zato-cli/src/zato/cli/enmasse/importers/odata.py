@@ -26,7 +26,9 @@ class ODataImporter(GenericConnectionImporter):
     once per subtype, e.g. under the odata key and under the sap key.
     """
 
-    connection_secret_keys = ['password', 'secret', 'client_secret']
+    # Basic Auth reads the secret column, OAuth reads the client secret from the opaque attributes
+    connection_secret_keys = ['password', 'secret']
+    opaque_secret_keys = ('client_secret',)
     connection_required_attrs = ['name', 'address']
 
     def __init__(self, importer:'EnmasseYAMLImporter', subtype:'str') -> 'None':

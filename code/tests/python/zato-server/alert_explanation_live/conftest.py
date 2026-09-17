@@ -1,0 +1,471 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# The live explain suite - the alert explanation service end to end over real servers, every one
+# of them test-managed: the LLM is Ollama in its docker container, the failures the LLM explains
+# are produced against a real IMAP server and a real SSH server with an SFTP subsystem, and the
+# explained alert is delivered to a real SMTP receiver. The REST channel proof runs inside a
+# quickstart server of its own, with a hot-deployed service that raises and the LLM connection
+# imported through enmasse, and the SOAP outgoing proof has a scheduler of its own firing the
+# connection's health check. The suite skips when docker is not available.
+
+# stdlib
+import logging
+import os
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+import warnings
+from importlib import import_module
+from shutil import copytree
+from urllib.request import urlopen
+from uuid import uuid4
+
+# The Ollama container helpers live in the LLM MCP suite, the IMAP server in the IMAP scheduler suite,
+# the SMTP receiver with the zato-common suites and the explain helpers in the simulator-backed explain suite.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mcp_llm_live')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'email_imap_scheduler')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'alert_explanation')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'llm', 'lib')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib')))
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
+# pytest
+import pytest
+
+# Zato
+from zato.common.alerting.explain.skill import get_default_skills_dir, Skills_Dir_Name
+from zato.common.alerting.rendering import get_default_template_dir, Template_Dir_Name
+from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Port_Env_Name
+from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
+from zato.common.test.sftp_ import SFTPTestServer
+from zato.common.typing_ import cast_
+
+# Test helpers
+from hl7_client.smtp_receiver import SMTPReceiver
+from llm_test_server import LLMTestServer
+from live_config import IMAP_Password, LiveServer
+from live_trace import is_on as is_trace_on
+
+containers = cast_('any_', import_module('ollama_containers'))
+imap_test_server = cast_('any_', import_module('_imap_test_server'))
+IMAPTestServer = imap_test_server.IMAPTestServer
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from collections.abc import Iterator
+    from pathlib import Path
+    from zato.common.test.conftest_base_pubsub import SessionState
+    from zato.common.typing_ import any_, anydict
+
+    anydictgen = Iterator[anydict]
+    Path = Path
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How long to wait for the test-managed Redis to accept connections
+_redis_wait_timeout = 30
+_redis_poll_interval = 0.1
+
+# How long to wait for the suite's own scheduler to answer on its HTTP API
+_scheduler_wait_timeout = 30
+_scheduler_poll_interval = 0.5
+
+# The scheduler binary, the same one zato start <scheduler-dir> runs
+_scheduler_binary = os.path.join(os.environ['ZATO_TEST_BASE_DIR'], 'code', 'zato-rust', 'zato_scheduler_core', 'target',
+    'release', '_zato_scheduler')
+
+# Where the scheduler's log goes
+_scheduler_log_path = '/tmp/zato-explain-live-scheduler.log'
+
+# The server and the suite's own scheduler share these, and nothing else on the machine does - the stream prefix keeps
+# their Redis streams apart from any other scheduler's, the port keeps the scheduler's HTTP API off the default one.
+# Both are decided here, before the server fixture below is built, because the server reads them from its environment.
+_scheduler_stream_prefix = 'zato:scheduler:explain-live:' + uuid4().hex
+
+# The enmasse document the quickstart server imports before it starts - the LLM connection
+# the explanations go through, pointed at the Ollama container
+_enmasse_template_path = os.path.join(os.path.dirname(__file__), 'live_server_enmasse.yaml')
+
+# The services the proofs point their channels at - every call to the first one raises, every call to the second
+# one is answered with a FHIR OperationOutcome on a 500, the way a FHIR server answers for a resource it failed on,
+# every HL7 message the third one receives fails in it, so the MLLP channel in front of it answers with an AR,
+# the fourth one sends a message through a named outgoing MLLP connection, the way a service of the server does, and
+# the fifth one asks a named outgoing LLM connection for a completion, reporting what came back or what went wrong
+_live_services_source = '''# -*- coding: utf-8 -*-
+
+# stdlib
+from http.client import INTERNAL_SERVER_ERROR
+from json import dumps
+
+# Zato
+from zato.server.service import Service
+
+class AlwaysRaise(Service):
+    """ Fails on purpose, so that the channel in front of it answers with a 500.
+    """
+    name = '{service_name}'
+
+    def handle(self):
+        raise Exception('{error_text}')
+
+class FHIROutcome(Service):
+    """ Answers with an OperationOutcome on a 500, so that a FHIR connection calling the channel in front of it
+    reads an issue code of its own rather than a bare status.
+    """
+    name = '{outcome_service_name}'
+
+    def handle(self):
+        issue = {{'severity': 'error', 'code': '{outcome_code}', 'diagnostics': '{outcome_text}'}}
+        self.response.status_code = INTERNAL_SERVER_ERROR
+        self.response.content_type = 'application/fhir+json'
+        self.response.payload = dumps({{'resourceType': 'OperationOutcome', 'issue': [issue]}})
+
+class MLLPReject(Service):
+    """ Fails on every HL7 message, so that the MLLP channel in front of it acknowledges each one with an AR.
+    """
+    name = '{reject_service_name}'
+
+    def handle(self):
+        raise Exception('{reject_text}')
+
+class MLLPSend(Service):
+    """ Sends one HL7 message through the named outgoing MLLP connection and reports the acknowledgment it received,
+    so that the outgoing MLLP proof sends the way a service of the server sends.
+    """
+    name = '{send_service_name}'
+
+    def handle(self):
+        request = self.request.raw_request
+        ack = self.mllp[request['outconn']].send(request['data'])
+        self.response.payload = {{'ack_code': ack.ack_code, 'is_accepted': ack.is_accepted, 'ack_text': ack.ack_text}}
+
+class LLMInvoke(Service):
+    """ Asks the named outgoing LLM connection for one completion and reports its text, its finish reason and its usage,
+    or the error the provider answered with - so that the outgoing LLM proof calls the way a service of the server calls,
+    and a 429 is a reply to the test rather than a 500 from the channel.
+    """
+    name = '{llm_invoke_service_name}'
+
+    def handle(self):
+        request = self.request.raw_request
+        try:
+            response = self.llm[request['outconn']].invoke(request['text'])
+        except Exception as e:
+            self.response.payload = {{'error': str(e)}}
+        else:
+            self.response.payload = {{
+                'text': response['text'],
+                'finish_reason': response['finish_reason'],
+                'usage': response['usage'],
+            }}
+'''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _build_live_server_config(
+    state:'SessionState',
+    logger:'logging.Logger',
+    zato_bin:'str',
+    server_port:'int',
+    invoke_password:'str',
+    ) -> 'anydict':
+    """ What the quickstart server needs before it starts - the placeholders of the enmasse document
+    and the source of the services the proofs call, and what the tests need once it runs.
+    """
+    work_directory = tempfile.mkdtemp(prefix='zato_explain_live_work_')
+    source_path = os.path.join(work_directory, 'explain_live_services.py')
+
+    source = _live_services_source.format(
+        service_name=LiveServer.raising_service,
+        error_text=LiveServer.error_text,
+        outcome_service_name=LiveServer.outcome_service,
+        outcome_code=LiveServer.outcome_code,
+        outcome_text=LiveServer.outcome_text,
+        reject_service_name=LiveServer.reject_service,
+        reject_text=LiveServer.reject_text,
+        send_service_name=LiveServer.mllp_send_service,
+        llm_invoke_service_name=LiveServer.llm_invoke_service,
+    )
+
+    with open(source_path, 'w') as source_file:
+        _ = source_file.write(source)
+
+    def _populate(
+        host:'str',
+        server_port:'int',
+        invoke_password:'str',
+        server_directory:'str',
+        zato_bin:'str',
+        ) -> 'None':
+        LiveServer.host = host
+        LiveServer.server_port = server_port
+        LiveServer.invoke_password = invoke_password
+        LiveServer.server_directory = server_directory
+
+    out:'anydict' = {
+        'placeholders': {
+            'llm_conn_name': LiveServer.llm_conn_name,
+            'llm_address': containers.Ollama_OpenAI_URL,
+            'llm_model': containers.Model_Name,
+            'email_from': LiveServer.email_from,
+            'email_to': LiveServer.email_to,
+        },
+        'populate_callback': _populate,
+        'hot_deploy_sources': [source_path],
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def _find_free_port() -> 'int':
+    """ Binds to an ephemeral port and returns its number.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
+        tcp_socket.bind(('127.0.0.1', 0))
+        address = tcp_socket.getsockname()
+        out = address[1]
+
+    return out
+
+# ################################################################################################################################
+
+_scheduler_http_port = _find_free_port()
+
+_scheduler_env = {
+    'Zato_Scheduler_Stream_Prefix': _scheduler_stream_prefix,
+    'Zato_Scheduler_HTTP_Port': str(_scheduler_http_port),
+}
+
+# The server's MLLP listener binds to a port decided here, so the MLLP channel proof knows where to send before
+# the server starts - the same variable the load balancer reads, so the two never disagree
+LiveServer.mllp_port = _find_free_port()
+
+_server_env = dict(_scheduler_env)
+_server_env[MLLP_Port_Env_Name] = str(LiveServer.mllp_port)
+
+# ################################################################################################################################
+
+zato_server = create_zato_server_fixture(
+    logger_name='zato.test.alert_explanation_live.conftest',
+    server_log_copy_name='server-logs-alert-explanation-live.txt',
+    template_path=_enmasse_template_path,
+    quickstart_prefix='zato_explain_live_qs_',
+    extra_server_env=_server_env,
+    patch_server_conf_bind=True,
+    build_config_callback=_build_live_server_config,
+)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def scheduler_process(zato_server:'any_') -> 'any_':
+    """ The suite's own scheduler, firing the health checks the SOAP outgoing proof configures - started after
+    the server so that quickstart has wiped the Redis keys, and reading the same stream prefix the server writes to.
+    """
+    environment = os.environ.copy()
+    environment.update(_scheduler_env)
+    _ = environment.setdefault('Zato_Scheduler_Log_Level', 'info')
+
+    log_file = open(_scheduler_log_path, 'w')
+
+    process = subprocess.Popen([_scheduler_binary], env=environment, stdout=log_file, stderr=subprocess.STDOUT)
+
+    # The HTTP API answers once the scheduler consumes its command stream too
+    deadline = time.monotonic() + _scheduler_wait_timeout
+
+    while time.monotonic() < deadline:
+        try:
+            with urlopen(f'http://127.0.0.1:{_scheduler_http_port}/metrics', timeout=1) as response:
+                _ = response.read()
+        except Exception:
+            time.sleep(_scheduler_poll_interval)
+            continue
+        else:
+            break
+    else:
+        process.kill()
+        _ = process.wait()
+        log_file.close()
+        raise Exception(f'The scheduler did not answer on port {_scheduler_http_port} within {_scheduler_wait_timeout}s')
+
+    yield process
+
+    process.kill()
+    _ = process.wait()
+    log_file.close()
+
+# ################################################################################################################################
+
+def _wait_for_tcp_port(port:'int', timeout:'int'=_redis_wait_timeout) -> 'None':
+    """ Polls a TCP port until it accepts connections, or raises after the timeout.
+    """
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection(('127.0.0.1', port), timeout=1):
+                return
+        except OSError:
+            time.sleep(_redis_poll_interval)
+
+    raise Exception(f'Port {port} did not accept connections within {timeout}s')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(autouse=True, scope='session')
+def quiet_when_traced() -> 'None':
+    """ With the trace on, the screen carries the exchanges alone - the tracebacks the probe
+    logs about the failures it is meant to produce and gevent's fork warnings stay off it.
+    """
+    if not is_trace_on():
+        return
+
+    # With no handler at all the root logger prints every warning through its last resort handler
+    logging.getLogger().addHandler(logging.NullHandler())
+
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+# ################################################################################################################################
+
+@pytest.fixture(autouse=True)
+def audit_db_env(tmp_path:'Path') -> 'any_':
+    """ Points the audit database at a per-test SQLite file so every test runs on its own.
+    """
+    database_path = os.path.join(str(tmp_path), 'audit.db')
+
+    os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
+    os.environ[AuditLogCtx.Env_Name] = database_path
+
+    yield database_path
+
+    del os.environ[AuditLogCtx.Env_Type]
+    del os.environ[AuditLogCtx.Env_Name]
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def ollama() -> 'any_':
+    """ The Ollama container running with the model pulled - the suite skips without docker.
+    """
+    if not containers.is_docker_available():
+        pytest.skip('Docker is not available')
+
+    containers.ensure_ollama()
+    containers.ensure_model()
+
+    out = {
+        'openai_url': containers.Ollama_OpenAI_URL,
+        'model': containers.Model_Name,
+    }
+
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def redis_server() -> 'anydictgen':
+    """ A test-managed Redis on its own port - the LLM wrapper's chat history store points at it.
+    """
+    port = _find_free_port()
+
+    process = subprocess.Popen(
+        ['redis-server', '--port', str(port), '--save', '', '--appendonly', 'no'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+    _wait_for_tcp_port(port)
+
+    yield {'host': '127.0.0.1', 'port': port}
+
+    process.terminate()
+    _ = process.wait(timeout=5)
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def imap_server() -> 'any_':
+    """ A real IMAP server that rejects every login but the one with the required password.
+    """
+    server = IMAPTestServer()
+    server.required_password = IMAP_Password
+    server.start()
+
+    yield server
+
+    server.stop()
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def sftp_server() -> 'any_':
+    """ A real SSH server with an SFTP subsystem, serving a directory of its own.
+    """
+    server = SFTPTestServer()
+    server.start()
+
+    yield server
+
+    server.stop()
+
+# ################################################################################################################################
+
+@pytest.fixture()
+def llm_test_server() -> 'any_':
+    """ A live LLM provider simulator over plain HTTP - what an outgoing LLM connection of the live server calls,
+    answering each path the way the proof configures it.
+    """
+    server = LLMTestServer()
+    server.start()
+
+    yield server
+
+    server.stop()
+
+# ################################################################################################################################
+
+@pytest.fixture()
+def smtp_receiver() -> 'any_':
+    """ A running aiosmtpd receiver recording every email delivered to it.
+    """
+    receiver = SMTPReceiver()
+    receiver.start()
+
+    yield receiver
+
+    receiver.stop()
+
+# ################################################################################################################################
+
+@pytest.fixture()
+def repo_dir(tmp_path:'Path') -> 'str':
+    """ A server repo directory with the alert templates and the alert skills copied in,
+    the way create_server.py copies them.
+    """
+    repo = tmp_path / 'repo'
+    repo.mkdir()
+
+    _ = copytree(get_default_template_dir(), str(repo / Template_Dir_Name))
+    _ = copytree(get_default_skills_dir(), str(repo / Skills_Dir_Name))
+
+    out = str(repo)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################

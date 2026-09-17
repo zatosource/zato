@@ -10,7 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
+from zato.admin.web import alerts_tab
 from zato.admin.web.forms import add_security_select, add_services
+from zato.common.alerting.object_config import alert_type_mllp_channel
 from zato.common.api import HL7
 
 # ################################################################################################################################
@@ -179,6 +181,7 @@ class CreateForm(forms.Form):
         add_services(self, req)
         add_security_select(self, security_list, field_name='rest_security_id')
         add_security_select(self, mtls_security_list, field_name='security_id')
+        alerts_tab.add_alerts_fields(self, alert_type_mllp_channel, req)
 
 # ################################################################################################################################
 # ################################################################################################################################

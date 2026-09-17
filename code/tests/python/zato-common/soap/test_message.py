@@ -13,7 +13,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 # lxml
-from lxml import etree
+import lxml.etree as etree
 
 # pytest
 import pytest

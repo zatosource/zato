@@ -18,8 +18,8 @@ from zato.common.audit_log.dedup import acquire_dedup_key, build_dedup_key, comp
     release_dedup_key
 from zato.common.audit_log.resubmit import bulk_resubmit, find_event_ids, get_resubmit_handler, get_stored_payload, \
     is_event_type_resubmittable, load_event, register_resubmit_handler, require_event_type, resend_hop, \
-    source_resubmit_actions, Action_Reprocess, Action_Resend, ResubmitFilter, ResubmitException, Row_Error, \
-    Row_Resubmitted, Row_Would_Resubmit
+    source_resubmit_actions, Action_Reprocess, Action_Resend, Resubmit_Label, ResubmitFilter, ResubmitException, \
+    Retry_Label, Row_Error, Row_Resubmitted, Row_Would_Resubmit
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
@@ -209,11 +209,15 @@ def _run_resubmittable_declaration_checks() -> 'None':
     and a source with no catalog at all says no for everything.
     """
 
-    # Every catalog entry names its label and the service that performs it
+    # Every catalog entry names its label and the service that performs it ..
     for actions in source_resubmit_actions.values():
         for action in actions.values():
-            assert action['label'] == 'Resubmit'
+            assert action['label'] in (Resubmit_Label, Retry_Label)
             assert action['service'].startswith('zato.audit-log.')
+
+    # .. and a quarantined file is retried rather than resubmitted
+    file_transfer_actions = source_resubmit_actions[AuditSource.File_Outgoing]
+    assert file_transfer_actions[AuditEvent.File_Quarantined]['label'] == Retry_Label
 
     # A declared type of a declared source can be sent again ..
     assert is_event_type_resubmittable(AuditSource.REST_Outgoing, AuditEvent.Request_Sent) is True

@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # requests
 from requests.sessions import Session as RequestsSession
 
+# Zato
+from zato.common.audit_log.common import LLMFinish
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -27,12 +30,65 @@ Role_Assistant = 'assistant'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class LLMError(Exception):
-    """ Raised when an LLM provider rejects a request or returns an error - carries the provider's response body verbatim.
+# Each provider's own finish reasons mapped onto the shared vocabulary - OpenAI's in lower case, Claude's in snake case,
+# Gemini's in upper case. A reason absent from here is written lowercased as the provider sent it.
+_finish_reason_map = {
+
+    # The model stopped on its own
+    'stop':     LLMFinish.Stop,
+    'end_turn': LLMFinish.Stop,
+    'STOP':     LLMFinish.Stop,
+
+    # The model ran out of tokens - the completion is truncated
+    'length':     LLMFinish.Length,
+    'max_tokens': LLMFinish.Length,
+    'MAX_TOKENS': LLMFinish.Length,
+
+    # The provider declined to answer - a content filter or a safety block
+    'content_filter':     LLMFinish.Refusal,
+    'refusal':            LLMFinish.Refusal,
+    'SAFETY':             LLMFinish.Refusal,
+    'RECITATION':         LLMFinish.Refusal,
+    'PROHIBITED_CONTENT': LLMFinish.Refusal,
+    'BLOCKLIST':          LLMFinish.Refusal,
+    'SPII':               LLMFinish.Refusal,
+
+    # The model asked for a tool to be called
+    'tool_calls': LLMFinish.Tool_Use,
+    'tool_use':   LLMFinish.Tool_Use,
+}
+
+# ################################################################################################################################
+
+def normalize_finish_reason(value:'str | None') -> 'str':
+    """ One provider's finish reason in the shared vocabulary - stop, length, refusal or tool_use - with anything
+    the map does not know lowercased as it came and a missing reason an empty string.
     """
-    def __init__(self, message:'str', provider_body:'str') -> 'None':
+    if value is None:
+        return ''
+
+    if value in _finish_reason_map:
+        out = _finish_reason_map[value]
+    else:
+        out = value.lower()
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LLMError(Exception):
+    """ Raised when an LLM provider rejects a request or returns an error - carries the provider's response body verbatim,
+    the HTTP status code and reason of the response when there was one, and the finish reason when the provider answered
+    with HTTP 200 yet declined to complete, as Gemini does when it blocks a prompt.
+    """
+    def __init__(self, message:'str', provider_body:'str', status_code:'int'=0, reason:'str'='',
+        finish_reason:'str'='') -> 'None':
         super().__init__(message)
         self.provider_body = provider_body
+        self.status_code = status_code
+        self.reason = reason
+        self.finish_reason = finish_reason
 
 # ################################################################################################################################
 # ################################################################################################################################

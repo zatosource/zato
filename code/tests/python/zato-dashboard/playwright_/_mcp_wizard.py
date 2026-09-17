@@ -365,7 +365,7 @@ def popover_input_selector(field_name:'str') -> 'str':
 def accept_popover(page:'Page') -> 'None':
     """ Accepts the open popover micro-form - OK writes the answers back into the form and closes it.
     """
-    page.click('#mcp-wizard-popup .wizard-tippy-buttons button.action-button')
+    page.click('#mcp-wizard-popup .micro-form-buttons button.action-button')
     _ = page.wait_for_selector('#mcp-wizard-popup', state='detached', timeout=_Wizard_Timeout)
 
 # ################################################################################################################################

@@ -12,6 +12,7 @@ from uuid import uuid4
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
+from zato.cli.enmasse.util.secrets import encrypt_secret, ensure_encrypted, is_usable_secret, redact_secrets
 from zato.common.odb.model import OutgoingOdoo, to_json
 from zato.common.odb.query import out_odoo_list
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -83,12 +84,12 @@ class OdooImporter:
             if name in db_defs:
                 update_def = yaml_def.copy()
                 update_def['id'] = db_defs[name]['id']
-                logger.info('Adding to update: %s', update_def)
+                logger.info('Adding to update: %s', redact_secrets(update_def))
                 to_update.append(update_def)
 
             # Create new definition
             else:
-                logger.info('Adding to create: %s', yaml_def)
+                logger.info('Adding to create: %s', redact_secrets(yaml_def))
                 to_create.append(yaml_def)
 
         return to_create, to_update
@@ -125,11 +126,13 @@ class OdooImporter:
                 logger.error('Missing required field %s for odoo connection %s', field, odoo_def.get('name', 'unknown'))
                 raise ValueError(f'Missing required field {field} for odoo connection')
 
-        # Set password if provided, otherwise generate one
+        # Set password if provided, otherwise generate one, and store it encrypted either way
         if 'password' in odoo_def:
-            odoo_conn.password = odoo_def['password']
+            password = odoo_def['password']
         else:
-            odoo_conn.password = uuid4().hex
+            password = uuid4().hex
+
+        odoo_conn.password = encrypt_secret(session, password)
 
         # Set any opaque attributes from the configuration
         set_instance_opaque_attrs(odoo_conn, odoo_def)
@@ -155,14 +158,18 @@ class OdooImporter:
         for key, value in odoo_def.items():
 
             # Skip special fields that shouldn't be directly updated
-            if key not in ['id', 'type']:
-
-                # Special handling for password - only update if provided
-                if key == 'password' and not value:
-                    continue
+            if key not in ['id', 'type', 'password']:
 
                 # Set the attribute on the odoo connection object
                 setattr(odoo_conn, key, value)
+
+        # A password is updated only if a usable one was given, otherwise the stored one is kept
+        # and encrypted in place if it is still in clear text.
+        password = odoo_def.get('password')
+        if is_usable_secret(password):
+            odoo_conn.password = encrypt_secret(session, password)
+        else:
+            odoo_conn.password = ensure_encrypted(session, odoo_conn.password)
 
         # Set any opaque attributes
         set_instance_opaque_attrs(odoo_conn, odoo_def)

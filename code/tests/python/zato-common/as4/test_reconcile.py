@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import timedelta
 
 # lxml
-from lxml import etree
+import lxml.etree as etree
 
 # Zato
 from zato.common.as4.audit import record_errors_received, record_message_sent, record_receipt_received

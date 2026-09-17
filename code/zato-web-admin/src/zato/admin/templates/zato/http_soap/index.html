@@ -1,4 +1,5 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
 {% block html_title %}
 
@@ -26,20 +27,25 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/panel-menu.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tippy-buttons.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
-    {% if transport == 'soap' %}
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
-    {% endif %}
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-chips.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-resize.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
     {% if connection == 'channel' and transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/channel.css">
+    {% endif %}
+    {% if has_alerts_tab %}
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     {% endif %}
     {% if connection == 'outgoing' and transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/data-table-widget.css">
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/openapi.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/invocation.css">
     {% endif %}
     {% if transport == 'plain_http' %}
@@ -67,20 +73,33 @@
     {% comment %} What the inline editors are built from - the shared popup chrome, the wizard
     kit's panels, the badge picker and the page's own inline machinery {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/lines.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/decision-lines.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
-    {% if transport == 'soap' %}
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
-    {% endif %}
     {% if transport == 'plain_http' %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
     {% endif %}
     {% if connection == 'outgoing' and transport == 'plain_http' %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/health-check.js"></script>
+    {% endif %}
+    {% if has_alerts_tab %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/health-check.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/chips.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select-placement.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots-fields.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab-slots.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
+    {{ alerts_tab_config|json_script:"http-soap-alerts-tab-config" }}
     {% endif %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/row.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/index.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/inline.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/inline-pickers.js"></script>
@@ -239,10 +258,7 @@
                 'callback_name',
                 'health_check_run_every',
                 'health_check_run_unit',
-                'health_check_notify_on',
                 'health_check_job_id',
-                'health_check_callback_type',
-                'health_check_callback_name',
             {% endif %}
 
             // 41 - retry config for REST outgoing connections
@@ -253,7 +269,7 @@
                 'retry_backoff_multiplier',
             {% endif %}
 
-        ]
+        ]{% if has_alerts_tab %}.concat($.fn.zato.alerts_tab.columns()){% endif %}
     }
     </script>
 
@@ -431,10 +447,7 @@
                             <th class='ignore'>&nbsp;</th> {% comment %} callback_name {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} health_check_run_every {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} health_check_run_unit {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} health_check_notify_on {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} health_check_job_id {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} health_check_callback_type {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} health_check_callback_name {% endcomment %}
                         {% endif %}
 
                         <!-- 41 - retry config for REST outgoing connections -->
@@ -596,10 +609,7 @@
                             <td class='ignore'>{{ item.callback_name|default_if_none:"" }}</td>
                             <td class='ignore'>{{ item.health_check_run_every|default_if_none:"" }}</td>
                             <td class='ignore'>{{ item.health_check_run_unit|default_if_none:"" }}</td>
-                            <td class='ignore'>{{ item.health_check_notify_on|default_if_none:"" }}</td>
                             <td class='ignore'>{{ item.health_check_job_id|default_if_none:"" }}</td>
-                            <td class='ignore'>{{ item.health_check_callback_type|default_if_none:"" }}</td>
-                            <td class='ignore'>{{ item.health_check_callback_name|default_if_none:"" }}</td>
                         {% endif %}
 
                         <!-- 41 - retry config for REST outgoing connections -->
@@ -608,6 +618,13 @@
                             <td class='ignore'>{{ item.retry_sleep_time }}</td>
                             <td class='ignore'>{{ item.retry_backoff_threshold }}</td>
                             <td class='ignore'>{{ item.retry_backoff_multiplier }}</td>
+                        {% endif %}
+
+                        <!-- 42 - the Alerts tab of REST and SOAP channels and of REST outgoing connections -->
+                        {% if has_alerts_tab %}
+                            {% for field_name in alerts_tab_config.storage_field_names %}
+                            <td class='ignore'>{{ item|get_item:field_name }}</td>
+                            {% endfor %}
                         {% endif %}
 
                     </tr>
@@ -631,14 +648,23 @@
                     {% if connection == 'outgoing' and transport == 'plain_http' %}
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
-                        <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-config" role="tabpanel">
+                    {% endif %}
+
+                    {% if has_channel_tabs %}
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-main" role="tabpanel">
                     {% endif %}
 
                     <table class="form-data">
@@ -911,6 +937,7 @@
                         {% endif %}
 
                         {% if connection != 'outgoing' or transport != 'plain_http' %}
+                        {% if not has_alerts_tab %}
                         <tr>
                             {% if transport == 'soap' %}
                             <td style="text-align:left;vertical-align:middle">
@@ -926,7 +953,26 @@
 
                         </tr>
                         {% endif %}
+                        {% endif %}
                     </table>
+
+                    {% if has_channel_tabs %}
+                    </div>
+
+                    {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
+
+                    <table class="form-data">
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    {% endif %}
 
                     {% if connection == 'outgoing' and transport == 'plain_http' %}
                     </div>
@@ -947,9 +993,10 @@
                         {% include "zato/http_soap/callback-tab.html" with form=create_form action="create" field_prefix="" %}
                     </div>
 
-                    <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-health_check" role="tabpanel" hidden>
-                        {% include "zato/http_soap/health-check-tab.html" with form=create_form action="create" field_prefix="" %}
-                    </div>
+                    {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
+                    {{ create_form.health_check_job_id }}
+
+                    {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
 
                     <table class="form-data">
                         <tr>
@@ -985,14 +1032,23 @@
                     {% if connection == 'outgoing' and transport == 'plain_http' %}
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
-                        <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-config" role="tabpanel">
+                    {% endif %}
+
+                    {% if has_channel_tabs %}
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-main" role="tabpanel">
                     {% endif %}
 
                     <table class="form-data">
@@ -1263,6 +1319,7 @@
                         {% endif %}
 
                         {% if connection != 'outgoing' or transport != 'plain_http' %}
+                        {% if not has_alerts_tab %}
                         <tr>
                             {% if transport == 'soap' %}
                             <td style="text-align:left;vertical-align:middle">
@@ -1277,7 +1334,26 @@
                             </td>
                         </tr>
                         {% endif %}
+                        {% endif %}
                     </table>
+
+                    {% if has_channel_tabs %}
+                    </div>
+
+                    {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
+
+                    <table class="form-data">
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    {% endif %}
 
                     {% if connection == 'outgoing' and transport == 'plain_http' %}
                     </div>
@@ -1298,9 +1374,10 @@
                         {% include "zato/http_soap/callback-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
                     </div>
 
-                    <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-health_check" role="tabpanel" hidden>
-                        {% include "zato/http_soap/health-check-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
-                    </div>
+                    {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
+                    {{ edit_form.health_check_job_id }}
+
+                    {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
 
                     <table class="form-data">
                         <tr>

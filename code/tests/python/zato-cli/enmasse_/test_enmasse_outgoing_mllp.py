@@ -53,6 +53,15 @@ outgoing_mllp:
     tls_cert_path: /path/to/client.pem
     tls_key_path: /path/to/client.key
 
+  # A connection with alert settings of its own - the rejects alone are counted, and five unacknowledged messages
+  - name: enmasse.hl7.mllp.out.4.{test_suffix}
+    address: 127.0.0.1:30904
+    alerts:
+      ack_codes: 'AR, CR'
+      ack_threshold: 2
+      connection_failures: 5
+      connection_failures_window: 600
+
 """
 
 # ################################################################################################################################
@@ -119,7 +128,7 @@ class TestEnmasseOutgoingMLLPLive(BaseEnmasseTestCase):
                     test_connections.append(connection)
 
             test_connection_count = len(test_connections)
-            self.assertEqual(test_connection_count, 3, f'Expected 3 outgoing HL7 MLLP connections, found {test_connection_count}')
+            self.assertEqual(test_connection_count, 4, f'Expected 4 outgoing HL7 MLLP connections, found {test_connection_count}')
 
             # .. verify key fields survived the round trip ..
             connections_by_name = {}
@@ -129,6 +138,7 @@ class TestEnmasseOutgoingMLLPLive(BaseEnmasseTestCase):
             connection_1_name = f'enmasse.hl7.mllp.out.1.{test_suffix}'
             connection_2_name = f'enmasse.hl7.mllp.out.2.{test_suffix}'
             connection_3_name = f'enmasse.hl7.mllp.out.3.{test_suffix}'
+            connection_4_name = f'enmasse.hl7.mllp.out.4.{test_suffix}'
 
             self.assertEqual(connections_by_name[connection_1_name]['address'], '127.0.0.1:30901')
 
@@ -143,6 +153,17 @@ class TestEnmasseOutgoingMLLPLive(BaseEnmasseTestCase):
             self.assertEqual(connections_by_name[connection_3_name]['tls_ca_path'], '/path/to/ca.pem')
             self.assertEqual(connections_by_name[connection_3_name]['tls_cert_path'], '/path/to/client.pem')
             self.assertEqual(connections_by_name[connection_3_name]['tls_key_path'], '/path/to/client.key')
+
+            # .. the alerts mapping carries what moved off the defaults and nothing else, last among the fields ..
+            connection_4 = connections_by_name[connection_4_name]
+            self.assertEqual(connection_4['alerts'], {
+                'ack_codes': 'AR, CR',
+                'ack_threshold': 2,
+                'connection_failures': 5,
+                'connection_failures_window': 600,
+            })
+            self.assertEqual(list(connection_4)[-1], 'alerts')
+            self.assertNotIn('alerts', connections_by_name[connection_1_name])
 
             # .. now reimport the exported file to confirm idempotency ..
             _ = self.invoke_enmasse(export_path)
@@ -164,7 +185,7 @@ class TestEnmasseOutgoingMLLPLive(BaseEnmasseTestCase):
                     reimport_connections.append(connection)
 
             reimport_count = len(reimport_connections)
-            self.assertEqual(reimport_count, 3, f'Reimport produced {reimport_count} connections instead of 3')
+            self.assertEqual(reimport_count, 4, f'Reimport produced {reimport_count} connections instead of 4')
 
             if os.path.exists(reimport_export_path):
                 os.remove(reimport_export_path)

@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import time
+
 # Zato
 from zato.common.api import FileTransfer
 from zato.common.test.file_transfer_harness.base import FileTransferScheduleTestBase
@@ -41,6 +44,10 @@ _blocked_file_count = 5
 # What the blocked-destination test's schedule picks up - the file standing where the destination
 # should be is left out of it, so the only thing failing is the move itself.
 _blocked_file_pattern = 'blocked-*.txt'
+
+# The shortest retry backoff a schedule may carry, in seconds - a test that wants to watch a file
+# fail and then go through uses it so that the run after the failure is not the one still waiting.
+_shortest_retry_backoff = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -121,7 +128,8 @@ class RobustnessTests(FileTransferScheduleTestBase):
         file_name = f'invoice-{Failing_File_Token}.txt'
         harness.write(directory, file_name, 'A payload the service will take on the second try')
 
-        schedule = harness.create_schedule(conn, schedule_name, directory, service=Service_Fail_Selected)
+        schedule = harness.create_schedule(conn, schedule_name, directory, service=Service_Fail_Selected,
+            retry_backoff=_shortest_retry_backoff)
 
         try:
             harness.run_once(conn, schedule)
@@ -136,9 +144,13 @@ class RobustnessTests(FileTransferScheduleTestBase):
         schedule_id = schedule['id']
 
         _ = harness.client.edit_schedule(conn.id, schedule_id, schedule_name, directory,
-            service=Service_Store_File)
+            service=Service_Store_File, retry_backoff=_shortest_retry_backoff)
 
         schedule = harness.client.require_schedule(conn.id, schedule_id)
+
+        # The file failed once, so the next run may only take it after its backoff wait has passed
+        time.sleep(_shortest_retry_backoff)
+
         harness.run(conn, schedule)
 
         assert harness.delivered_names(schedule_name) == [file_name]

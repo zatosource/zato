@@ -28,7 +28,7 @@ from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retenti
     Env_Content_Retention_Days_Prefix, get_content_retention_days, register_prunability, run_retention
 from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
 from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, dispose_env_engine, EnvDBConfig, \
-    get_env_engine, get_env_values, Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
+    get_env_engine, get_env_values, set_sqlite_busy_timeout, Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
 from zato.common.util.api import as_bool, utcnow
 
 # ################################################################################################################################
@@ -36,13 +36,14 @@ from zato.common.util.api import as_bool, utcnow
 
 if 0:
     from datetime import datetime
-    from sqlalchemy.engine import Engine
+    from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.buffer import pending_event_list
     from zato.common.typing_ import anylist, anylistnone, intlist, intlistnone, intnone, stranydict, strdictnone
 
     # Dummy assignments to satisfy type checkers
     anylist = anylist
     anylistnone = anylistnone
+    Connection = Connection
     datetime = datetime
     Engine = Engine
     intlist = intlist
@@ -125,6 +126,15 @@ _retention_check_interval = 1000
 
 # The files SQLite keeps next to a WAL-mode database
 _sqlite_companion_suffixes = ('-wal', '-shm')
+
+# How long a write waits for another writer once the database has refused a write, in milliseconds -
+# a refused write drops its one event, and the writes after it are not to wait out the full busy timeout
+# each until one of them goes through again.
+_refused_write_busy_timeout_ms = 250
+
+# Whether the most recent write to the audit database was refused - process-wide,
+# as all writers in a process share one database.
+_is_write_refused = False
 
 logger = getLogger(__name__)
 
@@ -224,6 +234,52 @@ def _dispose_stale_sqlite_engine() -> 'None':
         return
 
     _repair_sqlite_companions(db_path)
+
+# ################################################################################################################################
+
+def _is_sqlite() -> 'bool':
+    """ Whether the audit log database is a SQLite file.
+    """
+    values = get_env_values(_env_config)
+
+    out = values['type'] == Type_SQLite
+    return out
+
+# ################################################################################################################################
+
+def _mark_write_refused() -> 'None':
+    """ Remembers that the database refused a write, which shortens the wait of the writes that follow.
+    """
+    global _is_write_refused
+    _is_write_refused = True
+
+# ################################################################################################################################
+
+def _mark_write_accepted() -> 'None':
+    """ Forgets a refused write once one goes through again. The pooled connections carry the shortened wait,
+    so they are disposed and the next write opens a fresh one with the full busy timeout.
+    """
+    global _is_write_refused
+
+    if not _is_write_refused:
+        return
+
+    _is_write_refused = False
+    dispose_env_engine(_env_config)
+
+# ################################################################################################################################
+
+def _apply_write_wait(connection:'Connection') -> 'None':
+    """ Shortens the wait for another writer on this connection after a refused write.
+    """
+    if not _is_write_refused:
+        return
+
+    # Only a SQLite file has a busy timeout to shorten
+    if not _is_sqlite():
+        return
+
+    set_sqlite_busy_timeout(connection, _refused_write_busy_timeout_ms)
 
 # ################################################################################################################################
 
@@ -512,10 +568,16 @@ class AuditLog:
             out = self._insert_batch(batch)
         except OperationalError:
 
-            # A pooled connection that opened the file while it was read-only stays
+            # A refused write shortens the wait of every write from here on, the retry below included ..
+            _mark_write_refused()
+
+            # .. and a pooled connection that opened the file while it was read-only stays
             # read-only after the permissions come back - a fresh engine self-heals that.
             dispose_env_engine(_env_config)
             out = self._insert_batch(batch)
+
+        # A write that went through brings the full busy timeout back
+        _mark_write_accepted()
 
         write_elapsed = monotonic() - write_start
         write_elapsed_ms = write_elapsed * 1000
@@ -550,6 +612,9 @@ class AuditLog:
         out:'intnone' = None
 
         with self.engine.begin() as connection:
+
+            # After a refused write, this one waits for another writer only briefly
+            _apply_write_wait(connection)
 
             for pending in batch:
 

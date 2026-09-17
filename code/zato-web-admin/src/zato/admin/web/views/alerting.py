@@ -24,6 +24,8 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.rule_store import get_backend
 from zato.admin.web.views import method_allowed
+from zato.admin.web.views.alerting_config_cells import _build_config_cell, _not_set_label, _notification_display, \
+     _type_cells, _type_titles
 from zato.common.alerting import config_map
 from zato.common.alerting.config_store import apply_type_config, NoSuchRulesetError
 from zato.common.alerting.notification_config import notification_keys
@@ -54,6 +56,9 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# The seeded ruleset the listing and the editor open onto - the rules every source shares
+_ruleset_name = config_map.type_to_ruleset['common']
 
 # Defaults for the editor's GET parameters when the caller does not send them
 _default_rule_key    = ''
@@ -87,113 +92,6 @@ def _find_definition(backend:'RuleSQLBackend', name:'str', object_type:'str') ->
     return out
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-# What the config screen calls each type
-_type_titles = {
-    'rest':          'REST and SOAP',
-    'sql':           'SQL',
-    'llm':           'LLM',
-    'mcp':           'MCP',
-    'microsoft':     'Microsoft cloud',
-    'email':         'Email',
-    'odoo':          'Odoo',
-    'file_transfer': 'File transfer',
-    'scheduler':     'Scheduler',
-    'channels':      'Channels',
-    'common':        'Common',
-}
-
-# What each screen cell says - the label next to the value and the unit suffix after it
-_field_display = {
-    'consecutive_failures': ('Consecutive failures', ''),
-    'error_rate':           ('Error rate', '%'),
-    'alert_threshold':      ('Alert threshold', '%'),
-    'max_latency':          ('Max latency', ' ms'),
-    'max_query_time':       ('Max query time', ' ms'),
-    'warning_latency':      ('Warning latency', ' ms'),
-    'critical_latency':     ('Critical latency', ' ms'),
-    'max_tool_call_time':   ('Max tool-call time', ' ms'),
-    'health_alerts':        ('Health alerts', ''),
-    'max_call_time':        ('Max call time', ' ms'),
-    'auth_failures':        ('Auth failures', ''),
-    'warning_failures':     ('Warning failures', ''),
-    'critical_failures':    ('Critical failures', ''),
-    'arrival_overdue':      ('Arrival overdue', ''),
-    'test_transfers':       ('Test transfers', ''),
-    'overdue_multiplier':   ('Overdue multiplier', ''),
-    'start_delay':          ('Start delay', ' ms'),
-    'certificate_warning':  ('Certificate warning', ' days'),
-    'outstanding_backlog':  ('Outstanding backlog', ''),
-    'feed_silence':         ('Feed silence', ' s'),
-    'use_llm':              ('LLM', ''),
-}
-
-# The five cell slots of each type's row - the columns line up across the rows,
-# so a type without a value in some column carries a placeholder there.
-_type_cells = {
-    'rest':          ['consecutive_failures', 'error_rate', 'alert_threshold', 'max_latency', 'use_llm'],
-    'sql':           ['consecutive_failures', 'error_rate', 'alert_threshold', 'max_query_time', 'use_llm'],
-    'llm':           ['consecutive_failures', 'error_rate', 'warning_latency', 'critical_latency', 'use_llm'],
-    'mcp':           ['consecutive_failures', 'error_rate', 'alert_threshold', 'max_tool_call_time', 'use_llm'],
-    'microsoft':     ['consecutive_failures', 'error_rate', 'health_alerts', 'max_call_time', 'use_llm'],
-    'email':         ['consecutive_failures', 'error_rate', 'auth_failures', 'alert_threshold', 'use_llm'],
-    'odoo':          ['consecutive_failures', 'error_rate', 'auth_failures', 'max_call_time', 'use_llm'],
-    'file_transfer': ['consecutive_failures', 'warning_failures', 'critical_failures', 'test_transfers', 'use_llm',
-        'arrival_overdue'],
-    'scheduler':     ['error_rate', 'alert_threshold', 'overdue_multiplier', 'start_delay', 'use_llm'],
-    'channels':      [None, 'error_rate', None, None, None],
-    'common':        ['certificate_warning', 'outstanding_backlog', 'feed_silence', None, None],
-}
-
-# What a toggle cell's value reads as
-_toggle_on_label  = 'On'
-_toggle_off_label = 'Off'
-
-# What each cell of the notifications row calls its value
-_notification_display = {
-    Alerting.Extra_Slack_Webhook:    'Slack webhook',
-    Alerting.Extra_Teams_Webhook:    'Teams webhook',
-    Alerting.Extra_Webhook_URL:      'Webhook URL',
-    Alerting.Extra_Email_Connection: 'Email connection',
-    Alerting.Extra_Default_To:       'Email to',
-    Alerting.Extra_From:             'Email from',
-    Alerting.Extra_Dashboard_URL:    'Dashboard URL',
-}
-
-# What a notification cell without a value reads as
-_not_set_label = 'Not set'
-
-# ################################################################################################################################
-
-def _build_config_cell(field_name:'str', kind:'str', values:'stranydict') -> 'stranydict | None':
-    """ One cell of one type's row - the label, the value in screen units and what
-    the cell displays. A field whose rule is gone renders as a placeholder.
-    """
-    if field_name not in values:
-        return None
-
-    label, suffix = _field_display[field_name]
-    value = values[field_name]
-
-    # Our response to produce
-    out = {
-        'name': field_name,
-        'label': label,
-        'suffix': suffix,
-    }
-
-    if kind == config_map.Kind_Toggle:
-        out['kind'] = 'checkbox'
-        out['value'] = 'true' if value else 'false'
-        out['display'] = _toggle_on_label if value else _toggle_off_label
-    else:
-        out['kind'] = 'number'
-        out['value'] = value
-        out['display'] = f'{value}{suffix}'
-
-    return out
-
 # ################################################################################################################################
 
 @method_allowed('GET')
@@ -345,14 +243,14 @@ def index(req:'any_') -> 'TemplateResponse':
     onto the rules of the alerts ruleset.
     """
     backend = get_backend()
-    definition = _find_definition(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+    definition = _find_definition(backend, _ruleset_name, Definition_Type_Ruleset)
 
     definition_id = definition.id if definition else 0
 
     return TemplateResponse(req, 'zato/alerting/index.html', {
         'cluster_id': default_cluster_id,
         'definition_id': definition_id,
-        'ruleset_name': Alerting.Ruleset_Name,
+        'ruleset_name': _ruleset_name,
         'zato_clusters': True,
         'zato_template_name': 'zato/alerting/index.html',
     })
@@ -365,7 +263,7 @@ def editor(req:'any_') -> 'TemplateResponse':
     on an existing rule or with the name of a rule to create.
     """
     backend = get_backend()
-    definition = _find_definition(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+    definition = _find_definition(backend, _ruleset_name, Definition_Type_Ruleset)
 
     definition_id = definition.id if definition else 0
 
@@ -421,7 +319,7 @@ def action(req:'any_') -> 'HttpResponse':
     goes live right away, like every other object the Dashboard edits.
     """
     backend = get_backend()
-    definition = _find_definition(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+    definition = _find_definition(backend, _ruleset_name, Definition_Type_Ruleset)
 
     if not definition:
         out = JsonResponse({'error': 'There is no alerts ruleset to act on'}, status=BAD_REQUEST)
@@ -467,7 +365,7 @@ def action(req:'any_') -> 'HttpResponse':
             # is the ruleset's name joined with the rule's own.
             if new_name != rule_name:
 
-                new_key = f'{Alerting.Ruleset_Name}_{new_name}'
+                new_key = f'{_ruleset_name}_{new_name}'
 
                 if new_key in documents:
                     out = JsonResponse({'error': f'A rule of that name already exists -> {new_name}'}, status=BAD_REQUEST)
@@ -548,7 +446,7 @@ def api_definitions(req:'any_') -> 'JsonResponse':
     if object_type == Definition_Type_Vocabulary:
         name = Alerting.Vocabulary_Name
     else:
-        name = Alerting.Ruleset_Name
+        name = _ruleset_name
 
     definition = _find_definition(backend, name, object_type)
 
@@ -588,7 +486,7 @@ def api_name_exists(req:'any_') -> 'JsonResponse':
     popup's uniqueness checks ask before the editor is ever opened.
     """
     backend = get_backend()
-    definition = _find_definition(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+    definition = _find_definition(backend, _ruleset_name, Definition_Type_Ruleset)
 
     name = req.POST['value'].strip()
     exists = False

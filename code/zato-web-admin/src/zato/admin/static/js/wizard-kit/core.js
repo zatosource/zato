@@ -153,7 +153,7 @@ kit.core.defaults = {
     pulsateClass: 'pulsate',
 
     // Which row that is, for a field whose target names no anchor of its own
-    missingRowSelector: '.wizard-name-row, .wizard-field-row, .wizard-line, .wizard-toggle-row',
+    missingRowSelector: '.wizard-name-row, .wizard-field-row, .decision-line, .wizard-toggle-row',
 
     // The spinner turning beside the button while a save runs - the very image
     // the Check for updates button on the updates page spins

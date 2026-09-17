@@ -65,7 +65,7 @@ class GetList(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            data = self.get_data(session)
+            data = self.strip_listing_secrets(self.get_data(session))
             for item in data:
                 item.extra = item.extra.decode('utf8') if isinstance(item.extra, bytes) else item.extra
                 item.engine_display_name = get_sql_engine_display_name(item.engine, self.server.fs_sql_config)

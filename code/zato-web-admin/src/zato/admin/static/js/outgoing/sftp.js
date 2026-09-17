@@ -13,6 +13,9 @@ $.fn.zato.data_table.SFTP = new Class({
 // /////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
+    $.fn.zato.alerts_tab.init({config_id: 'out-sftp-alerts-tab-config'});
+    $.fn.zato.live_form_updates.register('create', $.fn.zato.alerts_tab.live_configs(''));
+    $.fn.zato.live_form_updates.register('edit', $.fn.zato.alerts_tab.live_configs('edit-'));
     $.fn.zato.time_ago.init_table('#data-table');
     $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.SFTP;
@@ -66,25 +69,57 @@ $.fn.zato.outgoing.sftp.collapse_more_options = function(form_type) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The tabs of the create and edit dialogs - the connection itself and its alert settings
+$.fn.zato.outgoing.sftp.tab_labels = function() {
+    var out = {
+        main:   'Main',
+        alerts: $.fn.zato.alerts_tab.tab_label()
+    };
+    return out;
+}
+
+$.fn.zato.outgoing.sftp._reset_tabs = function(action) {
+    $.fn.zato.form_tabs.reset({
+        div_id:       '#' + action + '-div',
+        panel_prefix: 'out-sftp-' + action + '-tab-panel-',
+        default_tab:  'main',
+        tab_labels:   $.fn.zato.outgoing.sftp.tab_labels()
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.sftp.create = function() {
+    $.fn.zato.outgoing.sftp._reset_tabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing SFTP connection', null);
     $.fn.zato.outgoing.sftp.collapse_more_options('create');
+    $.fn.zato.alerts_tab.bind({
+        panel_id: 'out-sftp-create-tab-panel-alerts',
+        field_prefix: ''
+    });
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
         divId: '#create-div',
-        descriptions: $.fn.zato.outgoing.sftp.field_descriptions
+        fieldSelector: 'table.form-data tr, .decision-line',
+        descriptions: $.extend({}, $.fn.zato.outgoing.sftp.field_descriptions, $.fn.zato.alerts_tab.descriptions())
     });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.sftp.edit = function(id) {
+    $.fn.zato.outgoing.sftp._reset_tabs('edit');
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing SFTP connection', id);
     $.fn.zato.outgoing.sftp.collapse_more_options('edit');
+    $.fn.zato.alerts_tab.bind({
+        panel_id: 'out-sftp-edit-tab-panel-alerts',
+        field_prefix: 'edit-'
+    });
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',
         divId: '#edit-div',
-        descriptions: $.fn.zato.outgoing.sftp.field_descriptions
+        fieldSelector: 'table.form-data tr, .decision-line',
+        descriptions: $.extend({}, $.fn.zato.outgoing.sftp.field_descriptions, $.fn.zato.alerts_tab.descriptions())
     });
 }
 
@@ -140,6 +175,9 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", ignore_host_key_changes ? 'True' : 'False');
     row += String.format("<td class='ignore'>{0}</td>", item.should_store_content == true);
     row += String.format("<td class='ignore'>{0}</td>", item.verify_how);
+
+    // 7 - the Alerts tab
+    row += $.fn.zato.alerts_tab.hidden_cells(item);
 
     if(include_tr) {
         row += '</tr>';

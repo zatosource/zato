@@ -9,9 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # One alerting sweep - the scheduler-driven run that measures the audit database
 # and live channel metrics into per-object facts and routes each fact through every
 # alert ruleset the rule engine keeps. A rule that fires names its action in its
-# `then` outcomes - `outcome.action = 'diagnose'` invokes the diagnosis service,
-# with the remaining outcome keys travelling as the action config. Deduplication,
-# the audit trace and the dispatch transports all key off the rule that fired.
+# `then` outcomes - `outcome.action = 'email'` sends an email - with the remaining
+# outcome keys travelling as the action config, and a ruleset whose documents say
+# the LLM explains its alerts has each of them explained before the action delivers
+# it. Deduplication, the audit trace and the dispatch transports all key off the rule that fired.
 
 from __future__ import annotations
 
@@ -22,15 +23,25 @@ from datetime import datetime
 from urllib.parse import quote
 
 # Zato
+from zato.common.alerting.ack_codes import apply_ack_codes
 from zato.common.alerting.collectors import collect_facts
+from zato.common.alerting.config_map import read_window_seconds_by_measure, type_sources, type_to_ruleset, \
+    Explain_With_LLM_Key
 from zato.common.alerting.engine import process_findings
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, Default_Dedup_Window_Seconds
-from zato.common.api import Alerting, Incidents
-from zato.common.audit_log.common import get_source_label, health_sources
+from zato.common.alerting.object_config import Email_Connection_Config_Key, LLM_Connection_Config_Key
+from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
+    get_llm_connection, get_muted_rule_names, get_silence_expected_names, is_object_active
+from zato.common.alerting.fact_message import build_fact_message as build_fact_message
+from zato.common.alerting.fault_codes import apply_fault_codes
+from zato.common.alerting.outcome_codes import apply_outcome_codes
+from zato.common.alerting.status_codes import apply_status_codes
+from zato.common.api import Alerting
 from zato.common.defaults import default_cluster_id
+from zato.common.rule_engine.document import resolve_defaults
 from zato.common.rule_engine.loading import documents_from_version, load_documents
+from zato.common.rule_engine.references import referenced_terms
 from zato.common.typing_ import list_field
-from zato.common.util.api import pluralize
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,10 +86,8 @@ Fact_Entity = 'alert'
 # The prefix a rule's then targets carry - `outcome.action`, `outcome.severity` and so on.
 Outcome_Prefix = 'outcome.'
 
-# What each outcome.action value means in engine terms - `diagnose` is invoke-service
-# pointed at the diagnosis service, everything else maps one to one.
+# What each outcome.action value means in engine terms.
 _action_by_outcome = {
-    'diagnose':         AlertAction.Invoke_Service,
     'email':            AlertAction.Email_Digest,
     'invoke-service':   AlertAction.Invoke_Service,
     'publish-to-topic': AlertAction.Publish_To_Topic,
@@ -88,7 +97,13 @@ _action_by_outcome = {
 }
 
 # The severities an outcome may carry.
-_severities = (AlertSeverity.Info, AlertSeverity.Warning, AlertSeverity.Critical)
+_severities = (AlertSeverity.Info, AlertSeverity.Warning, AlertSeverity.Error)
+
+# Which alert type each ruleset's rules belong to - the reverse of the config map's table
+_type_by_ruleset:'dict[str, str]' = {}
+
+for _type_name, _ruleset_name in type_to_ruleset.items():
+    _type_by_ruleset[_ruleset_name] = _type_name
 
 # Where a finding's link leads when the rule names none of its own - the audit log page,
 # the one existing screen every dashboard URL already wraps in login_required.
@@ -96,6 +111,14 @@ Audit_Log_Path = '/zato/audit-log/'
 
 # What the deep link asks the audit log page to do with the failing event.
 Resubmit_Action = 'resubmit'
+
+# The per-object toggle that says whether the LLM explains the object's alerts - the same
+# field the ruleset-wide switch stamps on every rule document.
+Use_LLM_Field = 'use_llm'
+
+# The fact's keys that name the object rather than measure it - a rule reads them,
+# but there is no evidence to collect for them.
+_identity_keys = ('source', 'object_name')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,108 +184,44 @@ def load_alert_rules(backend:'RuleSQLBackend') -> 'rule_engine_rule_list':
     return out
 
 # ################################################################################################################################
-# ################################################################################################################################
 
-def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
-    """ One readable line saying which rule fired on which object and what
-    the measures were at that moment - only the measures that are non-zero speak.
+def build_window_seconds_by_source(rules:'rule_engine_rule_list') -> 'anydict':
+    """ The measuring window of each measure of each audit source, read off the window_seconds defaults
+    of the rules of the type that matches on it - a person changes a window on the config screen and
+    the collectors measure the type's sources over it, each measure over the window of its own line.
+    A source whose type has no window rule at all is absent.
     """
-    parts = []
 
-    source = fact['source']
-    source_label = get_source_label(source)
+    # Our response to produce
+    out:'anydict' = {}
 
-    # A connection's own health check is named in the measure rather than after it,
-    # because "the check failed" and "the calls failed" are two different sentences.
-    is_health_check = source in health_sources
+    # The documents of each ruleset, keyed the way the config map reads them
+    documents_by_ruleset:'dict[str, stranydict]' = {}
 
-    if fact['total_count']:
-        percent = round(fact['error_rate'] * 100)
-        error_part = f'error rate {percent}% ({fact["error_count"]} of {fact["total_count"]}'
-        error_part += f' over {fact["window_seconds"]}s)'
-        parts.append(error_part)
+    for rule in rules:
+        if rule.ruleset_name not in documents_by_ruleset:
+            documents_by_ruleset[rule.ruleset_name] = {}
+        documents_by_ruleset[rule.ruleset_name][rule.full_name] = rule.document
 
-    if fact['outstanding']:
-        parts.append(f'{fact["outstanding"]} outstanding (oldest waiting {fact["oldest_waiting_seconds"]}s)')
+    for type_name, sources in type_sources.items():
 
-    if fact['silent_seconds']:
-        parts.append(f'silent for {fact["silent_seconds"]}s')
+        ruleset_name = type_to_ruleset[type_name]
 
-    if failure_count := fact['consecutive_failures']:
-        if is_health_check:
-            times_label = pluralize(failure_count, 'time')
-            parts.append(f'{source_label} failed {times_label}')
-        else:
-            failure_label = pluralize(failure_count, 'consecutive failure')
-            parts.append(failure_label)
+        # A type nothing published has no window to speak of
+        if ruleset_name not in documents_by_ruleset:
+            continue
 
-    if fact['avg_duration_ms']:
-        parts.append(f'average duration {fact["avg_duration_ms"]}ms')
+        window_seconds_by_measure = read_window_seconds_by_measure(documents_by_ruleset[ruleset_name], type_name)
 
-    if auth_failure_count := fact['auth_failure_count']:
-        auth_failure_label = pluralize(auth_failure_count, 'authentication failure')
-        parts.append(auth_failure_label)
+        if not window_seconds_by_measure:
+            continue
 
-    if cert_days_left := fact['cert_days_left']:
-        days_label = pluralize(cert_days_left, 'day')
-        parts.append(f'certificate expires in {days_label}')
+        for source in sources:
+            out[source] = dict(window_seconds_by_measure)
 
-    if fact['health_state']:
-        parts.append(f'reported health state `{fact["health_state"]}`')
-
-    if fact['test_transfer_failed']:
-        parts.append('the test transfer check failed')
-
-    if fact['start_delay_ms']:
-        parts.append(f'started {fact["start_delay_ms"]}ms late')
-
-    if fact['overdue_ratio']:
-        parts.append(f'{fact["overdue_ratio"]}x its interval since the last run')
-
-    if seconds_since_last_arrival := fact['seconds_since_last_arrival']:
-        parts.append(f'no file for {seconds_since_last_arrival}s')
-
-    if arrival_overdue_ratio := fact['arrival_overdue_ratio']:
-        parts.append(f'{arrival_overdue_ratio}x its arrival window since the last file')
-
-    if expected_files_missing := fact['expected_files_missing']:
-        missing_label = pluralize(expected_files_missing, 'expected file')
-        parts.append(f'{missing_label} still missing today, {fact["delivered_today"]} delivered')
-
-    if list_failed_streak := fact['list_failed_streak']:
-        run_label = pluralize(list_failed_streak, 'run')
-        parts.append(f'the newest {run_label} never reached the directory')
-
-    if failed_files_in_window := fact['failed_files_in_window']:
-        failed_label = pluralize(failed_files_in_window, 'file')
-        runs_label = pluralize(fact['runs_failed_in_window'], 'run')
-        parts.append(f'{failed_label} failed across {runs_label}')
-
-    if runs_interrupted_in_window := fact['runs_interrupted_in_window']:
-        interrupted_label = pluralize(runs_interrupted_in_window, 'run')
-        parts.append(f'{interrupted_label} cut short by a server stop')
-
-    if quarantined_count := fact['quarantined_count']:
-        quarantined_label = pluralize(quarantined_count, 'file')
-        parts.append(f'{quarantined_label} quarantined')
-
-    if verify_failed_count := fact['verify_failed_count']:
-        verify_label = pluralize(verify_failed_count, 'stored file')
-        parts.append(f'{verify_label} did not verify')
-
-    measures = ', '.join(parts)
-
-    # A streak measure on a health source already opens with the source's name, so
-    # repeating it in parentheses would say the same thing twice in one sentence ..
-    if is_health_check:
-        if fact['consecutive_failures']:
-            out = f'Rule `{rule_name}` matched `{fact["object_name"]}` - {measures}'
-            return out
-
-    # .. every other measure reads the same on either stream, so the source is what tells them apart.
-    out = f'Rule `{rule_name}` matched `{fact["object_name"]}` ({source_label}) - {measures}'
     return out
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 def build_finding_link(fact:'stranydict') -> 'str':
@@ -300,16 +259,70 @@ def read_outcome(then:'stranydict') -> 'stranydict':
 
 # ################################################################################################################################
 
+def build_measures(rule:'Rule') -> 'strlist':
+    """ The measures of the fact a rule reads - every `alert.` term of its document without the prefix,
+    the keys naming the object left out.
+    """
+
+    # Our response to produce
+    out:'strlist' = []
+
+    prefix = Fact_Entity + '.'
+
+    for term in referenced_terms(rule.document):
+
+        if not term.startswith(prefix):
+            continue
+
+        name = term[len(prefix):]
+
+        if name in _identity_keys:
+            continue
+
+        out.append(name)
+
+    return out
+
+# ################################################################################################################################
+
+def build_thresholds(rule:'Rule', rule_values:'stranydict') -> 'stranydict':
+    """ The thresholds a rule compared against as they were in force for the object -
+    the literal defaults of the rule's document with the object's own numbers over them.
+    """
+
+    # Our response to produce
+    out:'stranydict' = resolve_defaults(rule.document['defaults'])
+
+    for name, value in rule_values.items():
+        if name in out:
+            out[name] = value
+
+    return out
+
+# ################################################################################################################################
+
 def build_dispatch(
     rule:'Rule',
     fact:'stranydict',
     outcome:'stranydict',
     dashboard_url:'str' = '',
+    settings:'stranydict | None' = None,
+    rule_values:'stranydict | None' = None,
     ) -> 'tuple[AlertRule, Finding] | None':
     """ Turns one rule match into the pair the engine dispatches - a transient engine rule
-    carrying the outcome's action and config, and a finding carrying the fact's measures.
+    carrying the outcome's action and config, and a finding carrying the fact's measures,
+    the thresholds the rule compared against and the measures it read.
     An outcome without an action names nothing to do, which is an authoring error, not a dispatch.
+    An object with settings of its own has its email and LLM connections travel in the action
+    config, so the actions deliver through them rather than through the default ones, and its
+    own Use LLM switch says whether the LLM explains the alert, over the ruleset's answer.
     """
+    if settings is None:
+        settings = {}
+
+    if rule_values is None:
+        rule_values = {}
+
     action_name = outcome.pop('action', None)
 
     if action_name not in _action_by_outcome:
@@ -340,13 +353,26 @@ def build_dispatch(
     if link.startswith('/') and dashboard_url:
         link = dashboard_url.rstrip('/') + link
 
-    # The diagnose action is invoke-service pointed at the diagnosis service ..
-    if action_name == 'diagnose':
-        outcome['service'] = Incidents.Service_Diagnose
-
-    # .. and an email outcome's addresses arrive as one comma-separated string.
+    # An email outcome's addresses arrive as one comma-separated string.
     if addresses := outcome.pop('addresses', None):
         outcome['addresses'] = [item.strip() for item in addresses.split(',')]
+
+    # The object's own email and LLM connections, when it has them
+    if settings:
+
+        if email_connection := get_email_connection(settings):
+            outcome[Email_Connection_Config_Key] = email_connection
+
+        if llm_connection := get_llm_connection(settings):
+            outcome[LLM_Connection_Config_Key] = llm_connection
+
+    # Whether the LLM explains the alert is the object's own answer when it has settings,
+    # the ruleset's otherwise, stamped on every rule document - a rule a person wrote
+    # by hand without the key is not explained.
+    if Use_LLM_Field in settings:
+        explain_with_llm = settings[Use_LLM_Field] is True
+    else:
+        explain_with_llm = rule.document.get(Explain_With_LLM_Key) is True
 
     alert_rule = new_rule(
         rule.name,
@@ -354,11 +380,13 @@ def build_dispatch(
         action=action,
         action_config=outcome,
         dedup_window_seconds=dedup_window_seconds,
+        explain_with_llm=explain_with_llm,
     )
 
     message = build_fact_message(rule.name, fact)
 
-    finding = new_finding(rule.name, fact['source'], fact['object_name'], message, link=link, severity=severity)
+    finding = new_finding(rule.name, fact['source'], fact['object_name'], message, link=link, severity=severity,
+        fact=fact, thresholds=build_thresholds(rule, rule_values), measures=build_measures(rule))
 
     out = alert_rule, finding
     return out
@@ -382,10 +410,17 @@ def run_sweep(
     job_intervals:'strintdict | None' = None,
     arrival_windows:'strintdict | None' = None,
     schedule_expectations:'anydict | None' = None,
+    tool_counts:'strintdict | None' = None,
+    object_settings:'anydict | None' = None,
     ) -> 'SweepResult':
     """ Runs one full sweep - the fact producers measure everything once, each fact runs
     through each rule of every alert ruleset, and every match is dispatched through
     the engine one at a time, so dedup and the audit trace see each match on its own.
+
+    The object settings are what each object's Alerts tab stored, by alert type and object name -
+    an object that is not active raises nothing, its toggles mute the rules they stand for,
+    its numbers stand in for the rules' defaults, it is measured over its own window
+    and its alerts leave through its own email connection.
     """
 
     # Our response to produce - the fields are assigned here because init=False
@@ -393,8 +428,18 @@ def run_sweep(
     out = SweepResult()
     out.dispatched = []
 
-    facts = collect_facts(engine, metrics_by_name, metrics_source, now, job_intervals=job_intervals,
-        arrival_windows=arrival_windows, schedule_expectations=schedule_expectations)
+    if object_settings is None:
+        object_settings = {}
+
+    window_seconds_by_source = build_window_seconds_by_source(rules)
+    window_seconds_by_object = build_window_seconds_by_object(object_settings, window_seconds_by_source)
+
+    # The channels whose settings say traffic is expected at this time of day are the ones measured for silence
+    silence_expected_names = get_silence_expected_names(object_settings, now)
+
+    facts = collect_facts(engine, metrics_by_name, metrics_source, now, window_seconds_by_source=window_seconds_by_source,
+        window_seconds_by_object=window_seconds_by_object, job_intervals=job_intervals, arrival_windows=arrival_windows,
+        schedule_expectations=schedule_expectations, silence_expected_names=silence_expected_names, tool_counts=tool_counts)
     out.fact_count = len(facts)
 
     for rule in rules:
@@ -405,15 +450,55 @@ def run_sweep(
 
         out.rule_count += 1
 
+        # The objects of the rule's own type carry settings, anyone else's are not its business -
+        # a ruleset outside the config map's table, e.g. one a person wrote by hand, has none.
+        alert_type = ''
+        settings_by_object:'anydict' = {}
+
+        if rule.ruleset_name in _type_by_ruleset:
+            alert_type = _type_by_ruleset[rule.ruleset_name]
+
+            if alert_type in object_settings:
+                settings_by_object = object_settings[alert_type]
+
         for fact in facts:
 
-            match_result = rule.match({Fact_Entity: fact})
+            settings:'stranydict' = {}
+            rule_values:'stranydict' = {}
+
+            if fact['object_name'] in settings_by_object:
+
+                settings = settings_by_object[fact['object_name']]
+
+                # An object switched off raises nothing at all ..
+                if not is_object_active(settings):
+                    continue
+
+                # .. one with a toggle off never reaches the rules the toggle stands for ..
+                if rule.name in get_muted_rule_names(alert_type, settings, now):
+                    continue
+
+                # .. and its own numbers stand in for the rule's defaults.
+                rule_values = build_rule_values(alert_type, settings, now, rule.name)
+
+            # A connection's responses are counted against the status codes in force for it and this rule,
+            # a SOAP connection's faults against its fault codes, a FHIR connection's operation outcomes
+            # against its outcome codes and an MLLP channel's negative acks against its ack codes the same way
+            fact = apply_status_codes(fact, rule, rule_values)
+            fact = apply_fault_codes(fact, rule, rule_values)
+            fact = apply_outcome_codes(fact, rule, rule_values)
+            fact = apply_ack_codes(fact, rule, rule_values)
+
+            match_data = {Fact_Entity: fact}
+            match_data.update(rule_values)
+
+            match_result = rule.match(match_data)
 
             if not match_result:
                 continue
 
             outcome = read_outcome(match_result.then)
-            dispatch = build_dispatch(rule, fact, outcome, dashboard_url)
+            dispatch = build_dispatch(rule, fact, outcome, dashboard_url, settings, rule_values)
 
             if dispatch is None:
                 continue

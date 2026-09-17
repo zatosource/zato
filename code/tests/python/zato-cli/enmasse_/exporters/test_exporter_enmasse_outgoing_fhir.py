@@ -48,10 +48,16 @@ outgoing_fhir:
     address: http://127.0.0.1:31101/fhir/r4
     pool_size: 7
     security: enmasse.fhir.export.basic_auth.1
-    is_audit_log_active: true
+    is_audit_log_active: false
 
   - name: enmasse.fhir.export.2
     address: http://127.0.0.1:31102/fhir/r4
+
+  - name: enmasse.fhir.export.3
+    address: http://127.0.0.1:31103/fhir/r4
+    alerts:
+      outcome_codes: 'exception, not-found'
+      outcome_threshold: 5
 
 """
 
@@ -138,18 +144,18 @@ class TestEnmasseOutgoingFHIRExporter(TestCase):
         exported_by_name = self._import_and_export()
 
         exported_count = len(exported_by_name)
-        self.assertEqual(exported_count, 2)
+        self.assertEqual(exported_count, 3)
 
         # The first connection moved three fields away from their defaults ..
         item = exported_by_name['enmasse.fhir.export.1']
         self.assertEqual(item['address'], 'http://127.0.0.1:31101/fhir/r4')
         self.assertEqual(item['pool_size'], 7)
-        self.assertTrue(item['is_audit_log_active'])
+        self.assertIs(item['is_audit_log_active'], False)
 
         # .. and left this one where it was, so it is not written out ..
         self.assertNotIn('is_active', item)
 
-        # .. while the second one moved nothing at all.
+        # .. while the second one moved nothing at all - the audit log is on by default, so only the off state is written.
         item = exported_by_name['enmasse.fhir.export.2']
         self.assertEqual(item['address'], 'http://127.0.0.1:31102/fhir/r4')
         self.assertNotIn('pool_size', item)
@@ -171,6 +177,24 @@ class TestEnmasseOutgoingFHIRExporter(TestCase):
         item = exported_by_name['enmasse.fhir.export.2']
         self.assertNotIn('security', item)
         self.assertNotIn('security_id', item)
+
+# ################################################################################################################################
+
+    def test_the_alerts_moved_away_from_their_defaults_come_back_as_one_mapping(self) -> 'None':
+        """ The alert settings a connection sets of its own come back under one alerts mapping, last among
+        its fields, and a connection on the defaults carries no mapping at all.
+        """
+        exported_by_name = self._import_and_export()
+
+        item = exported_by_name['enmasse.fhir.export.3']
+        self.assertEqual(item['alerts'], {'outcome_codes': 'exception, not-found', 'outcome_threshold': 5})
+        self.assertEqual(list(item)[-1], 'alerts')
+
+        for key in item:
+            self.assertFalse(key.startswith('alert_'), key)
+
+        item = exported_by_name['enmasse.fhir.export.2']
+        self.assertNotIn('alerts', item)
 
 # ################################################################################################################################
 # ################################################################################################################################

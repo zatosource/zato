@@ -34,6 +34,9 @@ $(document).ready(function() {
     $('#id_edit-mode').on('change', function() {
         $.fn.zato.email.smtp.on_mode_changed('edit-');
     });
+
+    // Another page, e.g. an Alerts tab, may link here to have a connection created right away
+    $.fn.zato.data_table.maybe_open_create_form($.fn.zato.email.smtp.create);
 })
 
 // /////////////////////////////////////////////////////////////////////////////

@@ -15,8 +15,16 @@
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tippy-buttons.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-chips.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-resize.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -36,12 +44,35 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/health-check.js"></script>
+
+    {% comment %} The Alerts tab - the micro-forms its popovers are built from, the selects, the time slots and the tab itself {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/chips.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select-placement.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots-fields.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab-slots.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
+    {{ alerts_tab_config|json_script:"out-soap-alerts-tab-config" }}
+
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/soap.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/soap-rows.js"></script>
+
+    {% comment %} The Invoke dialog - an operation and an XML body sent through the connection {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/invoker.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/soap-invoke.js"></script>
 
     {% comment %} What the inline editors are built from - the shared popup chrome, the wizard
     kit's panels and the inline machinery the HTTP/SOAP listings share {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/lines.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/decision-lines.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/inline.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/inline-pickers.js"></script>
 
@@ -64,6 +95,7 @@
             '_security',
             '_audit_log',
             '_ping',
+            '_invoke',
             '_edit',
             '_delete',
             'id',
@@ -95,16 +127,13 @@
             'scheduler_job_id',
             'health_check_run_every',
             'health_check_run_unit',
-            'health_check_notify_on',
             'health_check_job_id',
-            'health_check_callback_type',
-            'health_check_callback_name',
             'is_audit_log_active',
             'max_retries',
             'retry_sleep_time',
             'retry_backoff_threshold',
             'retry_backoff_multiplier',
-        ]
+        ].concat($.fn.zato.alerts_tab.columns());
     }
     </script>
 
@@ -151,6 +180,7 @@
 
                         <th>&nbsp;</th> {% comment %} _audit_log {% endcomment %}
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th> {% comment %} _invoke {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -204,6 +234,11 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} The Alerts tab {% endcomment %}
+                        {% for field_name in alerts_tab_config.storage_field_names %}
+                        <th class='ignore'>&nbsp;</th>
+                        {% endfor %}
+
                 </thead>
 
                 <tbody>
@@ -228,6 +263,7 @@
 
                         <td>{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=soap-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)" class="ping-link">Ping</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.soap.invoke('{{ item.id }}')">Invoke</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.soap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.soap.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -273,10 +309,7 @@
                         {% comment %} Health check fields {% endcomment %}
                         <td class='ignore'>{{ item.health_check_run_every|default:'' }}</td>
                         <td class='ignore'>{{ item.health_check_run_unit|default:'' }}</td>
-                        <td class='ignore'>{{ item.health_check_notify_on|default:'' }}</td>
                         <td class='ignore'>{{ item.health_check_job_id|default:'' }}</td>
-                        <td class='ignore'>{{ item.health_check_callback_type|default:'' }}</td>
-                        <td class='ignore'>{{ item.health_check_callback_name|default:'' }}</td>
 
                         <td class='ignore'>{{ item.is_audit_log_active }}</td>
 
@@ -286,11 +319,16 @@
                         <td class='ignore'>{{ item.retry_backoff_threshold }}</td>
                         <td class='ignore'>{{ item.retry_backoff_multiplier }}</td>
 
+                        {% comment %} The Alerts tab {% endcomment %}
+                        {% for field_name in alerts_tab_config.storage_field_names %}
+                        <td class='ignore'>{{ item|get_item:field_name }}</td>
+                        {% endfor %}
+
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='48'>No results</td>
+                        <td colspan='49'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -307,6 +345,7 @@
 
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="soap" role="tab" aria-selected="false">SOAP</button>
                         <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
                         <button type="button" class="dashboard-tab" data-tab="credentials" role="tab" aria-selected="false">Body credentials</button>
@@ -314,7 +353,6 @@
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
-                        <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-main" role="tabpanel">
@@ -445,9 +483,10 @@
                         {% include "zato/http_soap/callback-tab.html" with form=create_form action="create" field_prefix="" %}
                     </div>
 
-                    <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-health_check" role="tabpanel" hidden>
-                        {% include "zato/http_soap/health-check-tab.html" with form=create_form action="create" field_prefix="" %}
-                    </div>
+                    {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
+                    {{ create_form.health_check_job_id }}
+
+                    {% include "zato/shared/alerts-tab.html" with panel_id="out-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
 
                     <table class="form-data">
                         <tr>
@@ -472,6 +511,7 @@
 
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="soap" role="tab" aria-selected="false">SOAP</button>
                         <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
                         <button type="button" class="dashboard-tab" data-tab="credentials" role="tab" aria-selected="false">Body credentials</button>
@@ -479,7 +519,6 @@
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
-                        <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-main" role="tabpanel">
@@ -610,9 +649,10 @@
                         {% include "zato/http_soap/callback-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
                     </div>
 
-                    <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-health_check" role="tabpanel" hidden>
-                        {% include "zato/http_soap/health-check-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
-                    </div>
+                    {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
+                    {{ edit_form.health_check_job_id }}
+
+                    {% include "zato/shared/alerts-tab.html" with panel_id="out-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
 
                     <table class="form-data">
                         <tr>

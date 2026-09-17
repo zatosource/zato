@@ -1,0 +1,128 @@
+/*
+ * Micro-forms - the look of the chips kind, a text field that is a list of
+ * names such as the status codes or the SOAP fault codes a connection alerts
+ * on. Loaded after shared/micro-forms.css, next to
+ * static/js/common/micro-forms/chips.js, which builds the controls.
+ *
+ * Each name is a chip with a cross, the input for the next one comes after
+ * the chips, and all of it sits inside one bordered box that reads as the
+ * field it stands for. The box is two rows of chips tall from the start and
+ * stays that tall - a chip wrapping onto the second row moves nothing below
+ * it, a third row scrolls inside the box. The popover the box is in has a
+ * width of its own, so the chips wrap inside the box rather than size it.
+ *
+ * Token                            Purpose
+ * --micro-form-chip-height         A chip, and the input next to the chips
+ * --micro-form-chip-font-size      A chip's text
+ * --micro-form-chip-bg             A chip's face
+ * --micro-form-chip-gap            The room between chips
+ * --micro-form-chips-rows          How many rows of chips the box is tall
+ * --micro-form-chips-input-min-width  The least room the input keeps for typing
+ */
+
+.micro-form {
+    --micro-form-chip-height: 22px;
+    --micro-form-chip-font-size: 12px;
+    --micro-form-chip-bg: var(--zato-popup-sand);
+    --micro-form-chip-gap: 4px;
+    --micro-form-chips-rows: 2;
+    --micro-form-chips-input-min-width: 9em;
+    --micro-form-chips-padding-block: 4px;
+    --micro-form-chips-padding-inline: 6px;
+    --micro-form-chips-border: 1px;
+    --micro-form-chips-height: calc(
+        var(--micro-form-chips-rows) * var(--micro-form-chip-height) +
+        (var(--micro-form-chips-rows) - 1) * var(--micro-form-chip-gap) +
+        2 * var(--micro-form-chips-padding-block) +
+        2 * var(--micro-form-chips-border)
+    );
+}
+
+/* The field takes the popover's width, unlike the other own-styled fields, which take their content's */
+.micro-form .micro-form-field-own.micro-form-chips-field {
+    width: auto;
+}
+
+.micro-form .micro-form-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: flex-start;
+    gap: var(--micro-form-chip-gap);
+    box-sizing: border-box;
+    width: 100%;
+    height: var(--micro-form-chips-height);
+    overflow-y: auto;
+    padding: var(--micro-form-chips-padding-block) var(--micro-form-chips-padding-inline);
+    border: var(--micro-form-chips-border) solid var(--zato-ui-border-strong);
+    border-radius: 3px;
+    background: #fff;
+    cursor: text;
+}
+
+.micro-form .micro-form-chips:focus-within {
+    border-color: var(--zato-ui-accent);
+}
+
+.micro-form .micro-form-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    box-sizing: border-box;
+    height: var(--micro-form-chip-height);
+    padding: 0 4px 0 8px;
+    font-size: var(--micro-form-chip-font-size);
+    color: var(--zato-ui-text);
+    background: var(--micro-form-chip-bg);
+    border: 1px solid var(--zato-ui-border-strong);
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+/* The cross is a <button>, so formalize.css hands it its grey 3D button face - each piece of
+   that is named back here, in each state formalize writes one for */
+.micro-form .micro-form-chip-remove,
+.micro-form .micro-form-chip-remove:hover,
+.micro-form .micro-form-chip-remove:focus,
+.micro-form .micro-form-chip-remove:active {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 2px;
+    background: transparent;
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--zato-ui-text-muted);
+    cursor: pointer;
+    outline: none;
+}
+
+.micro-form .micro-form-chip-remove:hover {
+    color: var(--zato-ui-text);
+    background: rgba(0, 0, 0, 0.08);
+}
+
+/* The input wears no box of its own, the list's border is the field's */
+.micro-form .micro-form-chips-input,
+.micro-form .micro-form-chips-input:focus {
+    flex: 1 1 var(--micro-form-chips-input-min-width);
+    min-width: var(--micro-form-chips-input-min-width);
+    height: var(--micro-form-chip-height);
+    padding: 0 2px;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+    font-size: var(--micro-form-font-size);
+}

@@ -11,8 +11,15 @@ import os
 from http.client import BAD_GATEWAY, BAD_REQUEST, FORBIDDEN, GATEWAY_TIMEOUT, NOT_FOUND, REQUEST_TIMEOUT, \
     SERVICE_UNAVAILABLE, TOO_MANY_REQUESTS, UNAUTHORIZED, UNPROCESSABLE_ENTITY
 
+# requests
+from requests.exceptions import ConnectionError as RequestsConnectionError, SSLError as RequestsSSLError, \
+    Timeout as RequestsTimeout
+
 # SQLAlchemy
 from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, Numeric, String, Table, Text
+
+# Zato
+from zato.common.exception import BackendInvocationError
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -85,6 +92,7 @@ class AuditSource:
     # from what the connection's real calls measure.
     REST_Outgoing_Health = 'rest-outgoing-health'
     SOAP_Outgoing_Health = 'soap-outgoing-health'
+    FHIR_Health          = 'fhir-health'
 
     # The probe sources - the default scheduler jobs that measure what no
     # per-call event can, writing ordinary audit events the collectors read.
@@ -95,7 +103,7 @@ class AuditSource:
 # ################################################################################################################################
 
 # What tells a check's event or measure from the connection's own.
-health_sources = {AuditSource.REST_Outgoing_Health, AuditSource.SOAP_Outgoing_Health}
+health_sources = {AuditSource.REST_Outgoing_Health, AuditSource.SOAP_Outgoing_Health, AuditSource.FHIR_Health}
 
 # ################################################################################################################################
 
@@ -109,6 +117,7 @@ _source_label = {
     AuditSource.SOAP_Outgoing: 'SOAP outgoing',
     AuditSource.REST_Outgoing_Health: 'REST check',
     AuditSource.SOAP_Outgoing_Health: 'SOAP check',
+    AuditSource.FHIR_Health: 'FHIR check',
     AuditSource.Email_IMAP: 'IMAP',
     AuditSource.Email_SMTP: 'SMTP',
     AuditSource.File_Outgoing: 'File transfer',
@@ -141,6 +150,43 @@ def get_source_label(source:'str') -> 'str':
 
 # ################################################################################################################################
 
+class LLMAttr:
+    """ The attributes an LLM call's row carries - the model asked, why the provider stopped generating
+    and the tokens the call used, the two counts as numbers so they can be added up in SQL.
+    """
+    Model         = 'model'
+    Finish_Reason = 'finish_reason'
+    Input_Tokens  = 'input_tokens'
+    Output_Tokens = 'output_tokens'
+
+# ################################################################################################################################
+
+class LLMFinish:
+    """ The one vocabulary a completion's finish reason is written in, whichever provider answered -
+    the clients map each provider's own reasons onto these and the collectors count the middle two.
+    """
+    Stop     = 'stop'
+    Length   = 'length'
+    Refusal  = 'refusal'
+    Tool_Use = 'tool_use'
+
+# ################################################################################################################################
+
+class MCPAttr:
+    """ The attributes an MCP gateway's row carries next to its data document, so SQL can count them -
+    the JSON-RPC method, the request's bytes, the error code of a failed call, what refused a tool's response,
+    whether the size cap cut it and the tokens before and after the cut. The last five appear only when they apply.
+    """
+    Method        = 'method'
+    Request_Size  = 'request_size'
+    Error_Code    = 'error_code'
+    Reject_Kind   = 'reject_kind'
+    Was_Truncated = 'was_truncated'
+    Tokens_Before = 'tokens_before'
+    Tokens_After  = 'tokens_after'
+
+# ################################################################################################################################
+
 # The searchable attributes each source's events carry in the event_attr table -
 # the free-text search covers them and the Dashboard renders them as columns of their own.
 source_attr_names = {
@@ -149,6 +195,12 @@ source_attr_names = {
     AuditSource.FHIR: ('resource_type', 'method'),
     AuditSource.Scheduler: ('current_run', 'delay_ms', 'job_id'),
     AuditSource.File_Outgoing: ('operation', 'schedule', 'file_name', 'service', 'checksum', 'current_run'),
+
+    # The model a completion was asked of and why the provider stopped generating - stop, length, refusal, tool_use.
+    AuditSource.LLM: (LLMAttr.Model, LLMAttr.Finish_Reason),
+
+    # The JSON-RPC method of a gateway's request, the error code of a failed call and what refused a tool's response.
+    AuditSource.MCP: (MCPAttr.Method, MCPAttr.Error_Code, MCPAttr.Reject_Kind),
 
     # The channel type the invocation came in through.
     AuditSource.Service: ('channel',),
@@ -169,6 +221,7 @@ _source_retention_days = {
     AuditSource.X12: _default_evidence_retention_days,
     AuditSource.REST_Outgoing_Health: _default_health_check_retention_days,
     AuditSource.SOAP_Outgoing_Health: _default_health_check_retention_days,
+    AuditSource.FHIR_Health: _default_health_check_retention_days,
 }
 
 # ################################################################################################################################
@@ -236,7 +289,7 @@ class AuditEvent:
     Receipt_Sent         = 'receipt-sent'
     Receipt_Received     = 'receipt-received'
     Alert_Raised         = 'alert-raised'
-    Alert_Diagnosed      = 'alert-diagnosed'
+    Alert_Explained      = 'alert-explained'
     MCP_Initialize       = 'mcp-initialize'
     MCP_Tools_List       = 'mcp-tools-list'
     MCP_Tools_Call       = 'mcp-tools-call'
@@ -274,6 +327,10 @@ class AuditEvent:
     # because its remedy is different, so alerting counts it separately.
     Auth_Failed          = 'auth-failed'
 
+    # A call an authenticated caller's own rate limit refused with a 429 - written by the services that
+    # answer their own 429s, an MCP gateway's endpoint among them, so alerting can count throttled callers.
+    Rate_Limited         = 'rate-limited'
+
     # What the probe jobs write - a certificate's days left, a remote service's
     # own health state and a test transfer's outcome.
     Cert_Checked           = 'cert-checked'
@@ -289,6 +346,44 @@ class AuditOutcome:
 
     # An event still in progress.
     Running = 'running'
+
+# ################################################################################################################################
+
+class TransportStatus:
+    """ The status a response event carries when a call failed before any response arrived - where a response
+    carries its HTTP status line, `503 Service Unavailable`, a failed call names how it failed, so a timeout
+    and a refused connection are told apart from each other and from any HTTP status.
+    """
+    Timeout          = 'timeout'
+    Connection_Error = 'connection-error'
+    TLS_Error        = 'tls-error'
+    Error            = 'error'
+
+# Every status a failed call is written under - what the collectors count as a connection failure
+transport_statuses = (TransportStatus.Timeout, TransportStatus.Connection_Error, TransportStatus.TLS_Error,
+    TransportStatus.Error)
+
+# ################################################################################################################################
+
+def classify_transport_error(e:'Exception') -> 'str':
+    """ The transport status of an exception an outgoing call raised - a timeout, a connection error, a TLS failure
+    or any other error, with a TLS failure told first because requests makes it a kind of connection error.
+    An invocation error the connection already classified answers with what it carries.
+    """
+    if isinstance(e, BackendInvocationError):
+        if e.transport_status:
+            return e.transport_status
+
+    if isinstance(e, RequestsSSLError):
+        out = TransportStatus.TLS_Error
+    elif isinstance(e, RequestsTimeout):
+        out = TransportStatus.Timeout
+    elif isinstance(e, RequestsConnectionError):
+        out = TransportStatus.Connection_Error
+    else:
+        out = TransportStatus.Error
+
+    return out
 
 # ################################################################################################################################
 

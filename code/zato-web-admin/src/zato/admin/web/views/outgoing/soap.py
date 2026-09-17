@@ -10,13 +10,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django.http import HttpResponseServerError
 
 # Zato
-from zato.admin.web import from_user_to_utc, from_utc_to_user
-from zato.admin.web.forms import add_http_soap_select, add_select_from_service
+from zato.admin.web import alerts_tab, from_user_to_utc, from_utc_to_user
+from zato.admin.web.forms import add_http_soap_select, add_select_from_service, health_check_unit_for_form, \
+    health_check_unit_to_scheduler
 from zato.admin.web.forms.outgoing.soap import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, extract_security_id, get_js_dt_format, id_only_service, \
     Index as _Index, method_allowed, ping_json_response
 from zato.admin.web.views.http_soap import _get_security_href
+from zato.common.alerting.object_config import get_alert_type, Field_Prefix
 from zato.common.api import CONNECTION, HTTP_SOAP, Sec_Def_Type_Name, URL_TYPE, ZATO_NONE
+from zato.common.ext.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,14 +44,12 @@ _invocation_field_names = (
     'scheduler_job_id',
     'health_check_run_every',
     'health_check_run_unit',
-    'health_check_notify_on',
     'health_check_job_id',
-    'health_check_callback_type',
-    'health_check_callback_name',
 )
 
 # The retry config of an outgoing connection - each field maps to its shared default
 _retry = HTTP_SOAP.Retry
+_health_check = HTTP_SOAP.HealthCheck
 
 _retry_field_defaults = {
     _retry.Field_Max_Retries: _retry.Default_Max_Retries,
@@ -64,18 +65,16 @@ _callback_widget_names = {
     'rest': 'callback_rest',
 }
 
-# The same pattern applies to the health check tab's callback widgets
-_health_check_callback_widget_names = {
-    'service': 'health_check_callback_service',
-    'topic': 'health_check_callback_topic',
-    'rest': 'health_check_callback_rest',
-}
+# The alert settings of an outgoing SOAP connection follow the soap type - the rest type's plus the SOAP faults
+_alert_type = get_alert_type(CONNECTION.OUTGOING, URL_TYPE.SOAP)
+_alert_field_names = alerts_tab.get_storage_field_names(_alert_type)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class OutgoingSOAPConfigObject:
-    """ A config object for outgoing SOAP connections, filled in with attributes from the get-list response.
+class OutgoingSOAPConfigObject(Bunch):
+    """ A config object for outgoing SOAP connections, filled in with attributes from the get-list response -
+    a Bunch, so the Alerts tab's helpers and the template read its fields by name as well.
     """
 
 # ################################################################################################################################
@@ -101,7 +100,7 @@ class Index(_Index):
     output_optional = ('host', 'url_path', 'soap_action', 'soap_version', 'security_id', 'security_name', 'sec_type', \
         'sec_type_name', 'validate_tls', 'ping_method', 'timeout', 'content_type', \
         'use_ws_addressing', 'use_mtom', 'body_credentials', 'tls_client_cert', 'tls_client_key', \
-        'is_audit_log_active') + _invocation_field_names + tuple(_retry_field_defaults)
+        'is_audit_log_active') + _invocation_field_names + tuple(_retry_field_defaults) + _alert_field_names
     output_repeated = True
 
 # ################################################################################################################################
@@ -129,6 +128,13 @@ class Index(_Index):
         if scheduler_start_date := getattr(item, 'scheduler_start_date', None):
             item.scheduler_start_date = from_utc_to_user(scheduler_start_date + '+00:00', self.req.zato.user_profile)
 
+        # The scheduler names the health check's unit in the plural, the form in the singular
+        run_unit = getattr(item, _health_check.Field_Run_Unit, None)
+        setattr(item, _health_check.Field_Run_Unit, health_check_unit_for_form(run_unit))
+
+        # The edit form shows a duration as a count with a unit, not as the seconds it is stored as
+        alerts_tab.split_unit_fields(_alert_type, item)
+
         return item
 
 # ################################################################################################################################
@@ -136,26 +142,24 @@ class Index(_Index):
     def handle(self):
         security_list = self.get_sec_def_list(None)
 
-        create_form = CreateForm(security_list, req=self.req)
-        edit_form = EditForm(security_list, prefix='edit', req=self.req)
+        create_form = CreateForm(security_list, req=self.req, alert_type=_alert_type)
+        edit_form = EditForm(security_list, prefix='edit', req=self.req, alert_type=_alert_type)
 
-        # The callback tabs let outgoing SOAP connections deliver responses
-        # and health check outcomes to outgoing REST connections
+        # The callback tab lets outgoing SOAP connections deliver responses to outgoing REST connections ..
         add_http_soap_select(create_form, 'callback_rest', self.req, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, by_id=False)
         add_http_soap_select(edit_form, 'callback_rest', self.req, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, by_id=False)
-        add_http_soap_select(create_form, 'health_check_callback_rest', self.req, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, by_id=False)
-        add_http_soap_select(edit_form, 'health_check_callback_rest', self.req, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, by_id=False)
 
         # .. and to pub/sub topics, selected by name from the topics that currently exist.
         add_select_from_service(create_form, self.req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
         add_select_from_service(edit_form, self.req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
-        add_select_from_service(create_form, self.req, 'zato.pubsub.topic.get-list', 'health_check_callback_topic', by_id=False)
-        add_select_from_service(edit_form, self.req, 'zato.pubsub.topic.get-list', 'health_check_callback_topic', by_id=False)
 
         out = {
             'show_search_form': True,
             'create_form': create_form,
             'edit_form': edit_form,
+            'create_alerts_tab': alerts_tab.get_alerts_tab_context(create_form, _alert_type),
+            'edit_alerts_tab': alerts_tab.get_alerts_tab_context(edit_form, _alert_type),
+            'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
         }
 
         # The scheduler tab's start date picker needs the user's date and time format
@@ -174,8 +178,18 @@ class _CreateEdit(CreateEdit):
         'validate_tls', 'ping_method', 'timeout', 'content_type', \
         'use_ws_addressing', 'use_mtom', 'body_credentials', 'tls_client_cert', 'tls_client_key') + \
         _invocation_field_names + tuple(_retry_field_defaults) + ('callback_service', 'callback_topic', 'callback_rest') + \
-        ('health_check_callback_service', 'health_check_callback_topic', 'health_check_callback_rest')
+        _alert_field_names
     output_required = 'id', 'name'
+
+# ################################################################################################################################
+
+    def pre_process_item(self, name, value):
+
+        # The Alerts tab's fields arrive as text and are stored typed - booleans, integers and stripped text
+        if name.startswith(Field_Prefix):
+            value = alerts_tab.pre_process_alert_item(_alert_type, name, value)
+
+        return value
 
 # ################################################################################################################################
 
@@ -214,16 +228,16 @@ class _CreateEdit(CreateEdit):
             widget_name = _callback_widget_names[callback_type]
             input_dict['callback_name'] = input_dict.get(widget_name)
 
-        # The health check tab's callback widgets work the same way
-        if health_check_callback_type := input_dict.get('health_check_callback_type'):
-            widget_name = _health_check_callback_widget_names[health_check_callback_type]
-            input_dict['health_check_callback_name'] = input_dict.get(widget_name)
+        # The form names the health check's unit in the singular, the scheduler in the plural
+        if run_unit := input_dict.get(_health_check.Field_Run_Unit):
+            input_dict[_health_check.Field_Run_Unit] = health_check_unit_to_scheduler[run_unit]
 
         # The widgets themselves are not part of the backend's input
         for widget_name in _callback_widget_names.values():
             input_dict.pop(widget_name, None)
-        for widget_name in _health_check_callback_widget_names.values():
-            input_dict.pop(widget_name, None)
+
+        # A duration is stored as seconds, which is what its count and unit join into
+        alerts_tab.join_unit_fields(_alert_type, input_dict)
 
 # ################################################################################################################################
 

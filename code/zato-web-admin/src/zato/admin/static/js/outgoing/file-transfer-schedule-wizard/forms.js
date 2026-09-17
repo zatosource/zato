@@ -17,7 +17,10 @@ var forms = wizard.forms;
 
 // A page is a list of entries. An entry is either one field spec, shown on
 // its own line, or a list of field specs, shown side by side in one row.
-$.fn.zato.wizard_kit.forms.setup(wizard, {
+$.fn.zato.micro_forms.setup(wizard, {
+
+    // The class the popovers wear, under which wizard-kit.css sizes their switches
+    popupClass: 'wizard-micro-form',
 
     descriptors: {
 
@@ -146,7 +149,7 @@ forms.renderReadySegments = function() {
     var ownConfig = forms.config_own;
     var current = wizard.field('ready_how').val();
 
-    $.fn.zato.wizard_kit.lines.setSegments(ownConfig.readySlotId, ownConfig.readyOptions, current, function(name) {
+    $.fn.zato.decision_lines.setSegments(ownConfig.readySlotId, ownConfig.readyOptions, current, function(name) {
         wizard.field('ready_how').val(name);
         forms.renderReadySegments();
         wizard.review.refreshSummaries();
@@ -160,7 +163,7 @@ forms.renderSuccessSegments = function() {
     var ownConfig = forms.config_own;
     var current = wizard.field('on_success').val();
 
-    $.fn.zato.wizard_kit.lines.setSegments(ownConfig.successSlotId, ownConfig.successOptions, current, function(name) {
+    $.fn.zato.decision_lines.setSegments(ownConfig.successSlotId, ownConfig.successOptions, current, function(name) {
         wizard.field('on_success').val(name);
         forms.renderSuccessSegments();
         wizard.review.refreshSummaries();

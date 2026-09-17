@@ -333,6 +333,7 @@ review.refreshSummaries = function() {
     review.setSummary('mllp-wizard-summary-dedup', review._dedupSummary());
     review.setSummary('mllp-wizard-summary-logging', review._loggingSummary());
     review.setSummary('mllp-wizard-summary-options', review._optionsSummary());
+    review.setSummary(wizard.alerts.config.summaryId, wizard.alerts.summary());
 
     // .. and the transport toggles mirror the hidden form flags.
     $('#mllp-wizard-toggle-mllp').prop('checked', isMllpOn);
@@ -389,11 +390,17 @@ review._editRouting = function() {
 
 review._editDestinations = function() {
 
-    var lines = $.fn.zato.wizard_kit.lines;
+    var lines = $.fn.zato.decision_lines;
     var chip = document.getElementById('mllp-wizard-slot-destinations-chip');
 
     lines.closePanel();
     lines.openPanel(chip, wizard.destinations.panels.destinationsPanel());
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+review._editAlerts = function() {
+    wizard.alerts.open(document.getElementById(wizard.alerts.config.editLinkId));
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -530,6 +537,7 @@ review.render = function() {
         {label: groups.routing,   step: 0, rows: routingRows, edit: review._editRouting},
         {label: groups.targets,   step: 1, listRows: destinationRows, rows: serviceRows,
             edit: review._editDestinations},
+        {label: groups.alerts,    step: 1, rows: wizard.alerts.reviewRows(), edit: review._editAlerts},
         {label: groups.tolerance, step: 1, rows: review._toleranceReviewRows(), edit: review._editTolerance},
         {label: groups.dedup,     step: 1, rows: [['Window', review._dedupSummary()]], edit: review._editDedup},
         {label: groups.logging,   step: 1, rows: [['Behavior', review._loggingSummary()]], edit: review._editLogging}

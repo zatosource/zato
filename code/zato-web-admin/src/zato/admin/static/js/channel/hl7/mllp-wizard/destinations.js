@@ -141,7 +141,7 @@ destinations.settle = function() {
 
 destinations.render = function() {
 
-    var lines = $.fn.zato.wizard_kit.lines;
+    var lines = $.fn.zato.decision_lines;
     var destinationsConfig = destinations.config;
 
     lines.setChip(destinationsConfig.slots.destinations, destinations._destinationChip());

@@ -13,6 +13,8 @@ look come from the wizard kit. The view provides:
 * item_id           - the id of the channel being edited, empty on create
 * rest_channel_id   - the id of the backing REST channel, zero when there is none
 * security_key_list - the definitions the REST bridge authenticates with
+* alerts_tab        - the fields of the alert settings, from alerts_tab.get_alerts_tab_context
+* alerts_tab_config - the lines the Alerts popover is built of, from alerts_tab.get_alerts_tab_config
 
 One page serves both actions. On edit the form carries the edit- prefix
 its endpoint reads its input under, which the wizard's own fieldPrefix
@@ -31,8 +33,17 @@ a failed one opens when its details are asked for {% endcomment %}
 <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-chips.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-resize.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
+{% comment %} How the popovers of the Alerts lines lay their fields out - their look is the wizard's {% endcomment %}
+<link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
-<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-alerts.css">
 <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
 <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard.css">
 <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard-controls.css">
@@ -46,9 +57,20 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/core.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/select-rows.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/lines.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/decision-lines.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/collapse.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/chips.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select-placement.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots-fields.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab-slots.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/wizard-alerts.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/review.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-descriptions.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-matchers.js"></script>
@@ -59,6 +81,7 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/review.js"></script>
 
 {{ security_key_list|json_script:"mllp-wizard-security-key-list" }}
+{{ alerts_tab_config|json_script:"mllp-wizard-alerts-tab-config" }}
 
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
@@ -130,18 +153,18 @@ $(document).ready(function() {
                         <div class="wizard-toggle-row" id="mllp-wizard-row-transport">
                             <label class="wizard-toggle-label" for="mllp-wizard-toggle-mllp">MLLP</label>
                             <input type="checkbox" id="mllp-wizard-toggle-mllp" checked>
-                            <a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-wizard-edit-transport"><span class="zato-link-face wizard-toggle-summary" id="mllp-wizard-summary-transport"></span><span class="zato-soft-hint">Click to edit</span></a>
+                            <a href="javascript:void(0)" class="summary-link" id="mllp-wizard-edit-transport"><span class="zato-link-face summary-link-text" id="mllp-wizard-summary-transport"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
 
                         <div class="wizard-toggle-row" id="mllp-wizard-row-rest">
                             <label class="wizard-toggle-label" for="mllp-wizard-toggle-rest">REST</label>
                             <input type="checkbox" id="mllp-wizard-toggle-rest">
-                            <a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-wizard-edit-rest"><span class="zato-link-face wizard-toggle-summary" id="mllp-wizard-summary-rest"></span><span class="zato-soft-hint">Click to edit</span></a>
+                            <a href="javascript:void(0)" class="summary-link" id="mllp-wizard-edit-rest"><span class="zato-link-face summary-link-text" id="mllp-wizard-summary-rest"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
 
                         <div class="wizard-toggle-row" id="mllp-wizard-row-routing">
                             <label class="wizard-toggle-label" for="mllp-wizard-edit-routing">Match</label>
-                            <a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-wizard-edit-routing"><span class="zato-link-face wizard-toggle-summary" id="mllp-wizard-summary-routing"></span><span class="zato-soft-hint">Click to edit</span></a>
+                            <a href="javascript:void(0)" class="summary-link" id="mllp-wizard-edit-routing"><span class="zato-link-face summary-link-text" id="mllp-wizard-summary-routing"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                     </div>
 
@@ -152,26 +175,31 @@ $(document).ready(function() {
 
                     <!-- One decision per line, each value a chip opening a panel -->
                     <div class="wizard-section">
-                        <div class="wizard-lines" id="mllp-wizard-lines">
+                        <div class="decision-lines" id="mllp-wizard-lines">
 
-                            <div class="wizard-line" id="mllp-wizard-line-destinations">
-                                <label class="wizard-line-label" for="mllp-wizard-slot-destinations-chip">Incoming messages go to</label>
-                                <span class="wizard-line-slot" id="mllp-wizard-slot-destinations"></span>
+                            <div class="decision-line" id="mllp-wizard-line-destinations">
+                                <label class="decision-line-label" for="mllp-wizard-slot-destinations-chip">Incoming messages go to</label>
+                                <span class="decision-line-slot" id="mllp-wizard-slot-destinations"></span>
                             </div>
 
-                            <div class="wizard-line" id="mllp-wizard-line-service">
-                                <label class="wizard-line-label" for="mllp-wizard-slot-service-chip">Service invoked</label>
-                                <span class="wizard-line-slot" id="mllp-wizard-slot-service"></span>
+                            <div class="decision-line" id="mllp-wizard-line-service">
+                                <label class="decision-line-label" for="mllp-wizard-slot-service-chip">Service invoked</label>
+                                <span class="decision-line-slot" id="mllp-wizard-slot-service"></span>
                             </div>
 
-                            <div class="wizard-line" id="mllp-wizard-line-delivery">
-                                <label class="wizard-line-label" for="mllp-wizard-slot-delivery">The destinations receive it</label>
-                                <span class="wizard-line-slot" id="mllp-wizard-slot-delivery"></span>
+                            <div class="decision-line" id="mllp-wizard-line-delivery">
+                                <label class="decision-line-label" for="mllp-wizard-slot-delivery">The destinations receive it</label>
+                                <span class="decision-line-slot" id="mllp-wizard-slot-delivery"></span>
                             </div>
 
-                            <div class="wizard-line" id="mllp-wizard-line-reply">
-                                <label class="wizard-line-label" for="mllp-wizard-slot-reply-chip">The reply is produced by</label>
-                                <span class="wizard-line-slot" id="mllp-wizard-slot-reply"></span>
+                            <div class="decision-line" id="mllp-wizard-line-reply">
+                                <label class="decision-line-label" for="mllp-wizard-slot-reply-chip">The reply is produced by</label>
+                                <span class="decision-line-slot" id="mllp-wizard-slot-reply"></span>
+                            </div>
+
+                            <div class="decision-line" id="mllp-wizard-line-alerts">
+                                <label class="decision-line-label" for="mllp-wizard-edit-alerts">Alerts</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-wizard-edit-alerts"><span class="zato-link-face summary-link-text" id="mllp-wizard-summary-alerts"></span><span class="zato-soft-hint">{{ alerts_tab.edit_hint }}</span></a></span>
                             </div>
 
                         </div>
@@ -179,9 +207,9 @@ $(document).ready(function() {
 
                     <div class="wizard-section">
 
-                        <div class="wizard-line" id="mllp-wizard-row-options">
-                            <label class="wizard-line-label" for="mllp-wizard-edit-options">More options</label>
-                            <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-wizard-edit-options"><span class="zato-link-face wizard-toggle-summary" id="mllp-wizard-summary-options"></span><span class="zato-soft-hint" id="mllp-wizard-hint-options"></span></a></span>
+                        <div class="decision-line" id="mllp-wizard-row-options">
+                            <label class="decision-line-label" for="mllp-wizard-edit-options">More options</label>
+                            <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-wizard-edit-options"><span class="zato-link-face summary-link-text" id="mllp-wizard-summary-options"></span><span class="zato-soft-hint" id="mllp-wizard-hint-options"></span></a></span>
                         </div>
 
                         <div class="wizard-collapse-body" id="mllp-wizard-options-body" hidden>
@@ -323,6 +351,15 @@ $(document).ready(function() {
                     {{ form.destinations }}
                     {{ form.respond_from }}
                     {{ form.delivery_mode }}
+
+                    <!-- The alert settings - the Alerts popover's lines take their switches and picks
+                         from here and their popovers read and write the rest -->
+                    {% for field in alerts_tab.fields %}
+                    {{ field }}
+                    {% endfor %}
+
+                    <!-- Where the popover's panel of lines waits while the popover is closed -->
+                    <div id="mllp-wizard-alerts-holder"></div>
 
                 </div>
 

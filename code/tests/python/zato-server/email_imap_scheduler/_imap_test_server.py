@@ -36,6 +36,9 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
     def _respond(self, data:'bytes') -> 'None':
         _ = self.wfile.write(data + b'\r\n')
 
+        # Every line sent is recorded next to the lines received, in order
+        cast_('any_', self.server).wire.append(('<<', data.decode('utf-8', errors='replace')))
+
 # ################################################################################################################################
 
     def _handle_capability(self, tag:'str') -> 'bool':
@@ -61,6 +64,24 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
         self._respond(b'* BYE IMAP test server signing off')
         self._respond(tag.encode('utf-8') + b' OK LOGOUT completed')
         return False
+
+# ################################################################################################################################
+
+    def _handle_login(self, tag:'str', parts:'strlist') -> 'bool':
+        """ A server without a required password accepts any login, one with it rejects
+        every other password the way a real server does - with a NO and the failure code.
+        """
+        required_password = cast_('any_', self.server).required_password
+
+        # The password is the last word of the command, imaplib sends it quoted
+        password = parts[-1].strip('"')
+
+        if required_password and password != required_password:
+            self._respond(tag.encode('utf-8') + b' NO [AUTHENTICATIONFAILED] Authentication failed')
+            return True
+
+        self._respond(tag.encode('utf-8') + b' OK LOGIN completed')
+        return True
 
 # ################################################################################################################################
 
@@ -169,8 +190,9 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
             if not text:
                 continue
 
-            # Every received command is recorded for tests to assert on
+            # Every received command is recorded for tests to assert on, and on the wire log in order
             cast_('any_', self.server).received_commands.append(text)
+            cast_('any_', self.server).wire.append(('>>', text))
             logger.info('IMAP test server received: %s', text)
 
             parts = text.split(' ')
@@ -189,7 +211,10 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
             elif command == 'LOGOUT':
                 should_continue = self._handle_logout(tag)
 
-            # LOGIN, NOOP, CLOSE and anything else simply succeed
+            elif command == 'LOGIN':
+                should_continue = self._handle_login(tag, parts)
+
+            # NOOP, CLOSE and anything else simply succeed
             else:
                 should_continue = self._handle_any_other(tag, command)
 
@@ -213,6 +238,12 @@ class IMAPTestServer(socketserver.ThreadingTCPServer):
 
         self.received_commands = []
         self.host, self.port = self.server_address[:2]
+
+        # Both directions of the conversation in order - each item is a direction marker and the line
+        self.wire:'list' = []
+
+        # The password a login must carry - empty means any login is accepted
+        self.required_password = ''
 
         # The in-memory mailbox - a list of dicts with the uid, raw message bytes and the seen flag,
         # guarded by a lock because each client connection is served in its own thread.
@@ -283,6 +314,7 @@ class IMAPTestServer(socketserver.ThreadingTCPServer):
             self.mailbox = []
 
         self.received_commands = []
+        self.wire = []
 
 # ################################################################################################################################
 

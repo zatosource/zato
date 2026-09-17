@@ -37,6 +37,9 @@ $(document).ready(function() {
             }
         );
     });
+
+    // Another page, e.g. an Alerts tab, may link here to have a connection created right away
+    $.fn.zato.data_table.maybe_open_create_form($.fn.zato.email.imap.create);
 })
 
 // /////////////////////////////////////////////////////////////////////////////

@@ -19,6 +19,9 @@
 
 var wizard = $.fn.zato.channel.hl7.mllp.wizard;
 
+// The Alerts line of step 2 and its popover - the kit's, named under the page's prefix
+wizard.alerts = $.fn.zato.wizard_alerts.create({wizard: wizard, idPrefix: 'mllp-wizard'});
+
 // ////////////////////////////////////////////////////////////////////////
 
 wizard.config_own = {
@@ -38,6 +41,7 @@ wizard.config_own = {
         transport: 'Transport',
         routing: 'Routing',
         targets: 'Destinations and service',
+        alerts: 'Alerts',
         tolerance: 'Tolerance',
         dedup: 'Deduplication',
         logging: 'Logging'
@@ -100,7 +104,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // header with the wizard-wide overview, then anything on a step
     // body holding a labeled field
     helpRowSelector: '.dashboard-card-header, .wizard-name-row, .wizard-toggle-row, ' +
-        '.wizard-section-title, .wizard-line, .mllp-wizard-tolerance-grid',
+        '.wizard-section-title, .decision-line, .mllp-wizard-tolerance-grid',
 
     // Fields that must not be empty on submit - the service is not among them
     // because the destinations may take the messages instead
@@ -170,7 +174,10 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         // The transport, REST and routing cards on step 1 ..
         wizard.forms.initCards();
 
-        // .. the decision lines and the option cards on step 2 ..
+        // .. the Alerts line, the decision lines and the option cards on step 2 -
+        // the destinations refresh every summary as they render, the Alerts one
+        // among them, so the Alerts line has to be there first ..
+        wizard.alerts.init();
         wizard.destinations.init();
         wizard.review.initOptionCards();
 
@@ -183,10 +190,15 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         var ownConfig = wizard.config_own;
         var action = wizard.state.isEdit ? ownConfig.editAction : ownConfig.createAction;
 
-        $.fn.zato.live_form_updates.register(action, [
+        var liveConfigs = [
             {object_type: 'service', target_select: wizard.fieldSelector('service')},
             {object_type: 'security', target_select: wizard.fieldSelector('rest_security_id')}
-        ]);
+        ];
+
+        // .. the email and LLM connections the Alerts popup picks from included ..
+        liveConfigs = liveConfigs.concat($.fn.zato.alerts_tab.live_configs(wizard.config.fieldPrefix));
+
+        $.fn.zato.live_form_updates.register(action, liveConfigs);
         $.fn.zato.live_form_updates.start(action);
 
         // .. an open REST popover clones the security select into its rows,
@@ -337,6 +349,14 @@ wizard.helpDescriptions = function() {
     out['mllp-wizard-slot-delivery'] = 'All the destinations at once, or one after another ' +
         'in the order they were picked.';
     out['mllp-wizard-slot-reply-chip'] = shared['destinations-respond-from'];
+
+    // .. the Alerts line and the inputs of its popover ..
+    out['mllp-wizard-edit-alerts'] = 'Whether the channel raises alerts and which ones - messages acknowledged ' +
+        'negatively in a row, the share of them in the recent traffic, negative acknowledgments of given codes, ' +
+        'slow acknowledgments and a channel that receives no messages at all. The alerts read the channel\'s ' +
+        'audit log, so the audit log option under Logging and errors has to be on for anything to be measured.';
+
+    $.extend(out, wizard.alerts.descriptions());
 
     // .. and the options folded away under the four decisions.
     out['mllp-wizard-edit-options'] = 'The fixups applied to messages that do not quite follow the standard, ' +

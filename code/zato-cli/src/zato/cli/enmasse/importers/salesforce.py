@@ -33,7 +33,9 @@ class SalesforceImporter(GenericConnectionImporter):
         'api_version': SALESFORCE.Default.API_Version,
     }
 
-    connection_secret_keys = ['password']
+    # The wrapper reads all three from the opaque attributes, so none of them goes to the secret column
+    connection_secret_keys = []
+    opaque_secret_keys = ('password', 'consumer_key', 'consumer_secret')
     connection_required_attrs = ['name', 'address', 'username']
 
 # ################################################################################################################################

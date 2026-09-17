@@ -14,6 +14,8 @@ from json import dumps, loads
 # Zato
 from zato.cli.enmasse.util import as_row_list, assign_security, Invocation_Row_Fields, preprocess_item, \
     security_needs_update, serialize_invocation_rows, sync_invocation_jobs
+from zato.cli.enmasse.util.alerts import alerts_need_update, take_alert_attrs
+from zato.common.alerting.object_config import alert_type_soap, Alerts_Key
 from zato.common.api import CONNECTION, MISC, URL_TYPE
 from zato.common.soap.common import SOAPVersion
 from zato.common.odb.model import HTTPSOAP, to_json
@@ -31,6 +33,9 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# What the alert settings name the object as in the errors they raise
+_connection_type = 'outgoing SOAP'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -118,10 +123,10 @@ class OutgoingSOAPImporter:
 
                 needs_update = False
 
-                # Compare standard attributes (excluding security)
+                # Compare standard attributes - security and the alert settings are checked separately
                 for key, value in item.items():
 
-                    if key in ('security', 'security_name'):
+                    if key in ('security', 'security_name', Alerts_Key):
                         continue
 
                     # Body-credential mappings are compared as lists no matter
@@ -156,6 +161,10 @@ class OutgoingSOAPImporter:
                 if security_needs_update(item, db_def, self.importer):
                     needs_update = True
 
+                # Check the alert settings
+                if alerts_need_update(item, db_def, alert_type_soap):
+                    needs_update = True
+
                 if needs_update:
                     item['id'] = db_def['id']
                     logger.info('Will update %s with id=%s', name, db_def['id'])
@@ -176,6 +185,9 @@ class OutgoingSOAPImporter:
             'validate_tls': True,
             'is_audit_log_active': True,
         }
+
+        # The alert settings leave the definition before it reaches the row's own attributes
+        alert_attrs = take_alert_attrs(outgoing_def, alert_type_soap, _connection_type, session)
 
         outgoing = HTTPSOAP()
 
@@ -205,6 +217,9 @@ class OutgoingSOAPImporter:
 
         for key, value in connection_extra_field_defaults.items():
             _ = outgoing_def.setdefault(key, value)
+
+        # The alert settings go into the opaque attributes, every one of them
+        outgoing_def.update(alert_attrs)
 
         # Body-credential mappings are stored the way the Dashboard stores them - as a JSON string.
         if body_credentials := outgoing_def.get('body_credentials'):
@@ -237,6 +252,9 @@ class OutgoingSOAPImporter:
 
         outgoing = session.query(HTTPSOAP).filter_by(id=outgoing_id).one()
 
+        # The alert settings leave the definition before it reaches the row's own attributes
+        alert_attrs = take_alert_attrs(outgoing_def, alert_type_soap, _connection_type, session)
+
         outgoing_def = deepcopy(outgoing_def)
 
         # Body-credential mappings are stored the way the Dashboard stores them - as a JSON string.
@@ -250,6 +268,9 @@ class OutgoingSOAPImporter:
         for key, value in outgoing_def.items():
             if key not in ['security', 'security_name']:
                 setattr(outgoing, key, value)
+
+        # The alert settings go into the opaque attributes, every one of them
+        outgoing_def.update(alert_attrs)
 
         # Create or update the linked jobs, which stores their IDs in the definition
         sync_invocation_jobs(self.importer, session, outgoing_def, outgoing, URL_TYPE.SOAP)

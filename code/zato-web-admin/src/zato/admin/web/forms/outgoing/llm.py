@@ -10,7 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
+from zato.admin.web import alerts_tab
 from zato.admin.web.util import get_server_user_conf_directory
+from zato.common.alerting.object_config import alert_type_llm
 from zato.common.api import LLM
 from zato.common.llm_models import get_model_list
 
@@ -58,8 +60,8 @@ class CreateForm(forms.Form):
     chat_expiry = forms.CharField(
         initial=LLM.DEFAULT.CHAT_EXPIRY, widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:9%'}))
 
-    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
-        super().__init__(*args, **kwargs)
+    def __init__(self, req:'any_', prefix:'any_'=None) -> 'None':
+        super().__init__(prefix=prefix)
 
         # The form initially suggests the first catalog model's wire id and its provider's address,
         # with the catalog read afresh so edits to default-models.yaml show up without a restart.
@@ -69,6 +71,9 @@ class CreateForm(forms.Form):
 
         self.fields['model'].initial = first_model['id']
         self.fields['address'].initial = _provider_address[first_model['provider']]
+
+        # The Alerts tab - the thresholds, the status codes, the LLM's own lines, the toggles and the connections
+        alerts_tab.add_alerts_fields(self, alert_type_llm, req)
 
 # ################################################################################################################################
 # ################################################################################################################################

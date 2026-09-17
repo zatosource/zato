@@ -39,7 +39,7 @@ class GetList(AdminService):
     _filter_by = OutgoingAMQP.name,
 
     input = 'cluster_id', '-subtype', *query_parameters
-    output = 'id', 'name', 'address', 'username', 'password', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
+    output = 'id', 'name', 'address', 'username', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
         '-content_type', '-content_encoding', '-expiration', AsIs('-user_id'), AsIs('-app_id')
 
     def get_data(self, session):
@@ -51,7 +51,8 @@ class GetList(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            data = self.strip_listing_secrets(self.get_data(session))
+            self.response.payload[:] = data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,7 +99,7 @@ class Create(AdminService):
                 item.is_active = input.is_active
                 item.address = input.address
                 item.username = input.username
-                item.password = input.password
+                item.password = self.encrypt_input_secret(input.password)
                 item.delivery_mode = input.delivery_mode # type: ignore
                 item.priority = input.priority # type: ignore
                 item.content_type = input.content_type
@@ -176,7 +177,6 @@ class Edit(AdminService):
                 item.is_active = input.is_active
                 item.address = input.address
                 item.username = input.username
-                item.password = input.password
                 item.delivery_mode = input.delivery_mode
                 item.priority = input.priority
                 item.content_type = input.content_type
@@ -186,12 +186,19 @@ class Edit(AdminService):
                 item.user_id = input.user_id
                 item.app_id = input.app_id
 
+                # A password on input replaces the stored one, a blank field keeps it
+                if input.password:
+                    item.password = self.encrypt_input_secret(input.password)
+
                 # The subtype, e.g. Azure Service Bus, is kept in the opaque attributes
                 if input.subtype:
                     item.opaque1 = dumps({'subtype': input.subtype})
 
                 session.add(item)
                 session.commit()
+
+                # The runtime reconnects with the stored password, whichever way it got there
+                input.password = item.password
 
                 input.action = OUTGOING.AMQP_EDIT.value
                 input.old_name = old_name

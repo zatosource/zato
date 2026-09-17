@@ -52,10 +52,48 @@
  *   3. Calls dashboard_kit.tabs.init() to wire up click handlers
  *   4. If independent_tabs is true, installs a before_submit_hook
  *      that suppresses validation on hidden tab panels
+ *   5. Keeps the dialog whole within the window - a dialog opens centered
+ *      on its default tab and a taller tab would grow it past the bottom
+ *      of the window, so on every tab change, and once more when the dialog
+ *      opens, it is moved up as far as it takes for its bottom to show
  */
 
+$.fn.zato.form_tabs.config = {
 
+    // How close to the window's edge a dialog may come when it is moved up to stay whole
+    viewport_padding: 16
+};
 
+// ////////////////////////////////////////////////////////////////////////
+
+// Moves a dialog up as far as it takes for its bottom to stay within the window - a dialog
+// that fits stays where it is, one taller than the window is aligned to the top
+$.fn.zato.form_tabs._keep_in_view = function(div_id) {
+
+    var padding = $.fn.zato.form_tabs.config.viewport_padding;
+    var dialog = $(div_id).closest('.ui-dialog');
+
+    if(!dialog.length) {
+        return;
+    }
+
+    var rect = dialog[0].getBoundingClientRect();
+    var overflow = rect.bottom + padding - window.innerHeight;
+
+    if(overflow <= 0) {
+        return;
+    }
+
+    // Up by the overflow, but never above the padding at the top
+    var room_above = rect.top - padding;
+    var shift = Math.min(overflow, room_above);
+
+    if(shift <= 0) {
+        return;
+    }
+
+    dialog.offset({top: dialog.offset().top - shift});
+};
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -181,9 +219,18 @@ $.fn.zato.form_tabs.reset = function(config) {
     var on_change = null;
     var tab_focus = {};
 
+    // The dialog stays whole within the window whichever tab is on show, and whenever it opens
+    var keep_in_view = function() {
+        $.fn.zato.form_tabs._keep_in_view(div_id);
+    };
+
+    $(div_id).off('dialogopen.form_tabs_view').on('dialogopen.form_tabs_view', keep_in_view);
+
     if (independent_tabs) {
 
         on_change = function(tab) {
+            keep_in_view();
+
             var form = $(div_id).find('form');
             $.fn.zato.form_tabs._restore_hidden_validation(form);
             $.fn.zato.form_tabs._suppress_hidden_validation(form);
@@ -233,8 +280,14 @@ $.fn.zato.form_tabs.reset = function(config) {
         var form = $(div_id).find('form');
         $.fn.zato.form_tabs._suppress_hidden_validation(form);
     }
-    else if (caller_on_change) {
-        on_change = caller_on_change;
+    else {
+        on_change = function(tab) {
+            keep_in_view();
+
+            if (caller_on_change) {
+                caller_on_change(tab);
+            }
+        };
     }
 
     // Initialize mirror fields that sync between tabs

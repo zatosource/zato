@@ -16,7 +16,7 @@ from http.client import OK
 import httpx
 
 # lxml
-from lxml import etree
+import lxml.etree as etree
 
 # pytest
 import pytest

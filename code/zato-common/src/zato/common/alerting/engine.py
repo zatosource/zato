@@ -13,7 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Slack and Teams deliver through the connections that share the default notification
 # name, and a rule only says where within them, e.g. which Slack channel. What each
 # notification says comes from the Jinja templates on disk. Findings no rule matches
-# go to the default sink - logged and offered as a catch-all digest - and critical
+# go to the default sink - logged and offered as a catch-all digest - and error
 # findings are dispatched on every occurrence, regardless of dedup and digest settings.
 
 from __future__ import annotations
@@ -27,10 +27,11 @@ from traceback import format_exc
 
 # Zato
 from zato.common.alerting.model import rule_matches, AlertAction, AlertSeverity
+from zato.common.alerting.object_config import Email_Connection_Config_Key
 from zato.common.alerting.rendering import render_alert_template, Template_Digest_Body, Template_Digest_Subject, \
     Template_Email_Body, Template_Email_Subject, Template_Slack, Template_Teams, Template_Webhook
 from zato.common.alerting.store import raise_alert, render_alert_message
-from zato.common.api import Incidents
+from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent, get_audit_engine
 from zato.common.json_internal import dumps
 from zato.common.typing_ import list_field
@@ -59,6 +60,13 @@ if 0:
 
 logger = logging.getLogger('zato')
 
+# What the explanation keys of a template context hold when the LLM did not explain the alert.
+Empty_Explanation = {
+    'explanation': '',
+    'confidence': '',
+    'remediation': None,
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -71,7 +79,8 @@ class AlertTransports:
     does not exist or is inactive.
     """
 
-    # send_email(addresses, subject, body)
+    # send_email(addresses, subject, body, email_connection) - the connection is the encoded one an
+    # object names as its own, e.g. `smtp:ops`, or the empty string for the default notification connection
     send_email: 'callable_' = None
 
     # invoke_service(service_name, payload_dict)
@@ -100,8 +109,43 @@ class AlertDefaults:
     # Where the catch-all digest and target-less email rules deliver
     email_to: 'strlist | None' = None
 
+    # Whom every alert email is from
+    email_from: str = ''
+
     # Where target-less plain webhook rules post - e.g. a Jira automation webhook
     webhook_url: str = ''
+
+    # The LLM connection explanations go through when an object names none of its own
+    llm_connection: str = ''
+
+# ################################################################################################################################
+
+def defaults_to_dict(defaults:'AlertDefaults') -> 'stranydict':
+    """ The deployment-level targets as one dict - what travels to the explain service
+    so it can deliver through the same targets the sweep would have.
+    """
+    out = {
+        'email_to': defaults.email_to,
+        'email_from': defaults.email_from,
+        'webhook_url': defaults.webhook_url,
+        'llm_connection': defaults.llm_connection,
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def defaults_from_dict(data:'stranydict') -> 'AlertDefaults':
+    """ The deployment-level targets read back from the dict defaults_to_dict produced.
+    """
+    out = AlertDefaults()
+
+    out.email_to = data['email_to']
+    out.email_from = data['email_from']
+    out.webhook_url = data['webhook_url']
+    out.llm_connection = data['llm_connection']
+
+    return out
 
 # ################################################################################################################################
 
@@ -121,12 +165,21 @@ class ProcessResult:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def build_template_context(rule:'AlertRule', finding:'Finding', alert_id:'int', count:'int') -> 'stranydict':
+def build_template_context(
+    rule:'AlertRule',
+    finding:'Finding',
+    alert_id:'int',
+    count:'int',
+    explanation:'stranydict | None' = None,
+    ) -> 'stranydict':
     """ The context every notification template renders with - the alert as one dict,
-    the rendered message with its repetition prefix included. The diagnosis keys are
-    empty here - the diagnosis service fills them in when it renders through
-    the same templates.
+    the rendered message with its repetition prefix included. The explanation keys
+    are filled in when the LLM explained the alert and empty otherwise - the templates
+    render the same either way, with or without the explanation paragraph.
     """
+    if explanation is None:
+        explanation = Empty_Explanation
+
     message = render_alert_message(count, finding.message)
 
     out = {
@@ -140,20 +193,29 @@ def build_template_context(rule:'AlertRule', finding:'Finding', alert_id:'int', 
         'severity': finding.severity,
         'count': count,
         'action_config': rule.action_config,
-        'diagnosis': '',
-        'confidence': '',
-        'remediation': None,
+        'explanation': explanation['explanation'],
+        'confidence': explanation['confidence'],
+        'remediation': explanation['remediation'],
     }
 
     return out
 
 # ################################################################################################################################
 
-def build_alert_payload(rule:'AlertRule', finding:'Finding', alert_id:'int', count:'int') -> 'stranydict':
+def build_alert_payload(
+    rule:'AlertRule',
+    finding:'Finding',
+    alert_id:'int',
+    count:'int',
+    explanation:'stranydict | None' = None,
+    ) -> 'stranydict':
     """ Builds the structured payload the invoke-service and publish-to-topic actions
     carry - everything an automated remediation needs to act on the alert, the rule's
-    own action configuration included.
+    own action configuration included, and the LLM's explanation when there is one.
     """
+    if explanation is None:
+        explanation = Empty_Explanation
+
     out = {
         'alert_id': alert_id,
         'rule': rule.name,
@@ -165,7 +227,32 @@ def build_alert_payload(rule:'AlertRule', finding:'Finding', alert_id:'int', cou
         'severity': finding.severity,
         'count': count,
         'action_config': rule.action_config,
+        'explanation': explanation['explanation'],
+        'confidence': explanation['confidence'],
+        'remediation': explanation['remediation'],
     }
+
+    return out
+
+# ################################################################################################################################
+
+def build_explain_payload(rule:'AlertRule', finding:'Finding', alert_id:'int', count:'int', defaults:'AlertDefaults') -> 'stranydict':
+    """ What the explain service receives - the alert's payload plus everything it needs
+    to collect the evidence and to run the rule's own action itself once the LLM has spoken:
+    the fact, the thresholds and the measures, the action's name and the deployment-level
+    targets the sweep was configured with.
+    """
+    out = build_alert_payload(rule, finding, alert_id, count)
+
+    out['action'] = rule.action
+    out['dedup_window_seconds'] = rule.dedup_window_seconds
+    out['defaults'] = defaults_to_dict(defaults)
+
+    # What the evidence is collected from - the fact with every measure, the thresholds
+    # the rule compared against and the measures it read
+    out['fact'] = finding.fact
+    out['thresholds'] = finding.thresholds
+    out['measures'] = finding.measures
 
     return out
 
@@ -193,14 +280,22 @@ def _dispatch_email(
     transports:'AlertTransports',
     defaults:'AlertDefaults',
     template_dir:'str',
+    explanation:'stranydict | None',
     ) -> 'None':
     """ Sends one alert as an email to the rule's own addresses, or to the sweep's
-    default ones when the rule names none.
+    default ones when the rule names none, through the object's own email connection
+    when the finding's object has one and through the default one otherwise.
     """
 
     # A rule without its own address list sends to the sweep's default address.
     if not (addresses := rule.action_config.get('addresses')):
         addresses = defaults.email_to
+
+    # The object's own email connection travels in the action config, when it has one.
+    if Email_Connection_Config_Key in rule.action_config:
+        email_connection = rule.action_config[Email_Connection_Config_Key]
+    else:
+        email_connection = ''
 
     # With no addresses configured anywhere there is nowhere to send the email.
     if not addresses:
@@ -212,7 +307,7 @@ def _dispatch_email(
     subject = render_alert_template(Template_Email_Subject, context, template_dir)
     body = render_alert_template(Template_Email_Body, context, template_dir)
 
-    transports.send_email(addresses, subject, body)
+    transports.send_email(addresses, subject, body, email_connection)
 
 # ################################################################################################################################
 
@@ -225,11 +320,12 @@ def _dispatch_invoke_service(
     transports:'AlertTransports',
     defaults:'AlertDefaults',
     template_dir:'str',
+    explanation:'stranydict | None',
     ) -> 'None':
     """ Invokes the service the rule names, handing it the alert's structured payload.
     """
     service_name = rule.action_config['service']
-    payload = build_alert_payload(rule, finding, alert_id, count)
+    payload = build_alert_payload(rule, finding, alert_id, count, explanation)
 
     transports.invoke_service(service_name, payload)
 
@@ -244,11 +340,12 @@ def _dispatch_publish(
     transports:'AlertTransports',
     defaults:'AlertDefaults',
     template_dir:'str',
+    explanation:'stranydict | None',
     ) -> 'None':
     """ Publishes the alert's structured payload to the topic the rule names.
     """
     topic_name = rule.action_config['topic']
-    payload = build_alert_payload(rule, finding, alert_id, count)
+    payload = build_alert_payload(rule, finding, alert_id, count, explanation)
 
     transports.publish(topic_name, payload)
 
@@ -263,12 +360,13 @@ def _dispatch_slack(
     transports:'AlertTransports',
     defaults:'AlertDefaults',
     template_dir:'str',
+    explanation:'stranydict | None',
     ) -> 'None':
     """ Posts one alert to the Slack channel the rule names.
     """
 
     # Without a channel in the rule's action config there is nowhere to post.
-    if not (channel := rule.action_config.get(Incidents.Config_Slack_Channel)):
+    if not (channel := rule.action_config.get(Alerting.Config_Slack_Channel)):
         logger.info('Alert rule `%s` has no Slack channel - skipping `%s`', rule.name, finding.object_name)
         return
 
@@ -287,12 +385,13 @@ def _dispatch_teams(
     transports:'AlertTransports',
     defaults:'AlertDefaults',
     template_dir:'str',
+    explanation:'stranydict | None',
     ) -> 'None':
     """ Posts one alert to the Microsoft Teams target the rule names.
     """
 
     # Without a target in the rule's action config there is nowhere to post.
-    if not (to := rule.action_config.get(Incidents.Config_Teams_To)):
+    if not (to := rule.action_config.get(Alerting.Config_Teams_To)):
         logger.info('Alert rule `%s` has no Teams target - skipping `%s`', rule.name, finding.object_name)
         return
 
@@ -313,6 +412,7 @@ def _dispatch_webhook(
     transports:'AlertTransports',
     defaults:'AlertDefaults',
     template_dir:'str',
+    explanation:'stranydict | None',
     ) -> 'None':
     """ Posts one alert to the rule's webhook URL, or to the deployment-level one
     when the rule names none.
@@ -353,20 +453,30 @@ def dispatch_action(
     transports:'AlertTransports',
     defaults:'AlertDefaults | None' = None,
     template_dir:'str' = '',
+    explanation:'stranydict | None' = None,
     ) -> 'None':
     """ Runs one rule's action for one alert - what goes out is rendered from the
     alert templates and delivered through whichever transport the rule chose.
     Email, Slack and Teams ride on the connections behind their transports,
     and a rule whose action config names no address list or webhook URL of its own
-    uses the deployment-level defaults.
+    uses the deployment-level defaults. An alert of a rule the LLM explains goes
+    to the explain service first, which comes back here with the explanation
+    filled in, and only then does the rule's own action deliver it - once.
     """
     if defaults is None:
         defaults = AlertDefaults()
 
-    context = build_template_context(rule, finding, alert_id, count)
+    # The explanation is None both on the way to the explain service and for rules
+    # the LLM does not speak for - the flag tells the two apart.
+    if rule.explain_with_llm and explanation is None:
+        payload = build_explain_payload(rule, finding, alert_id, count, defaults)
+        transports.invoke_service(Alerting.Service_Explain, payload)
+        return
+
+    context = build_template_context(rule, finding, alert_id, count, explanation)
 
     if dispatcher := _dispatchers.get(rule.action):
-        dispatcher(rule, finding, context, alert_id, count, transports, defaults, template_dir)
+        dispatcher(rule, finding, context, alert_id, count, transports, defaults, template_dir, explanation)
 
     # .. anything else is an action no transport delivers.
     else:
@@ -434,7 +544,7 @@ def process_findings(
     """ Runs the engine once - every finding is routed through every rule that matches it,
     deduplicated in the store and dispatched through the rule's action. A repetition
     within the dedup window increments the count without being dispatched again,
-    unless the finding is critical - critical findings are dispatched on every
+    unless the finding is an error - error findings are dispatched on every
     occurrence and can never be suppressed. Findings no rule matches go to the
     default sink: logged, returned, and emailed as a catch-all digest
     when a default address is configured. A transport that raises costs its own
@@ -480,8 +590,8 @@ def process_findings(
             record_alert_event(audit_log, rule, finding, raise_result.count, cid)
 
             # A repetition within the window is not dispatched again - unless
-            # the finding is critical, which is never suppressed.
-            if raise_result.is_new or finding.severity == AlertSeverity.Critical:
+            # the finding is an error, which is never suppressed.
+            if raise_result.is_new or finding.severity == AlertSeverity.Error:
 
                 # A transport that cannot deliver - an unreachable webhook, an SMTP server
                 # that is down - loses this one notification and nothing else.

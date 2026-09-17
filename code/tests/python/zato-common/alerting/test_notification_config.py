@@ -45,6 +45,7 @@ _values = {
     Alerting.Extra_Default_To:       'ops@example.com, oncall@example.com',
     Alerting.Extra_From:             'alerts@example.com',
     Alerting.Extra_Dashboard_URL:    'https://dashboard.example.com',
+    Alerting.Extra_LLM_Connection:   'ops.llm',
 }
 
 # ################################################################################################################################

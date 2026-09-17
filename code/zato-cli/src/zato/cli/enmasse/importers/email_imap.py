@@ -13,6 +13,7 @@ from uuid import uuid4
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
+from zato.cli.enmasse.util.secrets import encrypt_secret, ensure_encrypted, is_usable_secret, redact_secrets
 from zato.common.api import EMAIL as EMail_Common, SCHEDULER
 from zato.common.odb.model import IMAP, Job, to_json
 from zato.common.odb.query import email_imap_list
@@ -90,12 +91,12 @@ class IMAPImporter:
             if name in db_defs:
                 update_def = yaml_def.copy()
                 update_def['id'] = db_defs[name]['id']
-                logger.info('Adding to update: %s', update_def)
+                logger.info('Adding to update: %s', redact_secrets(update_def))
                 to_update.append(update_def)
 
             # Create new definition
             else:
-                logger.info('Adding to create: %s', yaml_def)
+                logger.info('Adding to create: %s', redact_secrets(yaml_def))
                 to_create.append(yaml_def)
 
         return to_create, to_update
@@ -191,11 +192,13 @@ class IMAPImporter:
         else:
             imap_def['server_type'] = EMail_Common.IMAP.ServerType.Generic
 
-        # Set password if provided, otherwise generate one
+        # Set password if provided, otherwise generate one, and store it encrypted either way
         if 'password' in imap_def:
-            imap_conn.password = imap_def['password']
+            password = imap_def['password']
         else:
-            imap_conn.password = uuid4().hex
+            password = uuid4().hex
+
+        imap_conn.password = encrypt_secret(session, password)
 
         # Add to session and flush to get ID
         session.add(imap_conn)
@@ -233,14 +236,18 @@ class IMAPImporter:
         for key, value in imap_def.items():
 
             # Skip special fields that shouldn't be directly updated
-            if key not in ['id', 'type']:
-
-                # Special handling for password - only update if provided
-                if key == 'password' and not value:
-                    continue
+            if key not in ['id', 'type', 'password']:
 
                 # Set the attribute on the IMAP connection object
                 setattr(imap_conn, key, value)
+
+        # A password is updated only if a usable one was given, otherwise the stored one is kept
+        # and encrypted in place if it is still in clear text. The column is nullable.
+        password = imap_def.get('password')
+        if is_usable_secret(password):
+            imap_conn.password = encrypt_secret(session, password)
+        elif imap_conn.password is not None:
+            imap_conn.password = ensure_encrypted(session, imap_conn.password)
 
         # Create or update the scheduler job that this connection is linked to, if one was configured
         if imap_def.get('scheduler_service'):

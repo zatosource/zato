@@ -1114,7 +1114,7 @@ def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime', rng:'Random') -> 'd
     error_finding = new_finding(
         FindingKind.Error_Rate, AuditSource.MLLP_Channel, Channel_Lab,
         f'Error rate on {Channel_Lab} exceeded 10 failures within 15 minutes',
-        severity=AlertSeverity.Critical)
+        severity=AlertSeverity.Error)
 
     burst_day = today_start - timedelta(days=1)
     error_offsets = (10, 40, 80)

@@ -28,7 +28,7 @@ class GetList(AdminService):
     _filter_by = ChannelAMQP.name,
 
     input = 'cluster_id', '-subtype', *query_parameters
-    output = 'id', 'name', 'address', 'username', 'password', 'is_active', 'queue', 'consumer_tag_prefix', \
+    output = 'id', 'name', 'address', 'username', 'is_active', 'queue', 'consumer_tag_prefix', \
         'service_name', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format'
 
     def get_data(self, session):
@@ -40,7 +40,8 @@ class GetList(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            data = self.strip_listing_secrets(self.get_data(session))
+            self.response.payload[:] = data
 
 # ################################################################################################################################
 
@@ -90,7 +91,7 @@ class Create(AdminService):
                 item.is_active = input.is_active
                 item.address = input.address # type: ignore
                 item.username = input.username # type: ignore
-                item.password = input.password
+                item.password = self.encrypt_input_secret(input.password)
                 item.queue = input.queue # type: ignore
                 item.consumer_tag_prefix = input.consumer_tag_prefix
                 item.service = service
@@ -129,7 +130,7 @@ class Edit(AdminService):
     """
     name = 'zato.channel.amqp.edit'
 
-    input = 'id', 'cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue', \
+    input = 'id', 'cluster_id', 'name', 'is_active', 'address', 'username', '-password', 'queue', \
         'consumer_tag_prefix', 'service', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format', '-subtype'
     output = 'id', 'name'
 
@@ -169,7 +170,6 @@ class Edit(AdminService):
                 item.is_active = input.is_active
                 item.address = input.address
                 item.username = input.username
-                item.password = input.password
                 item.queue = input.queue
                 item.consumer_tag_prefix = input.consumer_tag_prefix
                 item.service = service
@@ -178,12 +178,19 @@ class Edit(AdminService):
                 item.prefetch_count = input.prefetch_count
                 item.data_format = input.data_format
 
+                # A password on input replaces the stored one, a blank field keeps it
+                if input.password:
+                    item.password = self.encrypt_input_secret(input.password)
+
                 # The subtype, e.g. Azure Service Bus, is kept in the opaque attributes
                 if input.subtype:
                     item.opaque1 = dumps({'subtype': input.subtype})
 
                 session.add(item)
                 session.commit()
+
+                # The runtime reconnects with the stored password, whichever way it got there
+                input.password = item.password
 
                 input.action = CHANNEL.AMQP_EDIT.value
                 input.id = item.id

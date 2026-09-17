@@ -14,11 +14,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from http.client import INTERNAL_SERVER_ERROR, OK
 
+# requests
+from requests.exceptions import ConnectionError as RequestsConnectionError, SSLError as RequestsSSLError, \
+    Timeout as RequestsTimeout
+
 # SQLAlchemy
 from sqlalchemy import select
 
 # Zato
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.common import TransportStatus
 from zato.common.json_internal import loads
 
 # Test support
@@ -78,12 +83,16 @@ def _replying_invoke_http(response:'ResponseStub') -> 'any_':
 
 # ################################################################################################################################
 
-def _raising_invoke_http() -> 'any_':
-    """ Builds an invoke_http stand-in that fails the way a dead endpoint makes it fail.
+def _raising_invoke_http(error:'Exception | None'=None) -> 'any_':
+    """ Builds an invoke_http stand-in that fails the way a dead endpoint makes it fail,
+    with the given error or a plain one.
     """
+    if error is None:
+        error = Exception(_connection_error)
+
     def invoke_http(cid:'any_', method:'any_', address:'any_', data:'any_', headers:'any_', hooks:'any_',
         *args:'any_', **kwargs:'any_') -> 'ResponseStub':
-        raise Exception(_connection_error)
+        raise error
 
     return invoke_http
 
@@ -215,8 +224,9 @@ def test_a_failed_ping_writes_the_error(tmp_path:'os.PathLike') -> 'None':
         assert response_received['outcome'] == AuditOutcome.Error
         assert response_received['data'] == _connection_error
 
-        # No response ever arrived, so there is no status to record
-        assert response_received['status'] == ''
+        # No response ever arrived, so the status names how the call failed instead - a failure
+        # that is none of a timeout, a refused connection or a TLS one is recorded as a plain error
+        assert response_received['status'] == TransportStatus.Error
 
 # ################################################################################################################################
 
@@ -231,6 +241,94 @@ def test_a_ping_of_an_unaudited_connection_writes_nothing(tmp_path:'os.PathLike'
         _ = wrapper.ping(_cid)
 
         assert _get_events() == []
+
+# ################################################################################################################################
+
+def test_a_health_checks_ping_writes_its_pair_with_the_audit_log_off(tmp_path:'os.PathLike') -> 'None':
+    """ A scheduled health check asks for its pings to be written whatever the connection's own
+    audit log says, so the alerts can measure a check of a connection that is otherwise unaudited.
+    """
+    with rest_audit_env(tmp_path):
+
+        wrapper = new_rest_wrapper(is_audit_log_active=False)
+        wrapper.invoke_http = _replying_invoke_http(ResponseStub(OK, 'OK', ''))
+
+        _ = wrapper.ping(_cid, needs_audit=True)
+
+        events = _get_events()
+        assert len(events) == 2
+
+        for event in events:
+            assert event['source'] == AuditSource.REST_Outgoing_Health
+            assert event['cid'] == _cid
+
+        assert events[0]['event_type'] == AuditEvent.Request_Sent
+        assert events[1]['event_type'] == AuditEvent.Response_Received
+        assert events[1]['status'] == f'{OK} OK'
+
+# ################################################################################################################################
+
+def test_a_transport_failure_writes_its_status(tmp_path:'os.PathLike') -> 'None':
+    """ A call that never received a response is recorded with the kind of failure in its status,
+    a timeout, a refused connection and a TLS failure each under a name of its own.
+    """
+    cases = [
+        (RequestsTimeout('Read timed out'), TransportStatus.Timeout),
+        (RequestsConnectionError('Connection refused'), TransportStatus.Connection_Error),
+        (RequestsSSLError('Certificate verify failed'), TransportStatus.TLS_Error),
+    ]
+
+    with rest_audit_env(tmp_path):
+
+        for idx, (error, expected_status) in enumerate(cases):
+
+            wrapper = new_rest_wrapper()
+            wrapper.invoke_http = _raising_invoke_http(error)
+
+            cid = f'{_cid}-{idx}'
+
+            try:
+                _ = wrapper.post(cid, 'The request body')
+            except Exception as e:
+                assert str(error) in str(e)
+            else:
+                raise AssertionError('The call should have raised')
+
+            events = _get_events()
+            response_received = events[-1]
+
+            assert response_received['cid'] == cid
+            assert response_received['source'] == AuditSource.REST_Outgoing
+            assert response_received['event_type'] == AuditEvent.Response_Received
+            assert response_received['outcome'] == AuditOutcome.Error
+            assert response_received['status'] == expected_status, expected_status
+
+# ################################################################################################################################
+
+def test_a_failed_pings_status_names_the_failure(tmp_path:'os.PathLike') -> 'None':
+    """ A health check's ping that timed out is recorded under the health source with the timeout in its status,
+    which is what lets the alerts tell a check that never came back apart from one that was answered with an error.
+    """
+    with rest_audit_env(tmp_path):
+
+        wrapper = new_rest_wrapper(is_audit_log_active=False)
+        wrapper.invoke_http = _raising_invoke_http(RequestsTimeout('Read timed out'))
+
+        try:
+            _ = wrapper.ping(_cid, needs_audit=True)
+        except Exception:
+            pass
+        else:
+            raise AssertionError('The ping should have raised')
+
+        events = _get_events()
+        assert len(events) == 2
+
+        response_received = events[1]
+
+        assert response_received['source'] == AuditSource.REST_Outgoing_Health
+        assert response_received['outcome'] == AuditOutcome.Error
+        assert response_received['status'] == TransportStatus.Timeout
 
 # ################################################################################################################################
 

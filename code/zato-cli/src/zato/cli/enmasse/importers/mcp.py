@@ -13,6 +13,7 @@ import logging
 from sqlalchemy import and_, select
 
 # Zato
+from zato.common.alerting.object_config import conn_type_to_alert_type
 from zato.common.api import CONNECTION, GENERIC, Groups, MCP
 from zato.common.odb.model import GenericConn, GenericObject, HTTPSOAP
 from zato.common.util.gateway import ensure_mcp_rest_channel
@@ -119,6 +120,9 @@ class GatewayMCPImporter(GenericConnectionImporter):
 
     connection_secret_keys = []
     connection_required_attrs = ['name']
+
+    # The alerts mapping of a gateway follows the mcp type - the failure settings and the ones about what the agents did
+    alert_type = conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.GATEWAY_MCP]
 
 # ################################################################################################################################
 

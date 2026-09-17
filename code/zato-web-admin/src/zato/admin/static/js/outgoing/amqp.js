@@ -18,6 +18,10 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.amqp.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'address', 'username', 'password', 'delivery_mode', 'priority', 'pool_size']);
+
+    // A blank password on the edit form keeps the stored one
+    $.fn.zato.data_table.remove_field_required('#id_edit-password');
+
     var unique_constraints = [
         {field: 'name', entity_type: 'outgoing_amqp', attr_name: 'name'}
     ];
@@ -41,7 +45,8 @@ $.fn.zato.outgoing.amqp.get_field_descriptions = function() {
             'Services publish messages through it, referring to it by this exact name.',
         'id_address': 'Address of the broker as host:port, e.g. ' + config.address_example + '.',
         'id_username': 'Username the connection authenticates with.',
-        'id_password': 'Password matching the username above. Stored encrypted in the Zato database.',
+        'id_password': 'Password matching the username above. Stored encrypted in the Zato database. ' +
+            'When updating a connection, a blank field keeps the current password.',
         'id_content_type': 'MIME type stamped on published messages, e.g. application/json or text/xml. ' +
             'Consumers use it to decide how to parse the body.',
         'id_content_encoding': 'Content encoding property of published messages, e.g. utf-8. ' +

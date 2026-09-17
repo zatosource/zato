@@ -20,9 +20,14 @@ from __future__ import annotations
 from logging import getLogger
 
 # Zato
+from zato.common.alerting.config_map import Explain_With_LLM_Key
 from zato.common.alerting.seed.rules_common import channels_rules, common_rules, scheduler_rules
-from zato.common.alerting.seed.rules_connections import email_rules, file_transfer_rules, llm_rules, mcp_rules, \
-    microsoft_rules, odoo_rules, rest_rules, sql_rules
+from zato.common.alerting.seed.rules_connections import email_rules, file_transfer_rules, microsoft_rules, odoo_rules, \
+    rest_rules, soap_rules, sql_rules
+from zato.common.alerting.seed.rules_fhir import fhir_rules
+from zato.common.alerting.seed.rules_llm import llm_rules
+from zato.common.alerting.seed.rules_mcp import mcp_rules
+from zato.common.alerting.seed.rules_mllp import mllp_channel_rules, mllp_outgoing_rules
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditSource
 from zato.common.audit_log.file_transfer_run import Run_Status_Clean, Run_Status_Empty, Run_Status_Failed, \
@@ -71,6 +76,7 @@ _alert_sources = [
     AuditSource.SOAP_Outgoing,
     AuditSource.REST_Outgoing_Health,
     AuditSource.SOAP_Outgoing_Health,
+    AuditSource.FHIR_Health,
     AuditSource.Email_IMAP,
     AuditSource.Email_SMTP,
     AuditSource.File_Outgoing,
@@ -95,7 +101,6 @@ _alert_sources = [
 
 # The actions an outcome may name - the value list behind `outcome.action`.
 _outcome_actions = [
-    'diagnose',
     'email',
     'slack',
     'teams',
@@ -108,7 +113,7 @@ _outcome_actions = [
 _outcome_severities = [
     'info',
     'warning',
-    'critical',
+    'error',
 ]
 
 # The health states a remote service may report about itself - the value list
@@ -135,6 +140,15 @@ _run_statuses = [
 # systems - activating the rule together with the test transfer job is the documented opt-in.
 _inactive_rule_full_names = [
     'alerts_file_transfer_Test_Transfer_Failing',
+    'alerts_channels_Channel_Silent',
+    'alerts_mllp_channel_Channel_Silent',
+    'alerts_mcp_Gateway_Silent',
+]
+
+# The rules an earlier release shipped and this one no longer does - an upgrade removes them
+# from the store, edited or not, because what they alerted on is no longer what their ruleset means.
+_retired_rule_full_names = [
+    'alerts_mcp_Server_Down',
 ]
 
 # ################################################################################################################################
@@ -148,7 +162,11 @@ _inactive_rule_full_names = [
 default_rulesets = [
     ('alerts_common',        common_rules),
     ('alerts_channels',      channels_rules),
+    ('alerts_mllp_channel',  mllp_channel_rules),
+    ('alerts_mllp_outgoing', mllp_outgoing_rules),
     ('alerts_rest',          rest_rules),
+    ('alerts_soap',          soap_rules),
+    ('alerts_fhir',          fhir_rules),
     ('alerts_sql',           sql_rules),
     ('alerts_llm',           llm_rules),
     ('alerts_mcp',           mcp_rules),
@@ -192,6 +210,35 @@ def alerting_vocabulary() -> 'anydict':
         _term('consecutive_failures',   TermType.Number, 'how many of the newest outcomes are errors, without a break'),
         _term('avg_duration_ms',        TermType.Number, 'the average duration of completed calls within the window'),
         _term('auth_failure_count',     TermType.Number, 'how many authentication failures the window holds'),
+        _term('client_error_count',     TermType.Number, 'how many responses of a channel had a 4xx status other than 401 or 403'),
+        _term('server_error_rate',      TermType.Number, 'the share of responses of a channel that had a 5xx status'),
+        _term('status_code_count',      TermType.Number,
+            'how many responses an outgoing connection received with a status code it alerts on'),
+        _term('fault_count',            TermType.Number,
+            'how many responses an outgoing SOAP connection received as a fault with a fault code it alerts on'),
+        _term('outcome_count',          TermType.Number,
+            'how many responses an outgoing FHIR connection received as an OperationOutcome with an issue code it alerts on'),
+        _term('connection_failure_count', TermType.Number,
+            'how many calls of an outgoing connection failed before any response arrived'),
+        _term('token_count',            TermType.Number,
+            'how many tokens, input and output added up, an LLM connection used within the window'),
+        _term('truncation_count',       TermType.Number,
+            'how many completions of an LLM connection were cut short by the token limit within the window'),
+        _term('refusal_count',          TermType.Number,
+            'how many completions of an LLM connection the provider refused within the window'),
+        _term('invalid_call_count',     TermType.Number,
+            'how many tool calls of an MCP gateway named a tool it does not expose or arguments its schema refused'),
+        _term('rejection_count',        TermType.Number,
+            'how many tool responses of an MCP gateway a safeguard or the size cap rejected within the window'),
+        _term('throttled_count',        TermType.Number,
+            'how many calls of an MCP gateway a security definition\'s rate limit answered with a 429 within the window'),
+        _term('repeat_call_count',      TermType.Number,
+            'how many times the one session that called one tool of an MCP gateway the most did so within the window'),
+        _term('repeat_call_tool',       TermType.Text,   'the tool the session calling one tool the most called'),
+        _term('repeat_call_session',    TermType.Text,   'the session that called one tool of an MCP gateway the most'),
+        _term('volume_bytes',           TermType.Number,
+            'how many bytes of tool responses an MCP gateway returned within the window'),
+        _term('tool_count',             TermType.Number, 'how many tools an MCP gateway exposes'),
         _term('cert_days_left',         TermType.Number, 'how many days the TLS certificate has left, zero when unmeasured'),
         _term('health_state',           TermType.Choice, 'the health state the remote service reports about itself',
             values=_health_states),
@@ -217,7 +264,6 @@ def alerting_vocabulary() -> 'anydict':
     outcome_terms = [
         _term('action',               TermType.Choice, 'what happens when the rule fires', values=_outcome_actions),
         _term('severity',             TermType.Choice, 'how severe the alert is', values=_outcome_severities),
-        _term('llm_connection',       TermType.Text,   'the LLM connection an alert diagnosis goes through'),
         _term('dashboard_url',        TermType.Text,   'the dashboard address notification links point to'),
         _term('addresses',            TermType.Text,   'the comma-separated addresses an email alert goes to'),
         _term('slack_channel',        TermType.Text,   'the channel a Slack alert posts to'),
@@ -252,6 +298,11 @@ def build_ruleset_document(ruleset_name:'str', zrules_contents:'str') -> 'anydic
     for full_name in _inactive_rule_full_names:
         if full_name in documents:
             documents[full_name]['is_active'] = False
+
+    # Every rule carries the type's Use LLM answer, on out of the box - the LLM explains
+    # the alerts as soon as the default LLM connection is pointed at a real model
+    for rule_document in documents.values():
+        rule_document[Explain_With_LLM_Key] = True
 
     out = {Documents_Key: documents}
     return out
@@ -481,11 +532,29 @@ def _upgrade_vocabulary(backend:'RuleSQLBackend') -> 'bool':
 
 # ################################################################################################################################
 
+def _first_held_documents(historical:'list[anydict]') -> 'anydict':
+    """ Each rule as it read in the oldest version that held it - what the seed of some release
+    stored, before any person had a chance to edit it.
+    """
+
+    # Our response to produce
+    out:'anydict' = {}
+
+    for historical_document in historical:
+        for full_name, rule_document in historical_document[Documents_Key].items():
+            if full_name not in out:
+                out[full_name] = rule_document
+
+    return out
+
+# ################################################################################################################################
+
 def _upgrade_ruleset(backend:'RuleSQLBackend', ruleset_name:'str', zrules_contents:'str') -> 'bool':
-    """ Gives an existing default ruleset the rules a newer release ships. A rule is added only
+    """ Gives an existing default ruleset what a newer release ships. A rule is added only
     when no version of the ruleset ever held it - a rule missing now that some earlier version
-    did hold was deleted by a person and stays deleted, and anything a person edited
-    themselves is never touched.
+    did hold was deleted by a person and stays deleted. A rule that is there already is refreshed
+    only when it still reads exactly as it did in the version that first held it - a rule a person
+    edited themselves is never touched.
     """
     definition = _find_active(backend, ruleset_name, Definition_Type_Ruleset)
 
@@ -497,26 +566,47 @@ def _upgrade_ruleset(backend:'RuleSQLBackend', ruleset_name:'str', zrules_conten
     documents = document[Documents_Key]
 
     shipped = build_ruleset_document(ruleset_name, zrules_contents)
+    shipped_documents = shipped[Documents_Key]
 
-    # What the current document is missing, by each rule's full name
+    # What the current document is missing, by each rule's full name ..
     missing = []
 
-    for full_name in shipped[Documents_Key]:
+    # .. and what it holds in a form other than the one shipping now.
+    differing = []
+
+    for full_name, shipped_document in shipped_documents.items():
         if full_name not in documents:
             missing.append(full_name)
+        elif documents[full_name] != shipped_document:
+            differing.append(full_name)
 
-    # Nothing missing means nothing to store, and the history stays unread
+    # .. and what it still holds of the rules this release retired.
+    retired = [full_name for full_name in _retired_rule_full_names if full_name in documents]
+
+    # Nothing missing, nothing differing and nothing retired means nothing to store, and the history stays unread
     if not missing:
-        return False
+        if not differing:
+            if not retired:
+                return False
+
+    historical = _historical_documents(backend, definition)
 
     # Every rule name any version ever held - what was there once
     # and is gone now was deleted by a person on purpose.
     ever_present = set()
 
-    for historical in _historical_documents(backend, definition):
-        ever_present.update(historical[Documents_Key])
+    for historical_document in historical:
+        ever_present.update(historical_document[Documents_Key])
 
-    added_any = False
+    # Each rule as it first arrived, which is what an untouched rule still reads as
+    first_held = _first_held_documents(historical)
+
+    changed_any = False
+
+    # A retired rule goes whether or not a person touched it
+    for full_name in retired:
+        del documents[full_name]
+        changed_any = True
 
     for full_name in missing:
 
@@ -524,16 +614,25 @@ def _upgrade_ruleset(backend:'RuleSQLBackend', ruleset_name:'str', zrules_conten
         if full_name in ever_present:
             continue
 
-        documents[full_name] = shipped[Documents_Key][full_name]
-        added_any = True
+        documents[full_name] = shipped_documents[full_name]
+        changed_any = True
 
-    # Everything missing was deleted by a person, so there is nothing to store
-    if not added_any:
+    for full_name in differing:
+
+        # A rule that no longer reads as it arrived was edited by a person and stays as they left it
+        if documents[full_name] != first_held[full_name]:
+            continue
+
+        documents[full_name] = shipped_documents[full_name]
+        changed_any = True
+
+    # Everything missing was deleted and everything differing was edited by a person, so there is nothing to store
+    if not changed_any:
         return False
 
     _store_upgrade(backend, definition, document)
 
-    logger.info('Upgraded the default alerting ruleset `%s` with new rules', ruleset_name)
+    logger.info('Upgraded the default alerting ruleset `%s` with the rules of this release', ruleset_name)
     return True
 
 # ################################################################################################################################
@@ -557,8 +656,8 @@ def ensure_alerting_definitions(backend:'RuleSQLBackend') -> 'None':
         created_ruleset = _seed_ruleset(backend, ruleset_name, zrules_contents)
         created_any = created_any or created_ruleset
 
-        # An already-seeded ruleset gains the rules a newer release ships,
-        # each one looked up by its own full name.
+        # An already-seeded ruleset gains the rules a newer release ships and the newer
+        # text of the ones nobody edited, each one looked up by its own full name.
         if not created_ruleset:
             _ = _upgrade_ruleset(backend, ruleset_name, zrules_contents)
 

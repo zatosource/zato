@@ -11,6 +11,7 @@ import logging
 
 # Zato
 from zato.cli.enmasse.util import get_engine_from_type, preprocess_item, SQL_Default_Pool_Size
+from zato.cli.enmasse.util.secrets import encrypt_secret, ensure_encrypted, is_usable_secret, redact_secrets
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.model import SQLConnectionPool, to_json
 from zato.common.odb.query import out_sql_list
@@ -42,7 +43,6 @@ _default_is_active = True
 
 # What the extra column stores when a definition carries no extra options.
 _empty_extra = b''
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -99,12 +99,12 @@ class SQLImporter:
             if name in db_defs:
                 update_def = yaml_def.copy()
                 update_def['id'] = db_defs[name]['id']
-                logger.info('Adding to update: %s', update_def)
+                logger.info('Adding to update: %s', redact_secrets(update_def))
                 to_update.append(update_def)
 
             # Create new definition
             else:
-                logger.info('Adding to create: %s', yaml_def)
+                logger.info('Adding to create: %s', redact_secrets(yaml_def))
                 to_create.append(yaml_def)
 
         return to_create, to_update
@@ -140,11 +140,11 @@ class SQLImporter:
         else:
             out.extra = _empty_extra
 
-        # .. a definition without a password gets a generated one ..
+        # .. a definition without a password gets a generated one and either way it is stored encrypted ..
         if password := sql_definition.get('password'):
-            out.password = password
+            out.password = encrypt_secret(session, password)
         else:
-            out.password = CryptoManager.generate_password(to_str=True)
+            out.password = encrypt_secret(session, CryptoManager.generate_password(to_str=True))
 
         # .. whatever else the definition carries goes to the opaque attributes ..
         set_instance_opaque_attrs(out, sql_definition)
@@ -195,9 +195,13 @@ class SQLImporter:
             connection_type = sql_definition['type']
             out.engine = get_engine_from_type(connection_type)
 
-        # .. a password is updated only if one was actually given ..
-        if password := sql_definition.get('password'):
-            out.password = password
+        # .. a password is updated only if one was actually given, otherwise the stored one is kept
+        # and encrypted in place if it is still in clear text ..
+        password = sql_definition.get('password')
+        if is_usable_secret(password):
+            out.password = encrypt_secret(session, password)
+        else:
+            out.password = ensure_encrypted(session, out.password)
 
         # .. the 'extra' options are a YAML list, joined into the newline-separated string the column stores ..
         if 'extra' in sql_definition:

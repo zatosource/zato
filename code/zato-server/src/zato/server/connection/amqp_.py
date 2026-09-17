@@ -863,18 +863,6 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def edit_channel(self, config:'Bunch') -> 'None':
-        """ Obtains self.lock and updates a channel
-        """
-        with self.lock:
-            self._delete_channel(config)
-            self._create_channel(config)
-
-        old_name = f' ({config.old_name})' if config.old_name != config.name else ''
-        logger.info(f'Updated AMQP channel `{old_name or config.name}` -> `{config.name}` -> {self.get_log_details()}')
-
-# ################################################################################################################################
-
     def _delete_channel(self, config, delete_from_channels=True):
         """ Deletes a channel. Must be called with self.lock held.
         """
@@ -935,27 +923,12 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def edit_outconn(self, config:'Bunch') -> 'None':
-        """ Obtains self.lock and updates an outgoing connection.
-        """
-        with self.lock:
-            self._delete_outconn(config)
-            self._create_outconn(config)
-
-        old_name = f' ({config.old_name})' if config.old_name != config.name else ''
-        logger.info(f'Updated outconn `{config.name}`{old_name} in AMQP connector `{self.config.name}`')
-
-# ################################################################################################################################
-
     def _delete_outconn(self, config:'Bunch') -> 'None':
         """ Deletes an outgoing connection. Must be called with self.lock held.
         """
-        # It will be old_name if this is an edit and name if it a deletion.
-        _name = config.get('old_name') or config.name
-
-        self._producers[_name].stop()
-        del self._producers[_name]
-        del self.outconns[_name]
+        self._producers[config.name].stop()
+        del self._producers[config.name]
+        del self.outconns[config.name]
 
 # ################################################################################################################################
 

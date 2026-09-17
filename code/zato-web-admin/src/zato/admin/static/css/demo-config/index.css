@@ -40,14 +40,14 @@
 .demo-config-master-label {
     font-weight: 700;
     font-size: 15px;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
     cursor: pointer;
 }
 
 /* Where a failed change explains itself, with room to wrap */
 .demo-config-error {
     font-size: 12px;
-    color: var(--wizard-error);
+    color: var(--zato-ui-error);
     overflow-wrap: anywhere;
 }
 
@@ -68,7 +68,7 @@
     gap: 10px;
     padding-bottom: 10px;
     margin-bottom: 10px;
-    border-bottom: 1px solid var(--wizard-border);
+    border-bottom: 1px solid var(--zato-ui-border);
 }
 
 /* Clicking the title flips the card's slider */
@@ -76,7 +76,7 @@
     flex: 1;
     font-weight: 700;
     font-size: 15px;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
     cursor: pointer;
 }
 
@@ -105,7 +105,7 @@
    for the moment its JS timer gives it - plain text, not a badge */
 .demo-config-ok {
     display: none;
-    color: var(--wizard-done);
+    color: var(--zato-ui-done);
     font-size: 11px;
     font-weight: 700;
 }
@@ -150,7 +150,7 @@ a.demo-config-pill:hover {
 /* A kind none of whose objects exist steps back */
 .demo-config-pill-empty {
     background: #eef1f4;
-    color: var(--wizard-text-muted);
+    color: var(--zato-ui-text-muted);
 }
 
 a.demo-config-pill.demo-config-pill-empty:hover {

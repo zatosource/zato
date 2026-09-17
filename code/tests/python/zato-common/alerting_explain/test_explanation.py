@@ -1,0 +1,159 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# Zato
+from zato.common.alerting.explain.explanation import parse_explanation
+from zato.common.json_internal import dumps
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The remediations a skill of the kind under test allows
+_remediations = ['resubmit']
+
+# A well-formed reply proposing the one allowed remediation.
+_reply = dumps({
+    'explanation': 'The remote server replied with HTTP 503 for every call in the window.',
+    'confidence': 'high',
+    'remediation': {'action': 'resubmit'},
+})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestParseExplanation:
+
+    def test_a_well_formed_reply_is_parsed_in_full(self) -> 'None':
+        result = parse_explanation(_reply, _remediations)
+
+        assert result['is_parsed'] is True
+        assert result['explanation'] == 'The remote server replied with HTTP 503 for every call in the window.'
+        assert result['confidence'] == 'high'
+        assert result['remediation'] == {'action': 'resubmit'}
+
+    def test_a_reply_wrapped_in_a_code_fence_is_parsed(self) -> 'None':
+        fenced = '```json\n' + _reply + '\n```'
+
+        result = parse_explanation(fenced, _remediations)
+
+        assert result['is_parsed'] is True
+        assert result['confidence'] == 'high'
+
+    def test_a_prose_reply_is_kept_as_the_explanation(self) -> 'None':
+        text = 'The connection appears to be down and a person should verify the address.'
+
+        result = parse_explanation(text, _remediations)
+
+        assert result['is_parsed'] is False
+        assert result['explanation'] == text
+        assert result['confidence'] == ''
+        assert result['remediation'] is None
+
+    def test_a_json_reply_that_is_not_an_object_is_kept_as_prose(self) -> 'None':
+        result = parse_explanation('["not", "an", "object"]', _remediations)
+
+        assert result['is_parsed'] is False
+        assert result['remediation'] is None
+
+    def test_a_confidence_and_a_remediation_written_as_the_last_lines_of_the_prose_are_lifted_out(self) -> 'None':
+        prose = 'The TCP socket could not be opened to 127.0.0.1:20465.'
+        reply = dumps({'explanation': prose + '\n\nConfidence: High\n\nRemediation: null'})
+
+        result = parse_explanation(reply, _remediations)
+
+        assert result['is_parsed'] is True
+        assert result['explanation'] == prose
+        assert result['confidence'] == 'high'
+        assert result['remediation'] is None
+
+    def test_a_confidence_written_as_the_last_line_without_a_remediation_is_lifted_out(self) -> 'None':
+        prose = 'The remote server replied with HTTP 503 for every call in the window.'
+        reply = dumps({'explanation': prose + '\nconfidence: medium'})
+
+        result = parse_explanation(reply, _remediations)
+
+        assert result['explanation'] == prose
+        assert result['confidence'] == 'medium'
+
+    def test_a_confidence_key_of_its_own_leaves_the_prose_alone(self) -> 'None':
+        prose = 'Every call failed.\n\nConfidence: low'
+        reply = dumps({'explanation': prose, 'confidence': 'high'})
+
+        result = parse_explanation(reply, _remediations)
+
+        assert result['explanation'] == prose
+        assert result['confidence'] == 'high'
+
+    def test_an_unrecognized_confidence_level_is_dropped(self) -> 'None':
+        reply = dumps({'explanation': 'Test explanation text.', 'confidence': 'absolutely certain'})
+
+        result = parse_explanation(reply, _remediations)
+
+        assert result['is_parsed'] is True
+        assert result['confidence'] == ''
+
+    def test_a_remediation_the_skill_does_not_name_is_dropped(self) -> 'None':
+        reply = dumps({'explanation': 'Test explanation text.', 'remediation': {'action': 'delete-the-connection'}})
+
+        result = parse_explanation(reply, _remediations)
+
+        assert result['is_parsed'] is True
+        assert result['remediation'] is None
+
+    def test_a_skill_without_remediations_keeps_none(self) -> 'None':
+        result = parse_explanation(_reply, [])
+
+        assert result['is_parsed'] is True
+        assert result['remediation'] is None
+
+    def test_a_reply_without_a_explanation_is_kept_as_prose(self) -> 'None':
+        reply = dumps({'confidence': 'high'})
+
+        result = parse_explanation(reply, _remediations)
+
+        assert result['is_parsed'] is False
+        assert result['explanation'] == reply
+
+    def test_a_reply_with_a_broken_closing_quote_is_repaired(self) -> 'None':
+
+        # The model escaped the quote closing its explanation, so the document does not parse whole ..
+        reply = '{"explanation": "The server answered 503 for the \\"orders\\" endpoint.\\", ' + \
+            '"confidence": "medium", "remediation": {"action": "resubmit"}}'
+
+        result = parse_explanation(reply, _remediations)
+
+        # .. yet its three keys read back one by one, the same way a clean reply's do
+        assert result['is_parsed'] is True
+        assert result['explanation'].startswith('The server answered 503 for the "orders" endpoint.')
+        assert result['confidence'] == 'medium'
+        assert result['remediation'] == {'action': 'resubmit'}
+
+    def test_a_reply_missing_its_closing_brace_is_repaired(self) -> 'None':
+        reply = '{"explanation": "Every call timed out after 15 seconds.", "confidence": "high", "remediation": null'
+
+        result = parse_explanation(reply, _remediations)
+
+        assert result['is_parsed'] is True
+        assert result['explanation'] == 'Every call timed out after 15 seconds.'
+        assert result['confidence'] == 'high'
+        assert result['remediation'] is None
+
+    def test_a_reply_with_a_key_missing_stays_prose(self) -> 'None':
+
+        # Two of the three keys are there, which is not enough to trust the reading
+        reply = '{"explanation": "Every call timed out.", "confidence": "high"'
+
+        result = parse_explanation(reply, _remediations)
+
+        assert result['is_parsed'] is False
+        assert result['explanation'] == reply
+        assert result['confidence'] == ''
+        assert result['remediation'] is None
+
+# ################################################################################################################################
+# ################################################################################################################################

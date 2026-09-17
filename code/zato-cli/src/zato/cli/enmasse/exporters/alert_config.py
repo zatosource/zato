@@ -46,6 +46,7 @@ extra_to_yaml = {
     Alerting.Extra_Default_To:       'email_to',
     Alerting.Extra_From:             'email_from',
     Alerting.Extra_Dashboard_URL:    'dashboard_url',
+    Alerting.Extra_LLM_Connection:   'llm_connection',
 }
 
 # ################################################################################################################################

@@ -19,6 +19,7 @@ from json import loads
 
 # Bunch
 from zato.common.ext.bunch import Bunch
+from zato.common.file_transfer.api import Default_Verify_How
 
 # SQLAlchemy
 from sqlalchemy import select
@@ -85,6 +86,10 @@ class LocalDirectoryClient:
     def remove(self, remote_path:'str') -> 'None':
         os.remove(self._full_path(remote_path))
 
+    def stat(self, remote_path:'str') -> 'os.stat_result':
+        out = os.stat(self._full_path(remote_path))
+        return out
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -95,6 +100,7 @@ class LocalDirectoryWrapper:
     def __init__(self, base_dir:'str') -> 'None':
         self.config = Bunch(name=Connection_Name)
         self.audit_log = AuditLog(Server_Name)
+        self.verify_how = Default_Verify_How
         self.should_store_content = False
         self._client = LocalDirectoryClient(base_dir)
 

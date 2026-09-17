@@ -21,6 +21,7 @@ from zato.common.api import FileTransfer
 from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.attachment import list_attachments
 from zato.common.audit_log.file_transfer import Operation_Move, Operation_Read
+from zato.common.audit_log.file_transfer_run import Run_Status_No_Directory
 from zato.common.typing_ import cast_
 from zato.server.service.internal.outgoing.file_transfer.process import process_files
 
@@ -84,12 +85,12 @@ def test_a_processed_file_shares_one_cid_and_carries_the_schedule(tmp_path:'any_
         assert os.path.exists(os.path.join(base_dir, Directory, _scheduler.Default_Move_Directory, File_Name))
         assert not os.path.exists(os.path.join(base_dir, Directory, File_Name))
 
-        # The events, in order - the claim rename, the read, the hand-over,
-        # the archive move, the ack and the run summary.
+        # The events, in order - the run's own row, opened first and closed with the summary,
+        # then the claim rename, the read, the hand-over, the archive move and the ack.
         events = get_events()
         assert len(events) == 6
 
-        claim_move, read, delivered, ack_move, acked, run_completed = events
+        run_completed, claim_move, read, delivered, ack_move, acked = events
 
         assert loads(claim_move['data'])['operation'] == Operation_Move
         assert loads(read['data'])['operation'] == Operation_Read
@@ -138,10 +139,10 @@ def test_a_run_summary_counts_a_failure_next_to_a_success(tmp_path:'any_') -> 'N
     """
     class OneFileFails(ServiceStub):
 
-        def invoke(self, service_name:'str', item:'any_') -> 'None':
+        def invoke(self, service_name:'str', item:'any_', cid:'str'='') -> 'None':
             if item.file_name == 'bad.csv':
                 raise Exception(Service_Error)
-            super().invoke(service_name, item)
+            super().invoke(service_name, item, cid)
 
     with audit_db_env(tmp_path):
 
@@ -300,7 +301,7 @@ def test_content_is_stored_on_read_when_opted_in(tmp_path:'any_') -> 'None':
 
 def test_a_missing_directory_leaves_a_run_summary_with_the_note(tmp_path:'any_') -> 'None':
     """ When the polled directory does not exist, the run summary is still written
-    and its note names the reason.
+    and its status names the reason.
     """
     with audit_db_env(tmp_path):
 
@@ -317,9 +318,11 @@ def test_a_missing_directory_leaves_a_run_summary_with_the_note(tmp_path:'any_')
         assert run_completed['event_type'] == AuditEvent.Run_Completed
         assert run_completed['source'] == AuditSource.File_Outgoing
 
+        assert run_completed['outcome'] == AuditOutcome.Error
+        assert run_completed['status'] == Run_Status_No_Directory
+
         run_summary = loads(run_completed['data'])
         assert run_summary['entries'] == 0
-        assert run_summary['note'] == 'Directory does not exist'
 
 # ################################################################################################################################
 # ################################################################################################################################

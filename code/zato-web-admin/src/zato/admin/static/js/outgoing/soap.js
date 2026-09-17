@@ -28,6 +28,7 @@
         // The tab the create and edit dialogs open on.
         defaultTab: 'main',
 
+        // The Alerts tab's own label joins these once the tab reads its config off the page.
         tabLabels: {
             main:         'Main',
             soap:         'SOAP',
@@ -36,8 +37,13 @@
             scheduler:    'Scheduler',
             request:      'Request',
             response:     'Response',
-            callback:     'Callback',
-            health_check: 'Health check'
+            callback:     'Callback'
+        },
+
+        // The Alerts tab's panels on the create and edit dialogs
+        alertsPanelIds: {
+            create: 'out-soap-create-tab-panel-alerts',
+            edit:   'out-soap-edit-tab-panel-alerts'
         },
 
         // The two kinds of request parameter rows, each with a hidden JSON field of its own.
@@ -65,240 +71,17 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    function fieldPrefix(action) {
+    // The rows module reads the same prefix, so it is shared rather than spelled twice
+    $.fn.zato.outgoing.soap.field_prefix = function(action) {
 
         if(action === 'edit') {
             return 'edit-';
         }
 
         return '';
-    }
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    // Reads a hidden JSON field into the rows it stands for. A field that was never filled in and
-    // one holding something other than JSON both mean there are no rows to build.
-    function parseRowsField(selector) {
-
-        var value = $(selector).val();
-
-        if(!value) {
-            return [];
-        }
-
-        try {
-            return JSON.parse(value);
-        }
-        catch(parseError) {
-            return [];
-        }
-    }
-
-    // ////////////////////////////////////////////////////////////////////////
-    // Request parameter rows - each row is a key, a value and the value's Text/JSONata mode,
-    // serialized to the form's hidden JSON fields before the form is submitted.
-    // ////////////////////////////////////////////////////////////////////////
-
-    $.fn.zato.outgoing.soap.add_param_row = function(action, kind, key, value, mode) {
-
-        var row = $('<tr class="request-param-row"></tr>');
-
-        var jsonataCell = $('<td class="request-param-jsonata-cell"></td>');
-        var jsonataCheckbox = $('<input type="checkbox" class="request-param-jsonata" title="Evaluate the value as JSONata">');
-
-        if(mode === config.jsonataMode) {
-            jsonataCheckbox.prop('checked', true);
-        }
-
-        jsonataCell.append(jsonataCheckbox);
-
-        var keyCell = $('<td class="request-param-key-cell"></td>');
-        var keyInput = $('<input type="text" class="request-param-key" placeholder="Name">');
-
-        if(key) {
-            keyInput.val(key);
-        }
-
-        keyCell.append(keyInput);
-
-        var valueCell = $('<td class="request-param-value-cell"></td>');
-        var valueInput = $('<input type="text" class="request-param-value" placeholder="Value">');
-
-        if(value) {
-            valueInput.val(value);
-        }
-
-        valueCell.append(valueInput);
-
-        var removeCell = $('<td class="request-param-remove-cell"></td>');
-        var removeLink = $('<a href="javascript:void(0)" class="request-param-remove" title="Remove" aria-label="Remove"></a>');
-        removeLink.append($.fn.zato.new_remove_icon());
-        removeCell.append(removeLink);
-
-        row.append(jsonataCell);
-        row.append(keyCell);
-        row.append(valueCell);
-        row.append(removeCell);
-
-        $('#request-' + kind + '-rows-' + action).append(row);
-
-        // A newly added row is ready to be typed into right away
-        keyInput.focus();
     };
 
-    // ////////////////////////////////////////////////////////////////////////
-
-    function paramRowsField(action, kind) {
-        return '#id_' + fieldPrefix(action) + 'request_' + kind;
-    }
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    function populateParamRows(action) {
-
-        $.each(config.paramKinds, function(ignored, kind) {
-
-            var container = $('#request-' + kind + '-rows-' + action);
-            container.empty();
-
-            var items = parseRowsField(paramRowsField(action, kind));
-
-            for(var itemIdx = 0; itemIdx < items.length; itemIdx++) {
-                var item = items[itemIdx];
-                $.fn.zato.outgoing.soap.add_param_row(action, kind, item.key, item.value, item.mode);
-            }
-        });
-    }
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    function serializeParamRows(action) {
-
-        $.each(config.paramKinds, function(ignored, kind) {
-
-            var rows = [];
-
-            $('#request-' + kind + '-rows-' + action).find('.request-param-row').each(function() {
-
-                var row = $(this);
-                var key = row.find('.request-param-key').val().trim();
-
-                // A row whose name was left blank is not a parameter at all.
-                if(!key) {
-                    return;
-                }
-
-                var isJsonata = row.find('.request-param-jsonata').prop('checked');
-                var mode = config.textMode;
-
-                if(isJsonata) {
-                    mode = config.jsonataMode;
-                }
-
-                rows.push({
-                    key: key,
-                    value: row.find('.request-param-value').val(),
-                    mode: mode
-                });
-            });
-
-            // No rows at all is stored as nothing rather than as an empty JSON list, which is what
-            // the server side reads as a connection having configured none.
-            var stored = '';
-
-            if(rows.length) {
-                stored = JSON.stringify(rows);
-            }
-
-            $(paramRowsField(action, kind)).val(stored);
-        });
-    }
-
-    // ////////////////////////////////////////////////////////////////////////
-    // Body-credential mapping rows
-    // ////////////////////////////////////////////////////////////////////////
-
-    $.fn.zato.outgoing.soap.add_body_credential_row = function(action, name, position) {
-
-        var row = $('<div class="body-credential-row"></div>');
-
-        var nameInput = $('<input type="text" class="body-credential-name" placeholder="Element name">');
-
-        if(name) {
-            nameInput.val(name);
-        }
-
-        var positionInput = $('<input type="number" class="body-credential-position" placeholder="Position" min="1">');
-
-        if(position) {
-            positionInput.val(position);
-        }
-
-        var removeLink = $('<a href="javascript:void(0)" class="body-credential-remove">Remove</a>');
-
-        row.append(nameInput);
-        row.append(positionInput);
-        row.append(removeLink);
-
-        $('#body-credentials-' + action).append(row);
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    function bodyCredentialsField(action) {
-        return '#id_' + fieldPrefix(action) + 'body_credentials';
-    }
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    function populateBodyCredentialRows(action) {
-
-        var container = $('#body-credentials-' + action);
-        container.empty();
-
-        var items = parseRowsField(bodyCredentialsField(action));
-
-        for(var itemIdx = 0; itemIdx < items.length; itemIdx++) {
-            var item = items[itemIdx];
-            $.fn.zato.outgoing.soap.add_body_credential_row(action, item.name, item.position);
-        }
-    }
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    function serializeBodyCredentialRows(action) {
-
-        var rows = [];
-
-        $('#body-credentials-' + action).find('.body-credential-row').each(function() {
-
-            var row = $(this);
-            var name = row.find('.body-credential-name').val().trim();
-
-            // A mapping without an element name names nothing.
-            if(!name) {
-                return;
-            }
-
-            var mapping = {name: name};
-            var position = row.find('.body-credential-position').val();
-
-            // A mapping without a position prepends, which is what leaving the field empty means.
-            if(position) {
-                mapping.position = parseInt(position, 10);
-            }
-
-            rows.push(mapping);
-        });
-
-        var stored = '';
-
-        if(rows.length) {
-            stored = JSON.stringify(rows);
-        }
-
-        $(bodyCredentialsField(action)).val(stored);
-    }
+    var fieldPrefix = $.fn.zato.outgoing.soap.field_prefix;
 
     // ////////////////////////////////////////////////////////////////////////
 
@@ -313,11 +96,24 @@
             panelPrefix = 'out-soap-edit-tab-panel-';
         }
 
+        var tabLabels = $.extend({}, config.tabLabels, {alerts: $.fn.zato.alerts_tab.tab_label()});
+
         $.fn.zato.form_tabs.reset({
             div_id:       divId,
             panel_prefix: panelPrefix,
             default_tab:  config.defaultTab,
-            tab_labels:   config.tabLabels
+            tab_labels:   tabLabels
+        });
+    }
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // The Alerts tab reads and writes the rendered Django form of one dialog at a time
+    function bindAlertsTab(action) {
+
+        $.fn.zato.alerts_tab.bind({
+            panel_id: config.alertsPanelIds[action],
+            field_prefix: fieldPrefix(action)
         });
     }
 
@@ -343,12 +139,14 @@
 
     function initHowItWorks(action) {
 
+        // The Alerts tab's lines are not table rows, so the walk covers them as well
         $.fn.zato.how_it_works.init({
             badgeId: action + '-how-it-works',
             divId: '#' + action + '-div',
+            fieldSelector: 'table.form-data tr, .decision-line',
             descriptions: $.extend({},
                 $.fn.zato.outgoing.soap.field_descriptions,
-                $.fn.zato.health_check.field_descriptions)
+                $.fn.zato.alerts_tab.descriptions())
         });
     }
 
@@ -368,10 +166,8 @@
             action = 'edit';
         }
 
-        serializeBodyCredentialRows(action);
-
-        // The message and SOAP header rows are serialized to their hidden JSON fields the same way
-        serializeParamRows(action);
+        // The body-credential, message and SOAP header rows are serialized to their hidden JSON fields
+        $.fn.zato.outgoing.soap.rows.serialize(action);
 
         return true;
     };
@@ -381,9 +177,9 @@
     $.fn.zato.outgoing.soap.create = function() {
         resetTabs('create');
         $.fn.zato.data_table._create_edit('create', 'Create a new outgoing SOAP connection', null);
-        populateBodyCredentialRows('create');
-        populateParamRows('create');
+        $.fn.zato.outgoing.soap.rows.populate('create');
         toggleCallback('create');
+        bindAlertsTab('create');
         initHowItWorks('create');
     };
 
@@ -393,8 +189,7 @@
 
         resetTabs('edit');
         $.fn.zato.data_table._create_edit('edit', 'Update the outgoing SOAP connection', id);
-        populateBodyCredentialRows('edit');
-        populateParamRows('edit');
+        $.fn.zato.outgoing.soap.rows.populate('edit');
 
         // The callback name lands in the widget matching the callback type stored
         var item = $.fn.zato.data_table.data[id];
@@ -413,9 +208,10 @@
 
         toggleCallback('edit');
 
-        // The health check tab's widgets are populated the same way
+        // The health check line of the Alerts tab reads its hidden inputs, populated the same way
         $.fn.zato.health_check.populate('edit', item);
 
+        bindAlertsTab('edit');
         initHowItWorks('edit');
     };
 
@@ -451,8 +247,7 @@
         'response_map', 'response_map_mode',
         'callback_type', 'callback_name',
         'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_job_id',
-        'health_check_run_every', 'health_check_run_unit', 'health_check_notify_on',
-        'health_check_job_id', 'health_check_callback_type', 'health_check_callback_name'
+        'health_check_run_every', 'health_check_run_unit', 'health_check_job_id'
     ];
 
     var hiddenRetryFields = [
@@ -544,6 +339,7 @@
         row += String.format(
             '<td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping(\'{0}\', this)" class="ping-link">Ping</a></td>',
             item.id);
+        row += String.format('<td><a href="javascript:$.fn.zato.outgoing.soap.invoke(\'{0}\')">Invoke</a></td>', item.id);
 
         row += String.format('<td><a href="javascript:$.fn.zato.outgoing.soap.edit(\'{0}\')">Edit</a></td>', item.id);
         row += String.format('<td><a href="javascript:$.fn.zato.outgoing.soap.delete_(\'{0}\');">Delete</a></td>', item.id);
@@ -563,15 +359,14 @@
             item.callback_name = item['callback_' + item.callback_type];
         }
 
-        if(!item.health_check_callback_name && item.health_check_callback_type) {
-            item.health_check_callback_name = item['health_check_callback_' + item.health_check_callback_type];
-        }
-
         row += hiddenCells(item, hiddenInvocationFields);
 
         row += String.format('<td class="ignore">{0}</td>', toDjangoBool(item.is_audit_log_active));
 
         row += hiddenCells(item, hiddenRetryFields);
+
+        // The Alerts tab's fields ride in the row for the edit form to read
+        row += $.fn.zato.alerts_tab.hidden_cells(item);
 
         if(include_tr) {
             row += '</tr>';
@@ -680,6 +475,11 @@
 
     $(document).ready(function() {
 
+        // The Alerts tab reads its config off the page before anything else reads the tab
+        $.fn.zato.alerts_tab.init({config_id: 'out-soap-alerts-tab-config'});
+        $.fn.zato.live_form_updates.register('create', $.fn.zato.alerts_tab.live_configs(''));
+        $.fn.zato.live_form_updates.register('edit', $.fn.zato.alerts_tab.live_configs('edit-'));
+
         $('#data-table').tablesorter();
         $.fn.zato.data_table.class_ = $.fn.zato.data_table.OutgoingSOAP;
         $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.soap.data_table.new_row;
@@ -696,18 +496,6 @@
         $('#edit-div').dialog('option', 'width', config.dialogWidth);
 
         $.fn.zato.data_table.before_submit_hook = $.fn.zato.outgoing.soap.before_submit_hook;
-
-        // .. removing a body-credential mapping row ..
-        $(document).on('click', '.body-credential-remove', function() {
-            $(this).closest('.body-credential-row').remove();
-            return false;
-        });
-
-        // .. removing a request parameter row ..
-        $(document).on('click', '.request-param-remove', function() {
-            $(this).closest('.request-param-row').remove();
-            return false;
-        });
 
         // .. attach date-time pickers to the scheduler start date fields in both popups ..
         var pickerIds = ['#id_scheduler_start_date', '#id_edit-scheduler_start_date'];
@@ -729,9 +517,6 @@
 
             toggleCallback(action);
         });
-
-        // .. the health check tab manages its own callback widgets the same way.
-        $.fn.zato.health_check.init();
 
         var uniqueConstraints = [
             {field: 'name', entity_type: 'outgoing_soap', attr_name: 'name'}

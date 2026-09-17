@@ -279,8 +279,9 @@ class TestMLLPOutconnWire:
 
 # ################################################################################################################################
 
-    def test_06_outconn_to_dead_port_returns_ae(self, zato_client:'object', mllp_port:'int') -> 'None':
-        """ Creates an outconn pointing to a dead port and verifies AE ACK when the forward service tries to use it.
+    def test_06_outconn_to_dead_port_returns_ar(self, zato_client:'object', mllp_port:'int') -> 'None':
+        """ Creates an outconn pointing to a dead port and verifies an AR ACK when the forward service
+        tries to use it - the service failing on the dead port is a transient failure the sender may retry.
         """
 
         dead_port = _find_free_port()
@@ -329,13 +330,13 @@ class TestMLLPOutconnWire:
         # The previous channel was deleted in test_05, so wait until the listener is up again
         wait_for_port_open(mllp_port)
 
-        # .. send a message and expect AE ACK ..
+        # .. send a message and expect AR ACK ..
         message_bytes = _build_adt_a01('DEAD-001')
         ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         segments = _parse_ack_segments(ack_bytes)
 
         msa_segment = _find_segment(segments, 'MSA|')
-        assert 'MSA|AE|DEAD-001' in msa_segment
+        assert 'MSA|AR|DEAD-001' in msa_segment
 
         err_segment = _find_segment(segments, 'ERR|')
         assert err_segment

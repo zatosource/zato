@@ -193,7 +193,7 @@ class TestApplyTypeConfig:
 
 # ################################################################################################################################
 
-    def test_the_use_llm_checkbox_follows_the_diagnose_rule(self, backend:'RuleSQLBackend') -> 'None':
+    def test_the_use_llm_checkbox_writes_the_key_onto_every_rule(self, backend:'RuleSQLBackend') -> 'None':
 
         # The same post-shaped input the Use LLM checkbox sends - off first ..
         changed = apply_type_config(backend, _rest_type, actor=_actor, values={'use_llm': False})
@@ -203,9 +203,10 @@ class TestApplyTypeConfig:
         document = deserialize_document(definition.document)
         documents = document[Documents_Key]
 
-        # .. only the diagnose rule flipped, the other rules stayed as they were ..
-        assert documents[f'{_rest_ruleset}_Error_Rate_Diagnose']['is_active'] is False
-        assert config_map.is_rule_active(documents[f'{_rest_ruleset}_Connection_Down']) is True
+        # .. every rule of the type carries the key off and none of them was deactivated ..
+        for rule_document in documents.values():
+            assert rule_document[config_map.Explain_With_LLM_Key] is False
+            assert config_map.is_rule_active(rule_document) is True
 
         # .. and the checkbox reads back off.
         values = config_map.read_type_values(_rest_type, documents)

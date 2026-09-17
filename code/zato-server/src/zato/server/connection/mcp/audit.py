@@ -11,6 +11,7 @@ from math import ceil
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.common import MCPAttr
 from zato.common.json_internal import dumps
 
 # ################################################################################################################################
@@ -32,6 +33,14 @@ Method_Auth_Rejected = 'auth-rejected'
 
 # What a request whose method could not be parsed at all audits as
 Method_Unknown = 'unknown'
+
+# Marker used as the method of requests the caller's own rate limit refused with a 429 -
+# the gateway never read their JSON-RPC body.
+Method_Rate_Limited = 'rate-limited'
+
+# The keys of the shaping trace that also become attributes of the row, so the alert collectors
+# can count the responses a safeguard or the size cap refused and the ones the cap cut short
+_trace_attr_names = (MCPAttr.Reject_Kind, MCPAttr.Was_Truncated, MCPAttr.Tokens_Before, MCPAttr.Tokens_After)
 
 # The fixed mapping of methods to audit event types - methods outside this set,
 # e.g. ping or notifications/initialized, audit as their literal method name.
@@ -147,15 +156,30 @@ def build_audit_event(
         'request_size': request_size,
     }
 
-    # .. errors additionally record what the response reported ..
+    # .. the attributes the alert collectors count in SQL travel next to the row, the method
+    # and the request's bytes always ..
+    attrs:'stranydict' = {
+        MCPAttr.Method: method,
+        MCPAttr.Request_Size: request_size,
+    }
+
+    # .. errors additionally record what the response reported, the code as an attribute too ..
     if error is not None:
         data['error_code'] = error.get('code')
         data['error_message'] = error.get('message')
 
-    # .. and what shaping did to the response goes in as it was traced -
-    # the trace only ever carries the keys of stages that found something.
+        if data['error_code'] is not None:
+            attrs[MCPAttr.Error_Code] = data['error_code']
+
+    # .. and what shaping did to the response goes in as it was traced - the trace only ever
+    # carries the keys of stages that found something, and the ones the collectors count
+    # become attributes of the row as well ..
     if trace:
         data.update(trace)
+
+        for attr_name in _trace_attr_names:
+            if attr_name in trace:
+                attrs[attr_name] = trace[attr_name]
 
     # .. and this is the whole published mapping - the duration column holds whole
     # milliseconds for the listings, rounded up so a sub-millisecond request never
@@ -173,6 +197,54 @@ def build_audit_event(
         'outcome': outcome,
         'duration_ms': ceil(duration_ms),
         'data': dumps(data),
+        'attrs': attrs,
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def build_rate_limit_audit_event(
+    gateway_name:'str',
+    sec_def_name:'str',
+    cid:'str',
+    session_id:'strnone',
+    remote_address:'str',
+    retry_after_seconds:'int',
+    request_size:'int',
+    ) -> 'stranydict':
+    """ The audit event of a request an authenticated caller's own rate limit refused - the gateway
+    answered 429 before any JSON-RPC processing, so the row names the caller and when it may retry
+    and nothing about a method or a tool.
+    """
+    if session_id is None:
+        session_id = ''
+
+    data:'stranydict' = {
+        'remote_address': remote_address,
+        'method': Method_Rate_Limited,
+        'request_size': request_size,
+        'retry_after_seconds': retry_after_seconds,
+    }
+
+    attrs:'stranydict' = {
+        MCPAttr.Method: Method_Rate_Limited,
+        MCPAttr.Request_Size: request_size,
+    }
+
+    out:'stranydict' = {
+        'source': AuditSource.MCP,
+        'event_type': AuditEvent.Rate_Limited,
+        'object_name': gateway_name,
+        'cid': cid,
+        'endpoint': '',
+        'ext_client_id': sec_def_name,
+        'sub_key': session_id,
+        'size': 0,
+        'outcome': AuditOutcome.Error,
+        'duration_ms': 0,
+        'data': dumps(data),
+        'attrs': attrs,
     }
 
     return out

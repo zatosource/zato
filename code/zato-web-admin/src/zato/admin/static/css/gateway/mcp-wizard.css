@@ -4,7 +4,7 @@
  * Everything the wizard shares with other wizards - the card, the step
  * strip, the decision lines, the review, the footer and the popover
  * micro-forms - comes from shared/wizard-kit.css and
- * shared/wizard-lines.css. This file holds only what is MCP's own:
+ * shared/decision-lines.css. This file holds only what is MCP's own:
  * the badge picker sections of step 1 and the field grids inside the
  * PII and content safety cards.
  */
@@ -17,7 +17,7 @@
    "Allow agent filters" - the shared 14.5em default would push the
    answers far off to the right */
 #mcp-wizard {
-    --wizard-line-label-width: 9.5em;
+    --decision-line-label-width: 9.5em;
 
     /* One width for the Name and URL path labels, so both inputs start
        in the same column - nowrap below keeps URL path on one line.
@@ -41,7 +41,7 @@
 
 /* The shared width lines the values up in a column - nowrap keeps the
    longest label on one line inside it */
-#mcp-wizard .wizard-line-label {
+#mcp-wizard .decision-line-label {
     white-space: nowrap;
 }
 
@@ -49,7 +49,7 @@
    More options line lives in a section of its own - the kit's rhythm
    tokens are set to one value for this step body */
 #mcp-wizard-step-body-1 {
-    --wizard-lines-gap: 16px;
+    --decision-lines-gap: 16px;
     --wizard-section-space: 16px;
 }
 
@@ -135,8 +135,8 @@
     min-width: 190px;
     overflow-y: scroll;
     scrollbar-width: thin;
-    scrollbar-color: var(--wizard-border) transparent;
-    --kit-tree-guide: var(--wizard-border);
+    scrollbar-color: var(--zato-ui-border) transparent;
+    --kit-tree-guide: var(--zato-ui-border);
     --kit-tree-inset: 8px;
     --kit-tree-child-indent: 10px;
     --kit-tree-stub-width: 10px;
@@ -152,7 +152,7 @@
 }
 
 .mcp-tool-source-list::-webkit-scrollbar-thumb {
-    background: var(--wizard-border);
+    background: var(--zato-ui-border);
     border-radius: var(--mcp-tool-scrollbar-width);
 }
 
@@ -235,7 +235,7 @@
     align-items: center;
     justify-items: start;
     font-size: 12px;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
     cursor: pointer;
     transition: var(--wizard-text-off-transition);
 }
@@ -254,15 +254,15 @@
     height: 24px;
     padding: 0 6px;
     font-size: 12px;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
     background: #fff;
-    border: 1px solid var(--wizard-border-strong);
+    border: 1px solid var(--zato-ui-border-strong);
     border-radius: 3px;
 }
 
 .mcp-wizard-field-grid select:focus,
 .mcp-wizard-field-grid input[type="text"]:focus {
-    border-color: var(--wizard-accent);
+    border-color: var(--zato-ui-accent);
 }
 
 /* The allow list holds a list of hosts - the label sits above and the
@@ -296,7 +296,7 @@
 
 .mcp-wizard-pii-selects > label {
     font-size: 12px;
-    color: var(--wizard-text);
+    color: var(--zato-ui-text);
 }
 
 /* The PII card's switch rows live in two blocks with the multi-selects

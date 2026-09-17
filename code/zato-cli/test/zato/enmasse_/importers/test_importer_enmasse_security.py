@@ -22,6 +22,7 @@ from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.security import SecurityImporter
+from zato.cli.enmasse.util.secrets import is_encrypted
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -100,6 +101,7 @@ class TestEnmasseSecurity(TestCase):
             self.assertIn(instance.name, self.importer.sec_defs)
             self.assertIn(instance.username, {'enmasse.1', 'enmasse.2', 'enmasse.3'})
             self.assertIsNotNone(instance.password)
+            self.assertTrue(is_encrypted(instance.password))
 
 # ################################################################################################################################
 
@@ -124,6 +126,7 @@ class TestEnmasseSecurity(TestCase):
             self.assertTrue(instance.name.startswith('enmasse.bearer_token.'))
             self.assertIsNotNone(instance.username)
             self.assertIsNotNone(instance.password)
+            self.assertTrue(is_encrypted(instance.password))
 
 # ################################################################################################################################
 
@@ -266,6 +269,7 @@ class TestEnmasseSecurity(TestCase):
         for instance in sec_created:
             self.assertIn(instance.name, self.importer.sec_defs)
             self.assertIsNotNone(instance.password)
+            self.assertTrue(is_encrypted(instance.password))
             created_by_name[instance.name] = instance
 
         for item in wss_defs:
@@ -388,6 +392,7 @@ class TestEnmasseSecurity(TestCase):
             self.assertIn(instance.name, {'enmasse.apikey.1', 'enmasse.apikey.2'})
             self.assertIn(instance.username, {'enmasse.1', 'enmasse.2', 'enmasse.3'})
             self.assertIsNotNone(instance.password)
+            self.assertTrue(is_encrypted(instance.password))
 
 # ################################################################################################################################
 

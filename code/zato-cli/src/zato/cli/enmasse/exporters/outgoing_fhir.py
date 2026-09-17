@@ -10,7 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common.api import GENERIC
+from zato.cli.enmasse.util.alerts import group_alerts
+from zato.cli.enmasse.util.invocation import Health_Check_Fields
+from zato.common.alerting.object_config import Alerts_Key, conn_type_to_alert_type
+from zato.common.api import GENERIC, HTTP_SOAP
 from zato.common.hl7.fhir.fields import Outgoing_Fields, Outgoing_Security_Id_Key, Outgoing_Security_Name_Key
 from zato.common.odb.model import SecurityBase, to_json
 from zato.common.odb.query.generic import connection_list
@@ -30,6 +33,12 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_alert_type = conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR]
+_health_check = HTTP_SOAP.HealthCheck
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -106,6 +115,15 @@ class OutgoingFHIRExporter:
                     continue
 
                 item[field.name] = value
+
+            # .. a health check travels as how often it runs ..
+            if row.get(_health_check.Field_Run_Every):
+                for field_name in Health_Check_Fields:
+                    item[field_name] = row[field_name]
+
+            # .. the alert settings the connection sets of its own go under one alerts mapping ..
+            if alerts := group_alerts(row, _alert_type):
+                item[Alerts_Key] = alerts
 
             # .. and add it to the output.
             exported.append(item)

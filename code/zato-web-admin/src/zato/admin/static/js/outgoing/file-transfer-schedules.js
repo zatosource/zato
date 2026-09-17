@@ -152,10 +152,10 @@ $.fn.zato.outgoing.file_transfer.schedules.interval.save = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.wizard_kit.forms.setup($.fn.zato.outgoing.file_transfer.schedules.interval, {
+$.fn.zato.micro_forms.setup($.fn.zato.outgoing.file_transfer.schedules.interval, {
     descriptors: {'run_every': $.fn.zato.outgoing.file_transfer.interval.descriptor},
     showCancel: true,
-    showHelp: false,
+    showHowItWorks: false,
     doneLabel: $.fn.zato.outgoing.file_transfer.schedules.config.saveLabel,
     onDone: $.fn.zato.outgoing.file_transfer.schedules.interval.save
 });

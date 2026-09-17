@@ -126,8 +126,7 @@ class Create(ZatoCommand):
             create_openapi_channel(session, cluster, openapi_handler_service)
             self.add_pubsub_rest_channels(session, cluster)
 
-            if 0: # alerting_disabled
-                self.add_alert_notification_connections(session, cluster)
+            self.add_alert_notification_connections(session, cluster)
 
             # Run ODB post-processing tasks
             odb_post_process.run()
@@ -294,24 +293,21 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_alert_notification_connections(self, session, cluster):
-        """ Adds the default alert notification connections - one Slack, one Microsoft Teams,
-        one SMTP and one LLM connection for alert diagnoses, all inactive
-        with placeholder details for people to fill in.
+        """ Adds the default alert notification connections - one Slack, one Microsoft Teams
+        and one SMTP, all inactive with placeholder details for people to fill in.
         """
 
         # Zato
-        from zato.common.alerting.names import get_llm_conn_name, get_notification_conn_name
+        from zato.common.alerting.names import get_notification_conn_name
         from zato.common.api import EMAIL, GENERIC
         from zato.common.odb.model import GenericConn, SMTP
 
         conn_name = get_notification_conn_name()
 
-        # Slack, Microsoft Teams and the LLM connection are generic connections
-        # and differ only by their type and name.
+        # Slack and Microsoft Teams are generic connections and differ only by their type.
         generic_details = (
             (conn_name, GENERIC.CONNECTION.TYPE.CHAT_SLACK),
             (conn_name, GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS),
-            (get_llm_conn_name(), GENERIC.CONNECTION.TYPE.OUTCONN_LLM),
         )
 
         for name, type_ in generic_details:
@@ -330,7 +326,9 @@ class Create(ZatoCommand):
 
             session.add(connection)
 
-        # SMTP has a table of its own
+        # SMTP has a table of its own - it carries no password until a person sets one, the same
+        # as a connection created from the dashboard, because a password on its own, with no
+        # username next to it, would make the connection log in to a server that asks for no login.
         smtp_conn = SMTP()
         smtp_conn.name = conn_name
         smtp_conn.is_active = False
@@ -339,7 +337,6 @@ class Create(ZatoCommand):
         smtp_conn.timeout = 300
         smtp_conn.is_debug = False
         smtp_conn.username = ''
-        smtp_conn.password = uuid4().hex
         smtp_conn.mode = EMAIL.SMTP.MODE.STARTTLS
         smtp_conn.ping_address = ''
 

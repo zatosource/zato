@@ -1,7 +1,7 @@
 {{ message }}
-{% if diagnosis %}
+{% if explanation %}
 
-Diagnosis ({{ confidence }}): {{ diagnosis }}
+Explanation{% if confidence %} ({{ confidence }}){% endif %}: {{ explanation }}
 {% endif %}
 {% if link %}
 

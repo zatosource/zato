@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import TestCase, main
 
 # Zato
-from zato.cli.enmasse.importer import get_generic_connection_type
+from zato.cli.enmasse.importer.config import get_generic_connection_type
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -12,6 +12,8 @@ import logging
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item, security_needs_update
+from zato.cli.enmasse.util.alerts import alerts_need_update, take_alert_attrs
+from zato.common.alerting.object_config import Alerts_Key, alert_type_channels
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, Service, to_json
 from zato.common.util.api import utcnow
@@ -30,6 +32,9 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# The name the alerts helpers call a REST channel by in their messages
+_connection_type = 'channel_rest'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,7 +93,7 @@ class ChannelImporter:
                 # Compare standard attributes (excluding security and groups)
                 for key, value in item.items():
                     if key not in ['security', 'groups', 'gateway_service_list', 'rate_limiting', 'response_cache',
-                        'is_audit_log_active',
+                        'is_audit_log_active', Alerts_Key,
                         'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor'] \
                         and key in db_def and db_def[key] != value:
                         logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
@@ -125,6 +130,10 @@ class ChannelImporter:
 
                 # Check the deprecation attributes
                 if self._deprecation_needs_update(item, db_def):
+                    needs_update = True
+
+                # Check the alert settings
+                if alerts_need_update(item, db_def, alert_type_channels):
                     needs_update = True
 
                 if needs_update:
@@ -341,6 +350,8 @@ class ChannelImporter:
         logger.info('Creating REST channel: %s', name)
         logger.info('Channel definition: %s', channel_def)
 
+        alert_attrs = take_alert_attrs(channel_def, alert_type_channels, _connection_type, session)
+
         service_name = channel_def['service']
         service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).one()
         cluster = self.importer.get_cluster(session)
@@ -364,7 +375,7 @@ class ChannelImporter:
         channel.transport = URL_TYPE.PLAIN_HTTP
         channel.url_path = channel_def['url_path']
         channel.method = channel_def.get('method', '') or ''
-        channel.is_active = True
+        channel.is_active = channel_def.get('is_active', True)
         channel.is_internal = False
         channel.soap_action = '' # Must be an empty string
 
@@ -420,8 +431,10 @@ class ChannelImporter:
         else:
             opaque_attrs['deprecation_since'] = ''
 
-        if opaque_attrs:
-            set_instance_opaque_attrs(channel, opaque_attrs)
+        # The alert settings, every one of them, over the defaults
+        opaque_attrs.update(alert_attrs)
+
+        set_instance_opaque_attrs(channel, opaque_attrs)
 
         session.add(channel)
         return channel
@@ -436,6 +449,8 @@ class ChannelImporter:
 
         channel = session.query(HTTPSOAP).filter_by(id=channel_id).one()
         logger.info('Current channel security_id before update: %s', channel.security_id)
+
+        alert_attrs = take_alert_attrs(channel_def, alert_type_channels, _connection_type, session)
 
         channel.url_path = channel_def['url_path']
 
@@ -515,8 +530,10 @@ class ChannelImporter:
         else:
             opaque_attrs['deprecation_since'] = ''
 
-        if opaque_attrs:
-            set_instance_opaque_attrs(channel, opaque_attrs)
+        # The alert settings, every one of them, over the defaults
+        opaque_attrs.update(alert_attrs)
+
+        set_instance_opaque_attrs(channel, opaque_attrs)
 
         session.add(channel)
         return channel

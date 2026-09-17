@@ -20,6 +20,7 @@ import smbclient
 # Zato
 from zato.common.audit_log.api import AuditLog, ModuleCtx as AuditLogCtx
 from zato.common.crypto.api import CryptoManager
+from zato.common.file_transfer.api import Default_Verify_How
 from zato.common.test.smb_ import SMBTestServer
 from zato.common.typing_ import cast_
 from zato.server.connection.smb import SMBConnection
@@ -81,6 +82,7 @@ class _TestWrapper:
     def __init__(self, client:'SMBClient') -> 'None':
         self.client_object        = client
         self.should_store_content = False
+        self.verify_how           = Default_Verify_How
         self.audit_log            = AuditLog('test-outconn-smb')
 
         self.config = Bunch()

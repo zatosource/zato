@@ -108,8 +108,13 @@ public class HapiMllpClient {
             ADT_A01 adt = new ADT_A01();
             adt.initQuickstart("ADT", triggerEvent, "P");
 
-            // An admission message carries the patient it admits
+            // An admission message carries the event it announces - the quickstart fills MSH alone
+            // and an EVN left empty is not encoded, so without these two a real A01 has no EVN at all ..
             Terser adtTerser = new Terser(adt);
+            adtTerser.set("/EVN-1", triggerEvent);
+            adtTerser.set("/EVN-2", adtTerser.get("/MSH-7"));
+
+            // .. and the patient it admits
             adtTerser.set("/PID-3-1", "12345");
             adtTerser.set("/PID-5-1", "Doe");
             adtTerser.set("/PID-5-2", "John");

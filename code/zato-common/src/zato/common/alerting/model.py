@@ -18,14 +18,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 # Zato
-from zato.common.typing_ import dict_field
+from zato.common.typing_ import dict_field, list_field
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import stranydict, strlist
     stranydict = stranydict
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,12 +60,12 @@ class AlertAction:
 # ################################################################################################################################
 
 class AlertSeverity:
-    """ The severity of a finding - critical findings are always dispatched,
+    """ The severity of a finding - error findings are always dispatched,
     regardless of dedup and digest settings.
     """
     Info     = 'info'
     Warning  = 'warning'
-    Critical = 'critical'
+    Error    = 'error'
 
 # ################################################################################################################################
 
@@ -103,6 +104,17 @@ class Finding:
     # The severity - one of AlertSeverity.
     severity: str = AlertSeverity.Warning
 
+    # The fact the finding was built from - every measure the collectors took of the object,
+    # what the explain service reads its evidence queries off.
+    fact: 'stranydict' = dict_field()
+
+    # The thresholds the rule compared against, as they were in force for the object -
+    # the rule's own defaults with the object's numbers over them.
+    thresholds: 'stranydict' = dict_field()
+
+    # The measures of the fact the rule read - what the evidence is collected for.
+    measures: 'strlist' = list_field()
+
 # ################################################################################################################################
 
 def new_finding(
@@ -113,11 +125,15 @@ def new_finding(
     *,
     link:'str' = '',
     severity:'str' = AlertSeverity.Warning,
+    fact:'stranydict | None' = None,
+    thresholds:'stranydict | None' = None,
+    measures:'strlist | None' = None,
     ) -> 'Finding':
     """ Builds one finding.
     """
 
-    # Our response to produce
+    # Our response to produce - the fields are assigned here because init=False
+    # means the field factories never run
     out = Finding()
 
     out.kind = kind
@@ -126,6 +142,19 @@ def new_finding(
     out.message = message
     out.link = link
     out.severity = severity
+
+    if fact is None:
+        fact = {}
+
+    if thresholds is None:
+        thresholds = {}
+
+    if measures is None:
+        measures = []
+
+    out.fact = fact
+    out.thresholds = thresholds
+    out.measures = measures
 
     return out
 
@@ -165,6 +194,9 @@ class AlertRule:
     # the existing alert's count instead of raising a new one.
     dedup_window_seconds: int = Default_Dedup_Window_Seconds
 
+    # Whether the LLM explains every alert the rule raises before the action delivers it.
+    explain_with_llm: bool = False
+
 # ################################################################################################################################
 
 def new_rule(
@@ -178,6 +210,7 @@ def new_rule(
     config:'stranydict | None' = None,
     dedup_window_seconds:'int' = Default_Dedup_Window_Seconds,
     is_active:'bool' = True,
+    explain_with_llm:'bool' = False,
     ) -> 'AlertRule':
     """ Builds one alerting rule.
     """
@@ -199,6 +232,7 @@ def new_rule(
     out.action_config = action_config
     out.config = config
     out.dedup_window_seconds = dedup_window_seconds
+    out.explain_with_llm = explain_with_llm
 
     return out
 

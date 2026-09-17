@@ -16,7 +16,10 @@ var forms = wizard.forms;
 // A page is a list of entries. An entry is either one field spec, shown on
 // its own line, or a list of field specs, shown side by side in one row.
 // A spec's optional width pins a field down to that many pixels.
-$.fn.zato.wizard_kit.forms.setup(wizard, {
+$.fn.zato.micro_forms.setup(wizard, {
+
+    // The class the popovers wear, under which wizard-kit.css sizes their switches
+    popupClass: 'wizard-micro-form',
 
     descriptors: {
 
@@ -256,7 +259,7 @@ forms.registerKind('securityList', {
         head.className = 'mllp-wizard-security-head';
 
         var listLabel = document.createElement('label');
-        listLabel.className = 'wizard-tippy-label';
+        listLabel.className = 'micro-form-label';
         listLabel.setAttribute('for', forms.inputId('rest_security_id'));
         listLabel.setAttribute('data-help-placement', 'left');
         listLabel.textContent = fieldSpec.label;
@@ -298,7 +301,7 @@ forms.registerKind('securityList', {
 
                 // The badge sits inside the form while the form is on screen, and the
                 // body is where it goes once tippy has moved it out
-                var form = disabledBadge.closest('.wizard-tippy-form');
+                var form = disabledBadge.closest('.micro-form');
 
                 if(form === null) {
                     return document.body;
