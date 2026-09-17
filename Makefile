@@ -13,7 +13,7 @@
 	test-mcp test-bearer test-graphql test-grpc \
 	test-as2 test-as4 test-edifact test-x12 test-soap \
 	test-llm \
-	test-sql test-oracle-db test-aws test-sdk test-microsoft-cloud test-salesforce \
+	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce \
 	test-hl7 test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-alerting test-destinations test-analytics test-demo-seed test-logging \
@@ -819,6 +819,12 @@ test-oracle-db: ## Outgoing Oracle DB connection tests against a live Oracle con
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_oracle_db_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-mssql-db: ## Outgoing MS SQL connection tests against a live MS SQL Developer container, including a live Zato server and stored procedure calls.
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/mssql_db_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mssql_db_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-microsoft-cloud: ## Microsoft 365 connection tests through a live Zato server against a simulated Microsoft cloud.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/microsoft_cloud_live/ \
@@ -1104,7 +1110,7 @@ Zato_Test_Toolchain := \
 # test-as2
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-mongodb test-es \
-	test-sql test-oracle-db test-microsoft-cloud test-salesforce test-bearer \
+	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
 	test-ibm-mq test-kafka test-sdk test-hl7 test-llm test-rule-engine test-enmasse
 
 # The whole browser and dashboard suite
