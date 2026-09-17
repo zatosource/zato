@@ -397,8 +397,8 @@ class Service:
     odb:'ODBManager'
     static_config:'Bunch'
 
-    email:'EMailAPI | None' = None
-    patterns: 'PatternsFacade | None' = None
+    email:'EMailAPI' = None
+    patterns: 'PatternsFacade' = None
 
     amqp = AMQPFacade()
     commands = CommandsFacade()
