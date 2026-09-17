@@ -12,6 +12,7 @@ from sysconfig import get_paths
 
 # Zato
 from zato.common.exception import ZatoException
+from zato.common.user_config import UserConfig, UserConfigFile, UserConfigSection
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,6 +28,7 @@ _zato_module_prefix = 'zato.'
 _source_indent      = '    '
 _block_separator    = '\n\n'
 _keys_separator     = ', '
+_user_config_suffix = '.ini'
 
 _paths = get_paths()
 _library_paths = (_paths['stdlib'], _paths['platstdlib'], _paths['purelib'], _paths['platlib'])
@@ -48,9 +50,17 @@ def _get_message(e:'BaseException') -> 'str':
     elif isinstance(e, KeyError):
         out = e.args[0]
 
-    # .. an AttributeError from a dict is a missing key, so the existing ones are listed ..
+    # .. an AttributeError from user config is a missing file, section or option ..
     elif isinstance(e, AttributeError):
-        if isinstance(e.obj, dict):
+        if isinstance(e.obj, UserConfig):
+            out = _get_missing_file_message(e.name, e.obj)
+        elif isinstance(e.obj, UserConfigFile):
+            out = _get_missing_section_message(e.name, e.obj)
+        elif isinstance(e.obj, UserConfigSection):
+            out = _get_missing_option_message(e.name, e.obj)
+
+        # .. and from any other dict it is a missing key, so the existing ones are listed ..
+        elif isinstance(e.obj, dict):
             out = _get_missing_key_message(e.name, e.obj)
         else:
             out = str(e)
@@ -63,18 +73,79 @@ def _get_message(e:'BaseException') -> 'str':
 
 # ################################################################################################################################
 
-def _get_missing_key_message(name:'strnone', data:'anydict') -> 'str':
+def _format_keys(data:'anydict') -> 'str':
 
     keys:'strlist' = []
 
     for key in sorted(data):
         keys.append(f'`{key}`')
 
-    if keys:
-        existing = _keys_separator.join(keys)
+    out = _keys_separator.join(keys)
+    return out
+
+# ################################################################################################################################
+
+def _get_missing_key_message(name:'strnone', data:'anydict') -> 'str':
+
+    if existing := _format_keys(data):
         out = f'no such key `{name}`, existing keys: {existing}'
     else:
         out = f'no such key `{name}`, it has no keys'
+
+    return out
+
+# ################################################################################################################################
+
+def _get_missing_file_message(name:'strnone', store:'UserConfig') -> 'str':
+
+    file_names:'strlist' = []
+
+    for config_file in store.values():
+        file_names.append(config_file.zato_file_name)
+
+    file_names.sort()
+
+    file_name = f'{name}{_user_config_suffix}'
+    dir_names = _keys_separator.join(store.zato_dir_names)
+
+    if file_names:
+        existing = _keys_separator.join(file_names)
+        out = f'no such user config file `{file_name}`, existing files: {existing}, read from {dir_names}'
+    else:
+        out = f'no such user config file `{file_name}`, no files in {dir_names}'
+
+    return out
+
+# ################################################################################################################################
+
+def _get_missing_section_message(name:'strnone', config_file:'UserConfigFile') -> 'str':
+
+    sections:'strlist' = []
+
+    for section_name in sorted(config_file):
+        sections.append(f'`[{section_name}]`')
+
+    file_name = config_file.zato_file_name
+
+    if sections:
+        existing = _keys_separator.join(sections)
+        out = f'no such section `[{name}]` in {file_name}, existing sections: {existing}'
+    else:
+        out = f'no such section `[{name}]` in {file_name}, it has no sections'
+
+    return out
+
+# ################################################################################################################################
+
+def _get_missing_option_message(name:'strnone', section:'UserConfigSection') -> 'str':
+
+    file_name = section.zato_file_name
+    section_name = section.zato_section_name
+
+    if existing := _format_keys(section):
+        out = f'no such key `{name}` in section `[{section_name}]` of {file_name}, existing keys: {existing}'
+    else:
+        out = f'no such key `{name}` in section `[{section_name}]` of {file_name}, it has no keys'
 
     return out
 

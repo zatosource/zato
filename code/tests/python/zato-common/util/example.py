@@ -9,6 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.exception import Inactive
 from zato.common.ext.bunch import Bunch
+from zato.common.user_config import UserConfig, UserConfigFile
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+User_Config_Dir = '/opt/zato/env/qs-1/server1/config/repo/user-conf'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,6 +29,16 @@ class ExampleService:
         self.config.smtp = Bunch()
         self.empty_config = Bunch()
 
+        self.user_config = UserConfig()
+        self.user_config.zato_dir_names.append(User_Config_Dir)
+        self.user_config.user = UserConfigFile('user.ini', self.user_config, {
+            'demo': {},
+            'smtp': {'host': 'smtp.example.com', 'port': 587},
+        })
+
+        self.empty_user_config = UserConfig()
+        self.empty_user_config.zato_dir_names.append(User_Config_Dir)
+
 # ################################################################################################################################
 
     def handle_missing_config_key(self) -> 'str':
@@ -33,6 +49,30 @@ class ExampleService:
 
     def handle_missing_key_in_empty_config(self) -> 'str':
         source = self.empty_config.billing.source
+        return source
+
+# ################################################################################################################################
+
+    def handle_missing_user_config_file(self) -> 'str':
+        source = self.user_config.billing.source
+        return source
+
+# ################################################################################################################################
+
+    def handle_missing_user_config_file_in_empty_store(self) -> 'str':
+        source = self.empty_user_config.billing.source
+        return source
+
+# ################################################################################################################################
+
+    def handle_missing_user_config_section(self) -> 'str':
+        source = self.user_config.user.billing.source
+        return source
+
+# ################################################################################################################################
+
+    def handle_missing_user_config_option(self) -> 'str':
+        source = self.user_config.user.smtp.source
         return source
 
 # ################################################################################################################################

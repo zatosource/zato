@@ -29,7 +29,8 @@ _example_dir  = os.path.dirname(__file__)
 _example_path = os.path.join(_example_dir, 'example.py')
 _example      = import_module_from_path(_example_path)
 
-ExampleService = _example.module.ExampleService
+ExampleService  = _example.module.ExampleService
+User_Config_Dir = _example.module.User_Config_Dir
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,6 +102,47 @@ class TestExplainException:
         out = _explain(service.handle_missing_key_in_empty_config)
 
         assert _first_line(out) == 'AttributeError: no such key `billing`, it has no keys'
+
+# ################################################################################################################################
+
+    def test_missing_user_config_file(self) -> 'None':
+        service = ExampleService()
+        out = _explain(service.handle_missing_user_config_file)
+
+        expected = 'AttributeError: no such user config file `billing.ini`, existing files: user.ini, ' + \
+            f'read from {User_Config_Dir}'
+
+        assert _first_line(out) == expected
+
+# ################################################################################################################################
+
+    def test_missing_user_config_file_in_empty_store(self) -> 'None':
+        service = ExampleService()
+        out = _explain(service.handle_missing_user_config_file_in_empty_store)
+
+        expected = f'AttributeError: no such user config file `billing.ini`, no files in {User_Config_Dir}'
+
+        assert _first_line(out) == expected
+
+# ################################################################################################################################
+
+    def test_missing_user_config_section(self) -> 'None':
+        service = ExampleService()
+        out = _explain(service.handle_missing_user_config_section)
+
+        expected = 'AttributeError: no such section `[billing]` in user.ini, existing sections: `[demo]`, `[smtp]`'
+
+        assert _first_line(out) == expected
+
+# ################################################################################################################################
+
+    def test_missing_user_config_option(self) -> 'None':
+        service = ExampleService()
+        out = _explain(service.handle_missing_user_config_option)
+
+        expected = 'AttributeError: no such key `source` in section `[smtp]` of user.ini, existing keys: `host`, `port`'
+
+        assert _first_line(out) == expected
 
 # ################################################################################################################################
 
