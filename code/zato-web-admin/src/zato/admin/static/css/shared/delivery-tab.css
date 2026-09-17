@@ -1,0 +1,20 @@
+/* ------------------------------------------------------------ */
+/* Delivery tab - the popovers its counts are edited in           */
+/* ------------------------------------------------------------ */
+
+/* The tab's lines wear the Alerts tab's classes and its popovers the Alerts
+   tab's look, .alerts-tab-micro-form, so the two tabs read the same in a
+   dialog. The popovers are appended to document.body, hence a class of their
+   own for the layout - a count here is only ever as wide as a count needs,
+   whether or not a unit select follows it, so a lone Max retries field does
+   not stretch to the width of the widest label the way the Alerts tab's do. */
+
+.delivery-tab-popover {
+
+    /* Room for the longest unit label */
+    --delivery-tab-unit-select-min-width: 7.5em;
+}
+
+.delivery-tab-popover .micro-form-unit {
+    min-width: var(--delivery-tab-unit-select-min-width);
+}

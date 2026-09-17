@@ -224,9 +224,13 @@ def index(req): # type: ignore
             add_http_soap_select(create_form, 'callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
             add_http_soap_select(edit_form, 'callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
 
-            # .. and to pub/sub topics, selected by name from the topics that currently exist.
+            # .. and to pub/sub topics, selected by name from the topics that currently exist ..
             add_select_from_service(create_form, req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
             add_select_from_service(edit_form, req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
+
+            # .. which is also where a message from the DLQ is forwarded to.
+            add_select_from_service(create_form, req, 'zato.pubsub.topic.get-list', 'dlq_forward_to', by_id=False)
+            add_select_from_service(edit_form, req, 'zato.pubsub.topic.get-list', 'dlq_forward_to', by_id=False)
 
         input_dict = {
             'cluster_id': req.zato.cluster_id,

@@ -41,6 +41,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/delivery-tab.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     {% endif %}
     {% if connection == 'outgoing' and transport == 'plain_http' %}
@@ -97,6 +98,9 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab-slots.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
     {{ alerts_tab_config|json_script:"http-soap-alerts-tab-config" }}
+    {% endif %}
+    {% if connection == 'outgoing' and transport == 'plain_http' %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/delivery-tab.js"></script>
     {% endif %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/row.js"></script>
@@ -261,12 +265,23 @@
                 'health_check_job_id',
             {% endif %}
 
-            // 41 - retry config for REST outgoing connections
+            // 41 - the Delivery tab of REST outgoing connections - the retries, each count of seconds
+            // as a count and a unit, the queue switch and the DLQ config
             {% if connection == 'outgoing' and transport == 'plain_http' %}
                 'max_retries',
                 'retry_sleep_time',
+                'retry_sleep_time_unit',
                 'retry_backoff_threshold',
+                'retry_backoff_threshold_unit',
                 'retry_backoff_multiplier',
+                'use_queue',
+                'use_dlq',
+                'dlq_action',
+                'dlq_retries',
+                'dlq_retry_interval',
+                'dlq_retry_interval_unit',
+                'dlq_forward_to',
+                'dlq_keep_header',
             {% endif %}
 
         ]{% if has_alerts_tab %}.concat($.fn.zato.alerts_tab.columns()){% endif %}
@@ -450,12 +465,22 @@
                             <th class='ignore'>&nbsp;</th> {% comment %} health_check_job_id {% endcomment %}
                         {% endif %}
 
-                        <!-- 41 - retry config for REST outgoing connections -->
+                        <!-- 41 - the Delivery tab of REST outgoing connections -->
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
                             <th class='ignore'>&nbsp;</th> {% comment %} max_retries {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} retry_sleep_time {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} retry_sleep_time_unit {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} retry_backoff_threshold {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} retry_backoff_threshold_unit {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} retry_backoff_multiplier {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} use_queue {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} use_dlq {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} dlq_action {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} dlq_retries {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} dlq_retry_interval {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} dlq_retry_interval_unit {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} dlq_forward_to {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} dlq_keep_header {% endcomment %}
                         {% endif %}
 
                 </thead>
@@ -612,12 +637,22 @@
                             <td class='ignore'>{{ item.health_check_job_id|default_if_none:"" }}</td>
                         {% endif %}
 
-                        <!-- 41 - retry config for REST outgoing connections -->
+                        <!-- 41 - the Delivery tab of REST outgoing connections -->
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
                             <td class='ignore'>{{ item.max_retries }}</td>
                             <td class='ignore'>{{ item.retry_sleep_time }}</td>
+                            <td class='ignore'>{{ item.retry_sleep_time_unit }}</td>
                             <td class='ignore'>{{ item.retry_backoff_threshold }}</td>
+                            <td class='ignore'>{{ item.retry_backoff_threshold_unit }}</td>
                             <td class='ignore'>{{ item.retry_backoff_multiplier }}</td>
+                            <td class='ignore'>{{ item.use_queue }}</td>
+                            <td class='ignore'>{{ item.use_dlq }}</td>
+                            <td class='ignore'>{{ item.dlq_action }}</td>
+                            <td class='ignore'>{{ item.dlq_retries }}</td>
+                            <td class='ignore'>{{ item.dlq_retry_interval }}</td>
+                            <td class='ignore'>{{ item.dlq_retry_interval_unit }}</td>
+                            <td class='ignore'>{{ item.dlq_forward_to }}</td>
+                            <td class='ignore'>{{ item.dlq_keep_header }}</td>
                         {% endif %}
 
                         <!-- 42 - the Alerts tab of REST and SOAP channels and of REST outgoing connections -->
@@ -650,6 +685,7 @@
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
+                        <button type="button" class="dashboard-tab" data-tab="delivery" role="tab" aria-selected="false">Delivery</button>
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
@@ -902,38 +938,6 @@
                             <td style="vertical-align:middle"><label for="{{ create_form.validate_tls.id_for_label }}">Validate SSL/TLS</label></td>
                             <td>{{ create_form.validate_tls }}</td>
                         </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                            More options
-                            </td>
-                            <td>
-                            <a href="javascript:$.fn.zato.toggle_visibility('.more-options-block')">Toggle options</a>
-                            </td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle"><label for="{{ create_form.max_retries.id_for_label }}">Max retries</label>
-                            <br/>
-                            <span class="form_hint">0 = no retries</span>
-                            </td>
-                            <td>{{ create_form.max_retries }}</td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle"><label for="{{ create_form.retry_sleep_time.id_for_label }}">Retry sleep time (s)</label></td>
-                            <td>{{ create_form.retry_sleep_time }}</td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle"><label for="{{ create_form.retry_backoff_threshold.id_for_label }}">Retry backoff threshold (s)</label></td>
-                            <td>{{ create_form.retry_backoff_threshold }}</td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle"><label for="{{ create_form.retry_backoff_multiplier.id_for_label }}">Retry backoff multiplier</label></td>
-                            <td>{{ create_form.retry_backoff_multiplier }}</td>
-                        </tr>
                         {% endif %}
 
                         {% if connection != 'outgoing' or transport != 'plain_http' %}
@@ -980,6 +984,8 @@
                     <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-scheduler" role="tabpanel" hidden>
                         {% include "zato/http_soap/scheduler-tab.html" with form=create_form action="create" field_prefix="" %}
                     </div>
+
+                    {% include "zato/shared/delivery-tab.html" with panel_id="http-soap-create-tab-panel-delivery" form=create_form %}
 
                     <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-request" role="tabpanel" hidden>
                         {% include "zato/http_soap/request-tab.html" with form=create_form action="create" field_prefix="" %}
@@ -1034,6 +1040,7 @@
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
+                        <button type="button" class="dashboard-tab" data-tab="delivery" role="tab" aria-selected="false">Delivery</button>
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
@@ -1200,38 +1207,6 @@
                             <td style="vertical-align:middle"><label for="{{ edit_form.validate_tls.id_for_label }}">Validate SSL/TLS</label></td>
                             <td>{{ edit_form.validate_tls }}</td>
                         </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                            More options
-                            </td>
-                            <td>
-                            <a href="javascript:$.fn.zato.toggle_visibility('.more-options-block')">Toggle options</a>
-                            </td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle"><label for="{{ edit_form.max_retries.id_for_label }}">Max retries</label>
-                            <br/>
-                            <span class="form_hint">0 = no retries</span>
-                            </td>
-                            <td>{{ edit_form.max_retries }}</td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle"><label for="{{ edit_form.retry_sleep_time.id_for_label }}">Retry sleep time (s)</label></td>
-                            <td>{{ edit_form.retry_sleep_time }}</td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle"><label for="{{ edit_form.retry_backoff_threshold.id_for_label }}">Retry backoff threshold (s)</label></td>
-                            <td>{{ edit_form.retry_backoff_threshold }}</td>
-                        </tr>
-
-                        <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle"><label for="{{ edit_form.retry_backoff_multiplier.id_for_label }}">Retry backoff multiplier</label></td>
-                            <td>{{ edit_form.retry_backoff_multiplier }}</td>
-                        </tr>
                         {% endif %}
 
                         {% if connection == 'channel' and transport == 'plain_http' %}
@@ -1361,6 +1336,8 @@
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-scheduler" role="tabpanel" hidden>
                         {% include "zato/http_soap/scheduler-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
                     </div>
+
+                    {% include "zato/shared/delivery-tab.html" with panel_id="http-soap-edit-tab-panel-delivery" form=edit_form %}
 
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-request" role="tabpanel" hidden>
                         {% include "zato/http_soap/request-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
