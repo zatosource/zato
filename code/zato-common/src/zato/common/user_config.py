@@ -41,6 +41,56 @@ class AmbiguousTarget(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class UserConfig(Bunch):
+    """ Every user config file of a server, keyed by the file's name without its suffix.
+    """
+
+    # The directories the files were read from, which is what an error about a missing file points to.
+    zato_dir_names:'strlist'
+
+    def __init__(self) -> 'None':
+        super().__init__()
+
+        # Set the way Python sets any attribute, which is what keeps it out of the store's own keys.
+        object.__setattr__(self, 'zato_dir_names', [])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class UserConfigSection(Bunch):
+    """ One section of a user config file, keyed by the section's options.
+    """
+
+    # The file and the section an error about a missing option points to.
+    zato_file_name:'str'
+    zato_section_name:'str'
+
+    def __init__(self, file_name:'str', section_name:'str', data:'anydict') -> 'None':
+        super().__init__(data)
+
+        # Set the way Python sets any attribute, which is what keeps them out of the section's own keys.
+        object.__setattr__(self, 'zato_file_name', file_name)
+        object.__setattr__(self, 'zato_section_name', section_name)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _wrap_sections(file_name:'str', data:'anydict') -> 'anydict':
+    """ Every value of a file that is a dict is one of its sections.
+    """
+    out:'anydict' = {}
+
+    for key, value in data.items():
+        if isinstance(value, dict):
+            out[key] = UserConfigSection(file_name, key, value)
+        else:
+            out[key] = value
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class UserConfigFile(Bunch):
     """ One user config file, read as it always was, with two questions asked of it on top -
     whether a value is one that is accepted here, and what a value of another party's means here.
@@ -56,12 +106,23 @@ class UserConfigFile(Bunch):
 
     def __init__(self, file_name:'str', store:'anydict', data:'anydict') -> 'None':
 
-        super().__init__(data)
+        sections = _wrap_sections(file_name, data)
+        super().__init__(sections)
 
         # These two are set the way Python sets any attribute, which is what keeps them out
         # of the file - a plain assignment would put them into it as keys of its own.
         object.__setattr__(self, 'zato_file_name', file_name)
         object.__setattr__(self, 'zato_store', store)
+
+# ################################################################################################################################
+
+    def zato_reload(self, data:'anydict') -> 'None':
+        """ Replaces what the file holds while the file itself stays in place.
+        """
+        sections = _wrap_sections(self.zato_file_name, data)
+
+        _ = self.clear()
+        _ = self.update(sections)
 
 # ################################################################################################################################
 

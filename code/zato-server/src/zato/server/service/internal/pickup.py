@@ -337,8 +337,7 @@ class OnUpdateUserConf(_OnUpdate):
             # The file itself is kept and only what it holds is replaced, so anything
             # already pointing to it keeps pointing to the file that was reloaded
             entry:'UserConfigFile' = user_config[user_config_name]
-            _ = entry.clear()
-            _ = entry.update(conf)
+            _ = entry.zato_reload(conf)
 
 # ################################################################################################################################
 

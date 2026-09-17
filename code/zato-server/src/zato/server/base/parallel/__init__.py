@@ -55,7 +55,7 @@ from zato.common.rate_limiting.common import client_address_headers
 from zato.common.rate_limiting.manager import RateLimitingManager
 from zato.common.rule_engine.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional, tuple_
-from zato.common.user_config import UserConfigFile
+from zato.common.user_config import UserConfig, UserConfigFile
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
     parse_extra_into_dict, register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
@@ -259,7 +259,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self._hash_secret_rounds = -1
         self._hash_secret_salt_size = -1
         self.platform_system = platform_system().lower()
-        self.user_config = Bunch()
+        self.user_config = UserConfig()
         self.stderr_path = ''
         self.marshal_api = MarshalAPI()
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
@@ -661,6 +661,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # Let HL7-FHIR mapping configs resolve their names against this directory too
         hl7_add_config_location(dir_name)
+
+        # The store keeps every directory it was read from
+        self.user_config.zato_dir_names.append(dir_name)
 
         # We assume that it will be always one of these file name suffixes,
         # note that we are not reading enmasse (.yaml and .yml) files here,
