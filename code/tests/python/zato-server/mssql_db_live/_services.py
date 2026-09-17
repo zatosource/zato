@@ -65,21 +65,82 @@ class MSSQLCallProcYield(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MSSQLExecute(Service):
-    """ Executes a statement through the outgoing MS SQL connection.
+class MSSQLQuery(Service):
+    """ Runs a query with bound parameters through the outgoing MS SQL connection.
     """
-    name = 'test.mssql.db.execute'
+    name = 'test.mssql.db.query'
 
     def handle(self) -> 'None':
 
         conn_name = self.request.raw_request['conn_name']
         query = self.request.raw_request['query']
+        params = self.request.raw_request['params']
 
         conn = self.out.sql[conn_name]
-        session = conn.session()
-        result = session.execute(query)
+        result = conn.execute(query, params)
 
         self.response.payload = json.dumps(result)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MSSQLOne(Service):
+    """ Returns exactly one row through the outgoing MS SQL connection.
+    """
+    name = 'test.mssql.db.one'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        query = self.request.raw_request['query']
+        params = self.request.raw_request['params']
+
+        conn = self.out.sql[conn_name]
+        result = conn.one(query, params)
+
+        self.response.payload = json.dumps(result)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MSSQLOneOrNone(Service):
+    """ Returns one row or None through the outgoing MS SQL connection.
+    """
+    name = 'test.mssql.db.one-or-none'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        query = self.request.raw_request['query']
+        params = self.request.raw_request['params']
+
+        conn = self.out.sql[conn_name]
+        result = conn.one_or_none(query, params)
+
+        self.response.payload = json.dumps(result)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MSSQLWrite(Service):
+    """ Runs a write statement through the outgoing MS SQL connection, then reads back what it wrote.
+    """
+    name = 'test.mssql.db.write'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        statement = self.request.raw_request['statement']
+        params = self.request.raw_request['params']
+        query = self.request.raw_request['query']
+        query_params = self.request.raw_request['query_params']
+
+        conn = self.out.sql[conn_name]
+
+        written = conn.execute(statement, params)
+        rows = conn.execute(query, query_params)
+
+        self.response.payload = json.dumps({'written': written, 'rows': rows})
 
 # ################################################################################################################################
 # ################################################################################################################################

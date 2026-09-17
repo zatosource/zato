@@ -819,9 +819,10 @@ test-oracle-db: ## Outgoing Oracle DB connection tests against a live Oracle con
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_oracle_db_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-mssql-db: ## Outgoing MS SQL connection tests against a live MS SQL Developer container, including a live Zato server and stored procedure calls.
+test-mssql-db: ## Outgoing MS SQL connection tests against a live MS SQL Developer container, including a live Zato server, queries, stored procedure calls and the SQL audit log.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/mssql_db_live/ \
+		$(CURDIR)/code/tests/python/zato-server/sql_outgoing_audit/test_sql_audit_mssql.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mssql_db_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 

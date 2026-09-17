@@ -140,6 +140,7 @@ class SessionWrapper:
         self.config = {}    # type: dict
         self.is_sqlite = False # type: bool
         self.is_oracle_db = False # type: bool
+        self.is_ms_sql_direct = False # type: bool
         self.logger = logging.getLogger(self.__class__.__name__)
 
         # Statement auditing - off unless the pool store attached a writer
@@ -174,9 +175,9 @@ class SessionWrapper:
             else:
                 self.sql_audit_endpoint = '{}:{}/{}'.format(config['host'], config['port'], config['db_name'])
 
-        is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
+        self.is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
 
-        if is_ms_sql_direct:
+        if self.is_ms_sql_direct:
             self._Session = SimpleSession(self.pool.engine) # type: ignore
         else:
             if use_scoped_session:
@@ -238,6 +239,12 @@ class SessionWrapper:
 
         with closing(self.session()) as session:
             result = session.execute(query, params)
+
+            # A direct MS SQL session already returns rows as dicts ..
+            if self.is_ms_sql_direct:
+                return result
+
+            # .. while an SQLAlchemy result has to be turned into them.
             column_names = result.keys() # type: ignore
             result = [dict(zip(column_names, row)) for row in result] # type: ignore
             return result

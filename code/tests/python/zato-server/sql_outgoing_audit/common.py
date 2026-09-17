@@ -25,7 +25,9 @@ from sqlalchemy import create_engine, select, text
 from sqlalchemy.pool import NullPool
 
 # Zato
+from live_sql.containers import connect_mssql
 from live_sql.env import database_env
+from zato.common.api import MS_SQL
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditOutcome, AuditSource, \
     ModuleCtx as AuditLogCtx
 from zato.common.odb.api import PoolStore
@@ -51,6 +53,7 @@ Server_Name = 'test-sql-audit-server'
 Connection_Name = 'test.sql.audit'
 
 # The engines the scenario runs against
+Engine_MSSQL      = MS_SQL.ZATO_DIRECT
 Engine_MySQL      = 'mysql+pymysql'
 Engine_PostgreSQL = 'postgresql+pg8000'
 
@@ -99,10 +102,32 @@ def _audit_db_env(tmp_path:'any_', check_name:'str') -> 'envgen':
 
 # ################################################################################################################################
 
+def _seed_table_mssql(details:'stranydict') -> 'None':
+    """ Creates the table the statements under test run against in MS SQL, with known rows.
+    There is no SQLAlchemy dialect for MS SQL, so the rows go in through pytds directly.
+    """
+    port = int(details['port'])
+    connection = connect_mssql(port, details['password'], details['name'], True)
+
+    with connection.cursor() as cursor:
+        cursor.execute(f'drop table if exists {_table_name}')
+        cursor.execute(f'create table {_table_name} (code varchar(20), label varchar(200))')
+
+        for row in _seed_rows:
+            cursor.execute(f'insert into {_table_name} (code, label) values (%(code)s, %(label)s)', row)
+
+    connection.close()
+
+# ################################################################################################################################
+
 def _seed_table(details:'stranydict', engine_name:'str') -> 'None':
     """ Creates the table the statements under test run against, with known rows -
     containers can be reused between test runs so the table always starts from scratch.
     """
+    if engine_name == Engine_MSSQL:
+        _seed_table_mssql(details)
+        return
+
     url = '{}://{}:{}@{}:{}/{}'.format(engine_name,
         details['username'], details['password'], details['host'], details['port'], details['name'])
 
@@ -137,6 +162,11 @@ def _new_connection(details:'stranydict', engine_name:'str', audit_log:'str') ->
         'fs_sql_config': {},
         'extra': '',
     }
+
+    # The port goes into an engine URL for SQLAlchemy databases, while pytds receives it as a number,
+    # the same way a server hands it over from its own configuration.
+    if engine_name == Engine_MSSQL:
+        config['port'] = int(details['port'])
 
     # A connection that says nothing about auditing carries no such key at all,
     # the same way one created before the setting existed carries none.

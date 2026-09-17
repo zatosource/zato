@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 import pytest
 
 # Zato
-from live_sql.containers import start_mysql, start_postgresql, stop_container
+from live_sql.containers import start_mssql, start_mysql, start_postgresql, stop_container
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,17 +37,22 @@ class ModuleCtx:
 
     # Host ports the containers listen on - distinct from the other suites'
     # so they can all run alongside each other.
+    MSSQL_Port      = 21435
     MySQL_Port      = 23346
     PostgreSQL_Port = 25464
 
     # Names of the containers so stale ones can be removed
+    MSSQL_Container      = 'zato-sql-audit-test-mssql'
     MySQL_Container      = 'zato-sql-audit-test-mysql'
     PostgreSQL_Container = 'zato-sql-audit-test-postgresql'
 
-    # Database credentials shared by both containers
+    # Database credentials shared by the MySQL and PostgreSQL containers
     Username = 'zato_sql_audit'
     Password = 'test-sql-audit-password'
     DB_Name  = 'zato_sql_audit'
+
+    # MS SQL has a password complexity policy of its own to satisfy
+    MSSQL_Password = 'Test-sql-audit-password-1'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,6 +86,22 @@ def postgresql_server() -> 'servergen':
         password=ModuleCtx.Password,
         db_name=ModuleCtx.DB_Name,
         needs_ssl=False,
+    )
+    yield server
+
+    stop_container(server.container_name)
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def mssql_server() -> 'servergen':
+    """ An MS SQL server started on demand in a container.
+    """
+    server = start_mssql(
+        container_name=ModuleCtx.MSSQL_Container,
+        port=ModuleCtx.MSSQL_Port,
+        password=ModuleCtx.MSSQL_Password,
+        db_name=ModuleCtx.DB_Name,
     )
     yield server
 
