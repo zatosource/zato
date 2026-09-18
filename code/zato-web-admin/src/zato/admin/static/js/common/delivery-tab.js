@@ -79,7 +79,7 @@ $.fn.zato.delivery_tab.config = {
 
     // What the retries line reads as - with no retries at all, with waits that grow and with waits that do not
     summaryNoRetries: 'No retries',
-    summaryRetriesGrowing: 'Retry {retries}, {sleep} before the first, each next wait {multiplier}x longer, {threshold} of waiting at most',
+    summaryRetriesGrowing: 'Retry {retries}, {sleep} before the first, each next wait {multiplier} times the previous one, {threshold} of waiting at most',
     summaryRetriesFlat: 'Retry {retries}, {sleep} apart, {threshold} of waiting at most',
 
     // The stored values of the DLQ actions
@@ -105,7 +105,7 @@ $.fn.zato.delivery_tab.config = {
     labelMaxRetries: 'Max. retries',
     labelSleepTime: 'Wait before the first retry',
     labelBackoffThreshold: 'Wait in total at most',
-    labelBackoffMultiplier: 'Each next wait longer by',
+    labelBackoffMultiplier: 'Wait multiplier',
 
     popoverTitle: 'DLQ action',
     labelAction: 'Action',
@@ -173,11 +173,17 @@ $.fn.zato.delivery_tab.buildDescriptors = function() {
     out[config.retriesLine] = {
         title: config.retriesTitle,
         fitContent: true,
+        // Two rows read in order - how many retries and the first wait, then how the waits grow and where they stop -
+        // with a plain count in the left column and a count with its unit in the right one, so the columns line up
         pages: [[
-            {field: config.fieldMaxRetries, label: config.labelMaxRetries, kind: 'number', fractional: true, step: config.retriesStep},
-            {field: config.fieldSleepTime, label: config.labelSleepTime, kind: 'number', unitField: tab.unitField(config.fieldSleepTime)},
-            {field: config.fieldBackoffMultiplier, label: config.labelBackoffMultiplier, kind: 'number'},
-            {field: config.fieldBackoffThreshold, label: config.labelBackoffThreshold, kind: 'number', unitField: tab.unitField(config.fieldBackoffThreshold)}
+            [
+                {field: config.fieldMaxRetries, label: config.labelMaxRetries, kind: 'number', fractional: true, step: config.retriesStep},
+                {field: config.fieldSleepTime, label: config.labelSleepTime, kind: 'number', unitField: tab.unitField(config.fieldSleepTime)}
+            ],
+            [
+                {field: config.fieldBackoffMultiplier, label: config.labelBackoffMultiplier, kind: 'number'},
+                {field: config.fieldBackoffThreshold, label: config.labelBackoffThreshold, kind: 'number', unitField: tab.unitField(config.fieldBackoffThreshold)}
+            ]
         ]]
     };
 
