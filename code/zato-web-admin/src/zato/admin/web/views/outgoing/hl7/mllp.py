@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from http import HTTPStatus
+from json import dumps
 from time import monotonic
 
 # Django
@@ -21,7 +22,6 @@ from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.alerting.object_config import alert_type_mllp_outgoing, Field_Prefix
 from zato.common.api import GENERIC, generic_attrs
-from zato.common.hl7.mllp.ack import new_control_id
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.tls import build_client_ssl_context
 from zato.common.model.hl7 import HL7MLLPOutconnConfigObject
@@ -43,15 +43,12 @@ if 0:
 # .. the multi-step wizard template, serving both the create and the edit page ..
 _Wizard_Template = 'zato/outgoing/hl7/mllp-wizard.html'
 
-# .. what the live check sends - an admission, which is the message type every receiving
-# system in the field handles, so a rejection means the endpoint is wrong rather than that
-# the sample was ..
-_Probe_Message = (
-    'MSH|^~\\&|ZATO|ZATO|RECEIVER|RECEIVER|20240315120000||ADT^A01^ADT_A01|{control_id}|P|2.5\r'
-    'EVN|A01|20240315120000\r'
-    'PID|1||12345^^^FAC^MR||SMITH^JOHN^A||19800115|M\r'
-    'PV1|1|I'
-)
+# .. what the live check does, said in its details - a plain connection or one with a TLS handshake ..
+_Probe_Action_Tcp = 'TCP connect'
+_Probe_Action_Tls = 'TCP connect and TLS handshake'
+
+# .. the details of the live check are a JSON object, which is what they are highlighted as ..
+_Probe_Details_Lexer = 'json'
 
 # .. the connection's receive timeout is configured in milliseconds and the client takes seconds ..
 _Ms_Per_Second = 1000
@@ -225,20 +222,17 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
 
 # ################################################################################################################################
 
-def _build_probe_client(req:'any_') -> 'HL7MLLPClient':
-    """ Builds the client the live check sends with, out of what the wizard currently has on
+def _build_probe_client(req:'any_', address:'str', ca_path:'str') -> 'HL7MLLPClient':
+    """ Builds the client the live check connects with, out of what the wizard currently has on
     screen rather than out of anything stored - which is what lets a check run before the
     connection has ever been saved.
     """
-    host, port_string = parse_address(req.POST['address'])
-    port = int(port_string)
+    host, port = parse_address(address)
 
     start_sequence = hex_sequence_to_bytes(req.POST['start_seq'])
     end_sequence   = hex_sequence_to_bytes(req.POST['end_seq'])
 
     # TLS turns on once a CA bundle is named, the same rule the connection itself is built under
-    ca_path = req.POST['tls_ca_path']
-
     if ca_path:
         ssl_context = build_client_ssl_context(ca_path, req.POST['tls_cert_path'], req.POST['tls_key_path'])
     else:
@@ -249,9 +243,6 @@ def _build_probe_client(req:'any_') -> 'HL7MLLPClient':
         port,
         start_sequence,
         end_sequence,
-        receive_timeout=int(req.POST['recv_timeout']) / _Ms_Per_Second,
-        max_message_size=int(req.POST['max_msg_size']),
-        read_buffer_size=int(req.POST['read_buffer_size']),
         ssl_context=ssl_context,
     )
 
@@ -261,22 +252,22 @@ def _build_probe_client(req:'any_') -> 'HL7MLLPClient':
 
 @method_allowed('POST')
 def wizard_test_action(req:'any_') -> 'JsonResponse':
-    """ Sends one message to the endpoint the wizard currently names and reports what came back.
-    Nothing is stored either way - this only says whether the answers given so far reach a
-    receiver that speaks MLLP.
+    """ Opens a connection to the endpoint the wizard currently names and closes it again, with the
+    TLS handshake if TLS is on. Nothing is sent and nothing is stored either way - this only says
+    whether the answers given so far reach an endpoint that is listening.
     """
-    address = req.POST['address']
+    # An address that cannot be connected to at all never gets this far, the wizard says so beside its button
+    address = req.POST['address'].strip()
+
+    # What the check is about to do, named in its details either way
+    ca_path = req.POST['tls_ca_path']
+    action = _Probe_Action_Tls if ca_path else _Probe_Action_Tcp
 
     try:
-        client = _build_probe_client(req)
+        client = _build_probe_client(req, address, ca_path)
 
-        control_id = new_control_id()
-        message = _Probe_Message.format(control_id=control_id)
-
-        # The control id goes along, so the acknowledgment is checked for having echoed it
-        # rather than merely for having arrived
         started_at = monotonic()
-        result = client.send(message.encode('utf-8'), control_id)
+        client.ping()
         elapsed_ms = (monotonic() - started_at) * _Ms_Per_Second
 
     except Exception as e:
@@ -285,21 +276,31 @@ def wizard_test_action(req:'any_') -> 'JsonResponse':
         if not error_text:
             error_text = e.__class__.__name__
 
+        # The details say what was being done and what went wrong, and nothing else
+        details = {
+            'address': address,
+            'action': action,
+            'error': error_text,
+        }
+
         return JsonResponse({
             'is_ok': False,
             'summary': f'{address} could not be reached - {error_text}',
+            'details': dumps(details, indent=2),
+            'details_lexer': _Probe_Details_Lexer,
         })
 
-    # A receiver that turns the message away has still answered, so the check reports what it
-    # said rather than reporting that nothing was there
-    if result.is_accepted:
-        summary = f'{address} answered {result.ack_code} in {elapsed_ms:.0f} ms'
-    else:
-        summary = f'{address} answered {result.ack_code} - {result.error_text}'
+    details = {
+        'address': address,
+        'action': action,
+        'elapsed_ms': round(elapsed_ms),
+    }
 
     out = JsonResponse({
-        'is_ok': result.is_accepted,
-        'summary': summary,
+        'is_ok': True,
+        'summary': f'{address} answered in {elapsed_ms:.0f} ms',
+        'details': dumps(details, indent=2),
+        'details_lexer': _Probe_Details_Lexer,
     })
 
     return out

@@ -71,10 +71,7 @@ microForms.installFields = function(host, forms) {
             divId: '#' + formsConfig.popupId,
             containerSelector: '.micro-form',
             fieldSelector: '.micro-form-field',
-
-            // Several fields share one row, so a tooltip on the left would
-            // cover the neighbor - above the field nothing is in the way
-            placement: 'top',
+            placement: formsConfig.helpPlacement,
             descriptions: host.helpDescriptions()
         });
     };

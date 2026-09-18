@@ -120,7 +120,7 @@ $(document).ready(function() {
                 </div>
 
                 <!-- Step 1 - the name, the endpoint, how messages are framed and
-                     the check that says whether anything is listening there -->
+                     the test that opens a connection there -->
                 <div class="wizard-step-body" id="mllp-outconn-wizard-step-body-0">
 
                     <div class="wizard-name-row">
@@ -134,15 +134,14 @@ $(document).ready(function() {
                         </label>
                     </div>
 
+                    <!-- One section, the way the channel wizard's step 1 is - the
+                         rows sit as close as their own padding puts them -->
                     <div class="wizard-section">
-                        <div class="wizard-field-row">
+
+                        <div class="wizard-field-row" id="mllp-outconn-wizard-row-address">
                             <label for="{{ form.address.id_for_label }}">Address</label>
                             {{ form.address }}
-                            <span class="wizard-field-hint">e.g. 10.20.30.40:2575</span>
                         </div>
-                    </div>
-
-                    <div class="wizard-section">
 
                         <div class="wizard-toggle-row" id="mllp-outconn-wizard-row-framing">
                             <label class="wizard-toggle-label" for="mllp-outconn-wizard-edit-framing">Framing</label>
@@ -160,15 +159,13 @@ $(document).ready(function() {
                             <a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-tls"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-tls"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
 
-                    </div>
-
-                    <!-- Everything the check needs has just been answered, so it
-                         closes the step - nothing is saved either way -->
-                    <div class="wizard-section">
-                        <div class="decision-line" id="mllp-outconn-wizard-row-check">
-                            <label class="decision-line-label" for="mllp-outconn-wizard-check">Is anything listening?</label>
-                            <span class="decision-line-slot" id="mllp-outconn-wizard-slot-check"></span>
+                        <!-- Everything the test needs has just been answered, so it
+                             closes the step - nothing is saved either way -->
+                        <div class="wizard-toggle-row" id="mllp-outconn-wizard-row-check">
+                            <label class="wizard-toggle-label" for="mllp-outconn-wizard-check">Test</label>
+                            <span class="mllp-outconn-wizard-check-slot" id="mllp-outconn-wizard-slot-check"></span>
                         </div>
+
                     </div>
 
                 </div>
@@ -183,24 +180,24 @@ $(document).ready(function() {
                         <div class="decision-lines" id="mllp-outconn-wizard-lines">
 
                             <div class="decision-line" id="mllp-outconn-wizard-row-pool">
-                                <label class="decision-line-label" for="mllp-outconn-wizard-edit-pool">Connections kept open</label>
+                                <label class="decision-line-label" for="mllp-outconn-wizard-edit-pool">Pool</label>
                                 <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-pool"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-pool"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
                             <div class="decision-line" id="mllp-outconn-wizard-row-retries">
-                                <label class="decision-line-label" for="mllp-outconn-wizard-edit-retries">A failed send is retried</label>
+                                <label class="decision-line-label" for="mllp-outconn-wizard-edit-retries">Retries</label>
                                 <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-retries"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-retries"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
-                            <div class="decision-line" id="mllp-outconn-wizard-row-breaker">
-                                <label class="decision-line-label" for="mllp-outconn-wizard-edit-breaker">Sending pauses when the endpoint fails</label>
-                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-breaker"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-breaker"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            <div class="decision-line" id="mllp-outconn-wizard-row-send-limit">
+                                <label class="decision-line-label" for="mllp-outconn-wizard-edit-send-limit">Send limit</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-send-limit"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-send-limit"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
                             <!-- The alert settings - the popover holds the lines of the Alerts tab -->
                             <div class="decision-line" id="mllp-outconn-wizard-row-alerts">
                                 <label class="decision-line-label" for="mllp-outconn-wizard-edit-alerts">Alerts</label>
-                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-alerts"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-alerts"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-alerts"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-alerts"></span><span class="zato-soft-hint">{{ alerts_tab.edit_hint }}</span></a></span>
                             </div>
 
                         </div>
@@ -228,16 +225,16 @@ $(document).ready(function() {
 
                 </div>
 
-                <!-- Step 3 - review, with the check repeated at its foot so the
+                <!-- Step 3 - review, with the test repeated at its foot so the
                      endpoint can be tried once more before anything is saved -->
                 <div class="wizard-step-body" id="mllp-outconn-wizard-step-body-2" hidden>
 
                     <div class="wizard-review" id="mllp-outconn-wizard-review"></div>
 
                     <div class="wizard-section">
-                        <div class="decision-line" id="mllp-outconn-wizard-row-review-check">
-                            <label class="decision-line-label" for="mllp-outconn-wizard-review-check">Is anything listening?</label>
-                            <span class="decision-line-slot" id="mllp-outconn-wizard-slot-review-check"></span>
+                        <div class="wizard-toggle-row" id="mllp-outconn-wizard-row-review-check">
+                            <label class="wizard-toggle-label" for="mllp-outconn-wizard-review-check">Test</label>
+                            <span class="mllp-outconn-wizard-check-slot" id="mllp-outconn-wizard-slot-review-check"></span>
                         </div>
                     </div>
 

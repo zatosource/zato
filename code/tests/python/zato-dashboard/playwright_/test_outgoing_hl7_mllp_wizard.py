@@ -130,7 +130,8 @@ def _assert_not_saved(page:'Page') -> 'None':
 def _run_probe(page:'Page', button_id:'str') -> 'str':
     """ Presses one of the wizard's live checks and returns the verdict it painted.
     """
-    result_selector = f'#{button_id} + .wizard-probe-result'
+    # The button sits in the spinner's wrapper and the verdict follows the wrapper
+    result_selector = f'span:has(> .button-wrapper > #{button_id}) > .wizard-probe-result'
 
     page.click(f'#{button_id}')
 
@@ -265,10 +266,10 @@ class TestOutgoingHL7MLLPWizard:
         verdict = _run_probe(page, f'{Wizard_Id}-check')
 
         assert address in verdict, f'Expected the address in the verdict, got: "{verdict}"'
-        assert 'AA' in verdict, f'Expected an accepted acknowledgment, got: "{verdict}"'
+        assert 'answered in' in verdict, f'Expected the endpoint to have answered, got: "{verdict}"'
 
-        # .. and the receiver has it on record, not only the dashboard
-        assert receiver.deliveries, 'The receiver should have taken delivery of the check message'
+        # .. and it only opened a connection, so the receiver has nothing on record
+        assert not receiver.deliveries, 'The check should not have sent the receiver any message'
 
         # The timing popover holds the receive timeout ..
         set_in_popover(page, 'timing', 'recv_timeout', _Changed_Recv_Timeout)
@@ -294,7 +295,7 @@ class TestOutgoingHL7MLLPWizard:
 
         # The review's own check reaches the same receiver
         verdict = _run_probe(page, f'{Wizard_Id}-review-check')
-        assert 'AA' in verdict, f'Expected an accepted acknowledgment on the review, got: "{verdict}"'
+        assert 'answered in' in verdict, f'Expected the endpoint to have answered on the review, got: "{verdict}"'
 
         # Create - back on the list, with the connection's own row on it
         finish_wizard(page, conn_name)

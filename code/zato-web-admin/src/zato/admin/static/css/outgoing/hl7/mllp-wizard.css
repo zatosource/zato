@@ -8,8 +8,54 @@
  */
 
 /* ------------------------------------------------------------ */
-/* MLLP outconn wizard - the TLS toggle row                      */
+/* MLLP outconn wizard - one label column on step 01              */
 /* ------------------------------------------------------------ */
+
+/* Step 01 is five rows - the name, the address, the three toggle rows and
+   the check - and the kit gives each kind of row a label column of its
+   own. Here they all share one, so the inputs, the summaries and the check
+   button start on one vertical line. */
+#mllp-outconn-wizard {
+
+    /* What the longest of the labels, Address, needs in 13px 600 - in px
+       so the name field's width below, the sum of the two plus the gap,
+       is exact */
+    --mllp-outconn-wizard-row-label-width: 60px;
+
+    /* One width for the Name and Address inputs - a fixed flex basis, so
+       nothing around them can stretch either one */
+    --mllp-outconn-wizard-row-input-width: 390px;
+
+    /* The kit's gap between a row's label and what follows it */
+    --mllp-outconn-wizard-row-gap: 10px;
+}
+
+#mllp-outconn-wizard .wizard-name-field label,
+#mllp-outconn-wizard .wizard-field-row > label,
+#mllp-outconn-wizard .wizard-toggle-label {
+    width: var(--mllp-outconn-wizard-row-label-width);
+    white-space: nowrap;
+}
+
+#mllp-outconn-wizard .wizard-name-field input,
+#mllp-outconn-wizard .wizard-field-row input[type="text"] {
+    flex: 0 0 var(--mllp-outconn-wizard-row-input-width);
+}
+
+/* The name field holds only its label and input rather than stretching
+   across the row, so the Active switch sits right after the input instead
+   of at the row's far edge. Its width is said outright - sized to content,
+   the field would not count the input's fixed flex basis and would come
+   out narrower than the input inside it, which then slid under the switch */
+#mllp-outconn-wizard .wizard-name-field {
+    flex: 0 0 calc(var(--mllp-outconn-wizard-row-label-width) + var(--mllp-outconn-wizard-row-gap) + var(--mllp-outconn-wizard-row-input-width));
+}
+
+/* The address row stands among toggle rows and keeps their rhythm rather
+   than the kit's field row padding, two pixels shorter */
+#mllp-outconn-wizard-row-address {
+    padding: 7px 0;
+}
 
 /* The TLS label sits next to an actual slider and rides one pixel
    higher than the shared toggle labels */
@@ -18,12 +64,26 @@
 }
 
 /* ------------------------------------------------------------ */
-/* MLLP outconn wizard - the decision lines                      */
+/* MLLP outconn wizard - step 02                                 */
 /* ------------------------------------------------------------ */
 
-/* Step 02 asks its questions as whole sentences, e.g. "Sending pauses
-   when the endpoint fails", which do not fit the width a line label
-   has by default */
-#mllp-outconn-wizard {
-    --decision-line-label-width: 19em;
+/* The five lines of step 02 read as one evenly spaced list, though the
+   More options line lives in a section of its own - the kit's rhythm
+   tokens are set to one value for this step body */
+#mllp-outconn-wizard-step-body-1 {
+    --decision-lines-gap: 16px;
+    --wizard-section-space: 16px;
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP outconn wizard - the check rows                          */
+/* ------------------------------------------------------------ */
+
+/* The check is a toggle row like the three above it, its slot holding the
+   button and the verdict the kit's probe puts there - side by side, the
+   verdict centered against the button */
+.mllp-outconn-wizard-check-slot {
+    display: flex;
+    align-items: center;
+    min-width: 0;
 }

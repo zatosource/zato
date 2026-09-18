@@ -78,7 +78,7 @@ review.summaryFraming = function() {
 
 review.summaryTiming = function() {
 
-    var out = 'acknowledgment within ' + wizard.field('recv_timeout').val() + ' ms';
+    var out = 'ACK within ' + wizard.field('recv_timeout').val() + ' ms';
     return out;
 };
 
@@ -117,19 +117,21 @@ review.summaryRetries = function() {
     var longestWait = wizard.field('backoff_cap_seconds').val();
     var jitter = wizard.field('backoff_jitter_percent').val();
 
-    var out = attempts + ' times, ' + firstWait + ' s to ' + longestWait + ' s, ' + jitter + '% jitter';
+    var out = attempts + ' attempts, ' + firstWait + '-' + longestWait + ' s, ' + jitter + '% jitter';
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-review.summaryBreaker = function() {
+// The word failures has to be here - "50% in 60 s" on its own would read
+// as a cap on how much may be sent, which is not what the limit is
+review.summarySendLimit = function() {
 
-    var threshold = wizard.field('circuit_breaker_threshold_percent').val();
+    var failurePercent = wizard.field('circuit_breaker_threshold_percent').val();
     var window_ = wizard.field('circuit_breaker_window_seconds').val();
-    var reset = wizard.field('circuit_breaker_reset_seconds').val();
+    var resume = wizard.field('circuit_breaker_reset_seconds').val();
 
-    var out = 'over ' + threshold + '% in ' + window_ + ' s, retried after ' + reset + ' s';
+    var out = failurePercent + '% failures in ' + window_ + ' s, resume after ' + resume + ' s';
     return out;
 };
 
@@ -199,7 +201,7 @@ review.refreshSummaries = function() {
 
     review.setSummary('mllp-outconn-wizard-summary-pool', review.summaryPool());
     review.setSummary('mllp-outconn-wizard-summary-retries', review.summaryRetries());
-    review.setSummary('mllp-outconn-wizard-summary-breaker', review.summaryBreaker());
+    review.setSummary('mllp-outconn-wizard-summary-send-limit', review.summarySendLimit());
     review.setSummary(wizard.alerts.config.summaryId, wizard.alerts.summary());
 
     review.setSummary('mllp-outconn-wizard-summary-options', review.summaryLogging());
@@ -271,9 +273,9 @@ review.render = function() {
             step: 1,
             edit: review._buildEdit('retries', 'mllp-outconn-wizard-edit-retries'),
             rows: [
-                ['Connections kept open', review.summaryPool()],
-                ['A failed send is retried', review.summaryRetries()],
-                ['Sending pauses', review.summaryBreaker()]
+                ['Pool', review.summaryPool()],
+                ['Retries', review.summaryRetries()],
+                ['Send limit', review.summarySendLimit()]
             ]
         },
         {
@@ -292,7 +294,7 @@ review.render = function() {
                 wizard.forms.open('logging', document.getElementById('mllp-outconn-wizard-card-logging'));
             },
             rows: [
-                ['Logs written', review.summaryLogging()]
+                ['Behavior', review.summaryLogging()]
             ]
         }
     ]);

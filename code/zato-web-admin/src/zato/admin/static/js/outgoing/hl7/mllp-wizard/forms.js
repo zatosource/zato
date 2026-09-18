@@ -23,6 +23,9 @@ $.fn.zato.micro_forms.setup(wizard, {
     // The class the popovers wear, under which wizard-kit.css sizes their switches
     popupClass: 'wizard-micro-form',
 
+    // The help tooltips open to the left of a field, the way the page's own do
+    helpPlacement: 'left',
+
     descriptors: {
 
         // The bytes on the wire come first, the bounds a reply is read
@@ -40,8 +43,8 @@ $.fn.zato.micro_forms.setup(wizard, {
                 ],
                 [
                     [
-                        {field: 'max_msg_size',     label: 'Max reply size (bytes)', kind: 'number', width: '190px'},
-                        {field: 'read_buffer_size', label: 'Read buffer (bytes)',    kind: 'number', width: '190px'}
+                        {field: 'max_msg_size',     label: 'Max ACK size (bytes)', kind: 'number', width: '190px'},
+                        {field: 'read_buffer_size', label: 'Read buffer (bytes)',  kind: 'number', width: '190px'}
                     ]
                 ]
             ]
@@ -49,12 +52,9 @@ $.fn.zato.micro_forms.setup(wizard, {
 
         'timing': {
             title: 'Timing',
-            width: '430px',
             pages: [[
-                [
-                    {field: 'recv_timeout',  label: 'Wait for the acknowledgment (ms)', kind: 'number', width: '230px'},
-                    {field: 'max_wait_time', label: 'Invoke page timeout (s)',          kind: 'number', width: '150px'}
-                ]
+                {field: 'recv_timeout',  label: 'ACK timeout (ms)',   kind: 'number'},
+                {field: 'max_wait_time', label: 'Invoke timeout (s)', kind: 'number'}
             ]]
         },
 
@@ -62,14 +62,14 @@ $.fn.zato.micro_forms.setup(wizard, {
             title: 'TLS',
             width: '430px',
             pages: [[
-                {field: 'tls_ca_path',   label: 'CA bundle',          kind: 'text', hint: 'Verifies the receiving system'},
-                {field: 'tls_cert_path', label: 'Client certificate', kind: 'text', hint: 'For mutual TLS, where the far side asks for one'},
+                {field: 'tls_ca_path',   label: 'CA bundle',          kind: 'text'},
+                {field: 'tls_cert_path', label: 'Client certificate', kind: 'text'},
                 {field: 'tls_key_path',  label: 'Client key',         kind: 'text'}
             ]]
         },
 
         'pool': {
-            title: 'Connections kept open',
+            title: 'Pool',
             pages: [[
                 {field: 'pool_size', label: 'Pool size', kind: 'number'}
             ]]
@@ -90,15 +90,15 @@ $.fn.zato.micro_forms.setup(wizard, {
             ]]
         },
 
-        'breaker': {
-            title: 'Sending pauses when it keeps failing',
+        'send_limit': {
+            title: 'Send limit',
             width: '430px',
             pages: [[
                 [
                     {field: 'circuit_breaker_threshold_percent', label: 'Failures (%)', kind: 'number', width: '150px'},
                     {field: 'circuit_breaker_window_seconds',    label: 'Within (s)',   kind: 'number', width: '150px'}
                 ],
-                {field: 'circuit_breaker_reset_seconds', label: 'Try again after (s)', kind: 'number', width: '190px'}
+                {field: 'circuit_breaker_reset_seconds', label: 'Resume after (s)', kind: 'number', width: '190px'}
             ]]
         },
 
@@ -119,12 +119,12 @@ forms.config_own = {
 
     // The rows whose summary link opens one popover, in template order
     editRows: [
-        {linkId: 'mllp-outconn-wizard-edit-framing', descriptor: 'framing'},
-        {linkId: 'mllp-outconn-wizard-edit-timing',  descriptor: 'timing'},
-        {linkId: 'mllp-outconn-wizard-edit-tls',     descriptor: 'tls'},
-        {linkId: 'mllp-outconn-wizard-edit-pool',    descriptor: 'pool'},
-        {linkId: 'mllp-outconn-wizard-edit-retries', descriptor: 'retries'},
-        {linkId: 'mllp-outconn-wizard-edit-breaker', descriptor: 'breaker'}
+        {linkId: 'mllp-outconn-wizard-edit-framing',    descriptor: 'framing'},
+        {linkId: 'mllp-outconn-wizard-edit-timing',     descriptor: 'timing'},
+        {linkId: 'mllp-outconn-wizard-edit-tls',        descriptor: 'tls'},
+        {linkId: 'mllp-outconn-wizard-edit-pool',       descriptor: 'pool'},
+        {linkId: 'mllp-outconn-wizard-edit-retries',    descriptor: 'retries'},
+        {linkId: 'mllp-outconn-wizard-edit-send-limit', descriptor: 'send_limit'}
     ],
 
     // The switch that says whether this connection speaks TLS, and the

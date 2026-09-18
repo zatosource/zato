@@ -163,7 +163,7 @@ Both hide with the `hidden` attribute rather than with a height that animates - 
 
 ## The live check
 
-Some answers can be proven right there and then. A probe is one button and one verdict beside it - it posts the named fields of the rendered Django form to an endpoint of the instance's choosing and paints what comes back:
+Some answers can be proven right there and then. A probe is one button, the spinner that turns beside it while the check runs and the verdict written next to them once it is over - it posts the named fields of the rendered Django form to an endpoint of the instance's choosing through `$.fn.zato.action_runner`, the way every other button on the dashboard reports its outcome, so a page mounting a probe loads `action-runner.js` and `settings.css`:
 
 ```javascript
 $.fn.zato.wizard_kit.probe.init(wizard, {
@@ -171,13 +171,15 @@ $.fn.zato.wizard_kit.probe.init(wizard, {
     buttonId: 'mllp-outconn-wizard-check',
     endpoint: '/zato/outgoing/hl7/mllp/wizard/test/?cluster=1',
     fields: ['address', 'start_seq', 'end_seq', 'recv_timeout'],
-    runLabel: 'Test the connection'
+    validate: function() { return wizard.field('address').val() ? '' : 'The address is empty'; },
+    validatedField: 'address',
+    runLabel: 'Ping'
 });
 ```
 
-The template holds the row and its label, the label pointing at `buttonId` so the check is a regular "How does it work?" stop, and the kit fills the slot. Nothing is stored, so a probe works on the first step of a wizard that has never saved - which is the point of it, a reader finding out that an address is wrong before creating anything rather than after.
+The template holds the row and its label - a toggle row like the ones above it, so the check sits in the step's label column - the label pointing at `buttonId` so the check is a regular "How does it work?" stop, and the kit fills the slot. Nothing is stored, so a probe works on the first step of a wizard that has never saved - which is the point of it, a reader finding out that an address is wrong before creating anything rather than after.
 
-The endpoint answers with `{is_ok, summary}`. What the one line says is the instance's own view's business, the kit only decides how it looks - green for the answer that came back, red for the one that did not. A probe that has not been run yet says nothing at all, so a step only walked through never reads as a failure. `init` returns a handle with `reset()`, for an instance clearing the verdict once an answer the check was about has changed.
+The endpoint answers with `{is_ok, summary, details, details_lexer}`. The summary is the one line said in the tooltip beside the button and then written next to it, the details are what the tooltip's Show details link opens on a failed check, highlighted with the named Pygments lexer - e.g. a JSON object naming the address, what was being done with it and the error. What both say is the instance's own view's business, the kit only decides how they look - green for the answer that came back, red for the one that did not. A probe that has not been run yet says nothing at all, so a step only walked through never reads as a failure. `init` returns a handle with `reset()`, for an instance clearing the verdict once an answer the check was about has changed.
 
 ## Review groups
 

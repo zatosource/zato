@@ -56,23 +56,26 @@ wizard.config_own = {
     // url the template resolved
     testUrl: '',
 
-    // What the two mounts of the live check say on their buttons
-    probeRunLabel: 'Send a test message',
-    probeBusyLabel: 'Sending ..',
+    // What the two mounts of the live check say on their buttons - the row
+    // they sit on is already labeled Test, so the button only says what a
+    // test does, which is a connection opened and closed, nothing sent
+    probeRunLabel: 'Ping',
+
+    // What is said beside the button when the address cannot be connected
+    // to at all, in which case nothing is done
+    probeAddressEmptyText: 'The address is empty',
+    probeAddressNoPortText: 'The address is not host:port',
 
     // Which set of live form updates the page subscribes to
     createAction: 'create',
     editAction: 'edit',
 
-    // The fields the live check carries with it - what it takes to reach an
-    // endpoint and read one acknowledgment back from it
+    // The fields the live check carries with it - what it takes to open a
+    // connection to an endpoint, with the TLS handshake when TLS is on
     probeFields: [
         'address',
         'start_seq',
         'end_seq',
-        'recv_timeout',
-        'max_msg_size',
-        'read_buffer_size',
         'tls_ca_path',
         'tls_cert_path',
         'tls_key_path'
@@ -179,6 +182,27 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Whether the address is one a message can be sent to at all - an empty
+// string when it is, otherwise what to say beside the button instead of
+// sending anything
+wizard._validateProbeAddress = function() {
+
+    var ownConfig = wizard.config_own;
+    var address = wizard.field('address').val().trim();
+
+    if(address === '') {
+        return ownConfig.probeAddressEmptyText;
+    }
+
+    if(address.indexOf(':') === -1) {
+        return ownConfig.probeAddressNoPortText;
+    }
+
+    return '';
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // Both mounts of the live check. They are independent of each other and
 // each keeps its own verdict, so walking back to step 1 does not wipe what
 // the review's check said.
@@ -200,8 +224,9 @@ wizard._initProbes = function() {
             buttonId: mount.buttonId,
             endpoint: ownConfig.testUrl,
             fields: ownConfig.probeFields,
-            runLabel: ownConfig.probeRunLabel,
-            busyLabel: ownConfig.probeBusyLabel
+            validate: wizard._validateProbeAddress,
+            validatedField: 'address',
+            runLabel: ownConfig.probeRunLabel
         });
 
         wizard.state.probeList.push(probe);
@@ -287,18 +312,19 @@ wizard.helpDescriptions = function() {
         'When off, messages travel in plaintext.';
     out['mllp-outconn-wizard-edit-tls'] = out['mllp-outconn-wizard-toggle-tls'];
 
-    // .. the live check, which both of its mounts share ..
-    out['mllp-outconn-wizard-check'] = 'Sends one test message to the address above and reports what came back. ' +
-        'Nothing is saved either way, so this can be used before the connection is created.';
+    // .. the test, which both of its mounts share ..
+    out['mllp-outconn-wizard-check'] = 'Opens a connection to the address above, with the TLS handshake ' +
+        'if TLS is on, and closes it again. No message is sent and nothing is saved either way, so the ' +
+        'address can be tried before the connection is created.';
     out['mllp-outconn-wizard-review-check'] = out['mllp-outconn-wizard-check'];
 
     // .. the three decisions of step 2 ..
     out['mllp-outconn-wizard-edit-pool'] = shared['id_pool_size'];
-    out['mllp-outconn-wizard-edit-retries'] = 'What happens to a message the receiving system did not take - ' +
-        'how many times it is sent again and how long the platform waits between attempts.';
-    out['mllp-outconn-wizard-edit-breaker'] = 'When too many sends fail in a row, the platform stops trying ' +
-        'for a while rather than queueing up work for an endpoint that is down. ' +
-        'The connection resumes when one trial message succeeds.';
+    out['mllp-outconn-wizard-edit-retries'] = 'How many times a message the receiving system did not take ' +
+        'is sent again, and how long the platform waits between the attempts.';
+    out['mllp-outconn-wizard-edit-send-limit'] = 'How much may go wrong before the platform stops sending - once ' +
+        'the given share of sends within the window fails, sending stops for the given time rather than ' +
+        'queueing up work for an endpoint that is down. One trial message then decides whether it resumes.';
 
     // .. the Alerts line and, within its popover, the lines of the Alerts tab ..
     out['mllp-outconn-wizard-edit-alerts'] = 'When the platform sends an email about this connection - after how many ' +
@@ -331,8 +357,8 @@ wizard.titleHelp = function() {
         '<p>On <span class="wizard-title-help-step">01</span> you name the connection ' +
         'and say which system it reaches, with a test message that can be sent ' +
         'before anything is saved. ' +
-        'On <span class="wizard-title-help-step">02</span> you choose what happens to a ' +
-        'message the far side did not take and when to be alerted about it. ' +
+        'On <span class="wizard-title-help-step">02</span> you choose how many connections ' +
+        'to keep open, what happens to a message the far side did not take and when to be alerted. ' +
         '<span class="wizard-title-help-step">03</span> is a review before the ' +
         'connection is created.</p>' +
 
