@@ -860,51 +860,19 @@ a.wizard-select-delete:hover::before {
 /* Wizard - the live check                                       */
 /* ------------------------------------------------------------ */
 
-/* One button and the verdict beside it. The button reads as a field of
-   the row it sits on rather than as the step's own action, so it stays
-   the quieter of the two and Next keeps the emphasis. The states are
-   spelled out because formalize.css writes a look for every bare
-   button, and a check that changed size on hover would read as a nudge
-   towards pressing it. */
-.wizard-card .wizard-probe-button,
-.wizard-card .wizard-probe-button:hover,
-.wizard-card .wizard-probe-button:focus,
-.wizard-card .wizard-probe-button:active {
-    height: 24px;
-    padding: 0 10px;
-    font-family: inherit;
-    font-size: var(--zato-ui-button-font-size);
-    font-weight: 400;
-    color: var(--zato-ui-text-muted);
-    background: #fff;
-    background-image: none;
-    border: 1px solid var(--zato-ui-border-strong);
-    border-radius: 3px;
-    box-shadow: none;
-    text-shadow: none;
-    outline: none;
-}
-
-.wizard-card .wizard-probe-button:hover {
-    color: var(--zato-ui-text);
-    border-color: var(--zato-ui-accent);
-}
-
-/* A check on its way is not pressed again */
-.wizard-card .wizard-probe-button:disabled,
-.wizard-card .wizard-probe-button:disabled:hover {
-    color: var(--zato-ui-text-faint);
-    border-color: var(--zato-ui-border);
-    cursor: not-allowed;
-}
-
-/* The verdict shares the row with the button, its color saying which of
-   the two answers came back. Empty until a check has run, which is what
-   keeps a step that was only walked through from reading as a failure. */
+/* The button, the spinner that turns beside it while the check runs and
+   the tooltip the outcome arrives in are the ones every settings page
+   has - .button-wrapper, .button-spinner and .secondary-button of
+   settings.css, the tooltip of action-runner.js - so a wizard that
+   mounts a probe loads both. What is the kit's own is the verdict that
+   stays written beside the button once the OK tooltip is gone - only
+   the good one, a failure staying in its own tooltip with Show details.
+   The one thing written in red is a check that never went out because
+   the field it needs is empty, which is no invocation and gets no
+   spinner or tooltip. */
 .wizard-probe-result {
     margin-left: 10px;
     font-size: 12px;
-    color: var(--zato-ui-text-muted);
 }
 
 .wizard-probe-ok {

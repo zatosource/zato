@@ -234,16 +234,6 @@ $.fn.zato.http_soap.rest_outgoing_field_descriptions = {
     'id_data_format': 'Format of the data this connection exchanges, e.g. JSON. ' +
         'Responses are parsed accordingly, so services receive ready-to-use objects.',
 
-    // Config tab - retry config under More options
-    'id_max_retries': 'How many times a failed invocation is retried after a timeout or a connection error. ' +
-        '0 means no retries at all.',
-    'id_retry_sleep_time': 'How many seconds to sleep before the first retry. ' +
-        'Each subsequent sleep is multiplied by the backoff multiplier.',
-    'id_retry_backoff_threshold': 'A cap on the total time spent sleeping between retries, in seconds. ' +
-        'Once reached, no more retries take place.',
-    'id_retry_backoff_multiplier': 'Each retry sleeps this many times longer than the previous one, ' +
-        'up to 8 seconds per a single sleep.',
-
     // Scheduler tab
     'id_scheduler_run_every': 'How often this connection is invoked, e.g. every 6 hours. ' +
         'Leave empty for no scheduled invocations.',
@@ -295,9 +285,10 @@ $.fn.zato.http_soap.init_how_it_works = function(action) {
     }
     else if($.fn.zato.http_soap.is_rest_outgoing()) {
 
-        // An outgoing connection's Alerts tab lines are described next to its own fields
+        // An outgoing connection's Alerts and Delivery tab lines are described next to its own fields
         descriptions = $.extend({},
             $.fn.zato.http_soap.rest_outgoing_field_descriptions,
+            $.fn.zato.delivery_tab.descriptions(),
             $.fn.zato.alerts_tab.descriptions());
         fieldSelector = 'table.form-data tr, .decision-line';
     }
@@ -331,6 +322,11 @@ $.fn.zato.http_soap.create = function(object_type) {
     if($.fn.zato.http_soap.is_rest_outgoing()) {
         $.fn.zato.http_soap.populate_param_rows('create');
         $.fn.zato.http_soap.toggle_callback('create');
+
+        $.fn.zato.delivery_tab.bind({
+            panel_id: 'http-soap-create-tab-panel-delivery',
+            field_prefix: ''
+        });
     }
 
     if($.fn.zato.http_soap.has_alerts_tab()) {
@@ -370,6 +366,12 @@ $.fn.zato.http_soap.edit = function(id) {
 
         // The health check line of the Alerts tab reads its hidden inputs, populated the same way
         $.fn.zato.health_check.populate('edit', item);
+
+        // The Delivery tab reads the form the item was populated into
+        $.fn.zato.delivery_tab.bind({
+            panel_id: 'http-soap-edit-tab-panel-delivery',
+            field_prefix: 'edit-'
+        });
     }
 
     if($.fn.zato.http_soap.has_alerts_tab()) {

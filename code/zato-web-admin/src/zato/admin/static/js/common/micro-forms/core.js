@@ -147,6 +147,17 @@ microForms.defaults = {
     // Whether the popover carries the How does it work? badge
     showHowItWorks: true,
 
+    // The classes of the button that accepts a page and of the ones that do not - a host whose popovers
+    // open inside a dialog gives both an empty string, so the buttons wear the dialog's own look
+    doneButtonClass: 'action-button',
+    otherButtonClass: 'secondary-button',
+
+    // Which side of a field its help tooltip opens on - several fields share one
+    // row, so a tooltip on the left would cover the neighbor and above the field
+    // nothing is in the way, which is why top is the default. A host whose rows
+    // are short enough says left instead.
+    helpPlacement: 'top',
+
     // The classes of the host's own put on every popover it opens, separated by spaces
     popupClass: ''
 };
@@ -436,7 +447,7 @@ microForms.setup = function(host, config) {
             if(pageIndex > 0) {
                 var backButton = document.createElement('button');
                 backButton.type = 'button';
-                backButton.className = 'secondary-button';
+                backButton.className = formsConfig.otherButtonClass;
                 backButton.textContent = formsConfig.backLabel;
 
                 backButton.addEventListener('click', function() {
@@ -454,7 +465,7 @@ microForms.setup = function(host, config) {
             if(formsConfig.showCancel && !hasMorePages) {
                 var cancelButton = document.createElement('button');
                 cancelButton.type = 'button';
-                cancelButton.className = 'secondary-button';
+                cancelButton.className = formsConfig.otherButtonClass;
                 cancelButton.textContent = formsConfig.cancelLabel;
 
                 cancelButton.addEventListener('click', function() {
@@ -465,7 +476,7 @@ microForms.setup = function(host, config) {
 
             forwardButton = document.createElement('button');
             forwardButton.type = 'button';
-            forwardButton.className = 'action-button';
+            forwardButton.className = formsConfig.doneButtonClass;
             forwardButton.textContent = hasMorePages ? formsConfig.nextLabel : formsConfig.doneLabel;
 
             forwardButton.addEventListener('click', function() {

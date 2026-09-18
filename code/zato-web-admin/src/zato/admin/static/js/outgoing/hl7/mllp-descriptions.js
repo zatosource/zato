@@ -46,11 +46,11 @@ $.fn.zato.outgoing.hl7.mllp.field_descriptions = {
         'no matter how many attempts have been made already. Default is 300.',
     'id_backoff_jitter_percent': 'Random percentage applied to each retry delay so that many senders ' +
         'do not all retry at the same moment. Default is 10.',
-    'id_circuit_breaker_threshold_percent': 'Failure percentage within the window that opens the circuit ' +
-        'and pauses sending to the endpoint. Default is 50.',
-    'id_circuit_breaker_window_seconds': 'Length in seconds of the rolling window the failure percentage ' +
+    'id_circuit_breaker_threshold_percent': 'The share of failed sends within the window, in percent, ' +
+        'at which sending to the endpoint stops. Default is 50.',
+    'id_circuit_breaker_window_seconds': 'Length in seconds of the rolling window the share of failures ' +
         'is computed over. Default is 60.',
-    'id_circuit_breaker_reset_seconds': 'How long in seconds the circuit stays open before a trial message ' +
+    'id_circuit_breaker_reset_seconds': 'How long in seconds sending stays stopped before a trial message ' +
         'is let through again. Default is 60.',
 
     // Logging and audit

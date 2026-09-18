@@ -1,0 +1,49 @@
+/* ------------------------------------------------------------ */
+/* Delivery tab - the popovers its counts are edited in           */
+/* ------------------------------------------------------------ */
+
+/* The tab's lines wear the Alerts tab's classes and its popovers the Alerts
+   tab's look, .alerts-tab-micro-form, so the two tabs read the same in a
+   dialog. The popovers are appended to document.body, hence a class of their
+   own for the layout - a count here is only ever as wide as a count needs,
+   whether or not a unit select follows it, so a lone Max retries field does
+   not stretch to the width of the widest label the way the Alerts tab's do. */
+
+.delivery-tab-popover {
+
+    /* Room for the longest unit label */
+    --delivery-tab-unit-select-min-width: 7.5em;
+
+    /* The room between the two columns of a popover's rows */
+    --delivery-tab-column-gap: 10px;
+}
+
+.delivery-tab-popover .micro-form-unit {
+    min-width: var(--delivery-tab-unit-select-min-width);
+}
+
+/* The rows of a popover are two fields each, and the two columns are shared
+   by all the rows - the body is a grid of two columns as wide as their
+   content and a row just hands its fields over to it, so the left column is
+   exactly as wide as the widest of its labels and the right one starts at
+   the same edge in every row. A field on a line of its own and the buttons
+   under the rows take the whole width. */
+.delivery-tab-popover .micro-form-body {
+    display: grid;
+    grid-template-columns: max-content max-content;
+    column-gap: var(--delivery-tab-column-gap);
+}
+
+.delivery-tab-popover .micro-form-row {
+    display: contents;
+}
+
+/* A row the action does not need - the DLQ retries under an action other than Retry - stays hidden */
+.delivery-tab-popover .micro-form-row[hidden] {
+    display: none;
+}
+
+.delivery-tab-popover .micro-form-body > .micro-form-field,
+.delivery-tab-popover .micro-form-buttons {
+    grid-column: 1 / -1;
+}

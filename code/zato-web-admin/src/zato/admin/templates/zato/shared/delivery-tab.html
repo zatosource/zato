@@ -1,0 +1,69 @@
+{% comment %}
+The Delivery tab of an outgoing connection's create or edit form - the retry settings, the queue switch and
+the dead-letter queue settings, written as decision lines the way the Alerts tab writes its own, with the retries
+and the DLQ action edited in popover micro-forms. Included inside the form, after the panel of the Scheduler tab,
+with panel_id and form.
+
+The page includes /static/js/common/delivery-tab.js, calls $.fn.zato.delivery_tab.init() once and
+$.fn.zato.delivery_tab.bind({panel_id: ..., field_prefix: ...}) each time a form opens. The form carries
+the retry fields of its own and gets the queue fields and the unit selects of its counts of seconds through
+zato.admin.web.delivery_tab.add_delivery_fields.
+{% endcomment %}
+<div class="dashboard-tab-panel alerts-tab-panel delivery-tab-panel" id="{{ panel_id }}" role="tabpanel" hidden>
+    <div class="form-data alerts-tab-body">
+
+        <div class="alerts-tab-sections">
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Retries</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-line-popover alerts-tab-always-on-line" id="{{ panel_id }}-line-retries">
+                        <label class="decision-line-label" for="{{ panel_id }}-edit-retries">On failure</label>
+                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-retries"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-retries"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Queue</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-line-toggle alerts-tab-active-line" id="{{ panel_id }}-line-use_queue">
+                        <label class="decision-line-label" for="{{ form.use_queue.id_for_label }}">Use queue</label>
+                        <span class="decision-line-slot">{{ form.use_queue }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Dead-letter queue</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-line-toggle" id="{{ panel_id }}-line-use_dlq">
+                        <label class="decision-line-label" for="{{ form.use_dlq.id_for_label }}">Use DLQ</label>
+                        <span class="decision-line-slot">{{ form.use_dlq }}</span>
+                    </div>
+                    <div class="decision-line alerts-tab-line alerts-tab-line-popover" id="{{ panel_id }}-line-dlq_action">
+                        <label class="decision-line-label" for="{{ panel_id }}-edit-dlq_action">Action</label>
+                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-dlq_action"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-dlq_action"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="alerts-tab-hidden-fields" hidden>
+            {{ form.max_retries }}
+            {{ form.retry_sleep_time }}
+            {{ form.retry_sleep_time_unit }}
+            {{ form.retry_backoff_threshold }}
+            {{ form.retry_backoff_threshold_unit }}
+            {{ form.retry_backoff_multiplier }}
+            {{ form.dlq_action }}
+            {{ form.dlq_retries }}
+            {{ form.dlq_retry_interval }}
+            {{ form.dlq_retry_interval_unit }}
+            {{ form.dlq_forward_to }}
+            {{ form.dlq_keep_header }}
+        </div>
+
+    </div>
+</div>

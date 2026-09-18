@@ -32,6 +32,14 @@
  *   on_error runs before the error tooltip is rendered, e.g. to take the caller's own
  *   indicator down, the tooltip with its Show details link still following.
  *
+ *   on_complete is optional too - it runs on either outcome, before the outcome is
+ *   rendered and before on_success or on_error, e.g. to take the caller's own indicator
+ *   down whichever way the request went.
+ *
+ *   min_wait_ms is optional and 0 by default - with a value, the outcome is not reported
+ *   sooner than that many milliseconds after run() was called, so a caller showing its
+ *   own spinner has it on screen for at least that long rather than flashing it.
+ *
  *   $.fn.zato.action_runner.close_all();
  */
 
@@ -155,6 +163,7 @@ var _run_defaults = {
     details_modal_title: 'Response',
     spinner_label: 'Pinging ..',
     show_delay_ms: 0,
+    min_wait_ms: 0,
     placement: 'top'
 };
 
@@ -299,7 +308,10 @@ $.fn.zato.action_runner = {
         var details_modal_title = _opt(opts, 'details_modal_title');
         var spinner_label = _opt(opts, 'spinner_label');
         var show_delay_ms = _opt(opts, 'show_delay_ms');
+        var min_wait_ms = _opt(opts, 'min_wait_ms');
         var placement = _opt(opts, 'placement');
+
+        var started_at = Date.now();
 
         var parse = _default_parse;
         if('parse' in opts) {
@@ -314,6 +326,11 @@ $.fn.zato.action_runner = {
         var on_error = null;
         if('on_error' in opts) {
             on_error = opts.on_error;
+        }
+
+        var on_complete = null;
+        if('on_complete' in opts) {
+            on_complete = opts.on_complete;
         }
 
         // The caller may show an indicator of its own, in which case the tooltip
@@ -399,28 +416,47 @@ $.fn.zato.action_runner = {
 
             var r = parse(jqXHR, textStatus);
             console.log('[action_runner] callback: parsed is_success=' + r.is_success + ' label=' + r.label.substring(0, 100));
-            if(r.is_success) {
-                if(on_success) {
-                    on_success(instance, r);
+
+            var report = function() {
+
+                if(on_complete) {
+                    on_complete(instance, r);
+                }
+
+                if(r.is_success) {
+                    if(on_success) {
+                        on_success(instance, r);
+                    } else {
+                        instance.show();
+                        _render_success(instance, r.label);
+                    }
                 } else {
+                    if(on_error) {
+                        on_error(instance, r);
+                    }
                     instance.show();
-                    _render_success(instance, r.label);
+                    _details_seq += 1;
+                    var details_id = 'action-details-' + _details_seq + '-' + Date.now();
+                    _details_store[details_id] = {
+                        title: details_modal_title,
+                        body: r.details_body,
+                        lexer: r.details_lexer,
+                        status_code: r.status_code,
+                        instance: instance
+                    };
+                    _render_error(instance, r.label, details_id);
                 }
+            };
+
+            // The outcome waits until the caller's indicator has been on screen for
+            // its minimum, so a fast response does not flash it
+            var elapsed = Date.now() - started_at;
+            var remaining = Math.max(0, min_wait_ms - elapsed);
+
+            if(remaining) {
+                setTimeout(report, remaining);
             } else {
-                if(on_error) {
-                    on_error(instance, r);
-                }
-                instance.show();
-                _details_seq += 1;
-                var details_id = 'action-details-' + _details_seq + '-' + Date.now();
-                _details_store[details_id] = {
-                    title: details_modal_title,
-                    body: r.details_body,
-                    lexer: r.details_lexer,
-                    status_code: r.status_code,
-                    instance: instance
-                };
-                _render_error(instance, r.label, details_id);
+                report();
             }
         };
 

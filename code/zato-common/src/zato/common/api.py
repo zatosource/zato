@@ -851,6 +851,56 @@ class HTTP_SOAP:
 
         FieldList = (Field_Max_Retries, Field_Sleep_Time, Field_Backoff_Threshold, Field_Backoff_Multiplier)
 
+    class Queue:
+        """ The queue switch of outgoing REST, SOAP, HL7 MLLP and FHIR connections - with it on, each send goes
+        to the connection's own queue and is delivered one message at a time, in order. Stored in the opaque attributes.
+        """
+
+        Field_Use_Queue = 'use_queue'
+
+        # By default, a send is made right away, the way it always was
+        Default_Use_Queue = False
+
+        FieldList = (Field_Use_Queue,)
+
+    class DLQ:
+        """ The DLQ config of outgoing connections that use a queue - what happens to a message that still fails
+        after its last retry. All the fields are stored in the connection's opaque attributes.
+        """
+
+        Field_Use_DLQ = 'use_dlq'
+        Field_Action = 'dlq_action'
+        Field_Retries = 'dlq_retries'
+        Field_Retry_Interval = 'dlq_retry_interval'
+        Field_Forward_To = 'dlq_forward_to'
+        Field_Keep_Header = 'dlq_keep_header'
+
+        class Action:
+            Keep = 'keep'
+            Retry = 'retry'
+            Forward = 'forward'
+            Discard = 'discard'
+
+        # By default, a message that exhausted its retries moves to the DLQ and the queue moves on
+        Default_Use_DLQ = True
+
+        # By default, the DLQ rule leaves a message where it is
+        Default_Action = Action.Keep
+
+        # How many times the rule puts a message back into the queue before leaving it in the DLQ
+        Default_Retries = 3
+
+        # How many seconds pass between two rounds of the rule for one message
+        Default_Retry_Interval = 60
+
+        # A forwarded message goes to this topic
+        Default_Forward_To = ''
+
+        # A forwarded message keeps its DLQ header
+        Default_Keep_Header = True
+
+        FieldList = (Field_Use_DLQ, Field_Action, Field_Retries, Field_Retry_Interval, Field_Forward_To, Field_Keep_Header)
+
     class ResponseCache:
         """ Declarative response caching config of REST and SOAP channels - the whole block is stored
         in the channel's opaque attributes under the Opaque_Key name.

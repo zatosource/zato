@@ -120,6 +120,7 @@ $.namespace('zato.data_table');
 $.namespace('zato.data_table.multirow');
 $.namespace('zato.definition');
 $.namespace('zato.definition.amqp');
+$.namespace('zato.delivery_tab');
 $.namespace('zato.destinations');
 $.namespace('zato.docs');
 $.namespace('zato.email');

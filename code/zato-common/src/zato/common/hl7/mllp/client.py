@@ -69,6 +69,27 @@ class HL7MLLPClient:
 
 # ################################################################################################################################
 
+    def ping(self) -> 'None':
+        """ Opens a connection to the endpoint, with the TLS handshake if TLS is configured, and closes it
+        again without sending anything - which is all it takes to know whether the endpoint is there,
+        and nothing a receiving system would act on.
+        """
+        raw_socket = socket.create_connection(
+            (self.host, self.port),
+            timeout=self.connect_timeout,
+        )
+
+        try:
+            if self.ssl_context:
+                hostname = self.server_hostname if self.server_hostname else self.host
+                active_socket = self.ssl_context.wrap_socket(raw_socket, server_hostname=hostname)
+                active_socket.close()
+
+        finally:
+            raw_socket.close()
+
+# ################################################################################################################################
+
     def send(self, data:'bytes', control_id:'str' = '') -> 'AckResult':
         """ Sends a framed HL7 message and returns a validated AckResult.
         """

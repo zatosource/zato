@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.admin.web import alerts_tab, from_user_to_utc, from_utc_to_user
+from zato.admin.web import alerts_tab, delivery_tab, from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms import health_check_unit_for_form, health_check_unit_to_scheduler
 from zato.admin.web.views import get_security_id_from_select, get_security_groups_from_checkbox_list
 from zato.common.alerting.object_config import get_alert_type
@@ -140,6 +140,12 @@ def get_edit_create_message(params:'any_', prefix:'str'='', user_profile:'any_'=
             else:
                 message[name] = default
 
+        # The queue switch and the DLQ config exist only in the forms of outgoing REST connections,
+        # whose Delivery tab enters each count of seconds as a count and a unit
+        if params['transport'] == URL_TYPE.PLAIN_HTTP:
+            message.update(delivery_tab.get_message_fields(params, prefix))
+            delivery_tab.join_unit_fields(params, prefix, message)
+
     # The start date is entered in the user's own timezone and format and it is stored in UTC
     if scheduler_start_date := message['scheduler_start_date']:
         message['scheduler_start_date'] = from_user_to_utc(scheduler_start_date, user_profile).isoformat()
@@ -193,6 +199,11 @@ def fill_row_from_item(
             if value is None:
                 value = default
             setattr(http_soap, name, value)
+
+        # The queue switch and the DLQ config are opaque attributes too, and the Delivery tab
+        # shows each count of seconds as a count and a unit
+        delivery_tab.fill_row(http_soap, item)
+        delivery_tab.split_unit_fields(http_soap)
 
         # The start date is stored in UTC and displayed in the user's own timezone and format
         if scheduler_start_date := http_soap.get('scheduler_start_date'):

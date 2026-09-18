@@ -31,6 +31,9 @@ $.fn.zato.http_soap.tabs.init = function() {
 
     if($.fn.zato.http_soap.is_rest_outgoing()) {
 
+        // The Delivery tab's popover is set up once for both popups
+        $.fn.zato.delivery_tab.init();
+
         // Attach date-time pickers to the scheduler start date fields in both popups ..
         $.fn.zato.http_soap.attach_datetimepicker(['#id_scheduler_start_date', '#id_edit-scheduler_start_date']);
 
@@ -94,6 +97,7 @@ $.fn.zato.http_soap.outgoingTabLabels = function() {
         config:       'Config',
         alerts:       $.fn.zato.alerts_tab.tab_label(),
         scheduler:    'Scheduler',
+        delivery:     'Delivery',
         request:      'Request',
         response:     'Response',
         callback:     'Callback'
