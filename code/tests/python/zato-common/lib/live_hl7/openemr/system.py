@@ -9,10 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from json import dumps
+from urllib.parse import urlencode
 
 # Live HL7
 from live_hl7.credentials import PasswordRules
 from live_hl7.http import Session, encode_form, expect_status, parse_json, request
+from live_hl7.seed import Seed_Patients, SeedPatient
 from live_hl7.system import Handle, LiveSystem
 
 # ################################################################################################################################
@@ -24,8 +26,13 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The service name in the compose file
+# The service names in the compose file
 Service = 'openemr'
+DB_Service = 'db'
+
+# The database the image installs and its root account, whose password is the one every service is started with
+Database_Name = 'openemr'
+Database_Root_User = 'root'
 
 # The account the image creates from OE_USER and OE_PASS
 Admin_Username = 'admin'
@@ -39,7 +46,6 @@ Login_Action = f'/interface/main/main_screen.php?auth=login&site={Site}'
 Provider_Edit_Page = '/interface/orders/procedure_provider_edit.php'
 Order_Form_Page = '/interface/forms/procedure_order/new.php'
 Reports_Page = '/interface/orders/list_reports.php'
-Client_Admin_Page = '/interface/smart/admin-client.php'
 
 # API paths
 Registration_Path = f'/oauth2/{Site}/registration'
@@ -48,6 +54,10 @@ API_Root = f'/apis/{Site}/api'
 
 # What the API client asks for
 API_Scopes = 'openid offline_access api:oemr user/patient.read user/patient.write user/encounter.read user/encounter.write'
+
+# What a standalone instance's seed patients are created through, and how HL7's sex codes read in OpenEMR
+Seed_Client_Name = 'zato-seed'
+Sex_Names = {'F': 'Female', 'M': 'Male'}
 
 # The transport the procedure provider uses - what makes OpenEMR upload orders over SFTP and poll for results
 Protocol_SFTP = 'SFTP'
@@ -89,6 +99,55 @@ class OpenEMR(LiveSystem):
 
         out = b'name="authUser"' in result.body
         return out
+
+# ################################################################################################################################
+
+    def after_ready(self, handle:'Handle') -> 'None':
+        """ A standalone instance gets the seed patients, unless an earlier run on the kept volumes already added them.
+        """
+        if handle.is_standalone:
+            seed_patients(handle)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def seed_patients(handle:'Handle') -> 'None':
+    api = admin_api(handle)
+
+    for patient in Seed_Patients:
+        payload = _seed_payload(patient)
+        query = urlencode({'lname': payload['lname'], 'fname': payload['fname'], 'DOB': payload['DOB']})
+        found = find_patients(api, query)
+
+        if not found:
+            _ = create_patient(api, payload)
+
+# ################################################################################################################################
+
+def admin_api(handle:'Handle') -> 'Session':
+    """ An API session for the administrator - a client is registered and enabled for it first.
+    """
+    client = register_api_client(handle, Seed_Client_Name)
+    enable_api_client(handle, client['client_id'])
+    token = api_token(handle, client)
+
+    out = api_session(handle, token)
+    return out
+
+# ################################################################################################################################
+
+def _seed_payload(patient:'SeedPatient') -> 'anydict':
+    birth_date = f'{patient.birth_date[:4]}-{patient.birth_date[4:6]}-{patient.birth_date[6:]}'
+
+    out:'anydict' = {
+        'pubpid': patient.mrn,
+        'fname': patient.given_name,
+        'lname': patient.family_name,
+        'DOB': birth_date,
+        'sex': Sex_Names[patient.sex],
+    }
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -138,12 +197,13 @@ def register_api_client(handle:'Handle', name:'str') -> 'anydict':
 
 # ################################################################################################################################
 
-def enable_api_client(session:'Session', client_id:'str') -> 'None':
-    """ A registered client is disabled until an administrator enables it in the browser - this is that click.
+def enable_api_client(handle:'Handle', client_id:'str') -> 'None':
+    """ A registered client is disabled until an administrator enables it, which is this one row.
     """
-    fields:'strstrdict' = {'action': 'enable', 'client_id': client_id}
-    result = session.post_form(Client_Admin_Page, fields)
-    expect_status(result, 200, f'enabling API client {client_id}')
+    statement = f"update oauth_clients set is_enabled = 1 where client_id = '{client_id}'"
+    arguments = ['mariadb', f'-u{Database_Root_User}', f'-p{handle.password}', Database_Name, '-e', statement]
+
+    _ = handle.stack.exec(DB_Service, arguments)
 
 # ################################################################################################################################
 
