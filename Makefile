@@ -1413,12 +1413,9 @@ HL7_LIVE_RUN = Zato_Health_Root=$(Zato_Health) PYTHONPATH=$(HL7_LIVE_PYTHONPATH)
 HL7_LIVE_SYSTEMS := dcm4che_tools dcm4chee openelis openemr openhim openmrs oscar sftp
 
 # .PHONY expands its prerequisites where it stands, so the generated targets are declared here, after the lists they come from
-.PHONY: $(addprefix hl7-,$(HL7_LIVE_SYSTEMS)) \
+.PHONY: $(addprefix hl7-,$(filter-out dcm4che_tools,$(HL7_LIVE_SYSTEMS))) \
 	$(addprefix hl7-start-,$(HL7_LIVE_SYSTEMS)) $(addprefix hl7-stop-,$(HL7_LIVE_SYSTEMS)) \
 	$(addprefix hl7-logs-,$(HL7_LIVE_SYSTEMS)) $(addprefix hl7-describe-,$(HL7_LIVE_SYSTEMS))
-
-hl7-dcm4che_tools: ## Bring the DICOM tools up standalone, stopping what runs of them first.
-	$(HL7_LIVE_RUN) start dcm4che_tools
 
 hl7-dcm4chee: ## Bring the dcm4chee archive up standalone, stopping what runs of it first.
 	$(HL7_LIVE_RUN) start dcm4chee
