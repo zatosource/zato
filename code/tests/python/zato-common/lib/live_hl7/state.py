@@ -82,6 +82,36 @@ def remove_state(system:'str') -> 'None':
 
 # ################################################################################################################################
 
+def _kept_path(system:'str') -> 'str':
+    out = os.path.join(State_Dir, f'{system}.kept')
+    return out
+
+# ################################################################################################################################
+
+def read_kept_digest(system:'str') -> 'str':
+    """ The digest of the password a system's kept volumes were installed with, empty when there is none recorded.
+    """
+    path = _kept_path(system)
+
+    if not os.path.exists(path):
+        return ''
+
+    with open(path, encoding='utf8') as kept_file:
+        out = kept_file.read().strip()
+
+    return out
+
+# ################################################################################################################################
+
+def write_kept_digest(system:'str', digest:'str') -> 'None':
+    ensure_directories()
+    path = _kept_path(system)
+
+    with open(path, 'w', encoding='utf8') as kept_file:
+        _ = kept_file.write(digest)
+
+# ################################################################################################################################
+
 def list_states() -> 'strlist':
     """ Names of every standalone system with a state file, sorted.
     """

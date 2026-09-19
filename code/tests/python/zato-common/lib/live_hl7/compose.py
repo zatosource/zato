@@ -56,6 +56,13 @@ def ensure_volume(name:'str') -> 'None':
 
 # ################################################################################################################################
 
+def remove_volume(name:'str') -> 'None':
+    """ Removes a volume, if there is one.
+    """
+    _ = subprocess.run(['docker', 'volume', 'rm', name], capture_output=True, check=False)
+
+# ################################################################################################################################
+
 def _decode(data:'bytes') -> 'str':
     out = data.decode('utf8', 'replace')
     return out

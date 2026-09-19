@@ -9,16 +9,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from datetime import datetime, timezone
+from hashlib import sha256
 from functools import partial
 
 # Live containers
 from live_containers.ready import ContainerExited, wait_until
 
 # Live HL7
-from live_hl7.compose import ComposeStack, ensure_volume
+from live_hl7.compose import ComposeStack, ensure_volume, remove_volume
 from live_hl7.credentials import password_for
 from live_hl7.registry import get_group, get_system
-from live_hl7.state import has_state, read_state, remove_state, write_state
+from live_hl7.state import has_state, read_kept_digest, read_state, remove_state, write_kept_digest, write_state
 from live_hl7.system import Handle
 
 # ################################################################################################################################
@@ -134,6 +135,22 @@ def _is_ready_or_gone(system:'LiveSystem', handle:'Handle') -> 'bool':
 
 # ################################################################################################################################
 
+def _reset_kept_volumes_on_new_password(system:'LiveSystem', handle:'Handle') -> 'None':
+    if not system.kept_volumes:
+        return
+
+    digest = sha256(handle.password.encode('utf8')).hexdigest()
+
+    if read_kept_digest(system.name) == digest:
+        return
+
+    for volume_name in system.kept_volumes:
+        remove_volume(volume_name)
+
+    write_kept_digest(system.name, digest)
+
+# ################################################################################################################################
+
 def start(system_name:'str', *, is_standalone:'bool', extra_environment:'strstrdict | None'=None) -> 'Handle':
     """ Starts one system and returns when it is ready and set up.
     """
@@ -157,7 +174,10 @@ def start(system_name:'str', *, is_standalone:'bool', extra_environment:'strstrd
     # .. the system renders and fetches what its compose file mounts ..
     system.prepare(handle)
 
-    # .. what the system keeps between runs is there before its containers look for it ..
+    # .. what the system keeps between runs has its password installed in it, so a different password starts it over ..
+    _reset_kept_volumes_on_new_password(system, handle)
+
+    # .. and what it keeps is there before its containers look for it ..
     for volume_name in system.kept_volumes:
         ensure_volume(volume_name)
 
