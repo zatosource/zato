@@ -25,6 +25,7 @@ from live_containers.ready import StartupFailed, wait_until
 from live_hl7.credentials import PasswordRules
 from live_hl7.openhim.system import Host_Address
 from live_hl7.http import expect_status, is_http_ok, parse_json, request
+from live_hl7.seed import Seed_Patients
 from live_hl7.system import Handle, LiveSystem
 
 # ################################################################################################################################
@@ -171,14 +172,6 @@ Zato_MLLP_Port_Env = 'Zato_HL7_Zato_MLLP_Port'
 Default_Zato_MLLP_Port = 2575
 Zato_Device = 'zato'
 Zato_Application = 'ZATO|HOSPITAL'
-
-# What a standalone archive starts with, so that its UI has something to show
-Seed_Patients = (
-    PatientRecord('MRN0001', 'Johnson', 'Emily', '19850312', 'F'),
-    PatientRecord('MRN0002', 'Miller', 'James', '19701124', 'M'),
-    PatientRecord('MRN0003', 'Davis', 'Sarah', '19920805', 'F'),
-    PatientRecord('MRN0004', 'Wilson', 'Robert', '19630217', 'M'),
-)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -787,7 +780,8 @@ def seed_patients(handle:'Handle') -> 'None':
     """ A few patients for a person to find in the UI of a standalone archive.
     """
     for patient in Seed_Patients:
-        create_patient(handle, patient)
+        record = PatientRecord(patient.mrn, patient.family_name, patient.given_name, patient.birth_date, patient.sex)
+        create_patient(handle, record)
 
 # ################################################################################################################################
 
