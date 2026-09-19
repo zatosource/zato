@@ -39,6 +39,9 @@ def _print_handle(handle:'Handle') -> 'None':
         print(f'  UI             {url}', flush=True)
         print(f'  Login          {system.ui_username}', flush=True)
 
+        if handle.password != get_password():
+            print(f'  Password       {handle.password}', flush=True)
+
 # ################################################################################################################################
 
 def _command_start(arguments:'Namespace') -> 'None':

@@ -7,6 +7,8 @@ services:
       MARIADB_ROOT_PASSWORD: "${OPENEMR_PASSWORD}"
     ports:
       - "${OPENEMR_MARIADB_PORT}:3306"
+    volumes:
+      - db:/var/lib/mysql
 
   openemr:
     image: openemr/openemr:7.0.3
@@ -24,12 +26,24 @@ services:
       OPENEMR_SETTING_site_addr_oath: "http://127.0.0.1:${OPENEMR_WEB_PORT}"
     ports:
       - "${OPENEMR_WEB_PORT}:80"
+    volumes:
+      - app:/var/www/localhost/htdocs/openemr
     extra_hosts:
       - "host.docker.internal:host-gateway"
     # The laboratory's file drop is reached by its service name across stacks, so this one service joins the shared network too
     networks:
       - default
       - live
+
+# The application tree and the database outlive the stack - the image's setup walks the whole tree changing
+# permissions, which on a container's own layer copies every file up and takes minutes, on a volume it is done once
+volumes:
+  db:
+    name: zato-hl7-openemr-db
+    external: true
+  app:
+    name: zato-hl7-openemr-app
+    external: true
 
 networks:
   live:

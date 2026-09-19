@@ -74,6 +74,7 @@ class OpenEMR(LiveSystem):
     ui_purpose = 'web'
     ui_path = '/'
     ui_username = Admin_Username
+    kept_volumes = ('zato-hl7-openemr-db', 'zato-hl7-openemr-app')
 
 # ################################################################################################################################
 
