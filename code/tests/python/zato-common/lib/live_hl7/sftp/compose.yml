@@ -1,0 +1,12 @@
+services:
+
+  sftp:
+    image: atmoz/sftp:alpine
+    command: "${SFTP_USERNAME}:${SFTP_PASSWORD}:1001::orders,results"
+    ports:
+      - "${SFTP_SSH_PORT}:22"
+
+networks:
+  default:
+    name: zato-hl7-live
+    external: true

@@ -1,0 +1,80 @@
+services:
+
+  ldap:
+    image: dcm4che/slapd-dcm4chee:2.6.14-35.2
+    environment:
+      ARCHIVE_HOST: arc
+      STORAGE_DIR: /storage/fs1
+      LDAP_ROOTPASS: "${DCM4CHEE_PASSWORD}"
+    ports:
+      - "${DCM4CHEE_LDAP_PORT}:389"
+    volumes:
+      - ldap-config:/etc/openldap/slapd.d
+      - ldap-data:/var/lib/openldap/openldap-data
+    # The archive reads its device once, on deployment, so it waits until the directory has imported everything
+    healthcheck:
+      test: ["CMD-SHELL", "ldapsearch -x -H ldap://127.0.0.1:389 -b 'dicomDeviceName=dcm4chee-arc,cn=Devices,cn=DICOM Configuration,dc=dcm4che,dc=org' -s base '(dicomVendorData=*)' dn | grep -q '^dn:'"]
+      interval: 2s
+      timeout: 5s
+      retries: 150
+
+  db:
+    image: dcm4che/postgres-dcm4chee:17.9-35
+    environment:
+      POSTGRES_DB: pacsdb
+      POSTGRES_USER: pacs
+      POSTGRES_PASSWORD: "${DCM4CHEE_PASSWORD}"
+    ports:
+      - "${DCM4CHEE_POSTGRES_PORT}:5432"
+    # The archive connects once, on deployment, so it waits until the database answers over TCP
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U pacs -d pacsdb"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
+  arc:
+    image: dcm4che/dcm4chee-arc-psql:5.35.2
+    depends_on:
+      ldap:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    environment:
+      WILDFLY_ADMIN_USER: admin
+      WILDFLY_ADMIN_PASSWORD: "${DCM4CHEE_PASSWORD}"
+      WILDFLY_DEPLOY_UI: "true"
+      WILDFLY_PACSDS_USE_CCM: "false"
+      POSTGRES_DB: pacsdb
+      POSTGRES_USER: pacs
+      POSTGRES_PASSWORD: "${DCM4CHEE_PASSWORD}"
+      LDAP_ROOTPASS: "${DCM4CHEE_PASSWORD}"
+      WILDFLY_CHOWN: /storage
+      WILDFLY_WAIT_FOR: ldap:389 db:5432
+      KEYSTORE: "${DCM4CHEE_KEYSTORE}"
+      KEYSTORE_PASSWORD: "${DCM4CHEE_KEYSTORE_PASSWORD}"
+      KEYSTORE_TYPE: PKCS12
+      TRUSTSTORE: "${DCM4CHEE_TRUSTSTORE}"
+      TRUSTSTORE_PASSWORD: "${DCM4CHEE_TRUSTSTORE_PASSWORD}"
+      TRUSTSTORE_TYPE: PKCS12
+      JAVA_OPTS: -Xms64m -Xmx1024m -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=256m -Djava.net.preferIPv4Stack=true -Djboss.modules.system.pkgs=org.jboss.byteman -Djava.awt.headless=true
+    volumes:
+      - "${DCM4CHEE_TLS_DIR}:/opt/zato-tls:ro"
+      - storage:/storage
+    ports:
+      - "${DCM4CHEE_WEB_PORT}:8080"
+      - "${DCM4CHEE_DICOM_PORT}:11112"
+      - "${DCM4CHEE_HL7_PORT}:2575"
+      - "${DCM4CHEE_HL7_TLS_PORT}:12575"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+# The directory outlives the stack, its import of the archive configuration is done once
+volumes:
+  storage:
+  ldap-config:
+    name: zato-hl7-dcm4chee-ldap-config
+    external: true
+  ldap-data:
+    name: zato-hl7-dcm4chee-ldap-data
+    external: true

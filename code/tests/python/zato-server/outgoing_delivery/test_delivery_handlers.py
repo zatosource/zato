@@ -14,7 +14,8 @@ from unittest.mock import MagicMock
 
 # Zato
 from zato.common.ext.bunch import Bunch
-from zato.common.pubsub.outgoing import deliver_envelope, OutgoingType
+from zato.common.pubsub.outgoing import build_envelope, deliver_envelope, Key_Data, Key_Headers, Key_Method, Key_Params, \
+    OutgoingType, SendRejected
 from zato.server.config import ConfigDict
 from zato.server.connection.outgoing_delivery import register_delivery_handlers
 
@@ -43,20 +44,6 @@ _fhir_document = {'resourceType': _fhir_resource_type, 'name': [{'family': 'John
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _RESTResponse:
-    """ What an outgoing REST connection answers an invocation with.
-    """
-
-    def __init__(self, is_accepted:'bool') -> 'None':
-        self.is_accepted = is_accepted
-
-    def raise_for_status(self) -> 'None':
-        if not self.is_accepted:
-            raise Exception('The connection did not accept the message')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class _RESTWrapper:
     """ Stands in for an outgoing REST connection's wrapper, recording what was sent through it.
     """
@@ -65,10 +52,14 @@ class _RESTWrapper:
         self.invocations:'anylist' = []
         self.is_accepted = True
 
-    def rest_invoke(self, cid:'str', data:'str') -> '_RESTResponse':
-        self.invocations.append((cid, data))
-        out = _RESTResponse(self.is_accepted)
-        return out
+        # No retry fields, so one attempt per round
+        self.config:'stranydict' = {}
+
+    def send_from_queue(self, cid:'str', request:'stranydict') -> 'None':
+        self.invocations.append((cid, request[Key_Data]))
+
+        if not self.is_accepted:
+            raise SendRejected('HTTP 500 The connection did not accept the message')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -111,13 +102,14 @@ def _new_envelope(conn_type:'str', data:'str') -> 'stranydict':
     """ The envelope a publication to one connection turns into - the id is what it is delivered by
     and the name is the one it went by when it was published, which a rename may have changed since.
     """
-    out = {
-        'conn_type': conn_type,
-        'conn_id': _conn_id,
-        'conn_name': _conn_name,
-        'data': data,
+    request = {
+        Key_Method: 'POST',
+        Key_Data: data,
+        Key_Headers: {},
+        Key_Params: {},
     }
 
+    out = build_envelope(conn_type, _conn_id, _conn_name, '', 0, request)
     return out
 
 # ################################################################################################################################

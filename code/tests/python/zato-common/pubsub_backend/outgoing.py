@@ -17,11 +17,12 @@ from gevent import sleep
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows, get_sub_rows, move_message_rows
 from zato.common.api import PubSub
-from zato.common.pubsub.outgoing import deliver_envelope, get_outgoing_sub_key, get_outgoing_topic_name, \
-    OutgoingPublisher, register_outgoing_conn_type
+from zato.common.pubsub.outgoing import deliver_envelope, get_outgoing_sub_key, get_outgoing_topic_name, Key_Conn_ID, \
+    Key_Conn_Type, Key_Data, OutgoingPublisher, register_outgoing_conn_type, wait_between_rounds
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.typing_ import cast_
 from zato.server.base.config_manager import ConfigManager
+from zato.server.base.config_manager.outgoing_queues import OutgoingQueueDepth
 from zato.server.base.parallel.delivery import PushDelivery
 
 # ################################################################################################################################
@@ -54,6 +55,9 @@ _name_orders_renamed = 'Order Intake EU'
 # its own set, because a name and an id mean something only within one type of connection.
 _connections:'anydict' = {}
 _other_connections:'anydict' = {}
+
+# Stopped once the scenario is over
+_deliveries:'list[PushDelivery]' = []
 
 # How long one wait for an expected outcome may take at most, in seconds -
 # generous because a retry sleeps for seconds before its next attempt.
@@ -133,25 +137,50 @@ class _StubConfigManager:
     delete_outgoing_subscription = ConfigManager.delete_outgoing_subscription
     restore_outgoing_subscriptions = ConfigManager.restore_outgoing_subscriptions
 
+    init_outgoing_dlqs = ConfigManager.init_outgoing_dlqs
+    ensure_outgoing_dlq = ConfigManager.ensure_outgoing_dlq
+    rename_outgoing_dlq = ConfigManager.rename_outgoing_dlq
+    delete_outgoing_dlq = ConfigManager.delete_outgoing_dlq
+    restore_outgoing_dlqs = ConfigManager.restore_outgoing_dlqs
+
     def __init__(self, server:'any_') -> 'None':
         self.server = server
         self._push_subs:'anydict' = {}
         self._outgoing_sub_key_cache:'any_' = set()
         self._outgoing_sub_key_lock = RLock()
         self._outgoing_conn_locks:'anydict' = {}
+        self.outgoing_queue_depth = OutgoingQueueDepth()
+        self.init_outgoing_dlqs()
+
+# ################################################################################################################################
+
+    def get_pubsub_topic_backend(self, topic_name:'str') -> 'None':
+        """ Every topic of this scenario is a built-in one.
+        """
+        return None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _StubServiceStore:
+    """ Stands in for the service store.
+    """
+
+    def __init__(self) -> 'None':
+        self.name_to_impl_name:'anydict' = {}
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _StubServer:
-    """ Stands in for the server - what its invoke does with a message is what the delivery
-    service does with it, which is to say it hands the envelope to the registry.
+    """ Stands in for the server, its invoke does what the delivery service does.
     """
 
     pubsub_push_delivery: 'PushDelivery'
 
     def __init__(self, backend:'SQLPubSubBackend') -> 'None':
         self.config_manager = _StubConfigManager(self)
+        self.service_store = _StubServiceStore()
         self.pubsub_backend = backend
         self.invoked:'anylist' = []
 
@@ -162,7 +191,16 @@ class _StubServer:
         self.invoked.append(service_name)
 
         envelope = loads(payload)
-        deliver_envelope(_as_server(self), 'test-cid', envelope)
+
+        # A failed round waits before the failure is let out, as the delivery service does
+        try:
+            deliver_envelope(_as_server(self), 'test-cid', envelope)
+        except Exception:
+            wait_between_rounds()
+            raise
+
+        sub_key = get_outgoing_sub_key(envelope[Key_Conn_Type], envelope[Key_Conn_ID])
+        self.config_manager.outgoing_queue_depth.lower(sub_key, 1)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -203,10 +241,10 @@ def _locate_other_test_connection(server:'any_', conn_id:'int') -> 'anytuple':
 
 # ################################################################################################################################
 
-def _deliver_to_test_connection(server:'any_', cid:'str', wrapper:'any_', data:'str') -> 'None':
+def _deliver_to_test_connection(server:'any_', cid:'str', wrapper:'any_', request:'anydict') -> 'None':
     """ The delivery handler this scenario registers - it gives the message to what the locator found.
     """
-    wrapper.receive(data)
+    wrapper.receive(request[Key_Data])
 
 # ################################################################################################################################
 
@@ -263,7 +301,19 @@ def _new_server() -> 'anytuple':
 
     server.pubsub_push_delivery = delivery
 
+    # Stopped however the scenario ends, or the greenlets outlive it
+    _deliveries.append(delivery)
+
     return backend, server, delivery
+
+# ################################################################################################################################
+
+def _stop_all_deliveries() -> 'None':
+    """ Stops every delivery the scenario built.
+    """
+    while _deliveries:
+        delivery = _deliveries.pop()
+        delivery.stop()
 
 # ################################################################################################################################
 
@@ -978,19 +1028,23 @@ def run_outgoing_scenario() -> 'None':
     register_outgoing_conn_type(_conn_type, _locate_test_connection, _deliver_to_test_connection)
     register_outgoing_conn_type(_other_conn_type, _locate_other_test_connection, _deliver_to_test_connection)
 
-    _run_publish_delivers_flow()
-    _run_queue_isolation_flow()
-    _run_retry_then_success_flow()
-    _run_expiration_flow()
-    _run_restart_recovery_flow()
-    _run_ordering_flow()
-    _run_rename_flow()
-    _run_rename_during_delivery_flow()
-    _run_rename_one_queue_flow()
-    _run_rename_keeps_order_flow()
-    _run_rename_crash_flow()
-    _run_delete_flow()
-    _run_type_isolation_flow()
+    try:
+        _run_publish_delivers_flow()
+        _run_queue_isolation_flow()
+        _run_retry_then_success_flow()
+        _run_expiration_flow()
+        _run_restart_recovery_flow()
+        _run_ordering_flow()
+        _run_rename_flow()
+        _run_rename_during_delivery_flow()
+        _run_rename_one_queue_flow()
+        _run_rename_keeps_order_flow()
+        _run_rename_crash_flow()
+        _run_delete_flow()
+        _run_type_isolation_flow()
+
+    finally:
+        _stop_all_deliveries()
 
 # ################################################################################################################################
 # ################################################################################################################################

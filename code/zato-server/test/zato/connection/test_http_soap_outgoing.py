@@ -40,8 +40,10 @@ def _get_wrapper(config_extra:'stranydict | None'=None) -> 'HTTPSOAPWrapper':
     """ Builds a wrapper around a minimal connection config.
     """
     config = {
+        'id': 1,
         'name': ModuleCtx.Conn_Name,
         'is_active': True,
+        'use_queue': False,
         'is_internal': True,
         'timeout': 1,
         'username': 'my-user',

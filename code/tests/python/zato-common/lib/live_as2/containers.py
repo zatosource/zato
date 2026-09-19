@@ -9,7 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import subprocess
-from time import sleep, time
+
+# Zato
+from live_containers.ready import wait_until
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,10 +40,6 @@ class ModuleCtx:
 
     # The name under which the container reaches listeners running on the host.
     Host_Alias = 'host.docker.internal'
-
-    # How long to wait for the receiver to accept connections and how long to sleep between attempts.
-    Ready_Timeout = 180
-    Ready_Sleep   = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -163,22 +161,20 @@ def _read_container_logs() -> 'str':
 
 # ################################################################################################################################
 
-def _wait_for_receiver() -> 'None':
-    """ Waits until the counterparty logs that it has fully started - a TCP probe against
+def _has_started() -> 'bool':
+    """ True once the counterparty logs that it has fully started - a TCP probe against
     the published port would only reach docker's own proxy, which accepts connections
     long before the receiver inside the container binds its socket.
     """
-    deadline = time() + ModuleCtx.Ready_Timeout
-
-    while time() < deadline:
-        output = _read_container_logs()
-        if ModuleCtx.Started_Marker in output:
-            return
-        sleep(ModuleCtx.Ready_Sleep)
-
-    # The receiver never came up - the container logs say why.
     output = _read_container_logs()
-    raise Exception(f'The AS2 receiver did not come up on port {ModuleCtx.Host_Receiver_Port}, container logs: {output}')
+
+    out = ModuleCtx.Started_Marker in output
+    return out
+
+# ################################################################################################################################
+
+def _wait_for_receiver() -> 'None':
+    wait_until(_has_started, f'the AS2 receiver on port {ModuleCtx.Host_Receiver_Port}')
 
 # ################################################################################################################################
 # ################################################################################################################################

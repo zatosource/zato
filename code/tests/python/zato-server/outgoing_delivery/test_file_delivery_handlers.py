@@ -30,7 +30,8 @@ from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, A
     ModuleCtx as AuditLogCtx
 from zato.common.ext.bunch import Bunch
 from zato.common.file_transfer.api import Default_Verify_How
-from zato.common.pubsub.outgoing import audit_disabled_conn_types, deliver_envelope, OutgoingType
+from zato.common.pubsub.outgoing import audit_disabled_conn_types, build_envelope, deliver_envelope, Key_Data, \
+    OutgoingType
 from zato.common.sftp import SFTPOutput
 from zato.server.connection.file_transfer_base import spool_file_payload, Key_Remote_Path, Key_Spool_Path
 from zato.server.connection.outgoing_delivery import publishable_generic_types, register_delivery_handlers
@@ -337,15 +338,12 @@ def _new_envelope(conn_type:'str', spool_path:'str') -> 'stranydict':
     """ The envelope a queued file transfer turns into - the bytes stay in the spool file
     and only its path and the remote destination travel through the queue.
     """
-    out = {
-        'conn_type': conn_type,
-        'conn_id': _conn_id,
-        'conn_name': _conn_name,
-        'data': dumps({
-            Key_Spool_Path: spool_path,
-            Key_Remote_Path: _remote_path,
-        }),
-    }
+    data = dumps({
+        Key_Spool_Path: spool_path,
+        Key_Remote_Path: _remote_path,
+    })
+
+    out = build_envelope(conn_type, _conn_id, _conn_name, '', 0, {Key_Data: data})
 
     return out
 

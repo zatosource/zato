@@ -1,0 +1,183 @@
+/* ------------------------------------------------------------ */
+/* Delivery - the queue and the DLQ of an outgoing connection    */
+/* ------------------------------------------------------------ */
+
+.delivery-tabs {
+    margin: 0 0 8px 2%;
+}
+
+.delivery-tabs > .dashboard-tab[disabled],
+.delivery-tabs > .dashboard-tab[disabled]:hover {
+    cursor: default;
+    opacity: 0.45;
+    color: rgba(0, 0, 0, 0.36);
+    background: transparent none;
+}
+
+/* ------------------------------------------------------------ */
+/* Delivery - the action links above the table                  */
+/* ------------------------------------------------------------ */
+
+.delivery-action-gap {
+    display: inline-block;
+    width: 24px;
+}
+
+/* ------------------------------------------------------------ */
+/* Delivery - the table                                         */
+/* ------------------------------------------------------------ */
+
+/* Two tables share the page, so the #data-table layout is repeated here */
+.delivery-table {
+    width: 96%;
+    margin-left: 2%;
+    counter-reset: data_table_counter;
+}
+
+.delivery-table th {
+    white-space: nowrap;
+}
+
+.delivery-table tbody tr:not(.ignore):nth-child(even) {
+    background-color: rgba(6, 60, 101, 0.025);
+}
+
+.delivery-table tbody tr:not(.ignore):hover {
+    background-color: var(--zato-row-hover);
+}
+
+.delivery-table td.numbering {
+    position: relative;
+    text-align: center;
+}
+
+.delivery-table td.numbering:before {
+    content: counter(data_table_counter);
+    counter-increment: data_table_counter;
+    font-weight: 500;
+}
+
+.delivery-cell-select {
+    width: 1%;
+    text-align: center;
+}
+
+.delivery-table .zato-plain-checkbox {
+    margin: 0;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+.delivery-cell-nowrap {
+    white-space: nowrap;
+}
+
+.delivery-cell-error {
+    color: var(--zato-ui-error);
+}
+
+.delivery-hidden-form {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Delivery - the action popovers                               */
+/* ------------------------------------------------------------ */
+
+.delivery-popover {
+    --delivery-popover-min-width: 260px;
+}
+
+.delivery-popover.micro-form-fit {
+    min-width: var(--delivery-popover-min-width);
+}
+
+.delivery-popover-target {
+    font-size: 12px;
+    color: var(--zato-ui-text);
+}
+
+.delivery-popover-target-count {
+    font-weight: 700;
+}
+
+.delivery-popover-target-id,
+.delivery-popover-target-query {
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+}
+
+.delivery-popover .micro-form-checkbox-text {
+    flex: 0 0 auto;
+}
+
+/* ------------------------------------------------------------ */
+/* Delivery - the details window                                */
+/* ------------------------------------------------------------ */
+
+.delivery-details {
+    --delivery-details-label-color: #999;
+    --delivery-details-value-color: #e8e8e8;
+    --delivery-details-error-color: #ff8a80;
+    --delivery-details-font: 'Menlo', 'Consolas', 'Monaco', monospace;
+    --delivery-details-link-color: #7ab3ef;
+}
+
+.delivery-details-facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: 18px;
+    row-gap: 4px;
+    margin: 0 0 6px 0;
+    font-family: var(--delivery-details-font);
+    font-size: 12px;
+}
+
+.delivery-details-label {
+    color: var(--delivery-details-label-color);
+    white-space: nowrap;
+}
+
+.delivery-details-value {
+    color: var(--delivery-details-value-color);
+    word-break: break-word;
+}
+
+.delivery-details-value-error {
+    color: var(--delivery-details-error-color);
+}
+
+.delivery-details-headers {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.delivery-details-body-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 10px;
+    font-family: var(--delivery-details-font);
+    font-size: 12px;
+    color: var(--delivery-details-label-color);
+}
+
+.delivery-details-body-header a,
+.delivery-details-body-header a:link,
+.delivery-details-body-header a:visited {
+    color: var(--delivery-details-link-color) !important;
+    text-decoration: none !important;
+    background-image: none;
+    padding-bottom: 0;
+}
+
+.delivery-details-body-links {
+    display: inline-flex;
+    gap: 14px;
+    margin-left: auto;
+}
+
+.delivery-details-editor {
+    margin-top: 6px;
+}

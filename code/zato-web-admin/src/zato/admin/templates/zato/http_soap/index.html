@@ -222,6 +222,11 @@
                 '_usage',
             {% endif %}
 
+            // Delivery queue link (REST outgoing connections)
+            {% if transport == 'plain_http' and connection == 'outgoing' %}
+                '_delivery',
+            {% endif %}
+
             // 31, 32
             '_edit',
             '_delete',
@@ -421,6 +426,10 @@
                         <th>&nbsp;</th> {% comment %} _usage {% endcomment %}
                         {% endif %}
 
+                        {% if transport == 'plain_http' and connection == 'outgoing' %}
+                        <th>&nbsp;</th> {% comment %} _delivery {% endcomment %}
+                        {% endif %}
+
                         <!-- 31, 32 -->
                         <th>&nbsp;</th> {% comment %} _edit {% endcomment %}
                         <th>&nbsp;</th> {% comment %} _delete {% endcomment %}
@@ -592,6 +601,7 @@
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
                         <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
                         <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?sources=rest-outgoing&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Delivery queue</span>{% else %}<a href="/zato/outgoing/delivery/rest/{{ item.id }}/?cluster={{ cluster_id }}&amp;tab=queue">Delivery queue</a>{% endif %}</td>
                         {% endif %}
 
                         <!-- 31, 32 -->

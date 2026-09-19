@@ -1,0 +1,82 @@
+services:
+
+  certs:
+    image: itechuw/certgen:main
+    restart: "no"
+    environment:
+      - KEYSTORE_PW="kspass"
+      - TRUSTSTORE_PW="tspass"
+    volumes:
+      - key_trust_store:/etc/openelis-global
+      - keys:/etc/ssl/private/
+      - certs:/etc/ssl/certs/
+
+  db.openelis.org:
+    image: itechuw/openelis-global-2-database:3.2.2.0
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${OPENELIS_PASSWORD}"
+      POSTGRES_DB: clinlims
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
+      DB_PASSWORD: "${OPENELIS_PASSWORD}"
+      DB_SUPERUSER_PASSWORD: "${OPENELIS_PASSWORD}"
+    ports:
+      - "${OPENELIS_POSTGRES_PORT}:5432"
+
+  oe.openelis.org:
+    image: itechuw/openelis-global-2:3.2.2.0
+    depends_on:
+      - db.openelis.org
+      - certs
+    environment:
+      - DEFAULT_PW=${OPENELIS_PASSWORD}
+      - TZ=UTC
+      - CATALINA_OPTS=-Ddatasource.url=jdbc:postgresql://db.openelis.org:5432/clinlims -Ddatasource.username=clinlims -Ddatasource.password=${OPENELIS_PASSWORD} -Doe.ssl.truststorepath=/etc/openelis-global/truststore -Doe.ssl.truststorepassword=tspass -Doe.ssl.keystorepath=/etc/openelis-global/keystore -Doe.ssl.keystorepassword=kspass
+    ports:
+      - "${OPENELIS_WEB_PORT}:8443"
+    volumes:
+      - key_trust_store:/etc/openelis-global
+      - lucene:/var/lib/lucene_index
+    secrets:
+      - source: common.properties
+
+  fhir.openelis.org:
+    image: itechuw/openelis-global-2-fhir:3.2.2.0
+    depends_on:
+      - db.openelis.org
+      - certs
+    environment:
+      TZ: UTC
+      JAVA_OPTS: "-Djavax.net.ssl.trustStore=/etc/openelis-global/truststore -Djavax.net.ssl.trustStorePassword=tspass -Djavax.net.ssl.trustStoreType=pkcs12 -Djavax.net.ssl.keyStore=/etc/openelis-global/keystore -Djavax.net.ssl.keyStorePassword=kspass -Djavax.net.ssl.keyStoreType=pkcs12"
+      CATALINA_OPTS: "-Dhapi.ssl.truststorepath=/etc/openelis-global/truststore -Dhapi.ssl.truststorepassword=tspass -Dhapi.ssl.keystorepath=/etc/openelis-global/keystore -Dhapi.ssl.keystorepassword=kspass"
+      FHIR_DATASOURCE_URL: "jdbc:postgresql://db.openelis.org:5432/clinlims?currentSchema=clinlims"
+      FHIR_DATASOURCE_USERNAME: "clinlims"
+      FHIR_DATASOURCE_PASSWORD: "${OPENELIS_PASSWORD}"
+      FHIR_SERVER_ADRESS: "http://fhir.openelis.org:8080/fhir/"
+    volumes:
+      - key_trust_store:/etc/openelis-global
+
+  bridge:
+    image: itechuw/openelis-analyzer-bridge:3.0.5
+    depends_on:
+      - oe.openelis.org
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      LOGGING_LEVEL_ORG_ITECH: INFO
+    ports:
+      - "${OPENELIS_BRIDGE_API_PORT}:8443"
+      - "${OPENELIS_MLLP_PORT}:2575"
+    volumes:
+      - "${OPENELIS_BRIDGE_CONFIG}:/app/configuration.yml"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+secrets:
+  common.properties:
+    file: ./common.properties
+
+volumes:
+  key_trust_store:
+  keys:
+  certs:
+  lucene:

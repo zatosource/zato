@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import ssl
 import subprocess
-from time import sleep, time
+from functools import partial
 from typing import NamedTuple
 
 # pytds
@@ -21,6 +21,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
 # Zato
+from live_containers.ready import wait_until
 from zato.common.odb import oracle as oracle
 from zato.common.typing_ import cast_
 
@@ -62,14 +63,6 @@ class ModuleCtx:
     # How long a single MS SQL login attempt may take
     MSSQL_Login_Timeout = 3
 
-    # How long to wait for a database to accept connections
-    Ready_Timeout = 300
-
-    # How long to sleep between connection attempts
-    Ready_Sleep = 1
-
-    # After how many connection attempts the wait reports its progress
-    Ready_Report_Every = 10
 
     # The queries the readiness checks run
     Ping_Query        = 'select 1'
@@ -99,34 +92,25 @@ def stop_container(name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _wait_until_ready(engine_url:'str', connect_args:'stranydict', ping_query:'str'=ModuleCtx.Ping_Query) -> 'None':
-    """ Retries connecting until the database accepts connections or the timeout is reached.
+def _ping(engine_url:'str', connect_args:'stranydict', ping_query:'str') -> 'bool':
+    """ One connection attempt - the engine is disposed whether or not it worked.
     """
-    deadline = time() + ModuleCtx.Ready_Timeout
-    last_error = ''
-    attempt_count = 0
+    engine = create_engine(engine_url, connect_args=connect_args, poolclass=NullPool)
+    try:
+        with engine.connect() as connection:
+            _ = connection.execute(text(ping_query))
+    finally:
+        engine.dispose()
 
-    while time() < deadline:
-        engine = create_engine(engine_url, connect_args=connect_args, poolclass=NullPool)
-        try:
-            with engine.connect() as connection:
-                _ = connection.execute(text(ping_query))
-            engine.dispose()
-            return
-        except Exception as e:
-            last_error = str(e)
-            engine.dispose()
+    return True
 
-            # Databases take a while to initialize on their first start,
-            # so a long wait reports that it is still alive and what it last saw.
-            attempt_count += 1
+# ################################################################################################################################
 
-            if attempt_count % ModuleCtx.Ready_Report_Every == 0:
-                print(f'Still waiting for the database, attempt {attempt_count}, last error: {last_error}', flush=True)
-
-            sleep(ModuleCtx.Ready_Sleep)
-
-    raise Exception(f'Database at {engine_url} did not become ready, last error: {last_error}')
+def _wait_until_ready(engine_url:'str', connect_args:'stranydict', ping_query:'str'=ModuleCtx.Ping_Query) -> 'None':
+    """ Retries connecting until the database accepts connections.
+    """
+    check = partial(_ping, engine_url, connect_args, ping_query)
+    wait_until(check, f'the database at {engine_url}')
 
 # ################################################################################################################################
 
@@ -147,34 +131,26 @@ def connect_mssql(port:'int', password:'str', db_name:'str', autocommit:'bool') 
 
 # ################################################################################################################################
 
-def _wait_until_ready_mssql(port:'int', password:'str') -> 'None':
-    """ Retries connecting through pytds until MS SQL accepts logins or the timeout is reached.
+def _ping_mssql(port:'int', password:'str') -> 'bool':
+    """ One login through pytds.
     """
-    deadline = time() + ModuleCtx.Ready_Timeout
-    last_error = ''
-    attempt_count = 0
+    connection = connect_mssql(port, password, ModuleCtx.MSSQL_Master_DB, False)
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(ModuleCtx.Ping_Query)
+            _ = cursor.fetchall()
+    finally:
+        connection.close()
 
-    while time() < deadline:
-        try:
-            connection = connect_mssql(port, password, ModuleCtx.MSSQL_Master_DB, False)
-            with connection.cursor() as cursor:
-                cursor.execute(ModuleCtx.Ping_Query)
-                _ = cursor.fetchall()
-            connection.close()
-            return
-        except Exception as e:
-            last_error = str(e)
+    return True
 
-            # The server takes a while to initialize on its first start,
-            # so a long wait reports that it is still alive and what it last saw.
-            attempt_count += 1
+# ################################################################################################################################
 
-            if attempt_count % ModuleCtx.Ready_Report_Every == 0:
-                print(f'Still waiting for the database, attempt {attempt_count}, last error: {last_error}', flush=True)
-
-            sleep(ModuleCtx.Ready_Sleep)
-
-    raise Exception(f'MS SQL at localhost:{port} did not become ready, last error: {last_error}')
+def _wait_until_ready_mssql(port:'int', password:'str') -> 'None':
+    """ Retries connecting through pytds until MS SQL accepts logins.
+    """
+    check = partial(_ping_mssql, port, password)
+    wait_until(check, f'MS SQL on port {port}')
 
 # ################################################################################################################################
 

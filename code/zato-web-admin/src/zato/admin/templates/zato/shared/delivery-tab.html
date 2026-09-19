@@ -1,14 +1,4 @@
-{% comment %}
-The Delivery tab of an outgoing connection's create or edit form - the retry settings, the queue switch and
-the dead-letter queue settings, written as decision lines the way the Alerts tab writes its own, with the retries
-and the DLQ action edited in popover micro-forms. Included inside the form, after the panel of the Scheduler tab,
-with panel_id and form.
-
-The page includes /static/js/common/delivery-tab.js, calls $.fn.zato.delivery_tab.init() once and
-$.fn.zato.delivery_tab.bind({panel_id: ..., field_prefix: ...}) each time a form opens. The form carries
-the retry fields of its own and gets the queue fields and the unit selects of its counts of seconds through
-zato.admin.web.delivery_tab.add_delivery_fields.
-{% endcomment %}
+{% comment %} The Delivery tab of an outgoing connection's create or edit form, included with panel_id and form {% endcomment %}
 <div class="dashboard-tab-panel alerts-tab-panel delivery-tab-panel" id="{{ panel_id }}" role="tabpanel" hidden>
     <div class="form-data alerts-tab-body">
 
@@ -21,12 +11,6 @@ zato.admin.web.delivery_tab.add_delivery_fields.
                         <label class="decision-line-label" for="{{ panel_id }}-edit-retries">On failure</label>
                         <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-retries"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-retries"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                     </div>
-                </div>
-            </div>
-
-            <div class="alerts-tab-section">
-                <div class="alerts-tab-section-title">Queue</div>
-                <div class="decision-lines">
                     <div class="decision-line alerts-tab-line alerts-tab-line-toggle alerts-tab-active-line" id="{{ panel_id }}-line-use_queue">
                         <label class="decision-line-label" for="{{ form.use_queue.id_for_label }}">Use queue</label>
                         <span class="decision-line-slot">{{ form.use_queue }}</span>

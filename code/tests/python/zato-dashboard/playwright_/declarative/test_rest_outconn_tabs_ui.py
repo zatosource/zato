@@ -46,6 +46,9 @@ _Channel_Page_Url = '/zato/http-soap/?cluster=1&connection=channel&transport=pla
 # The rows of the query string parameters in the create dialog
 _Query_Rows_Selector = '#request-query_string-rows-create .request-param-row'
 
+# The tabs of the declarative invocation profile, which outgoing connections have and channels do not
+_Outgoing_Only_Tabs = ('config', 'scheduler', 'delivery', 'request', 'response', 'callback')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -86,8 +89,8 @@ class TestRESTOutconnTabsUI:
         logged_in_page:'Page',
         zato_dashboard:'anydict',
         ) -> 'None':
-        """ The create dialog of REST channels has no tabs at all - the declarative
-        invocation profile belongs to outgoing connections only.
+        """ The create dialog of REST channels has none of the declarative invocation profile's tabs -
+        the profile belongs to outgoing connections only.
         """
 
         page = logged_in_page
@@ -101,12 +104,14 @@ class TestRESTOutconnTabsUI:
         name_input = cast_('any_', page.query_selector('#create-div #id_name'))
         assert name_input.is_visible(), 'Expected the plain create form on the channels page'
 
-        # .. with no tab headers and no tab panels anywhere in the dialog.
-        tabs = page.query_selector_all('#create-div .dashboard-tab')
-        assert not tabs, f'Expected no tabs on the channels page, got {len(tabs)}'
+        # .. with none of the outgoing-only tab headers and none of their tab panels anywhere in the dialog.
+        for tab_name in _Outgoing_Only_Tabs:
 
-        panels = page.query_selector_all('#create-div .dashboard-tab-panel')
-        assert not panels, f'Expected no tab panels on the channels page, got {len(panels)}'
+            tabs = page.query_selector_all(f'#create-div .dashboard-tab[data-tab="{tab_name}"]')
+            assert not tabs, f'Expected no `{tab_name}` tab on the channels page, got {len(tabs)}'
+
+            panels = page.query_selector_all(f'#create-div .dashboard-tab-panel[id$="-tab-panel-{tab_name}"]')
+            assert not panels, f'Expected no `{tab_name}` tab panel on the channels page, got {len(panels)}'
 
         close_dialog_via_jquery(page, 'create-div')
 

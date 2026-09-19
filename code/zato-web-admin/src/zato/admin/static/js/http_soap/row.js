@@ -219,6 +219,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     if(is_outgoing && !is_soap) {
         row += String.format('<td><a href="/zato/audit-log/?source=rest-outgoing&object_name={0}&cluster={1}">Audit log</a></td>', encodeURIComponent(item.name), cluster_id);
         row += String.format('<td><a href="/zato/channel-usage/?sources=rest-outgoing&objects={0}&cluster={1}">Usage</a></td>', encodeURIComponent(item.name), cluster_id);
+        row += String.format('<td><a href="/zato/outgoing/delivery/rest/{0}/?cluster={1}&tab=queue">Delivery queue</a></td>', item.id, cluster_id);
     }
 
     /* 31, 32 */

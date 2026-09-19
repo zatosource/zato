@@ -852,20 +852,17 @@ class HTTP_SOAP:
         FieldList = (Field_Max_Retries, Field_Sleep_Time, Field_Backoff_Threshold, Field_Backoff_Multiplier)
 
     class Queue:
-        """ The queue switch of outgoing REST, SOAP, HL7 MLLP and FHIR connections - with it on, each send goes
-        to the connection's own queue and is delivered one message at a time, in order. Stored in the opaque attributes.
+        """ The queue switch of outgoing connections, stored in the opaque attributes.
         """
 
         Field_Use_Queue = 'use_queue'
 
-        # By default, a send is made right away, the way it always was
         Default_Use_Queue = False
 
         FieldList = (Field_Use_Queue,)
 
     class DLQ:
-        """ The DLQ config of outgoing connections that use a queue - what happens to a message that still fails
-        after its last retry. All the fields are stored in the connection's opaque attributes.
+        """ The DLQ config of outgoing connections, stored in the opaque attributes.
         """
 
         Field_Use_DLQ = 'use_dlq'
@@ -881,22 +878,11 @@ class HTTP_SOAP:
             Forward = 'forward'
             Discard = 'discard'
 
-        # By default, a message that exhausted its retries moves to the DLQ and the queue moves on
         Default_Use_DLQ = True
-
-        # By default, the DLQ rule leaves a message where it is
         Default_Action = Action.Keep
-
-        # How many times the rule puts a message back into the queue before leaving it in the DLQ
         Default_Retries = 3
-
-        # How many seconds pass between two rounds of the rule for one message
         Default_Retry_Interval = 60
-
-        # A forwarded message goes to this topic
         Default_Forward_To = ''
-
-        # A forwarded message keeps its DLQ header
         Default_Keep_Header = True
 
         FieldList = (Field_Use_DLQ, Field_Action, Field_Retries, Field_Retry_Interval, Field_Forward_To, Field_Keep_Header)
@@ -2382,6 +2368,21 @@ class PubSub:
 
         # Every such queue is subscribed by this one service.
         Delivery_Service = 'zato.pubsub.outgoing.deliver'
+
+        # Seconds between two rounds of one message
+        Retry_Round_Wait = 8
+
+        # The DLQ topic and sub key prefixes, followed by the connection's type and name or id
+        DLQ_Topic_Prefix = 'zato.out.dlq.'
+        DLQ_Sub_Key_Prefix = 'zato.out.dlq.'
+
+        # Why a message is in the DLQ
+        DLQ_Reason_Retries_Exhausted = 'retries-exhausted'
+
+        # The scheduler job that runs the DLQ rule
+        DLQ_Job_Name             = 'zato.pubsub.dlq'
+        DLQ_Job_Interval_Minutes = 1
+        DLQ_Rule_Service         = 'zato.pubsub.dlq.run'
 
     class REST_Server:
 

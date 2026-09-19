@@ -20,7 +20,7 @@ from sqlalchemy.pool import QueuePool
 
 # Zato
 from zato.common.odb import oracle as oracle
-from zato.common.db_env.common import get_env_values, Type_SQLite
+from zato.common.db_env.common import get_env_values, Type_Oracle, Type_SQLite
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, set_sqlite_pragmas
 from zato.common.db_env.schema import ensure_column_types, ensure_columns, ensure_indexes
 from zato.common.defaults import default_env_base_dir
@@ -119,9 +119,13 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
     # .. all network databases run read committed so every backend behaves the same -
     # .. it is already the default of PostgreSQL and Oracle DB, and it matters on MySQL,
     # .. whose repeatable-read default takes gap locks that deadlock concurrent
-    # .. transactions deleting interleaved key ranges, e.g. pub/sub acknowledgements ..
+    # .. transactions deleting interleaved key ranges, e.g. pub/sub acknowledgements.
+    # .. The Oracle dialect does not take the level as an engine argument at all,
+    # .. and read committed is the only level it would offer anyway ..
     if db_type != Type_SQLite:
-        engine_kwargs['isolation_level'] = 'READ COMMITTED'
+
+        if db_type != Type_Oracle:
+            engine_kwargs['isolation_level'] = 'READ COMMITTED'
 
         # .. stores with many concurrent small transactions also need enough
         # .. connections for the database to group their commits into shared flushes ..

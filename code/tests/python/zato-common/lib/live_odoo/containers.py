@@ -8,11 +8,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import subprocess
-from time import sleep, time
+from functools import partial
 from typing import NamedTuple
 
 # Odoo
 import odoolib
+
+# Zato
+from live_containers.ready import wait_until
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,16 +38,6 @@ class ModuleCtx:
 
     # The port Odoo listens on inside its container
     Odoo_Port = 8069
-
-    # How long to wait for Odoo to initialize its database and accept logins -
-    # installing the base module on first start takes a while
-    Ready_Timeout = 600
-
-    # How long to sleep between login attempts
-    Ready_Sleep = 2
-
-    # After how many login attempts the wait reports its progress
-    Ready_Report_Every = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,36 +74,25 @@ def stop_odoo(server:'OdooServer') -> 'None':
 
 # ################################################################################################################################
 
-def _wait_until_ready(port:'int', db_name:'str') -> 'None':
-    """ Retries logging in until Odoo has initialized the database and accepts
-    the default credentials, or the timeout is reached.
+def _check_login(port:'int', db_name:'str') -> 'bool':
+    """ One login with the default credentials.
     """
-    deadline = time() + ModuleCtx.Ready_Timeout
-    last_error = ''
-    attempt_count = 0
+    connection = odoolib.get_connection(
+        hostname='localhost', protocol='jsonrpc', port=port, # type: ignore
+        database=db_name, login=ModuleCtx.Login, password=ModuleCtx.Password)
 
-    while time() < deadline:
+    connection.check_login()
 
-        try:
-            connection = odoolib.get_connection(
-                hostname='localhost', protocol='jsonrpc', port=port, # type: ignore
-                database=db_name, login=ModuleCtx.Login, password=ModuleCtx.Password)
+    return True
 
-            connection.check_login()
-            return
+# ################################################################################################################################
 
-        except Exception as e:
-            last_error = str(e)
-
-            # A long wait reports its progress and the last error seen.
-            attempt_count += 1
-
-            if attempt_count % ModuleCtx.Ready_Report_Every == 0:
-                print(f'Still waiting for Odoo, attempt {attempt_count}, last error: {last_error}', flush=True)
-
-            sleep(ModuleCtx.Ready_Sleep)
-
-    raise Exception(f'Odoo at localhost:{port} did not become ready, last error: {last_error}')
+def _wait_until_ready(port:'int', db_name:'str') -> 'None':
+    """ Retries logging in until Odoo has initialized the database and accepts the default credentials -
+    installing the base module on first start takes a while.
+    """
+    check = partial(_check_login, port, db_name)
+    wait_until(check, f'Odoo at localhost:{port}')
 
 # ################################################################################################################################
 

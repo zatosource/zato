@@ -287,10 +287,9 @@ class RESTInvoker:
 # ################################################################################################################################
 
     def publish(self, data:'any_'='', **kwargs:'any_') -> 'any_':
-        """ Queues a message for delivery to this connection. This is the same publisher that
-        self.out.rest reaches, so both ways of naming a connection publish to the same queue.
+        """ Queues a message for delivery to this connection, under the calling service's correlation id.
         """
-        out = self.item.publish(data, **kwargs)
+        out = self.conn.publish(data, cid=self.container.cid, **kwargs)
         return out
 
 # ################################################################################################################################

@@ -1,0 +1,138 @@
+{% extends "zato/index.html" %}
+{% load humanize %}
+
+{% block html_title %}Delivery: {{ conn_name }}{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/zato_action_button.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/buttons.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-resize.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/outgoing/delivery.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+
+    {% comment %} Tippy {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
+
+    {% comment %} The tabs {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/detail-kit/url_state.js"></script>
+
+    {% comment %} The details window's editor {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
+
+    {% comment %} The page {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/delivery.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        $.fn.zato.outgoing_delivery.init({
+            activeTab: '{{ active_tab }}',
+            connType: '{{ conn_type }}',
+            connId: '{{ conn_id }}',
+            connName: '{{ conn_name|escapejs }}',
+            clusterId: '{{ cluster_id }}',
+            tabs: {
+                queue: {query: '{{ queue_tab.query|escapejs }}', total: {{ queue_tab.meta.total }}},
+                dlq: {query: '{{ dlq_tab.query|escapejs }}', total: {{ dlq_tab.meta.total }}}
+            }
+        });
+    });
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        <div id="markup">
+
+            <h2 class="zato">Delivery: {{ conn_name }}</h2>
+
+            <div class="dashboard-tabs delivery-tabs" role="tablist" aria-label="Delivery">
+
+                <button type="button"
+                        class="dashboard-tab{% if active_tab == 'queue' %} dashboard-tab-active{% endif %}"
+                        data-tab="queue"
+                        role="tab"
+                        {% if not is_queue_browsable %}disabled{% endif %}
+                        aria-selected="{% if active_tab == 'queue' %}true{% else %}false{% endif %}">
+                    <span class="dashboard-tab-label">Delivery queue</span>
+                </button>
+
+                <button type="button"
+                        class="dashboard-tab{% if active_tab == 'dlq' %} dashboard-tab-active{% endif %}"
+                        data-tab="dlq"
+                        role="tab"
+                        aria-selected="{% if active_tab == 'dlq' %}true{% else %}false{% endif %}">
+                    <span class="dashboard-tab-label">Dead-letter queue</span>
+                </button>
+
+            </div>
+
+            <div class="dashboard-tab-panel"
+                 id="delivery-tab-panel-queue"
+                 role="tabpanel"
+                 {% if active_tab != 'queue' %}hidden{% endif %}>
+                {% if is_queue_browsable %}
+                    {% with tab=queue_tab %}
+                        {% include "zato/outgoing/delivery-tab.html" %}
+                    {% endwith %}
+                {% endif %}
+            </div>
+
+            <div class="dashboard-tab-panel"
+                 id="delivery-tab-panel-dlq"
+                 role="tabpanel"
+                 {% if active_tab != 'dlq' %}hidden{% endif %}>
+                {% with tab=dlq_tab %}
+                    {% include "zato/outgoing/delivery-tab.html" %}
+                {% endwith %}
+            </div>
+
+        </div>
+
+        <form id="delivery-form" class="delivery-hidden-form">
+            <select id="id_forward_to">
+                {% for topic_name in topic_list %}
+                <option value="{{ topic_name }}"{% if topic_name == forward_to %} selected{% endif %}>{{ topic_name }}</option>
+                {% endfor %}
+            </select>
+            <input type="checkbox" id="id_keep_header"{% if keep_header %} checked{% endif %}>
+        </form>
+
+    {% endif %}
+
+{% endif %}
+
+{% endblock %}

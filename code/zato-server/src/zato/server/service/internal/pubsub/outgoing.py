@@ -12,7 +12,9 @@ from logging import getLogger
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.pubsub.outgoing import deliver_envelope
+from zato.common.pubsub.dlq import move_to_dlq
+from zato.common.pubsub.outgoing import deliver_envelope, DeliveryExhausted, get_outgoing_sub_key, Key_Conn_ID, \
+    Key_Conn_Type, wait_between_rounds
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -24,21 +26,35 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class Deliver(Service):
-    """ Delivers one published message to the outgoing connection it was addressed to. This is the subscriber
-    behind the queue of every outgoing connection that anything is published to.
+    """ The push subscriber behind the queue of every outgoing connection.
     """
 
     name = PubSub.Outgoing.Delivery_Service
 
     def handle(self) -> 'None':
 
-        # The invocation machinery hands the envelope over either as a string or as a parsed dict ..
         envelope = self.request.raw_request
         if isinstance(envelope, str):
             envelope = loads(envelope)
 
-        # .. and delivery raises on failure, which is what keeps the message queued for another attempt.
-        deliver_envelope(self.server, self.cid, envelope)
+        try:
+            deliver_envelope(self.server, self.cid, envelope)
+
+        # A message whose attempts ran out moves to the DLQ ..
+        except DeliveryExhausted as e:
+
+            # .. one that does not move waits before it is offered again ..
+            if not move_to_dlq(self.server, self.cid, envelope, e):
+                wait_between_rounds()
+                raise
+
+        except Exception:
+            wait_between_rounds()
+            raise
+
+        # .. and either way it is one fewer in the queue.
+        sub_key = get_outgoing_sub_key(envelope[Key_Conn_Type], envelope[Key_Conn_ID])
+        self.server.config_manager.outgoing_queue_depth.lower(sub_key, 1)
 
 # ################################################################################################################################
 # ################################################################################################################################

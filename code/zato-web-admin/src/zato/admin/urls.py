@@ -50,6 +50,7 @@ from zato.admin.web.views.outgoing import as2 as out_as2
 from zato.admin.web.views.outgoing import as4 as out_as4
 from zato.admin.web.views.outgoing import es as out_es
 from zato.admin.web.views.outgoing import file_transfer_schedule as out_file_transfer_schedule
+from zato.admin.web.views.outgoing import delivery as out_delivery
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import llm as out_llm
@@ -1264,6 +1265,19 @@ urlpatterns += [
         login_required(out_mongodb.Delete()), name=out_mongodb.Delete.url_name),
     url(r'^zato/mongodb/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_mongodb.ping), name='out-mongodb-ping'),
+
+    # .. The queue and the DLQ of an outgoing connection
+
+    path('zato/outgoing/delivery/<str:conn_type>/<int:conn_id>/',
+        login_required(out_delivery.index), name='out-delivery'),
+    url(r'^zato/outgoing/delivery/message/$',
+        login_required(out_delivery.message), name='out-delivery-message'),
+    url(r'^zato/outgoing/delivery/download/$',
+        login_required(out_delivery.download), name='out-delivery-download'),
+    url(r'^zato/outgoing/delivery/action/$',
+        login_required(out_delivery.action), name='out-delivery-action'),
+    url(r'^zato/outgoing/delivery/save/$',
+        login_required(out_delivery.save), name='out-delivery-save'),
 
     # .. Redis
 

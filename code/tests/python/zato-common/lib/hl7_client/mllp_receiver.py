@@ -34,13 +34,32 @@ if 0:
 _Handled_Message_Types = (
     'ADT^A01',
     'ADT^A01^ADT_A01',
+    'ADT^A02',
+    'ADT^A02^ADT_A02',
+    'ADT^A03',
+    'ADT^A03^ADT_A03',
+    'ADT^A04',
+    'ADT^A04^ADT_A01',
+    'ADT^A08',
+    'ADT^A08^ADT_A01',
+    'ADT^A28',
+    'ADT^A28^ADT_A05',
+    'ADT^A31',
+    'ADT^A31^ADT_A05',
+    'ADT^A40',
+    'ADT^A40^ADT_A39',
+    'ADT^A47',
+    'ADT^A47^ADT_A30',
+    'MDM^T02',
+    'MDM^T02^MDM_T02',
     'ORU^R01',
     'ORU^R01^ORU_R01',
     'ORM^O01',
     'ORM^O01^ORM_O01',
 )
 
-# What every listener here binds to
+# What a listener binds to unless a test says otherwise - a receiver standing in for a system that
+# containers send to binds every interface instead
 _Host = '127.0.0.1'
 
 # What the receiver keeps its deliveries in
@@ -73,9 +92,7 @@ def _get_msh_field(message:'str', field_index:'int') -> 'str':
 # ################################################################################################################################
 
 def _build_ack(message:'str', ack_note:'str', ack_code:'str'='AA') -> 'str':
-    """ Builds the acknowledgment this receiver answers one message with - the code it was started
-    with, echoing the message's own control id, with the receiver's note in MSA-3 where it has one.
-    The reply goes onto the wire exactly as a handler returns it, so it carries its own MLLP frame.
+    """ The acknowledgment answering one message, MLLP frame included - the code given, the message's control id and the note in MSA-3.
     """
     control_id = _get_msh_field(message, 9)
 
@@ -153,9 +170,7 @@ class _ReusableMLLPServer(MLLPServer):
 # ################################################################################################################################
 
 class _TLSMLLPServer(_ReusableMLLPServer):
-    """ The same server again, except every connection it accepts is wrapped in TLS before a byte
-    of it is read. hl7apy has nothing to say about transport security, so the wrapping happens where
-    the connection is accepted, which leaves the whole of the HL7 side of it untouched.
+    """ The same server, with every connection it accepts wrapped in TLS before a byte of it is read.
     """
 
     # Set by the receiver before the server is started, because what a connection is wrapped in has
@@ -176,10 +191,8 @@ class _TLSMLLPServer(_ReusableMLLPServer):
 # ################################################################################################################################
 
 class MLLPReceiver:
-    """ A standard-library-of-the-trade MLLP receiving side, built on hl7apy's own MLLP server -
-    the same class other Python systems receive HL7 with. It records every delivery it is sent
-    and acknowledges each one, taking a configurable amount of time over each when a test needs
-    a slow receiver.
+    """ An MLLP receiving side built on hl7apy's MLLP server - it records every delivery it is sent and acknowledges
+    each one, taking a configurable amount of time over each when a test needs a slow receiver.
     """
 
     def __init__(
@@ -190,19 +203,17 @@ class MLLPReceiver:
         cert_path:'str'='',
         key_path:'str'='',
         ca_path:'str'='',
+        host:'str'=_Host,
     ) -> 'None':
 
         self.delay = delay
         self.ack_note = ack_note
+        self.host = host
 
-        # What every acknowledgment this receiver sends carries in MSA-1. It is AA for a receiver
-        # that takes what it is sent, and a rejection code for one a test points a sender at to see
-        # how the sender handles being turned away.
+        # What every acknowledgment this receiver sends carries in MSA-1
         self.ack_code = ack_code
 
-        # What this receiver presents to a sender that connects to it. A certificate turns TLS on,
-        # and naming an authority on top of it turns the verification of the sender on too, which
-        # is the mutual case an outgoing connection with a certificate of its own is pointed at.
+        # A certificate turns TLS on, an authority on top of it turns the verification of the sender on too
         self.cert_path = cert_path
         self.key_path = key_path
         self.ca_path = ca_path
@@ -230,10 +241,10 @@ class MLLPReceiver:
 
         # A receiver with a certificate terminates TLS, and one without takes plain connections
         if self.cert_path:
-            self._server = _TLSMLLPServer(_Host, self.port, handlers)
+            self._server = _TLSMLLPServer(self.host, self.port, handlers)
             self._server.ssl_context = self._build_ssl_context()
         else:
-            self._server = _ReusableMLLPServer(_Host, self.port, handlers)
+            self._server = _ReusableMLLPServer(self.host, self.port, handlers)
 
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
         self._thread.start()

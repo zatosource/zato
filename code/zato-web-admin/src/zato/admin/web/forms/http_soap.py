@@ -76,7 +76,6 @@ response_map_mode_choices = (
 
 class CreateForm(DataFormatForm):
 
-    # An edit form's checkboxes start unchecked, the item that opens the form checks them
     is_edit_form = False
 
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -108,8 +107,7 @@ class CreateForm(DataFormatForm):
     http_accept = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=HTTP_SOAP.ACCEPT.ANY)
     validate_tls = forms.ChoiceField(widget=forms.Select())
 
-    # Retry config - how many times to retry a failed invocation and how long to sleep between attempts,
-    # hidden fields of the Delivery tab, edited in its popover
+    # The retry fields of the Delivery tab
     max_retries = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Max_Retries)
     retry_sleep_time = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Sleep_Time)
     retry_backoff_threshold = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Backoff_Threshold)
@@ -191,7 +189,6 @@ class CreateForm(DataFormatForm):
         # The generic health check tab shares its fields across connection types
         add_health_check_fields(self)
 
-        # The Delivery tab - the retries, the queue switch and the DLQ config - is shared across outgoing connection types too
         delivery_tab.add_delivery_fields(self, self.is_edit_form)
 
         add_security_select(self, security_list)

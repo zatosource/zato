@@ -72,7 +72,7 @@ from zato.common.util.logging_ import get_logging_levels, set_logging_levels, te
 from zato.common.util.platform_ import is_posix
 from zato.common.util.scheduler import ensure_alerting_job_exists, ensure_as2_async_mdn_job_exists, \
     ensure_as2_resend_job_exists, ensure_as2_rotation_job_exists, ensure_as4_resend_job_exists, \
-    ensure_b2b_alerting_job_exists, ensure_cert_check_job_exists, ensure_ms_health_job_exists, \
+    ensure_b2b_alerting_job_exists, ensure_cert_check_job_exists, ensure_dlq_rule_job_exists, ensure_ms_health_job_exists, \
     ensure_test_transfer_job_exists
 from zato.common.util.time_ import TimeUtil
 from zato.common.util.url_dispatcher import build_methods_allowed_re
@@ -1890,6 +1890,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             ms_health_job_created = ensure_ms_health_job_exists(session, self.cluster_id)
             test_transfer_job_created = ensure_test_transfer_job_exists(session, self.cluster_id)
 
+            # .. and the DLQ rule of outgoing connections.
+            dlq_rule_job_created = ensure_dlq_rule_job_exists(session, self.cluster_id)
+
             created_flags = [
                 openapi_created,
                 mcp_created,
@@ -1902,6 +1905,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 cert_check_job_created,
                 ms_health_job_created,
                 test_transfer_job_created,
+                dlq_rule_job_created,
             ]
 
             needs_commit = any(created_flags)
@@ -1941,6 +1945,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             if test_transfer_job_created:
                 logger.info('Created test transfer job (inactive)')
+
+            if dlq_rule_job_created:
+                logger.info('Created DLQ rule job')
 
         # AS2 channels are auto-created in the external AS2/AS4 database when one is configured
         if is_ext_db_configured():

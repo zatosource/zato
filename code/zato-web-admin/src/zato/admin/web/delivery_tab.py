@@ -6,15 +6,14 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The Delivery tab of an outgoing connection's create and edit forms - the retry settings, the queue switch and
-# the dead-letter queue settings - what a form sends and what a listed row carries, shared by every outgoing
-# connection type that can deliver through a queue. The lines themselves are in shared/delivery-tab.html.
+# The Django side of the Delivery tab of an outgoing connection's create and edit forms.
 
 # Django
 from django import forms
 
 # Zato
 from zato.common.api import HTTP_SOAP
+from zato.common.util.delivery_config import Delivery_Bool_Fields, Delivery_Field_Defaults, Delivery_Int_Fields
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,7 +30,6 @@ _retry = HTTP_SOAP.Retry
 _queue = HTTP_SOAP.Queue
 _dlq = HTTP_SOAP.DLQ
 
-# Each option is the action's stored value and the label a form shows for it
 dlq_action_choices = (
     (_dlq.Action.Keep, 'Keep in DLQ'),
     (_dlq.Action.Retry, 'Retry'),
@@ -41,8 +39,7 @@ dlq_action_choices = (
 
 # ################################################################################################################################
 
-# The units a number of seconds is shown in, smallest first - an option's value is the noun in the singular,
-# which a summary reads a count with - `1 second`, `2 minutes` - and its label the plural.
+# The units a number of seconds is shown in, smallest first
 Duration_Units = (
     ('second', 1),
     ('minute', 60),
@@ -57,11 +54,10 @@ duration_unit_choices = []
 for _unit_name, _ in Duration_Units:
     duration_unit_choices.append((_unit_name, _unit_name + 's'))
 
-# A count of seconds is stored as one number and edited as a count with a unit select named after it,
-# which is a field of the form alone
+# The suffix of the unit select of a count of seconds
 Unit_Field_Suffix = '_unit'
 
-# The stored fields that are counts of seconds
+# The fields that are counts of seconds
 duration_fields = (_retry.Field_Sleep_Time, _retry.Field_Backoff_Threshold, _dlq.Field_Retry_Interval)
 
 # ################################################################################################################################
@@ -75,8 +71,7 @@ def unit_field_name(name:'str') -> 'str':
 # ################################################################################################################################
 
 def split_duration(seconds:'int') -> 'tuple[int, str]':
-    """ A number of seconds as a count and the largest unit dividing it evenly - 86400 is one day, 3600 is one hour,
-    120 is two minutes, 90 is ninety seconds.
+    """ A number of seconds as a count and the largest unit dividing it evenly.
     """
     unit_seconds = Duration_Units[0][1]
     out_unit = Duration_Unit_Smallest
@@ -93,7 +88,7 @@ def split_duration(seconds:'int') -> 'tuple[int, str]':
 # ################################################################################################################################
 
 def join_duration(count:'int', unit_name:'str') -> 'int':
-    """ A count of one unit back as seconds - what split_duration took apart.
+    """ A count of one unit as seconds.
     """
     out = 0
 
@@ -106,30 +101,15 @@ def join_duration(count:'int', unit_name:'str') -> 'int':
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Every queue and DLQ field and its default - a connection that predates the fields carries none of them
-field_defaults = {
-    _queue.Field_Use_Queue: _queue.Default_Use_Queue,
-    _dlq.Field_Use_DLQ: _dlq.Default_Use_DLQ,
-    _dlq.Field_Action: _dlq.Default_Action,
-    _dlq.Field_Retries: _dlq.Default_Retries,
-    _dlq.Field_Retry_Interval: _dlq.Default_Retry_Interval,
-    _dlq.Field_Forward_To: _dlq.Default_Forward_To,
-    _dlq.Field_Keep_Header: _dlq.Default_Keep_Header,
-}
-
-# A checkbox is on when its name is in the POST data at all
-bool_fields = (_queue.Field_Use_Queue, _dlq.Field_Use_DLQ, _dlq.Field_Keep_Header)
-
-# A count is sent as an integer
-int_fields = (_dlq.Field_Retries, _dlq.Field_Retry_Interval)
+field_defaults = Delivery_Field_Defaults
+bool_fields = Delivery_Bool_Fields
+int_fields = Delivery_Int_Fields
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def add_delivery_fields(form:'any_', is_edit:'bool'=False) -> 'None':
-    """ Adds the queue switch, the DLQ fields and the unit selects of the counts of seconds to a create or edit form,
-    whose own retry fields the tab reads as well. The two switches are the tab's own lines, the rest are hidden
-    and edited in the tab's popovers. An edit form's checkboxes start unchecked, the item that opens the form checks them.
+    """ Adds the queue switch, the DLQ fields and the unit selects to a create or edit form.
     """
     if is_edit:
         use_dlq_attrs = {}
@@ -147,13 +127,12 @@ def add_delivery_fields(form:'any_', is_edit:'bool'=False) -> 'None':
     form.fields[_dlq.Field_Keep_Header] = forms.BooleanField(
         required=False, widget=forms.CheckboxInput(attrs=keep_header_attrs))
 
-    # The default number of seconds is shown as a count and a unit too
     count, unit = split_duration(_dlq.Default_Retry_Interval)
     form.fields[_dlq.Field_Retry_Interval] = forms.CharField(required=False, initial=count, widget=forms.TextInput())
     form.fields[unit_field_name(_dlq.Field_Retry_Interval)] = forms.ChoiceField(
         required=False, choices=duration_unit_choices, initial=unit, widget=forms.Select())
 
-    # The retry fields are the form's own, each count of seconds among them gets its unit select
+    # The retry fields are the form's own
     for name in (_retry.Field_Sleep_Time, _retry.Field_Backoff_Threshold):
         count, unit = split_duration(form.fields[name].initial)
         form.fields[name].initial = count
@@ -164,8 +143,7 @@ def add_delivery_fields(form:'any_', is_edit:'bool'=False) -> 'None':
 # ################################################################################################################################
 
 def get_message_fields(params:'any_', prefix:'str'='') -> 'stranydict':
-    """ The queue and DLQ fields a create or edit form submitted, typed the way they are stored -
-    a checkbox is a bool, a count is an int and anything left empty gets its default.
+    """ The queue and DLQ fields a form submitted, typed as stored.
     """
     out = {}
 
@@ -192,8 +170,7 @@ def get_message_fields(params:'any_', prefix:'str'='') -> 'stranydict':
 # ################################################################################################################################
 
 def join_unit_fields(params:'any_', prefix:'str', message:'stranydict') -> 'None':
-    """ Turns each count of seconds in a message, entered as a count of the unit its select says, into the number
-    of seconds it is stored as, in place. The form's default unit stands for a form without the select.
+    """ Turns each count of a unit in a message into seconds, in place.
     """
     for name in duration_fields:
         unit = params.get(prefix + unit_field_name(name))
@@ -204,8 +181,7 @@ def join_unit_fields(params:'any_', prefix:'str', message:'stranydict') -> 'None
 # ################################################################################################################################
 
 def fill_row(row:'any_', item:'any_') -> 'None':
-    """ The queue and DLQ fields of a listed connection that its edit form reads off the row - they are opaque attributes,
-    so a connection that predates them carries no values, in which case the defaults are displayed.
+    """ Copies the queue and DLQ fields of a listed connection onto its row, with defaults filled in.
     """
     for name, default in field_defaults.items():
         value = item.get(name)
@@ -216,8 +192,7 @@ def fill_row(row:'any_', item:'any_') -> 'None':
 # ################################################################################################################################
 
 def split_unit_fields(row:'any_') -> 'None':
-    """ Turns each count of seconds on a listed connection into the count and the unit the edit form shows, in place -
-    the retry fields are on the row by the time this runs, and so are the DLQ fields.
+    """ Turns each count of seconds on a row into a count and a unit, in place.
     """
     for name in duration_fields:
         count, unit = split_duration(row[name])

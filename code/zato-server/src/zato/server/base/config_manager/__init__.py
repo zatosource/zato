@@ -40,9 +40,7 @@ from zato.common.dispatch import dispatcher
 from zato.common.facade import _service_name_to_topic, _service_sub_key_prefix
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
-from zato.common.pubsub.outgoing import audit_disabled_conn_types, find_outgoing_conn, get_outgoing_sub_config, \
-    get_outgoing_sub_key, get_outgoing_topic_name, locate_outgoing_conn, OutgoingPublisher, OutgoingType, \
-    parse_outgoing_sub_key
+from zato.common.pubsub.outgoing import OutgoingType
 from zato.common.pubsub.sql.backend import PublishResult
 from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, new_msg_id, parse_datetime, \
@@ -308,15 +306,8 @@ class ConfigManager(_ConfigManagerBase):
         # Lock to serialize service-topic setup/teardown
         self._service_topic_lock = RLock()
 
-        # Sub keys of the outgoing connections that already have a queue of their own
-        self._outgoing_sub_key_cache = set() # type: set[str]
-
-        # Lock to serialize the setup of those queues
-        self._outgoing_sub_key_lock = RLock()
-
-        # One lock per outgoing connection queue, under which publications to that connection
-        # take turns with the renames and deletes of the connection they are addressed to
-        self._outgoing_conn_locks = {} # type: dict[str, RLock]
+        # The queues in front of outgoing connections and what they hold
+        self.init_outgoing_queues()
 
         # Pub/sub topic manager for topic-level lookups
         from zato.common.pubsub.topic_manager import TopicManager
@@ -679,6 +670,11 @@ class ConfigManager(_ConfigManagerBase):
         for field_name in HTTP_SOAP.Retry.FieldList:
             wrapper_config[field_name] = config.get(field_name)
 
+        # The queue switch and the DLQ config - opaque attributes too, and a connection that predates
+        # them has the switch off, which is what an absent value reads as.
+        for field_name in HTTP_SOAP.Queue.FieldList + HTTP_SOAP.DLQ.FieldList:
+            wrapper_config[field_name] = config.get(field_name)
+
         wrapper_config.update(sec_config)
 
         # A WS-Security definition carries its whole mode-specific configuration - the wrapper
@@ -772,11 +768,9 @@ class ConfigManager(_ConfigManagerBase):
             # To make the API consistent with that of SQL connection pools
             config_data.ping = wrapper.ping
 
-            # A REST connection can also be published to, which delivers to it with retries. The publisher
-            # is given the connection's id because that is what a rename of the connection leaves alone.
+            # A REST connection can also be published to, through the publisher its wrapper carries
             if config_data.config['transport'] == URL_TYPE.PLAIN_HTTP:
-                publisher = OutgoingPublisher(self.server, OutgoingType.REST, config_data.config['id'])
-                config_data.publish = publisher.publish
+                config_data.publish = wrapper.publish
 
             # Store ID -> name mapping
             config_dict.set_key_id_data(config_data.config)
@@ -2486,8 +2480,7 @@ class ConfigManager(_ConfigManagerBase):
 
             # .. a REST connection can also be published to (just like in self.init_http_soap) ..
             if is_plain_http:
-                publisher = OutgoingPublisher(self.server, OutgoingType.REST, msg['id'])
-                config_dict[msg['name']].publish = publisher.publish
+                config_dict[msg['name']].publish = wrapper.publish
 
             # Store mapping of ID -> name
             config_dict.set_key_id_data(msg)
@@ -2894,203 +2887,6 @@ class ConfigManager(_ConfigManagerBase):
             self._push_subs[sub_key].append(sub_config)
 
         self.server.pubsub_push_delivery.start_sub_key(sub_key)
-
-# ################################################################################################################################
-
-    def get_outgoing_publish_lock(self, conn_type:'str', conn_id:'int') -> 'RLock':
-        """ The lock that publications to one outgoing connection take turns under with the renames
-        and deletes of that same connection. There is one lock per connection, so that a connection
-        being renamed never holds up a publication to any other one.
-        """
-        sub_key = get_outgoing_sub_key(conn_type, conn_id)
-
-        # The dict these locks live in is what the global lock guards, which is all it is needed for here
-        with self._outgoing_sub_key_lock:
-            lock = self._outgoing_conn_locks.get(sub_key)
-            if not lock:
-                lock = RLock()
-                self._outgoing_conn_locks[sub_key] = lock
-
-        return lock
-
-# ################################################################################################################################
-
-    def _set_outgoing_topic_audit_flag(self, conn_type:'str', topic_name:'str') -> 'None':
-        """ Turns the pub/sub audit log of one outgoing connection's topic off when its type says so -
-        file deliveries are already recorded as file-outgoing events, so recording them
-        as pub/sub events too would say the same thing twice.
-        """
-        if conn_type in audit_disabled_conn_types:
-            self.server.pubsub_backend.set_topic_audit_flag(topic_name, False)
-
-# ################################################################################################################################
-
-    def ensure_outgoing_subscription(self, conn_type:'str', conn_id:'int') -> 'anytuple':
-        """ Makes sure that one outgoing connection has a topic and a queue of its own, returning the name
-        of that topic and the name the connection goes by now. The queue is keyed by the connection's id,
-        so a connection has the one queue for as long as it exists, while the topic follows its name.
-        """
-        sub_key = get_outgoing_sub_key(conn_type, conn_id)
-
-        # The lock is what keeps two publications from setting the same connection up twice ..
-        with self._outgoing_sub_key_lock:
-
-            # .. the topic is built from the name the connection goes by at this very moment ..
-            conn_name, _ = locate_outgoing_conn(self.server, conn_type, conn_id)
-            topic_name = get_outgoing_topic_name(conn_type, conn_name)
-
-            # .. a type whose deliveries are recorded elsewhere keeps its topic out of the pub/sub audit log ..
-            self._set_outgoing_topic_audit_flag(conn_type, topic_name)
-
-            # .. and a connection already set up needs nothing further ..
-            if sub_key not in self._outgoing_sub_key_cache:
-
-                # .. the subscription is what makes a publication reach this connection's queue ..
-                self.server.pubsub_backend.subscribe(sub_key, topic_name)
-
-                # .. the push config is what tells a delivery greenlet where to take the messages ..
-                sub_config = get_outgoing_sub_config(sub_key, topic_name)
-                self._push_subs[sub_key] = [sub_config]
-
-                # .. that greenlet runs from this moment on ..
-                self.server.pubsub_push_delivery.start_sub_key(sub_key)
-
-                # .. and this connection is never set up again.
-                self._outgoing_sub_key_cache.add(sub_key)
-
-                logger.info('Created outgoing connection queue `%s` for topic `%s`', sub_key, topic_name)
-
-        return topic_name, conn_name
-
-# ################################################################################################################################
-
-    def rename_outgoing_subscription(self, conn_type:'str', conn_id:'int', old_name:'str', new_name:'str') -> 'None':
-        """ Moves the topic of one outgoing connection to the connection's new name. The queue itself does
-        not move, because it is keyed by the connection's id, which means that everything queued before
-        a rename is delivered to the connection after it, out of the one queue it was always in.
-        """
-        sub_key = get_outgoing_sub_key(conn_type, conn_id)
-
-        # A connection that was never published to has no topic to move
-        if sub_key not in self._outgoing_sub_key_cache:
-            return
-
-        old_topic_name = get_outgoing_topic_name(conn_type, old_name)
-        new_topic_name = get_outgoing_topic_name(conn_type, new_name)
-
-        # Nothing is published to this connection while its topic moves ..
-        with self.get_outgoing_publish_lock(conn_type, conn_id):
-
-            # .. and nothing is delivered from it either, although a delivery already under way
-            # .. is waited for rather than cut in half, which is what would send it twice ..
-            self.server.pubsub_push_delivery.pause_sub_key(sub_key)
-
-            try:
-                # .. the messages, the deliveries and the subscription all move together ..
-                self.server.pubsub_backend.rename_topic(old_topic_name, new_topic_name)
-
-                # .. the audit flag follows the topic to its new name ..
-                self.server.pubsub_backend.delete_topic_audit_flag(old_topic_name)
-                self._set_outgoing_topic_audit_flag(conn_type, new_topic_name)
-
-                # .. a delivery greenlet looks a message's config up by the topic name that message
-                # .. carries, so the one in memory now needs to be the new name too ..
-                sub_config = get_outgoing_sub_config(sub_key, new_topic_name)
-                self._push_subs[sub_key] = [sub_config]
-
-            finally:
-                # .. and the queue picks up where it left off, under the sub key it always had.
-                self.server.pubsub_push_delivery.resume_sub_key(sub_key)
-
-        logger.info('Moved outgoing connection queue `%s` from topic `%s` to `%s`',
-            sub_key, old_topic_name, new_topic_name)
-
-# ################################################################################################################################
-
-    def delete_outgoing_subscription(self, conn_type:'str', conn_id:'int', conn_name:'str') -> 'None':
-        """ Removes the queue of an outgoing connection that has been deleted, along with whatever that
-        queue still held. This is the one place where messages are dropped on purpose, because there is
-        no connection left for them to be delivered to, so how many they were is logged.
-        """
-        sub_key = get_outgoing_sub_key(conn_type, conn_id)
-
-        # A connection that was never published to has no queue to remove
-        if sub_key not in self._outgoing_sub_key_cache:
-            return
-
-        topic_name = get_outgoing_topic_name(conn_type, conn_name)
-
-        with self.get_outgoing_publish_lock(conn_type, conn_id):
-
-            # Nothing is delivered out of this queue anymore ..
-            self.server.pubsub_push_delivery.stop_sub_key(sub_key)
-
-            # .. what it still held is about to be dropped, so it is counted while it is still there ..
-            dropped_count = self.server.pubsub_backend.get_total_count(sub_key, topic_name, 'pending')
-
-            # .. the topic goes away with its messages, its deliveries and its subscription ..
-            self.server.pubsub_backend.delete_topic(topic_name)
-
-            # .. the audit flag of the deleted topic goes away too ..
-            self.server.pubsub_backend.delete_topic_audit_flag(topic_name)
-
-            # .. and nothing in this server points to the queue any longer.
-            del self._push_subs[sub_key]
-            self._outgoing_sub_key_cache.remove(sub_key)
-
-        # The lock itself is only dropped once it is no longer held
-        with self._outgoing_sub_key_lock:
-            del self._outgoing_conn_locks[sub_key]
-
-        logger.info('Deleted outgoing connection queue `%s` for topic `%s`, messages dropped:%d',
-            sub_key, topic_name, dropped_count)
-
-# ################################################################################################################################
-
-    def restore_outgoing_subscriptions(self) -> 'None':
-        """ Brings back the queues of the outgoing connections that were published to before this server
-        started, which is what lets whatever they still hold be delivered. Their greenlets are started
-        by the caller, along with those of every other push subscription.
-        """
-        sub_key_list = self.server.pubsub_backend.get_sub_keys_by_prefix(PubSub.Outgoing.Sub_Key_Prefix)
-        restored_count = 0
-
-        for sub_key in sub_key_list:
-
-            # The connection a queue belongs to is what its own sub key says ..
-            conn_type, conn_id = parse_outgoing_sub_key(sub_key)
-
-            # .. a connection deleted while this server was down leaves nothing to deliver to ..
-            found = find_outgoing_conn(self.server, conn_type, conn_id)
-
-            if not found:
-                logger.info('Skipping outgoing connection queue `%s`, there is no connection with that id', sub_key)
-                continue
-
-            # .. the topic is the one built from the name that connection goes by now ..
-            conn_name, _ = found
-            topic_name = get_outgoing_topic_name(conn_type, conn_name)
-
-            # .. a rename that a crash interrupted left rows behind under the previous name,
-            # .. and this is where that move is finished, so that the queue is in the one topic ..
-            for subscribed_topic in self.server.pubsub_backend.get_subscribed_topics(sub_key):
-                if subscribed_topic != topic_name:
-                    logger.info('Finishing the move of outgoing topic `%s` to `%s`', subscribed_topic, topic_name)
-                    self.server.pubsub_backend.rename_topic(subscribed_topic, topic_name)
-
-            # .. a type whose deliveries are recorded elsewhere keeps its topic out of the pub/sub audit log ..
-            self._set_outgoing_topic_audit_flag(conn_type, topic_name)
-
-            # .. and the queue is put back exactly as the first publication to it made it.
-            sub_config = get_outgoing_sub_config(sub_key, topic_name)
-            self._push_subs[sub_key] = [sub_config]
-            self._outgoing_sub_key_cache.add(sub_key)
-
-            restored_count += 1
-
-        suffix = 'queue' if restored_count == 1 else 'queues'
-
-        logger.info('Restored %d outgoing connection %s', restored_count, suffix)
 
 # ################################################################################################################################
 

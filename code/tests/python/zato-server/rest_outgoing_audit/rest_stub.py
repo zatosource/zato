@@ -98,8 +98,10 @@ def _new_wrapper(transport:'str', is_audit_log_active:'bool') -> 'HTTPSOAPWrappe
     replace so that nothing ever goes on the wire.
     """
     config = {
+        'id': 1,
         'name': Connection_Name,
         'is_internal': False,
+        'use_queue': False,
         'is_active': True,
         'is_audit_log_active': is_audit_log_active,
         'timeout': 10,

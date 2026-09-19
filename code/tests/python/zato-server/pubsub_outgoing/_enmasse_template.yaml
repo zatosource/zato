@@ -7,12 +7,16 @@ security:
 
 outgoing_rest:
 
+  # The two connections whose messages the tests have the endpoint refuse for a while keep such a message at the head
+  # of the queue until it is accepted, which is what the DLQ switch off means - with it on, the default, a message
+  # whose attempts ran out would move to the connection's DLQ instead
   - name: test.outgoing.orders
     host: "http://127.0.0.1:{{port_orders}}"
     url_path: /api/orders
     data_format: json
     timeout: 30
     request_method: POST
+    use_dlq: false
 
   - name: test.outgoing.to-rename
     host: "http://127.0.0.1:{{port_rename}}"
@@ -20,6 +24,7 @@ outgoing_rest:
     data_format: json
     timeout: 30
     request_method: POST
+    use_dlq: false
 
   - name: test.outgoing.to-delete
     host: "http://127.0.0.1:{{port_delete}}"

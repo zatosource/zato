@@ -200,14 +200,23 @@ def send_with_retry(policy:'RetryPolicy', send:'callable_', cid:'str', label:'st
         sleep(current_sleep_time)
         total_sleep_time += current_sleep_time
 
-        # The next sleep grows by the multiplier but is held under both the per-sleep ceiling
-        # and whatever is left of the total budget, so the loop cannot overshoot the threshold.
-        next_sleep_time = current_sleep_time * policy.backoff_multiplier
-        remaining = policy.backoff_threshold - total_sleep_time
-        current_sleep_time = min(next_sleep_time, _retry.Max_Sleep_Time, remaining)
+        current_sleep_time = get_next_sleep_time(policy, current_sleep_time, total_sleep_time)
 
-        if current_sleep_time <= 0:
-            current_sleep_time = Minimum_Sleep_Time
+# ################################################################################################################################
+
+def get_next_sleep_time(policy:'RetryPolicy', current_sleep_time:'int', total_sleep_time:'int') -> 'int':
+    """ How long the sleep after the one just made is - it grows by the multiplier but is held under both
+    the per-sleep ceiling and whatever is left of the total budget, so a loop cannot overshoot the threshold,
+    and it is never no time at all, which would turn a loop into a tight one against an endpoint that is unwell.
+    """
+    next_sleep_time = current_sleep_time * policy.backoff_multiplier
+    remaining = policy.backoff_threshold - total_sleep_time
+    out = min(next_sleep_time, _retry.Max_Sleep_Time, remaining)
+
+    if out <= 0:
+        out = Minimum_Sleep_Time
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

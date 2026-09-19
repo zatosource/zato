@@ -117,15 +117,20 @@ class SQLPubSubBackend(SQLAdminAPI):
         publisher:'strnone'=None,
         pub_time:'strnone'=None,
         cid:'strnone'=None,
+        msg_id:'strnone'=None,
     ) -> 'PublishResult':
-        """ Publish a message to a topic.
+        """ Publish a message to a topic. A caller that needs to know the message's id before the message is
+        stored, e.g. because the id travels inside the message itself, gives its own, otherwise one is generated.
         """
 
         # Normalize topic name to lowercase for case-insensitivity ..
         topic_name = topic_name.lower()
 
-        # .. generate message ID ..
-        message_id = new_msg_id()
+        # .. the message ID is the caller's own or a new one ..
+        if msg_id:
+            message_id = msg_id
+        else:
+            message_id = new_msg_id()
 
         # .. build timestamps ..
         now = utcnow()
