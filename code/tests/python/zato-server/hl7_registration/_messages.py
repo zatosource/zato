@@ -14,11 +14,11 @@ from live_hl7.messages import Envelope, Order, Patient
 # ################################################################################################################################
 
 # The registration system, as it names itself in MSH-3 and MSH-4 - the sender every feed message comes from
-HIS_Application = 'HIS'
-Hospital_Facility = 'HOSPITAL'
+Registration_Application = 'REGISTRATION'
+Site_Facility = 'SITE'
 
 # The same system as it names itself when its way to the PACS is over TLS
-HIS_TLS_Application = 'HIS_TLS'
+Registration_TLS_Application = 'REGISTRATION_TLS'
 
 # The integration engine, as the registration system addresses it in MSH-5 and MSH-6
 Engine_Application = 'ZATO'
@@ -26,11 +26,11 @@ Engine_Application = 'ZATO'
 # The PACS, as it names itself in MSH-3 and MSH-4 of everything it sends
 PACS_Application = 'DCM4CHEE'
 
-# The identifier type the hospital's medical record numbers are issued under
+# The identifier type the site's medical record numbers are issued under
 MRN_Type = 'MR'
 
 # What every control id of the feed starts with
-Control_ID_Prefix = 'HOSP'
+Control_ID_Prefix = 'REG'
 
 # What the rest of the suite reads out of the toolkit through this module
 Order_Control_New = messages.Order_Control_New
@@ -47,8 +47,8 @@ wait_for = messages.wait_for
 # ################################################################################################################################
 
 # The registration system writing to the engine, under either of its names
-Feed_Envelope = Envelope(HIS_Application, Hospital_Facility, Engine_Application, Hospital_Facility)
-TLS_Feed_Envelope = Envelope(HIS_TLS_Application, Hospital_Facility, Engine_Application, Hospital_Facility)
+Feed_Envelope = Envelope(Registration_Application, Site_Facility, Engine_Application, Site_Facility)
+TLS_Feed_Envelope = Envelope(Registration_TLS_Application, Site_Facility, Engine_Application, Site_Facility)
 
 # MSH-15 as a sender asking for an accept acknowledgment sets it
 Accept_Ack_Always = 'AL'
@@ -92,7 +92,13 @@ def new_order(modality:'str', procedure_code:'str', procedure_name:'str') -> 'Or
 
 # ################################################################################################################################
 
-def build_adt_a04(control_id:'str', patient:'Patient', admission_id:'str', *, envelope:'Envelope'=Feed_Envelope) -> 'str':
+def build_adt_a04(
+    control_id:'str',
+    patient:'Patient',
+    admission_id:'str',
+    *,
+    envelope:'Envelope'=Feed_Envelope,
+    ) -> 'str':
     out = messages.build_adt_a04(envelope, control_id, patient, admission_id)
     return out
 

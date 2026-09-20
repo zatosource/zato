@@ -93,7 +93,8 @@ Task_Completed = 'COMPLETED'
 Task_Warning = 'WARNING'
 Task_Failed = 'FAILED'
 
-# The cipher suites the archive's TLS listener and senders are switched to, the image's own being ones a current OpenSSL no longer offers
+# The cipher suites the archive's TLS listener and senders are switched to, the image's own being ones a current
+# OpenSSL no longer offers
 TLS_Cipher_Suites = (
     'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256',
     'TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384',
@@ -170,7 +171,7 @@ Startup_Causes_Command = f"grep '^Caused by' {Server_Log} | sort -u"
 
 # What Zato is to the archive - this device and application
 Zato_Device = 'zato'
-Zato_Application = 'ZATO|HOSPITAL'
+Zato_Application = 'ZATO|SITE'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -738,7 +739,8 @@ def enable_hl7_logging(handle:'Handle') -> 'None':
 
     # The management port speaks TLS with the image's own certificate, which the client is told to accept
     # for this one connection
-    shell_command = f'echo T | {Management_Client} --controller={Management_Controller} {Management_Login} --commands="{joined_commands}"'
+    client = f'{Management_Client} --controller={Management_Controller} {Management_Login}'
+    shell_command = f'echo T | {client} --commands="{joined_commands}"'
 
     arguments = ['sh', '-c', shell_command]
 
@@ -758,7 +760,8 @@ def publish_to_zato(handle:'Handle') -> 'None':
     add_hl7_receiver(handle, Zato_Device, Zato_Application, Host_Address, port)
     enable_adt_notifications(handle, Zato_Application)
 
-    print(f'  Sends to       {Host_Address}:{port}, the Zato MLLP channel on this machine ({Zato_MLLP_Port_Env} to change it)', flush=True)
+    sends_to = f'{Host_Address}:{port}, the Zato MLLP channel on this machine ({Zato_MLLP_Port_Env} to change it)'
+    print(f'  Sends to       {sends_to}', flush=True)
 
 # ################################################################################################################################
 

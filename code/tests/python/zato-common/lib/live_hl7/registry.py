@@ -47,10 +47,10 @@ _systems:'system_dict' = {
 
 # The scenario groups, each in the order its systems start
 _groups:'group_dict' = {
-    'radiology':  ('dcm4chee', 'openmrs', 'dcm4che_tools'),
-    'laboratory': ('sftp', 'openelis', 'openemr', 'oscar'),
-    'hie':        ('openhim', 'openmrs'),
-    'hospital':   ('dcm4chee',),
+    'radiology':    ('dcm4chee', 'openmrs', 'dcm4che_tools'),
+    'laboratory':   ('sftp', 'openelis', 'openemr', 'oscar'),
+    'hie':          ('openhim', 'openmrs'),
+    'registration': ('dcm4chee',),
 }
 
 # ################################################################################################################################

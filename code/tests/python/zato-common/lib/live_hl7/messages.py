@@ -44,7 +44,7 @@ Segment_Separator = '\r'
 # and the identifier fields, long enough that no two of one run collide
 Identifier_Bits = 48
 
-# The coding scheme a hospital's own procedure codes are issued under
+# The coding scheme a site's own procedure codes are issued under
 Local_Coding_Scheme = 'L'
 
 # TXA-2, TXA-3 and TXA-17 of a document sent as an encapsulated PDF, and OBX-3 naming what the OBX carries
@@ -225,7 +225,13 @@ def build_adt_a01(envelope:'Envelope', message_control_id:'str', patient:'Patien
 
 # ################################################################################################################################
 
-def build_adt_a02(envelope:'Envelope', message_control_id:'str', patient:'Patient', admission_id:'str', ward:'str') -> 'str':
+def build_adt_a02(
+    envelope:'Envelope',
+    message_control_id:'str',
+    patient:'Patient',
+    admission_id:'str',
+    ward:'str',
+    ) -> 'str':
     """ A patient is transferred to another ward.
     """
     segments = [
@@ -286,7 +292,7 @@ def build_adt_a08(envelope:'Envelope', message_control_id:'str', patient:'Patien
 # ################################################################################################################################
 
 def build_adt_a28(envelope:'Envelope', message_control_id:'str', patient:'Patient') -> 'str':
-    """ A person is added to a record - the shared record of an exchange, the registry of a hospital.
+    """ A person is added to a record - the shared record of an exchange, the registry of a site.
     """
     segments = [
         msh(envelope, 'ADT^A28^ADT_A05', message_control_id),
@@ -376,10 +382,11 @@ def build_mdm_t02(
     ) -> 'str':
     """ One document about a patient - a PDF, base64 in OBX-5 the way an encapsulated document travels.
     """
+    txa = f'TXA|1|{Document_Type_Discharge_Summary}|{Document_Content_PDF}|{Timestamp}||||||||{document_id}||||'
     segments = [
         msh(envelope, 'MDM^T02^MDM_T02', message_control_id),
         pid(patient),
-        f'TXA|1|{Document_Type_Discharge_Summary}|{Document_Content_PDF}|{Timestamp}||||||||{document_id}||||{Document_Status_Authenticated}',
+        f'{txa}{Document_Status_Authenticated}',
         f'OBX|1|ED|{Document_Observation_ID}||^application^pdf^Base64^{document_base64}||||||F',
     ]
 

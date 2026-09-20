@@ -6,46 +6,28 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import os
-import sys
-from collections.abc import Generator
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib'))
-sys.path.insert(0, os.path.dirname(__file__))
-
-# pytest
-import pytest
-
-# Zato - the suite's own parts
-from _environment import HospitalEnvironment, Parts, bring_up, missing_requirements, skip_or_fail, tear_down
+# Live HL7
+from live_hl7.recording import Raising_Error_Text, Raising_Service, Recorder, Send_Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-environment_gen = Generator[HospitalEnvironment, None, None]
+# The service behind the channel the PACS publishes identity changes to - it records what the PACS said
+# and the channel's destinations carry it on to the second department
+PACS_Record_Service = 'registration.pacs.record'
+PACS_Record_Label = 'pacs.adt'
+
+# What the rest of the suite takes from the toolkit through this module
+Raising_Error_Text = Raising_Error_Text
+Raising_Service = Raising_Service
+Send_Service = Send_Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='session')
-def hospital() -> 'environment_gen':
-    """ The hospital, up for the whole session and gone afterwards.
-    """
-    skip_or_fail(missing_requirements())
-
-    parts = Parts()
-
-    try:
-        environment = bring_up(parts)
-    # An interrupt is not an Exception and a setup cut short has to leave nothing behind either
-    except BaseException:
-        tear_down(parts)
-        raise
-
-    yield environment
-
-    tear_down(parts)
+Recorders = [
+    Recorder(PACS_Record_Label, PACS_Record_Service),
+]
 
 # ################################################################################################################################
 # ################################################################################################################################

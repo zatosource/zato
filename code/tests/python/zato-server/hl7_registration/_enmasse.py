@@ -14,7 +14,7 @@ from live_hl7 import enmasse
 from live_hl7.enmasse import TLSClient
 
 # Zato - the suite's own parts
-from _messages import HIS_Application, HIS_TLS_Application, PACS_Application
+from _messages import PACS_Application, Registration_Application, Registration_TLS_Application
 from _services import PACS_Record_Service
 
 # ################################################################################################################################
@@ -33,10 +33,10 @@ Department_Connection = 'department'
 
 # The feed's entry points, one for admissions and one for orders, the one whose way to the PACS is
 # over TLS, and where the PACS publishes to
-ADT_Channel = 'his.adt'
-ADT_TLS_Channel = 'his.adt.tls'
-Orders_Channel = 'his.orders'
-Documents_Channel = 'his.documents'
+ADT_Channel = 'registration.adt'
+ADT_TLS_Channel = 'registration.adt.tls'
+Orders_Channel = 'registration.orders'
+Documents_Channel = 'registration.documents'
 PACS_Channel = 'pacs.adt'
 
 # What the channels call their destinations
@@ -51,7 +51,7 @@ MDM_Type = 'MDM'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HospitalAddresses(NamedTuple):
+class RegistrationAddresses(NamedTuple):
     """ Where the engine's connections go and what the TLS one presents.
     """
     pacs: 'str'
@@ -73,7 +73,7 @@ def adt_channel() -> 'stranydict':
             enmasse.mllp_destination(Department_Destination, Department_Connection),
         ],
         respond_from=PACS_Destination,
-        msh3_sending_app=HIS_Application,
+        msh3_sending_app=Registration_Application,
         msh9_message_type=ADT_Type,
     )
 
@@ -89,7 +89,7 @@ def adt_tls_channel() -> 'stranydict':
         ADT_TLS_Channel,
         destinations=[enmasse.mllp_destination(PACS_Destination, PACS_TLS_Connection)],
         respond_from=PACS_Destination,
-        msh3_sending_app=HIS_TLS_Application,
+        msh3_sending_app=Registration_TLS_Application,
         msh9_message_type=ADT_Type,
     )
 
@@ -104,7 +104,7 @@ def orders_channel() -> 'stranydict':
         Orders_Channel,
         destinations=[enmasse.mllp_destination(PACS_Destination, PACS_Connection)],
         respond_from=PACS_Destination,
-        msh3_sending_app=HIS_Application,
+        msh3_sending_app=Registration_Application,
         msh9_message_type=ORM_Type,
     )
 
@@ -120,7 +120,7 @@ def documents_channel() -> 'stranydict':
         Documents_Channel,
         destinations=[enmasse.mllp_destination(Department_Destination, Department_Connection)],
         respond_from=Department_Destination,
-        msh3_sending_app=HIS_Application,
+        msh3_sending_app=Registration_Application,
         msh9_message_type=MDM_Type,
     )
 
@@ -143,7 +143,7 @@ def pacs_channel() -> 'stranydict':
 
 # ################################################################################################################################
 
-def build_definitions(addresses:'HospitalAddresses') -> 'enmasse.Definitions':
+def build_definitions(addresses:'RegistrationAddresses') -> 'enmasse.Definitions':
     """ Everything the engine is made of.
     """
     out = enmasse.Definitions()

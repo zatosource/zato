@@ -13,8 +13,8 @@ from typing import NamedTuple
 
 # Live environment
 from live_environment.haproxy import TLSBind
-from live_environment.parts import Parts, missing_requirements as _missing_requirements, skip_or_fail as _skip_or_fail, \
-    tear_down
+from live_environment.parts import Parts, missing_requirements as _missing_requirements, \
+    skip_or_fail as _skip_or_fail, tear_down
 
 # Live HL7
 from live_hl7.compose import Host_Gateway
@@ -24,8 +24,8 @@ from live_hl7.suite import Required_Variables, start_receiver, start_systems, st
 from live_hl7.tls import Authority, new_stranger
 
 # Zato - the suite's own parts
-from _enmasse import HospitalAddresses, build_definitions
-from _messages import Engine_Application, Hospital_Facility
+from _enmasse import RegistrationAddresses, build_definitions
+from _messages import Engine_Application, Site_Facility
 from _services import Recorders
 
 # ################################################################################################################################
@@ -43,7 +43,7 @@ if 0:
 # ################################################################################################################################
 
 # Setting this variable makes a machine without docker a failure rather than a skip
-Env_Hospital_Required = 'Zato_Test_HL7_Hospital'
+Env_Registration_Required = 'Zato_Test_HL7_Registration'
 
 # The one container of the scenario
 PACS_System = 'dcm4chee'
@@ -51,14 +51,14 @@ PACS_System = 'dcm4chee'
 # How the PACS knows the engine - a device per listener of the engine, each with an HL7 application on it,
 # the names the archive addresses in MSH-5 and MSH-6 of everything it publishes
 Engine_Device = 'zato'
-Engine_Receiver = f'{Engine_Application}|{Hospital_Facility}'
+Engine_Receiver = f'{Engine_Application}|{Site_Facility}'
 
 Engine_TLS_Device = 'zato-tls'
-Engine_TLS_Receiver = f'{Engine_Application}_TLS|{Hospital_Facility}'
+Engine_TLS_Receiver = f'{Engine_Application}_TLS|{Site_Facility}'
 
 # A receiver presenting a certificate the suite's authority did not issue - what the PACS is to refuse
 Stranger_Device = 'stranger'
-Stranger_Receiver = f'STRANGER|{Hospital_Facility}'
+Stranger_Receiver = f'STRANGER|{Site_Facility}'
 Stranger_Identity_Name = 'somebody-else'
 
 # How many times the PACS tries a message its receiver could not be reached for - none, so that a test
@@ -66,9 +66,9 @@ Stranger_Identity_Name = 'somebody-else'
 PACS_Send_Retries = 0
 
 # Whom the suite's authority issues certificates to and the names they are connected by
-Authority_Name = 'Hospital Test Authority'
+Authority_Name = 'Registration Test Authority'
 Engine_Identity_Name = 'zato-integration-engine'
-PACS_Identity_Name = 'hospital-pacs'
+PACS_Identity_Name = 'registration-pacs'
 
 Engine_Host_Names = ['localhost', '127.0.0.1', Host_Gateway]
 PACS_Host_Names = ['localhost', '127.0.0.1']
@@ -76,8 +76,8 @@ PACS_Host_Names = ['localhost', '127.0.0.1']
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HospitalEnvironment(NamedTuple):
-    """ Everything a test needs to know about the hospital it operates in.
+class RegistrationEnvironment(NamedTuple):
+    """ Everything a test needs to know about the registration scenario it operates in.
     """
 
     # The integration engine
@@ -117,15 +117,15 @@ def missing_requirements() -> 'strlist':
 # ################################################################################################################################
 
 def skip_or_fail(missing:'strlist') -> 'None':
-    _skip_or_fail(missing, Env_Hospital_Required)
+    _skip_or_fail(missing, Env_Registration_Required)
 
 # ################################################################################################################################
 
-def bring_up(parts:'Parts') -> 'HospitalEnvironment':
-    """ Brings the hospital up - the authority and its identities, the engine with HAProxy and its TLS bind, the
-    second department and the PACS, each configured for the others.
+def bring_up(parts:'Parts') -> 'RegistrationEnvironment':
+    """ Brings the registration scenario up - the authority and its identities, the engine with HAProxy and its
+    TLS bind, the second department and the PACS, each configured for the others.
     """
-    directory = tempfile.mkdtemp(prefix='zato_hl7_hospital_')
+    directory = tempfile.mkdtemp(prefix='zato_hl7_registration_')
 
     # The certificates of the run ..
     authority = Authority(os.path.join(directory, 'tls'), Authority_Name)
@@ -134,7 +134,7 @@ def bring_up(parts:'Parts') -> 'HospitalEnvironment':
 
     # .. the engine, with the door a department outside the network comes through ..
     tls_bind = TLSBind(pem_path=engine_identity.combined_pem_path, ca_cert_path=authority.ca_cert_path)
-    zato_parts = start_zato(parts, prefix='hospital', recorders=Recorders, tls_bind=tls_bind)
+    zato_parts = start_zato(parts, prefix='registration', recorders=Recorders, tls_bind=tls_bind)
 
     # .. the second department, and a receiver nobody here vouches for ..
     department = start_receiver(parts, 'the department')
@@ -164,7 +164,7 @@ def bring_up(parts:'Parts') -> 'HospitalEnvironment':
     add_hl7_receiver(pacs, Stranger_Device, Stranger_Receiver, Host_Gateway, stranger.port, is_tls=True)
 
     # .. and the engine learns where the PACS and the department are.
-    addresses = HospitalAddresses(
+    addresses = RegistrationAddresses(
         pacs=pacs.address('hl7'),
         pacs_tls=pacs.address('hl7_tls'),
         department=department.address,
@@ -173,7 +173,7 @@ def bring_up(parts:'Parts') -> 'HospitalEnvironment':
 
     import_definitions(zato_parts.zato, build_definitions(addresses))
 
-    out = HospitalEnvironment(
+    out = RegistrationEnvironment(
         zato=zato_parts.zato,
         client=zato_parts.zato.client(),
         engine_plain_port=plain_port,
