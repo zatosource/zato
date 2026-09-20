@@ -342,6 +342,24 @@ def find_patients(session:'Session', query:'str') -> 'any_':
 
 # ################################################################################################################################
 
+def find_location(session:'Session', name:'str') -> 'anydict':
+    """ The location of a name, which has to be there.
+    """
+    locations = session.get_json(REST_Path + f'/location?q={quote(name)}')
+
+    for location in locations['results']:
+        if location['display'] == name:
+            out = location
+            break
+
+    # .. the record has no location of that name.
+    else:
+        raise Exception(f'No location {name} in {locations}')
+
+    return out
+
+# ################################################################################################################################
+
 def find_encounters(session:'Session', patient_uuid:'str') -> 'any_':
     out = session.get_json(REST_Path + f'/encounter?patient={patient_uuid}&v=full')
     return out['results']
@@ -372,10 +390,10 @@ def ensure_hl7_source(session:'Session', name:'str') -> 'None':
 # ################################################################################################################################
 
 def ensure_identifier_type(session:'Session', name:'str') -> 'None':
-    """ Registers a patient identifier type - the ADT^A28 handler files PID-3 under the type whose name
-    is the identifier's assigning authority, and leaves a patient without one it cannot find.
+    """ Registers a patient identifier type - what the exchange's front door files a national id under.
     """
-    types = session.get_json(REST_Path + f'/patientidentifiertype?q={quote(name)}')
+    # The resource does not search by name, so it is all of them and a match on the name here
+    types = session.get_json(REST_Path + '/patientidentifiertype')
 
     for identifier_type in types['results']:
         if identifier_type['display'] == name:

@@ -14,7 +14,7 @@
 	test-as2 test-as4 test-edifact test-x12 test-soap \
 	test-llm \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce \
-	test-hl7 test-hl7-hie test-hl7-hospital test-hl7-scenarios test-ui \
+	test-hl7 hl7-scenario-hie hl7-scenario-hospital hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-alerting test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
@@ -1418,25 +1418,25 @@ HL7_LIVE_SYSTEMS := dcm4che_tools dcm4chee openelis openemr openhim openmrs osca
 	$(addprefix hl7-logs-,$(HL7_LIVE_SYSTEMS)) $(addprefix hl7-describe-,$(HL7_LIVE_SYSTEMS))
 
 hl7-dcm4chee: ## Bring the dcm4chee archive up standalone, stopping what runs of it first.
-	$(HL7_LIVE_RUN) start dcm4chee
+	$(HL7_LIVE_RUN) start dcm4chee --follow
 
 hl7-openelis: ## Bring OpenELIS up standalone, stopping what runs of it first.
-	$(HL7_LIVE_RUN) start openelis
+	$(HL7_LIVE_RUN) start openelis --follow
 
 hl7-openemr: ## Bring OpenEMR up standalone, stopping what runs of it first.
-	$(HL7_LIVE_RUN) start openemr
+	$(HL7_LIVE_RUN) start openemr --follow
 
 hl7-openhim: ## Bring OpenHIM up standalone, stopping what runs of it first.
-	$(HL7_LIVE_RUN) start openhim
+	$(HL7_LIVE_RUN) start openhim --follow
 
 hl7-openmrs: ## Bring OpenMRS up standalone, stopping what runs of it first.
-	$(HL7_LIVE_RUN) start openmrs
+	$(HL7_LIVE_RUN) start openmrs --follow
 
 hl7-oscar: ## Bring OSCAR up standalone, stopping what runs of it first.
-	$(HL7_LIVE_RUN) start oscar
+	$(HL7_LIVE_RUN) start oscar --follow
 
 hl7-sftp: ## Bring the SFTP server up standalone, stopping what runs of it first.
-	$(HL7_LIVE_RUN) start sftp
+	$(HL7_LIVE_RUN) start sftp --follow
 
 $(addprefix hl7-start-,$(HL7_LIVE_SYSTEMS)): hl7-start-%:
 	$(HL7_LIVE_RUN) start $*
@@ -1455,7 +1455,7 @@ $(addprefix hl7-describe-,$(HL7_LIVE_SYSTEMS)): hl7-describe-%:
 # scenario in their containers against a throwaway Zato environment.
 # ----------------------------------------------------------------------------
 
-test-hl7-hie: ## The health information exchange scenario - facility, interoperability layer, shared record and client registry, live.
+hl7-scenario-hie: ## The health information exchange scenario - facility, interoperability layer, shared record and client registry, live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) \
 	Zato_Test_HL7_HIE=1 \
@@ -1466,7 +1466,7 @@ test-hl7-hie: ## The health information exchange scenario - facility, interopera
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_hie -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-hl7-hospital: ## The hospital integration scenario - the ADT feed, orders and patient identity between the integration engine, a PACS and a department, live.
+hl7-scenario-hospital: ## The hospital integration scenario - the ADT feed, orders and patient identity between the integration engine, a PACS and a department, live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) \
 	Zato_Test_HL7_Hospital=1 \
@@ -1477,4 +1477,4 @@ test-hl7-hospital: ## The hospital integration scenario - the ADT feed, orders a
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_hospital -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-hl7-scenarios: test-hl7-hie test-hl7-hospital ## Every live clinical scenario, one after another.
+hl7-scenarios: hl7-scenario-hie hl7-scenario-hospital ## Every live clinical scenario, one after another.

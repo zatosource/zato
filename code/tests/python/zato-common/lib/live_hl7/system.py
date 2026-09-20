@@ -40,7 +40,9 @@ class Handle:
     images: 'strstrdict'
     password: str
     started_at: str
-    is_standalone: bool
+
+    # What whoever started the system added to its compose environment
+    environment: 'strstrdict'
     stack: 'ComposeStack'
 
 # ################################################################################################################################

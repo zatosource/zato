@@ -69,7 +69,7 @@ Plugins_Cache_Dir_Name = 'openelis-plugins'
 Plugin_Suffix = '.jar'
 Generic_HL7_Type_Name = 'Generic HL7'
 
-# What Zato is to a standalone laboratory - an analyzer whose results carry this MSH-3 and which takes orders
+# What Zato is to the laboratory - an analyzer whose results carry this MSH-3 and which takes orders
 # at the Zato MLLP channel on this machine, known to the bridge by the address the host has on its network.
 Zato_Analyzer_Name = 'Zato'
 Zato_Sending_Application = 'ZATO'
@@ -117,10 +117,9 @@ class OpenELIS(LiveSystem):
 
     def prepare(self, handle:'Handle') -> 'None':
         """ Renders the bridge configuration with the webapp's address and our credentials, having made sure
-        a standalone laboratory has the plugin its connection to Zato needs.
+        the laboratory has the plugin its connection to Zato needs.
         """
-        if handle.is_standalone:
-            _require_plugin()
+        _require_plugin()
 
         template_path = os.path.join(self.directory, Bridge_Config_Template_Name)
 
@@ -164,12 +163,10 @@ class OpenELIS(LiveSystem):
 # ################################################################################################################################
 
     def after_ready(self, handle:'Handle') -> 'None':
-        """ The administrator gets our password, and a standalone laboratory gets Zato as its analyzer, in both directions.
+        """ The administrator gets our password, and the laboratory gets Zato as its analyzer, in both directions.
         """
         change_admin_password(handle)
-
-        if handle.is_standalone:
-            connect_to_zato(handle)
+        connect_to_zato(handle)
 
 # ################################################################################################################################
 # ################################################################################################################################

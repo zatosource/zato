@@ -21,7 +21,7 @@ from live_hl7.sftp.system import SFTP
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist, strtuple
+    from zato.common.typing_ import strlist, strset, strtuple
     from live_hl7.system import LiveSystem
 
 # ################################################################################################################################
@@ -56,14 +56,22 @@ _groups:'group_dict' = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The names of the systems the extension package added
+_extension_systems:'strset' = set()
+
+# ################################################################################################################################
+
 def _add_extension() -> 'None':
     """ Adds the systems and groups of the extension package when there is one.
     """
     if extension is None:
         return
 
-    _systems.update(extension.systems())
+    systems = extension.systems()
+
+    _systems.update(systems)
     _groups.update(extension.groups())
+    _extension_systems.update(systems)
 
 # ################################################################################################################################
 
@@ -83,6 +91,12 @@ def get_system(name:'str') -> 'LiveSystem':
 
 def system_names() -> 'strlist':
     out = sorted(_systems)
+    return out
+
+# ################################################################################################################################
+
+def is_extension_system(name:'str') -> 'bool':
+    out = name in _extension_systems
     return out
 
 # ################################################################################################################################

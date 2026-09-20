@@ -14,7 +14,7 @@ from argparse import ArgumentParser, Namespace
 from live_hl7.compose import has_docker
 from live_hl7.credentials import get_password
 from live_hl7.registry import get_system, group_names, system_names
-from live_hl7.runner import describe, logs, start, start_group, stop, stop_group
+from live_hl7.runner import describe, extra_environment_from_process, logs, start, start_group, stop, stop_group
 from live_hl7.state import list_states, read_state
 
 # ################################################################################################################################
@@ -45,8 +45,11 @@ def _print_handle(handle:'Handle') -> 'None':
 # ################################################################################################################################
 
 def _command_start(arguments:'Namespace') -> 'None':
-    handle = start(arguments.system, is_standalone=True)
+    handle = start(arguments.system, extra_environment=extra_environment_from_process())
     _print_handle(handle)
+
+    if not arguments.follow:
+        return
 
     print('', flush=True)
     print('Following the logs, Ctrl+C leaves the system running', flush=True)
@@ -92,7 +95,7 @@ def _command_describe(arguments:'Namespace') -> 'None':
 # ################################################################################################################################
 
 def _command_start_group(arguments:'Namespace') -> 'None':
-    handles = start_group(arguments.group, is_standalone=True)
+    handles = start_group(arguments.group)
 
     for handle in handles:
         print(f'{handle.system}', flush=True)
@@ -112,8 +115,9 @@ def _build_parser() -> 'ArgumentParser':
     parser = ArgumentParser(prog='live_hl7', description='Starts and stops the live HL7 systems, without Zato.')
     commands = parser.add_subparsers(dest='command', required=True)
 
-    start_parser = commands.add_parser('start', help='Start one system standalone')
+    start_parser = commands.add_parser('start', help='Start one system standalone and return once it is ready')
     _ = start_parser.add_argument('system', choices=systems)
+    _ = start_parser.add_argument('--follow', action='store_true', help='Then follow its logs until interrupted')
     start_parser.set_defaults(handler=_command_start)
 
     stop_parser = commands.add_parser('stop', help='Stop one standalone system')

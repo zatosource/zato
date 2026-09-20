@@ -16,13 +16,14 @@ from live_environment.parts import Parts, missing_requirements as _missing_requi
 # Live HL7
 from live_hl7.enmasse import import_definitions
 from live_hl7.openhim.system import login as openhim_login
-from live_hl7.openmrs.system import Admin_Username, REST_Path
+from live_hl7.openmrs.system import Admin_Username
 from live_hl7.suite import Required_Variables, start_receiver, start_systems, start_zato
 
 # Zato - the suite's own parts
 from _enmasse import ExchangeAddresses, build_definitions
-from _exchange import ExchangeChannels, configure_exchange, configure_shared_record
-from _services import Recorders
+from _exchange import ExchangeChannels, Identifier_Location, configure_exchange, configure_shared_record
+from _messages import National_ID_Type
+from _services import front_door_source
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,7 +98,8 @@ def bring_up(parts:'Parts') -> 'HIEEnvironment':
 
     # Facility B and the front door run in one Zato environment, HAProxy fronting the door on every
     # interface since the exchange connects from a container ..
-    zato_parts = start_zato(parts, prefix='hie', recorders=Recorders)
+    front_door = front_door_source(National_ID_Type, Identifier_Location)
+    zato_parts = start_zato(parts, prefix='hie', recorders=[], sources=(front_door,))
 
     # .. the registry listens the same way ..
     registry = start_receiver(parts, 'the client registry')
@@ -109,13 +111,12 @@ def bring_up(parts:'Parts') -> 'HIEEnvironment':
     channels = configure_exchange(openhim, zato_parts.haproxy.ports.mllp_plain, registry.port, openhim.password)
     openmrs_session = configure_shared_record(openmrs)
 
-    # .. and Zato learns where the exchange's channels and the record's queue are.
+    # .. and Zato learns where the exchange's channels and the record are.
     addresses = ExchangeAddresses(
         national_adt=openhim.address('channel_1'),
         national_adt_registry_down=openhim.address('channel_2'),
         national_adt_shr_down=openhim.address('channel_3'),
         shr_host=openmrs.http_url('web'),
-        shr_queue_path=REST_Path + '/hl7',
         shr_username=Admin_Username,
         shr_password=openmrs.password,
     )

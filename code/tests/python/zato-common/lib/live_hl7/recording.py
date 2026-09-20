@@ -16,7 +16,7 @@ from typing import NamedTuple
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import strlist, strtuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -207,9 +207,9 @@ def _render_recorder(recorder:'Recorder') -> 'str':
 
 # ################################################################################################################################
 
-def build_source(recorders:'recorder_list') -> 'str':
-    """ The module a suite hot-deploys - the refusing and the sending service, then one recording service
-    per recorder given.
+def build_source(recorders:'recorder_list', sources:'strtuple'=()) -> 'str':
+    """ The module a suite hot-deploys - the refusing and the sending service, one recording service per recorder
+    given, then the suite's own services as given, which have the module's header and its helpers at their disposal.
     """
     header = _module_header
     header = header.replace('@messages_file_variable@', Messages_File_Variable)
@@ -224,6 +224,8 @@ def build_source(recorders:'recorder_list') -> 'str':
 
     for recorder in recorders:
         sections.append(_render_recorder(recorder))
+
+    sections.extend(sources)
 
     out = ''.join(sections)
     return out

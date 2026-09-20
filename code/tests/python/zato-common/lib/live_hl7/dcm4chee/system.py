@@ -168,7 +168,7 @@ Follow_Log_Command = f'tail -F -n 0 {Server_Log} | {Follow_Log_Filter}'
 Startup_Failed_Marker = 'WFLYSRV0026'
 Startup_Causes_Command = f"grep '^Caused by' {Server_Log} | sort -u"
 
-# What Zato is to a standalone archive - this device and application
+# What Zato is to the archive - this device and application
 Zato_Device = 'zato'
 Zato_Application = 'ZATO|HOSPITAL'
 
@@ -235,16 +235,15 @@ class DCM4CHEE(LiveSystem):
     def after_ready(self, handle:'Handle') -> 'None':
         """ The image's only HL7 application is the wildcard one, which nothing can send as - the archive looks its
         sending application up by its exact name, so it gets one of its own, unless the directory already has it.
-        An archive started for a person to look at gets a few patients too, a test fills its own.
+        The archive gets a few patients too, and Zato as where its ADT notifications go.
         """
         if not ldap_entry_exists(handle, Archive_HL7_Application_DN):
             add_archive_hl7_application(handle)
 
-        if handle.is_standalone:
-            strip_ui_background(handle)
-            enable_hl7_logging(handle)
-            seed_patients(handle)
-            publish_to_zato(handle)
+        strip_ui_background(handle)
+        enable_hl7_logging(handle)
+        seed_patients(handle)
+        publish_to_zato(handle)
 
 # ################################################################################################################################
 
@@ -764,7 +763,7 @@ def publish_to_zato(handle:'Handle') -> 'None':
 # ################################################################################################################################
 
 def seed_patients(handle:'Handle') -> 'None':
-    """ A few patients for a person to find in the UI of a standalone archive.
+    """ A few patients for a person to find in the UI of the archive.
     """
     for patient in Seed_Patients:
         record = PatientRecord(patient.mrn, patient.family_name, patient.given_name, patient.birth_date, patient.sex)

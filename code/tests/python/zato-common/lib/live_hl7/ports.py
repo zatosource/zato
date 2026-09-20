@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import socket
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,17 +26,6 @@ Default_Port_Base = 31500
 Block_Size = 20
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def find_free_port() -> 'int':
-    """ Returns a TCP port that is free at the moment of the call.
-    """
-    with socket.socket() as probe:
-        probe.bind(('127.0.0.1', 0))
-        out = probe.getsockname()[1]
-
-    return out
-
 # ################################################################################################################################
 
 def _override_env_name(system:'str', purpose:'str') -> 'str':
@@ -65,26 +53,13 @@ def _read_port_base() -> 'int':
 # ################################################################################################################################
 
 class PortPlan:
-    """ Assigns a host port to each purpose a system publishes - free ports under a test,
-    a fixed block per system when a system runs standalone so a person can find it.
+    """ Assigns a host port to each purpose a system publishes - a fixed block per system, so a person can find it.
     """
 
     def __init__(self, system:'str', block_number:'int', purposes:'strtuple') -> 'None':
         self.system = system
         self.block_number = block_number
         self.purposes = purposes
-
-# ################################################################################################################################
-
-    def for_test(self) -> 'strintdict':
-        """ A free port for every purpose.
-        """
-        out:'strintdict' = {}
-
-        for purpose in self.purposes:
-            out[purpose] = find_free_port()
-
-        return out
 
 # ################################################################################################################################
 

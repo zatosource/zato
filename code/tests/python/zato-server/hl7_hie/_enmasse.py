@@ -11,16 +11,16 @@ from typing import NamedTuple
 
 # Live HL7
 from live_hl7 import enmasse
+from live_hl7.openmrs.system import REST_Path
 
 # Zato - the suite's own parts
-from _services import Record_Service, SHR_Destination
+from _services import Record_Service, SHR_Connections
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The shared record's REST API and the security definition Zato calls it with
+# The security definition Zato calls the shared record's REST API with
 SHR_Security_Name = 'hie.shr.api'
-SHR_Queue_Connection = 'hie.shr.hl7-queue'
 
 # The shared record's channel - what a facility addresses in MSH-5 to reach the record through the exchange
 SHR_Channel = 'shr.inbound'
@@ -39,7 +39,7 @@ SHR_Idle_Timeout = 1
 # ################################################################################################################################
 
 class ExchangeAddresses(NamedTuple):
-    """ Where a facility's connections go and where the shared record's queue is.
+    """ Where a facility's connections go and where the shared record is.
     """
 
     # The exchange's channel ports, on this machine
@@ -47,9 +47,8 @@ class ExchangeAddresses(NamedTuple):
     national_adt_registry_down: 'str'
     national_adt_shr_down: 'str'
 
-    # The shared record's web address and the account its queue is posted to with
+    # The shared record's web address and the account its REST API is called with
     shr_host: 'str'
-    shr_queue_path: 'str'
     shr_username: 'str'
     shr_password: 'str'
 
@@ -64,8 +63,8 @@ def build_definitions(addresses:'ExchangeAddresses') -> 'enmasse.Definitions':
     out.security.append(
         enmasse.basic_auth(SHR_Security_Name, addresses.shr_username, addresses.shr_password, 'openmrs'))
 
-    out.outgoing_rest.append(
-        enmasse.outgoing_rest(SHR_Queue_Connection, addresses.shr_host, addresses.shr_queue_path, SHR_Security_Name))
+    for connection, suffix in SHR_Connections.items():
+        out.outgoing_rest.append(enmasse.outgoing_rest(connection, addresses.shr_host, REST_Path + suffix, SHR_Security_Name))
 
     out.outgoing_mllp.append(enmasse.outgoing(Facility_B_Connection, addresses.national_adt))
     out.outgoing_mllp.append(enmasse.outgoing(Facility_B_Registry_Down_Connection, addresses.national_adt_registry_down))
@@ -74,7 +73,6 @@ def build_definitions(addresses:'ExchangeAddresses') -> 'enmasse.Definitions':
     out.channel_mllp.append(enmasse.channel(
         SHR_Channel,
         service=Record_Service,
-        destinations=[enmasse.rest_destination(SHR_Destination, SHR_Queue_Connection)],
         msh5_receiving_app=SHR_Receiving_Application,
         idle_timeout=SHR_Idle_Timeout,
     ))

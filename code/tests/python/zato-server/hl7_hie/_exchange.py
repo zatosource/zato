@@ -12,7 +12,7 @@ from typing import NamedTuple
 
 # Live HL7
 from live_hl7.openhim.system import Host_Address, add_client, add_tcp_channel, login as openhim_login, tcp_route
-from live_hl7.openmrs.system import ensure_hl7_source, ensure_identifier_type, login as openmrs_login, \
+from live_hl7.openmrs.system import ensure_hl7_source, ensure_identifier_type, find_location, login as openmrs_login, \
     make_identifier_types_optional
 
 # Zato - the suite's own parts
@@ -28,6 +28,9 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# The location the shared record has a national id as issued at
+Identifier_Location = 'Unknown Location'
 
 # The exchange's channels - the national ADT feed, and the two whose routes model a system that is down
 National_ADT_Channel = 'national-adt'
@@ -129,6 +132,9 @@ def configure_shared_record(openmrs:'Handle') -> 'Session':
     ensure_hl7_source(session, Facility_B)
     ensure_identifier_type(session, National_ID_Type)
     make_identifier_types_optional(session)
+
+    # The front door files identifiers as issued there, so it has to be there
+    _ = find_location(session, Identifier_Location)
 
     out = session
     return out

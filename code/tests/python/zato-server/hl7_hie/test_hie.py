@@ -8,8 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # A ministry's exchange, driven live - facility B sends patient events through Zato to the interoperability
 # layer in its container, which routes them to the shared record's front door, also Zato, and to the client
-# registry, and logs every transaction. What the record made of each message is read back from the
-# record itself, what the exchange saw from its transaction log.
+# registry, and logs every transaction. The front door files a registration through the record's patient API
+# and hands anything else to the record's own HL7 queue. What the record made of each message is read back from
+# the record itself, what the exchange saw from its transaction log.
 
 # stdlib
 import socket
@@ -45,8 +46,8 @@ Accepted = 'AA'
 Route_OK = 200
 Route_Failed = 500
 
-# How long a connection attempt at a closed port is given before it is called refused
-Connect_Timeout = 2.0
+# How long a probe waits for the channel behind a port to close on it before the channel is called open
+Probe_Timeout = 2.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -151,13 +152,13 @@ def _process_queue(hie:'HIEEnvironment') -> 'None':
 # ################################################################################################################################
 
 def _wait_for_patient(hie:'HIEEnvironment', patient:'Patient') -> 'anydict':
-    """ Until the shared record has a patient under the national id, running the queue as it waits.
+    """ Until the shared record has a patient under the national id - the front door files one before it
+    acknowledges, so this is a wait for the record's search to see them.
     """
     found:'anylist' = []
 
     def _is_filed() -> 'bool':
         found.clear()
-        _process_queue(hie)
 
         for candidate in find_patients(hie.openmrs_session, patient.patient_id):
             for identifier in candidate['identifiers']:
@@ -197,14 +198,19 @@ def _wait_for_queue_error(hie:'HIEEnvironment', control_id:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _is_port_refusing(port:'int') -> 'bool':
-    """ True when nothing accepts a connection on one of the exchange's ports on this machine.
+def _is_channel_closed(port:'int') -> 'bool':
+    """ True when the channel behind one of the exchange's ports closes a connection at once - an open channel
+    holds it and waits for a message. Docker publishes the port whether or not anything in the container listens
+    on it, so a channel that is off shows as a connection accepted and closed at once, with nothing said.
     """
     test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    test_socket.settimeout(Connect_Timeout)
+    test_socket.settimeout(Probe_Timeout)
 
     try:
         test_socket.connect((Container_Host, port))
+        data = test_socket.recv(1)
+        out = data == b''
+    except TimeoutError:
         out = False
     except OSError:
         out = True
@@ -215,19 +221,19 @@ def _is_port_refusing(port:'int') -> 'bool':
 
 # ################################################################################################################################
 
-def _wait_for_port(port:'int', *, is_open:'bool') -> 'None':
-    """ Until one of the exchange's ports is open, or closed.
+def _wait_for_channel(port:'int', *, is_open:'bool') -> 'None':
+    """ Until the channel behind one of the exchange's ports is open, or closed.
     """
     def _is_as_wanted() -> 'bool':
-        is_refusing = _is_port_refusing(port)
+        is_closed = _is_channel_closed(port)
 
-        out = is_refusing != is_open
+        out = is_closed != is_open
         return out
 
     if is_open:
-        what = f'port {port} to open'
+        what = f'the channel on port {port} to open'
     else:
-        what = f'port {port} to close'
+        what = f'the channel on port {port} to close'
 
     wait_for(_is_as_wanted, what)
 
@@ -309,8 +315,8 @@ def test_registry_down(hie:'HIEEnvironment') -> 'None':
 # ################################################################################################################################
 
 def test_shr_down(hie:'HIEEnvironment') -> 'None':
-    """ The shared record is down - the exchange has no acknowledgment to answer the facility with, so the
-    facility's send fails, the registry still gets its copy and the transaction log has the failure.
+    """ The shared record is down - the facility's send fails, the transaction log has the failure and
+    neither the front door nor the registry gets the message.
     """
     patient = new_patient('Davis', 'Emily', '19910203', 'F')
     control_id = new_control_id()
@@ -321,24 +327,23 @@ def test_shr_down(hie:'HIEEnvironment') -> 'None':
     assert not result['is_sent'], result
     assert result['error_text']
 
-    _wait_for_registry(hie, control_id)
-
     transaction = _wait_for_route(hie, hie.channels.shr_down, control_id, Registry_Route)
     assert transaction['response']['status'] == Route_Failed
     assert transaction['error']['message']
 
-    registry_route = _route_named(transaction, Registry_Route)
-    assert registry_route['response']['status'] == Route_OK
-
-    # The front door never saw it
     recorded = recorded_with_control_id(hie.messages_file, control_id)
     assert len(recorded) == 0
+
+    # The exchange writes the failure of a primary route that refuses the connection over the message before it
+    # writes the other routes, so the registry gets the exchange's error text and no message
+    deliveries = deliveries_with_control_id(hie.registry.deliveries, control_id)
+    assert len(deliveries) == 0
 
 # ################################################################################################################################
 
 def test_disabled_channel(hie:'HIEEnvironment') -> 'None':
-    """ The exchange switches the national feed off - a disabled tcp channel has its port closed, so
-    the facility's send is refused before a byte is read, nothing is logged and nothing reaches the
+    """ The exchange switches the national feed off - a disabled tcp channel listens no more, so the facility's
+    connection is closed before a byte is answered and its send fails, nothing is logged and nothing reaches the
     record, and once the feed is back on the same message goes through.
     """
     patient = new_patient('Wilson', 'James', '19680715', 'M')
@@ -349,7 +354,7 @@ def test_disabled_channel(hie:'HIEEnvironment') -> 'None':
     port = hie.openhim.port('channel_1')
 
     set_channel_status(hie.openhim_session, channel_id, Channel_Disabled)
-    _wait_for_port(port, is_open=False)
+    _wait_for_channel(port, is_open=False)
 
     try:
         result = _send(hie, Facility_B_Connection, message)
@@ -365,7 +370,7 @@ def test_disabled_channel(hie:'HIEEnvironment') -> 'None':
 
     finally:
         set_channel_status(hie.openhim_session, channel_id, Channel_Enabled)
-        _wait_for_port(port, is_open=True)
+        _wait_for_channel(port, is_open=True)
 
     result = _send(hie, Facility_B_Connection, message)
     _assert_accepted(result, control_id)
@@ -376,8 +381,9 @@ def test_disabled_channel(hie:'HIEEnvironment') -> 'None':
 # ################################################################################################################################
 
 def test_merge_is_logged_and_forwarded(hie:'HIEEnvironment') -> 'None':
-    """ Facility B merges two records - the exchange routes the merge to the record and the registry, the
-    record's queue files it as one it has no handler for, and the transaction log holds the whole message.
+    """ Facility B merges two records - the exchange routes the merge to the record and the registry, the front
+    door hands it to the record's queue, which files it as one it has no handler for, and the transaction log holds
+    the whole message.
     """
     surviving = new_patient('Brown', 'Michael', '19790522', 'M')
     prior = new_patient('Brown', 'Michael', '19790522', 'M')

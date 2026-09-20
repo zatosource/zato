@@ -56,7 +56,7 @@ API_Root = f'/apis/{Site}/api'
 # What the API client asks for
 API_Scopes = 'openid offline_access api:oemr user/patient.read user/patient.write user/encounter.read user/encounter.write'
 
-# What a standalone instance's seed patients are created through, and how HL7's sex codes read in OpenEMR
+# What the instance's seed patients are created through, and how HL7's sex codes read in OpenEMR
 Seed_Client_Name = 'zato-seed'
 Sex_Names = {'F': 'Female', 'M': 'Male'}
 
@@ -104,10 +104,9 @@ class OpenEMR(LiveSystem):
 # ################################################################################################################################
 
     def after_ready(self, handle:'Handle') -> 'None':
-        """ A standalone instance gets the seed patients, unless an earlier run on the kept volumes already added them.
+        """ The instance gets the seed patients, unless an earlier run on the kept volumes already added them.
         """
-        if handle.is_standalone:
-            seed_patients(handle)
+        seed_patients(handle)
 
 # ################################################################################################################################
 # ################################################################################################################################
