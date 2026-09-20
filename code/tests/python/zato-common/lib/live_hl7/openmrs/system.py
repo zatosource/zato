@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import shutil
+from http.client import CREATED, NO_CONTENT, NOT_FOUND, OK
 from urllib.parse import quote
 from xml.sax.saxutils import escape
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -135,12 +136,12 @@ class OpenMRS(LiveSystem):
             headers = {'Authorization': basic_auth(Admin_Username, password)}
             result = request('GET', url, headers=headers)
 
-            if result.status == 200:
+            if result.status == OK:
                 data = parse_json(result)
                 if data['authenticated']:
                     return True
 
-            if result.status == 404:
+            if result.status == NOT_FOUND:
                 _restart_once_after_install(handle)
 
         return False
@@ -233,7 +234,7 @@ def _change_initial_password(handle:'Handle') -> 'None':
 
     payload = {'oldPassword': Admin_Initial_Password, 'newPassword': handle.password}
     result = session.post_json(REST_Path + '/password', payload)
-    expect_status(result, 200, 'password change')
+    expect_status(result, OK, 'password change')
 
 # ################################################################################################################################
 
@@ -244,7 +245,7 @@ def login(handle:'Handle') -> 'Session':
     out.headers['Authorization'] = basic_auth(Admin_Username, handle.password)
 
     result = out.get(REST_Path + '/session')
-    expect_status(result, 200, 'login')
+    expect_status(result, OK, 'login')
 
     data = parse_json(result)
     if not data['authenticated']:
@@ -258,7 +259,7 @@ def _require_module_started(session:'Session', module_id:'str') -> 'None':
     """ Fails with the module's own state when it is there but did not start, since nothing works without it.
     """
     result = session.get(REST_Path + f'/module/{module_id}?v=full')
-    expect_status(result, 200, f'module {module_id}')
+    expect_status(result, OK, f'module {module_id}')
 
     data = parse_json(result)
 
@@ -289,12 +290,12 @@ def set_global_property(session:'Session', name:'str', value:'str') -> 'None':
     """
     result = session.get(REST_Path + f'/systemsetting/{name}')
 
-    if result.status == 200:
+    if result.status == OK:
         result = session.post_json(REST_Path + f'/systemsetting/{name}', {'value': value})
     else:
         result = session.post_json(REST_Path + '/systemsetting', {'property': name, 'value': value})
 
-    if result.status not in (200, 201):
+    if result.status not in (OK, CREATED):
         body = result.body.decode('utf8', 'replace')
         raise Exception(f'Could not set global property {name}, status {result.status}, body: {body}')
 
@@ -304,7 +305,7 @@ def post_hl7(session:'Session', message:'str') -> 'anydict':
     """ Puts one ER7 message into hl7_in_queue.
     """
     result = session.post_json(REST_Path + '/hl7', {'hl7': message})
-    expect_status(result, 201, 'HL7 post')
+    expect_status(result, CREATED, 'HL7 post')
 
     out = parse_json(result)
     return out
@@ -317,7 +318,7 @@ def run_hl7_task(session:'Session') -> 'None':
     payload = {'action': 'runtask', 'tasks': [Process_HL7_Task]}
     result = session.post_json(REST_Path + '/taskaction', payload)
 
-    if result.status not in (200, 201, 204):
+    if result.status not in (OK, CREATED, NO_CONTENT):
         body = result.body.decode('utf8', 'replace')
         raise Exception(f'Could not run {Process_HL7_Task}, status {result.status}, body: {body}')
 
@@ -328,7 +329,7 @@ def render_oru_r01(session:'Session', patient_uuid:'str', encounter_uuid:'str') 
     """
     path = Context_Path + f'/hl7query/orur01?patient={patient_uuid}&encounter={encounter_uuid}'
     result = session.get(path)
-    expect_status(result, 200, 'ORU^R01 rendering')
+    expect_status(result, OK, 'ORU^R01 rendering')
 
     out = result.body.decode('utf8')
     return out
@@ -366,7 +367,7 @@ def ensure_hl7_source(session:'Session', name:'str') -> 'None':
 
     payload = {'name': name, 'description': f'Facility {name}'}
     result = session.post_json(REST_Path + '/hl7source', payload)
-    expect_status(result, 201, f'HL7 source {name}')
+    expect_status(result, CREATED, f'HL7 source {name}')
 
 # ################################################################################################################################
 
@@ -382,7 +383,7 @@ def ensure_identifier_type(session:'Session', name:'str') -> 'None':
 
     payload = {'name': name, 'description': f'Identifier {name}', 'required': False}
     result = session.post_json(REST_Path + '/patientidentifiertype', payload)
-    expect_status(result, 201, f'identifier type {name}')
+    expect_status(result, CREATED, f'identifier type {name}')
 
 # ################################################################################################################################
 
@@ -396,7 +397,7 @@ def make_identifier_types_optional(session:'Session') -> 'None':
         if identifier_type['required']:
             uuid = identifier_type['uuid']
             result = session.post_json(REST_Path + f'/patientidentifiertype/{uuid}', {'required': False})
-            expect_status(result, 200, f'identifier type {uuid}')
+            expect_status(result, OK, f'identifier type {uuid}')
 
 # ################################################################################################################################
 

@@ -8,29 +8,40 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from http.client import CREATED, OK
 from string import Template
 
 # Live HL7
+from live_hl7.compose import Host_Gateway
 from live_hl7.credentials import PasswordRules
+from live_hl7.extension import extension_directory
 from live_hl7.fetch import work_directory
 from live_hl7.http import Session, expect_status, is_http_ok, parse_json, request
 from live_hl7.system import Handle, LiveSystem
+from live_hl7.zato import Zato_MLLP_Port_Env, zato_mllp_port
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, strintdict, strstrdict
+    from zato.common.typing_ import anydict, strintdict, strset, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # Service names in the compose file
 Webapp_Service = 'oe.openelis.org'
-Bridge_Service = 'bridge'
+Bridge_Service = 'bridge.openelis.org'
+DB_Service = 'db.openelis.org'
 
-# The administrator the image creates with DEFAULT_PW
+# The database the image installs and the account the container's own psql connects as, without a password
+Database_Name = 'clinlims'
+Database_User = 'postgres'
+
+# The administrator and the password baked into the image when it was built - DEFAULT_PW is a build argument
+# and does nothing at runtime, so the password is changed to ours once the webapp is up.
 Admin_Username = 'admin'
+Image_Admin_Password = 'adminADMIN!'
 
 # The bridge's own account for its /input endpoint
 Bridge_Username = 'bridge'
@@ -41,14 +52,30 @@ Context_Path = '/OpenELIS-Global'
 # Where the bridge posts what it receives, on the stack's own network
 Webapp_Analyzer_URI = f'https://{Webapp_Service}:8443{Context_Path}/analyzer'
 
-# The rendered bridge configuration lives here
+# The bridge configuration's template next to this file and where the rendered one lives
+Bridge_Config_Template_Name = 'bridge-configuration.yml'
 Bridge_Config_Dir_Name = 'openelis-bridge'
 Bridge_Config_File_Name = 'configuration.yml'
-Bridge_Config_Template = os.path.join(os.path.dirname(__file__), 'bridge-configuration.yml')
 
-# Analyzer protocols and modes, as the webapp names them
-Protocol_HL7 = 'HL7'
+# Analyzer protocols, modes and states, as the webapp names them
+Protocol_HL7_V25 = 'HL7_V2_5'
 Mode_Both = 'BOTH'
+Status_Active = 'ACTIVE'
+
+# The webapp takes HL7 results through analyzer plugins only and its image ships none - the plugin directory comes
+# from the extension when there is one and is empty otherwise, and this is the name the webapp registers the generic plugin under.
+Plugins_Directory_Name = 'openelis_plugins'
+Plugins_Cache_Dir_Name = 'openelis-plugins'
+Generic_HL7_Type_Name = 'Generic HL7'
+
+# What Zato is to a standalone laboratory - an analyzer whose results carry this MSH-3 and which takes orders
+# at the Zato MLLP channel on this machine, known to the bridge by the address the host has on its network.
+Zato_Analyzer_Name = 'Zato'
+Zato_Sending_Application = 'ZATO'
+Zato_Identifier_Pattern = f'^{Zato_Sending_Application}'
+
+# The laboratory's LOINC-coded tests, one per code, each becoming a test of the Zato analyzer under its code
+LOINC_Tests_SQL = "select id, loinc from clinlims.test where is_active = 'Y' and loinc is not null and loinc <> '' order by id"
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,12 +89,13 @@ class OpenELIS(LiveSystem):
     purposes = ('web', 'postgres', 'bridge_api', 'mllp')
     password_rules = PasswordRules(8, True, True, True, True)
     images = {
-        'certs':            'itechuw/certgen:main',
-        'db.openelis.org':  'itechuw/openelis-global-2-database:3.2.2.0',
-        'oe.openelis.org':  'itechuw/openelis-global-2:3.2.2.0',
-        'fhir.openelis.org': 'itechuw/openelis-global-2-fhir:3.2.2.0',
-        'bridge':           'itechuw/openelis-analyzer-bridge:3.0.5',
+        'certs':               'itechuw/certgen:main',
+        'db.openelis.org':     'itechuw/openelis-global-2-database:3.2.2.0',
+        'oe.openelis.org':     'itechuw/openelis-global-2:3.2.2.0',
+        'fhir.openelis.org':   'itechuw/openelis-global-2-fhir:3.2.2.0',
+        'bridge.openelis.org': 'itechuw/openelis-analyzer-bridge:3.0.5',
     }
+    one_off_services = ('certs',)
     directory = os.path.dirname(__file__)
     summary = 'OpenELIS Global 2 with its FHIR store and analyzer bridge, MLLP in on the bridge, orders out from the webapp.'
     ui_purpose = 'web'
@@ -80,6 +108,7 @@ class OpenELIS(LiveSystem):
     def environment(self, ports:'strintdict', password:'str') -> 'strstrdict':
         out = super().environment(ports, password)
         out['OPENELIS_BRIDGE_CONFIG'] = _bridge_config_path()
+        out['OPENELIS_PLUGINS_DIR'] = extension_directory(Plugins_Directory_Name, work_directory(Plugins_Cache_Dir_Name))
 
         return out
 
@@ -88,10 +117,13 @@ class OpenELIS(LiveSystem):
     def prepare(self, handle:'Handle') -> 'None':
         """ Renders the bridge configuration with the webapp's address and our credentials.
         """
-        with open(Bridge_Config_Template, encoding='utf8') as f:
+        template_path = os.path.join(self.directory, Bridge_Config_Template_Name)
+
+        with open(template_path, encoding='utf8') as f:
             template = Template(f.read())
 
         values:'strstrdict' = {
+            'BRIDGE_USERNAME':     Bridge_Username,
             'BRIDGE_PASSWORD':     handle.password,
             'WEBAPP_ANALYZER_URI': Webapp_Analyzer_URI,
             'WEBAPP_USERNAME':     Admin_Username,
@@ -116,13 +148,23 @@ class OpenELIS(LiveSystem):
         bridge_url = handle.https_url('bridge_api') + '/actuator/health'
         result = request('GET', bridge_url, verify_tls=False)
 
-        if result.status != 200:
+        if result.status != OK:
             return False
 
         data = parse_json(result)
         out = data['status'] == 'UP'
 
         return out
+
+# ################################################################################################################################
+
+    def after_ready(self, handle:'Handle') -> 'None':
+        """ The administrator gets our password, and a standalone laboratory gets Zato as its analyzer, in both directions.
+        """
+        change_admin_password(handle)
+
+        if handle.is_standalone:
+            connect_to_zato(handle)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -133,19 +175,118 @@ def _bridge_config_path() -> 'str':
 
 # ################################################################################################################################
 
+def change_admin_password(handle:'Handle') -> 'None':
+    """ The image's password gives way to ours - the form the login page offers for it, no session needed.
+    """
+    session = Session(handle.https_url('web') + Context_Path, verify_tls=False)
+
+    fields = {
+        'loginName':       Admin_Username,
+        'password':        Image_Admin_Password,
+        'newPassword':     handle.password,
+        'confirmPassword': handle.password,
+    }
+
+    result = session.post_form('/ChangePasswordLogin?apiCall=true', fields)
+    expect_status(result, OK, 'password change')
+
+# ################################################################################################################################
+
 def login(handle:'Handle') -> 'Session':
-    """ A session logged in the way the frontend logs in - a CSRF token first, then the credentials.
+    """ A session logged in the way the frontend logs in - the credentials as a form, then the CSRF token from the session.
     """
     out = Session(handle.https_url('web') + Context_Path, verify_tls=False)
 
-    result = out.get('/csrf')
-    expect_status(result, 200, 'CSRF token')
+    fields = {'loginName': Admin_Username, 'password': handle.password}
+    result = out.post_form('/ValidateLogin?apiCall=true', fields)
+    expect_status(result, OK, 'login')
 
-    data = parse_json(result)
-    out.headers['X-CSRF-Token'] = data['token']
+    data = out.get_json('/session')
+    out.headers['X-CSRF-Token'] = data['csrf']
 
-    result = out.post_json('/ValidateLogin', {'loginName': Admin_Username, 'password': handle.password})
-    expect_status(result, 200, 'login')
+    return out
+
+# ################################################################################################################################
+
+def connect_to_zato(handle:'Handle') -> 'None':
+    """ Zato becomes an analyzer of the laboratory - its results come in over the bridge's MLLP port and orders
+    to it go out to the Zato MLLP channel on this machine as ORM^O01.
+    """
+    session = login(handle)
+    host_address = host_address_of(handle)
+    port = zato_mllp_port()
+
+    analyzer = register_analyzer(
+        session,
+        name=Zato_Analyzer_Name,
+        identifier_pattern=Zato_Identifier_Pattern,
+        host=host_address,
+        port=port,
+    )
+    analyzer_id = analyzer['id']
+
+    mapped = map_loinc_tests(session, handle, analyzer_id)
+    codes = f'{mapped} LOINC code' if mapped == 1 else f'{mapped} LOINC codes'
+
+    # The mappings went in after the bridge learned of the analyzer, so it learns of it again, this time with them
+    update_analyzer(session, analyzer_id, analyzer)
+
+    print(f'  Sends to       {host_address}:{port}, the Zato MLLP channel on this machine ({Zato_MLLP_Port_Env} to change it)', flush=True)
+    print(f'  Receives on    {handle.address("mllp")}, MSH-3 {Zato_Sending_Application}, OBR-3 the accession, OBX-3 one of {codes}', flush=True)
+
+# ################################################################################################################################
+
+def host_address_of(handle:'Handle') -> 'str':
+    """ The address this machine has on the bridge's network - the webapp takes analyzers by IPv4 address only.
+    """
+    hosts = handle.stack.exec(Bridge_Service, ['cat', '/etc/hosts'])
+
+    for line in hosts.splitlines():
+        fields = line.split()
+        if Host_Gateway in fields[1:]:
+            out = fields[0]
+            break
+    else:
+        raise Exception(f'{Host_Gateway} is not in the hosts of {Bridge_Service}:\n{hosts}')
+
+    return out
+
+# ################################################################################################################################
+
+def generic_hl7_type_id(session:'Session') -> 'str':
+    """ The analyzer type the webapp created for the plugin when it loaded it on startup.
+    """
+    data = session.get_json('/rest/analyzer-types')
+
+    for analyzer_type in data:
+        if analyzer_type['name'] == Generic_HL7_Type_Name:
+            out = analyzer_type['id']
+            break
+    else:
+        raise Exception(f'No {Generic_HL7_Type_Name} analyzer type - there is no such plugin in the plugin directory, data: {data}')
+
+    return out
+
+# ################################################################################################################################
+
+def _analyzer_payload(
+    name:'str',
+    plugin_type_id:'str',
+    identifier_pattern:'str',
+    host:'str',
+    port:'int',
+    ) -> 'anydict':
+    out = {
+        'name':              name,
+        'analyzerType':      Generic_HL7_Type_Name,
+        'pluginTypeId':      plugin_type_id,
+        'identifierPattern': identifier_pattern,
+        'ipAddress':         host,
+        'port':              port,
+        'protocolVersion':   Protocol_HL7_V25,
+        'communicationMode': Mode_Both,
+        'status':            Status_Active,
+    }
 
     return out
 
@@ -158,36 +299,95 @@ def register_analyzer(
     identifier_pattern:'str',
     host:'str',
     port:'int',
-    test_mappings:'anylist',
     ) -> 'anydict':
-    """ An HL7 analyzer the webapp recognises by MSH-3 and sends orders to at the host and port.
+    """ An HL7 analyzer of the generic plugin - recognised by MSH-3 through the pattern and sent orders at the host and port.
     """
-    payload = {
-        'name':                  name,
-        'protocol':              Protocol_HL7,
-        'identifierPattern':     identifier_pattern,
-        'mode':                  Mode_Both,
-        'supportsLisInitiated':  True,
-        'destinationHost':       host,
-        'destinationPort':       port,
-        'active':                True,
-        'testMappings':          test_mappings,
-    }
+    plugin_type_id = generic_hl7_type_id(session)
+    payload = _analyzer_payload(name, plugin_type_id, identifier_pattern, host, port)
 
     result = session.post_json('/rest/analyzer/analyzers', payload)
 
-    if result.status not in (200, 201):
+    if result.status != CREATED:
         body = result.body.decode('utf8', 'replace')
         raise Exception(f'Could not register analyzer {name}, status {result.status}, body: {body}')
 
     out = parse_json(result)
+
+    if not out['bridgeRegistered']:
+        raise Exception(f'The webapp did not register analyzer {name} with the bridge: {out}')
+
     return out
 
 # ################################################################################################################################
 
-def analyzers(session:'Session') -> 'any_':
-    out = session.get_json('/rest/analyzer/analyzers')
+def update_analyzer(session:'Session', analyzer_id:'str', analyzer:'anydict') -> 'None':
+    """ Saves the analyzer as it is, which makes the webapp register it with the bridge again.
+    """
+    payload = _analyzer_payload(
+        analyzer['name'],
+        analyzer['pluginTypeId'],
+        analyzer['identifierPattern'],
+        analyzer['ipAddress'],
+        analyzer['port'],
+    )
+
+    result = session.put_json(f'/rest/analyzer/analyzers/{analyzer_id}', payload)
+    expect_status(result, OK, f'update of analyzer {analyzer_id}')
+
+    data = parse_json(result)
+
+    if not data['bridgeRegistered']:
+        raise Exception(f'The webapp did not register analyzer {analyzer_id} with the bridge again: {data}')
+
+# ################################################################################################################################
+
+def map_loinc_tests(session:'Session', handle:'Handle', analyzer_id:'str') -> 'int':
+    """ The laboratory's LOINC-coded tests become the analyzer's tests under their LOINC codes - an order for one of them
+    goes out with that code in OBR-4, and a result naming it in OBX-3 lands on that test. Returns how many.
+    """
+    out = 0
+
+    for test_id, loinc in loinc_tests(handle).items():
+        map_test(session, analyzer_id, loinc, test_id)
+        out += 1
+
     return out
+
+# ################################################################################################################################
+
+def loinc_tests(handle:'Handle') -> 'strstrdict':
+    """ Test ID to LOINC code, the first test of each code - the catalogue has the same code on a test per sample type,
+    and an analyzer knows one test under one code.
+    """
+    arguments = ['psql', '-U', Database_User, '-At', '-c', LOINC_Tests_SQL, Database_Name]
+    output = handle.stack.exec(DB_Service, arguments)
+
+    out:'strstrdict' = {}
+    seen:'strset' = set()
+
+    for line in output.splitlines():
+        test_id, loinc = line.split('|')
+
+        if loinc in seen:
+            continue
+
+        seen.add(loinc)
+        out[test_id] = loinc
+
+    return out
+
+# ################################################################################################################################
+
+def map_test(session:'Session', analyzer_id:'str', analyzer_test_name:'str', test_id:'str') -> 'None':
+    payload = {
+        'analyzerId':       analyzer_id,
+        'analyzerTestName': analyzer_test_name,
+        'testId':           test_id,
+        'newMapping':       True,
+    }
+
+    result = session.post_json('/rest/AnalyzerTestName', payload)
+    expect_status(result, CREATED, f'mapping of {analyzer_test_name} to test {test_id}')
 
 # ################################################################################################################################
 
@@ -196,47 +396,11 @@ def send_order(session:'Session', analyzer_id:'str', accession:'str') -> 'anydic
     """
     result = session.post_json(f'/rest/analyzer/analyzers/{analyzer_id}/send-order', {'accessionNumber': accession})
 
-    if result.status not in (200, 201, 202):
+    if result.status != OK:
         body = result.body.decode('utf8', 'replace')
         raise Exception(f'Could not send an order for {accession}, status {result.status}, body: {body}')
 
     out = parse_json(result)
-    return out
-
-# ################################################################################################################################
-
-def tests(session:'Session') -> 'any_':
-    """ The laboratory's test catalogue, for picking a test an analyzer code maps to.
-    """
-    out = session.get_json('/rest/tests')
-    return out
-
-# ################################################################################################################################
-
-def create_sample_patient_entry(session:'Session', entry:'anydict') -> 'anydict':
-    """ One patient with one sample and its tests, the way the order entry form posts it.
-    """
-    result = session.post_json('/rest/SamplePatientEntry', entry)
-
-    if result.status not in (200, 201):
-        body = result.body.decode('utf8', 'replace')
-        raise Exception(f'Could not create the sample patient entry, status {result.status}, body: {body}')
-
-    out = parse_json(result)
-    return out
-
-# ################################################################################################################################
-
-def analyzer_results(session:'Session') -> 'any_':
-    """ Results received from analyzers, waiting to be accepted.
-    """
-    out = session.get_json('/rest/AnalyzerResults')
-    return out
-
-# ################################################################################################################################
-
-def results_for_validation(session:'Session', test_section_id:'str') -> 'any_':
-    out = session.get_json(f'/rest/ResultValidation?testSectionId={test_section_id}')
     return out
 
 # ################################################################################################################################

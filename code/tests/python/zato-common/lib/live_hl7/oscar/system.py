@@ -11,6 +11,7 @@ import os
 import tarfile
 from base64 import b64encode
 from functools import partial
+from http.client import OK
 from io import BytesIO
 from secrets import token_bytes
 
@@ -157,7 +158,7 @@ class OSCAR(LiveSystem):
         url = handle.http_url('web') + Login_Page
         result = request('GET', url)
 
-        if result.status != 200:
+        if result.status != OK:
             return False
 
         out = b'name="username"' in result.body
@@ -311,7 +312,7 @@ def _complete_first_login(handle:'Handle') -> 'None':
     }
 
     result = session.post_form(Login_Action, fields)
-    expect_status(result, 200, 'first-login password change')
+    expect_status(result, OK, 'first-login password change')
 
     if b'errormsg' in result.body:
         raise Exception('OSCAR did not accept the new password')
@@ -330,7 +331,7 @@ def login(handle:'Handle') -> 'Session':
     }
 
     result = out.post_form(Login_Action, fields)
-    expect_status(result, 200, 'login')
+    expect_status(result, OK, 'login')
 
     if b'loginfailed' in result.body or b'name="username"' in result.body:
         raise Exception('OSCAR login failed')
@@ -491,7 +492,7 @@ def upload_lab(handle:'Handle', session:'Session', service:'str', message:'bytes
 
     out = result.body.decode('utf8', 'replace').strip()
 
-    if result.status != 200:
+    if result.status != OK:
         raise Exception(f'Lab upload failed with {result.status}: {out}')
 
     return out

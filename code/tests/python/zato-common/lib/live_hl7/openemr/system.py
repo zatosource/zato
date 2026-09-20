@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from http.client import CREATED, OK
 from json import dumps
 from urllib.parse import urlencode
 
@@ -94,7 +95,7 @@ class OpenEMR(LiveSystem):
         url = handle.http_url('web') + Login_Page
         result = request('GET', url)
 
-        if result.status != 200:
+        if result.status != OK:
             return False
 
         out = b'name="authUser"' in result.body
@@ -170,7 +171,7 @@ def login(handle:'Handle') -> 'Session':
     result = out.post_form(Login_Action, fields)
 
     # The main screen answers 200 when logged in, the login page comes back otherwise
-    if result.status != 200 or b'name="authUser"' in result.body:
+    if result.status != OK or b'name="authUser"' in result.body:
         raise Exception(f'OpenEMR login failed, status {result.status}')
 
     return out
@@ -190,7 +191,7 @@ def register_api_client(handle:'Handle', name:'str') -> 'anydict':
 
     url = handle.http_url('web') + Registration_Path
     result = request('POST', url, body=_json_bytes(payload), headers={'Content-Type': 'application/json'})
-    expect_status(result, 200, 'API client registration')
+    expect_status(result, OK, 'API client registration')
 
     out = parse_json(result)
     return out
@@ -222,7 +223,7 @@ def api_token(handle:'Handle', client:'anydict') -> 'str':
 
     url = handle.http_url('web') + Token_Path
     result = request('POST', url, body=_form_bytes(fields), headers={'Content-Type': 'application/x-www-form-urlencoded'})
-    expect_status(result, 200, 'API token')
+    expect_status(result, OK, 'API token')
 
     data = parse_json(result)
     out = data['access_token']
@@ -241,7 +242,7 @@ def api_session(handle:'Handle', token:'str') -> 'Session':
 
 def create_patient(api:'Session', patient:'anydict') -> 'anydict':
     result = api.post_json(API_Root + '/patient', patient)
-    expect_status(result, 201, 'patient creation')
+    expect_status(result, CREATED, 'patient creation')
 
     data = parse_json(result)
     out = data['data']
@@ -252,7 +253,7 @@ def create_patient(api:'Session', patient:'anydict') -> 'anydict':
 
 def create_encounter(api:'Session', patient_uuid:'str', encounter:'anydict') -> 'anydict':
     result = api.post_json(API_Root + f'/patient/{patient_uuid}/encounter', encounter)
-    expect_status(result, 201, 'encounter creation')
+    expect_status(result, CREATED, 'encounter creation')
 
     data = parse_json(result)
     out = data['data']
@@ -309,7 +310,7 @@ def create_procedure_provider(
     }
 
     result = session.post_form(Provider_Edit_Page, fields)
-    expect_status(result, 200, f'procedure provider {name}')
+    expect_status(result, OK, f'procedure provider {name}')
 
 # ################################################################################################################################
 
@@ -318,7 +319,7 @@ def poll_results(session:'Session') -> 'None':
     """
     fields:'strstrdict' = {'form_external_refresh': '1', 'form_refresh': 'true'}
     result = session.post_form(Reports_Page, fields)
-    expect_status(result, 200, 'result polling')
+    expect_status(result, OK, 'result polling')
 
 # ################################################################################################################################
 

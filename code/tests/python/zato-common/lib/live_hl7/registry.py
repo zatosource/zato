@@ -6,14 +6,10 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import os
-import sys
-from importlib import import_module
-
 # Live HL7
 from live_hl7.dcm4che_tools.system import DCM4CHETools
 from live_hl7.dcm4chee.system import DCM4CHEE
+from live_hl7.extension import extension
 from live_hl7.openelis.system import OpenELIS
 from live_hl7.openemr.system import OpenEMR
 from live_hl7.openhim.system import OpenHIM
@@ -33,14 +29,6 @@ if 0:
 
 system_dict = dict[str, 'LiveSystem']
 group_dict  = dict[str, 'strtuple']
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# More systems and groups are taken from this package under Zato_Health_Root when it is set
-Extension_Root_Env = 'Zato_Health_Root'
-Extension_Dir      = 'live'
-Extension_Package  = 'health_live_hl7'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,32 +56,18 @@ _groups:'group_dict' = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _load_extension() -> 'None':
-    """ Adds the systems and groups of the package under Zato_Health_Root when it is set - the package exposes
-    systems() returning a name to system dict and groups() returning a name to tuple dict.
+def _add_extension() -> 'None':
+    """ Adds the systems and groups of the extension package when there is one.
     """
-    root = os.environ.get(Extension_Root_Env)
-
-    if not root:
+    if extension is None:
         return
-
-    directory = os.path.join(root, Extension_Dir)
-    package_directory = os.path.join(directory, Extension_Package)
-
-    if not os.path.isdir(package_directory):
-        return
-
-    if directory not in sys.path:
-        sys.path.insert(0, directory)
-
-    extension = import_module(Extension_Package)
 
     _systems.update(extension.systems())
     _groups.update(extension.groups())
 
 # ################################################################################################################################
 
-_load_extension()
+_add_extension()
 
 # ################################################################################################################################
 # ################################################################################################################################

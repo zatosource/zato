@@ -1,7 +1,7 @@
 bridge:
   security:
     enabled: true
-    username: bridge
+    username: ${BRIDGE_USERNAME}
     password: ${BRIDGE_PASSWORD}
   analyzers: {}
   file:
@@ -49,7 +49,7 @@ server:
 logging:
   level:
     root: INFO
-    org.itech: DEBUG
+    org.itech: INFO
 
 management:
   endpoints:

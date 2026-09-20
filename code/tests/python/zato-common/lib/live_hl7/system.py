@@ -99,6 +99,9 @@ class LiveSystem:
     # Volumes that outlive the stack, declared external in the compose file and created before the first start
     kept_volumes:'strtuple' = ()
 
+    # Services that do their work and exit on purpose, whose exit is not the system going down
+    one_off_services:'strtuple' = ()
+
     # The directory holding compose.yml and everything the compose file mounts
     directory = ''
 

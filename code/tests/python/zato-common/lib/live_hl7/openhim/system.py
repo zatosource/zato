@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from hashlib import sha512
+from http.client import CREATED, OK
 from json import dumps
 from secrets import token_hex
 from urllib.parse import quote
@@ -98,11 +99,11 @@ class OpenHIM(LiveSystem):
         session = _session(handle, Root_Initial_Password)
         result = session.get('/users/' + Root_Username)
 
-        if result.status != 200:
+        if result.status != OK:
             return
 
         result = session.request_json('PUT', '/users/' + Root_Username, {'password': handle.password})
-        expect_status(result, 200, 'root password change')
+        expect_status(result, OK, 'root password change')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -121,7 +122,7 @@ def login(handle:'Handle') -> 'Session':
     out = _session(handle, handle.password)
 
     result = out.get('/users/' + Root_Username)
-    expect_status(result, 200, 'login')
+    expect_status(result, OK, 'login')
 
     return out
 
@@ -144,7 +145,7 @@ def add_client(session:'Session', client_id:'str', password:'str', roles:'anylis
     }
 
     result = session.post_json('/clients', payload)
-    expect_status(result, 201, f'client {client_id}')
+    expect_status(result, CREATED, f'client {client_id}')
 
 # ################################################################################################################################
 
@@ -173,7 +174,7 @@ def add_tcp_channel(
     }
 
     result = session.post_json('/channels', payload)
-    expect_status(result, 201, f'channel {name}')
+    expect_status(result, CREATED, f'channel {name}')
 
     out = find_channel(session, name)
     return out
@@ -203,7 +204,7 @@ def set_channel_status(session:'Session', channel_id:'str', status:'str') -> 'No
     connecting to it is turned away before a byte is read.
     """
     result = session.put_json(f'/channels/{channel_id}', {'status': status})
-    expect_status(result, 200, f'status {status} of channel {channel_id}')
+    expect_status(result, OK, f'status {status} of channel {channel_id}')
 
 # ################################################################################################################################
 
@@ -220,7 +221,7 @@ def find_channel(session:'Session', name:'str') -> 'anydict':
 
 def remove_channel(session:'Session', channel_id:'str') -> 'None':
     result = session.request('DELETE', f'/channels/{channel_id}')
-    expect_status(result, 200, f'removal of channel {channel_id}')
+    expect_status(result, OK, f'removal of channel {channel_id}')
 
 # ################################################################################################################################
 
@@ -238,7 +239,7 @@ def transactions(session:'Session', channel_id:'str') -> 'any_':
 
 def transaction(session:'Session', transaction_id:'str') -> 'anydict':
     result = session.get(f'/transactions/{transaction_id}')
-    expect_status(result, 200, f'transaction {transaction_id}')
+    expect_status(result, OK, f'transaction {transaction_id}')
 
     out = parse_json(result)
     return out

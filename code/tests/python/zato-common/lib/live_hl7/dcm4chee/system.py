@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import tempfile
+from http.client import NO_CONTENT, OK
 from io import BytesIO
 from json import dumps
 from time import sleep
@@ -27,6 +28,7 @@ from live_hl7.openhim.system import Host_Address
 from live_hl7.http import expect_status, is_http_ok, parse_json, request
 from live_hl7.seed import Seed_Patients
 from live_hl7.system import Handle, LiveSystem
+from live_hl7.zato import Zato_MLLP_Port_Env, zato_mllp_port
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -166,10 +168,7 @@ Follow_Log_Command = f'tail -F -n 0 {Server_Log} | {Follow_Log_Filter}'
 Startup_Failed_Marker = 'WFLYSRV0026'
 Startup_Causes_Command = f"grep '^Caused by' {Server_Log} | sort -u"
 
-# What a standalone archive sends its own HL7 to - Zato's MLLP channel on this machine, on the standard HL7 port
-# unless the variable says otherwise, known to the archive as this device and application
-Zato_MLLP_Port_Env = 'Zato_HL7_Zato_MLLP_Port'
-Default_Zato_MLLP_Port = 2575
+# What Zato is to a standalone archive - this device and application
 Zato_Device = 'zato'
 Zato_Application = 'ZATO|HOSPITAL'
 
@@ -392,13 +391,13 @@ def reload_config(handle:'Handle') -> 'None':
 
         result = request('POST', url)
 
-        if result.status == 204:
+        if result.status == NO_CONTENT:
             return
 
         is_last = attempt == Reload_Attempts - 1
 
         if is_last:
-            expect_status(result, 204, 'configuration reload')
+            expect_status(result, NO_CONTENT, 'configuration reload')
 
         sleep(Reload_Retry_Wait)
 
@@ -764,18 +763,6 @@ def publish_to_zato(handle:'Handle') -> 'None':
 
 # ################################################################################################################################
 
-def zato_mllp_port() -> 'int':
-    value = os.environ.get(Zato_MLLP_Port_Env)
-
-    if value:
-        out = int(value)
-    else:
-        out = Default_Zato_MLLP_Port
-
-    return out
-
-# ################################################################################################################################
-
 def seed_patients(handle:'Handle') -> 'None':
     """ A few patients for a person to find in the UI of a standalone archive.
     """
@@ -789,7 +776,7 @@ def create_patient(handle:'Handle', patient:'PatientRecord') -> 'None':
     """ A new patient through the archive's REST - with the notifications on, this brings an ADT^A28.
     """
     result = _send_patient_json(handle, 'POST', Patients_Path, patient)
-    expect_status(result, 200, 'create patient')
+    expect_status(result, OK, 'create patient')
 
 # ################################################################################################################################
 
@@ -797,7 +784,7 @@ def update_patient(handle:'Handle', patient:'PatientRecord') -> 'None':
     """ A patient's demographics change - an ADT^A31 with the notifications on.
     """
     result = _send_patient_json(handle, 'PUT', f'{Patients_Path}/{patient.patient_id}', patient)
-    expect_status(result, 204, 'update patient')
+    expect_status(result, NO_CONTENT, 'update patient')
 
 # ################################################################################################################################
 
@@ -807,7 +794,7 @@ def merge_patients(handle:'Handle', surviving_id:'str', prior_id:'str') -> 'None
     url = handle.http_url('web') + f'{Patients_Path}/{prior_id}/merge/{surviving_id}'
 
     result = request('POST', url)
-    expect_status(result, 204, 'merge patients')
+    expect_status(result, NO_CONTENT, 'merge patients')
 
 # ################################################################################################################################
 
@@ -817,7 +804,7 @@ def change_patient_id(handle:'Handle', prior_id:'str', new_id:'str') -> 'None':
     url = handle.http_url('web') + f'{Patients_Path}/{prior_id}/changeid/{new_id}'
 
     result = request('POST', url)
-    expect_status(result, 204, 'change patient id')
+    expect_status(result, NO_CONTENT, 'change patient id')
 
 # ################################################################################################################################
 
@@ -841,7 +828,7 @@ def hl7_tasks(handle:'Handle') -> 'anylist':
     """
     url = handle.http_url('web') + Tasks_Path + '?dicomDeviceName=' + Archive_Device
     result = request('GET', url)
-    expect_status(result, 200, 'HL7 send tasks')
+    expect_status(result, OK, 'HL7 send tasks')
 
     out = parse_json(result)
     return out
@@ -853,10 +840,10 @@ def _query(handle:'Handle', resource:'str', query:'str', *, rs_path:'str'=Archiv
     result = request('GET', url, headers={'Accept': 'application/dicom+json'})
 
     # No matches is an empty answer, not an empty list
-    if result.status == 204:
+    if result.status == NO_CONTENT:
         return []
 
-    expect_status(result, 200, resource)
+    expect_status(result, OK, resource)
 
     out = parse_json(result)
     return out
@@ -890,7 +877,7 @@ def study_by_uid(handle:'Handle', study_uid:'str') -> 'any_':
 def aets(handle:'Handle') -> 'anydict':
     url = handle.http_url('web') + AETs_Path
     result = request('GET', url)
-    expect_status(result, 200, 'AE titles')
+    expect_status(result, OK, 'AE titles')
 
     out = parse_json(result)
     return out

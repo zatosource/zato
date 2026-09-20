@@ -26,7 +26,7 @@ from live_hl7.system import Handle
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strintdict, strstrdict
+    from zato.common.typing_ import stranydict, strintdict, strlist, strstrdict
     from live_hl7.system import LiveSystem
 
 # ################################################################################################################################
@@ -122,7 +122,11 @@ def _is_ready_or_gone(system:'LiveSystem', handle:'Handle') -> 'bool':
     if is_ready:
         return True
 
-    exited = handle.stack.exited_services()
+    exited:'strlist' = []
+
+    for service in handle.stack.exited_services():
+        if service not in system.one_off_services:
+            exited.append(service)
 
     if exited:
         logs = handle.stack.logs(exited[0])
