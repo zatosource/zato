@@ -33,6 +33,8 @@ MRN_Type = 'MR'
 Control_ID_Prefix = 'REG'
 
 # What the rest of the suite reads out of the toolkit through this module
+Ack_Accepted = messages.Ack_Accepted
+Ack_Application_Error = messages.Ack_Application_Error
 Order_Control_New = messages.Order_Control_New
 Recorded = messages.Recorded
 control_id_of = messages.control_id
@@ -42,6 +44,7 @@ message_type_of = messages.message_type
 read_recorded = messages.read_recorded
 recorded_with_control_id = messages.recorded_with_control_id
 wait_for = messages.wait_for
+with_accept_ack = messages.with_accept_ack
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,9 +52,6 @@ wait_for = messages.wait_for
 # The registration system writing to the engine, under either of its names
 Feed_Envelope = Envelope(Registration_Application, Site_Facility, Engine_Application, Site_Facility)
 TLS_Feed_Envelope = Envelope(Registration_TLS_Application, Site_Facility, Engine_Application, Site_Facility)
-
-# MSH-15 as a sender asking for an accept acknowledgment sets it
-Accept_Ack_Always = 'AL'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,27 +100,6 @@ def build_adt_a04(
     envelope:'Envelope'=Feed_Envelope,
     ) -> 'str':
     out = messages.build_adt_a04(envelope, control_id, patient, admission_id)
-    return out
-
-# ################################################################################################################################
-
-def with_accept_ack(message:'str') -> 'str':
-    """ The message with MSH-15 set to AL - the sender asking to be told the message was received,
-    on top of whatever the application says about it.
-    """
-    segments = messages.split(message)
-    msh_fields = segments[0].split('|')
-
-    # MSH-15 is the 14th element after the field separator, which the split does not produce
-    msh_index = 14
-
-    while len(msh_fields) <= msh_index:
-        msh_fields.append('')
-
-    msh_fields[msh_index] = Accept_Ack_Always
-    segments[0] = '|'.join(msh_fields)
-
-    out = messages.join(segments)
     return out
 
 # ################################################################################################################################

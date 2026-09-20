@@ -14,7 +14,7 @@
 	test-as2 test-as4 test-edifact test-x12 test-soap \
 	test-llm \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce \
-	test-hl7 hl7-scenario-hie hl7-scenario-registration hl7-scenarios test-ui \
+	test-hl7 hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-alerting test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
@@ -1477,4 +1477,15 @@ hl7-scenario-registration: ## The registration scenario - the ADT feed, orders a
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_registration -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-hl7-scenarios: hl7-scenario-hie hl7-scenario-registration ## Every live clinical scenario, one after another.
+hl7-scenario-lab: ## The laboratory scenario - the LIS orders on an analyzer and takes its results through the middleware, live.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) \
+	Zato_Test_HL7_Lab=1 \
+	Zato_Health_Root=$(Zato_Health) \
+	PYTHONPATH=$(HL7_LIVE_PYTHONPATH) \
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/hl7_lab/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_lab -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+hl7-scenarios: hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab ## Every live clinical scenario, one after another.

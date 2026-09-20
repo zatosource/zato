@@ -24,8 +24,8 @@ from live_hl7.system import Host as Container_Host
 # Zato - the suite's own parts
 from _enmasse import Facility_B_Connection, Facility_B_Registry_Down_Connection, Facility_B_SHR_Down_Connection
 from _exchange import Registry_Route
-from _messages import Patient, build_adt_a28, build_adt_a40, deliveries_with_control_id, new_control_id, \
-    new_patient, recorded_with_control_id, wait_for
+from _messages import Ack_Accepted, Patient, build_adt_a28, build_adt_a40, deliveries_with_control_id, \
+    new_control_id, new_patient, recorded_with_control_id, wait_for
 from _services import Send_Service
 
 # ################################################################################################################################
@@ -38,9 +38,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The acknowledgment code a message that was taken gets
-Accepted = 'AA'
 
 # What the exchange stores a route's outcome as
 Route_OK = 200
@@ -243,10 +240,10 @@ def _assert_accepted(result:'anydict', control_id:'str') -> 'None':
     """ The facility got the shared record's acknowledgment of its own message back through the exchange.
     """
     assert result['is_sent'], result['error_text']
-    assert result['ack_code'] == Accepted, result
+    assert result['ack_code'] == Ack_Accepted, result
 
     ack = parse_ack(result['ack_text'])
-    assert ack.msa_1 == Accepted
+    assert ack.msa_1 == Ack_Accepted
     assert ack.msa_2 == control_id
 
 # ################################################################################################################################
@@ -279,11 +276,11 @@ def test_facility_b(hie:'HIEEnvironment') -> 'None':
     transaction = _wait_for_route(hie, hie.channels.national_adt, control_id, Registry_Route)
 
     assert transaction['response']['status'] == Route_OK
-    assert f'MSA|{Accepted}|{control_id}' in transaction['response']['body']
+    assert f'MSA|{Ack_Accepted}|{control_id}' in transaction['response']['body']
 
     registry_route = _route_named(transaction, Registry_Route)
     assert registry_route['response']['status'] == Route_OK
-    assert f'MSA|{Accepted}|{control_id}' in registry_route['response']['body']
+    assert f'MSA|{Ack_Accepted}|{control_id}' in registry_route['response']['body']
 
 # ################################################################################################################################
 

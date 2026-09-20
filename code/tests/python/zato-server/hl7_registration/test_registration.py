@@ -6,14 +6,12 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import os
-
 # Zato
 from zato.common.audit_log.api import AuditEvent
 
 # Live environment
 from live_environment.audit import events
+from live_environment.haproxy import Loopback_Address
 
 # Live HL7
 from live_hl7.dcm4chee.system import PatientRecord, Task_Completed, Task_Failed, Task_Warning, change_patient_id, \
@@ -22,13 +20,15 @@ from live_hl7.dcm4chee.system import PatientRecord, Task_Completed, Task_Failed,
 from live_hl7.enmasse import switch
 from live_hl7.http import as_dict
 from live_hl7.sender import send
+from live_hl7.suite import record_finding
 
 # Zato - the suite's own parts
 from _enmasse import ADT_Channel, ADT_TLS_Channel, Orders_Channel, PACS_Channel, pacs_channel
 from _environment import Engine_Receiver, Engine_TLS_Receiver, Stranger_Receiver
-from _messages import Order_Control_New, Patient, TLS_Feed_Envelope, build_adt_a04, build_adt_a08, build_adt_a40, \
-    build_orm_o01, control_id_of, deliveries_with_control_id, field, message_type_of, new_control_id, new_mrn, \
-    new_order, new_patient, read_recorded, recorded_with_control_id, wait_for, with_accept_ack
+from _messages import Ack_Accepted, Ack_Application_Error, Order_Control_New, Patient, TLS_Feed_Envelope, \
+    build_adt_a04, build_adt_a08, build_adt_a40, build_orm_o01, control_id_of, deliveries_with_control_id, field, \
+    message_type_of, new_control_id, new_mrn, new_order, new_patient, read_recorded, recorded_with_control_id, \
+    wait_for, with_accept_ack
 from _services import PACS_Record_Label, Raising_Error_Text, Raising_Service
 
 # ################################################################################################################################
@@ -41,16 +41,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# Acknowledgment codes
-Accepted = 'AA'
-Application_Error = 'AE'
-
-# The engine listens on every interface, and the suite reaches it on the loopback one
-Engine_Host = '127.0.0.1'
-
-# Where the suite writes down what it learnt about the PACS that a test cannot decide for it
-Findings_File_Name = 'findings.txt'
 
 # What the archive says of a message it could not process - the MSA and ERR fields it answers 409 with
 Refused_Status = 409
@@ -77,27 +67,19 @@ Column_Endpoint = 'endpoint'
 # ################################################################################################################################
 
 def _record_finding(registration:'RegistrationEnvironment', text:'str') -> 'None':
-    """ Something the run showed about the PACS, kept next to everything else of the run and printed
-    for whoever watches it.
-    """
-    path = os.path.join(registration.directory, Findings_File_Name)
-
-    with open(path, 'a') as file_handle:
-        _ = file_handle.write(text + '\n')
-
-    print(f'Finding: {text}')
+    record_finding(registration.directory, text)
 
 # ################################################################################################################################
 
 def _send_plain(registration:'RegistrationEnvironment', message:'str') -> 'AckResult':
-    out = send(Engine_Host, registration.engine_plain_port, message)
+    out = send(Loopback_Address, registration.engine_plain_port, message)
     return out
 
 # ################################################################################################################################
 
 def _assert_accepted(ack:'AckResult', control_id:'str') -> 'None':
     assert ack.is_accepted, ack.ack_text
-    assert ack.ack_code == Accepted, ack.ack_text
+    assert ack.ack_code == Ack_Accepted, ack.ack_text
     assert field(ack.ack_text, 'MSA', 2) == control_id, ack.ack_text
 
 # ################################################################################################################################
@@ -402,7 +384,7 @@ def test_orders(registration:'RegistrationEnvironment') -> 'None':
     ack = _send_plain(registration, message)
 
     # .. is refused with the PACS's acknowledgment as it came, its ERR naming the field ..
-    assert ack.ack_code == Application_Error, ack.ack_text
+    assert ack.ack_code == Ack_Application_Error, ack.ack_text
     assert not ack.is_accepted
     assert not ack.should_retry
     assert field(ack.ack_text, 'MSA', 2) == control_id
@@ -477,7 +459,7 @@ def test_identity_reconciliation(registration:'RegistrationEnvironment') -> 'Non
             assert result.status == Refused_Status, result.body
 
             refusal = as_dict(result)
-            assert refusal['msa-1'] == Application_Error, refusal
+            assert refusal['msa-1'] == Ack_Application_Error, refusal
             assert 'ERR|' in refusal['message'], refusal
             assert Raising_Error_Text in refusal['message'], refusal
 
@@ -494,7 +476,7 @@ def test_identity_reconciliation(registration:'RegistrationEnvironment') -> 'Non
                     refused.append(task)
 
             refused_task, = refused
-            assert f'MSA|{Application_Error}' in refused_task['outcomeMessage'], refused_task
+            assert f'MSA|{Ack_Application_Error}' in refused_task['outcomeMessage'], refused_task
 
     finally:
         disable_adt_notifications(registration.pacs)

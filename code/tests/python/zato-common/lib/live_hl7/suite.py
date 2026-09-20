@@ -54,6 +54,9 @@ Public_Root_Env = 'ZATO_TEST_BASE_DIR'
 Start_Target_Prefix = 'hl7-start-'
 Stop_Target_Prefix = 'hl7-stop-'
 
+# Where a suite writes down what a run showed about a system that a test cannot decide for it
+Findings_File_Name = 'findings.txt'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -151,6 +154,19 @@ def _make(name:'str', target_prefix:'str', process_environment:'strstrdict') -> 
     print(f'make {target} in {root}', flush=True)
 
     _ = subprocess.run(['make', '-C', root, target], env=environment, check=True)
+
+# ################################################################################################################################
+
+def record_finding(directory:'str', text:'str') -> 'None':
+    """ Something the run showed about a system, kept next to everything else of the run and printed
+    for whoever watches it.
+    """
+    path = os.path.join(directory, Findings_File_Name)
+
+    with open(path, 'a') as file_handle:
+        _ = file_handle.write(text + '\n')
+
+    print(f'Finding: {text}')
 
 # ################################################################################################################################
 

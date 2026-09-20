@@ -58,6 +58,19 @@ Document_Observation_ID = 'PDF^Encapsulated document'
 Order_Control_New = 'NW'
 Order_Status_Scheduled = 'SC'
 
+# ORC-1 of results - the order they answer is complete
+Order_Control_Results = 'RE'
+
+# MSA-1 of an acknowledgment - the message was taken, or the application could not process it
+Ack_Accepted = 'AA'
+Ack_Application_Error = 'AE'
+
+# MSH-15 as a sender asking for an accept acknowledgment sets it
+Accept_Ack_Always = 'AL'
+
+# MSH-15 is the 14th element after the field separator, which a split of the segment does not produce
+MSH_15_Index = 14
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -208,6 +221,24 @@ def control_id(message:'str') -> 'str':
     return out
 
 # ################################################################################################################################
+
+def with_accept_ack(message:'str') -> 'str':
+    """ The message with MSH-15 set to AL - the sender asking to be told the message was received,
+    on top of whatever the application says about it.
+    """
+    segments = split(message)
+    msh_fields = segments[0].split('|')
+
+    while len(msh_fields) <= MSH_15_Index:
+        msh_fields.append('')
+
+    msh_fields[MSH_15_Index] = Accept_Ack_Always
+    segments[0] = '|'.join(msh_fields)
+
+    out = join(segments)
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def build_adt_a01(envelope:'Envelope', message_control_id:'str', patient:'Patient', admission_id:'str') -> 'str':
@@ -352,15 +383,16 @@ def build_oru_r01(
     order:'Order',
     observations:'anylist',
     ) -> 'str':
-    """ Results of one order - each observation a triple of identifier, value and units.
+    """ Results of one order - each observation a triple of identifier, value and units. The accession is the
+    filler's number of the order, ORC-3 and OBR-3, which is where a laboratory looks for its own.
     """
     procedure = f'{order.procedure_code}^{order.procedure_name}'
-    obr = f'OBR|1|{order.placer_number}||{procedure}|||{Timestamp}|||||||||||{order.accession_number}'
+    obr = f'OBR|1|{order.placer_number}|{order.accession_number}|{procedure}|||{Timestamp}'
 
     segments = [
         msh(envelope, 'ORU^R01^ORU_R01', message_control_id),
         pid(patient),
-        f'ORC|RE|{order.placer_number}',
+        f'ORC|{Order_Control_Results}|{order.placer_number}|{order.accession_number}',
         obr,
     ]
 
@@ -414,15 +446,23 @@ def read_recorded(messages_file:'str') -> 'recorded_list':
 
 # ################################################################################################################################
 
-def recorded_with_control_id(messages_file:'str', message_control_id:'str') -> 'recorded_list':
-    """ What was recorded of one message.
+def recorded_containing(messages_file:'str', text:'str') -> 'recorded_list':
+    """ What was recorded of messages carrying the text - a control id, an accession, whatever names the message.
     """
     out:'recorded_list' = []
 
     for recorded in read_recorded(messages_file):
-        if message_control_id in recorded.message:
+        if text in recorded.message:
             out.append(recorded)
 
+    return out
+
+# ################################################################################################################################
+
+def recorded_with_control_id(messages_file:'str', message_control_id:'str') -> 'recorded_list':
+    """ What was recorded of one message.
+    """
+    out = recorded_containing(messages_file, message_control_id)
     return out
 
 # ################################################################################################################################

@@ -32,6 +32,7 @@ National_ID_Type = 'HIE National ID'
 Control_ID_Prefix = 'HIE'
 
 # What the rest of the suite reads out of the toolkit through this module
+Ack_Accepted = messages.Ack_Accepted
 Recorded = messages.Recorded
 read_recorded = messages.read_recorded
 recorded_with_control_id = messages.recorded_with_control_id

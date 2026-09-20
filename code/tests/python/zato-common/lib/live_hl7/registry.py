@@ -51,6 +51,7 @@ _groups:'group_dict' = {
     'laboratory':   ('sftp', 'openelis', 'openemr', 'oscar'),
     'hie':          ('openhim', 'openmrs'),
     'registration': ('dcm4chee',),
+    'lab':          ('openelis',),
 }
 
 # ################################################################################################################################

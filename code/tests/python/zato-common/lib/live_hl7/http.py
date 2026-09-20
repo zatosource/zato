@@ -336,12 +336,17 @@ class Session:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def expect_status(result:'HTTPResult', expected:'int', what:'str') -> 'None':
-    """ Fails with the body when a result does not carry the status expected.
+def expect_status(result:'HTTPResult', expected:'int | tuple[int, ...]', what:'str') -> 'None':
+    """ Fails with the body when a result does not carry the status expected, or one of the statuses when several
+    are acceptable.
     """
-    if result.status != expected:
+    if isinstance(expected, int):
+        expected = (expected,)
+
+    if result.status not in expected:
         body = result.body.decode('utf8', 'replace')[:Error_Body_Limit]
-        raise Exception(f'{what} answered {result.status} instead of {expected}: {body}')
+        accepted = ' or '.join(str(status) for status in expected)
+        raise Exception(f'{what} answered {result.status} instead of {accepted}: {body}')
 
 # ################################################################################################################################
 
