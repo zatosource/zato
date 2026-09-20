@@ -14,7 +14,7 @@ from string import Template
 # Live HL7
 from live_hl7.compose import Host_Gateway
 from live_hl7.credentials import PasswordRules
-from live_hl7.extension import extension_directory
+from live_hl7.extension import Extension_Root_Env, extension_directory
 from live_hl7.fetch import work_directory
 from live_hl7.http import Session, expect_status, is_http_ok, parse_json, request
 from live_hl7.system import Handle, LiveSystem
@@ -66,6 +66,7 @@ Status_Active = 'ACTIVE'
 # from the extension when there is one and is empty otherwise, and this is the name the webapp registers the generic plugin under.
 Plugins_Directory_Name = 'openelis_plugins'
 Plugins_Cache_Dir_Name = 'openelis-plugins'
+Plugin_Suffix = '.jar'
 Generic_HL7_Type_Name = 'Generic HL7'
 
 # What Zato is to a standalone laboratory - an analyzer whose results carry this MSH-3 and which takes orders
@@ -108,15 +109,19 @@ class OpenELIS(LiveSystem):
     def environment(self, ports:'strintdict', password:'str') -> 'strstrdict':
         out = super().environment(ports, password)
         out['OPENELIS_BRIDGE_CONFIG'] = _bridge_config_path()
-        out['OPENELIS_PLUGINS_DIR'] = extension_directory(Plugins_Directory_Name, work_directory(Plugins_Cache_Dir_Name))
+        out['OPENELIS_PLUGINS_DIR'] = _plugins_directory()
 
         return out
 
 # ################################################################################################################################
 
     def prepare(self, handle:'Handle') -> 'None':
-        """ Renders the bridge configuration with the webapp's address and our credentials.
+        """ Renders the bridge configuration with the webapp's address and our credentials, having made sure
+        a standalone laboratory has the plugin its connection to Zato needs.
         """
+        if handle.is_standalone:
+            _require_plugin()
+
         template_path = os.path.join(self.directory, Bridge_Config_Template_Name)
 
         with open(template_path, encoding='utf8') as f:
@@ -172,6 +177,25 @@ class OpenELIS(LiveSystem):
 def _bridge_config_path() -> 'str':
     out = os.path.join(work_directory(Bridge_Config_Dir_Name), Bridge_Config_File_Name)
     return out
+
+# ################################################################################################################################
+
+def _plugins_directory() -> 'str':
+    out = extension_directory(Plugins_Directory_Name, work_directory(Plugins_Cache_Dir_Name))
+    return out
+
+# ################################################################################################################################
+
+def _require_plugin() -> 'None':
+    """ Fails before any container starts when the plugin directory has no plugin in it.
+    """
+    directory = _plugins_directory()
+
+    for name in os.listdir(directory):
+        if name.endswith(Plugin_Suffix):
+            break
+    else:
+        raise Exception(f'No analyzer plugin in {directory}, so OpenELIS would take no HL7 results - is {Extension_Root_Env} set?')
 
 # ################################################################################################################################
 
