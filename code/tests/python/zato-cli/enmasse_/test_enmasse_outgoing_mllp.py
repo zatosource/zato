@@ -48,7 +48,7 @@ outgoing_mllp:
     end_seq: '1c 0d'
     logging_level: DEBUG
     max_retries: 3
-    retry_sleep_time: 2
+    retry_sleep_time: 5
     tls_ca_path: /path/to/ca.pem
     tls_cert_path: /path/to/client.pem
     tls_key_path: /path/to/client.key
@@ -149,7 +149,7 @@ class TestEnmasseOutgoingMLLPLive(BaseEnmasseTestCase):
 
             self.assertEqual(connections_by_name[connection_3_name]['logging_level'], 'DEBUG')
             self.assertEqual(connections_by_name[connection_3_name]['max_retries'], 3)
-            self.assertEqual(connections_by_name[connection_3_name]['retry_sleep_time'], 2)
+            self.assertEqual(connections_by_name[connection_3_name]['retry_sleep_time'], 5)
             self.assertEqual(connections_by_name[connection_3_name]['tls_ca_path'], '/path/to/ca.pem')
             self.assertEqual(connections_by_name[connection_3_name]['tls_cert_path'], '/path/to/client.pem')
             self.assertEqual(connections_by_name[connection_3_name]['tls_key_path'], '/path/to/client.key')
