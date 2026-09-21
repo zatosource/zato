@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from contextlib import contextmanager
 from threading import RLock
 
 # Zato
@@ -23,7 +24,7 @@ from zato.server.base.config_manager.common import ConfigManagerImpl
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anytuple, callable_
+    from zato.common.typing_ import any_, anydict, anytuple, callable_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -130,6 +131,36 @@ class OutgoingQueues(ConfigManagerImpl):
 
 # ################################################################################################################################
 
+    @contextmanager
+    def hold_outgoing_queue(self, conn_type:'str', conn_id:'int') -> 'any_':
+        """ Holds one connection's queue still for as long as the block runs - nothing is published to it and its delivery
+        stops between two rounds, so no message is in flight while the block changes the connection or the messages of its
+        queue. A round in flight would otherwise resolve the connection's topics from a configuration the block is replacing,
+        or go on with a message the block discarded or replaced.
+        """
+        sub_key = get_outgoing_sub_key(conn_type, conn_id)
+        delivery = self.server.pubsub_push_delivery
+
+        with self.get_outgoing_publish_lock(conn_type, conn_id):
+
+            # A connection that never had a queue has no delivery to stop
+            has_queue = sub_key in self._outgoing_sub_key_cache
+
+            if has_queue:
+                delivery.pause_sub_key(sub_key)
+
+            try:
+                yield
+            finally:
+
+                # A queue the block deleted has nothing to start again
+                is_still_there = sub_key in self._outgoing_sub_key_cache
+
+                if has_queue and is_still_there:
+                    delivery.resume_sub_key(sub_key)
+
+# ################################################################################################################################
+
     def ensure_outgoing_subscription(self, conn_type:'str', conn_id:'int') -> 'anytuple':
         """ Makes sure that one outgoing connection has a topic and a queue, returning the topic's name and the connection's
         current name.
@@ -161,7 +192,8 @@ class OutgoingQueues(ConfigManagerImpl):
 # ################################################################################################################################
 
     def rename_outgoing_subscription(self, conn_type:'str', conn_id:'int', old_name:'str', new_name:'str') -> 'None':
-        """ Moves the topic of one outgoing connection to the connection's new name.
+        """ Moves the topic of one outgoing connection to the connection's new name. The caller holds the queue
+        through hold_outgoing_queue, so nothing is published to the topic and no round is in flight while it moves.
         """
         sub_key = get_outgoing_sub_key(conn_type, conn_id)
 
@@ -171,23 +203,13 @@ class OutgoingQueues(ConfigManagerImpl):
         old_topic_name = get_outgoing_topic_name(conn_type, old_name)
         new_topic_name = get_outgoing_topic_name(conn_type, new_name)
 
-        # Under the queue's publish lock, nothing is published while the topic moves ..
-        with self.get_outgoing_publish_lock(conn_type, conn_id):
+        self.server.pubsub_backend.rename_topic(old_topic_name, new_topic_name)
 
-            # .. and a delivery already under way is waited for rather than cut in half.
-            self.server.pubsub_push_delivery.pause_sub_key(sub_key)
+        self.server.pubsub_backend.delete_topic_audit_flag(old_topic_name)
+        self._set_outgoing_topic_audit_flag(conn_type, new_topic_name)
 
-            try:
-                self.server.pubsub_backend.rename_topic(old_topic_name, new_topic_name)
-
-                self.server.pubsub_backend.delete_topic_audit_flag(old_topic_name)
-                self._set_outgoing_topic_audit_flag(conn_type, new_topic_name)
-
-                sub_config = get_outgoing_sub_config(sub_key, new_topic_name)
-                self._push_subs[sub_key] = [sub_config]
-
-            finally:
-                self.server.pubsub_push_delivery.resume_sub_key(sub_key)
+        sub_config = get_outgoing_sub_config(sub_key, new_topic_name)
+        self._push_subs[sub_key] = [sub_config]
 
         logger.info('Moved outgoing connection queue `%s` from topic `%s` to `%s`',
             sub_key, old_topic_name, new_topic_name)
@@ -201,15 +223,16 @@ class OutgoingQueues(ConfigManagerImpl):
         """
         sub_key = get_outgoing_sub_key(conn_type, conn_id)
 
-        # The DLQ goes first, while its queue's lock still exists
-        self.delete_outgoing_dlq(conn_type, conn_id, conn_name)
+        # The queue is held first, so no round of its delivery moves a message to the DLQ while the DLQ goes away
+        with self.hold_outgoing_queue(conn_type, conn_id):
 
-        if sub_key not in self._outgoing_sub_key_cache:
-            return
+            # The DLQ goes first, while its queue's lock still exists
+            self.delete_outgoing_dlq(conn_type, conn_id, conn_name)
 
-        topic_name = get_outgoing_topic_name(conn_type, conn_name)
+            if sub_key not in self._outgoing_sub_key_cache:
+                return
 
-        with self.get_outgoing_publish_lock(conn_type, conn_id):
+            topic_name = get_outgoing_topic_name(conn_type, conn_name)
 
             self.server.pubsub_push_delivery.stop_sub_key(sub_key)
 

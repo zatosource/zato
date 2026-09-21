@@ -90,6 +90,10 @@ class PushDelivery:
         """ Kill the delivery greenlet for the given subscriber key.
         """
         with self._lock:
+
+            # A stopped subscriber is not a paused one either, or the same key would never run again if it came back
+            self._paused.discard(sub_key)
+
             if greenlet := self._greenlets.pop(sub_key, None):
                 greenlet.kill()
 

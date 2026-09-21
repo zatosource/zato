@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The services the queue and DLQ pages of an outgoing connection read from and act through.
 
 # stdlib
-from contextlib import contextmanager
 from json import dumps, loads
 
 # Zato
@@ -24,7 +23,7 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, stranydict, strlist
+    from zato.common.typing_ import anydict, anylist, anytuple, stranydict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,26 +103,6 @@ class _BrowseService(AdminService):
 
         out = found
         return out
-
-# ################################################################################################################################
-
-    @contextmanager
-    def _hold_queue(self, conn_type:'str', conn_id:'int', sub_key:'str') -> 'any_':
-        """ Holds one connection's queue still while its messages are changed - nothing joins the queue under
-        the publish lock and its delivery stops once the round it is in the middle of is over, or the greenlet
-        would go on with the message it already holds, sending a body that was replaced here or delivering
-        one that was discarded here and lowering the depth a second time.
-        """
-        config_manager = self.server.config_manager
-        delivery = self.server.pubsub_push_delivery
-
-        with config_manager.get_outgoing_publish_lock(conn_type, conn_id):
-            delivery.pause_sub_key(sub_key)
-
-            try:
-                yield
-            finally:
-                delivery.resume_sub_key(sub_key)
 
 # ################################################################################################################################
 
@@ -365,9 +344,11 @@ class MessageAction(_BrowseService):
     def _discard_from_queue(self, conn_type:'str', conn_id:'int', sub_key:'str', msg_id_list:'strlist') -> 'None':
         """ Takes each message named out of the queue - a discarded message must not hold the queue up.
         """
-        depth = self.server.config_manager.outgoing_queue_depth
+        config_manager = self.server.config_manager
+        depth = config_manager.outgoing_queue_depth
 
-        with self._hold_queue(conn_type, conn_id, sub_key):
+        # The queue is held still, or its delivery would go on with a message discarded here and lower the depth twice
+        with config_manager.hold_outgoing_queue(conn_type, conn_id):
             for msg_id in msg_id_list:
                 was_acked = self.server.pubsub_backend.ack_message(sub_key, msg_id)
 
@@ -393,13 +374,14 @@ class UpdateMessage(_BrowseService):
         msg_id = input.msg_id
 
         conn_name, _ = self._get_conn(conn_type, conn_id)
-        topic_name, sub_key = self._get_names(kind, conn_type, conn_id, conn_name)
+        topic_name, _ = self._get_names(kind, conn_type, conn_id, conn_name)
 
-        # A message in the DLQ has no delivery to hold, one in the queue does
+        # A message in the DLQ has no delivery to hold, one in the queue does - its delivery would otherwise
+        # go on with the body it already holds rather than the one written here.
         if kind == Kind_DLQ:
             was_updated = self._update(kind, conn_type, conn_id, conn_name, topic_name, msg_id, input.data)
         else:
-            with self._hold_queue(conn_type, conn_id, sub_key):
+            with self.server.config_manager.hold_outgoing_queue(conn_type, conn_id):
                 was_updated = self._update(kind, conn_type, conn_id, conn_name, topic_name, msg_id, input.data)
 
         if not was_updated:

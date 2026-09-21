@@ -90,9 +90,8 @@ class OutgoingDLQs(ConfigManagerImpl):
         old_topic_name = get_dlq_topic_name(conn_type, old_name)
         new_topic_name = get_dlq_topic_name(conn_type, new_name)
 
-        # A move to the DLQ happens under the queue's publish lock too
-        with self.get_outgoing_publish_lock(conn_type, conn_id):
-            self.server.pubsub_backend.rename_topic(old_topic_name, new_topic_name)
+        # The caller holds the queue, so the delivery that moves messages to the DLQ is not running now
+        self.server.pubsub_backend.rename_topic(old_topic_name, new_topic_name)
 
         logger.info('Moved outgoing connection DLQ `%s` from topic `%s` to `%s`', sub_key, old_topic_name, new_topic_name)
 

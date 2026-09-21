@@ -93,6 +93,7 @@ class Generic(ConfigManagerImpl):
     _generic_conn_handler: 'stranydict'
     _get_generic_impl_func: 'callable_'
     get_outgoing_publish_lock: 'callable_'
+    hold_outgoing_queue: 'callable_'
     rename_outgoing_subscription: 'callable_'
     delete_outgoing_subscription: 'callable_'
 
@@ -289,14 +290,15 @@ class Generic(ConfigManagerImpl):
         is_rename = bool(conn_type) and old_name != msg['name']
 
         # A renamed connection that can be published to has its topic moved to the new name, and both
-        # that and the config this method replaces happen with nothing being published to it in between,
-        # because a publication resolves its topic from what the config says the connection is called.
+        # that and the config this method replaces happen with the queue held still - nothing is published
+        # to it and no round of its delivery is in flight in between, because both resolve their topics
+        # from what the config says the connection is called.
         if is_rename:
-            lock = self.get_outgoing_publish_lock(conn_type, msg['id'])
+            hold = self.hold_outgoing_queue(conn_type, msg['id'])
         else:
-            lock = nullcontext()
+            hold = nullcontext()
 
-        with lock:
+        with hold:
 
             # Delete the connection, although not the queue in front of it, which this edit keeps
             self._delete_generic_connection(msg, needs_queue_delete=False)

@@ -16,8 +16,8 @@ from sqlalchemy import func, select
 
 # Zato
 from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name
-from zato.common.pubsub.outgoing import get_outgoing_sub_key, get_outgoing_topic_name
-from zato.common.pubsub.sql.schema import message_table
+from zato.common.pubsub.outgoing import get_outgoing_sub_key, get_outgoing_topic_name, Key_Msg_ID
+from zato.common.pubsub.sql.schema import delivery_table
 
 # Test support
 from queue_delivery.client import create_connection, delete_connection, edit_connection, get_client, get_pubsub_db_engine, \
@@ -25,6 +25,12 @@ from queue_delivery.client import create_connection, delete_connection, edit_con
 from queue_delivery.dlq import get_dlq, send_to_dlq
 from queue_delivery.scenarios.base import ScenarioBase
 from queue_delivery.type_under_test import Conn_DLQ_Keep
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,16 +51,25 @@ _behind = {'seq': 3}
 # ################################################################################################################################
 
 def count_topic_messages(topic_name:'str') -> 'int':
-    """ How many message rows the pub/sub database holds under a topic.
+    """ How many messages wait for a subscriber under a topic in the pub/sub database - an acked message keeps its
+    message row, without the payload, so it is the delivery rows that say what is still there to be read.
     """
     engine = get_pubsub_db_engine()
 
-    query = select(func.count()).select_from(message_table)
-    query = query.where(message_table.c.topic_name == topic_name.lower())
+    query = select(func.count()).select_from(delivery_table)
+    query = query.where(delivery_table.c.topic_name == topic_name.lower())
 
     with engine.connect() as connection:
         out = connection.execute(query).scalar()
 
+    return out
+
+# ################################################################################################################################
+
+def original_msg_ids_of(dlq_messages:'anylist') -> 'strlist':
+    """ The ids of the messages that a run of DLQ entries holds, in order.
+    """
+    out = [message['document'][Key_Msg_ID] for message in dlq_messages]
     return out
 
 # ################################################################################################################################
@@ -93,8 +108,9 @@ class LifecycleScenarios(ScenarioBase):
             assert queue['depth'] == 1, queue
             assert msg_ids_of(queue['messages']) == [waiting['msg_id']]
 
+            # A DLQ entry has an id of its own, the id of the message it holds is inside its document
             dlq = get_dlq(client, new_name)
-            assert msg_ids_of(dlq['messages']) == [in_dlq['msg_id'], head['msg_id']], dlq
+            assert original_msg_ids_of(dlq['messages']) == [in_dlq['document'][Key_Msg_ID], head['msg_id']], dlq
 
             assert get_topic_subscribers(client, get_outgoing_topic_name(conn_type, old_name)) == []
             assert get_topic_subscribers(client, get_dlq_topic_name(conn_type, old_name)) == []
@@ -116,7 +132,7 @@ class LifecycleScenarios(ScenarioBase):
             receiver.accept_all()
             _ = edit_connection(client, new_name, {'name': old_name})
 
-        assert msg_ids_of(get_dlq(client, old_name)['messages']) == [in_dlq['msg_id'], head['msg_id']]
+        assert original_msg_ids_of(get_dlq(client, old_name)['messages']) == [in_dlq['document'][Key_Msg_ID], head['msg_id']]
 
 # ################################################################################################################################
 

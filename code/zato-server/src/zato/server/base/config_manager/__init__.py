@@ -2458,14 +2458,15 @@ class ConfigManager(_ConfigManagerBase):
         is_rename = bool(old_name) and old_name != msg['name']
 
         # A renamed REST connection has its topic moved to the new name, and both that and the config
-        # this method replaces happen with nothing being published to the connection in between,
-        # because a publication resolves its topic from what the config says the connection is called.
+        # this method replaces happen with the queue held still - nothing is published to the connection
+        # and no round of its delivery is in flight in between, because both resolve their topics from
+        # what the config says the connection is called.
         if is_plain_http and is_rename:
-            lock = self.get_outgoing_publish_lock(OutgoingType.REST, msg['id'])
+            hold = self.hold_outgoing_queue(OutgoingType.REST, msg['id'])
         else:
-            lock = nullcontext()
+            hold = nullcontext()
 
-        with lock:
+        with hold:
 
             # .. delete the connection if it exists ..
             self._delete_config_close_wrapper_http_soap(del_name, msg['transport'], logger.debug)
