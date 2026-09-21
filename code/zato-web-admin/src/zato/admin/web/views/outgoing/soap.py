@@ -232,10 +232,10 @@ class _CreateEdit(CreateEdit):
             else:
                 input_dict[name] = default
 
-        # The Delivery tab's fields arrive as text and are stored typed, with each duration's count and unit joined into seconds
-        delivery_fields = delivery_tab.get_message_fields(self.req.POST, self.form_prefix)
-        delivery_tab.join_unit_fields(self.req.POST, self.form_prefix, delivery_fields)
-        input_dict.update(delivery_fields)
+        # The Delivery tab's fields arrive as text and are stored typed, with each duration's count and unit joined
+        # into seconds - the retry durations among them, which is why the join runs over the whole input
+        input_dict.update(delivery_tab.get_message_fields(self.req.POST, self.form_prefix))
+        delivery_tab.join_unit_fields(self.req.POST, self.form_prefix, input_dict)
 
         # The callback name comes from whichever widget matches the callback type selected
         if callback_type := input_dict.get('callback_type'):

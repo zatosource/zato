@@ -27,7 +27,9 @@ from zato.cli.enmasse.importers.outgoing_fhir import OutgoingFHIRImporter
 from zato.cli.enmasse.importers.outgoing_mllp import OutgoingMLLPImporter
 from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
 from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
+from zato.cli.enmasse.util.secrets import Session_Key_Crypto_Manager
 from zato.common.api import HTTP_SOAP
+from zato.common.crypto.api import ServerCryptoManager
 from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, IntervalBasedJob, Job, \
     SecurityBase, Service, SMTP
 
@@ -78,7 +80,7 @@ _types = {
 @pytest.fixture
 def session() -> 'any_':
     """ A real ODB session over an in-memory SQLite database holding one cluster, the service the channels invoke
-    and the service a health check job dispatches to.
+    and the service a health check job dispatches to, carrying the crypto manager the importers encrypt secrets with.
     """
     engine = create_engine('sqlite://')
 
@@ -98,6 +100,9 @@ def session() -> 'any_':
 
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
+
+    # The LLM definition carries an API key the importer encrypts through the session's crypto manager
+    session.info[Session_Key_Crypto_Manager] = ServerCryptoManager.from_secret_key(ServerCryptoManager.generate_key())
 
     cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
     session.add(cluster)
