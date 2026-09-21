@@ -23,9 +23,9 @@ from zato.common.pubsub.outgoing import Attempts_Direct, Key_Data, Key_Request
 # Test support
 from queue_delivery.client import get_client, get_queue, is_broker_backend, send, wait_for_queue_depth, \
     wait_for_queue_empty
-from queue_delivery.dlq import get_dlq, get_topic_messages, invoke, send_to_dlq, subscribe_topic, wait_for_dlq_count
+from queue_delivery.dlq import get_dlq, invoke, send_to_dlq, wait_for_dlq_count
 from queue_delivery.scenarios.base import ScenarioBase
-from queue_delivery.type_under_test import Conn_DLQ_Keep, Conn_Orders, Forward_Topic
+from queue_delivery.type_under_test import Conn_DLQ_Keep, Conn_Orders
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,7 +50,6 @@ Kind_Queue = 'queue'
 Kind_DLQ = 'dlq'
 
 Action_Retry = 'retry'
-Action_Forward = 'forward'
 Action_Discard = 'discard'
 
 # The columns of one row of either tab
@@ -137,7 +136,6 @@ class BrowseScenarios(ScenarioBase):
             assert queue_page['dlq_depth'] == 2
             assert queue_page['dlq_settings'][_dlq.Field_Use_DLQ] is True
             assert queue_page['dlq_settings'][_dlq.Field_Action] == _dlq.Action.Keep
-            assert Forward_Topic in queue_page['topic_list']
             assert queue_page['cur_page'] == 1
             assert queue_page['num_pages'] == 1
 
@@ -286,17 +284,14 @@ class BrowseScenarios(ScenarioBase):
 
 # ################################################################################################################################
 
-    def test_message_action_retries_forwards_and_discards_selected_dlq_messages(self) -> 'None':
-        """ Three messages in the DLQ, one action each.
+    def test_message_action_retries_and_discards_selected_dlq_messages(self) -> 'None':
+        """ Two messages in the DLQ, one action each.
         """
         client = get_client()
         receiver = self.receiver(Conn_DLQ_Keep)
         conn_name = self.conn(Conn_DLQ_Keep)
 
-        subscribe_topic(client, Forward_Topic)
-        _ = get_topic_messages(client, Forward_Topic)
-
-        in_dlq = fill_dlq_with(client, conn_name, receiver, [{'seq': 1}, {'seq': 2}, {'seq': 3}])
+        in_dlq = fill_dlq_with(client, conn_name, receiver, [{'seq': 1}, {'seq': 2}])
         conn_id = self._conn_id(client, Conn_DLQ_Keep)
 
         receiver.clear()
@@ -317,23 +312,8 @@ class BrowseScenarios(ScenarioBase):
             'conn_type': self.t.conn_type,
             'conn_id': conn_id,
             'kind': Kind_DLQ,
-            'action': Action_Forward,
-            'msg_id_list': dumps([in_dlq[1]['msg_id']]),
-            'forward_to': Forward_Topic,
-            'keep_header': True,
-        })
-        assert response['count'] == 1
-
-        forwarded = get_topic_messages(client, Forward_Topic)
-        assert len(forwarded) == 1
-        assert forwarded[0]['document'] == in_dlq[1]['document']
-
-        response = invoke(client, Message_Action, {
-            'conn_type': self.t.conn_type,
-            'conn_id': conn_id,
-            'kind': Kind_DLQ,
             'action': Action_Discard,
-            'msg_id_list': dumps([in_dlq[2]['msg_id']]),
+            'msg_id_list': dumps([in_dlq[1]['msg_id']]),
         })
         assert response['count'] == 1
 

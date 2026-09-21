@@ -75,11 +75,14 @@ def _result_to_dict(result:'any_') -> 'stranydict':
 
 # ################################################################################################################################
 
-def _send_one(service:'Service', conn_name:'str', data:'any_', headers:'any_') -> 'stranydict':
+def _send_one(service:'Service', conn_name:'str', data:'any_', headers:'any_', params:'any_'=None) -> 'stranydict':
     """ One send through a connection.
     """
+    if params is None:
+        params = {}
+
     try:
-        result = service.rest[conn_name].post(data, headers=headers)
+        result = service.rest[conn_name].post(data, headers=headers, params=params)
         out = _result_to_dict(result)
         out['raised'] = ''
 
@@ -103,11 +106,16 @@ class Send(Service):
 
     def handle(self) -> 'None':
 
-        conn_name = self.request.raw_request['conn_name']
-        data = self.request.raw_request['data']
-        headers = self.request.raw_request['headers']
+        raw_request = self.request.raw_request
 
-        self.response.payload = _send_one(self, conn_name, data, headers)
+        conn_name = raw_request['conn_name']
+        data = raw_request['data']
+        headers = raw_request['headers']
+
+        # The query string is REST's own, the shared helpers never send one
+        params = raw_request.get('params')
+
+        self.response.payload = _send_one(self, conn_name, data, headers, params)
 
 # ################################################################################################################################
 # ################################################################################################################################

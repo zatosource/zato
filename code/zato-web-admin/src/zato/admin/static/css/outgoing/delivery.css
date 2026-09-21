@@ -153,10 +153,6 @@ div.page_prompt a.common.delivery-action-disabled:hover {
     font-size: 12px;
 }
 
-.delivery-hidden-form {
-    display: none;
-}
-
 /* ------------------------------------------------------------ */
 /* Delivery - the action popovers                               */
 /* ------------------------------------------------------------ */

@@ -280,7 +280,6 @@ def index(req:'any_', conn_type:'str', conn_id:'int') -> 'TemplateResponse':
             tabs[kind] = _load_tab(req, kind, conn_type, conn_id, '', _default_page)
 
     data = tabs[active_tab]['data']
-    settings = data['dlq_settings']
 
     out = TemplateResponse(req, _template, {
         'cluster_id': default_cluster_id,
@@ -292,9 +291,6 @@ def index(req:'any_', conn_type:'str', conn_id:'int') -> 'TemplateResponse':
         'has_invoker': data['invoker'] is not None,
         'queue_tab': tabs[Kind_Queue],
         'dlq_tab': tabs[Kind_DLQ],
-        'topic_list': data['topic_list'],
-        'forward_to': settings[_dlq.Field_Forward_To],
-        'keep_header': settings[_dlq.Field_Keep_Header],
         'req': req,
         'zato_clusters': True,
         'zato_template_name': _template,
@@ -439,8 +435,6 @@ def action(req:'any_') -> 'HttpResponse':
             'kind': req.POST['kind'],
             'action': req.POST['action'],
             'msg_id_list': req.POST['msg_id_list'],
-            'forward_to': req.POST['forward_to'],
-            'keep_header': req.POST['keep_header'] == 'true',
         })
 
         if response.ok:

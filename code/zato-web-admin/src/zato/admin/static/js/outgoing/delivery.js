@@ -21,18 +21,10 @@ $.fn.zato.outgoing_delivery.config = {
     downloadBody: 'body',
     downloadDocument: 'document',
 
-    // The hidden form the Forward popover reads and writes
-    fieldForwardTo: 'forward_to',
-    fieldKeepHeader: 'keep_header',
-
     actions: {
         retry:   {title: 'Retry',   doneLabel: 'Retry',   pastLabel: 'Retried'},
-        forward: {title: 'Forward', doneLabel: 'Forward', pastLabel: 'Forwarded'},
         discard: {title: 'Discard', doneLabel: 'Discard', pastLabel: 'Discarded'}
     },
-
-    labelTopic: 'Topic',
-    labelKeepHeader: 'Keep the DLQ header',
 
     targetSelectedSingular: 'selected message',
     targetSelectedPlural: 'selected messages',
@@ -51,7 +43,6 @@ $.fn.zato.outgoing_delivery.config = {
 
     resultSingular: 'message',
     resultPlural: 'messages',
-    resultForwardTo: 'to',
     statusOK: 200,
     successHideMs: 2500,
 
@@ -193,19 +184,13 @@ $.fn.zato.outgoing_delivery.table = function(kind) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// A field of the hidden form
-$.fn.zato.outgoing_delivery.field = function(fieldName) {
-    var out = $('#id_' + fieldName);
-    return out;
-}
-
 $.fn.zato.outgoing_delivery.helpDescriptions = function() {
     return {};
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The descriptors of the three popovers
+// The descriptors of the two popovers
 $.fn.zato.outgoing_delivery.buildDescriptors = function() {
 
     var config = $.fn.zato.outgoing_delivery.config;
@@ -217,16 +202,6 @@ $.fn.zato.outgoing_delivery.buildDescriptors = function() {
         title: config.actions.retry.title,
         fitContent: true,
         pages: [[targetSpec]]
-    };
-
-    out.forward = {
-        title: config.actions.forward.title,
-        fitContent: true,
-        pages: [[
-            targetSpec,
-            {field: config.fieldForwardTo, label: config.labelTopic, kind: 'select'},
-            {field: config.fieldKeepHeader, label: config.labelKeepHeader, kind: 'checkbox'}
-        ]]
     };
 
     out.discard = {
@@ -449,9 +424,7 @@ $.fn.zato.outgoing_delivery.runPendingAction = function() {
         conn_id: state.connId,
         kind: target.kind,
         action: action,
-        msg_id_list: JSON.stringify(target.msgIdList),
-        forward_to: page.field(config.fieldForwardTo).val(),
-        keep_header: page.field(config.fieldKeepHeader).prop('checked')
+        msg_id_list: JSON.stringify(target.msgIdList)
     };
 
     $.fn.zato.action_runner.run({
@@ -497,10 +470,6 @@ $.fn.zato.outgoing_delivery.parseActionResponse = function(action, jqXHR) {
     var count = response.count;
     var noun = page.pluralize(count, config.resultSingular, config.resultPlural);
     var label = config.actions[action].pastLabel + ' ' + count + ' ' + noun;
-
-    if(action === 'forward') {
-        label += ' ' + config.resultForwardTo + ' ' + response.forward_to;
-    }
 
     var out = {
         is_success: true,

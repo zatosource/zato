@@ -121,15 +121,6 @@
 
         </div>
 
-        <form id="delivery-form" class="delivery-hidden-form">
-            <select id="id_forward_to">
-                {% for topic_name in topic_list %}
-                <option value="{{ topic_name }}"{% if topic_name == forward_to %} selected{% endif %}>{{ topic_name }}</option>
-                {% endfor %}
-            </select>
-            <input type="checkbox" id="id_keep_header"{% if keep_header %} checked{% endif %}>
-        </form>
-
     {% endif %}
 
 {% endif %}
