@@ -419,7 +419,7 @@ def refresh(req:'any_') -> 'HttpResponse':
 
 @method_allowed('POST')
 def action(req:'any_') -> 'HttpResponse':
-    """ Runs one action on the messages the form names, or on all the messages matching the query.
+    """ Runs one action on the messages the form names.
     """
     try:
         response = req.zato.client.invoke(Service_Action, {
@@ -428,7 +428,6 @@ def action(req:'any_') -> 'HttpResponse':
             'kind': req.POST['kind'],
             'action': req.POST['action'],
             'msg_id_list': req.POST['msg_id_list'],
-            'query': req.POST['query'],
             'forward_to': req.POST['forward_to'],
             'keep_header': req.POST['keep_header'] == 'true',
         })

@@ -34,17 +34,14 @@ $.fn.zato.outgoing_delivery.config = {
     labelTopic: 'Topic',
     labelKeepHeader: 'Keep the DLQ header',
 
-    targetMessage: 'Message',
     targetSelectedSingular: 'selected message',
     targetSelectedPlural: 'selected messages',
-    targetAllPrefix: 'All',
-    targetAllMatching: 'matching',
-    targetMessageSingular: 'message',
-    targetMessagePlural: 'messages',
 
-    scopeSelected: 'selected',
-    scopeAll: 'all',
     disabledClass: 'delivery-action-disabled',
+    chipVisibleClass: 'delivery-selected-chip-visible',
+    chipSizerClass: 'delivery-selected-chip-sizer',
+    chipRowSingular: 'row',
+    chipRowPlural: 'rows',
     escapeKey: 'Escape',
 
     tabSelector: '.delivery-tabs .dashboard-tab',
@@ -103,9 +100,6 @@ $.fn.zato.outgoing_delivery.state = {
     connName: '',
     clusterId: '',
 
-    // Each tab's query and total, by kind
-    tabs: {},
-
     pendingAction: '',
     pendingTarget: null,
     pendingLink: null
@@ -126,7 +120,6 @@ $.fn.zato.outgoing_delivery.init = function(options) {
     state.connId = options.connId;
     state.connName = options.connName;
     state.clusterId = options.clusterId;
-    state.tabs = options.tabs;
 
     page.initTabs(options.activeTab);
 
@@ -143,6 +136,7 @@ $.fn.zato.outgoing_delivery.init = function(options) {
         save: function() {}
     });
 
+    page.initSelectedChips();
     page.bindSelection();
     page.bindActions();
     page.bindDetails();
@@ -151,7 +145,7 @@ $.fn.zato.outgoing_delivery.init = function(options) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The "In queue for" and "In DLQ for" columns are the same time-ago cells the scheduler's
+// The "Pub time" and "Moved to DLQ time" columns are the same time-ago cells the scheduler's
 // Last run column is, with the words of this page and its own refresh URL
 $.fn.zato.outgoing_delivery.initTimeAgo = function() {
 
@@ -160,7 +154,6 @@ $.fn.zato.outgoing_delivery.initTimeAgo = function() {
     var state = page.state;
     var timeAgo = $.fn.zato.time_ago;
 
-    timeAgo.config.ago_label = '';
     timeAgo.config.highlight_column = '';
     timeAgo.config.refresh_time_field = config.timeAgoTimeField;
     timeAgo.config.refresh_url = config.refreshUrl + '?conn_type=' + state.connType + '&conn_id=' + state.connId;
@@ -265,59 +258,16 @@ $.fn.zato.outgoing_delivery.buildTargetRow = function(fieldSpec, row) {
     var line = document.createElement('div');
     line.className = 'delivery-popover-target';
 
-    if(target.msgId) {
-        var label = document.createElement('span');
-        label.textContent = config.targetMessage + ' ';
+    var count = document.createElement('span');
+    count.className = 'delivery-popover-target-count';
+    count.textContent = target.msgIdList.length;
 
-        var id = document.createElement('span');
-        id.className = 'delivery-popover-target-id';
-        id.textContent = target.msgId;
+    var noun = document.createElement('span');
+    noun.textContent = ' ' + $.fn.zato.outgoing_delivery.pluralize(target.msgIdList.length,
+        config.targetSelectedSingular, config.targetSelectedPlural);
 
-        line.appendChild(label);
-        line.appendChild(id);
-    }
-    else if(target.scope === config.scopeSelected) {
-        var count = document.createElement('span');
-        count.className = 'delivery-popover-target-count';
-        count.textContent = target.msgIdList.length;
-
-        var noun = document.createElement('span');
-        noun.textContent = ' ' + $.fn.zato.outgoing_delivery.pluralize(target.msgIdList.length,
-            config.targetSelectedSingular, config.targetSelectedPlural);
-
-        line.appendChild(count);
-        line.appendChild(noun);
-    }
-    else {
-        var tab = page.state.tabs[target.kind];
-
-        var prefix = document.createElement('span');
-        prefix.textContent = config.targetAllPrefix + ' ';
-
-        var total = document.createElement('span');
-        total.className = 'delivery-popover-target-count';
-        total.textContent = tab.total;
-
-        var totalNoun = document.createElement('span');
-        totalNoun.textContent = ' ' + $.fn.zato.outgoing_delivery.pluralize(tab.total,
-            config.targetMessageSingular, config.targetMessagePlural);
-
-        line.appendChild(prefix);
-        line.appendChild(total);
-        line.appendChild(totalNoun);
-
-        if(tab.query) {
-            var matching = document.createElement('span');
-            matching.textContent = ' ' + config.targetAllMatching + ' ';
-
-            var query = document.createElement('span');
-            query.className = 'delivery-popover-target-query';
-            query.textContent = tab.query;
-
-            line.appendChild(matching);
-            line.appendChild(query);
-        }
-    }
+    line.appendChild(count);
+    line.appendChild(noun);
 
     row.appendChild(line);
 }
@@ -357,20 +307,83 @@ $.fn.zato.outgoing_delivery.bindSelection = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The "selected" links need a ticked row, the "all" links need any row
+// An action link waits for at least one ticked row and says how many there are
 $.fn.zato.outgoing_delivery.updateActionLinks = function(kind) {
 
     var page = $.fn.zato.outgoing_delivery;
     var config = page.config;
     var table = page.table(kind);
 
-    var hasRows = table.find('.delivery-row-select').length > 0;
-    var hasSelection = table.find('.delivery-row-select:checked').length > 0;
-
+    var selectedCount = table.find('.delivery-row-select:checked').length;
     var links = $('.delivery-action-link[data-kind="' + kind + '"]');
 
-    links.filter('[data-scope="' + config.scopeSelected + '"]').toggleClass(config.disabledClass, !hasSelection);
-    links.filter('[data-scope="' + config.scopeAll + '"]').toggleClass(config.disabledClass, !hasRows);
+    links.toggleClass(config.disabledClass, !selectedCount);
+
+    page.updateSelectedChip(kind, selectedCount);
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The chip in the gutter to the left of the table that says how many rows are ticked -
+// it is out of the table's flow, so it can come and go without moving anything.
+$.fn.zato.outgoing_delivery.updateSelectedChip = function(kind, selectedCount) {
+
+    var page = $.fn.zato.outgoing_delivery;
+    var config = page.config;
+
+    var chip = $('.delivery-selected-chip[data-kind="' + kind + '"]');
+
+    if(!selectedCount) {
+        chip.removeClass(config.chipVisibleClass);
+        return;
+    }
+
+    chip.text(page.chipText(selectedCount));
+
+    // Level with the header's checkbox, whatever the header's height is
+    var header = page.table(kind).find('th.delivery-cell-select')[0];
+    var headerRect = header.getBoundingClientRect();
+    var wrapRect = chip.parent()[0].getBoundingClientRect();
+    var top = headerRect.top - wrapRect.top + headerRect.height / 2;
+
+    chip.css('top', top + 'px');
+    chip.addClass(config.chipVisibleClass);
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.outgoing_delivery.chipText = function(count) {
+    var config = $.fn.zato.outgoing_delivery.config;
+    var out = count + ' ' + $.fn.zato.outgoing_delivery.pluralize(count, config.chipRowSingular, config.chipRowPlural);
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Each chip is given the width of the widest count its table can show, which is the count
+// of all its rows, so that the chip never grows or shrinks as rows are ticked.
+$.fn.zato.outgoing_delivery.initSelectedChips = function() {
+
+    var page = $.fn.zato.outgoing_delivery;
+    var config = page.config;
+
+    $('.delivery-table').each(function() {
+
+        var kind = this.getAttribute('data-kind');
+        var rowCount = $(this).find('.delivery-row-select').length;
+        var chip = $('.delivery-selected-chip[data-kind="' + kind + '"]');
+
+        // The copy is measured off the body, since a hidden tab's own panel has no size to give
+        var sizer = $('<span></span>');
+        sizer.attr('class', chip.attr('class'));
+        sizer.addClass(config.chipVisibleClass);
+        sizer.addClass(config.chipSizerClass);
+        sizer.text(page.chipText(rowCount));
+
+        $(document.body).append(sizer);
+        chip.css('min-width', sizer[0].getBoundingClientRect().width + 'px');
+        sizer.remove();
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -390,7 +403,7 @@ $.fn.zato.outgoing_delivery.selectedMsgIdList = function(kind) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The action links above and inside each table
+// The action links above each table
 $.fn.zato.outgoing_delivery.bindActions = function() {
 
     var page = $.fn.zato.outgoing_delivery;
@@ -404,24 +417,9 @@ $.fn.zato.outgoing_delivery.bindActions = function() {
 
         var kind = this.getAttribute('data-kind');
         var action = this.getAttribute('data-action');
-        var scope = this.getAttribute('data-scope');
 
-        var target = {kind: kind, scope: scope, msgId: '', msgIdList: []};
+        var target = {kind: kind, msgIdList: page.selectedMsgIdList(kind)};
 
-        if(scope === config.scopeSelected) {
-            target.msgIdList = page.selectedMsgIdList(kind);
-        }
-
-        page.openAction(action, target, this);
-    });
-
-    $('.delivery-table').on('click', '.delivery-row-action', function() {
-
-        var kind = this.getAttribute('data-kind');
-        var action = this.getAttribute('data-action');
-        var msgId = this.getAttribute('data-msg-id');
-
-        var target = {kind: kind, scope: config.scopeSelected, msgId: msgId, msgIdList: [msgId]};
         page.openAction(action, target, this);
     });
 }
@@ -454,23 +452,12 @@ $.fn.zato.outgoing_delivery.runPendingAction = function() {
     var action = state.pendingAction;
     var target = state.pendingTarget;
 
-    var msgIdList = '';
-    var query = '';
-
-    if(target.scope === config.scopeSelected) {
-        msgIdList = JSON.stringify(target.msgIdList);
-    }
-    else {
-        query = state.tabs[target.kind].query;
-    }
-
     var data = {
         conn_type: state.connType,
         conn_id: state.connId,
         kind: target.kind,
         action: action,
-        msg_id_list: msgIdList,
-        query: query,
+        msg_id_list: JSON.stringify(target.msgIdList),
         forward_to: page.field(config.fieldForwardTo).val(),
         keep_header: page.field(config.fieldKeepHeader).prop('checked')
     };
@@ -487,7 +474,7 @@ $.fn.zato.outgoing_delivery.runPendingAction = function() {
         success_hide_ms: config.successHideMs,
         on_complete: function(instance, result) {
             if(result.is_success) {
-                page.onActionDone(target, instance);
+                page.onActionDone(target);
             }
         }
     });
@@ -537,34 +524,19 @@ $.fn.zato.outgoing_delivery.parseActionResponse = function(action, jqXHR) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // Removes the rows the action took
-$.fn.zato.outgoing_delivery.onActionDone = function(target, instance) {
+$.fn.zato.outgoing_delivery.onActionDone = function(target) {
 
     var page = $.fn.zato.outgoing_delivery;
     var config = page.config;
 
     var table = page.table(target.kind);
 
-    var removeRows = function() {
-        if(target.scope === config.scopeSelected) {
-            for(var idx = 0; idx < target.msgIdList.length; idx++) {
-                table.find('tr[data-msg-id="' + target.msgIdList[idx] + '"]').remove();
-            }
-        }
-        else {
-            table.find('tbody tr').remove();
-        }
-
-        table.find('.delivery-select-all').prop('checked', false);
-        page.updateActionLinks(target.kind);
-    };
-
-    // A row's own link is the tippy's anchor, so the row stays until the tippy is gone
-    if(target.msgId) {
-        instance.setProps({onHidden: removeRows});
+    for(var idx = 0; idx < target.msgIdList.length; idx++) {
+        table.find('tr[data-msg-id="' + target.msgIdList[idx] + '"]').remove();
     }
-    else {
-        removeRows();
-    }
+
+    table.find('.delivery-select-all').prop('checked', false);
+    page.updateActionLinks(target.kind);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -584,19 +556,6 @@ $.fn.zato.outgoing_delivery.bindDetails = function() {
         var kind = this.getAttribute('data-kind');
         var msgId = this.getAttribute('data-msg-id');
         page.openInvoker(kind, msgId);
-    });
-
-    // A size reads as a person does in the cell and as exact bytes in its tippy
-    tippy('.delivery-size-link', {
-        content: function(reference) {
-            return reference.getAttribute('data-bytes');
-        },
-        trigger: 'click',
-        placement: 'top',
-        theme: 'dark',
-        arrow: true,
-        allowHTML: false,
-        appendTo: document.body
     });
 
     $(document).on('keydown.delivery_details', function(event) {

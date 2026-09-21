@@ -1346,6 +1346,13 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     opacity: var(--zato-time-ago-value-fade-opacity);
 }
 
+/* The humanized age that trails a timestamp is the lesser of the two readings,
+   so it is a touch smaller and a touch dimmer than the timestamp it follows. */
+.zato-time-ago-suffix {
+    font-size: 80%;
+    opacity: 0.8;
+}
+
 /* The column takes no spare width - with left-aligned values, any room the table
    hands this column piles up to the right of the values and pushes the columns
    after it away, so the column stays as wide as its header and no wider. The values
@@ -1433,12 +1440,11 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     font-size: 0.75rem;
 }
 
-/* The countdown to the next refresh - a soft hint that additionally keeps
-   a fixed minimum width and only toggles its opacity while the spinner is
-   shown, so it never shifts the layout around it. */
+/* The countdown to the next refresh - a soft hint that reads right after the
+   column name and only toggles its opacity while the spinner is shown, so the
+   spinner never shifts the layout around it. */
 .zato-time-ago-countdown {
     --zato-time-ago-countdown-fade-ms: 350ms;
-    min-width: 2.2ch;
     opacity: 0;
     vertical-align: middle;
     transition: opacity var(--zato-time-ago-countdown-fade-ms) ease;

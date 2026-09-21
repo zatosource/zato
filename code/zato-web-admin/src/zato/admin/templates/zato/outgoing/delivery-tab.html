@@ -37,17 +37,16 @@
 
 <div class="page_prompt" style="clear:left">
     {% if tab.is_dlq %}
-    <a href="javascript:void(0)" class="common delivery-action-link" data-kind="{{ tab.kind }}" data-action="retry" data-scope="selected">Retry selected</a> |
-    <a href="javascript:void(0)" class="common delivery-action-link" data-kind="{{ tab.kind }}" data-action="forward" data-scope="selected">Forward selected</a> |
+    <a href="javascript:void(0)" class="common delivery-action-link" data-kind="{{ tab.kind }}" data-action="retry">Retry selected</a> |
+    <a href="javascript:void(0)" class="common delivery-action-link" data-kind="{{ tab.kind }}" data-action="forward">Forward selected</a> |
     {% endif %}
-    <a href="javascript:void(0)" class="common delivery-action-link" data-kind="{{ tab.kind }}" data-action="discard" data-scope="selected">Discard selected</a>
-    <span class="delivery-action-gap"></span>
-    {% if tab.is_dlq %}
-    <a href="javascript:void(0)" class="common delivery-action-link" data-kind="{{ tab.kind }}" data-action="retry" data-scope="all">Retry all{% if tab.query %} matching{% endif %}</a> |
-    <a href="javascript:void(0)" class="common delivery-action-link" data-kind="{{ tab.kind }}" data-action="forward" data-scope="all">Forward all{% if tab.query %} matching{% endif %}</a> |
-    {% endif %}
-    <a href="javascript:void(0)" class="common delivery-action-link" data-kind="{{ tab.kind }}" data-action="discard" data-scope="all">Discard all{% if tab.query %} matching{% endif %}</a>
+    <a href="javascript:void(0)" class="common delivery-action-link" data-kind="{{ tab.kind }}" data-action="discard">Discard selected</a>
 </div>
+
+<div class="delivery-table-wrap">
+
+{% comment %} How many rows are ticked - it floats in the gutter to the left of the table {% endcomment %}
+<span class="delivery-selected-chip" data-kind="{{ tab.kind }}"></span>
 
 <table class="zato-table delivery-table" id="delivery-table-{{ tab.kind }}" data-kind="{{ tab.kind }}">
     <thead>
@@ -56,23 +55,15 @@
             <th class="delivery-cell-select"><input type="checkbox" class="zato-plain-checkbox delivery-select-all"></th>
             <th>Message ID</th>
             {% if tab.is_dlq %}
-            <th>Moved to DLQ</th>
-            <th class="zato-time-ago-header">In DLQ for</th>
+            <th class="zato-time-ago-header">Moved to DLQ time</th>
             {% else %}
-            <th>Published</th>
-            <th class="zato-time-ago-header">In queue for</th>
+            <th class="zato-time-ago-header">Pub time</th>
             {% endif %}
             {% if tab.is_dlq %}
             <th class="delivery-cell-center">Retries so far</th>
             <th>Last error</th>
             {% endif %}
-            <th>Address</th>
-            <th class="delivery-cell-center">Size</th>
-            {% if tab.is_dlq %}
-            <th>&nbsp;</th>
-            <th>&nbsp;</th>
-            {% endif %}
-            <th>&nbsp;</th>
+            <th>Destination</th>
         </tr>
     </thead>
 
@@ -80,33 +71,28 @@
     {% if tab.items %}
     {% for item in tab.items %}
         <tr data-msg-id="{{ item.msg_id }}">
-            <td class='numbering'>&nbsp;</td>
+            {% comment %} The row number itself comes from this cell's :before counter {% endcomment %}
+            <td class="numbering"></td>
             <td class="delivery-cell-select"><input type="checkbox" class="zato-plain-checkbox delivery-row-select"></td>
             <td class="delivery-cell-nowrap"><a href="javascript:void(0)" class="delivery-message-link" data-kind="{{ tab.kind }}" data-msg-id="{{ item.msg_id }}">{{ item.msg_id }}</a></td>
             {% if tab.is_dlq %}
-            <td class="zato-time-ago" data-time-ago-id="{{ tab.kind }}:{{ item.msg_id }}" data-time-utc="{{ item.moved_time_iso }}" data-time-ago-text="{{ item.moved_time }}" data-time-ago-title="Moved to DLQ" data-time-ago-row-label="In DLQ for"></td>
-            <td class="zato-time-ago" data-time-ago-id="{{ tab.kind }}:{{ item.msg_id }}" data-time-utc="{{ item.moved_time_iso }}" data-time-ago-plain></td>
+            <td class="zato-time-ago" data-time-ago-id="{{ tab.kind }}:{{ item.msg_id }}" data-time-utc="{{ item.moved_time_iso }}" data-time-ago-prefix="{{ item.moved_time }}" data-time-ago-title="Moved to DLQ" data-time-ago-row-label="In DLQ for"></td>
             {% else %}
-            <td class="zato-time-ago" data-time-ago-id="{{ tab.kind }}:{{ item.msg_id }}" data-time-utc="{{ item.pub_time_iso }}" data-time-ago-text="{{ item.pub_time }}" data-time-ago-title="Published" data-time-ago-row-label="In queue for"></td>
-            <td class="zato-time-ago" data-time-ago-id="{{ tab.kind }}:{{ item.msg_id }}" data-time-utc="{{ item.pub_time_iso }}" data-time-ago-plain></td>
+            <td class="zato-time-ago" data-time-ago-id="{{ tab.kind }}:{{ item.msg_id }}" data-time-utc="{{ item.pub_time_iso }}" data-time-ago-prefix="{{ item.pub_time }}" data-time-ago-title="Published" data-time-ago-row-label="In queue for"></td>
             {% endif %}
             {% if tab.is_dlq %}
             <td class="delivery-cell-center">{{ item.rounds }}</td>
             <td class="delivery-cell-error">{{ item.error }}</td>
             {% endif %}
             <td class="delivery-cell-address"><a href="javascript:void(0)" class="delivery-address-link" data-kind="{{ tab.kind }}" data-msg-id="{{ item.msg_id }}">{{ item.method }} {{ item.address }}</a></td>
-            <td class="delivery-cell-nowrap delivery-cell-center"><a href="javascript:void(0)" class="delivery-size-link" data-bytes="{{ item.size|intcomma }} byte{{ item.size|pluralize }}">{{ item.size|filesizeformat }}</a></td>
-            {% if tab.is_dlq %}
-            <td class="delivery-cell-nowrap"><a href="javascript:void(0)" class="delivery-row-action" data-kind="{{ tab.kind }}" data-action="retry" data-msg-id="{{ item.msg_id }}">Retry</a></td>
-            <td class="delivery-cell-nowrap"><a href="javascript:void(0)" class="delivery-row-action" data-kind="{{ tab.kind }}" data-action="forward" data-msg-id="{{ item.msg_id }}">Forward</a></td>
-            {% endif %}
-            <td class="delivery-cell-nowrap"><a href="javascript:void(0)" class="delivery-row-action" data-kind="{{ tab.kind }}" data-action="discard" data-msg-id="{{ item.msg_id }}">Discard</a></td>
         </tr>
     {% endfor %}
     {% else %}
         <tr class='ignore'>
-            <td colspan='12'>No results</td>
+            <td colspan='7'>No results</td>
         </tr>
     {% endif %}
     </tbody>
 </table>
+
+</div>

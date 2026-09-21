@@ -472,28 +472,16 @@ class GetMessageTimeList(_BrowseService):
 # ################################################################################################################################
 
 class MessageAction(_BrowseService):
-    """ Runs one action on the messages named by their ids or on all the messages matching a query.
+    """ Runs one action on the messages named by their ids.
     """
     name  = 'zato.pubsub.outgoing.message-action'
-    input = 'conn_type', Int('conn_id'), 'kind', 'action', AsIs('-msg_id_list'), '-query', '-forward_to', Bool('-keep_header')
+    input = 'conn_type', Int('conn_id'), 'kind', 'action', AsIs('msg_id_list'), '-forward_to', Bool('-keep_header')
 
     def handle(self) -> 'None':
         input = self.request.input
 
-        conn_name, _ = self._get_conn(input.conn_type, input.conn_id)
-        documents = self._get_documents(input.kind, input.conn_type, input.conn_id, conn_name)
-
-        if msg_id_list := input.msg_id_list:
-            msg_id_list = loads(msg_id_list)
-            count = len(msg_id_list)
-
-        else:
-            query = input.query.lower()
-            count = 0
-
-            for document in documents:
-                if _matches(document, query):
-                    count += 1
+        msg_id_list = loads(input.msg_id_list)
+        count = len(msg_id_list)
 
         self.response.payload = {
             'action': input.action,

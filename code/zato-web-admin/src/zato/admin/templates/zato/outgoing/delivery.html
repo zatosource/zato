@@ -56,11 +56,7 @@
             connType: '{{ conn_type }}',
             connId: '{{ conn_id }}',
             connName: '{{ conn_name|escapejs }}',
-            clusterId: '{{ cluster_id }}',
-            tabs: {
-                queue: {query: '{{ queue_tab.query|escapejs }}', total: {{ queue_tab.meta.total }}},
-                dlq: {query: '{{ dlq_tab.query|escapejs }}', total: {{ dlq_tab.meta.total }}}
-            }
+            clusterId: '{{ cluster_id }}'
         });
     });
     </script>

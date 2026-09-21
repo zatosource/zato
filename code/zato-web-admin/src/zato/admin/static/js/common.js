@@ -2316,6 +2316,9 @@ $.fn.zato.time_ago.config = {
     'duration_ms_label': 'ms',
     'tooltip_title': 'Last run',
 
+    // What separates a cell's own leading text from the humanized age after it
+    'prefix_separator': ' \u00b7 ',
+
     // The logical column whose cell wears the highlight badge while the tooltip is open -
     // set to an empty string on pages that have no such column.
     'highlight_column': 'name',
@@ -2335,7 +2338,9 @@ $.fn.zato.time_ago.config = {
     'value_fade_opacity': 0.5,
     'countdown_prefix': '',
     'countdown_suffix': 's',
-    'paused_label': 'Refresh paused',
+    // This sits where the countdown does, so it stays short - the slot is only as wide
+    // as its text and the countdown reads right after the column name
+    'paused_label': 'Paused',
 
     // Only one of these is meant to be active at a time - either the textual
     // countdown next to the column name or the draining progress bar under it.
@@ -2352,6 +2357,9 @@ $.fn.zato.time_ago.config = {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+// The coarse reading of an age - the largest unit that fits plus the one below it,
+// e.g. "1 hour 32 minutes ago". The unit below is what keeps the reading honest,
+// because an hour and a half is no more "1 hour" than it is "2 hours".
 $.fn.zato.time_ago.humanize = function(age_seconds) {
     var config = $.fn.zato.time_ago.config;
 
@@ -2361,21 +2369,45 @@ $.fn.zato.time_ago.humanize = function(age_seconds) {
     }
 
     var units = config.units;
-    var out = '';
+    var remaining = Math.floor(age_seconds);
 
-    // Find the largest unit that fits, e.g. 3700 seconds turn into "1 hour ago".
-    for(var unit_idx = 0; unit_idx < units.length; unit_idx++) {
-        var unit = units[unit_idx];
-        if(age_seconds >= unit.seconds) {
-            var count = Math.floor(age_seconds / unit.seconds);
-            out = $.fn.zato.count_text(count, unit.name, unit.name + 's');
+    // Find the largest unit that fits - the last one, seconds, always does ..
+    var unit_idx = 0;
+    while(unit_idx < units.length - 1 && remaining < units[unit_idx].seconds) {
+        unit_idx += 1;
+    }
 
-            // A page that shows durations rather than moments has no trailing word here.
-            if(config.ago_label) {
-                out += ' ' + config.ago_label;
-            }
-            break;
+    var unit = units[unit_idx];
+    var lesser_unit = units[unit_idx + 1];
+
+    if(lesser_unit) {
+
+        // .. the lesser unit is the precision the reading will have, so the age is rounded
+        // .. to it first, which is what makes 1:31:53 read as "1 hour 32 minutes" ..
+        remaining = Math.round(remaining / lesser_unit.seconds) * lesser_unit.seconds;
+
+        // .. and that rounding can fill a larger unit, e.g. 23:59:40 becoming a whole day.
+        while(unit_idx > 0 && remaining >= units[unit_idx - 1].seconds) {
+            unit_idx -= 1;
         }
+
+        unit = units[unit_idx];
+        lesser_unit = units[unit_idx + 1];
+    }
+
+    var count = Math.floor(remaining / unit.seconds);
+    var out = $.fn.zato.count_text(count, unit.name, unit.name + 's');
+
+    if(lesser_unit) {
+        var lesser_count = Math.round((remaining - count * unit.seconds) / lesser_unit.seconds);
+        if(lesser_count) {
+            out += ' ' + $.fn.zato.count_text(lesser_count, lesser_unit.name, lesser_unit.name + 's');
+        }
+    }
+
+    // A page that shows durations rather than moments has no trailing word here.
+    if(config.ago_label) {
+        out += ' ' + config.ago_label;
     }
 
     return out;
@@ -2573,35 +2605,44 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
         tooltip_html = $.fn.zato.time_ago.build_tooltip_html(iso_utc, duration_ms, title, row_label);
     }
 
-    // A cell may show a fixed text of its own, e.g. the full timestamp, in place of the humanized age -
-    // the age still lands in the sort value and in the tooltip.
-    var fixed_text = cell.attr('data-time-ago-text');
-    if(iso_utc && fixed_text) {
-        new_text = fixed_text;
-    }
+    // A cell may lead with a text of its own, e.g. the full timestamp, and read
+    // "2026-09-21 10:32:55 - 1 hour ago". Such a cell links its own text only and the
+    // humanized age follows it as plain text.
+    var prefix = cell.attr('data-time-ago-prefix');
+    var link_text = new_text;
+    var suffix_text = '';
 
-    // .. and a plain cell shows its text alone, with no link and no tooltip, while still refreshing.
-    var is_plain = cell.is('[data-time-ago-plain]');
+    if(iso_utc && prefix) {
+        link_text = prefix;
+        suffix_text = config.prefix_separator + new_text;
+        new_text = link_text + suffix_text;
+    }
 
     // .. this is what actually writes the new content out ..
     var apply_text = function() {
 
         // A cell without a timestamp shows a plain label only.
-        if(!iso_utc || is_plain) {
+        if(!iso_utc) {
             value_element.text(new_text);
             return;
         }
 
-        // Build the link and its tippy on the first update only. The tippy anchors
-        // to the fixed-width value element rather than the link itself, so the tooltip
-        // never shifts around when the link text changes width mid-refresh.
+        // Build the link and its tippy on the first update only. A cell that shows the
+        // humanized age alone anchors its tooltip to the whole value element, otherwise
+        // the tooltip would shift around as the link text changes width mid-refresh -
+        // a cell whose link is a timestamp has no such trouble because that text is fixed,
+        // so there the tooltip belongs to the link and the age after it stays inert.
         var link = value_element.find('a');
         if(!link.length) {
             value_element.empty();
             link = $('<a href="javascript:void(0)"></a>');
             value_element.append(link);
 
-            tippy(value_element[0], {
+            if(suffix_text) {
+                value_element.append($('<span class="zato-time-ago-suffix"></span>'));
+            }
+
+            tippy(suffix_text ? link[0] : value_element[0], {
                 allowHTML: true,
                 trigger: 'click',
                 placement: config.tippy_placement,
@@ -2640,8 +2681,15 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
             });
         }
 
-        link.text(new_text);
-        value_element[0]._tippy.setContent(tooltip_html);
+        link.text(link_text);
+
+        if(suffix_text) {
+            value_element.find('.zato-time-ago-suffix').text(suffix_text);
+            link[0]._tippy.setContent(tooltip_html);
+        }
+        else {
+            value_element[0]._tippy.setContent(tooltip_html);
+        }
     };
 
     // .. changed values fade out gently, swap once invisible and fade back in,
@@ -2713,27 +2761,6 @@ $.fn.zato.time_ago.init = function(container_selector) {
 
             indicator.append($('<span class="zato-time-ago-spinner"></span>'));
             header.append(indicator);
-
-            // The slot reserves the width of the wider of its two texts up front,
-            // so flipping between the countdown and the paused label never resizes the column.
-            if(config.countdown_enabled) {
-                var interval_seconds = config.refresh_interval_ms / 1000;
-                var countdown_text = config.countdown_prefix + interval_seconds + config.countdown_suffix;
-
-                // The texts are measured on a copy placed in the body, because the header itself
-                // may sit in a hidden tab at this point and a hidden element has no width to read.
-                var probe = countdown.clone().css({'position': 'absolute', 'visibility': 'hidden'});
-                probe.appendTo(document.body);
-
-                probe.text(countdown_text);
-                var countdown_width = probe.outerWidth();
-
-                probe.text(config.paused_label);
-                var paused_width = probe.outerWidth();
-
-                probe.remove();
-                countdown.css('min-width', Math.max(countdown_width, paused_width) + 'px');
-            }
         }
     });
 

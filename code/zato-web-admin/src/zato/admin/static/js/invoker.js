@@ -973,30 +973,22 @@ $.fn.zato.invoker.open_overlay = function(config) {
     $('#invoker-modal-path-params').val(savedPathParams);
     $('#invoker-modal-status').text('');
 
-    let moreOptionsOpen = saved.more_options_open;
-
     // A caller may open the overlay with a request of its own, e.g. the one a queued message carries -
-    // what it gives wins over what was saved last time, and the options it filled in are shown
+    // what it gives wins over what was saved last time
     if (config.request !== undefined) {
         requestValue = config.request;
     }
     if (config.method !== undefined) {
         savedMethod = config.method;
         $('#invoker-modal-method').val(savedMethod);
-        moreOptionsOpen = true;
     }
     if (config.query_params !== undefined) {
         savedQueryParams = config.query_params;
         $('#invoker-modal-query-params').val(savedQueryParams);
-        moreOptionsOpen = true;
     }
 
-    if (moreOptionsOpen) {
-        $('#invoker-more-options').removeClass('hidden');
-    }
-    else {
-        $('#invoker-more-options').addClass('hidden');
-    }
+    // The overlay always opens with the more options section closed, whatever was filled in behind it
+    $('#invoker-more-options').addClass('hidden');
 
     // Show the overlay first so Ace can measure its container ..
     $('#invoker-modal-overlay').removeClass('hidden');
@@ -1094,8 +1086,7 @@ $.fn.zato.invoker._save_overlay_state = function(historyKey) {
         variables: $('#invoker-modal-variables').val(),
         extra_fields: $.fn.zato.invoker._collect_extra_fields(),
         response_raw: responseRaw,
-        status: $('#invoker-modal-status').text(),
-        more_options_open: !$('#invoker-more-options').hasClass('hidden')
+        status: $('#invoker-modal-status').text()
     };
     localStorage.setItem('zato_invoker_state_' + historyKey, JSON.stringify(state));
 };
