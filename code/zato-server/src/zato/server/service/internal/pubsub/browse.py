@@ -204,6 +204,10 @@ class GetMessageList(_BrowseService):
         if remainder:
             num_pages += 1
 
+        # An empty list is still one page, the one the pager shows
+        if num_pages == 0:
+            num_pages = 1
+
         items:'anylist' = []
 
         for msg_id, document in page_documents:

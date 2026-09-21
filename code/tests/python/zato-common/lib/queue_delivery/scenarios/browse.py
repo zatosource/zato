@@ -196,7 +196,7 @@ class BrowseScenarios(ScenarioBase):
 
         assert page['total'] == 0
         assert page['items'] == []
-        assert page['num_pages'] == 0
+        assert page['num_pages'] == 1
 
 # ################################################################################################################################
 
