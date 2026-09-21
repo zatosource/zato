@@ -131,6 +131,7 @@ class _StubConfigManager:
     """
 
     get_outgoing_publish_lock = ConfigManager.get_outgoing_publish_lock
+    hold_outgoing_queue = ConfigManager.hold_outgoing_queue
     _set_outgoing_topic_audit_flag = ConfigManager._set_outgoing_topic_audit_flag
     ensure_outgoing_subscription = ConfigManager.ensure_outgoing_subscription
     rename_outgoing_subscription = ConfigManager.rename_outgoing_subscription
@@ -270,14 +271,15 @@ def _new_other_connection(conn_id:'int', name:'str') -> '_Connection':
 
 def _rename_connection(server:'_StubServer', conn_id:'int', new_name:'str') -> 'None':
     """ Renames a connection the way a config event does - the configuration says the new name first,
-    and the topic follows it, both under the lock that publications to the connection take.
+    and the topic follows it, both with the queue held still, so nothing is published to the connection
+    and no delivery of its is in flight in between.
     """
     connection = _connections[conn_id]
     old_name = connection.name
 
     config_manager = server.config_manager
 
-    with config_manager.get_outgoing_publish_lock(_conn_type, conn_id):
+    with config_manager.hold_outgoing_queue(_conn_type, conn_id):
         connection.name = new_name
         config_manager.rename_outgoing_subscription(_conn_type, conn_id, old_name, new_name)
 
