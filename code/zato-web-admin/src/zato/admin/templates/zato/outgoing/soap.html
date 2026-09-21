@@ -486,7 +486,7 @@
                     {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
                     {{ create_form.health_check_job_id }}
 
-                    {% include "zato/shared/alerts-tab.html" with panel_id="out-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
+                    {% include "zato/include/alerts-tab.html" with panel_id="out-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
 
                     <table class="form-data">
                         <tr>
@@ -652,7 +652,7 @@
                     {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
                     {{ edit_form.health_check_job_id }}
 
-                    {% include "zato/shared/alerts-tab.html" with panel_id="out-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
+                    {% include "zato/include/alerts-tab.html" with panel_id="out-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
 
                     <table class="form-data">
                         <tr>

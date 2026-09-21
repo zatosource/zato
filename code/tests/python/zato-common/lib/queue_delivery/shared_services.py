@@ -102,6 +102,7 @@ class GetQueue(Service):
         depth = self.server.config_manager.outgoing_queue_depth.get(sub_key)
 
         self.response.payload = {
+            'conn_id': conn_id,
             'sub_key': sub_key,
             'topic_name': topic_name,
             'depth': depth,

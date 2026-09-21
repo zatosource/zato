@@ -458,7 +458,7 @@
 
                         <!-- 41 - the Delivery tab of REST outgoing connections -->
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
-                            {% include "zato/shared/delivery-tab-headers.html" %}
+                            {% include "zato/include/delivery-tab-headers.html" %}
                         {% endif %}
 
                 </thead>
@@ -570,7 +570,7 @@
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
                         <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
                         <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?sources=rest-outgoing&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a>{% endif %}</td>
-                        {% include "zato/shared/delivery-queue-link.html" with conn_type="rest" %}
+                        {% include "zato/include/delivery-queue-link.html" with conn_type="rest" %}
                         {% endif %}
 
                         <!-- 31, 32 -->
@@ -618,7 +618,7 @@
 
                         <!-- 41 - the Delivery tab of REST outgoing connections -->
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
-                            {% include "zato/shared/delivery-tab-cells.html" %}
+                            {% include "zato/include/delivery-tab-cells.html" %}
                         {% endif %}
 
                         <!-- 42 - the Alerts tab of REST and SOAP channels and of REST outgoing connections -->
@@ -651,7 +651,7 @@
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
-                        {% include "zato/shared/delivery-tab-button.html" %}
+                        {% include "zato/include/delivery-tab-button.html" %}
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
@@ -929,7 +929,7 @@
                     {% if has_channel_tabs %}
                     </div>
 
-                    {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
+                    {% include "zato/include/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
 
                     <table class="form-data">
                         <tr>
@@ -951,7 +951,7 @@
                         {% include "zato/http_soap/scheduler-tab.html" with form=create_form action="create" field_prefix="" %}
                     </div>
 
-                    {% include "zato/shared/delivery-tab.html" with panel_id="http-soap-create-tab-panel-delivery" form=create_form %}
+                    {% include "zato/include/delivery-tab.html" with panel_id="http-soap-create-tab-panel-delivery" form=create_form %}
 
                     <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-request" role="tabpanel" hidden>
                         {% include "zato/http_soap/request-tab.html" with form=create_form action="create" field_prefix="" %}
@@ -968,7 +968,7 @@
                     {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
                     {{ create_form.health_check_job_id }}
 
-                    {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
+                    {% include "zato/include/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
 
                     <table class="form-data">
                         <tr>
@@ -1006,7 +1006,7 @@
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
-                        {% include "zato/shared/delivery-tab-button.html" %}
+                        {% include "zato/include/delivery-tab-button.html" %}
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
@@ -1281,7 +1281,7 @@
                     {% if has_channel_tabs %}
                     </div>
 
-                    {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
+                    {% include "zato/include/alerts-tab.html" with panel_id="http-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
 
                     <table class="form-data">
                         <tr>
@@ -1303,7 +1303,7 @@
                         {% include "zato/http_soap/scheduler-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
                     </div>
 
-                    {% include "zato/shared/delivery-tab.html" with panel_id="http-soap-edit-tab-panel-delivery" form=edit_form %}
+                    {% include "zato/include/delivery-tab.html" with panel_id="http-soap-edit-tab-panel-delivery" form=edit_form %}
 
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-request" role="tabpanel" hidden>
                         {% include "zato/http_soap/request-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
@@ -1320,7 +1320,7 @@
                     {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
                     {{ edit_form.health_check_job_id }}
 
-                    {% include "zato/shared/alerts-tab.html" with panel_id="http-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
+                    {% include "zato/include/alerts-tab.html" with panel_id="http-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
 
                     <table class="form-data">
                         <tr>
