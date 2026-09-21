@@ -9,7 +9,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
-	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir \
+	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-as2 test-as4 test-edifact test-x12 test-soap \
 	test-llm \
@@ -645,7 +645,15 @@ test-queue-delivery-fhir: ## Queue delivery of outgoing FHIR connections, live, 
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-queue-delivery: test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir ## Queue delivery of every kind of outgoing connection.
+test-queue-delivery-mllp: ## Queue delivery of outgoing MLLP connections, live, on every pub/sub backend.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/queue_delivery_mllp/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_mllp \
+		-W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-queue-delivery: test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp ## Queue delivery of every kind of outgoing connection.
 
 test-pubsub-perf: ## Every pub/sub performance test - SQL, AMQP, system-level load and mass recovery.
 	$(Zato_Log_Reset)

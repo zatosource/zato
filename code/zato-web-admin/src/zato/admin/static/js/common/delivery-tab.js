@@ -431,6 +431,21 @@ $.fn.zato.delivery_tab.applyActionRows = function(forms) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// Gives an open popover of another micro-forms instance the tab's own class, under which
+// delivery-tab.css lays its rows out and hides the ones an action does not need
+$.fn.zato.delivery_tab.markPopover = function(forms) {
+
+    var tab = $.fn.zato.delivery_tab;
+    var popper = forms._instance.popper;
+
+    var out = popper.querySelector('#' + forms.config.popupId);
+    out.classList.add(tab.config.popoverClass);
+
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // Wires the action select of an open popover - the rows follow the pick, and the popover keeps
 // the width of all its rows, so it does not resize as rows hide
 $.fn.zato.delivery_tab.bindActionRows = function(forms) {
@@ -441,7 +456,7 @@ $.fn.zato.delivery_tab.bindActionRows = function(forms) {
 
     var select = popper.querySelector('#' + forms.inputId(config.fieldAction));
 
-    var container = popper.querySelector('#' + forms.config.popupId);
+    var container = tab.markPopover(forms);
     container.style.width = container.offsetWidth + 'px';
 
     select.addEventListener('change', function() {

@@ -136,12 +136,13 @@ forms.config_own = {
         {linkId: 'mllp-outconn-wizard-edit-timing',     descriptor: 'timing'},
         {linkId: 'mllp-outconn-wizard-edit-tls',        descriptor: 'tls'},
         {linkId: 'mllp-outconn-wizard-edit-pool',       descriptor: 'pool'},
-        {linkId: 'mllp-outconn-wizard-edit-retries',    descriptor: 'retries'},
         {linkId: 'mllp-outconn-wizard-edit-send-limit', descriptor: 'send_limit'}
     ],
 
-    // The Dead-letter queue line - its popover shows only the rows the picked action needs,
-    // which is why it opens through a hand of its own rather than through the loop above
+    // The Retries and Dead-letter queue lines - their popovers are the shared tab's and are
+    // laid out its way once open, which is why each opens through a hand of its own
+    retriesEditLinkId: 'mllp-outconn-wizard-edit-retries',
+    retriesDescriptor: 'retries',
     dlqEditLinkId: 'mllp-outconn-wizard-edit-dlq',
     dlqDescriptor: 'dlq',
 
@@ -177,6 +178,15 @@ forms.syncTlsToggle = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Opens the Retries popover at the given element, laid out the way the tab lays it out.
+forms.openRetries = function(anchor) {
+
+    forms.open(forms.config_own.retriesDescriptor, anchor);
+    deliveryTab.markPopover(forms);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // Opens the Dead-letter queue popover at the given element, with its rows
 // following the action picked.
 forms.openDlq = function(anchor) {
@@ -205,7 +215,11 @@ forms.initRows = function() {
         $('#' + row.linkId).on('click', forms._buildOpener(row.descriptor));
     }
 
-    // .. the Dead-letter queue line opens its own ..
+    // .. the Retries and Dead-letter queue lines open the tab's ..
+    $('#' + ownConfig.retriesEditLinkId).on('click', function() {
+        forms.openRetries(this);
+    });
+
     $('#' + ownConfig.dlqEditLinkId).on('click', function() {
         forms.openDlq(this);
     });

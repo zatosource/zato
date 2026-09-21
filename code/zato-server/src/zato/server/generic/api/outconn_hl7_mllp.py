@@ -214,6 +214,14 @@ class _HL7MLLPConnection:
 
 # ################################################################################################################################
 
+    def ping(self) -> 'None':
+        """ Opens a connection to the receiving system and closes it again - nothing is sent, so nothing is queued
+        or acknowledged, and a system that is not there raises.
+        """
+        self.impl.ping()
+
+# ################################################################################################################################
+
     def _send_with_policy(self, cid:'str', send:'callable_', needs_retry:'bool') -> 'AckResult':
         """ Runs one send, tried again under the connection's retry policy when asked to. Only a send that no
         acknowledgment came back from is tried again - an acknowledgment of any code is the receiving system's

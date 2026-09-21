@@ -39,13 +39,6 @@ $.fn.zato.outgoing.hl7.mllp.field_descriptions = {
     // Delivery options
     'id_pool_size': 'How many connections the pool keeps open to the remote endpoint. ' +
         'Each concurrent send uses one connection. Default is 10.',
-    'id_max_retries': 'How many times a failed send is retried before giving up. Default is 5.',
-    'id_backoff_base_seconds': 'Delay in seconds before the first retry. ' +
-        'Each further retry doubles the delay, up to the backoff cap. Default is 1.',
-    'id_backoff_cap_seconds': 'Upper limit in seconds for the delay between retries, ' +
-        'no matter how many attempts have been made already. Default is 300.',
-    'id_backoff_jitter_percent': 'Random percentage applied to each retry delay so that many senders ' +
-        'do not all retry at the same moment. Default is 10.',
     'id_circuit_breaker_threshold_percent': 'The share of failed sends within the window, in percent, ' +
         'at which sending to the endpoint stops. Default is 50.',
     'id_circuit_breaker_window_seconds': 'Length in seconds of the rolling window the share of failures ' +

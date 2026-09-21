@@ -865,6 +865,17 @@ class HL7MLLPInvoker:
 
 # ################################################################################################################################
 
+    def ping(self) -> 'None':
+        """ Opens a connection to the receiving system and closes it again, through a pooled connection - a system that
+        is not there raises. Nothing is sent, so a ping goes to the wire whether or not the queue holds messages.
+        """
+        wrapper = self._outconn_hl7_mllp[self._conn_name].conn
+
+        with wrapper.client() as connection:
+            connection.ping()
+
+# ################################################################################################################################
+
     def _send_direct(self, wrapper:'any_', data:'str | bytes', needs_audit:'bool', *, needs_retry:'bool') -> 'AckResult':
         """ One send through a pooled connection, which goes back to the pool afterwards.
         """

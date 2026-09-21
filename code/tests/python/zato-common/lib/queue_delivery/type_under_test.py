@@ -12,6 +12,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from json import dumps, loads
 
+# Zato
+from zato.common.audit_log.api import AuditEvent
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -112,6 +115,14 @@ class TypeUnderTest:
 
     # What a send's error carries when nothing listens on the endpoint's port
     down_error_text = ''
+
+    # Whether the endpoint can turn a read down - a read that is a request is answered as scripted, one that is a
+    # connection opened and closed again, as an MLLP ping is, goes through whenever the endpoint is there
+    read_can_be_refused = True
+
+    # The audit events a connection writes for each attempt and for what came back from it
+    audit_sent_event = AuditEvent.Request_Sent
+    audit_received_event = AuditEvent.Response_Received
 
 # ################################################################################################################################
 

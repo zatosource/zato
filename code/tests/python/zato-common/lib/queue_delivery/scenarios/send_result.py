@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # What a send with the queue switch on comes back with, on every pub/sub backend.
 
 # Zato
-from zato.common.audit_log.api import AuditEvent
 from zato.common.pubsub.outgoing import Attempts_Direct, Key_Attempts, Key_CID, Key_Conn_Name, Key_Conn_Type, Key_Request
 
 # Test support
@@ -164,7 +163,9 @@ class SendResultScenarios(ScenarioBase):
         result = read(client, conn_name)
 
         assert result['is_send_result'] is False
-        assert result['is_ok'] is False
+
+        # A read the endpoint can turn down is turned down while it refuses everything, one it cannot goes through
+        assert result['is_ok'] is not self.t.read_can_be_refused
 
         receiver.accept_all()
 
@@ -230,14 +231,14 @@ class SendResultScenarios(ScenarioBase):
 
         assert receiver.acceptance() == [False, False, True]
 
-        sent_events = wait_for_audit_events(cid, AuditEvent.Request_Sent, 3)
+        sent_events = wait_for_audit_events(cid, self.t.audit_sent_event, 3)
         assert len(sent_events) == 3
 
         for event in sent_events:
             assert event['cid'] == cid
             assert event['object_name'] == conn_name
 
-        received_events = wait_for_audit_events(cid, AuditEvent.Response_Received, 3)
+        received_events = wait_for_audit_events(cid, self.t.audit_received_event, 3)
         assert len(received_events) == 3
 
         for event in received_events:
