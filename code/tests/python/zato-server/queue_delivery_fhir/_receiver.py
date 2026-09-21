@@ -197,6 +197,16 @@ class FHIRRecordingReceiver(RecordingReceiver):
 
 # ################################################################################################################################
 
+    def clear(self) -> 'None':
+        """ Forgets the requests and starts the ids of created resources over, so each test's first save is `created-1`.
+        """
+        super().clear()
+
+        with self._lock:
+            self._next_created_id = _first_created_id
+
+# ################################################################################################################################
+
     def record(
         self,
         method:'str',
