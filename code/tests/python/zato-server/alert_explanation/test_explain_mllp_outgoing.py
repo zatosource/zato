@@ -68,8 +68,9 @@ def _seed_connection(session_maker:'any_') -> 'None':
     opaque = {
         'max_wait_time': 5,
         'max_retries': 7,
-        'backoff_base_seconds': 2,
-        'backoff_cap_seconds': 120,
+        'retry_sleep_time': 2,
+        'retry_backoff_threshold': 120,
+        'use_queue': True,
         'circuit_breaker_threshold_percent': 50,
         'circuit_breaker_window_seconds': 60,
         'circuit_breaker_reset_seconds': 90,
@@ -181,7 +182,8 @@ class TestMllpOutgoing:
         assert 'TLS: on' in section
         assert 'Connections kept open: 4' in section
         assert 'Ack wait: 5s' in section
-        assert 'Retries: 7, backing off from 2s up to 120s' in section
+        assert 'Retries: 7, waiting from 2s, up to 120s in total' in section
+        assert 'Queue: on' in section
         assert 'Sending pauses: at 50% failures in 60s, for 90s' in section
         assert 'Audit log: on' in section
 

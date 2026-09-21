@@ -103,6 +103,7 @@ class OutgoingType:
     REST = 'rest'
     SOAP = 'soap'
     FHIR = 'fhir'
+    MLLP = 'mllp'
     SFTP = 'sftp'
     SMB = 'smb'
     FTP = 'ftp'

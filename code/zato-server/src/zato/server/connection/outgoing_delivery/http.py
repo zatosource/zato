@@ -171,7 +171,7 @@ def deliver_to_fhir(server:'ParallelServer', cid:'str', wrapper:'any_', request:
 # ################################################################################################################################
 
 def get_http_retry_policy(wrapper:'any_') -> 'RetryPolicy':
-    """ The retry policy of an outgoing REST, SOAP or FHIR connection - all three carry the same fields in their config.
+    """ The retry policy of an outgoing REST, SOAP, FHIR or MLLP connection - all four carry the same fields in their config.
     """
     out = RetryPolicy.from_config(wrapper.config)
     return out
@@ -179,7 +179,7 @@ def get_http_retry_policy(wrapper:'any_') -> 'RetryPolicy':
 # ################################################################################################################################
 
 def get_http_dlq_settings(wrapper:'any_') -> 'stranydict':
-    """ The DLQ settings of an outgoing REST, SOAP or FHIR connection, with defaults filled in.
+    """ The DLQ settings of an outgoing REST, SOAP, FHIR or MLLP connection, with defaults filled in.
     """
     config = wrapper.config
     out = {}

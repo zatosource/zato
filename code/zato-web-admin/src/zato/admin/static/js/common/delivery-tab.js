@@ -64,6 +64,9 @@ $.fn.zato.delivery_tab.config = {
     retryPlural: 'retries',
 
     retriesTitle: 'Retries',
+    dlqTitle: 'Dead-letter queue',
+    labelUseQueue: 'Use queue',
+    labelUseDLQ: 'Use DLQ',
     labelMaxRetries: 'Max. retries',
     labelSleepTime: 'Wait before the first retry',
     labelBackoffThreshold: 'Wait in total at most',
@@ -407,23 +410,45 @@ $.fn.zato.delivery_tab.render = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Shows only the rows the picked action needs
-$.fn.zato.delivery_tab.applyActionRows = function() {
+// Shows only the rows the picked action needs, in the popover of the given micro-forms instance
+$.fn.zato.delivery_tab.applyActionRows = function(forms) {
 
     var tab = $.fn.zato.delivery_tab;
     var config = tab.config;
-    var popper = tab.forms._instance.popper;
+    var popper = forms._instance.popper;
 
-    var select = popper.querySelector('#' + tab.forms.inputId(config.fieldAction));
+    var select = popper.querySelector('#' + forms.inputId(config.fieldAction));
     var action = select.value;
 
-    var retryRow = popper.querySelector('#' + tab.forms.inputId(config.fieldRetries)).closest('.micro-form-row');
-    var forwardToRow = popper.querySelector('#' + tab.forms.inputId(config.fieldForwardTo)).closest('.micro-form-field');
-    var keepHeaderRow = popper.querySelector('#' + tab.forms.inputId(config.fieldKeepHeader)).closest('.micro-form-field');
+    var retryRow = popper.querySelector('#' + forms.inputId(config.fieldRetries)).closest('.micro-form-row');
+    var forwardToRow = popper.querySelector('#' + forms.inputId(config.fieldForwardTo)).closest('.micro-form-field');
+    var keepHeaderRow = popper.querySelector('#' + forms.inputId(config.fieldKeepHeader)).closest('.micro-form-field');
 
     retryRow.hidden = action !== config.actionRetry;
     forwardToRow.hidden = action !== config.actionForward;
     keepHeaderRow.hidden = action !== config.actionForward;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Wires the action select of an open popover - the rows follow the pick, and the popover keeps
+// the width of all its rows, so it does not resize as rows hide
+$.fn.zato.delivery_tab.bindActionRows = function(forms) {
+
+    var tab = $.fn.zato.delivery_tab;
+    var config = tab.config;
+    var popper = forms._instance.popper;
+
+    var select = popper.querySelector('#' + forms.inputId(config.fieldAction));
+
+    var container = popper.querySelector('#' + forms.config.popupId);
+    container.style.width = container.offsetWidth + 'px';
+
+    select.addEventListener('change', function() {
+        tab.applyActionRows(forms);
+    });
+
+    tab.applyActionRows(forms);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -435,16 +460,7 @@ $.fn.zato.delivery_tab.openAction = function(link) {
     var config = tab.config;
 
     tab.forms.open(config.actionLine, link, config.fieldAction);
-
-    var popper = tab.forms._instance.popper;
-    var select = popper.querySelector('#' + tab.forms.inputId(config.fieldAction));
-
-    // The popover keeps the width of all its rows, so it does not resize as rows hide
-    var container = popper.querySelector('#' + tab.forms.config.popupId);
-    container.style.width = container.offsetWidth + 'px';
-
-    select.addEventListener('change', tab.applyActionRows);
-    tab.applyActionRows();
+    tab.bindActionRows(tab.forms);
 }
 
 // /////////////////////////////////////////////////////////////////////////////

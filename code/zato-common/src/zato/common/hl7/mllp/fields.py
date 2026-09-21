@@ -7,10 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import HL7
+from zato.common.api import HL7, HTTP_SOAP
 from zato.common.destination.constants import Default_Delivery_Mode, Respond_From_Service
-from zato.common.hl7.fields import ConnectionField, get_column_defaults, get_defaults, get_int_names, get_names, \
-    get_opaque_defaults
+from zato.common.hl7.fields import ConnectionField, get_bool_names, get_column_defaults, get_defaults, get_int_names, \
+    get_names, get_opaque_defaults
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,6 +28,10 @@ if 0:
 
 MLLPField = ConnectionField
 mllp_field_list = list[MLLPField]
+
+_retry = HTTP_SOAP.Retry
+_queue = HTTP_SOAP.Queue
+_dlq = HTTP_SOAP.DLQ
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -193,11 +197,20 @@ Outgoing_Fields:'mllp_field_list' = [
     MLLPField('logging_level', HL7.Default.logging_level),
     MLLPField('is_audit_log_active', True),
 
-    # Retry engine
-    MLLPField('max_retries', HL7.Default.max_retries),
-    MLLPField('backoff_base_seconds', HL7.Default.backoff_base_seconds),
-    MLLPField('backoff_cap_seconds', HL7.Default.backoff_cap_seconds),
-    MLLPField('backoff_jitter_percent', HL7.Default.backoff_jitter_percent),
+    # How a send that did not go through is tried again - the same settings an outgoing REST connection has.
+    MLLPField(_retry.Field_Max_Retries, _retry.Default_Max_Retries),
+    MLLPField(_retry.Field_Sleep_Time, _retry.Default_Sleep_Time),
+    MLLPField(_retry.Field_Backoff_Threshold, _retry.Default_Backoff_Threshold),
+    MLLPField(_retry.Field_Backoff_Multiplier, _retry.Default_Backoff_Multiplier),
+
+    # Whether a send that did not go through waits in the connection's queue, and what its DLQ does.
+    MLLPField(_queue.Field_Use_Queue, _queue.Default_Use_Queue),
+    MLLPField(_dlq.Field_Use_DLQ, _dlq.Default_Use_DLQ),
+    MLLPField(_dlq.Field_Action, _dlq.Default_Action),
+    MLLPField(_dlq.Field_Retries, _dlq.Default_Retries),
+    MLLPField(_dlq.Field_Retry_Interval, _dlq.Default_Retry_Interval),
+    MLLPField(_dlq.Field_Forward_To, _dlq.Default_Forward_To),
+    MLLPField(_dlq.Field_Keep_Header, _dlq.Default_Keep_Header),
 
     # Circuit breaker
     MLLPField('circuit_breaker_threshold_percent', HL7.Default.circuit_breaker_threshold_percent),
@@ -271,6 +284,7 @@ Outgoing_Column_Defaults = get_column_defaults(Outgoing_Fields)
 Outgoing_Opaque_Defaults = get_opaque_defaults(Outgoing_Fields)
 Outgoing_Defaults        = get_defaults(Outgoing_Fields)
 Outgoing_Int_Names       = get_int_names(Outgoing_Fields)
+Outgoing_Bool_Names      = get_bool_names(Outgoing_Fields)
 Outgoing_Names           = get_names(Outgoing_Fields)
 
 # ################################################################################################################################

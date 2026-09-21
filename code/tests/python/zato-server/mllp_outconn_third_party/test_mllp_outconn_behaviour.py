@@ -7,13 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import threading
 import time
 
 # Zato
 from zato.common.hl7.mllp.circuit_breaker import CircuitBreaker, CircuitState
 from zato.common.hl7.mllp.client import HL7MLLPClient
-from zato.common.hl7.mllp.retry import RetryEngine
 
 # Zato - the suite's own parts
 from _outconn_api import create_outconn, send, send_one, wait_until_ready
@@ -25,10 +23,9 @@ from _outconn_receivers import build_receiver, next_delivery, wait_for_deliverie
 
 if 0:
     from conftest import OutconnEnvironment
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_
 
     any_ = any_
-    anylist = anylist
     OutconnEnvironment = OutconnEnvironment
 
 # ################################################################################################################################
@@ -53,30 +50,6 @@ _Slow_Receiver_Delay = 2.0
 _Timeout_Below_The_Delay = 500
 _Timeout_Above_The_Delay = 10000
 
-# How long the retry test waits between attempts, and the most it will wait. Both are small so that
-# a handful of attempts takes a second rather than the half-hour the defaults would come to.
-_Retry_Backoff_Base = 0.2
-_Retry_Backoff_Cap  = 1.0
-
-# How many attempts the retry test allows past the first one - enough to outlast the listener being
-# down and to leave room for one more after it comes back
-_Retry_Max_Retries = 6
-
-# What the retry test multiplies the wait by each time, which is what makes the backoff a backoff
-_Retry_Backoff_Multiplier = 2.0
-
-# The retry test takes the jitter out, because what it asserts is the delay the settings promise and
-# jitter is by definition what makes a delay something other than what was promised. That the jitter
-# stays inside its own percentage is asserted separately, where the delays are computed rather than
-# waited through.
-_Retry_No_Jitter = 0
-
-# The jitter the computed-delay check holds the engine to, as a percentage of the delay
-_Jitter_Percent = 10
-
-# How many delays the computed-delay check looks at, one per attempt
-_Jitter_Attempt_Count = 5
-
 # What the circuit breaker is held to - a failure rate over half of a window, a window long enough
 # that a run of failures inside one test lands in the same one, and a reset short enough that a
 # test can wait it out
@@ -90,18 +63,13 @@ _Breaker_Failure_Count = 4
 # How long a send against a listener that is there waits for its answer, in seconds
 _Receive_Timeout = 10.0
 
-# How long the retry test waits before starting the listener again, in seconds. It is longer than
-# the first two backoff delays together and shorter than all of them, so that the send fails a few
-# times and then succeeds rather than either succeeding at once or running out of attempts.
-_Restart_After = 0.7
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _build_client(port:'int') -> 'HL7MLLPClient':
     """ Builds the client Zato's own outgoing connections send through, pointed at one of this
-    suite's listeners. The tests below that drive the retry engine and the circuit breaker use it
-    directly, because what they are about is what happens around a send rather than inside one.
+    suite's listeners. The test below that drives the circuit breaker uses it directly, because
+    what it is about is what happens around a send rather than inside one.
     """
     out = HL7MLLPClient(_Host, port, _Start_Sequence, _End_Sequence, receive_timeout=_Receive_Timeout)
     return out
@@ -320,174 +288,6 @@ class TestOutconnSlowReceiver:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestOutconnRetries:
-    """ The retry engine an outgoing connection carries the settings for, driven against a listener
-    that goes down and comes back on the address its senders know. What it wraps is the same client
-    a connection sends through, so what is under test here is the real thing over a real socket.
-    """
-
-# ################################################################################################################################
-
-    def test_a_send_succeeds_once_the_listener_is_back(self, outconn_environment:'OutconnEnvironment') -> 'None':
-        """ The listener is stopped, a send is started against it, and the listener comes back
-        while the engine is between attempts. The message goes through on the attempt after that,
-        and the engine reports how many attempts it took.
-        """
-        receiver = build_receiver(Receiver_Hl7apy)
-        receiver.start()
-
-        # The port is the listener's own and it keeps it across a stop and a start, which is what
-        # makes a sender that never learns of the outage possible at all
-        port = receiver.port
-        receiver.stop()
-
-        client = _build_client(port)
-        control_id = 'RETRY-0001'
-        message = build_adt_a01(control_id).encode('utf8')
-
-        dead_letters:'anylist' = []
-
-        def _send(payload:'bytes') -> 'any_':
-            return client.send(payload, control_id)
-
-        def _to_dead_letter(payload:'bytes', error_text:'str', retry_count:'int') -> 'None':
-            dead_letters.append((error_text, retry_count))
-
-        engine = RetryEngine(
-            _send,
-            _to_dead_letter,
-            max_retries=_Retry_Max_Retries,
-            backoff_base=_Retry_Backoff_Base,
-            backoff_multiplier=_Retry_Backoff_Multiplier,
-            backoff_cap=_Retry_Backoff_Cap,
-            jitter_percent=_Retry_No_Jitter,
-        )
-
-        # The listener comes back while the engine is waiting between attempts, which is the outage
-        # a retry engine is there for - short, and over before anybody was told about it
-        restart_timer = _start_after(receiver.start, _Restart_After)
-
-        try:
-            result = engine.send_with_retry(message)
-        finally:
-            restart_timer.join()
-            receiver.stop()
-
-        assert result.is_sent
-        assert not result.sent_to_dlq
-        assert not dead_letters
-
-        # It took more than one attempt, which is what says the engine did the waiting rather than
-        # the listener having been there all along
-        assert result.retry_count >= 1
-        assert result.retry_count <= _Retry_Max_Retries
-
-        # .. and the listener's own record shows the message that finally got through
-        wait_for_deliveries(receiver, 1)
-        assert get_msh_field(receiver.deliveries[0].text, 10) == control_id
-
-# ################################################################################################################################
-
-    def test_a_listener_that_never_comes_back_ends_in_the_dead_letter_queue(
-        self,
-        outconn_environment:'OutconnEnvironment',
-    ) -> 'None':
-        """ Every attempt the settings allow is made, each after the wait the settings promise, and
-        then the message is handed to the dead-letter queue rather than tried forever.
-        """
-        receiver = build_receiver(Receiver_Hl7apy)
-        receiver.start()
-
-        port = receiver.port
-        receiver.stop()
-
-        client = _build_client(port)
-        control_id = 'RETRY-0002'
-        message = build_adt_a01(control_id).encode('utf8')
-
-        dead_letters:'anylist' = []
-        attempt_times:'anylist' = []
-
-        def _send(payload:'bytes') -> 'any_':
-            attempt_times.append(time.monotonic())
-            return client.send(payload, control_id)
-
-        def _to_dead_letter(payload:'bytes', error_text:'str', retry_count:'int') -> 'None':
-            dead_letters.append((error_text, retry_count))
-
-        # Two retries is enough to see the waits growing without the test taking any longer over it
-        max_retries = 2
-
-        engine = RetryEngine(
-            _send,
-            _to_dead_letter,
-            max_retries=max_retries,
-            backoff_base=_Retry_Backoff_Base,
-            backoff_multiplier=_Retry_Backoff_Multiplier,
-            backoff_cap=_Retry_Backoff_Cap,
-            jitter_percent=_Retry_No_Jitter,
-        )
-
-        result = engine.send_with_retry(message)
-
-        assert not result.is_sent
-        assert result.sent_to_dlq
-        assert len(dead_letters) == 1
-
-        # The first attempt plus every retry the settings allowed
-        assert len(attempt_times) == max_retries + 1
-
-        # .. and each wait was the one the settings promised, doubling as it went
-        for index in range(1, len(attempt_times)):
-
-            waited = attempt_times[index] - attempt_times[index - 1]
-            promised = _Retry_Backoff_Base * (_Retry_Backoff_Multiplier ** (index - 1))
-
-            assert waited >= promised
-
-# ################################################################################################################################
-
-    def test_the_backoff_stays_inside_its_jitter_and_under_its_cap(
-        self,
-        outconn_environment:'OutconnEnvironment',
-    ) -> 'None':
-        """ The delays the engine computes grow by the multiplier, stay inside the jitter they were
-        given and never cross the cap. Asserting on the computed delays rather than on waits is what
-        keeps a test of the cap from taking as long as the cap.
-        """
-        def _send(payload:'bytes') -> 'None':
-            pass
-
-        def _to_dead_letter(payload:'bytes', error_text:'str', retry_count:'int') -> 'None':
-            pass
-
-        engine = RetryEngine(
-            _send,
-            _to_dead_letter,
-            backoff_base=_Retry_Backoff_Base,
-            backoff_multiplier=_Retry_Backoff_Multiplier,
-            backoff_cap=_Retry_Backoff_Cap,
-            jitter_percent=_Jitter_Percent,
-        )
-
-        jitter_fraction = _Jitter_Percent / 100.0
-
-        for attempt in range(1, _Jitter_Attempt_Count + 1):
-
-            delay = engine._compute_delay(attempt)
-
-            uncapped = _Retry_Backoff_Base * (_Retry_Backoff_Multiplier ** (attempt - 1))
-            expected = min(uncapped, _Retry_Backoff_Cap)
-
-            assert delay >= expected * (1 - jitter_fraction)
-            assert delay <= expected * (1 + jitter_fraction)
-
-            # The cap holds however far along the attempts have got, jitter included
-            assert delay <= _Retry_Backoff_Cap * (1 + jitter_fraction)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class TestOutconnCircuitBreaker:
     """ The circuit breaker an outgoing connection carries the settings for. A listener that is down
     is worth a few attempts and then worth leaving alone, because the attempts cost the sender more
@@ -565,22 +365,6 @@ class TestOutconnCircuitBreaker:
 
         finally:
             receiver.stop()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _start_after(action:'any_', delay:'float') -> 'any_':
-    """ Runs something once, after a wait, on a thread of its own. It is how a listener is brought
-    back while a send is already under way against it.
-    """
-    def _run() -> 'None':
-        time.sleep(delay)
-        action()
-
-    out = threading.Thread(target=_run, daemon=True)
-    out.start()
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

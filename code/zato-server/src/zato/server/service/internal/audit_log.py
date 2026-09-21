@@ -27,6 +27,7 @@ from zato.common.destination.audit import get_hop_entry
 from zato.common.hl7.resubmit import reprocess as hl7_reprocess, resend as hl7_resend
 from zato.common.json_internal import dumps
 from zato.common.model.file_transfer_ import FileTransferItem
+from zato.common.pubsub.outgoing import SendResult as QueueSendResult
 from zato.common.util.api import asbool
 from zato.hl7v2 import parse_hl7
 from zato.server.connection.as4 import AS4ChannelRuntime
@@ -409,8 +410,17 @@ class ResendHL7Message(AdminService):
             invoker = self.mllp[event.object_name]
 
             def send(payload:'str') -> 'strnone':
-                ack_result = invoker.send(payload, needs_audit=False)
-                return ack_result.ack_text # type: ignore[union-attr]
+                result = invoker.send(payload, needs_audit=False)
+
+                # With the queue switch on the acknowledgment, if there was one, rides on the result
+                if isinstance(result, QueueSendResult):
+                    result = result.response
+
+                if result is None:
+                    return None
+
+                out = result.ack_text
+                return out
 
             audit_log = AuditLog(self.server.name)
             result = hl7_resend(event, send, audit_log, self.cid, payload=edited_payload)

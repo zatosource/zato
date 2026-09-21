@@ -51,7 +51,7 @@ class ChannelConnections:
         self.rest.init(cid, config_manager.config_store.out_plain_http)
 
         self.mllp = MLLPFacade()
-        self.mllp.init(config_manager)
+        self.mllp.init(cid, config_manager)
 
         self.fhir = FHIRFacade()
         self.fhir.init(cid, config_manager)

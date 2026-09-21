@@ -2264,12 +2264,6 @@ class HL7:
         max_msg_size_unit  = 'mb'
         max_msg_size       = 2 * 1024 * 1024
 
-        # Retry engine defaults (outbound)
-        max_retries                      = 5
-        backoff_base_seconds             = 1
-        backoff_cap_seconds              = 300
-        backoff_jitter_percent           = 10
-
         # Circuit breaker defaults (outbound)
         circuit_breaker_threshold_percent = 50
         circuit_breaker_window_seconds    = 60

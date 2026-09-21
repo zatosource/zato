@@ -689,7 +689,7 @@ class Service:
         self.fhir.init(self.cid, self._config_manager)
 
         # MLLP facade
-        self.mllp.init(self._config_manager)
+        self.mllp.init(self.cid, self._config_manager)
 
         # OData facade
         self.odata.init(self._config_manager.outconn_odata)

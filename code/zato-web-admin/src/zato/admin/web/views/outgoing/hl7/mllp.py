@@ -16,15 +16,15 @@ from django.http import JsonResponse
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web import alerts_tab
+from zato.admin.web import alerts_tab, delivery_tab
 from zato.admin.web.forms import populate_form_initial
 from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.alerting.object_config import alert_type_mllp_outgoing, Field_Prefix
 from zato.common.api import GENERIC, generic_attrs
+from zato.common.ext.bunch import Bunch
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.tls import build_client_ssl_context
-from zato.common.model.hl7 import HL7MLLPOutconnConfigObject
 from zato.common.util.api import hex_sequence_to_bytes
 from zato.common.util.tcp import parse_address
 
@@ -57,6 +57,17 @@ _Ms_Per_Second = 1000
 _alert_type = alert_type_mllp_outgoing
 _alert_field_names = alerts_tab.get_storage_field_names(_alert_type)
 
+# .. the retry fields, the queue switch and the DLQ config, stored in the connection's opaque attributes ..
+_delivery_field_names = tuple(delivery_tab.field_defaults)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OutgoingMLLPConfigObject(Bunch):
+    """ A config object for outgoing MLLP connections, filled in with attributes from the get-list response -
+    a Bunch, so the Delivery tab's helpers and the template read its fields by name as well.
+    """
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -65,7 +76,7 @@ class Index(_Index):
     url_name = 'outgoing-hl7-mllp'
     template = 'zato/outgoing/hl7/mllp.html'
     service_name = 'zato.generic.connection.get-list'
-    output_class = HL7MLLPOutconnConfigObject
+    output_class = OutgoingMLLPConfigObject
     paginate = True
 
     input_required = 'cluster_id', 'type_'
@@ -74,11 +85,21 @@ class Index(_Index):
         'should_log_messages', 'logging_level',
         'max_msg_size', 'read_buffer_size', 'recv_timeout',
         'start_seq', 'end_seq', 'max_wait_time',
-        'max_retries', 'backoff_base_seconds', 'backoff_cap_seconds', 'backoff_jitter_percent',
         'circuit_breaker_threshold_percent', 'circuit_breaker_window_seconds', 'circuit_breaker_reset_seconds',
         'tls_cert_path', 'tls_key_path', 'tls_ca_path',
-    ) + generic_attrs
+    ) + generic_attrs + _delivery_field_names
     output_repeated = True
+
+# ################################################################################################################################
+
+    def on_before_append_item(self, item:'any_') -> 'any_':
+
+        # The retry fields, the queue switch and the DLQ config are opaque attributes - a connection that predates
+        # them carries no values, so the defaults show, with each duration split into a count and a unit
+        delivery_tab.fill_row(item, item)
+        delivery_tab.split_unit_fields(item)
+
+        return item
 
 # ################################################################################################################################
 
@@ -87,6 +108,7 @@ class Index(_Index):
             'show_search_form': True,
             'create_form': CreateForm(self.req),
             'edit_form': EditForm(self.req, prefix='edit'),
+            'delivery_tab_config': delivery_tab.get_delivery_tab_config(),
         }
 
 # ################################################################################################################################
@@ -101,10 +123,9 @@ class _CreateEdit(CreateEdit):
         'should_log_messages', 'logging_level',
         'max_msg_size', 'read_buffer_size', 'recv_timeout',
         'start_seq', 'end_seq', 'max_wait_time',
-        'max_retries', 'backoff_base_seconds', 'backoff_cap_seconds', 'backoff_jitter_percent',
         'circuit_breaker_threshold_percent', 'circuit_breaker_window_seconds', 'circuit_breaker_reset_seconds',
         'tls_cert_path', 'tls_key_path', 'tls_ca_path',
-    ) + generic_attrs + _alert_field_names
+    ) + generic_attrs + _delivery_field_names + _alert_field_names
     output_required = 'id', 'name'
 
 # ################################################################################################################################
@@ -124,6 +145,11 @@ class _CreateEdit(CreateEdit):
 
         # A duration is stored as seconds, which is what its count and unit join into
         alerts_tab.join_unit_fields(_alert_type, input_dict)
+
+        # The retry fields, the queue switch and the DLQ config arrive as text and are stored typed,
+        # with each duration's count and unit joined into seconds
+        input_dict.update(delivery_tab.get_message_fields(self.req.POST, self.form_prefix))
+        delivery_tab.join_unit_fields(self.req.POST, self.form_prefix, input_dict)
 
 # ################################################################################################################################
 
@@ -204,8 +230,11 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     # .. is built with and what the wizard's own fieldPrefix mirrors ..
     form = EditForm(req, prefix='edit')
 
-    # A duration is stored as seconds and edited as a count with a unit
+    # A duration is stored as seconds and edited as a count with a unit, and a connection that predates
+    # the retry, queue and DLQ fields opens with their defaults
     alerts_tab.split_unit_fields(_alert_type, item_dict)
+    delivery_tab.fill_row(item_dict, item_dict)
+    delivery_tab.split_unit_fields(item_dict)
     populate_form_initial(form, item_dict)
 
     return_data = {

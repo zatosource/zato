@@ -13,6 +13,31 @@
 var wizard = $.fn.zato.outgoing.hl7.mllp.wizard;
 var forms = wizard.forms;
 
+// The shared Delivery tab - the retry and DLQ fields of an outgoing connection are
+// its own, and so are the two popovers that edit them, opened here as the wizard's
+var deliveryTab = $.fn.zato.delivery_tab;
+var deliveryConfig = deliveryTab.config;
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The Retries popover - the tab's own rows with the queue switch on top of them,
+// and the Dead-letter queue popover - the tab's action rows under the DLQ switch
+forms.buildDeliveryDescriptors = function() {
+
+    var out = deliveryTab.buildDescriptors();
+
+    var retries = out[deliveryConfig.retriesLine];
+    retries.pages[0].unshift({field: deliveryConfig.fieldUseQueue, label: deliveryConfig.labelUseQueue, kind: 'checkbox'});
+
+    var dlq = out[deliveryConfig.actionLine];
+    dlq.title = deliveryConfig.dlqTitle;
+    dlq.pages[0].unshift({field: deliveryConfig.fieldUseDLQ, label: deliveryConfig.labelUseDLQ, kind: 'checkbox'});
+
+    return out;
+};
+
+var deliveryDescriptors = forms.buildDeliveryDescriptors();
+
 // ////////////////////////////////////////////////////////////////////////
 
 // A page is a list of entries. An entry is either one field spec, shown on
@@ -75,20 +100,8 @@ $.fn.zato.micro_forms.setup(wizard, {
             ]]
         },
 
-        'retries': {
-            title: 'Retries',
-            width: '430px',
-            pages: [[
-                [
-                    {field: 'max_retries',            label: 'Attempts',        kind: 'number', width: '120px'},
-                    {field: 'backoff_jitter_percent', label: 'Jitter (%)',      kind: 'number', width: '120px'}
-                ],
-                [
-                    {field: 'backoff_base_seconds', label: 'First wait (s)',   kind: 'number', width: '180px'},
-                    {field: 'backoff_cap_seconds',  label: 'Longest wait (s)', kind: 'number', width: '180px'}
-                ]
-            ]]
-        },
+        'retries': deliveryDescriptors[deliveryConfig.retriesLine],
+        'dlq': deliveryDescriptors[deliveryConfig.actionLine],
 
         'send_limit': {
             title: 'Send limit',
@@ -127,6 +140,11 @@ forms.config_own = {
         {linkId: 'mllp-outconn-wizard-edit-send-limit', descriptor: 'send_limit'}
     ],
 
+    // The Dead-letter queue line - its popover shows only the rows the picked action needs,
+    // which is why it opens through a hand of its own rather than through the loop above
+    dlqEditLinkId: 'mllp-outconn-wizard-edit-dlq',
+    dlqDescriptor: 'dlq',
+
     // The switch that says whether this connection speaks TLS, and the
     // three paths behind it
     tlsToggleId: 'mllp-outconn-wizard-toggle-tls',
@@ -159,9 +177,23 @@ forms.syncTlsToggle = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Opens the Dead-letter queue popover at the given element, with its rows
+// following the action picked.
+forms.openDlq = function(anchor) {
+
+    forms.open(forms.config_own.dlqDescriptor, anchor);
+    deliveryTab.bindActionRows(forms);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 forms.initRows = function() {
 
     var ownConfig = forms.config_own;
+
+    // The tab reads the retry and DLQ fields under the same prefix the wizard does,
+    // which is what its summaries and durations are computed from
+    deliveryTab.state.fieldPrefix = wizard.config.fieldPrefix;
 
     // Each summary link opens the popover its answers came from ..
     for(var rowIdx = 0; rowIdx < ownConfig.editRows.length; rowIdx++) {
@@ -172,6 +204,11 @@ forms.initRows = function() {
         // handler needs its own binding rather than the loop's variable
         $('#' + row.linkId).on('click', forms._buildOpener(row.descriptor));
     }
+
+    // .. the Dead-letter queue line opens its own ..
+    $('#' + ownConfig.dlqEditLinkId).on('click', function() {
+        forms.openDlq(this);
+    });
 
     // .. the logging card of step 2 opens the last of them ..
     $('#mllp-outconn-wizard-card-logging').on('click', forms._buildOpener('logging'));

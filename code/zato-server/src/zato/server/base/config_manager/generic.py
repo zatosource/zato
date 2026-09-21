@@ -31,7 +31,8 @@ from zato.server.generic.api.outconn_grpc import outconn_grpc_bool_config_keys, 
     outconn_grpc_int_config_keys
 from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_bool_config_keys, outconn_fhir_config_defaults, \
     outconn_fhir_int_config_keys
-from zato.server.generic.api.outconn_hl7_mllp import outconn_config_defaults, outconn_int_config_keys
+from zato.server.generic.api.outconn_hl7_mllp import outconn_bool_config_keys, outconn_config_defaults, \
+    outconn_int_config_keys
 from zato.server.generic.api.outconn_llm import llm_config_defaults, llm_int_config_keys
 from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys, outconn_odata_config_defaults, \
     outconn_odata_int_config_keys, outconn_sap_config_defaults
@@ -552,8 +553,8 @@ class Generic(ConfigManagerImpl):
             if config.get(key) is None:
                 config[key] = default
 
-        # .. and make sure numeric fields are integers - an empty string means
-        # .. the create path had no value for the field, so its default applies.
+        # .. make sure numeric fields are integers - an empty string means
+        # .. the create path had no value for the field, so its default applies ..
         for key in outconn_int_config_keys:
             value = config[key]
             if isinstance(value, str):
@@ -561,6 +562,12 @@ class Generic(ConfigManagerImpl):
                     config[key] = int(value)
                 else:
                     config[key] = outconn_config_defaults[key]
+
+        # .. and that boolean fields are booleans.
+        for key in outconn_bool_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = as_bool(value)
 
 # ################################################################################################################################
 
