@@ -194,7 +194,9 @@
         editor.setFontSize(12);
         editor.setOptions({
             fontFamily: 'Menlo, Consolas, Monaco, monospace',
-            firstLineNumber: 1
+            firstLineNumber: 1,
+            // Ace's syntax checker runs in a blob: worker, which the CSP does not allow
+            useWorker: false
         });
         editor.renderer.setScrollMargin(7, 0, 0, 0);
         editor.setReadOnly(!editable);

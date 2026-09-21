@@ -43,6 +43,8 @@ $.fn.zato.outgoing_delivery.config = {
 
     scopeSelected: 'selected',
     scopeAll: 'all',
+    disabledClass: 'delivery-action-disabled',
+    escapeKey: 'Escape',
 
     tabSelector: '.delivery-tabs .dashboard-tab',
     tabPanelPrefix: 'delivery-tab-panel-',
@@ -52,8 +54,6 @@ $.fn.zato.outgoing_delivery.config = {
     resultSingular: 'message',
     resultPlural: 'messages',
     resultForwardTo: 'to',
-    errorNoSelection: 'No messages selected',
-
     statusOK: 200,
 
     detailsTitle: 'Message',
@@ -61,10 +61,9 @@ $.fn.zato.outgoing_delivery.config = {
     labelConnection: 'Connection',
     labelCID: 'CID',
     labelPublished: 'Published',
-    labelAttempts: 'Attempts',
     labelMovedToDLQ: 'Moved to DLQ',
     labelReason: 'Reason',
-    labelRounds: 'Rounds',
+    labelRounds: 'Retries so far',
     labelLastError: 'Last error',
     labelSourceTopic: 'Source topic',
     labelMethod: 'Method',
@@ -301,9 +300,12 @@ $.fn.zato.outgoing_delivery.pluralize = function(count, singular, plural) {
 // The checkboxes of each table
 $.fn.zato.outgoing_delivery.bindSelection = function() {
 
+    var page = $.fn.zato.outgoing_delivery;
+
     $('.delivery-table').on('change', '.delivery-select-all', function() {
         var table = $(this).closest('table');
         table.find('.delivery-row-select').prop('checked', this.checked);
+        page.updateActionLinks(table.attr('data-kind'));
     });
 
     $('.delivery-table').on('change', '.delivery-row-select', function() {
@@ -311,7 +313,30 @@ $.fn.zato.outgoing_delivery.bindSelection = function() {
         var allCount = table.find('.delivery-row-select').length;
         var checkedCount = table.find('.delivery-row-select:checked').length;
         table.find('.delivery-select-all').prop('checked', allCount === checkedCount);
+        page.updateActionLinks(table.attr('data-kind'));
     });
+
+    $('.delivery-table').each(function() {
+        page.updateActionLinks(this.getAttribute('data-kind'));
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The "selected" links need a ticked row, the "all" links need any row
+$.fn.zato.outgoing_delivery.updateActionLinks = function(kind) {
+
+    var page = $.fn.zato.outgoing_delivery;
+    var config = page.config;
+    var table = page.table(kind);
+
+    var hasRows = table.find('.delivery-row-select').length > 0;
+    var hasSelection = table.find('.delivery-row-select:checked').length > 0;
+
+    var links = $('.delivery-action-link[data-kind="' + kind + '"]');
+
+    links.filter('[data-scope="' + config.scopeSelected + '"]').toggleClass(config.disabledClass, !hasSelection);
+    links.filter('[data-scope="' + config.scopeAll + '"]').toggleClass(config.disabledClass, !hasRows);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -339,6 +364,10 @@ $.fn.zato.outgoing_delivery.bindActions = function() {
 
     $('.delivery-action-link').on('click', function() {
 
+        if(this.classList.contains(config.disabledClass)) {
+            return;
+        }
+
         var kind = this.getAttribute('data-kind');
         var action = this.getAttribute('data-action');
         var scope = this.getAttribute('data-scope');
@@ -347,11 +376,6 @@ $.fn.zato.outgoing_delivery.bindActions = function() {
 
         if(scope === config.scopeSelected) {
             target.msgIdList = page.selectedMsgIdList(kind);
-
-            if(target.msgIdList.length === 0) {
-                $.fn.zato.user_message(false, config.errorNoSelection);
-                return;
-            }
         }
 
         page.openAction(action, target, this);
@@ -459,6 +483,7 @@ $.fn.zato.outgoing_delivery.onActionDone = function(action, target, response) {
     }
 
     table.find('.delivery-select-all').prop('checked', false);
+    page.updateActionLinks(target.kind);
 
     $.fn.zato.user_message(true, message);
 }
@@ -474,6 +499,16 @@ $.fn.zato.outgoing_delivery.bindDetails = function() {
         var kind = this.getAttribute('data-kind');
         var msgId = this.getAttribute('data-msg-id');
         page.openDetails(kind, msgId);
+    });
+
+    $(document).on('keydown.delivery_details', function(event) {
+        if(event.key !== page.config.escapeKey) {
+            return;
+        }
+        if($('[data-delivery-details]').length) {
+            event.preventDefault();
+            page.closeDetails();
+        }
     });
 }
 
@@ -635,7 +670,6 @@ $.fn.zato.outgoing_delivery.showDetails = function(kind, msgId, details) {
     page.addFact(facts, config.labelConnection, state.connName);
     page.addFact(facts, config.labelCID, envelope.cid);
     page.addFact(facts, config.labelPublished, envelope.pub_time_iso);
-    page.addFact(facts, config.labelAttempts, envelope.attempts);
 
     if(details.has_dlq_header) {
         var dlqHeader = envelope.dlq;

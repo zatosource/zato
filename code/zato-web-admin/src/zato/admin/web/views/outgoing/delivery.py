@@ -76,7 +76,7 @@ _rule_keep        = 'Keep'
 _rule_retry       = 'Retry {}'
 _rule_forward     = 'Forward to {} {}'
 _rule_discard     = 'Discard {}'
-_rule_rounds_used = 'Stays, {} of {} rounds used'
+_rule_rounds_used = 'Stays, {} of {} retries used'
 _rule_due_now     = 'on the next run'
 _rule_due_in      = 'in {}'
 

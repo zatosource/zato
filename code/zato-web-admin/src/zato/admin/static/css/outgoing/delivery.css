@@ -23,6 +23,14 @@
     width: 24px;
 }
 
+div.page_prompt a.common.delivery-action-disabled,
+div.page_prompt a.common.delivery-action-disabled:hover {
+    color: rgba(0, 0, 0, 0.5) !important;
+    cursor: default;
+    pointer-events: none;
+    text-decoration: none;
+}
+
 /* ------------------------------------------------------------ */
 /* Delivery - the table                                         */
 /* ------------------------------------------------------------ */
@@ -72,6 +80,11 @@
     white-space: nowrap;
 }
 
+.delivery-table th.delivery-cell-center,
+.delivery-table td.delivery-cell-center {
+    text-align: center;
+}
+
 .delivery-cell-error {
     color: var(--zato-ui-error);
 }
@@ -83,14 +96,6 @@
 /* ------------------------------------------------------------ */
 /* Delivery - the action popovers                               */
 /* ------------------------------------------------------------ */
-
-.delivery-popover {
-    --delivery-popover-min-width: 260px;
-}
-
-.delivery-popover.micro-form-fit {
-    min-width: var(--delivery-popover-min-width);
-}
 
 .delivery-popover-target {
     font-size: 12px;
