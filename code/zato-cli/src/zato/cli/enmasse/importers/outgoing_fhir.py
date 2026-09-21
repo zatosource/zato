@@ -12,6 +12,7 @@ from zato.common.api import GENERIC, SchedulerLink
 from zato.common.hl7.fhir.fields import Outgoing_Column_Defaults, Outgoing_Opaque_Defaults, Outgoing_Security_Id_Key, \
     Outgoing_Security_Name_Key
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
+from zato.cli.enmasse.util.delivery import prepare_delivery_fields
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -20,6 +21,12 @@ if 0:
     from zato.common.typing_ import anydict
 
     anydict = anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How an error message names this kind of connection
+_connection_type = 'outgoing FHIR'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +61,14 @@ class OutgoingFHIRImporter(GenericConnectionImporter):
         of the security definition its requests go out authenticated with.
         """
         self._resolve_security(connection_def)
+
+# ################################################################################################################################
+
+    def validate_definition(self, connection_def:'anydict') -> 'None':
+        """ The field list fills in and types the delivery fields on its own, what it does not do is reject a value
+        the field does not take - a switch that is not a boolean, a negative count, an action that is not one of the four.
+        """
+        prepare_delivery_fields(connection_def, _connection_type)
 
 # ################################################################################################################################
 

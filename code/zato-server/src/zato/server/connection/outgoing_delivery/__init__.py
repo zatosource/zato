@@ -9,33 +9,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # How a queued message is handed over to an outgoing connection - a locator and a handler per connection type.
 
 # stdlib
-from json import loads
 from logging import getLogger
 
 # Zato
 from zato.common.api import GENERIC
-from zato.common.pubsub.outgoing import Key_Data, OutgoingType, register_outgoing_conn_type
+from zato.common.pubsub.outgoing import OutgoingType, register_outgoing_conn_type
 from zato.server.connection.outgoing_delivery.files import deliver_to_ftp, deliver_to_sftp, deliver_to_smb, locate_ftp, \
     locate_sftp, locate_smb
-from zato.server.connection.outgoing_delivery.http import deliver_to_rest, deliver_to_soap, get_http_dlq_settings, \
-    get_http_retry_policy, locate_rest, locate_soap, rest_page, soap_page
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import any_, anytuple, stranydict
-    from zato.server.base.parallel import ParallelServer
+from zato.server.connection.outgoing_delivery.http import deliver_to_fhir, deliver_to_rest, deliver_to_soap, fhir_page, \
+    get_http_dlq_settings, get_http_retry_policy, locate_fhir, locate_rest, locate_soap, rest_page, soap_page
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
-
-# How many seconds to wait for a pooled FHIR client
-_fhir_block_timeout = 30
-
-_fhir_method = 'POST'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,31 +38,6 @@ publishable_generic_types = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _locate_fhir(server:'ParallelServer', conn_id:'int') -> 'anytuple':
-    """ An outgoing HL7 FHIR connection by its id, as its name and its wrapper.
-    """
-    for item in server.config_manager.outconn_hl7_fhir.values():
-        if item['id'] == conn_id:
-            out = (item['name'], item.conn)
-            return out
-
-    return ()
-
-# ################################################################################################################################
-
-def _deliver_to_fhir(server:'ParallelServer', cid:'str', wrapper:'any_', request:'stranydict') -> 'None':
-    """ Hands one message over to an outgoing HL7 FHIR connection as a resource of the type the document names.
-    """
-    resource = loads(request[Key_Data])
-    path = resource['resourceType']
-
-    with wrapper.client(should_block=True, block_timeout=_fhir_block_timeout) as client:
-        _ = client._do_request(_fhir_method, path, data=resource)
-
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def register_delivery_handlers() -> 'None':
     """ Registers every type of outgoing connection that can be published to.
     """
@@ -83,7 +45,8 @@ def register_delivery_handlers() -> 'None':
         retry_policy=get_http_retry_policy, dlq_settings=get_http_dlq_settings, page=rest_page)
     register_outgoing_conn_type(OutgoingType.SOAP, locate_soap, deliver_to_soap,
         retry_policy=get_http_retry_policy, dlq_settings=get_http_dlq_settings, page=soap_page)
-    register_outgoing_conn_type(OutgoingType.FHIR, _locate_fhir, _deliver_to_fhir)
+    register_outgoing_conn_type(OutgoingType.FHIR, locate_fhir, deliver_to_fhir,
+        retry_policy=get_http_retry_policy, dlq_settings=get_http_dlq_settings, page=fhir_page)
 
     # File deliveries are recorded as file-outgoing audit events already
     register_outgoing_conn_type(OutgoingType.SFTP, locate_sftp, deliver_to_sftp, is_audit_log_active=False)

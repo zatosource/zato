@@ -53,9 +53,10 @@ Key_Attempts   = 'attempts'
 Key_DLQ_Rounds = 'dlq_rounds'
 Key_Request    = 'request'
 
-# The keys of the request part - an HTTP type stores a method, a SOAP type an operation
+# The keys of the request part - an HTTP type stores a method, a SOAP type an operation, a FHIR type a method and a path
 Key_Method    = 'method'
 Key_Operation = 'operation'
+Key_Path      = 'path'
 Key_Data      = 'data'
 Key_Headers   = 'headers'
 Key_Params    = 'params'

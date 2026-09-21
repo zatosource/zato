@@ -97,6 +97,20 @@ def get_int_names(fields:'field_list') -> 'strtuple':
 
 # ################################################################################################################################
 
+def get_bool_names(fields:'field_list') -> 'strtuple':
+    """ The names of the fields holding a yes or a no, which opaque storage may hand over as text.
+    """
+    names = []
+
+    for field in fields:
+        if isinstance(field.default, bool):
+            names.append(field.name)
+
+    out = tuple(names)
+    return out
+
+# ################################################################################################################################
+
 def get_names(fields:'field_list') -> 'strtuple':
     """ The names of every field, in declaration order.
     """

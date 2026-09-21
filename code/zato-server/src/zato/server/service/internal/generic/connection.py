@@ -19,6 +19,7 @@ from zato.common.alerting.object_config import conn_type_to_alert_type, storage_
 from zato.common.audit_log.common import AuditEvent
 from zato.common.broker_message import GENERIC
 from zato.common.const import SECRETS
+from zato.common.hl7.fhir.fields import Outgoing_Int_Names as FHIR_Outgoing_Int_Names
 from zato.common.hl7.mllp.fields import Channel_Int_Names as MLLP_Channel_Int_Names, \
     Outgoing_Int_Names as MLLP_Outgoing_Int_Names
 from zato.common.ext_db.api import is_ext_object_id, needs_ext_db, to_local_id, to_public_id
@@ -212,10 +213,11 @@ for _alert_text_field_name in (config_map.Status_Codes_Field_Name, config_map.Fa
 # ################################################################################################################################
 
 # Values of these generic attributes should be converted to ints. The HL7 MLLP channel's and
-# outgoing connection's counts, sizes, timeouts and ids are among them because they travel as
-# opaque attributes rather than as columns of their own, so nothing else says they are numbers.
+# outgoing connection's counts, sizes, timeouts and ids are among them, as are the FHIR outgoing connection's
+# retry and DLQ counts, because they travel as opaque attributes rather than as columns of their own,
+# so nothing else says they are numbers.
 int_attrs = ['pool_size', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout']
-int_attrs = int_attrs + list(MLLP_Channel_Int_Names) + list(MLLP_Outgoing_Int_Names)
+int_attrs = int_attrs + list(MLLP_Channel_Int_Names) + list(MLLP_Outgoing_Int_Names) + list(FHIR_Outgoing_Int_Names)
 
 # ################################################################################################################################
 

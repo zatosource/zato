@@ -54,7 +54,7 @@ class ChannelConnections:
         self.mllp.init(config_manager)
 
         self.fhir = FHIRFacade()
-        self.fhir.init(config_manager)
+        self.fhir.init(cid, config_manager)
 
         # E-mail is a component a server may run without, and a destination that needs one
         # is told so rather than the whole fan-out failing to be built

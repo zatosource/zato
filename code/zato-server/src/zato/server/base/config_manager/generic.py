@@ -29,7 +29,8 @@ from zato.server.generic.api.outconn_es import outconn_es_bool_config_keys, outc
     outconn_es_int_config_keys
 from zato.server.generic.api.outconn_grpc import outconn_grpc_bool_config_keys, outconn_grpc_config_defaults, \
     outconn_grpc_int_config_keys
-from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_config_defaults, outconn_fhir_int_config_keys
+from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_bool_config_keys, outconn_fhir_config_defaults, \
+    outconn_fhir_int_config_keys
 from zato.server.generic.api.outconn_hl7_mllp import outconn_config_defaults, outconn_int_config_keys
 from zato.server.generic.api.outconn_llm import llm_config_defaults, llm_int_config_keys
 from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys, outconn_odata_config_defaults, \
@@ -516,6 +517,12 @@ class Generic(ConfigManagerImpl):
             value = config[key]
             if isinstance(value, str):
                 config[key] = int(value)
+
+        # .. and that boolean fields are booleans ..
+        for key in outconn_fhir_bool_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = as_bool(value)
 
         # .. without a security definition, there is nothing more to resolve.
         security_id = config['security_id']

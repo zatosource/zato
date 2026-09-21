@@ -7,9 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import HL7
-from zato.common.hl7.fields import ConnectionField, field_list, get_column_defaults, get_defaults, get_int_names, \
-    get_names, get_opaque_defaults
+from zato.common.api import HL7, HTTP_SOAP
+from zato.common.hl7.fields import ConnectionField, field_list, get_bool_names, get_column_defaults, get_defaults, \
+    get_int_names, get_names, get_opaque_defaults
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,6 +29,10 @@ if 0:
 FHIRField = ConnectionField
 fhir_field_list = field_list
 
+_retry = HTTP_SOAP.Retry
+_queue = HTTP_SOAP.Queue
+_dlq = HTTP_SOAP.DLQ
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -42,6 +46,21 @@ Outgoing_Fields:'fhir_field_list' = [
     FHIRField('security_id', 0),
 
     FHIRField('is_audit_log_active', True),
+
+    # How a send that did not go through is tried again - the same settings an outgoing REST connection has.
+    FHIRField(_retry.Field_Max_Retries, _retry.Default_Max_Retries),
+    FHIRField(_retry.Field_Sleep_Time, _retry.Default_Sleep_Time),
+    FHIRField(_retry.Field_Backoff_Threshold, _retry.Default_Backoff_Threshold),
+    FHIRField(_retry.Field_Backoff_Multiplier, _retry.Default_Backoff_Multiplier),
+
+    # Whether a send that did not go through waits in the connection's queue, and what its DLQ does.
+    FHIRField(_queue.Field_Use_Queue, _queue.Default_Use_Queue),
+    FHIRField(_dlq.Field_Use_DLQ, _dlq.Default_Use_DLQ),
+    FHIRField(_dlq.Field_Action, _dlq.Default_Action),
+    FHIRField(_dlq.Field_Retries, _dlq.Default_Retries),
+    FHIRField(_dlq.Field_Retry_Interval, _dlq.Default_Retry_Interval),
+    FHIRField(_dlq.Field_Forward_To, _dlq.Default_Forward_To),
+    FHIRField(_dlq.Field_Keep_Header, _dlq.Default_Keep_Header),
 ]
 
 # ################################################################################################################################
@@ -51,6 +70,7 @@ Outgoing_Column_Defaults = get_column_defaults(Outgoing_Fields)
 Outgoing_Opaque_Defaults = get_opaque_defaults(Outgoing_Fields)
 Outgoing_Defaults        = get_defaults(Outgoing_Fields)
 Outgoing_Int_Names       = get_int_names(Outgoing_Fields)
+Outgoing_Bool_Names      = get_bool_names(Outgoing_Fields)
 Outgoing_Names           = get_names(Outgoing_Fields)
 
 # ################################################################################################################################

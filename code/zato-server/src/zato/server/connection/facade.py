@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
+from copy import copy
 from datetime import datetime, timedelta, timezone
 
 # Arrow
@@ -876,9 +877,11 @@ class MLLPFacade:
 class FHIRFacade:
     """ Provides dict-like access to HL7 FHIR outgoing connections from services via self.fhir.
     """
+    cid: 'str'
     _outconn_hl7_fhir: 'anydict'
 
-    def init(self, config_manager:'ConfigManager') -> 'None':
+    def init(self, cid:'str', config_manager:'ConfigManager') -> 'None':
+        self.cid = cid
         self._outconn_hl7_fhir = config_manager.outconn_hl7_fhir
 
 # ################################################################################################################################
@@ -891,7 +894,12 @@ class FHIRFacade:
         # Take a pooled client, blocking to cover the window while the queue is still being built,
         # and put it right back - the client is safe for concurrent use so all callers share the one object.
         with wrapper.client(should_block=True, block_timeout=_fhir_block_timeout) as client:
-            out = cast_('_HL7FHIRConnection', client)
+            client = cast_('_HL7FHIRConnection', client)
+
+        # What the service is handed is a copy sharing everything with the pooled client but the correlation id,
+        # so that the calls the service makes are audited and queued under the service's own id
+        out = copy(client)
+        out.zato_cid = self.cid
 
         return out
 

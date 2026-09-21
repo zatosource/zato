@@ -22,6 +22,7 @@ from hl7_client.ports import find_free_port
 from live_sql.env import database_env
 from zato.common.api import HL7
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.hl7.fhir.fields import Outgoing_Opaque_Defaults
 from zato.common.json_internal import dumps
 from zato.common.typing_ import cast_
 from zato.server.generic.api.outconn_hl7_fhir import _HL7FHIRConnection
@@ -185,7 +186,11 @@ class _ServerStub:
 def new_fhir_client(address:'str', *, is_audit_log_active:'bool'=True) -> '_HL7FHIRConnection':
     """ The FHIR connection under test, pointing at the given address - real in every respect.
     """
-    config:'stranydict' = {
+    # The retry, queue and DLQ settings a connection created through the config manager carries ..
+    config:'stranydict' = dict(Outgoing_Opaque_Defaults)
+
+    # .. and what this connection is given of its own.
+    config.update({
         'id': Connection_ID,
         'name': Connection_Name,
         'address': address,
@@ -193,7 +198,7 @@ def new_fhir_client(address:'str', *, is_audit_log_active:'bool'=True) -> '_HL7F
         'security_id': 0,
         'auth_type': HL7.Const.FHIR_Auth_Type.No_Auth.id,
         'server': _ServerStub(),
-    }
+    })
 
     out = _HL7FHIRConnection(config)
 

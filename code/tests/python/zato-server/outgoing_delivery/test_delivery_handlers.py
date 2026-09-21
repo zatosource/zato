@@ -9,13 +9,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import unittest
 from contextlib import contextmanager
-from json import dumps
+from json import dumps, loads
 from unittest.mock import MagicMock
 
 # Zato
 from zato.common.ext.bunch import Bunch
 from zato.common.pubsub.outgoing import build_envelope, deliver_envelope, Key_Data, Key_Headers, Key_Method, Key_Params, \
-    OutgoingType, SendRejected
+    Key_Path, OutgoingType, SendRejected
 from zato.server.config import ConfigDict
 from zato.server.connection.outgoing_delivery import register_delivery_handlers
 
@@ -72,12 +72,12 @@ class _FHIRClient:
         self.requests:'anylist' = []
         self.is_accepted = True
 
-    def _do_request(self, method:'str', path:'str', data:'stranydict') -> 'None':
-        self.requests.append((method, path, data))
+    def zato_send_from_queue(self, cid:'str', request:'stranydict') -> 'None':
+        self.requests.append((request[Key_Method], request[Key_Path], loads(request[Key_Data])))
 
-        # This is what fhirpy does with a response that was not a success
+        # This is what the client raises on a response that was not a success
         if not self.is_accepted:
-            raise Exception('The FHIR server did not accept the document')
+            raise SendRejected('HTTP 422 The FHIR server did not accept the document')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,6 +89,9 @@ class _FHIRWrapper:
     def __init__(self) -> 'None':
         self.fhir_client = _FHIRClient()
         self.client_options:'anylist' = []
+
+        # No retry fields, so one attempt per round
+        self.config:'stranydict' = {}
 
     @contextmanager
     def client(self, should_block:'bool'=False, block_timeout:'int'=0) -> 'anygen':
@@ -104,6 +107,7 @@ def _new_envelope(conn_type:'str', data:'str') -> 'stranydict':
     """
     request = {
         Key_Method: 'POST',
+        Key_Path: _fhir_resource_type,
         Key_Data: data,
         Key_Headers: {},
         Key_Params: {},
@@ -235,7 +239,7 @@ class FHIRDeliveryTestCase(unittest.TestCase):
 
         method, path, data = requests[0]
 
-        # A resource is created by posting it to the path its own type names
+        # A resource is created by posting it to the path the envelope stores, which is what its own type names
         self.assertEqual(method, 'POST')
         self.assertEqual(path, _fhir_resource_type)
         self.assertEqual(data, _fhir_document)

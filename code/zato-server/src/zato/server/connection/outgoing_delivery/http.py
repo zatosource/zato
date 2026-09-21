@@ -6,15 +6,15 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# How a queued message is handed over to an outgoing REST or SOAP connection, and what the delivery page shows of it.
+# How a queued message is handed over to an outgoing REST, SOAP or FHIR connection, and what the delivery page shows of it.
 
 # stdlib
 from urllib.parse import urlencode
 
 # Zato
 from zato.common.api import HTTP_SOAP
-from zato.common.pubsub.outgoing import Body_Mode_XML, detect_body_mode, Key_Data, Key_Headers, Key_Method, Key_Operation, \
-    Key_Params, OutgoingInvoker, OutgoingPage
+from zato.common.pubsub.outgoing import Body_Mode_JSON, Body_Mode_XML, detect_body_mode, Key_Data, Key_Headers, Key_Method, \
+    Key_Operation, Key_Params, Key_Path, OutgoingInvoker, OutgoingPage
 from zato.common.util.http_retry import RetryPolicy
 
 # ################################################################################################################################
@@ -32,10 +32,17 @@ _dlq = HTTP_SOAP.DLQ
 # The request facts of the details window
 _fact_method       = 'Method'
 _fact_operation    = 'Operation'
+_fact_path         = 'Path'
 _fact_content_type = 'Content type'
 _fact_headers      = 'Headers'
 _fact_soap_headers = 'SOAP headers'
 _fact_query_string = 'Query string'
+
+# What a FHIR connection sends, which is always this
+_fhir_content_type = 'application/json'
+
+# How many seconds to wait for a pooled FHIR client
+_fhir_block_timeout = 30
 
 _content_type_header = 'Content-Type'
 
@@ -143,8 +150,28 @@ def deliver_to_soap(server:'ParallelServer', cid:'str', wrapper:'any_', request:
 
 # ################################################################################################################################
 
+def locate_fhir(server:'ParallelServer', conn_id:'int') -> 'anytuple':
+    """ An outgoing HL7 FHIR connection by its id, as its name and its wrapper.
+    """
+    for item in server.config_manager.outconn_hl7_fhir.values():
+        if item['id'] == conn_id:
+            out = (item['name'], item.conn)
+            return out
+
+    return ()
+
+# ################################################################################################################################
+
+def deliver_to_fhir(server:'ParallelServer', cid:'str', wrapper:'any_', request:'stranydict') -> 'None':
+    """ Makes one attempt to hand a request over to an outgoing HL7 FHIR connection through one of its pooled clients.
+    """
+    with wrapper.client(should_block=True, block_timeout=_fhir_block_timeout) as client:
+        client.zato_send_from_queue(cid, request)
+
+# ################################################################################################################################
+
 def get_http_retry_policy(wrapper:'any_') -> 'RetryPolicy':
-    """ The retry policy of an outgoing REST or SOAP connection.
+    """ The retry policy of an outgoing REST, SOAP or FHIR connection - all three carry the same fields in their config.
     """
     out = RetryPolicy.from_config(wrapper.config)
     return out
@@ -152,7 +179,7 @@ def get_http_retry_policy(wrapper:'any_') -> 'RetryPolicy':
 # ################################################################################################################################
 
 def get_http_dlq_settings(wrapper:'any_') -> 'stranydict':
-    """ The DLQ settings of an outgoing REST or SOAP connection, with defaults filled in.
+    """ The DLQ settings of an outgoing REST, SOAP or FHIR connection, with defaults filled in.
     """
     config = wrapper.config
     out = {}
@@ -267,6 +294,53 @@ soap_page.destination = get_soap_destination
 soap_page.details_facts = get_soap_details_facts
 soap_page.body_mode = get_soap_body_mode
 soap_page.invoker = soap_invoker
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_fhir_destination(wrapper:'any_', request:'stranydict') -> 'str':
+    """ The method and the address a queued FHIR request goes to - the connection's base address with the request's path
+    under it, and the message's own query string.
+    """
+    base_address = wrapper.config['address'].rstrip('/')
+    path = request[Key_Path].lstrip('/')
+    address = f'{base_address}/{path}'
+
+    if params := request[Key_Params]:
+        query_string = urlencode(params)
+        address = f'{address}?{query_string}'
+
+    out = f'{request[Key_Method]} {address}'
+    return out
+
+# ################################################################################################################################
+
+def get_fhir_details_facts(request:'stranydict') -> 'dictlist':
+    """ The request facts the details window lists of a queued FHIR request.
+    """
+    out = [
+        {'label': _fact_method, 'value': request[Key_Method]},
+        {'label': _fact_path, 'value': request[Key_Path]},
+        {'label': _fact_content_type, 'value': _fhir_content_type},
+        {'label': _fact_query_string, 'value': request[Key_Params]},
+    ]
+
+    return out
+
+# ################################################################################################################################
+
+def get_fhir_body_mode(request:'stranydict') -> 'str':
+    """ A queued FHIR request's body is the JSON of its resource.
+    """
+    return Body_Mode_JSON
+
+# ################################################################################################################################
+
+# What the delivery page shows of an outgoing FHIR connection's messages - its list page has no invoke dialog
+fhir_page = OutgoingPage()
+fhir_page.destination = get_fhir_destination
+fhir_page.details_facts = get_fhir_details_facts
+fhir_page.body_mode = get_fhir_body_mode
 
 # ################################################################################################################################
 # ################################################################################################################################

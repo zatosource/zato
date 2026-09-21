@@ -1663,7 +1663,7 @@ class RequestHandler:
         # as no response at all - the wire carries an empty response, never a half-built instance.
         # The payload has to be read first because it is that read that vivifies the model.
         payload = response.payload
-        if response._payload_vivified and isinstance(payload, Model) and not payload.__dict__:
+        if response._payload_vivified and isinstance(payload, Model) and not payload.zato_has_content():
             response.payload = ''
 
         # A message assigned by a service behind a SOAP channel is wrapped in an envelope

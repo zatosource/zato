@@ -686,7 +686,7 @@ class Service:
         self.out.graphql.init(self._config_manager)
 
         # FHIR facade
-        self.fhir.init(self._config_manager)
+        self.fhir.init(self.cid, self._config_manager)
 
         # MLLP facade
         self.mllp.init(self._config_manager)
@@ -733,7 +733,8 @@ class Service:
 
         # A model that was vivified by a read but never given any field is the same
         # as no response at all - the caller receives an empty response, never a half-built instance.
-        if service.response._payload_vivified and isinstance(response, Model) and not response.__dict__:
+        # Reading a field can vivify it too, so emptiness is about what the service assigned, not about __dict__.
+        if service.response._payload_vivified and isinstance(response, Model) and not response.zato_has_content():
             service.response.payload = ''
             return ''
 
