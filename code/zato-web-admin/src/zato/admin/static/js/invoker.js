@@ -566,7 +566,7 @@ $.fn.zato.invoker._toggle_response_detail = function(wrapper, index, item) {
 
     let header = $('<div class="invoker-history-response-detail-header"></div>');
     let title = $('<div class="invoker-history-response-detail-title">Response</div>');
-    let copyButton = $('<button class="invoker-history-response-detail-copy">Copy</button>');
+    let copyButton = $('<button type="button" class="zato-action-button invoker-history-response-detail-copy">Copy</button>');
 
     copyButton.on('click', function(event) {
         event.stopPropagation();

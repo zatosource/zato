@@ -77,6 +77,7 @@ $.fn.zato.outgoing_delivery.config = {
     labelRounds: 'Retries so far',
     labelLastError: 'Last error',
     labelSourceTopic: 'Source topic',
+    labelRule: 'DLQ rule',
     labelMethod: 'Method',
     labelContentType: 'Content type',
     labelSize: 'Size',
@@ -804,6 +805,7 @@ $.fn.zato.outgoing_delivery.showDetails = function(kind, msgId, details) {
         page.addFact(facts, config.labelRounds, dlqHeader.rounds);
         page.addFact(facts, config.labelLastError, dlqHeader.error, 'delivery-details-value-error');
         page.addFact(facts, config.labelSourceTopic, dlqHeader.source_topic);
+        page.addFact(facts, config.labelRule, details.rule);
     }
 
     var dataSize = new Blob([request.data]).size;
@@ -823,20 +825,6 @@ $.fn.zato.outgoing_delivery.showDetails = function(kind, msgId, details) {
     bodyLabel.textContent = config.labelBody;
     bodyHeader.appendChild(bodyLabel);
 
-    var links = document.createElement('span');
-    links.className = 'delivery-details-body-links';
-
-    var downloadBody = document.createElement('a');
-    downloadBody.href = page.messageUrl(config.downloadUrl, kind, msgId, config.downloadBody);
-    downloadBody.textContent = config.labelDownloadBody;
-    links.appendChild(downloadBody);
-
-    var downloadDocument = document.createElement('a');
-    downloadDocument.href = page.messageUrl(config.downloadUrl, kind, msgId, config.downloadDocument);
-    downloadDocument.textContent = config.labelDownloadDocument;
-    links.appendChild(downloadDocument);
-
-    bodyHeader.appendChild(links);
     body.appendChild(bodyHeader);
 
     var editor = document.createElement('div');
@@ -861,6 +849,16 @@ $.fn.zato.outgoing_delivery.showDetails = function(kind, msgId, details) {
             maxLines: config.editorMaxLines
         },
         buttons: [
+            $.fn.zato.highlight_pane.buttons.download({
+                id: 'delivery-details-download-body',
+                label: config.labelDownloadBody,
+                url: page.messageUrl(config.downloadUrl, kind, msgId, config.downloadBody)
+            }),
+            $.fn.zato.highlight_pane.buttons.download({
+                id: 'delivery-details-download-document',
+                label: config.labelDownloadDocument,
+                url: page.messageUrl(config.downloadUrl, kind, msgId, config.downloadDocument)
+            }),
             $.fn.zato.highlight_pane.buttons.copy(),
             $.fn.zato.highlight_pane.buttons.save({
                 poll_url: config.saveUrl,

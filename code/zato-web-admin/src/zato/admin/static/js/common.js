@@ -2333,7 +2333,7 @@ $.fn.zato.time_ago.config = {
     // How dim a changing value gets mid-fade - 1 is fully opaque, 0 is invisible.
     // A subtle dip is enough to signal the change without drawing the eye.
     'value_fade_opacity': 0.5,
-    'countdown_prefix': 'Refreshes in ',
+    'countdown_prefix': '',
     'countdown_suffix': 's',
     'paused_label': 'Refresh paused',
 

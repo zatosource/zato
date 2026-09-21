@@ -137,7 +137,6 @@ div.page_prompt a.common.delivery-action-disabled:hover {
     --delivery-details-value-color: #e8e8e8;
     --delivery-details-error-color: #ff8a80;
     --delivery-details-font: 'Menlo', 'Consolas', 'Monaco', monospace;
-    --delivery-details-link-color: #7ab3ef;
 }
 
 .delivery-details-facts {
@@ -178,21 +177,6 @@ div.page_prompt a.common.delivery-action-disabled:hover {
     font-family: var(--delivery-details-font);
     font-size: 12px;
     color: var(--delivery-details-label-color);
-}
-
-.delivery-details-body-header a,
-.delivery-details-body-header a:link,
-.delivery-details-body-header a:visited {
-    color: var(--delivery-details-link-color) !important;
-    text-decoration: none !important;
-    background-image: none;
-    padding-bottom: 0;
-}
-
-.delivery-details-body-links {
-    display: inline-flex;
-    gap: 14px;
-    margin-left: auto;
 }
 
 .delivery-details-editor {

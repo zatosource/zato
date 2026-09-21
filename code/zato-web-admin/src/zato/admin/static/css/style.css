@@ -1415,7 +1415,7 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
 }
 
 /* A gentle hint - the tiny muted text that sits next to whatever it explains,
-   like the "Refreshes in 5s" countdown next to a column name or the
+   like the "5s" countdown next to a column name or the
    "Click to edit" note after a summary link. */
 .zato-soft-hint {
     display: inline-block;

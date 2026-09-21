@@ -509,12 +509,14 @@ $.fn.zato.action_runner = {
                 '<div class="invoker-modal-body" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">' +
                     '<div class="invoker-modal-response-header" style="flex-shrink:0">' +
                         '<span class="invoker-modal-response-label">Response body</span>' +
-                        '<a class="invoker-modal-response-copy" href="javascript:void(0)">Copy</a>' +
                     '</div>' +
                     // Error text wraps rather than scrolling sideways, so there is no line gutter here -
                     // wrapped lines would not align with it anyway
                     '<div class="invoker-modal-response-wrap" style="flex:1;min-height:0;overflow:auto">' +
                         '<pre class="invoker-modal-response-pre" style="white-space:pre-wrap;word-break:break-word"></pre>' +
+                    '</div>' +
+                    '<div class="invoker-modal-buttons" style="flex-shrink:0">' +
+                        '<button type="button" class="zato-action-button invoker-modal-response-copy">Copy</button>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
@@ -530,10 +532,10 @@ $.fn.zato.action_runner = {
 
         $overlay.find('.invoker-modal-response-copy').on('click', function() {
             var text = $overlay.find('.invoker-modal-response-pre').text();
-            var copy_link = this;
+            var copy_button = this;
             navigator.clipboard.writeText(text).then(function() {
                 if(typeof tippy !== 'undefined') {
-                    var t = tippy(copy_link, {
+                    var t = tippy(copy_button, {
                         content: 'Copied to clipboard',
                         trigger: 'manual',
                         placement: 'top',

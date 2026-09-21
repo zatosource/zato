@@ -29,7 +29,7 @@ from zato.admin.web.views import method_allowed
 from zato.common.api import HTTP_SOAP
 from zato.common.content_type import format_content, get_content_type
 from zato.common.defaults import default_cluster_id
-from zato.common.pubsub.dlq import Key_DLQ
+from zato.common.pubsub.dlq import Header_Moved_Time, Header_Rounds, Key_DLQ
 from zato.common.pubsub.outgoing import Key_Data, Key_Headers, Key_Request
 from zato.common.util.time_ import utcnow
 
@@ -76,7 +76,7 @@ _body_extensions = {
 }
 _default_body_extension = 'txt'
 
-# The Rule column
+# The DLQ rule, as the details window states it
 _rule_keep        = 'Keep'
 _rule_retry       = 'Retry {}'
 _rule_forward     = 'Forward to {} {}'
@@ -124,7 +124,7 @@ def _format_duration(seconds:'int') -> 'str':
 
 # ################################################################################################################################
 
-def _rule_text(row:'stranydict', settings:'anydict', now:'any_') -> 'str':
+def _rule_text(moved_time_iso:'str', rounds:'int', settings:'anydict', now:'any_') -> 'str':
     """ What the DLQ rule will do with one message and when.
     """
     action = settings[_dlq.Field_Action]
@@ -134,7 +134,7 @@ def _rule_text(row:'stranydict', settings:'anydict', now:'any_') -> 'str':
         return out
 
     interval = settings[_dlq.Field_Retry_Interval]
-    moved = dt_parse(row['moved_time_iso'])
+    moved = dt_parse(moved_time_iso)
     due = moved + timedelta(seconds=interval)
     seconds_left = int((due - now).total_seconds())
 
@@ -145,7 +145,6 @@ def _rule_text(row:'stranydict', settings:'anydict', now:'any_') -> 'str':
 
     if action == _dlq.Action.Retry:
         max_rounds = settings[_dlq.Field_Retries]
-        rounds = row['rounds']
 
         if rounds >= max_rounds:
             out = _rule_rounds_used.format(rounds, max_rounds)
@@ -161,7 +160,7 @@ def _rule_text(row:'stranydict', settings:'anydict', now:'any_') -> 'str':
 
 # ################################################################################################################################
 
-def _enrich_row(row:'stranydict', kind:'str', settings:'anydict', user_profile:'any_', now:'any_') -> 'stranydict':
+def _enrich_row(row:'stranydict', kind:'str', user_profile:'any_') -> 'stranydict':
     """ Adds to one row what the page shows and the service does not know.
     """
     out = dict(row)
@@ -170,7 +169,6 @@ def _enrich_row(row:'stranydict', kind:'str', settings:'anydict', user_profile:'
 
     if kind == Kind_DLQ:
         out['moved_time'] = from_utc_to_user(row['moved_time_iso'], user_profile)
-        out['rule'] = _rule_text(row, settings, now)
 
     return out
 
@@ -224,13 +222,11 @@ def _load_tab(req:'any_', kind:'str', conn_type:'str', conn_id:'int', query:'str
         raise Exception(response.details)
 
     data = response.data
-    settings = data['dlq_settings']
-    now = utcnow()
 
     items:'anylist' = []
 
     for row in data['items']:
-        items.append(_enrich_row(row, kind, settings, req.zato.user_profile, now))
+        items.append(_enrich_row(row, kind, req.zato.user_profile))
 
     out = {
         'kind': kind,
@@ -301,8 +297,8 @@ def index(req:'any_', conn_type:'str', conn_id:'int') -> 'TemplateResponse':
 
 # ################################################################################################################################
 
-def _get_document(req:'any_') -> 'stranydict':
-    """ One message in full, as the GET parameters name it.
+def _get_message(req:'any_') -> 'stranydict':
+    """ One message in full along with its connection's DLQ settings, as the GET parameters name it.
     """
     response = req.zato.client.invoke(Service_Get, {
         'conn_type': req.GET['conn_type'],
@@ -314,7 +310,7 @@ def _get_document(req:'any_') -> 'stranydict':
     if not response.ok:
         raise Exception(response.details)
 
-    out = response.data['document']
+    out = response.data
     return out
 
 # ################################################################################################################################
@@ -323,17 +319,27 @@ def _get_document(req:'any_') -> 'stranydict':
 def message(req:'any_') -> 'JsonResponse':
     """ One message for the details window.
     """
-    document = _get_document(req)
+    message_data = _get_message(req)
+    document = message_data['document']
     request = document[Key_Request]
 
     data = request[Key_Data]
     content_type = get_content_type(data)
 
+    has_dlq_header = Key_DLQ in document
+    rule = ''
+
+    # What the DLQ rule will do with this message is told here rather than in the listing
+    if has_dlq_header:
+        dlq_header = document[Key_DLQ]
+        rule = _rule_text(dlq_header[Header_Moved_Time], dlq_header[Header_Rounds], message_data['dlq_settings'], utcnow())
+
     out = JsonResponse({
         'document': document,
         'data': format_content(data, content_type),
         'content_type': content_type,
-        'has_dlq_header': Key_DLQ in document,
+        'has_dlq_header': has_dlq_header,
+        'rule': rule,
     })
 
     return out
@@ -344,7 +350,7 @@ def message(req:'any_') -> 'JsonResponse':
 def download(req:'any_') -> 'HttpResponse':
     """ One message as a file, its data alone or the whole document.
     """
-    document = _get_document(req)
+    document = _get_message(req)['document']
     msg_id = req.GET['msg_id']
     what = req.GET['what']
 

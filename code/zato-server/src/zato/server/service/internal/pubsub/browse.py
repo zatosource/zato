@@ -421,7 +421,7 @@ class GetMessage(_BrowseService):
     def handle(self) -> 'None':
         input = self.request.input
 
-        conn_name, _ = self._get_conn(input.conn_type, input.conn_id)
+        conn_name, wrapper = self._get_conn(input.conn_type, input.conn_id)
         documents = self._get_documents(input.kind, input.conn_type, input.conn_id, conn_name)
 
         for document in documents:
@@ -431,7 +431,10 @@ class GetMessage(_BrowseService):
         else:
             raise Exception(f'No such message `{input.msg_id}`')
 
-        self.response.payload = {'document': out}
+        # The settings go along with the message because the details window states what the rule will do with it
+        dlq_settings = get_dlq_settings(input.conn_type, wrapper)
+
+        self.response.payload = {'document': out, 'dlq_settings': dlq_settings}
 
 # ################################################################################################################################
 # ################################################################################################################################

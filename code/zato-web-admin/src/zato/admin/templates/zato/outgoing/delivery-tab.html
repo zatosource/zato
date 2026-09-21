@@ -69,7 +69,6 @@
             <th>Address</th>
             <th class="delivery-cell-center">Size</th>
             {% if tab.is_dlq %}
-            <th>Rule</th>
             <th>&nbsp;</th>
             <th>&nbsp;</th>
             {% endif %}
@@ -98,7 +97,6 @@
             <td class="delivery-cell-address"><a href="javascript:void(0)" class="delivery-address-link" data-kind="{{ tab.kind }}" data-msg-id="{{ item.msg_id }}">{{ item.method }} {{ item.address }}</a></td>
             <td class="delivery-cell-nowrap delivery-cell-center"><a href="javascript:void(0)" class="delivery-size-link" data-bytes="{{ item.size|intcomma }} byte{{ item.size|pluralize }}">{{ item.size|filesizeformat }}</a></td>
             {% if tab.is_dlq %}
-            <td class="delivery-cell-nowrap">{{ item.rule }}</td>
             <td class="delivery-cell-nowrap"><a href="javascript:void(0)" class="delivery-row-action" data-kind="{{ tab.kind }}" data-action="retry" data-msg-id="{{ item.msg_id }}">Retry</a></td>
             <td class="delivery-cell-nowrap"><a href="javascript:void(0)" class="delivery-row-action" data-kind="{{ tab.kind }}" data-action="forward" data-msg-id="{{ item.msg_id }}">Forward</a></td>
             {% endif %}
@@ -107,7 +105,7 @@
     {% endfor %}
     {% else %}
         <tr class='ignore'>
-            <td colspan='14'>No results</td>
+            <td colspan='12'>No results</td>
         </tr>
     {% endif %}
     </tbody>
