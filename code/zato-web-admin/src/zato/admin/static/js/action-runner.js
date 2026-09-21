@@ -164,7 +164,8 @@ var _run_defaults = {
     spinner_label: 'Pinging ..',
     show_delay_ms: 0,
     min_wait_ms: 0,
-    placement: 'top'
+    placement: 'top',
+    success_hide_ms: 800
 };
 
 // What the details modal shows when the response body came back empty
@@ -279,11 +280,19 @@ function _default_parse(jqXHR, textStatus) {
     };
 }
 
-function _render_success(instance, label) {
+function _render_success(instance, label, hide_ms) {
     var html = '<div style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:13px;color:#fff;margin:-5px -9px;padding:5px 9px">' +
         _escape_html(label) + '</div>';
     instance.setContent(html);
-    _hide_timer = setTimeout(function() { instance.hide(); }, 800);
+
+    var hide = function() {
+        $(document).off('mousedown.action_runner_success');
+        instance.hide();
+    };
+
+    // A click anywhere takes the tooltip down before its time is up
+    $(document).off('mousedown.action_runner_success').on('mousedown.action_runner_success', hide);
+    _hide_timer = setTimeout(hide, hide_ms);
 }
 
 function _render_error(instance, label, details_id) {
@@ -310,6 +319,7 @@ $.fn.zato.action_runner = {
         var show_delay_ms = _opt(opts, 'show_delay_ms');
         var min_wait_ms = _opt(opts, 'min_wait_ms');
         var placement = _opt(opts, 'placement');
+        var success_hide_ms = _opt(opts, 'success_hide_ms');
 
         var started_at = Date.now();
 
@@ -428,7 +438,7 @@ $.fn.zato.action_runner = {
                         on_success(instance, r);
                     } else {
                         instance.show();
-                        _render_success(instance, r.label);
+                        _render_success(instance, r.label, success_hide_ms);
                     }
                 } else {
                     if(on_error) {
@@ -554,6 +564,7 @@ $.fn.zato.action_runner = {
     },
 
     close_all: function() {
+        $(document).off('mousedown.action_runner_success');
         if(_hide_timer) {
             clearTimeout(_hide_timer);
             _hide_timer = null;

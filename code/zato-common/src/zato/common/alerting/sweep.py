@@ -22,6 +22,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from urllib.parse import quote
 
+# gevent
+from gevent import sleep
+
 # Zato
 from zato.common.alerting.ack_codes import apply_ack_codes
 from zato.common.alerting.collectors import collect_facts
@@ -119,6 +122,10 @@ Use_LLM_Field = 'use_llm'
 # The fact's keys that name the object rather than measure it - a rule reads them,
 # but there is no evidence to collect for them.
 _identity_keys = ('source', 'object_name')
+
+# After this many facts a rule yields to the other greenlets - the sweep is pure CPU work
+# over every (rule, fact) pair and without a yield it would hold the server for its whole duration.
+Yield_Every_Facts = 200
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -461,7 +468,11 @@ def run_sweep(
             if alert_type in object_settings:
                 settings_by_object = object_settings[alert_type]
 
-        for fact in facts:
+        for fact_index, fact in enumerate(facts, 1):
+
+            # Let other greenlets run - a request that came in mid-sweep must not wait for the end of it
+            if fact_index % Yield_Every_Facts == 0:
+                sleep(0)
 
             settings:'stranydict' = {}
             rule_values:'stranydict' = {}

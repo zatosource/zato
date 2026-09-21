@@ -55,7 +55,7 @@ $.fn.zato.outgoing_delivery.config = {
     resultPlural: 'messages',
     resultForwardTo: 'to',
     statusOK: 200,
-    rowRemoveDelayMs: 900,
+    successHideMs: 2500,
 
     detailsTitle: 'Message',
     detailsWidth: '860px',
@@ -452,9 +452,10 @@ $.fn.zato.outgoing_delivery.runPendingAction = function() {
             return out;
         },
         details_modal_title: config.actions[action].title,
+        success_hide_ms: config.successHideMs,
         on_complete: function(instance, result) {
             if(result.is_success) {
-                page.onActionDone(target);
+                page.onActionDone(target, instance);
             }
         }
     });
@@ -504,7 +505,7 @@ $.fn.zato.outgoing_delivery.parseActionResponse = function(action, jqXHR) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // Removes the rows the action took
-$.fn.zato.outgoing_delivery.onActionDone = function(target) {
+$.fn.zato.outgoing_delivery.onActionDone = function(target, instance) {
 
     var page = $.fn.zato.outgoing_delivery;
     var config = page.config;
@@ -527,7 +528,7 @@ $.fn.zato.outgoing_delivery.onActionDone = function(target) {
 
     // A row's own link is the tippy's anchor, so the row stays until the tippy is gone
     if(target.msgId) {
-        setTimeout(removeRows, config.rowRemoveDelayMs);
+        instance.setProps({onHidden: removeRows});
     }
     else {
         removeRows();

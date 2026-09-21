@@ -65,9 +65,11 @@ div.page_prompt a.common.delivery-action-disabled:hover {
     font-weight: 500;
 }
 
-.delivery-cell-select {
+.delivery-table th.delivery-cell-select,
+.delivery-table td.delivery-cell-select {
     width: 1%;
     text-align: center;
+    vertical-align: middle;
 }
 
 .delivery-table .zato-plain-checkbox {
