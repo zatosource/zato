@@ -14,7 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # Zato
-from zato.common.alerting.explain.settings_info import settings_lines, Off, On
+from zato.common.alerting.explain.settings_info import queue_lines, settings_lines, Off, On
 from zato.common.alerting.object_config import alert_type_mllp_outgoing
 from zato.common.api import GENERIC, HL7, HTTP_SOAP
 from zato.common.odb.model import GenericConn
@@ -37,7 +37,6 @@ if 0:
 _type_label = 'MLLP outgoing connection'
 
 _retry = HTTP_SOAP.Retry
-_queue = HTTP_SOAP.Queue
 
 # The stored fields whose absence means the connection was saved before the field existed, and what they read as then
 _defaults = {
@@ -46,7 +45,6 @@ _defaults = {
     _retry.Field_Max_Retries: _retry.Default_Max_Retries,
     _retry.Field_Sleep_Time: _retry.Default_Sleep_Time,
     _retry.Field_Backoff_Threshold: _retry.Default_Backoff_Threshold,
-    _queue.Field_Use_Queue: _queue.Default_Use_Queue,
     'circuit_breaker_threshold_percent': HL7.Default.circuit_breaker_threshold_percent,
     'circuit_breaker_window_seconds': HL7.Default.circuit_breaker_window_seconds,
     'circuit_breaker_reset_seconds': HL7.Default.circuit_breaker_reset_seconds,
@@ -109,9 +107,8 @@ def describe_mllp_outgoing(session:'SASession', cluster_id:'int', name:'str') ->
         backoff_threshold = _stored_value(opaque, _retry.Field_Backoff_Threshold)
         out.append(('Retries', f'{max_retries}, waiting from {sleep_time}s, up to {backoff_threshold}s in total'))
 
-    # A send the receiving system did not take waits in the connection's queue and is delivered from there
-    is_queue_on = _stored_value(opaque, _queue.Field_Use_Queue) is True
-    out.append(('Queue', On if is_queue_on else Off))
+    # A send the receiving system did not take waits in the connection's queue, and one the queue gave up on goes to its DLQ
+    out.extend(queue_lines(opaque))
 
     breaker_threshold = _stored_value(opaque, 'circuit_breaker_threshold_percent')
     breaker_window = _stored_value(opaque, 'circuit_breaker_window_seconds')

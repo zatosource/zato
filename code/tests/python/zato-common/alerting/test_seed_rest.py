@@ -63,6 +63,8 @@ _rest_rule_defaults = {
     'Error_Rate':          {'error_rate_threshold': 0.1, 'min_events': 10, 'window_seconds': 300},
     'Status_Codes':        {'status_codes': '401, 403, 5xx', 'status_code_threshold': 3, 'window_seconds': 300},
     'Connection_Failures': {'connection_failure_threshold': 3, 'window_seconds': 300},
+    'DLQ_Messages':        {'dlq_threshold': 1},
+    'Queue_Backlog':       {'queue_depth_threshold': 1000},
 }
 
 # The rules the soap ruleset ships - the rest ones over the SOAP sources and the faults on top
@@ -196,7 +198,7 @@ def _seed_old_rest_ruleset(backend:'RuleSQLBackend') -> 'RuleDefinitionRecord':
 
 class TestRestRules:
 
-    def test_the_rest_ruleset_ships_five_rules_with_their_defaults(self, backend:'RuleSQLBackend') -> 'None':
+    def test_the_rest_ruleset_ships_seven_rules_with_their_defaults(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
 
         ruleset = _get_ruleset(backend, _rest_ruleset_name)
@@ -235,7 +237,7 @@ class TestRestRules:
 
 # ################################################################################################################################
 
-    def test_the_soap_ruleset_ships_six_rules_with_their_defaults(self, backend:'RuleSQLBackend') -> 'None':
+    def test_the_soap_ruleset_ships_eight_rules_with_their_defaults(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
 
         ruleset = _get_ruleset(backend, _soap_ruleset_name)
@@ -271,7 +273,7 @@ class TestRestRules:
 
 # ################################################################################################################################
 
-    def test_the_fhir_ruleset_ships_six_rules_with_their_defaults(self, backend:'RuleSQLBackend') -> 'None':
+    def test_the_fhir_ruleset_ships_eight_rules_with_their_defaults(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
 
         ruleset = _get_ruleset(backend, _fhir_ruleset_name)

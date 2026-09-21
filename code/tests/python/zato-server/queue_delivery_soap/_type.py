@@ -15,6 +15,7 @@ import os
 from lxml import etree
 
 # Zato
+from zato.common.audit_log.api import AuditSource
 from zato.common.pubsub.outgoing import Key_Data, Key_Headers, Key_Operation, OutgoingType
 from zato.common.soap.common import FaultCode
 from zato.common.soap.message import serialize as serialize_soap_message, SOAPMessage
@@ -126,6 +127,7 @@ class SOAPType(TypeUnderTest):
     """
 
     conn_type = OutgoingType.SOAP
+    audit_source = AuditSource.SOAP_Outgoing
     suite_name = 'soap'
 
     connections = Connections

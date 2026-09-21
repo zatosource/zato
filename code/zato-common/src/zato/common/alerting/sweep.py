@@ -56,7 +56,7 @@ if 0:
     from zato.common.audit_log.api import AuditLog
     from zato.common.rule_engine.models import Rule
     from zato.common.rule_engine.sql import RuleSQLBackend
-    from zato.common.typing_ import anydict, anylist, stranydict, strintdict, strlist
+    from zato.common.typing_ import anydict, anylist, dictlist, stranydict, strintdict, strlist
 
     AlertDefaults = AlertDefaults
     AlertRule = AlertRule
@@ -418,6 +418,7 @@ def run_sweep(
     arrival_windows:'strintdict | None' = None,
     schedule_expectations:'anydict | None' = None,
     tool_counts:'strintdict | None' = None,
+    queue_rows:'dictlist | None' = None,
     object_settings:'anydict | None' = None,
     ) -> 'SweepResult':
     """ Runs one full sweep - the fact producers measure everything once, each fact runs
@@ -446,7 +447,8 @@ def run_sweep(
 
     facts = collect_facts(engine, metrics_by_name, metrics_source, now, window_seconds_by_source=window_seconds_by_source,
         window_seconds_by_object=window_seconds_by_object, job_intervals=job_intervals, arrival_windows=arrival_windows,
-        schedule_expectations=schedule_expectations, silence_expected_names=silence_expected_names, tool_counts=tool_counts)
+        schedule_expectations=schedule_expectations, silence_expected_names=silence_expected_names, tool_counts=tool_counts,
+        queue_rows=queue_rows)
     out.fact_count = len(facts)
 
     for rule in rules:

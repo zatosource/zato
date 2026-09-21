@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 #       type_under_test = rest_type
 
 # Test support
+from queue_delivery.scenarios.alerting import AlertingScenarios
 from queue_delivery.scenarios.amqp_transport import AMQPTransportScenarios
 from queue_delivery.scenarios.browse import BrowseScenarios
 from queue_delivery.scenarios.dlq import DLQScenarios
@@ -35,6 +36,7 @@ class SharedScenarios(
     LifecycleScenarios,
     BrowseScenarios,
     AMQPTransportScenarios,
+    AlertingScenarios,
     ):
     """ Every shared scenario, in the order the blocks were built in.
     """

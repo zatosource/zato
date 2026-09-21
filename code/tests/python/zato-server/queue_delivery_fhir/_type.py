@@ -14,6 +14,7 @@ from http.client import UNPROCESSABLE_ENTITY
 from json import dumps, loads
 
 # Zato
+from zato.common.audit_log.api import AuditSource
 from zato.common.pubsub.outgoing import Key_Data, Key_Method, Key_Params, Key_Path, OutgoingType
 
 # Test support
@@ -81,6 +82,7 @@ class FHIRType(TypeUnderTest):
     """
 
     conn_type = OutgoingType.FHIR
+    audit_source = AuditSource.FHIR
     suite_name = 'fhir'
 
     connections = Connections

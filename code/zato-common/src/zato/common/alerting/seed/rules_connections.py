@@ -8,7 +8,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The per-connection-type default alert rules - one text block per type. The
 # cross-type, channel and scheduler rules live in rules_common.py, together
-# with the note on how the default thresholds were chosen.
+# with the note on how the default thresholds were chosen. The queue delivery rules
+# of the outgoing connections are built from rules_queue.py.
+
+# Zato
+from zato.common.alerting.seed.rules_queue import build_queue_rules
 
 rest_rules = """
 rule
@@ -90,7 +94,7 @@ then
     outcome.action = 'email'
     outcome.severity = 'error'
 
-""".strip()
+""".strip() + '\n\n' + build_queue_rules('rest-outgoing', 'A REST outgoing connection')
 
 # ################################################################################################################################
 
@@ -193,7 +197,7 @@ then
     outcome.action = 'email'
     outcome.severity = 'error'
 
-""".strip()
+""".strip() + '\n\n' + build_queue_rules('soap-outgoing', 'A SOAP outgoing connection')
 
 # ################################################################################################################################
 

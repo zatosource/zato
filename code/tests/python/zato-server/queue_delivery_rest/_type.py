@@ -14,6 +14,7 @@ from http.client import SERVICE_UNAVAILABLE
 from json import loads
 
 # Zato
+from zato.common.audit_log.api import AuditSource
 from zato.common.pubsub.outgoing import Key_Data, Key_Method, Key_Params, OutgoingType
 
 # Test support
@@ -66,6 +67,7 @@ class RESTType(TypeUnderTest):
     """
 
     conn_type = OutgoingType.REST
+    audit_source = AuditSource.REST_Outgoing
     suite_name = 'rest'
 
     connections = Connections

@@ -171,6 +171,8 @@ def _outgoing_rest_params(prefix:'str'='') -> 'anydict':
         prefix + 'alert_connection_failures': '2',
         prefix + 'alert_connection_failures_window': '1',
         prefix + 'alert_connection_failures_window_unit': 'hour',
+        prefix + 'alert_dlq_messages': '3',
+        prefix + 'alert_queue_depth': '250',
     }
     return out
 
@@ -200,6 +202,8 @@ _expected_outgoing_rest_settings = {
     'alert_connection_failures_window': 3600,
     'alert_max_latency': 2500,
     'alert_latency_window': 300,
+    'alert_dlq_messages': 3,
+    'alert_queue_depth': 250,
     'alert_use_llm': True,
     'alert_email_connection': 'smtp:ops.smtp',
     'alert_llm_connection': 'ops.llm',

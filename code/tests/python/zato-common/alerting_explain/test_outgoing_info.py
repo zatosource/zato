@@ -244,3 +244,37 @@ class TestHealthCheckLine:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class TestQueueLines:
+
+    def test_a_connection_saved_before_the_switches_existed_carries_their_defaults(self) -> 'None':
+        session_maker = _new_session()
+        _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {})
+
+        lines = _describe(session_maker, AuditSource.REST_Outgoing)
+
+        # The queue is off and the DLQ on by default
+        assert _value(lines, 'Use queue') == 'off'
+        assert _value(lines, 'Use DLQ') == 'on'
+
+        # The two sit after the retries, before the audit log
+        labels = _labels(lines)
+        assert labels.index('Use queue') + 1 == labels.index('Use DLQ')
+        assert labels.index('Use DLQ') < labels.index('Audit log')
+
+# ################################################################################################################################
+
+    def test_the_switches_read_as_stored_for_rest_and_soap_alike(self) -> 'None':
+        session_maker = _new_session()
+        _seed_connection(session_maker, URL_TYPE.SOAP, {
+            HTTP_SOAP.Queue.Field_Use_Queue: True,
+            HTTP_SOAP.DLQ.Field_Use_DLQ: False,
+        })
+
+        lines = _describe(session_maker, AuditSource.SOAP_Outgoing)
+
+        assert _value(lines, 'Use queue') == 'on'
+        assert _value(lines, 'Use DLQ') == 'off'
+
+# ################################################################################################################################
+# ################################################################################################################################

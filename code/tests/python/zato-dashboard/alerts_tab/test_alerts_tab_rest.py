@@ -24,6 +24,7 @@ from zato.admin.web.alerts_tab_lines import Fault_Codes_Default, Fault_Codes_Fie
     Health_Check_Run_Every_Field, Health_Check_Run_Unit_Field, Health_Check_Summary_Empty, Line_Kind_Popover, \
     Outcome_Codes_Default, Outcome_Codes_Field, Outcomes_Window_Unit_Field, Section_Core, Section_Failures, Section_Health, \
     Section_Traffic, Status_Codes_Field, Status_Codes_Default, Status_Codes_Window_Unit_Field, Unit_Field_Suffix
+from zato.admin.web.alerts_tab_lines_queue import Section_Queue
 from zato.admin.web.forms.http_soap import CreateForm as ChannelCreateForm, EditForm as ChannelEditForm
 from zato.admin.web.forms.outgoing.hl7.fhir import CreateForm as FHIRCreateForm, EditForm as FHIREditForm
 from zato.admin.web.forms.outgoing.soap import CreateForm as SOAPCreateForm, EditForm as SOAPEditForm
@@ -93,7 +94,7 @@ def _lines_by_name(config:'anydict') -> 'anydict':
 class TestOutgoingRestTab:
 
     @pytest.mark.parametrize('page_forms', _page_forms)
-    def test_the_sections_run_core_health_check_failures_traffic(self, req:'any_', page_forms:'any_') -> 'None':
+    def test_the_sections_run_core_health_check_failures_traffic_queue(self, req:'any_', page_forms:'any_') -> 'None':
 
         create_form_class, _ = page_forms
         form = create_form_class(req=req, alert_type=alert_type_rest)
@@ -104,7 +105,7 @@ class TestOutgoingRestTab:
         for section in context['sections']:
             section_labels.append(section['label'])
 
-        assert section_labels == [Section_Core, Section_Health, Section_Failures, Section_Traffic]
+        assert section_labels == [Section_Core, Section_Health, Section_Failures, Section_Traffic, Section_Queue]
 
 # ################################################################################################################################
 
@@ -118,7 +119,7 @@ class TestOutgoingRestTab:
             line_names.append(line['name'])
 
         assert line_names == ['active', 'use_llm', 'llm', 'email', 'health_check', 'failures_in_a_row', 'error_rate',
-            'status_codes', 'connection_failures', 'slow_responses']
+            'status_codes', 'connection_failures', 'slow_responses', 'dlq_messages', 'queue_backlog']
 
 # ################################################################################################################################
 
@@ -235,7 +236,7 @@ class TestOutgoingSoapTab:
             line_names.append(line['name'])
 
         assert line_names == ['active', 'use_llm', 'llm', 'email', 'health_check', 'failures_in_a_row', 'error_rate',
-            'status_codes', 'soap_faults', 'connection_failures', 'slow_responses']
+            'status_codes', 'soap_faults', 'connection_failures', 'slow_responses', 'dlq_messages', 'queue_backlog']
 
         # The REST tab has no such line
         rest_config = alerts_tab.get_alerts_tab_config(alert_type_rest)
@@ -335,7 +336,7 @@ class TestOutgoingFhirTab:
             line_names.append(line['name'])
 
         assert line_names == ['active', 'use_llm', 'llm', 'email', 'health_check', 'failures_in_a_row', 'error_rate',
-            'status_codes', 'operation_outcomes', 'connection_failures', 'slow_responses']
+            'status_codes', 'operation_outcomes', 'connection_failures', 'slow_responses', 'dlq_messages', 'queue_backlog']
 
         # Neither the REST tab nor the SOAP one has such a line, and the FHIR one has no faults
         assert 'operation_outcomes' not in _lines_by_name(alerts_tab.get_alerts_tab_config(alert_type_rest))

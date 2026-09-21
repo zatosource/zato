@@ -239,6 +239,8 @@ def alerting_vocabulary() -> 'anydict':
         _term('volume_bytes',           TermType.Number,
             'how many bytes of tool responses an MCP gateway returned within the window'),
         _term('tool_count',             TermType.Number, 'how many tools an MCP gateway exposes'),
+        _term('queue_depth',            TermType.Number, 'how many messages wait in the queue of an outgoing connection'),
+        _term('dlq_depth',              TermType.Number, 'how many messages the DLQ of an outgoing connection holds'),
         _term('cert_days_left',         TermType.Number, 'how many days the TLS certificate has left, zero when unmeasured'),
         _term('health_state',           TermType.Choice, 'the health state the remote service reports about itself',
             values=_health_states),

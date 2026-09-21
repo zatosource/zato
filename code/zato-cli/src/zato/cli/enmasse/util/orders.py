@@ -241,7 +241,7 @@ _object_order['channel_openapi'] = 'name', 'is_active', 'url_path', 'rest_channe
 
 _object_order['alert_rules'] = 'type', 'is_active', 'consecutive_failures', 'error_rate', \
     'max_latency', 'max_query_time', 'warning_latency', 'error_latency', 'invalid_calls', 'rejections', \
-    'throttled_calls', 'repeat_calls', 'truncations', 'volume_budget', 'max_tools', \
+    'throttled_calls', 'repeat_calls', 'truncations', 'volume_budget', 'max_tools', 'dlq_messages', 'queue_depth', \
     'max_call_time', 'health_alerts', 'auth_failures', 'warning_failures', 'error_failures', 'window', \
     'test_transfers', 'arrival_overdue', 'overdue_multiplier', 'start_delay', 'certificate_warning', \
     'outstanding_backlog', 'feed_silence', 'use_llm',

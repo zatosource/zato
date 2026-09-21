@@ -514,6 +514,8 @@ class TestRoundTripOverSeededRules:
             'connection_failures_window': 900,
             'max_latency': 9000,
             'latency_window': 1800,
+            'dlq_messages': 2,
+            'queue_depth': 500,
             'use_llm': False,
         }
 

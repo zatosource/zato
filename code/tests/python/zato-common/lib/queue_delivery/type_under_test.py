@@ -124,6 +124,9 @@ class TypeUnderTest:
     audit_sent_event = AuditEvent.Request_Sent
     audit_received_event = AuditEvent.Response_Received
 
+    # The audit source the type's connections write under - what the alerts about them are filed under too
+    audit_source = ''
+
 # ################################################################################################################################
 
     def body_of(self, request:'RecordedRequest') -> 'any_':

@@ -54,9 +54,12 @@ _percent_unit = '%'
 # The five cell slots of each type's row - the columns line up across the rows,
 # so a type without a value in some column carries a placeholder there.
 _type_cells = {
-    'rest':          ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'max_latency', 'use_llm'],
-    'soap':          ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'fault_codes', 'max_latency', 'use_llm'],
-    'fhir':          ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'outcome_codes', 'max_latency', 'use_llm'],
+    'rest':          ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'max_latency', 'dlq_messages', 'queue_depth',
+        'use_llm'],
+    'soap':          ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'fault_codes', 'max_latency', 'dlq_messages',
+        'queue_depth', 'use_llm'],
+    'fhir':          ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'outcome_codes', 'max_latency', 'dlq_messages',
+        'queue_depth', 'use_llm'],
     'sql':           ['consecutive_failures', 'error_rate', 'window', 'max_query_time', 'use_llm'],
     'llm':           ['consecutive_failures', 'error_rate', 'window', 'status_codes', 'truncations', 'refusals', 'token_budget',
         'warning_latency', 'error_latency', 'use_llm'],
@@ -71,7 +74,8 @@ _type_cells = {
     'scheduler':     ['error_rate', 'window', 'overdue_multiplier', 'start_delay', 'use_llm'],
     'channels':      ['consecutive_failures', 'error_rate', 'window', 'max_latency', 'use_llm'],
     'mllp_channel':  ['consecutive_failures', 'error_rate', 'window', 'ack_codes', 'max_latency', 'use_llm'],
-    'mllp_outgoing': ['consecutive_failures', 'error_rate', 'window', 'ack_codes', 'connection_failures', 'max_latency', 'use_llm'],
+    'mllp_outgoing': ['consecutive_failures', 'error_rate', 'window', 'ack_codes', 'connection_failures', 'max_latency',
+        'dlq_messages', 'queue_depth', 'use_llm'],
     'common':        ['certificate_warning', 'outstanding_backlog', 'feed_silence', None, None],
 }
 

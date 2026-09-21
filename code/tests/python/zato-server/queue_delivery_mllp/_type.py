@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
-from zato.common.audit_log.api import AuditEvent
+from zato.common.audit_log.api import AuditEvent, AuditSource
 from zato.common.pubsub.outgoing import Key_Data, OutgoingType
 
 # Test support
@@ -54,6 +54,7 @@ class MLLPType(TypeUnderTest):
     """
 
     conn_type = OutgoingType.MLLP
+    audit_source = AuditSource.MLLP_Outgoing
     suite_name = 'mllp'
 
     connections = Connections
