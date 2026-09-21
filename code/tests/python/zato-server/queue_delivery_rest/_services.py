@@ -6,13 +6,11 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from json import loads
+# The test services of the outgoing REST suite - what is REST's own of the contract every type's suite fulfils.
 
 # Zato
 from zato.common.api import HTTP_SOAP
-from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name
-from zato.common.pubsub.outgoing import get_outgoing_sub_key, get_outgoing_topic_name, OutgoingType, SendResult
+from zato.common.pubsub.outgoing import OutgoingType, SendResult
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -155,166 +153,6 @@ class Read(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetPubSubBackend(Service):
-    """ Answers with what database the server's own pub/sub backend runs on.
-    """
-
-    name = 'test.queue-delivery.get-pubsub-backend'
-
-    def handle(self) -> 'None':
-
-        url = self.server.pubsub_backend.engine.url
-
-        # Oracle DB is addressed by a service name in the query string, not by a database in the path
-        name = url.database
-
-        if not name:
-            name = url.query['service_name']
-
-        self.response.payload = {
-            'type': url.get_backend_name(),
-            'name': name,
-        }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class GetQueue(Service):
-    """ Answers with what the server knows about the queue of one outgoing REST connection.
-    """
-
-    name = 'test.queue-delivery.get-queue'
-
-    def handle(self) -> 'None':
-
-        conn_name = self.request.raw_request['conn_name']
-
-        item = self.server.config_manager.config_store.out_plain_http[conn_name]
-        conn_id = item['config']['id']
-
-        sub_key = get_outgoing_sub_key(OutgoingType.REST, conn_id)
-        topic_name = get_outgoing_topic_name(OutgoingType.REST, conn_name)
-
-        depth = self.server.config_manager.outgoing_queue_depth.get(sub_key)
-
-        messages, _ = self.server.pubsub_backend.browse_messages(topic_name, sub_key, 'pending', needs_data=True)
-
-        out_messages:'anylist' = []
-
-        for message in messages:
-            out_messages.append({
-                'msg_id': message['msg_id'],
-                'envelope': loads(message['data']),
-            })
-
-        self.response.payload = {
-            'sub_key': sub_key,
-            'topic_name': topic_name,
-            'depth': depth,
-            'messages': out_messages,
-        }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class GetDLQ(Service):
-    """ Answers with what the DLQ of one outgoing REST connection holds, oldest first.
-    """
-
-    name = 'test.queue-delivery.get-dlq'
-
-    def handle(self) -> 'None':
-
-        conn_name = self.request.raw_request['conn_name']
-
-        item = self.server.config_manager.config_store.out_plain_http[conn_name]
-        conn_id = item['config']['id']
-
-        sub_key = get_dlq_sub_key(OutgoingType.REST, conn_id)
-        topic_name = get_dlq_topic_name(OutgoingType.REST, conn_name)
-
-        messages, _ = self.server.pubsub_backend.browse_messages(topic_name, sub_key, 'pending', needs_data=True)
-
-        out_messages:'anylist' = []
-
-        for message in messages:
-            out_messages.append({
-                'msg_id': message['msg_id'],
-                'document': loads(message['data']),
-            })
-
-        self.response.payload = {
-            'sub_key': sub_key,
-            'topic_name': topic_name,
-            'messages': out_messages,
-        }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SubscribeTopic(Service):
-    """ Subscribes a test sub key to a topic.
-    """
-
-    name = 'test.queue-delivery.subscribe-topic'
-
-    def handle(self) -> 'None':
-
-        topic_name = self.request.raw_request['topic_name']
-        sub_key = self.request.raw_request['sub_key']
-
-        self.server.pubsub_backend.subscribe(sub_key, topic_name)
-
-        self.response.payload = {'sub_key': sub_key}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class GetTopicMessages(Service):
-    """ Answers with the messages waiting for a test sub key on a topic, oldest first.
-    """
-
-    name = 'test.queue-delivery.get-topic-messages'
-
-    def handle(self) -> 'None':
-
-        topic_name = self.request.raw_request['topic_name']
-        sub_key = self.request.raw_request['sub_key']
-
-        messages, _ = self.server.pubsub_backend.browse_messages(topic_name, sub_key, 'pending', needs_data=True)
-
-        out_messages:'anylist' = []
-
-        for message in messages:
-            out_messages.append({
-                'msg_id': message['msg_id'],
-                'document': loads(message['data']),
-            })
-            _ = self.server.pubsub_backend.ack_message(sub_key, message['msg_id'])
-
-        self.response.payload = {'messages': out_messages}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class InvokeService(Service):
-    """ Invokes any service by name with a request dict.
-    """
-
-    name = 'test.queue-delivery.invoke'
-
-    def handle(self) -> 'None':
-
-        service_name = self.request.raw_request['service_name']
-        request = self.request.raw_request['request']
-
-        response = self.invoke(service_name, request)
-
-        self.response.payload = {'response': response}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class GetConnection(Service):
     """ Answers with the configuration an outgoing REST connection has right now.
     """
@@ -328,7 +166,9 @@ class GetConnection(Service):
         item = self.server.config_manager.config_store.out_plain_http[conn_name]
         config = item['config']
 
-        out:'stranydict' = {}
+        out:'stranydict' = {
+            'conn_type': OutgoingType.REST,
+        }
 
         for field_name in _own_fields:
             out[field_name] = config[field_name]
@@ -338,6 +178,28 @@ class GetConnection(Service):
                 out[field_name] = config[field_name]
 
         self.response.payload = out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _build_create_edit_request(config:'stranydict', changes:'stranydict') -> 'stranydict':
+    """ A create or edit request out of a connection's configuration with some fields changed.
+    """
+    out = {
+        'connection': _connection,
+        'transport': _transport,
+    }
+
+    for field_name in _own_fields:
+        out[field_name] = config[field_name]
+
+    for field_name in _opaque_fields:
+        if field_name in config:
+            out[field_name] = config[field_name]
+
+    out.update(changes)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -356,23 +218,55 @@ class EditConnection(Service):
         item = self.server.config_manager.config_store.out_plain_http[conn_name]
         config = item['config']
 
-        request = {
-            'connection': _connection,
-            'transport': _transport,
-        }
-
-        for field_name in _own_fields:
-            request[field_name] = config[field_name]
-
-        for field_name in _opaque_fields:
-            if field_name in config:
-                request[field_name] = config[field_name]
-
-        request.update(changes)
+        request = _build_create_edit_request(config, changes)
 
         _ = self.invoke('zato.http-soap.edit', request)
 
         self.response.payload = {'id': config['id']}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CreateConnection(Service):
+    """ Creates an outgoing REST connection configured like an existing one, under a new name, as the Dashboard does.
+    """
+
+    name = 'test.queue-delivery.create-connection'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        like_conn_name = self.request.raw_request['like_conn_name']
+
+        item = self.server.config_manager.config_store.out_plain_http[like_conn_name]
+        config = item['config']
+
+        request = _build_create_edit_request(config, {'name': conn_name})
+        _ = request.pop('id')
+
+        response = self.invoke('zato.http-soap.create', request)
+
+        self.response.payload = {'id': response['id']}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DeleteConnection(Service):
+    """ Deletes an outgoing REST connection as the Dashboard does.
+    """
+
+    name = 'test.queue-delivery.delete-connection'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+
+        item = self.server.config_manager.config_store.out_plain_http[conn_name]
+        conn_id = item['config']['id']
+
+        _ = self.invoke('zato.http-soap.delete', {'id': conn_id})
+
+        self.response.payload = {'id': conn_id}
 
 # ################################################################################################################################
 # ################################################################################################################################

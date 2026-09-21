@@ -101,6 +101,7 @@
     {% endif %}
     {% if connection == 'outgoing' and transport == 'plain_http' %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/delivery-tab.js"></script>
+    {{ delivery_tab_config|json_script:"delivery-tab-config" }}
     {% endif %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/row.js"></script>
@@ -270,26 +271,7 @@
                 'health_check_job_id',
             {% endif %}
 
-            // 41 - the Delivery tab of REST outgoing connections - the retries, each count of seconds
-            // as a count and a unit, the queue switch and the DLQ config
-            {% if connection == 'outgoing' and transport == 'plain_http' %}
-                'max_retries',
-                'retry_sleep_time',
-                'retry_sleep_time_unit',
-                'retry_backoff_threshold',
-                'retry_backoff_threshold_unit',
-                'retry_backoff_multiplier',
-                'use_queue',
-                'use_dlq',
-                'dlq_action',
-                'dlq_retries',
-                'dlq_retry_interval',
-                'dlq_retry_interval_unit',
-                'dlq_forward_to',
-                'dlq_keep_header',
-            {% endif %}
-
-        ]{% if has_alerts_tab %}.concat($.fn.zato.alerts_tab.columns()){% endif %}
+        ]{% if connection == 'outgoing' and transport == 'plain_http' %}.concat($.fn.zato.delivery_tab.columns()){% endif %}{% if has_alerts_tab %}.concat($.fn.zato.alerts_tab.columns()){% endif %}
     }
     </script>
 
@@ -476,20 +458,7 @@
 
                         <!-- 41 - the Delivery tab of REST outgoing connections -->
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} max_retries {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} retry_sleep_time {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} retry_sleep_time_unit {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} retry_backoff_threshold {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} retry_backoff_threshold_unit {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} retry_backoff_multiplier {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} use_queue {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} use_dlq {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} dlq_action {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} dlq_retries {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} dlq_retry_interval {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} dlq_retry_interval_unit {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} dlq_forward_to {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} dlq_keep_header {% endcomment %}
+                            {% include "zato/shared/delivery-tab-headers.html" %}
                         {% endif %}
 
                 </thead>
@@ -601,7 +570,7 @@
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
                         <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
                         <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?sources=rest-outgoing&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a>{% endif %}</td>
-                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Delivery queue</span>{% else %}<a href="/zato/outgoing/delivery/rest/{{ item.id }}/?cluster={{ cluster_id }}&amp;tab=queue">Delivery queue</a>{% endif %}</td>
+                        {% include "zato/shared/delivery-queue-link.html" with conn_type="rest" %}
                         {% endif %}
 
                         <!-- 31, 32 -->
@@ -649,20 +618,7 @@
 
                         <!-- 41 - the Delivery tab of REST outgoing connections -->
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
-                            <td class='ignore'>{{ item.max_retries }}</td>
-                            <td class='ignore'>{{ item.retry_sleep_time }}</td>
-                            <td class='ignore'>{{ item.retry_sleep_time_unit }}</td>
-                            <td class='ignore'>{{ item.retry_backoff_threshold }}</td>
-                            <td class='ignore'>{{ item.retry_backoff_threshold_unit }}</td>
-                            <td class='ignore'>{{ item.retry_backoff_multiplier }}</td>
-                            <td class='ignore'>{{ item.use_queue }}</td>
-                            <td class='ignore'>{{ item.use_dlq }}</td>
-                            <td class='ignore'>{{ item.dlq_action }}</td>
-                            <td class='ignore'>{{ item.dlq_retries }}</td>
-                            <td class='ignore'>{{ item.dlq_retry_interval }}</td>
-                            <td class='ignore'>{{ item.dlq_retry_interval_unit }}</td>
-                            <td class='ignore'>{{ item.dlq_forward_to }}</td>
-                            <td class='ignore'>{{ item.dlq_keep_header }}</td>
+                            {% include "zato/shared/delivery-tab-cells.html" %}
                         {% endif %}
 
                         <!-- 42 - the Alerts tab of REST and SOAP channels and of REST outgoing connections -->
@@ -695,7 +651,7 @@
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
-                        <button type="button" class="dashboard-tab" data-tab="delivery" role="tab" aria-selected="false">Delivery</button>
+                        {% include "zato/shared/delivery-tab-button.html" %}
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
@@ -1050,7 +1006,7 @@
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
-                        <button type="button" class="dashboard-tab" data-tab="delivery" role="tab" aria-selected="false">Delivery</button>
+                        {% include "zato/shared/delivery-tab-button.html" %}
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>

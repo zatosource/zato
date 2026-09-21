@@ -100,11 +100,75 @@ $.fn.zato.delivery_tab.config = {
 
 $.fn.zato.delivery_tab.state = {
     panelId: null,
-    fieldPrefix: ''
+    fieldPrefix: '',
+
+    // The names of the hidden columns, read once off the page's json_script element
+    fieldNames: null
 };
 
 // The micro-forms kit installs the popover engine here
 $.fn.zato.delivery_tab.forms = {};
+
+// The json_script element a list page hands the tab's settings through
+$.fn.zato.delivery_tab.config.settingsId = 'delivery-tab-config';
+$.fn.zato.delivery_tab.config.cellEmpty = '';
+
+// The link to a connection's delivery page
+$.fn.zato.delivery_tab.config.deliveryPageUrl = '/zato/outgoing/delivery/';
+$.fn.zato.delivery_tab.config.deliveryPageTab = 'queue';
+$.fn.zato.delivery_tab.config.deliveryLinkLabel = 'Delivery queue';
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The cell of a new row that links to the connection's delivery page
+$.fn.zato.delivery_tab.link_cell = function(connType, item, clusterId) {
+
+    var config = $.fn.zato.delivery_tab.config;
+
+    var url = config.deliveryPageUrl + connType + '/' + item.id + '/?cluster=' + clusterId + '&tab=' + config.deliveryPageTab;
+
+    var out = String.format('<td><a href="{0}">{1}</a></td>', url, config.deliveryLinkLabel);
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The hidden columns of a row the tab's fields travel in, in the order the Django side lists them
+$.fn.zato.delivery_tab.columns = function() {
+
+    var tab = $.fn.zato.delivery_tab;
+    var state = tab.state;
+
+    if(state.fieldNames === null) {
+        var settings = JSON.parse(document.getElementById(tab.config.settingsId).textContent);
+        state.fieldNames = settings.field_names;
+    }
+
+    var out = state.fieldNames.slice();
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The hidden cells of a new row, one per column above
+$.fn.zato.delivery_tab.row_cells = function(item) {
+
+    var tab = $.fn.zato.delivery_tab;
+    var out = '';
+
+    tab.columns().forEach(function(fieldName) {
+
+        var value = item[fieldName];
+
+        if(value === undefined) {
+            value = tab.config.cellEmpty;
+        }
+
+        out += String.format("<td class='ignore'>{0}</td>", value);
+    });
+
+    return out;
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 

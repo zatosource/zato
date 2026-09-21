@@ -10,10 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import time
-from http.client import INTERNAL_SERVER_ERROR
 
 # Test support
-from _helpers import as_dict, Connections, get_client, send
+from queue_delivery.client import as_dict, get_client, send
+from queue_delivery.type_under_test import Attempts_Per_Round, Connection_Keys, TestConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,16 +21,13 @@ from _helpers import as_dict, Connections, get_client, send
 if 0:
     from zato.common.test.client import AdminClient
     from zato.common.typing_ import any_, anydict, anylist
-    from _receiver import RecordingReceiver
+    from queue_delivery.receiver import RecordingReceiver
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 _default_wait_timeout_seconds = 30.0
 _poll_interval_seconds = 0.1
-
-# The direct attempt and one retry
-Attempts_Per_Round = 2
 
 _get_dlq_service = 'test.queue-delivery.get-dlq'
 _subscribe_topic_service = 'test.queue-delivery.subscribe-topic'
@@ -139,7 +136,7 @@ def get_topic_messages(client:'AdminClient', topic_name:'str') -> 'anylist':
 def send_to_dlq(client:'AdminClient', conn_name:'str', receiver:'RecordingReceiver', data:'anydict') -> 'anydict':
     """ Sends one message the endpoint turns down until its attempts ran out and returns the DLQ message it became.
     """
-    receiver.answer_next([INTERNAL_SERVER_ERROR] * Attempts_Per_Round)
+    receiver.refuse_next(Attempts_Per_Round)
 
     result = send(client, conn_name, data)
     assert result['is_in_queue'] is True
@@ -167,7 +164,8 @@ def discard_all_dlqs() -> 'None':
     """
     client = get_client()
 
-    for conn_name in Connections.values():
+    for key in Connection_Keys:
+        conn_name = TestConfig.type_under_test.connections[key]
         dlq = get_dlq(client, conn_name)
 
         if dlq['messages']:

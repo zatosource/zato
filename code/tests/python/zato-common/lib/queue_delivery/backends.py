@@ -6,6 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# What every queue delivery suite runs its server's queues against - one pub/sub backend at a time.
+
 # stdlib
 import os
 
@@ -69,14 +71,14 @@ SQLite_File_Name = 'pubsub.db'
 
 class ModuleCtx:
 
-    # Host ports of this suite's own, so it can run alongside the perf and backend suites
+    # Host ports of the queue delivery suites' own, so they can run alongside the perf and backend suites
     PostgreSQL_Port     = 25472
     PostgreSQL_SSL_Port = 25473
     MySQL_Port          = 23372
     MySQL_SSL_Port      = 23373
     Oracle_Port         = 21572
 
-    Container_Prefix = 'zato-queue-delivery-rest-'
+    Container_Prefix = 'zato-queue-delivery-'
 
     Username = 'zato_queue_delivery'
     Password = 'test-queue-delivery-password'
@@ -172,7 +174,15 @@ def _start_sqlite(data_directory:'str') -> 'Backend':
 
 # ################################################################################################################################
 
-def _start_postgresql(needs_ssl:'bool', certificates:'CertificatePaths') -> 'Backend':
+def _get_container_name(suite_name:'str', backend_name:'str') -> 'str':
+    """ The container of one backend of one suite.
+    """
+    out = ModuleCtx.Container_Prefix + suite_name + '-' + backend_name
+    return out
+
+# ################################################################################################################################
+
+def _start_postgresql(needs_ssl:'bool', certificates:'CertificatePaths', suite_name:'str') -> 'Backend':
 
     if needs_ssl:
         name = Backend_PostgreSQL_SSL
@@ -181,7 +191,7 @@ def _start_postgresql(needs_ssl:'bool', certificates:'CertificatePaths') -> 'Bac
         name = Backend_PostgreSQL
         port = ModuleCtx.PostgreSQL_Port
 
-    container_name = ModuleCtx.Container_Prefix + name
+    container_name = _get_container_name(suite_name, name)
 
     server = start_postgresql(
         container_name=container_name,
@@ -198,7 +208,7 @@ def _start_postgresql(needs_ssl:'bool', certificates:'CertificatePaths') -> 'Bac
 
 # ################################################################################################################################
 
-def _start_mysql(needs_ssl:'bool', certificates:'CertificatePaths') -> 'Backend':
+def _start_mysql(needs_ssl:'bool', certificates:'CertificatePaths', suite_name:'str') -> 'Backend':
 
     if needs_ssl:
         name = Backend_MySQL_SSL
@@ -207,7 +217,7 @@ def _start_mysql(needs_ssl:'bool', certificates:'CertificatePaths') -> 'Backend'
         name = Backend_MySQL
         port = ModuleCtx.MySQL_Port
 
-    container_name = ModuleCtx.Container_Prefix + name
+    container_name = _get_container_name(suite_name, name)
 
     server = start_mysql(
         container_name=container_name,
@@ -224,13 +234,13 @@ def _start_mysql(needs_ssl:'bool', certificates:'CertificatePaths') -> 'Backend'
 
 # ################################################################################################################################
 
-def _start_oracle() -> 'Backend':
+def _start_oracle(suite_name:'str') -> 'Backend':
     """ Sets the Oracle license key variable.
     """
     if not os.environ.get(ModuleCtx.License_Key_Name):
         os.environ[ModuleCtx.License_Key_Name] = ModuleCtx.License_Key_Value
 
-    container_name = ModuleCtx.Container_Prefix + Backend_Oracle
+    container_name = _get_container_name(suite_name, Backend_Oracle)
 
     server = start_oracle(
         container_name=container_name,
@@ -270,26 +280,26 @@ def _start_amqp(needs_ssl:'bool', data_directory:'str', certificates:'Certificat
 
 # ################################################################################################################################
 
-def start_backend(name:'str', data_directory:'str', certificates:'CertificatePaths') -> 'Backend':
-    """ Starts the backend of that name and returns it with the details the server's pub/sub is pointed at.
+def start_backend(name:'str', data_directory:'str', certificates:'CertificatePaths', suite_name:'str') -> 'Backend':
+    """ Starts the backend of that name for one suite and returns it with the details the server's pub/sub is pointed at.
     """
     if name == Backend_SQLite:
         out = _start_sqlite(data_directory)
 
     elif name == Backend_PostgreSQL:
-        out = _start_postgresql(False, certificates)
+        out = _start_postgresql(False, certificates, suite_name)
 
     elif name == Backend_PostgreSQL_SSL:
-        out = _start_postgresql(True, certificates)
+        out = _start_postgresql(True, certificates, suite_name)
 
     elif name == Backend_MySQL:
-        out = _start_mysql(False, certificates)
+        out = _start_mysql(False, certificates, suite_name)
 
     elif name == Backend_MySQL_SSL:
-        out = _start_mysql(True, certificates)
+        out = _start_mysql(True, certificates, suite_name)
 
     elif name == Backend_Oracle:
-        out = _start_oracle()
+        out = _start_oracle(suite_name)
 
     elif name == Backend_AMQP:
         out = _start_amqp(False, data_directory, certificates)

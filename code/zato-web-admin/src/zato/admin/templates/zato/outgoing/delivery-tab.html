@@ -84,7 +84,11 @@
             <td class="delivery-cell-center">{{ item.rounds }}</td>
             <td class="delivery-cell-error">{{ item.error }}</td>
             {% endif %}
-            <td class="delivery-cell-address"><a href="javascript:void(0)" class="delivery-address-link" data-kind="{{ tab.kind }}" data-msg-id="{{ item.msg_id }}">{{ item.method }} {{ item.address }}</a></td>
+            {% if has_invoker %}
+            <td class="delivery-cell-address"><a href="javascript:void(0)" class="delivery-address-link" data-kind="{{ tab.kind }}" data-msg-id="{{ item.msg_id }}">{{ item.destination }}</a></td>
+            {% else %}
+            <td class="delivery-cell-address">{{ item.destination }}</td>
+            {% endif %}
         </tr>
     {% endfor %}
     {% else %}

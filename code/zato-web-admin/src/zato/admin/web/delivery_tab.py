@@ -105,6 +105,36 @@ field_defaults = Delivery_Field_Defaults
 bool_fields = Delivery_Bool_Fields
 int_fields = Delivery_Int_Fields
 
+# The hidden columns of a list page's row the tab's fields travel in, in this order - the list page's templates,
+# its JS config and the row builder all read this one list
+Delivery_Field_Names = (
+    _retry.Field_Max_Retries,
+    _retry.Field_Sleep_Time,
+    unit_field_name(_retry.Field_Sleep_Time),
+    _retry.Field_Backoff_Threshold,
+    unit_field_name(_retry.Field_Backoff_Threshold),
+    _retry.Field_Backoff_Multiplier,
+    _queue.Field_Use_Queue,
+    _dlq.Field_Use_DLQ,
+    _dlq.Field_Action,
+    _dlq.Field_Retries,
+    _dlq.Field_Retry_Interval,
+    unit_field_name(_dlq.Field_Retry_Interval),
+    _dlq.Field_Forward_To,
+    _dlq.Field_Keep_Header,
+)
+
+# ################################################################################################################################
+
+def get_delivery_tab_config() -> 'stranydict':
+    """ What a list page hands its JS about the tab, through a json_script element.
+    """
+    out = {
+        'field_names': list(Delivery_Field_Names),
+    }
+
+    return out
+
 # ################################################################################################################################
 # ################################################################################################################################
 

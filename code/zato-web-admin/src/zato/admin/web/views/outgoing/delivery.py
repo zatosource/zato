@@ -27,10 +27,10 @@ from django.template.response import TemplateResponse
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.views import method_allowed
 from zato.common.api import HTTP_SOAP
-from zato.common.content_type import format_content, get_content_type
+from zato.common.content_type import format_content
 from zato.common.defaults import default_cluster_id
 from zato.common.pubsub.dlq import Header_Moved_Time, Header_Rounds, Key_DLQ
-from zato.common.pubsub.outgoing import Key_Data, Key_Headers, Key_Request
+from zato.common.pubsub.outgoing import Body_Mode_HL7, Body_Mode_JSON, Body_Mode_Text, Body_Mode_XML, Key_Data, Key_Request
 from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
@@ -67,14 +67,20 @@ Refresh_Time_Field   = 'time_utc'
 Download_Body     = 'body'
 Download_Document = 'document'
 
+# A body's file extension and content type, by the mode it is shown in
 _body_extensions = {
-    'application/json': 'json',
-    'application/xml': 'xml',
-    'text/xml': 'xml',
-    'text/csv': 'csv',
-    'text/plain': 'txt',
+    Body_Mode_JSON: 'json',
+    Body_Mode_XML:  'xml',
+    Body_Mode_HL7:  'hl7',
+    Body_Mode_Text: 'txt',
 }
-_default_body_extension = 'txt'
+
+_body_content_types = {
+    Body_Mode_JSON: 'application/json',
+    Body_Mode_XML:  'text/xml',
+    Body_Mode_HL7:  'text/plain',
+    Body_Mode_Text: 'text/plain',
+}
 
 # The DLQ rule, as the details window states it
 _rule_keep        = 'Keep'
@@ -283,6 +289,7 @@ def index(req:'any_', conn_type:'str', conn_id:'int') -> 'TemplateResponse':
         'conn_id': conn_id,
         'conn_name': data['conn_name'],
         'is_queue_browsable': data['is_queue_browsable'],
+        'has_invoker': data['invoker'] is not None,
         'queue_tab': tabs[Kind_Queue],
         'dlq_tab': tabs[Kind_DLQ],
         'topic_list': data['topic_list'],
@@ -324,7 +331,7 @@ def message(req:'any_') -> 'JsonResponse':
     request = document[Key_Request]
 
     data = request[Key_Data]
-    content_type = get_content_type(data)
+    body_mode = message_data['body_mode']
 
     has_dlq_header = Key_DLQ in document
     rule = ''
@@ -336,8 +343,11 @@ def message(req:'any_') -> 'JsonResponse':
 
     out = JsonResponse({
         'document': document,
-        'data': format_content(data, content_type),
-        'content_type': content_type,
+        'data': format_content(data, _body_content_types[body_mode]),
+        'body_mode': body_mode,
+        'destination': message_data['destination'],
+        'facts': message_data['facts'],
+        'invoker': message_data['invoker'],
         'has_dlq_header': has_dlq_header,
         'rule': rule,
     })
@@ -350,17 +360,18 @@ def message(req:'any_') -> 'JsonResponse':
 def download(req:'any_') -> 'HttpResponse':
     """ One message as a file, its data alone or the whole document.
     """
-    document = _get_message(req)['document']
+    message_data = _get_message(req)
+    document = message_data['document']
     msg_id = req.GET['msg_id']
     what = req.GET['what']
 
     if what == Download_Body:
         request = document[Key_Request]
         data = request[Key_Data]
-        content_type = request[Key_Headers]['Content-Type']
+        body_mode = message_data['body_mode']
 
-        if not (extension := _body_extensions.get(content_type)):
-            extension = _default_body_extension
+        extension = _body_extensions[body_mode]
+        content_type = _body_content_types[body_mode]
 
         file_name = f'{msg_id}.{extension}'
         out = HttpResponse(data.encode('utf-8'), content_type=content_type)

@@ -36,6 +36,8 @@ if 0:
 
 logger = getLogger(__name__)
 
+strpagedict = dict[str, 'OutgoingPage']
+
 _topic_prefix   = PubSub.Outgoing.Topic_Prefix
 _sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
 _round_wait     = PubSub.Outgoing.Retry_Round_Wait
@@ -74,8 +76,21 @@ retry_policy_builders:'strcalldict' = {}
 # DLQ settings readers, by connection type
 dlq_settings_readers:'strcalldict' = {}
 
+# What the delivery page shows of each connection type
+page_descriptions:'strpagedict' = {}
+
 # Connection types whose queue topics write no pub/sub audit events
 audit_disabled_conn_types:'strset' = set()
+
+# The Ace modes a message's body is shown in
+Body_Mode_JSON = 'json'
+Body_Mode_XML  = 'xml'
+Body_Mode_HL7  = 'hl7'
+Body_Mode_Text = 'text'
+
+_json_openers = ('{', '[')
+_xml_opener   = '<'
+_hl7_opener   = 'MSH|'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,6 +103,85 @@ class OutgoingType:
     SFTP = 'sftp'
     SMB = 'smb'
     FTP = 'ftp'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class OutgoingInvoker:
+    """ The invoke dialog of one connection type's list page, which the delivery page opens on a message's destination.
+    """
+
+    # Where the dialog posts to, the connection's id and a slash follow
+    url_prefix: 'str'
+
+    # What the dialog knows the connection as
+    connection: 'str'
+
+    # What the history of one connection's invocations is stored under, the connection's id follows
+    history_key_prefix: 'str'
+
+    # (request) -> the dialog's options that are the message's own, e.g. its method and query string
+    options: 'callable_'
+
+# ################################################################################################################################
+
+@dataclass(init=False)
+class OutgoingPage:
+    """ What the delivery page shows of one connection type's messages.
+    """
+
+    # (wrapper, request) -> the text of the Destination column
+    destination: 'callable_'
+
+    # (request) -> the request facts of the details window, each a label and a value, the value a string or a dict
+    details_facts: 'callable_'
+
+    # (request) -> the mode the body is shown in
+    body_mode: 'callable_'
+
+    # None for a type whose list page has no invoke dialog
+    invoker: 'OutgoingInvoker | None' = None
+
+# ################################################################################################################################
+
+def detect_body_mode(data:'str') -> 'str':
+    """ The mode a body is shown in, by what it opens with.
+    """
+    text = data.lstrip()
+
+    if text.startswith(_json_openers):
+        out = Body_Mode_JSON
+
+    elif text.startswith(_xml_opener):
+        out = Body_Mode_XML
+
+    elif text.startswith(_hl7_opener):
+        out = Body_Mode_HL7
+
+    else:
+        out = Body_Mode_Text
+
+    return out
+
+# ################################################################################################################################
+
+def invoker_to_dict(invoker:'OutgoingInvoker | None', request:'stranydict | None'=None) -> 'stranydict | None':
+    """ An invoker as the page's script receives it, with the options of one message when there is a message.
+    """
+    if invoker:
+        out = {
+            'url_prefix': invoker.url_prefix,
+            'connection': invoker.connection,
+            'history_key_prefix': invoker.history_key_prefix,
+        }
+
+        if request:
+            out['options'] = invoker.options(request)
+    else:
+        out = None
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,8 +240,10 @@ def register_outgoing_conn_type(
     is_audit_log_active:'bool'=True,
     retry_policy:'callable_ | None'=None,
     dlq_settings:'callable_ | None'=None,
+    page:'OutgoingPage | None'=None,
     ) -> 'None':
-    """ Registers one type of outgoing connection with its locator, handler, retry policy and DLQ settings.
+    """ Registers one type of outgoing connection with its locator, handler, retry policy, DLQ settings and what
+    the delivery page shows of its messages.
     """
     conn_locators[conn_type] = locator
     delivery_handlers[conn_type] = handler
@@ -158,8 +254,24 @@ def register_outgoing_conn_type(
     if dlq_settings:
         dlq_settings_readers[conn_type] = dlq_settings
 
+    if page:
+        page_descriptions[conn_type] = page
+
     if not is_audit_log_active:
         audit_disabled_conn_types.add(conn_type)
+
+# ################################################################################################################################
+
+def get_page_description(conn_type:'str') -> 'OutgoingPage':
+    """ What the delivery page shows of one connection type's messages, raising for a type that has no page.
+    """
+    page = page_descriptions.get(conn_type)
+
+    if not page:
+        raise Exception(f'No delivery page for outgoing connection type `{conn_type}`')
+
+    out = page
+    return out
 
 # ################################################################################################################################
 

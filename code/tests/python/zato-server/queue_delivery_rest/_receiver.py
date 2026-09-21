@@ -6,20 +6,25 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# The endpoint of an outgoing REST connection - an HTTP server that records every request and answers with the status
+# it is scripted to.
+
 # stdlib
 import logging
 import threading
-import time
+from dataclasses import dataclass
 from http.client import OK, SERVICE_UNAVAILABLE
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import NamedTuple
 from urllib.parse import urlsplit
+
+# Test support
+from queue_delivery.receiver import RecordedRequest, RecordingReceiver
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, intlist, strstrdict
+    from zato.common.typing_ import any_, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,28 +35,28 @@ _default_content_type = 'application/json'
 _default_body = '{}'
 
 _shutdown_timeout_seconds = 5
-_default_wait_timeout_seconds = 60
-_poll_interval_seconds = 0.1
+
+# A GET is a read, never a delivery
+_read_method = 'GET'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RecordedRequest(NamedTuple):
-    """ One request as the endpoint of an outgoing connection saw it.
+@dataclass
+class HTTPRecordedRequest(RecordedRequest):
+    """ One request as the endpoint of an outgoing REST connection saw it.
     """
-    method: str
-    path: str
-    query_string: str
-    headers: 'strstrdict'
-    body: str
-    status_code: int
+    method: str = ''
+    path: str = ''
+    query_string: str = ''
+    headers: 'strstrdict' = None # type: ignore[assignment]
 
-    # On the monotonic clock
-    received_at: float
-
-# ################################################################################################################################
-
-request_list = list[RecordedRequest]
+    @property
+    def status_code(self) -> 'int':
+        """ The status the request was answered with.
+        """
+        out = self.outcome
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,7 +65,7 @@ class _ReceiverHTTPServer(HTTPServer):
     """ The HTTP server behind one receiver, carrying that receiver so its handlers can reach it.
     """
 
-    receiver: 'RecordingReceiver'
+    receiver: 'HTTPRecordingReceiver'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -129,51 +134,40 @@ class _RequestHandler(BaseHTTPRequestHandler):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RecordingReceiver:
-    """ The endpoint of an outgoing connection.
+class HTTPRecordingReceiver(RecordingReceiver):
+    """ The endpoint of an outgoing REST connection.
     """
 
+    Accept_Outcome = OK
+    Refuse_Outcome = SERVICE_UNAVAILABLE
+
     def __init__(self, port:'int') -> 'None':
-        self.port = port
-
-        # Every request received, accepted or not
-        self.requests:'request_list' = []
-
-        # The statuses the next requests are answered with, one per request
-        self._scripted:'intlist' = []
-
-        # The status once the script has run out
-        self._default_status = OK
+        super().__init__(port)
 
         self._server:'_ReceiverHTTPServer | None' = None
         self._thread:'threading.Thread | None' = None
-        self._lock = threading.Lock()
 
 # ################################################################################################################################
 
     def record(self, method:'str', path:'str', query_string:'str', headers:'strstrdict', body:'str') -> 'int':
         """ Stores one request and returns the status it is answered with.
         """
-        with self._lock:
+        status_code = self.next_outcome()
 
-            if self._scripted:
-                status_code = self._scripted.pop(0)
-            else:
-                status_code = self._default_status
+        request = HTTPRecordedRequest(
+            body=body,
+            outcome=status_code,
+            is_accepted=self.is_accepted(status_code),
+            is_read=method == _read_method,
+            method=method,
+            path=path,
+            query_string=query_string,
+            headers=headers,
+        )
 
-            request = RecordedRequest(
-                method=method,
-                path=path,
-                query_string=query_string,
-                headers=headers,
-                body=body,
-                status_code=status_code,
-                received_at=time.monotonic(),
-            )
+        self.add_request(request)
 
-            self.requests.append(request)
-
-            return status_code
+        return status_code
 
 # ################################################################################################################################
 
@@ -209,99 +203,6 @@ class RecordingReceiver:
             self._thread = None
 
         logger.info('Receiver stopped on port %d', self.port)
-
-# ################################################################################################################################
-
-    def clear(self) -> 'None':
-        """ Forgets every recorded request, drops the script and accepts everything again.
-        """
-        with self._lock:
-            self.requests = []
-            self._scripted = []
-            self._default_status = OK
-
-# ################################################################################################################################
-
-    def answer_next(self, status_codes:'intlist') -> 'None':
-        """ Answers the next requests with these statuses, one each, in this order.
-        """
-        with self._lock:
-            self._scripted = list(status_codes)
-
-# ################################################################################################################################
-
-    def refuse_all(self) -> 'None':
-        """ Rejects every request from now on with 503.
-        """
-        with self._lock:
-            self._default_status = SERVICE_UNAVAILABLE
-
-# ################################################################################################################################
-
-    def accept_all(self) -> 'None':
-        """ Accepts every request from now on.
-        """
-        with self._lock:
-            self._default_status = OK
-
-# ################################################################################################################################
-
-    def accepted(self) -> 'request_list':
-        """ The requests answered with 200, in the order they arrived.
-        """
-        with self._lock:
-            out = [request for request in self.requests if request.status_code == OK]
-
-        return out
-
-# ################################################################################################################################
-
-    def wait_for_requests(
-        self,
-        expected_count:'int'=1,
-        timeout:'float'=_default_wait_timeout_seconds,
-        ) -> 'request_list':
-        """ Blocks until that many requests have arrived, accepted or not, then returns all of them.
-        """
-        deadline = time.monotonic() + timeout
-
-        while time.monotonic() < deadline:
-
-            with self._lock:
-                out = list(self.requests)
-
-            if len(out) >= expected_count:
-                return out
-
-            time.sleep(_poll_interval_seconds)
-
-        with self._lock:
-            out = list(self.requests)
-
-        return out
-
-# ################################################################################################################################
-
-    def wait_for_accepted(
-        self,
-        expected_count:'int'=1,
-        timeout:'float'=_default_wait_timeout_seconds,
-        ) -> 'request_list':
-        """ Blocks until that many requests have been accepted, then returns the accepted ones.
-        """
-        deadline = time.monotonic() + timeout
-
-        while time.monotonic() < deadline:
-
-            out = self.accepted()
-
-            if len(out) >= expected_count:
-                return out
-
-            time.sleep(_poll_interval_seconds)
-
-        out = self.accepted()
-        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
