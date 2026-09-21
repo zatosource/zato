@@ -55,6 +55,7 @@ $.fn.zato.outgoing_delivery.config = {
     resultPlural: 'messages',
     resultForwardTo: 'to',
     statusOK: 200,
+    rowRemoveDelayMs: 900,
 
     detailsTitle: 'Message',
     detailsWidth: '860px',
@@ -95,7 +96,8 @@ $.fn.zato.outgoing_delivery.state = {
     tabs: {},
 
     pendingAction: '',
-    pendingTarget: null
+    pendingTarget: null,
+    pendingLink: null
 };
 
 // The micro-forms kit installs the popover engine here
@@ -402,6 +404,7 @@ $.fn.zato.outgoing_delivery.openAction = function(action, target, link) {
 
     page.state.pendingAction = action;
     page.state.pendingTarget = target;
+    page.state.pendingLink = link;
 
     page.forms.config.doneLabel = config.actions[action].doneLabel;
     page.forms.open(action, link);
@@ -440,52 +443,95 @@ $.fn.zato.outgoing_delivery.runPendingAction = function() {
         keep_header: page.field(config.fieldKeepHeader).prop('checked')
     };
 
-    var callback = function(jqXHR) {
-
-        var response = JSON.parse(jqXHR.responseText);
-
-        if(jqXHR.status !== config.statusOK) {
-            $.fn.zato.user_message(false, response.error);
-            return;
+    $.fn.zato.action_runner.run({
+        link_elem: state.pendingLink,
+        url: config.actionUrl,
+        data: $.param(data),
+        parse: function(jqXHR) {
+            var out = page.parseActionResponse(action, jqXHR);
+            return out;
+        },
+        details_modal_title: config.actions[action].title,
+        on_complete: function(instance, result) {
+            if(result.is_success) {
+                page.onActionDone(target);
+            }
         }
-
-        page.onActionDone(action, target, response);
-    };
-
-    $.fn.zato.post(config.actionUrl, callback, data, 'text');
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Removes the rows the action took and reports how many
-$.fn.zato.outgoing_delivery.onActionDone = function(action, target, response) {
+// What the tippy on the link says
+$.fn.zato.outgoing_delivery.parseActionResponse = function(action, jqXHR) {
 
     var page = $.fn.zato.outgoing_delivery;
     var config = page.config;
 
+    var response = JSON.parse(jqXHR.responseText);
+
+    if(jqXHR.status !== config.statusOK) {
+        var out = {
+            is_success: false,
+            label: response.error,
+            details_title: response.error,
+            details_body: jqXHR.responseText,
+            details_lexer: '',
+            status_code: jqXHR.status
+        };
+        return out;
+    }
+
     var count = response.count;
     var noun = page.pluralize(count, config.resultSingular, config.resultPlural);
-    var message = config.actions[action].pastLabel + ' ' + count + ' ' + noun;
+    var label = config.actions[action].pastLabel + ' ' + count + ' ' + noun;
 
     if(action === 'forward') {
-        message += ' ' + config.resultForwardTo + ' ' + response.forward_to;
+        label += ' ' + config.resultForwardTo + ' ' + response.forward_to;
     }
+
+    var out = {
+        is_success: true,
+        label: label,
+        details_title: label,
+        details_body: jqXHR.responseText,
+        details_lexer: '',
+        status_code: jqXHR.status
+    };
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Removes the rows the action took
+$.fn.zato.outgoing_delivery.onActionDone = function(target) {
+
+    var page = $.fn.zato.outgoing_delivery;
+    var config = page.config;
 
     var table = page.table(target.kind);
 
-    if(target.scope === config.scopeSelected) {
-        for(var idx = 0; idx < target.msgIdList.length; idx++) {
-            table.find('tr[data-msg-id="' + target.msgIdList[idx] + '"]').remove();
+    var removeRows = function() {
+        if(target.scope === config.scopeSelected) {
+            for(var idx = 0; idx < target.msgIdList.length; idx++) {
+                table.find('tr[data-msg-id="' + target.msgIdList[idx] + '"]').remove();
+            }
         }
+        else {
+            table.find('tbody tr').remove();
+        }
+
+        table.find('.delivery-select-all').prop('checked', false);
+        page.updateActionLinks(target.kind);
+    };
+
+    // A row's own link is the tippy's anchor, so the row stays until the tippy is gone
+    if(target.msgId) {
+        setTimeout(removeRows, config.rowRemoveDelayMs);
     }
     else {
-        table.find('tbody tr').remove();
+        removeRows();
     }
-
-    table.find('.delivery-select-all').prop('checked', false);
-    page.updateActionLinks(target.kind);
-
-    $.fn.zato.user_message(true, message);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
