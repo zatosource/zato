@@ -973,7 +973,25 @@ $.fn.zato.invoker.open_overlay = function(config) {
     $('#invoker-modal-path-params').val(savedPathParams);
     $('#invoker-modal-status').text('');
 
-    if (saved.more_options_open) {
+    let moreOptionsOpen = saved.more_options_open;
+
+    // A caller may open the overlay with a request of its own, e.g. the one a queued message carries -
+    // what it gives wins over what was saved last time, and the options it filled in are shown
+    if (config.request !== undefined) {
+        requestValue = config.request;
+    }
+    if (config.method !== undefined) {
+        savedMethod = config.method;
+        $('#invoker-modal-method').val(savedMethod);
+        moreOptionsOpen = true;
+    }
+    if (config.query_params !== undefined) {
+        savedQueryParams = config.query_params;
+        $('#invoker-modal-query-params').val(savedQueryParams);
+        moreOptionsOpen = true;
+    }
+
+    if (moreOptionsOpen) {
         $('#invoker-more-options').removeClass('hidden');
     }
     else {
@@ -991,10 +1009,16 @@ $.fn.zato.invoker.open_overlay = function(config) {
         $.fn.zato.invoker._request_pane.destroy();
     }
 
+    // A caller may name the mode the request is highlighted in, otherwise the text itself decides
+    if (config.request_mode !== undefined) {
+        $.fn.zato.invoker._request_ace_mode = config.request_mode;
+    }
+
     $.fn.zato.invoker._request_pane = $.fn.zato.highlight_pane.init({
         container: $requestContainer,
         text: requestValue,
         editable: true,
+        ace_mode: $.fn.zato.invoker._request_ace_mode,
         ace_options: {maxLines: 12, minLines: 12, alwaysShowScrollbars: true, resizable: true}
     });
 

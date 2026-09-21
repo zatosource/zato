@@ -12,6 +12,7 @@ $.fn.zato.outgoing_delivery.config = {
     popoverClass: 'delivery-popover',
 
     messageUrl: '/zato/outgoing/delivery/message/',
+    refreshUrl: '/zato/outgoing/delivery/refresh/',
     downloadUrl: '/zato/outgoing/delivery/download/',
     actionUrl: '/zato/outgoing/delivery/action/',
     saveUrl: '/zato/outgoing/delivery/save/',
@@ -56,6 +57,15 @@ $.fn.zato.outgoing_delivery.config = {
     resultForwardTo: 'to',
     statusOK: 200,
     successHideMs: 2500,
+
+    // The time-ago cells of both tabs
+    timeAgoContainer: '#markup',
+    timeAgoTimeField: 'time_utc',
+
+    // The invoker a message's address opens - the same one the outgoing REST connections page has
+    invokeUrl: '/zato/http-soap/invoke-outconn/',
+    invokeHistoryKeyPrefix: 'zato.invoke-history.outconn.',
+    invokeConnection: 'outgoing',
 
     detailsTitle: 'Message',
     detailsWidth: '860px',
@@ -135,6 +145,27 @@ $.fn.zato.outgoing_delivery.init = function(options) {
     page.bindSelection();
     page.bindActions();
     page.bindDetails();
+    page.initTimeAgo();
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The "In queue for" and "In DLQ for" columns are the same time-ago cells the scheduler's
+// Last run column is, with the words of this page and its own refresh URL
+$.fn.zato.outgoing_delivery.initTimeAgo = function() {
+
+    var page = $.fn.zato.outgoing_delivery;
+    var config = page.config;
+    var state = page.state;
+    var timeAgo = $.fn.zato.time_ago;
+
+    timeAgo.config.ago_label = '';
+    timeAgo.config.highlight_column = '';
+    timeAgo.config.refresh_time_field = config.timeAgoTimeField;
+    timeAgo.config.refresh_url = config.refreshUrl + '?conn_type=' + state.connType + '&conn_id=' + state.connId;
+
+    timeAgo.init(config.timeAgoContainer);
+    timeAgo.start_auto_refresh(config.timeAgoContainer, timeAgo.config.refresh_url);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -548,6 +579,25 @@ $.fn.zato.outgoing_delivery.bindDetails = function() {
         page.openDetails(kind, msgId);
     });
 
+    $('.delivery-table').on('click', '.delivery-address-link', function() {
+        var kind = this.getAttribute('data-kind');
+        var msgId = this.getAttribute('data-msg-id');
+        page.openInvoker(kind, msgId);
+    });
+
+    // A size reads as a person does in the cell and as exact bytes in its tippy
+    tippy('.delivery-size-link', {
+        content: function(reference) {
+            return reference.getAttribute('data-bytes');
+        },
+        trigger: 'click',
+        placement: 'top',
+        theme: 'dark',
+        arrow: true,
+        allowHTML: false,
+        appendTo: document.body
+    });
+
     $(document).on('keydown.delivery_details', function(event) {
         if(event.key !== page.config.escapeKey) {
             return;
@@ -589,6 +639,35 @@ $.fn.zato.outgoing_delivery.openDetails = function(kind, msgId) {
 
     $.getJSON(url, function(details) {
         page.showDetails(kind, msgId, details);
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The invoker, with the message's own method, query string and body filled in
+$.fn.zato.outgoing_delivery.openInvoker = function(kind, msgId) {
+
+    var page = $.fn.zato.outgoing_delivery;
+    var config = page.config;
+    var state = page.state;
+    var url = page.messageUrl(config.messageUrl, kind, msgId);
+
+    $.getJSON(url, function(details) {
+        var request = details.document.request;
+
+        $.fn.zato.invoker.open_overlay({
+            id: state.connId,
+            name: state.connName,
+            connection: config.invokeConnection,
+            history_key: config.invokeHistoryKeyPrefix + state.connId,
+            get_invoke_url_func: function(id) {
+                return config.invokeUrl + id + '/';
+            },
+            request: details.data,
+            request_mode: $.fn.zato.highlight_pane.mime_to_ace_mode(details.content_type),
+            method: request.method,
+            query_params: $.param(request.params)
+        });
     });
 }
 

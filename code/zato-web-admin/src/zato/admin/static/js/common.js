@@ -2323,6 +2323,10 @@ $.fn.zato.time_ago.config = {
     'tippy_placement': 'top',
     'refresh_interval_ms': 5000,
     'refresh_url': '/zato/scheduler/get-last-run-list/',
+
+    // The fields of each entry the refresh URL answers with
+    'refresh_time_field': 'last_run_utc',
+    'refresh_duration_field': 'last_duration_ms',
     'spinner_min_visible_ms': 350,
     'value_fade_ms': 250,
 
@@ -2364,7 +2368,12 @@ $.fn.zato.time_ago.humanize = function(age_seconds) {
         var unit = units[unit_idx];
         if(age_seconds >= unit.seconds) {
             var count = Math.floor(age_seconds / unit.seconds);
-            out = $.fn.zato.count_text(count, unit.name, unit.name + 's') + ' ' + config.ago_label;
+            out = $.fn.zato.count_text(count, unit.name, unit.name + 's');
+
+            // A page that shows durations rather than moments has no trailing word here.
+            if(config.ago_label) {
+                out += ' ' + config.ago_label;
+            }
             break;
         }
     }
@@ -2460,7 +2469,7 @@ $.fn.zato.time_ago.format_timestamp = function(when, use_utc) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.time_ago.build_tooltip_html = function(iso_utc, duration_ms) {
+$.fn.zato.time_ago.build_tooltip_html = function(iso_utc, duration_ms, title, row_label) {
     var config = $.fn.zato.time_ago.config;
     var when = new Date(iso_utc);
 
@@ -2477,9 +2486,9 @@ $.fn.zato.time_ago.build_tooltip_html = function(iso_utc, duration_ms) {
     }
     var ago_text = $.fn.zato.time_ago.humanize_detailed(age_seconds);
 
-    var out = '<div class="zato-time-ago-tooltip-title">' + config.tooltip_title + '</div>';
+    var out = '<div class="zato-time-ago-tooltip-title">' + title + '</div>';
     out += '<table class="zato-time-ago-tooltip">';
-    out += '<tr><th>' + config.ago_row_label + '</th><td>' + ago_text + '</td></tr>';
+    out += '<tr><th>' + row_label + '</th><td>' + ago_text + '</td></tr>';
 
     // The duration is only known once at least one run has completed.
     if(duration_ms !== null) {
@@ -2551,14 +2560,34 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
         cell.attr('data-sort-value', age_seconds);
 
         new_text = $.fn.zato.time_ago.humanize(age_seconds);
-        tooltip_html = $.fn.zato.time_ago.build_tooltip_html(iso_utc, duration_ms);
+
+        // A cell may carry a title and an age label of its own, e.g. when columns of two kinds share one page.
+        var title = cell.attr('data-time-ago-title');
+        if(!title) {
+            title = config.tooltip_title;
+        }
+        var row_label = cell.attr('data-time-ago-row-label');
+        if(!row_label) {
+            row_label = config.ago_row_label;
+        }
+        tooltip_html = $.fn.zato.time_ago.build_tooltip_html(iso_utc, duration_ms, title, row_label);
     }
+
+    // A cell may show a fixed text of its own, e.g. the full timestamp, in place of the humanized age -
+    // the age still lands in the sort value and in the tooltip.
+    var fixed_text = cell.attr('data-time-ago-text');
+    if(iso_utc && fixed_text) {
+        new_text = fixed_text;
+    }
+
+    // .. and a plain cell shows its text alone, with no link and no tooltip, while still refreshing.
+    var is_plain = cell.is('[data-time-ago-plain]');
 
     // .. this is what actually writes the new content out ..
     var apply_text = function() {
 
         // A cell without a timestamp shows a plain label only.
-        if(!iso_utc) {
+        if(!iso_utc || is_plain) {
             value_element.text(new_text);
             return;
         }
@@ -2691,13 +2720,18 @@ $.fn.zato.time_ago.init = function(container_selector) {
                 var interval_seconds = config.refresh_interval_ms / 1000;
                 var countdown_text = config.countdown_prefix + interval_seconds + config.countdown_suffix;
 
-                countdown.text(countdown_text);
-                var countdown_width = countdown.outerWidth();
+                // The texts are measured on a copy placed in the body, because the header itself
+                // may sit in a hidden tab at this point and a hidden element has no width to read.
+                var probe = countdown.clone().css({'position': 'absolute', 'visibility': 'hidden'});
+                probe.appendTo(document.body);
 
-                countdown.text(config.paused_label);
-                var paused_width = countdown.outerWidth();
+                probe.text(countdown_text);
+                var countdown_width = probe.outerWidth();
 
-                countdown.text('');
+                probe.text(config.paused_label);
+                var paused_width = probe.outerWidth();
+
+                probe.remove();
                 countdown.css('min-width', Math.max(countdown_width, paused_width) + 'px');
             }
         }
@@ -2814,7 +2848,11 @@ $.fn.zato.time_ago.refresh = function(container_selector, url) {
     var id_list = [];
     $(container_selector).find('td.zato-time-ago').each(function() {
         $.each($.fn.zato.time_ago.cell_ids($(this)), function(ignored, item_id) {
-            id_list.push(item_id);
+
+            // Two cells may stand for the same item, e.g. a timestamp and the age since it
+            if(id_list.indexOf(item_id) === -1) {
+                id_list.push(item_id);
+            }
         });
     });
 
@@ -2849,14 +2887,14 @@ $.fn.zato.time_ago.refresh = function(container_selector, url) {
                             if(latest === null) {
                                 latest = entry;
                             }
-                            else if(entry.last_run_utc > latest.last_run_utc) {
+                            else if(entry[config.refresh_time_field] > latest[config.refresh_time_field]) {
                                 latest = entry;
                             }
                         }
                     });
 
                     if(latest !== null) {
-                        $.fn.zato.time_ago.update_cell(cell, latest.last_run_utc, latest.last_duration_ms);
+                        $.fn.zato.time_ago.update_cell(cell, latest[config.refresh_time_field], latest[config.refresh_duration_field]);
                     }
                 });
                 $.fn.zato.time_ago.hide_spinners(container_selector);

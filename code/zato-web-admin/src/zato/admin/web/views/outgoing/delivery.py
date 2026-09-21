@@ -54,10 +54,15 @@ _default_page = 1
 Kind_Queue = 'queue'
 Kind_DLQ   = 'dlq'
 
-Service_Get_List = 'zato.pubsub.outgoing.get-message-list'
-Service_Get      = 'zato.pubsub.outgoing.get-message'
-Service_Action   = 'zato.pubsub.outgoing.message-action'
-Service_Update   = 'zato.pubsub.outgoing.update-message'
+Service_Get_List      = 'zato.pubsub.outgoing.get-message-list'
+Service_Get_Time_List = 'zato.pubsub.outgoing.get-message-time-list'
+Service_Get           = 'zato.pubsub.outgoing.get-message'
+Service_Action        = 'zato.pubsub.outgoing.message-action'
+Service_Update        = 'zato.pubsub.outgoing.update-message'
+
+# A refreshed cell's id is its tab and its message id, which lets one refresh cover both tabs
+Refresh_ID_Separator = ':'
+Refresh_Time_Field   = 'time_utc'
 
 Download_Body     = 'body'
 Download_Document = 'document'
@@ -119,17 +124,6 @@ def _format_duration(seconds:'int') -> 'str':
 
 # ################################################################################################################################
 
-def _seconds_since(iso:'str', now:'any_') -> 'int':
-    """ How many whole seconds have passed since an ISO timestamp.
-    """
-    when = dt_parse(iso)
-    delta = now - when
-
-    out = int(delta.total_seconds())
-    return out
-
-# ################################################################################################################################
-
 def _rule_text(row:'stranydict', settings:'anydict', now:'any_') -> 'str':
     """ What the DLQ rule will do with one message and when.
     """
@@ -172,14 +166,10 @@ def _enrich_row(row:'stranydict', kind:'str', settings:'anydict', user_profile:'
     """
     out = dict(row)
 
-    pub_time_iso = row['pub_time_iso']
-    out['pub_time'] = from_utc_to_user(pub_time_iso, user_profile)
-    out['age'] = _format_duration(_seconds_since(pub_time_iso, now))
+    out['pub_time'] = from_utc_to_user(row['pub_time_iso'], user_profile)
 
     if kind == Kind_DLQ:
-        moved_time_iso = row['moved_time_iso']
-        out['moved_time'] = from_utc_to_user(moved_time_iso, user_profile)
-        out['in_dlq'] = _format_duration(_seconds_since(moved_time_iso, now))
+        out['moved_time'] = from_utc_to_user(row['moved_time_iso'], user_profile)
         out['rule'] = _rule_text(row, settings, now)
 
     return out
@@ -377,6 +367,47 @@ def download(req:'any_') -> 'HttpResponse':
     out['Content-Disposition'] = f'attachment; filename="{file_name}"'
 
     return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def refresh(req:'any_') -> 'HttpResponse':
+    """ When each of the messages shown entered its queue - the time-ago cells of both tabs ask in one request.
+    """
+    conn_type = req.GET['conn_type']
+    conn_id = int(req.GET['conn_id'])
+
+    # The ids arrive as one comma-separated parameter, each one a tab and a message id ..
+    if id_list := req.POST.get('id_list'):
+        id_list = id_list.split(',')
+    else:
+        id_list = []
+
+    msg_ids_by_kind:'anydict' = {}
+
+    for item in id_list:
+        kind, msg_id = item.split(Refresh_ID_Separator, 1)
+        msg_ids_by_kind.setdefault(kind, []).append(msg_id)
+
+    # .. and one call per tab covers all of its messages.
+    out:'anydict' = {}
+
+    for kind, msg_id_list in msg_ids_by_kind.items():
+        response = req.zato.client.invoke(Service_Get_Time_List, {
+            'conn_type': conn_type,
+            'conn_id': conn_id,
+            'kind': kind,
+            'msg_id_list': json.dumps(msg_id_list),
+        })
+
+        if not response.ok:
+            raise Exception(response.details)
+
+        for msg_id, time_iso in response.data['items'].items():
+            out[f'{kind}{Refresh_ID_Separator}{msg_id}'] = {Refresh_Time_Field: time_iso}
+
+    response_json = json.dumps(out)
+    return HttpResponse(response_json.encode('utf-8'), content_type='application/json')
 
 # ################################################################################################################################
 

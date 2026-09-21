@@ -87,6 +87,16 @@ div.page_prompt a.common.delivery-action-disabled:hover {
     text-align: center;
 }
 
+.delivery-table th.zato-time-ago-header,
+.delivery-table td.zato-time-ago {
+    white-space: nowrap;
+}
+
+/* An address may be long - it breaks where it must rather than widening the table */
+.delivery-table td.delivery-cell-address {
+    word-break: break-all;
+}
+
 .delivery-cell-error {
     color: var(--zato-ui-error);
 }

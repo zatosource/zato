@@ -11,6 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 from json import dumps, loads
+from urllib.parse import urlencode
 
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub
@@ -41,6 +42,9 @@ Kind_Queue = 'queue'
 Kind_DLQ   = 'dlq'
 
 _topic_list = ['orders.failed', 'orders.manual-review', 'ops.escalations']
+
+# The moment the test messages are dated against - fixed once, so their ages grow the way real ones do
+_time_anchor = utcnow()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -127,11 +131,10 @@ _csv_headers  = {'Content-Type': 'text/csv', 'X-Request-Source': 'zato'}
 # ################################################################################################################################
 
 def _seconds_ago(seconds:'int') -> 'str':
-    """ An ISO timestamp this many seconds before now.
+    """ An ISO timestamp this many seconds before the anchor.
     """
-    now = utcnow()
     delta = timedelta(seconds=seconds)
-    when = now - delta
+    when = _time_anchor - delta
 
     out = when.isoformat()
     return out
@@ -266,12 +269,18 @@ def _matches(document:'stranydict', query:'str') -> 'bool':
 
 # ################################################################################################################################
 
-def _to_row(document:'stranydict') -> 'stranydict':
+def _to_row(document:'stranydict', conn_address:'str') -> 'stranydict':
     """ What the listing shows of one message.
     """
     request = document[Key_Request]
     data = request[Key_Data]
     data_bytes = data.encode('utf8')
+
+    # The address the message goes to - the connection's own with the message's query string
+    address = conn_address
+
+    if params := request[Key_Params]:
+        address = f'{address}?{urlencode(params)}'
 
     out = {
         'msg_id': document[Key_Msg_ID],
@@ -280,6 +289,7 @@ def _to_row(document:'stranydict') -> 'stranydict':
         'attempts': document[Key_Attempts],
         'rounds': document[Key_DLQ_Rounds],
         'method': request[Key_Method],
+        'address': address,
         'content_type': request[Key_Headers]['Content-Type'],
         'size': len(data_bytes),
     }
@@ -381,7 +391,7 @@ class GetMessageList(_BrowseService):
         items:'anylist' = []
 
         for document in page_documents:
-            items.append(_to_row(document))
+            items.append(_to_row(document, wrapper.address))
 
         dlq_settings = get_dlq_settings(conn_type, wrapper)
 
@@ -422,6 +432,38 @@ class GetMessage(_BrowseService):
             raise Exception(f'No such message `{input.msg_id}`')
 
         self.response.payload = {'document': out}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetMessageTimeList(_BrowseService):
+    """ When each of the messages named entered the queue or the DLQ - what the pages' refreshes read.
+    """
+    name  = 'zato.pubsub.outgoing.get-message-time-list'
+    input = 'conn_type', Int('conn_id'), 'kind', AsIs('msg_id_list')
+
+    def handle(self) -> 'None':
+        input = self.request.input
+        kind = input.kind
+
+        conn_name, _ = self._get_conn(input.conn_type, input.conn_id)
+        documents = self._get_documents(kind, input.conn_type, input.conn_id, conn_name)
+
+        wanted = set(loads(input.msg_id_list))
+        items:'stranydict' = {}
+
+        for document in documents:
+            msg_id = document[Key_Msg_ID]
+
+            if msg_id not in wanted:
+                continue
+
+            if kind == Kind_DLQ:
+                items[msg_id] = document[Key_DLQ][Header_Moved_Time]
+            else:
+                items[msg_id] = document[Key_Pub_Time]
+
+        self.response.payload = {'items': items}
 
 # ################################################################################################################################
 # ################################################################################################################################

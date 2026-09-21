@@ -137,6 +137,14 @@
             out = 'ace/mode/hl7';
         }
 
+        // .. a document that opens like JSON or XML is highlighted as one ..
+        else if (trimmed.charAt(0) === '{' || trimmed.charAt(0) === '[') {
+            out = 'ace/mode/json';
+        }
+        else if (trimmed.charAt(0) === '<') {
+            out = 'ace/mode/xml';
+        }
+
         // .. check for Python traceback markers ..
         else if (trimmed.indexOf('Traceback') !== -1) {
             out = 'ace/mode/python_traceback';
@@ -231,6 +239,17 @@
                 editorElement.style.resize = 'vertical';
                 editorElement.style.overflow = 'hidden';
                 resizeObserver = new ResizeObserver(function() {
+
+                    // With maxLines set, Ace sizes the element to its lines on every render and writes
+                    // that height into the inline style - a height in there that is not Ace's own is the
+                    // person dragging the handle, and from then on the element keeps the height it is given.
+                    var renderer = editor.renderer;
+                    var isDragged = renderer.desiredHeight && editorElement.style.height !== renderer.desiredHeight + 'px';
+
+                    if (isDragged && renderer.$maxLines) {
+                        editor.setOptions({maxLines: null, minLines: null});
+                    }
+
                     editor.resize();
                 });
                 resizeObserver.observe(editorElement);

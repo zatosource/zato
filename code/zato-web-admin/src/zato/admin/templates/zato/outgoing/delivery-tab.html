@@ -57,16 +57,16 @@
             <th>Message ID</th>
             {% if tab.is_dlq %}
             <th>Moved to DLQ</th>
-            <th class="delivery-cell-center">In DLQ</th>
+            <th class="zato-time-ago-header">In DLQ for</th>
             {% else %}
             <th>Published</th>
-            <th>Waiting</th>
+            <th class="zato-time-ago-header">In queue for</th>
             {% endif %}
             {% if tab.is_dlq %}
             <th class="delivery-cell-center">Retries so far</th>
             <th>Last error</th>
             {% endif %}
-            <th class="delivery-cell-center">Method</th>
+            <th>Address</th>
             <th class="delivery-cell-center">Size</th>
             {% if tab.is_dlq %}
             <th>Rule</th>
@@ -85,18 +85,18 @@
             <td class="delivery-cell-select"><input type="checkbox" class="zato-plain-checkbox delivery-row-select"></td>
             <td class="delivery-cell-nowrap"><a href="javascript:void(0)" class="delivery-message-link" data-kind="{{ tab.kind }}" data-msg-id="{{ item.msg_id }}">{{ item.msg_id }}</a></td>
             {% if tab.is_dlq %}
-            <td class="delivery-cell-nowrap">{{ item.moved_time }}</td>
-            <td class="delivery-cell-nowrap delivery-cell-center">{{ item.in_dlq }}</td>
+            <td class="zato-time-ago" data-time-ago-id="{{ tab.kind }}:{{ item.msg_id }}" data-time-utc="{{ item.moved_time_iso }}" data-time-ago-text="{{ item.moved_time }}" data-time-ago-title="Moved to DLQ" data-time-ago-row-label="In DLQ for"></td>
+            <td class="zato-time-ago" data-time-ago-id="{{ tab.kind }}:{{ item.msg_id }}" data-time-utc="{{ item.moved_time_iso }}" data-time-ago-plain></td>
             {% else %}
-            <td class="delivery-cell-nowrap">{{ item.pub_time }}</td>
-            <td class="delivery-cell-nowrap">{{ item.age }}</td>
+            <td class="zato-time-ago" data-time-ago-id="{{ tab.kind }}:{{ item.msg_id }}" data-time-utc="{{ item.pub_time_iso }}" data-time-ago-text="{{ item.pub_time }}" data-time-ago-title="Published" data-time-ago-row-label="In queue for"></td>
+            <td class="zato-time-ago" data-time-ago-id="{{ tab.kind }}:{{ item.msg_id }}" data-time-utc="{{ item.pub_time_iso }}" data-time-ago-plain></td>
             {% endif %}
             {% if tab.is_dlq %}
             <td class="delivery-cell-center">{{ item.rounds }}</td>
             <td class="delivery-cell-error">{{ item.error }}</td>
             {% endif %}
-            <td class="delivery-cell-center">{{ item.method }}</td>
-            <td class="delivery-cell-nowrap delivery-cell-center">{{ item.size|intcomma }}</td>
+            <td class="delivery-cell-address"><a href="javascript:void(0)" class="delivery-address-link" data-kind="{{ tab.kind }}" data-msg-id="{{ item.msg_id }}">{{ item.method }} {{ item.address }}</a></td>
+            <td class="delivery-cell-nowrap delivery-cell-center"><a href="javascript:void(0)" class="delivery-size-link" data-bytes="{{ item.size|intcomma }} byte{{ item.size|pluralize }}">{{ item.size|filesizeformat }}</a></td>
             {% if tab.is_dlq %}
             <td class="delivery-cell-nowrap">{{ item.rule }}</td>
             <td class="delivery-cell-nowrap"><a href="javascript:void(0)" class="delivery-row-action" data-kind="{{ tab.kind }}" data-action="retry" data-msg-id="{{ item.msg_id }}">Retry</a></td>

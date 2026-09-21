@@ -1274,6 +1274,8 @@ urlpatterns += [
         login_required(out_delivery.message), name='out-delivery-message'),
     url(r'^zato/outgoing/delivery/download/$',
         login_required(out_delivery.download), name='out-delivery-download'),
+    url(r'^zato/outgoing/delivery/refresh/$',
+        login_required(out_delivery.refresh), name='out-delivery-refresh'),
     url(r'^zato/outgoing/delivery/action/$',
         login_required(out_delivery.action), name='out-delivery-action'),
     url(r'^zato/outgoing/delivery/save/$',
