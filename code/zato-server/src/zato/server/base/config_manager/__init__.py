@@ -40,7 +40,7 @@ from zato.common.dispatch import dispatcher
 from zato.common.facade import _service_name_to_topic, _service_sub_key_prefix
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
-from zato.common.pubsub.outgoing import OutgoingType
+from zato.common.pubsub.outgoing import http_soap_outgoing_types
 from zato.common.pubsub.sql.backend import PublishResult
 from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, new_msg_id, parse_datetime, \
@@ -2457,12 +2457,15 @@ class ConfigManager(_ConfigManagerBase):
         is_plain_http = msg['transport'] == URL_TYPE.PLAIN_HTTP
         is_rename = bool(old_name) and old_name != msg['name']
 
-        # A renamed REST connection has its topic moved to the new name, and both that and the config
+        # Which kind of outgoing connection this is, for its queue and its DLQ
+        outgoing_type = http_soap_outgoing_types[msg['transport']]
+
+        # A renamed connection has its topic moved to the new name, and both that and the config
         # this method replaces happen with the queue held still - nothing is published to the connection
         # and no round of its delivery is in flight in between, because both resolve their topics from
         # what the config says the connection is called.
-        if is_plain_http and is_rename:
-            hold = self.hold_outgoing_queue(OutgoingType.REST, msg['id'])
+        if is_rename:
+            hold = self.hold_outgoing_queue(outgoing_type, msg['id'])
         else:
             hold = nullcontext()
 
@@ -2488,8 +2491,8 @@ class ConfigManager(_ConfigManagerBase):
 
             # .. and whatever was queued for this connection now waits under its new topic,
             # .. which is a move from the name the old configuration was deleted under.
-            if is_plain_http and is_rename:
-                self.rename_outgoing_subscription(OutgoingType.REST, msg['id'], del_name, msg['name'])
+            if is_rename:
+                self.rename_outgoing_subscription(outgoing_type, msg['id'], del_name, msg['name'])
 
         # An MCP gateway that exposes this connection as a tool rebuilds its registry now
         mcp_group = 'rest' if is_plain_http else 'soap'
@@ -2502,8 +2505,8 @@ class ConfigManager(_ConfigManagerBase):
         self._delete_config_close_wrapper_http_soap(msg['name'], msg['transport'], logger.error)
 
         # A deleted connection takes its queue with it, along with whatever that queue still held
-        if msg['transport'] == URL_TYPE.PLAIN_HTTP:
-            self.delete_outgoing_subscription(OutgoingType.REST, msg['id'], msg['name'])
+        outgoing_type = http_soap_outgoing_types[msg['transport']]
+        self.delete_outgoing_subscription(outgoing_type, msg['id'], msg['name'])
 
         # An MCP gateway that exposed this connection as a tool rebuilds its registry now
         mcp_group = 'rest' if msg['transport'] == URL_TYPE.PLAIN_HTTP else 'soap'

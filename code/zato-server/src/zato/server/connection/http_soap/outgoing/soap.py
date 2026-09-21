@@ -6,20 +6,62 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# lxml
+from lxml import etree
+
 # Zato
 from zato.common.json_ import loads
+from zato.common.pubsub.outgoing import Key_Data, Key_Headers, Key_Operation, SendRejected
 from zato.common.soap.client import SOAPClient
-from zato.common.soap.common import Content_Type as SOAP_Content_Type, Envelope_NS, SOAP_Action_Header, SOAPFault, \
-    SOAPVersion
+from zato.common.soap.common import Content_Type as SOAP_Content_Type, Envelope_NS, SOAP_Action_Header, SOAPException, \
+    SOAPFault, SOAPVersion
+from zato.common.soap.message import parse as parse_soap_message, serialize as serialize_soap_message
+from zato.common.util.xml_.core import parse_xml
 from zato.server.connection.http_soap.invocation import build_soap_jsonata_context, evaluate_soap_headers, \
     maybe_run_fault_callback, maybe_run_soap_callback, merge_declarative_soap_request
-from zato.server.connection.http_soap.outgoing.common import logger, _retry
+from zato.server.connection.http_soap.outgoing.common import logger, _queue, _retry
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, stranydict, strbytes, strstrdict
+    from zato.common.pubsub.outgoing import OutgoingPublisher, SendResult
+    from zato.common.soap.message import SOAPMessage
+    from zato.common.typing_ import any_, dictnone, stranydict, strbytes, strstrdict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# A queued message travels as the XML of its operation element, which is what the Dashboard's invoke dialog takes as a body too
+_message_encoding = 'unicode'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def message_to_text(message:'SOAPMessage', operation:'str') -> 'str':
+    """ The XML of a message under its operation element, as a queue stores it.
+    """
+    element = serialize_soap_message(message, operation)
+
+    out = etree.tostring(element, encoding=_message_encoding)
+    return out
+
+# ################################################################################################################################
+
+def message_from_text(data:'str') -> 'SOAPMessage':
+    """ A message out of the XML of its operation element - the element's children, under the element's namespace.
+    """
+    root = parse_xml(data.encode('utf-8'))
+
+    out = parse_soap_message(root)
+
+    # Parsing strips namespaces, so the one the operation element went out under is put back on the message
+    namespace = etree.QName(root).namespace
+
+    if namespace:
+        out.namespace = namespace
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,6 +89,8 @@ class SOAPMixin:
     """ The SOAP side of an outgoing connection - the envelope its data travels in, the SOAPAction header,
     the SOAP client the wrapper keeps and the operation-based invocation.
     """
+
+    publisher: 'OutgoingPublisher'
 
     def _add_soap_action(self, headers:'strstrdict') -> 'None':
         """ Adds the SOAPAction header a SOAP 1.1 request carries.
@@ -127,6 +171,10 @@ class SOAPMixin:
         for name in _retry.FieldList:
             config[name] = self.config[name]
 
+        # With the queue switch on, the retry fields drive the connection's queue, so the client makes each attempt once
+        if self.config[_queue.Field_Use_Queue]:
+            config[_retry.Field_Max_Retries] = 0
+
         # Declarative WS-Addressing values imply the headers are wanted even if the flag is off
         if config['wsa_action'] or config['wsa_to'] or config['wsa_reply_to']:
             config['use_ws_addressing'] = True
@@ -173,21 +221,9 @@ class SOAPMixin:
 
 # ################################################################################################################################
 
-    def invoke(self, cid:'str', operation:'str'='', message:'any_'=None) -> 'any_':
-        """ Invokes a SOAP operation over this connection - the message is a dot-accessed
-        SOAPMessage that becomes the operation element in soap:Body, and the parsed response
-        body comes back the same way, with faults raised as SOAPFault. An operation or message
-        the caller does not pass comes from the connection's declarative invocation profile.
+    def _invoke_soap(self, cid:'str', operation:'str', message:'SOAPMessage', soap_headers:'dictnone') -> 'SOAPMessage':
+        """ One call of an operation over the wire, with the callbacks the connection configures.
         """
-        self._enforce_is_active()
-
-        # Fill in the blanks from the connection's declarative invocation profile - explicit
-        # arguments always win and JSONata values are evaluated at call time against
-        # the message the caller passed in.
-        context = build_soap_jsonata_context(message)
-        operation, message = merge_declarative_soap_request(self.config, operation, message, context)
-        soap_headers = evaluate_soap_headers(self.config, context)
-
         logger.info('SOAP out -> cid=%s; %s %s; name:%s', cid, operation, self.address, self.config['name'])
 
         try:
@@ -203,6 +239,78 @@ class SOAPMixin:
         maybe_run_soap_callback(self.server, self.config, cid, response)
 
         return response
+
+# ################################################################################################################################
+
+    def _send_or_queue_soap(
+        self,
+        cid,          # type: str
+        operation,    # type: str
+        message,      # type: SOAPMessage
+        soap_headers, # type: dictnone
+    ) -> 'SendResult':
+        """ An invocation with the queue switch on - a fault or any other answer that is not a response is a rejection.
+        """
+        if soap_headers is None:
+            soap_headers = {}
+
+        request = {
+            Key_Operation: operation,
+            Key_Data: message_to_text(message, operation),
+            Key_Headers: soap_headers,
+        }
+
+        def attempt() -> 'SOAPMessage':
+            try:
+                out = self._invoke_soap(cid, operation, message, soap_headers)
+            except SOAPException as e:
+                raise SendRejected(str(e), e)
+
+            return out
+
+        out = self.publisher.send_or_queue(cid, request, attempt)
+        return out
+
+# ################################################################################################################################
+
+    def invoke(self, cid:'str', operation:'str'='', message:'any_'=None) -> 'any_':
+        """ Invokes a SOAP operation over this connection - the message is a dot-accessed
+        SOAPMessage that becomes the operation element in soap:Body, and the parsed response
+        body comes back the same way, with faults raised as SOAPFault. An operation or message
+        the caller does not pass comes from the connection's declarative invocation profile.
+        With the queue switch on, what comes back is a SendResult and nothing is raised.
+        """
+        self._enforce_is_active()
+
+        # Fill in the blanks from the connection's declarative invocation profile - explicit
+        # arguments always win and JSONata values are evaluated at call time against
+        # the message the caller passed in.
+        context = build_soap_jsonata_context(message)
+        operation, message = merge_declarative_soap_request(self.config, operation, message, context)
+        soap_headers = evaluate_soap_headers(self.config, context)
+
+        if self.config[_queue.Field_Use_Queue]:
+            out = self._send_or_queue_soap(cid, operation, message, soap_headers)
+        else:
+            out = self._invoke_soap(cid, operation, message, soap_headers)
+
+        return out
+
+# ################################################################################################################################
+
+    def send_soap_from_queue(self, cid:'str', request:'stranydict') -> 'SOAPMessage':
+        """ Makes one attempt to deliver an invocation the queue holds, raising when the endpoint turned it down.
+        """
+        operation = request[Key_Operation]
+        message = message_from_text(request[Key_Data])
+
+        soap_headers = request[Key_Headers]
+
+        if not soap_headers:
+            soap_headers = None
+
+        out = self._invoke_soap(cid, operation, message, soap_headers)
+        return out
 
 # ################################################################################################################################
 

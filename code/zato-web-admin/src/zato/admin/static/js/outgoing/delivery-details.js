@@ -42,6 +42,53 @@ $.fn.zato.outgoing_delivery.openDetails = function(kind, msgId) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The id of the dialog's input one field of a connection type is typed into
+$.fn.zato.outgoing_delivery.invokerFieldId = function(field) {
+    var out = $.fn.zato.outgoing_delivery.config.invokerFieldIdPrefix + field.name;
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The markup of the fields a connection type has in place of the HTTP options, e.g. a SOAP operation
+$.fn.zato.outgoing_delivery.invokerFieldsHtml = function(fields) {
+
+    var page = $.fn.zato.outgoing_delivery;
+    var out = '';
+
+    fields.forEach(function(field) {
+        out += String.format(
+            '<div class="invoker-more-options-row invoker-more-options-row-compact"><label>{0}</label><input type="text" id="{1}" /></div>',
+            field.label, page.invokerFieldId(field));
+    });
+
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// What the dialog posts for a connection type with fields of its own - the body and each field by its name
+$.fn.zato.outgoing_delivery.collectInvokerFields = function(fields) {
+
+    var page = $.fn.zato.outgoing_delivery;
+    var config = page.config;
+
+    var out = function() {
+        var formData = {};
+        formData[config.invokerRequestKey] = $.fn.zato.invoker._request_pane.getValue();
+
+        fields.forEach(function(field) {
+            formData[field.name] = $('#' + page.invokerFieldId(field)).val();
+        });
+
+        return formData;
+    };
+
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // The invoke dialog of the connection type's list page, with the message's own method, query string and body filled in
 $.fn.zato.outgoing_delivery.openInvoker = function(kind, msgId) {
 
@@ -52,6 +99,7 @@ $.fn.zato.outgoing_delivery.openInvoker = function(kind, msgId) {
 
     $.getJSON(url, function(details) {
         var invoker = details.invoker;
+        var invokerOptions = invoker.options;
 
         var options = {
             id: state.connId,
@@ -62,13 +110,31 @@ $.fn.zato.outgoing_delivery.openInvoker = function(kind, msgId) {
                 return invoker.url_prefix + id + '/';
             },
             request: details.data,
-            request_mode: page.aceMode(details.body_mode)
+            request_mode: page.aceMode(details.body_mode),
+            highlight_lexer: details.body_mode
         };
 
-        // What is the message's own - for an HTTP type its method and query string - comes from the services
-        $.extend(options, invoker.options);
+        // A connection type with fields of its own, e.g. a SOAP operation, shows them in place of the HTTP options ..
+        var fields = invokerOptions.fields;
+
+        if(fields !== undefined) {
+            options.show_more_options = false;
+            options.extra_fields_html = page.invokerFieldsHtml(fields);
+            options.collect_form_data_func = page.collectInvokerFields(fields);
+            delete invokerOptions.fields;
+        }
+
+        // .. and what else is the message's own - for an HTTP type its method and query string - comes from the services.
+        $.extend(options, invokerOptions);
 
         $.fn.zato.invoker.open_overlay(options);
+
+        // The message's own values win over what the dialog restored from its last use
+        if(fields !== undefined) {
+            fields.forEach(function(field) {
+                $('#' + page.invokerFieldId(field)).val(field.value);
+            });
+        }
     });
 }
 

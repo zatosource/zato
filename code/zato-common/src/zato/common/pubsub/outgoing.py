@@ -16,7 +16,7 @@ from traceback import format_exc
 from gevent import sleep
 
 # Zato
-from zato.common.api import HTTP_SOAP, PubSub
+from zato.common.api import HTTP_SOAP, PubSub, URL_TYPE
 from zato.common.facade import PubSubFacade
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.api import new_msg_id
@@ -53,11 +53,12 @@ Key_Attempts   = 'attempts'
 Key_DLQ_Rounds = 'dlq_rounds'
 Key_Request    = 'request'
 
-# The keys of the request part
-Key_Method  = 'method'
-Key_Data    = 'data'
-Key_Headers = 'headers'
-Key_Params  = 'params'
+# The keys of the request part - an HTTP type stores a method, a SOAP type an operation
+Key_Method    = 'method'
+Key_Operation = 'operation'
+Key_Data      = 'data'
+Key_Headers   = 'headers'
+Key_Params    = 'params'
 
 Attempts_None = 0
 Attempts_Direct = 1
@@ -99,10 +100,17 @@ class OutgoingType:
     """ The kinds of outgoing connection that can be published to.
     """
     REST = 'rest'
+    SOAP = 'soap'
     FHIR = 'fhir'
     SFTP = 'sftp'
     SMB = 'smb'
     FTP = 'ftp'
+
+# Which kind of outgoing connection an HTTP/SOAP connection is, by its transport
+http_soap_outgoing_types = {
+    URL_TYPE.PLAIN_HTTP: OutgoingType.REST,
+    URL_TYPE.SOAP: OutgoingType.SOAP,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################

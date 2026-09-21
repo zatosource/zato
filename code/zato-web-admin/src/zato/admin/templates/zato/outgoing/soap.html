@@ -23,6 +23,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/delivery-tab.css">
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
 {% endblock %}
@@ -58,6 +59,8 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab-slots.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
     {{ alerts_tab_config|json_script:"out-soap-alerts-tab-config" }}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/delivery-tab.js"></script>
+    {{ delivery_tab_config|json_script:"delivery-tab-config" }}
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/soap.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/soap-rows.js"></script>
@@ -96,6 +99,7 @@
             '_audit_log',
             '_ping',
             '_invoke',
+            '_delivery',
             '_edit',
             '_delete',
             'id',
@@ -129,11 +133,7 @@
             'health_check_run_unit',
             'health_check_job_id',
             'is_audit_log_active',
-            'max_retries',
-            'retry_sleep_time',
-            'retry_backoff_threshold',
-            'retry_backoff_multiplier',
-        ].concat($.fn.zato.alerts_tab.columns());
+        ].concat($.fn.zato.delivery_tab.columns()).concat($.fn.zato.alerts_tab.columns());
     }
     </script>
 
@@ -181,6 +181,7 @@
                         <th>&nbsp;</th> {% comment %} _audit_log {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th> {% comment %} _invoke {% endcomment %}
+                        <th>&nbsp;</th> {% comment %} _delivery {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -228,11 +229,8 @@
 
                         <th class='ignore'>&nbsp;</th> {% comment %} is_audit_log_active {% endcomment %}
 
-                        {% comment %} Retry config fields {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
+                        {% comment %} The Delivery tab {% endcomment %}
+                        {% include "zato/include/delivery-tab-headers.html" %}
 
                         {% comment %} The Alerts tab {% endcomment %}
                         {% for field_name in alerts_tab_config.storage_field_names %}
@@ -264,6 +262,7 @@
                         <td>{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=soap-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)" class="ping-link">Ping</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.soap.invoke('{{ item.id }}')">Invoke</a></td>
+                        {% include "zato/include/delivery-queue-link.html" with conn_type="soap" %}
                         <td><a href="javascript:$.fn.zato.outgoing.soap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.soap.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -313,11 +312,8 @@
 
                         <td class='ignore'>{{ item.is_audit_log_active }}</td>
 
-                        {% comment %} Retry config fields {% endcomment %}
-                        <td class='ignore'>{{ item.max_retries }}</td>
-                        <td class='ignore'>{{ item.retry_sleep_time }}</td>
-                        <td class='ignore'>{{ item.retry_backoff_threshold }}</td>
-                        <td class='ignore'>{{ item.retry_backoff_multiplier }}</td>
+                        {% comment %} The Delivery tab {% endcomment %}
+                        {% include "zato/include/delivery-tab-cells.html" %}
 
                         {% comment %} The Alerts tab {% endcomment %}
                         {% for field_name in alerts_tab_config.storage_field_names %}
@@ -350,6 +346,7 @@
                         <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
                         <button type="button" class="dashboard-tab" data-tab="credentials" role="tab" aria-selected="false">Body credentials</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
+                        {% include "zato/include/delivery-tab-button.html" %}
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
@@ -396,22 +393,6 @@
                             <tr class="more-options-block hidden">
                                 <td><label for="id_content_type">Content type</label></td>
                                 <td>{{ create_form.content_type }}</td>
-                            </tr>
-                            <tr class="more-options-block hidden">
-                                <td><label for="id_max_retries">Max retries</label></td>
-                                <td>{{ create_form.max_retries }} <span class="form_hint">0 = no retries</span></td>
-                            </tr>
-                            <tr class="more-options-block hidden">
-                                <td><label for="id_retry_sleep_time">Retry sleep time</label></td>
-                                <td>{{ create_form.retry_sleep_time }} <span class="form_hint">seconds</span></td>
-                            </tr>
-                            <tr class="more-options-block hidden">
-                                <td><label for="id_retry_backoff_threshold">Retry backoff threshold</label></td>
-                                <td>{{ create_form.retry_backoff_threshold }} <span class="form_hint">seconds</span></td>
-                            </tr>
-                            <tr class="more-options-block hidden">
-                                <td><label for="id_retry_backoff_multiplier">Retry backoff multiplier</label></td>
-                                <td>{{ create_form.retry_backoff_multiplier }}</td>
                             </tr>
                         </table>
                     </div>
@@ -471,6 +452,8 @@
                         {% include "zato/http_soap/scheduler-tab.html" with form=create_form action="create" field_prefix="" %}
                     </div>
 
+                    {% include "zato/include/delivery-tab.html" with panel_id="out-soap-create-tab-panel-delivery" form=create_form %}
+
                     <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-request" role="tabpanel" hidden>
                         {% include "zato/http_soap/soap-request-tab.html" with form=create_form action="create" field_prefix="" %}
                     </div>
@@ -516,6 +499,7 @@
                         <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
                         <button type="button" class="dashboard-tab" data-tab="credentials" role="tab" aria-selected="false">Body credentials</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
+                        {% include "zato/include/delivery-tab-button.html" %}
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
@@ -562,22 +546,6 @@
                             <tr class="more-options-block hidden">
                                 <td><label for="id_edit-content_type">Content type</label></td>
                                 <td>{{ edit_form.content_type }}</td>
-                            </tr>
-                            <tr class="more-options-block hidden">
-                                <td><label for="id_edit-max_retries">Max retries</label></td>
-                                <td>{{ edit_form.max_retries }} <span class="form_hint">0 = no retries</span></td>
-                            </tr>
-                            <tr class="more-options-block hidden">
-                                <td><label for="id_edit-retry_sleep_time">Retry sleep time</label></td>
-                                <td>{{ edit_form.retry_sleep_time }} <span class="form_hint">seconds</span></td>
-                            </tr>
-                            <tr class="more-options-block hidden">
-                                <td><label for="id_edit-retry_backoff_threshold">Retry backoff threshold</label></td>
-                                <td>{{ edit_form.retry_backoff_threshold }} <span class="form_hint">seconds</span></td>
-                            </tr>
-                            <tr class="more-options-block hidden">
-                                <td><label for="id_edit-retry_backoff_multiplier">Retry backoff multiplier</label></td>
-                                <td>{{ edit_form.retry_backoff_multiplier }}</td>
                             </tr>
                         </table>
                     </div>
@@ -636,6 +604,8 @@
                     <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-scheduler" role="tabpanel" hidden>
                         {% include "zato/http_soap/scheduler-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
                     </div>
+
+                    {% include "zato/include/delivery-tab.html" with panel_id="out-soap-edit-tab-panel-delivery" form=edit_form %}
 
                     <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-request" role="tabpanel" hidden>
                         {% include "zato/http_soap/soap-request-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}

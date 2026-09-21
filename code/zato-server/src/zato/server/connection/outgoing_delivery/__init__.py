@@ -17,8 +17,8 @@ from zato.common.api import GENERIC
 from zato.common.pubsub.outgoing import Key_Data, OutgoingType, register_outgoing_conn_type
 from zato.server.connection.outgoing_delivery.files import deliver_to_ftp, deliver_to_sftp, deliver_to_smb, locate_ftp, \
     locate_sftp, locate_smb
-from zato.server.connection.outgoing_delivery.http import deliver_to_rest, get_rest_dlq_settings, get_rest_retry_policy, \
-    locate_rest, rest_page
+from zato.server.connection.outgoing_delivery.http import deliver_to_rest, deliver_to_soap, get_http_dlq_settings, \
+    get_http_retry_policy, locate_rest, locate_soap, rest_page, soap_page
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,7 +80,9 @@ def register_delivery_handlers() -> 'None':
     """ Registers every type of outgoing connection that can be published to.
     """
     register_outgoing_conn_type(OutgoingType.REST, locate_rest, deliver_to_rest,
-        retry_policy=get_rest_retry_policy, dlq_settings=get_rest_dlq_settings, page=rest_page)
+        retry_policy=get_http_retry_policy, dlq_settings=get_http_dlq_settings, page=rest_page)
+    register_outgoing_conn_type(OutgoingType.SOAP, locate_soap, deliver_to_soap,
+        retry_policy=get_http_retry_policy, dlq_settings=get_http_dlq_settings, page=soap_page)
     register_outgoing_conn_type(OutgoingType.FHIR, _locate_fhir, _deliver_to_fhir)
 
     # File deliveries are recorded as file-outgoing audit events already

@@ -71,6 +71,10 @@ $.fn.zato.outgoing_delivery.config = {
 
     // The Ace modes are named by the services as the part after this prefix
     aceModePrefix: 'ace/mode/',
+
+    // The invoke dialog's inputs of a connection type's own fields, e.g. a SOAP operation, and what it posts the body as
+    invokerFieldIdPrefix: 'invoker-modal-',
+    invokerRequestKey: 'data-request',
     editorMinLines: 12,
     editorMaxLines: 30
 };

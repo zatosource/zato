@@ -20,7 +20,7 @@ from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.common import TransportStatus
 from zato.common.bearer_token import normalize_scopes
 from zato.common.exception import Inactive, BackendInvocationError
-from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
+from zato.common.pubsub.outgoing import http_soap_outgoing_types, OutgoingPublisher
 from zato.common.soap.common import Content_Type as SOAP_Content_Type
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, utcnow
@@ -459,10 +459,10 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper, SOAPMixin, RESTCallMixin):
         super(HTTPSOAPWrapper, self).__init__(config, server)
         self.server = server
 
-        # A REST connection can be published to and it can queue what its endpoint turned down - the publisher
+        # A REST or a SOAP connection can queue what its endpoint turned down - the publisher
         # is given the connection's id because that is what a rename of the connection leaves alone.
-        if config['transport'] == URL_TYPE.PLAIN_HTTP:
-            self.publisher = OutgoingPublisher(server, OutgoingType.REST, config['id'])
+        outgoing_type = http_soap_outgoing_types[config['transport']]
+        self.publisher = OutgoingPublisher(server, outgoing_type, config['id'])
 
 # ################################################################################################################################
 

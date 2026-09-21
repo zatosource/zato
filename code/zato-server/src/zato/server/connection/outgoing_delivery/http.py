@@ -6,15 +6,15 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# How a queued message is handed over to an outgoing REST connection, and what the delivery page shows of it.
+# How a queued message is handed over to an outgoing REST or SOAP connection, and what the delivery page shows of it.
 
 # stdlib
 from urllib.parse import urlencode
 
 # Zato
 from zato.common.api import HTTP_SOAP
-from zato.common.pubsub.outgoing import detect_body_mode, Key_Data, Key_Headers, Key_Method, Key_Params, OutgoingInvoker, \
-    OutgoingPage
+from zato.common.pubsub.outgoing import Body_Mode_XML, detect_body_mode, Key_Data, Key_Headers, Key_Method, Key_Operation, \
+    Key_Params, OutgoingInvoker, OutgoingPage
 from zato.common.util.http_retry import RetryPolicy
 
 # ################################################################################################################################
@@ -31,11 +31,19 @@ _dlq = HTTP_SOAP.DLQ
 
 # The request facts of the details window
 _fact_method       = 'Method'
+_fact_operation    = 'Operation'
 _fact_content_type = 'Content type'
 _fact_headers      = 'Headers'
+_fact_soap_headers = 'SOAP headers'
 _fact_query_string = 'Query string'
 
 _content_type_header = 'Content-Type'
+
+# The field of the SOAP invoke dialog a queued message's operation goes into
+_operation_field = 'operation'
+
+# Both kinds of connection are invoked through the one outgoing invoke endpoint, which reads the connection's transport
+_invoke_url_prefix = '/zato/http-soap/invoke-outconn/'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,12 +60,32 @@ def get_http_invoker_options(request:'stranydict') -> 'stranydict':
 
 # ################################################################################################################################
 
+def get_soap_invoker_options(request:'stranydict') -> 'stranydict':
+    """ The invoke dialog's options that are a queued SOAP request's own - its operation, in the dialog's own field.
+    """
+    out = {
+        'fields': [
+            {'name': _operation_field, 'label': _fact_operation, 'value': request[Key_Operation]},
+        ],
+    }
+
+    return out
+
+# ################################################################################################################################
+
 # The Dashboard's invoke dialog of outgoing REST connections
 rest_invoker = OutgoingInvoker()
-rest_invoker.url_prefix = '/zato/http-soap/invoke-outconn/'
+rest_invoker.url_prefix = _invoke_url_prefix
 rest_invoker.connection = 'outgoing'
 rest_invoker.history_key_prefix = 'zato.invoke-history.outconn.'
 rest_invoker.options = get_http_invoker_options
+
+# The Dashboard's invoke dialog of outgoing SOAP connections
+soap_invoker = OutgoingInvoker()
+soap_invoker.url_prefix = _invoke_url_prefix
+soap_invoker.connection = 'outconn-soap'
+soap_invoker.history_key_prefix = 'zato.invoke-history.outconn-soap.'
+soap_invoker.options = get_soap_invoker_options
 
 # Defaults of the DLQ fields
 _dlq_defaults = {
@@ -72,15 +100,31 @@ _dlq_defaults = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def locate_rest(server:'ParallelServer', conn_id:'int') -> 'anytuple':
-    """ An outgoing REST connection by its id, as its name and its wrapper.
+def _locate_http_soap(config_dict:'any_', conn_id:'int') -> 'anytuple':
+    """ An outgoing HTTP/SOAP connection by its id in one of the config store's dicts, as its name and its wrapper.
     """
-    item = server.config_manager.config_store.out_plain_http.get_by_id(conn_id)
+    item = config_dict.get_by_id(conn_id)
 
     if not item:
         return ()
 
     out = (item.config['name'], item.conn)
+    return out
+
+# ################################################################################################################################
+
+def locate_rest(server:'ParallelServer', conn_id:'int') -> 'anytuple':
+    """ An outgoing REST connection by its id, as its name and its wrapper.
+    """
+    out = _locate_http_soap(server.config_manager.config_store.out_plain_http, conn_id)
+    return out
+
+# ################################################################################################################################
+
+def locate_soap(server:'ParallelServer', conn_id:'int') -> 'anytuple':
+    """ An outgoing SOAP connection by its id, as its name and its wrapper.
+    """
+    out = _locate_http_soap(server.config_manager.config_store.out_soap, conn_id)
     return out
 
 # ################################################################################################################################
@@ -92,16 +136,23 @@ def deliver_to_rest(server:'ParallelServer', cid:'str', wrapper:'any_', request:
 
 # ################################################################################################################################
 
-def get_rest_retry_policy(wrapper:'any_') -> 'RetryPolicy':
-    """ The retry policy of an outgoing REST connection.
+def deliver_to_soap(server:'ParallelServer', cid:'str', wrapper:'any_', request:'stranydict') -> 'None':
+    """ Makes one attempt to hand an invocation over to an outgoing SOAP connection - a fault raises, as any other failure does.
+    """
+    _ = wrapper.send_soap_from_queue(cid, request)
+
+# ################################################################################################################################
+
+def get_http_retry_policy(wrapper:'any_') -> 'RetryPolicy':
+    """ The retry policy of an outgoing REST or SOAP connection.
     """
     out = RetryPolicy.from_config(wrapper.config)
     return out
 
 # ################################################################################################################################
 
-def get_rest_dlq_settings(wrapper:'any_') -> 'stranydict':
-    """ The DLQ settings of an outgoing REST connection, with defaults filled in.
+def get_http_dlq_settings(wrapper:'any_') -> 'stranydict':
+    """ The DLQ settings of an outgoing REST or SOAP connection, with defaults filled in.
     """
     config = wrapper.config
     out = {}
@@ -179,6 +230,43 @@ rest_page.destination = get_http_destination
 rest_page.details_facts = get_http_details_facts
 rest_page.body_mode = get_http_body_mode
 rest_page.invoker = rest_invoker
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_soap_destination(wrapper:'any_', request:'stranydict') -> 'str':
+    """ The operation and the address a queued SOAP invocation goes to.
+    """
+    out = f'{request[Key_Operation]} {wrapper.address}'
+    return out
+
+# ################################################################################################################################
+
+def get_soap_details_facts(request:'stranydict') -> 'dictlist':
+    """ The request facts the details window lists of a queued SOAP invocation.
+    """
+    out = [
+        {'label': _fact_operation, 'value': request[Key_Operation]},
+        {'label': _fact_soap_headers, 'value': request[Key_Headers]},
+    ]
+
+    return out
+
+# ################################################################################################################################
+
+def get_soap_body_mode(request:'stranydict') -> 'str':
+    """ A queued SOAP invocation's body is the XML of its operation element.
+    """
+    return Body_Mode_XML
+
+# ################################################################################################################################
+
+# What the delivery page shows of an outgoing SOAP connection's messages
+soap_page = OutgoingPage()
+soap_page.destination = get_soap_destination
+soap_page.details_facts = get_soap_details_facts
+soap_page.body_mode = get_soap_body_mode
+soap_page.invoker = soap_invoker
 
 # ################################################################################################################################
 # ################################################################################################################################

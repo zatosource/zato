@@ -37,6 +37,9 @@ for _name in Delivery_Fields:
 
 delivery_input = tuple(_delivery_fields)
 
+# Outgoing REST and SOAP connections have a queue and a DLQ
+_transports_with_delivery_settings = (URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -46,7 +49,7 @@ def has_delivery_settings(connection:'str', transport:'str') -> 'bool':
     if connection != CONNECTION.OUTGOING:
         return False
 
-    out = transport == URL_TYPE.PLAIN_HTTP
+    out = transport in _transports_with_delivery_settings
     return out
 
 # ################################################################################################################################
@@ -76,7 +79,7 @@ def prepare_delivery_settings(service:'AdminService', input:'Bunch', skip_opaque
 # ################################################################################################################################
 
 def apply_delivery_list_defaults(item:'strdict') -> 'None':
-    """ Fills in the delivery defaults of an outgoing REST connection in a list.
+    """ Fills in the delivery defaults of an outgoing REST or SOAP connection in a list.
     """
     if has_delivery_settings(item['connection'], item['transport']):
         apply_delivery_defaults(item)

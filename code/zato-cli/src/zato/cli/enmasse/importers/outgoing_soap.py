@@ -12,8 +12,8 @@ from copy import deepcopy
 from json import dumps, loads
 
 # Zato
-from zato.cli.enmasse.util import as_row_list, assign_security, Invocation_Row_Fields, preprocess_item, \
-    security_needs_update, serialize_invocation_rows, sync_invocation_jobs
+from zato.cli.enmasse.util import as_row_list, assign_security, delivery_needs_update, Invocation_Row_Fields, \
+    prepare_delivery_fields, preprocess_item, security_needs_update, serialize_invocation_rows, sync_invocation_jobs
 from zato.cli.enmasse.util.alerts import alerts_need_update, take_alert_attrs
 from zato.common.alerting.object_config import alert_type_soap, Alerts_Key
 from zato.common.api import CONNECTION, MISC, URL_TYPE
@@ -165,6 +165,10 @@ class OutgoingSOAPImporter:
                 if alerts_need_update(item, db_def, alert_type_soap):
                     needs_update = True
 
+                # Check the queue switch and the DLQ settings
+                if delivery_needs_update(item, db_def):
+                    needs_update = True
+
                 if needs_update:
                     item['id'] = db_def['id']
                     logger.info('Will update %s with id=%s', name, db_def['id'])
@@ -188,6 +192,8 @@ class OutgoingSOAPImporter:
 
         # The alert settings leave the definition before it reaches the row's own attributes
         alert_attrs = take_alert_attrs(outgoing_def, alert_type_soap, _connection_type, session)
+
+        prepare_delivery_fields(outgoing_def, _connection_type)
 
         outgoing = HTTPSOAP()
 
@@ -254,6 +260,8 @@ class OutgoingSOAPImporter:
 
         # The alert settings leave the definition before it reaches the row's own attributes
         alert_attrs = take_alert_attrs(outgoing_def, alert_type_soap, _connection_type, session)
+
+        prepare_delivery_fields(outgoing_def, _connection_type)
 
         outgoing_def = deepcopy(outgoing_def)
 

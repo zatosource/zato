@@ -35,6 +35,7 @@
             security:     'Security',
             credentials:  'Body credentials',
             scheduler:    'Scheduler',
+            delivery:     'Delivery',
             request:      'Request',
             response:     'Response',
             callback:     'Callback'
@@ -45,6 +46,15 @@
             create: 'out-soap-create-tab-panel-alerts',
             edit:   'out-soap-edit-tab-panel-alerts'
         },
+
+        // The Delivery tab's panels on the create and edit dialogs
+        deliveryPanelIds: {
+            create: 'out-soap-create-tab-panel-delivery',
+            edit:   'out-soap-edit-tab-panel-delivery'
+        },
+
+        // The delivery page link in a row names the connection type the page reads
+        deliveryConnType: 'soap',
 
         // The two kinds of request parameter rows, each with a hidden JSON field of its own.
         paramKinds: ['message', 'soap_headers']
@@ -119,6 +129,17 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
+    // The Delivery tab reads the rendered Django form of one dialog at a time, like the Alerts tab
+    function bindDeliveryTab(action) {
+
+        $.fn.zato.delivery_tab.bind({
+            panel_id: config.deliveryPanelIds[action],
+            field_prefix: fieldPrefix(action)
+        });
+    }
+
+    // ////////////////////////////////////////////////////////////////////////
+
     function toggleCallback(action) {
 
         var callbackType = $('#id_' + fieldPrefix(action) + 'callback_type').val();
@@ -139,13 +160,14 @@
 
     function initHowItWorks(action) {
 
-        // The Alerts tab's lines are not table rows, so the walk covers them as well
+        // The Alerts and Delivery tabs' lines are not table rows, so the walk covers them as well
         $.fn.zato.how_it_works.init({
             badgeId: action + '-how-it-works',
             divId: '#' + action + '-div',
             fieldSelector: 'table.form-data tr, .decision-line',
             descriptions: $.extend({},
                 $.fn.zato.outgoing.soap.field_descriptions,
+                $.fn.zato.delivery_tab.descriptions(),
                 $.fn.zato.alerts_tab.descriptions())
         });
     }
@@ -179,6 +201,7 @@
         $.fn.zato.data_table._create_edit('create', 'Create a new outgoing SOAP connection', null);
         $.fn.zato.outgoing.soap.rows.populate('create');
         toggleCallback('create');
+        bindDeliveryTab('create');
         bindAlertsTab('create');
         initHowItWorks('create');
     };
@@ -211,6 +234,7 @@
         // The health check line of the Alerts tab reads its hidden inputs, populated the same way
         $.fn.zato.health_check.populate('edit', item);
 
+        bindDeliveryTab('edit');
         bindAlertsTab('edit');
         initHowItWorks('edit');
     };
@@ -248,10 +272,6 @@
         'callback_type', 'callback_name',
         'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_job_id',
         'health_check_run_every', 'health_check_run_unit', 'health_check_job_id'
-    ];
-
-    var hiddenRetryFields = [
-        'max_retries', 'retry_sleep_time', 'retry_backoff_threshold', 'retry_backoff_multiplier'
     ];
 
     // ////////////////////////////////////////////////////////////////////////
@@ -340,6 +360,7 @@
             '<td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping(\'{0}\', this)" class="ping-link">Ping</a></td>',
             item.id);
         row += String.format('<td><a href="javascript:$.fn.zato.outgoing.soap.invoke(\'{0}\')">Invoke</a></td>', item.id);
+        row += $.fn.zato.delivery_tab.link_cell(config.deliveryConnType, item, config.cluster_id);
 
         row += String.format('<td><a href="javascript:$.fn.zato.outgoing.soap.edit(\'{0}\')">Edit</a></td>', item.id);
         row += String.format('<td><a href="javascript:$.fn.zato.outgoing.soap.delete_(\'{0}\');">Delete</a></td>', item.id);
@@ -363,9 +384,10 @@
 
         row += String.format('<td class="ignore">{0}</td>', toDjangoBool(item.is_audit_log_active));
 
-        row += hiddenCells(item, hiddenRetryFields);
+        // The Delivery tab's fields ride in the row for the edit form to read ..
+        row += $.fn.zato.delivery_tab.row_cells(item);
 
-        // The Alerts tab's fields ride in the row for the edit form to read
+        // .. and so do the Alerts tab's.
         row += $.fn.zato.alerts_tab.hidden_cells(item);
 
         if(include_tr) {
@@ -429,14 +451,6 @@
         'id_ping_method': 'HTTP method used when pinging the connection, e.g. HEAD or GET.',
         'id_content_type': 'Overrides the default Content-Type header. ' +
             'Leave empty to use the default matching the SOAP version selected.',
-        'id_max_retries': 'How many times a failed invocation is retried after a timeout or a connection error. ' +
-            '0 means no retries at all.',
-        'id_retry_sleep_time': 'How many seconds to sleep before the first retry. ' +
-            'Each subsequent sleep is multiplied by the backoff multiplier.',
-        'id_retry_backoff_threshold': 'A cap on the total time spent sleeping between retries, in seconds. ' +
-            'Once reached, no more retries take place.',
-        'id_retry_backoff_multiplier': 'Each retry sleeps this many times longer than the previous one, ' +
-            'up to 8 seconds per a single sleep.',
 
         // Scheduler tab
         'id_scheduler_run_every': 'How often this connection is invoked, e.g. every 6 hours. ' +
@@ -479,6 +493,9 @@
         $.fn.zato.alerts_tab.init({config_id: 'out-soap-alerts-tab-config'});
         $.fn.zato.live_form_updates.register('create', $.fn.zato.alerts_tab.live_configs(''));
         $.fn.zato.live_form_updates.register('edit', $.fn.zato.alerts_tab.live_configs('edit-'));
+
+        // The Delivery tab's popover is set up once for both popups
+        $.fn.zato.delivery_tab.init();
 
         $('#data-table').tablesorter();
         $.fn.zato.data_table.class_ = $.fn.zato.data_table.OutgoingSOAP;

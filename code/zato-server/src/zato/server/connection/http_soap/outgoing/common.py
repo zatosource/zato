@@ -48,6 +48,7 @@ _OAuth = SEC_DEF_TYPE.OAUTH
 _SPNEGO = SEC_DEF_TYPE.SPNEGO
 
 _retry = HTTP_SOAP.Retry
+_queue = HTTP_SOAP.Queue
 _invocation = HTTP_SOAP.Invocation
 
 # What a retry of an outgoing REST request is called in the logs.

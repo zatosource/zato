@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.admin.web import alerts_tab
+from zato.admin.web import alerts_tab, delivery_tab
 from zato.admin.web.forms import add_health_check_fields, add_security_select, add_services
 from zato.admin.web.forms.http_soap import callback_type_choices, response_map_mode_choices, scheduler_run_unit_choices
 from zato.common.api import HTTP_SOAP, MISC, SOAP_VERSIONS
@@ -29,6 +29,9 @@ _retry = HTTP_SOAP.Retry
 # ################################################################################################################################
 
 class CreateForm(forms.Form):
+
+    # The Delivery tab's DLQ switch is on for a new connection and reads its stored value on an existing one
+    is_edit_form = False
 
     # Main
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -57,16 +60,11 @@ class CreateForm(forms.Form):
     ping_method = forms.CharField(initial=MISC.DEFAULT_HTTP_PING_METHOD, widget=forms.TextInput(attrs={'style':'width:20%'}))
     content_type = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:40%'}))
 
-    # Retry config - how many times to retry a failed invocation and how long to sleep between attempts
-    max_retries = forms.CharField(
-        widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:10%'}), initial=_retry.Default_Max_Retries)
-    retry_sleep_time = forms.CharField(
-        widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:10%'}), initial=_retry.Default_Sleep_Time)
-    retry_backoff_threshold = forms.CharField(
-        widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:10%'}), initial=_retry.Default_Backoff_Threshold)
-    retry_backoff_multiplier = forms.CharField(
-        widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:10%'}), initial=_retry.Default_Backoff_Multiplier)
-
+    # Retry config - the Delivery tab's micro-form edits these, the queue and DLQ fields join them in __init__
+    max_retries = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Max_Retries)
+    retry_sleep_time = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Sleep_Time)
+    retry_backoff_threshold = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Backoff_Threshold)
+    retry_backoff_multiplier = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Backoff_Multiplier)
 
     # Request - what request each invocation builds. The message and SOAP header rows are edited
     # as rows of widgets and serialized by JS to the hidden JSON fields below before the form is submitted.
@@ -123,6 +121,8 @@ class CreateForm(forms.Form):
         # The health check is a line of the Alerts tab, its fields shared across connection types
         add_health_check_fields(self)
 
+        delivery_tab.add_delivery_fields(self, self.is_edit_form)
+
         add_security_select(self, security_list, field_name='security_id')
 
         add_services(self, req)
@@ -135,6 +135,7 @@ class CreateForm(forms.Form):
 # ################################################################################################################################
 
 class EditForm(CreateForm):
+    is_edit_form = True
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
