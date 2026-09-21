@@ -21,7 +21,7 @@ from zato.common.pubsub.dlq import Header_Moved_Time, Key_DLQ
 from zato.common.pubsub.outgoing import Attempts_Direct, Key_Data, Key_Request
 
 # Test support
-from queue_delivery.client import get_client, get_queue, is_broker_backend, send, wait_for_queue_depth, \
+from queue_delivery.client import get_client, get_queue, is_broker_backend, msg_ids_of, send, wait_for_queue_depth, \
     wait_for_queue_empty
 from queue_delivery.dlq import get_dlq, invoke, send_to_dlq, wait_for_dlq_count
 from queue_delivery.scenarios.base import ScenarioBase
@@ -32,7 +32,7 @@ from queue_delivery.type_under_test import Conn_DLQ_Keep, Conn_Orders
 
 if 0:
     from zato.common.test.client import AdminClient
-    from zato.common.typing_ import anydict, anylist, strlist
+    from zato.common.typing_ import anydict, anylist
     from queue_delivery.receiver import RecordingReceiver
 
 # ################################################################################################################################
@@ -76,14 +76,6 @@ def fill_dlq_with(client:'AdminClient', conn_name:'str', receiver:'RecordingRece
     receiver.accept_all()
 
     out = dlq['messages']
-    return out
-
-# ################################################################################################################################
-
-def msg_ids_of(items:'anylist') -> 'strlist':
-    """ The ids of a run of rows or messages, in order.
-    """
-    out = [item['msg_id'] for item in items]
     return out
 
 # ################################################################################################################################

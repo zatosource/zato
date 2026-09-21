@@ -31,7 +31,7 @@ from queue_delivery.type_under_test import TestConfig
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import any_, anydict, anylist, strdict, strnone
+    from zato.common.typing_ import any_, anydict, anylist, strdict, strlist, strnone
     from queue_delivery.receiver import RecordingReceiver
 
 # ################################################################################################################################
@@ -244,6 +244,14 @@ def get_topic_subscribers(client:'AdminClient', topic_name:'str') -> 'anylist':
     response = as_dict(response)
 
     out = response['sub_key_list']
+    return out
+
+# ################################################################################################################################
+
+def msg_ids_of(items:'anylist') -> 'strlist':
+    """ The ids of a run of rows or messages, in order.
+    """
+    out = [item['msg_id'] for item in items]
     return out
 
 # ################################################################################################################################

@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The services the queue and DLQ pages of an outgoing connection read from and act through.
 
 # stdlib
+from contextlib import contextmanager
 from json import dumps, loads
 
 # Zato
@@ -23,7 +24,7 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist, anytuple, stranydict, strlist
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, stranydict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,6 +104,26 @@ class _BrowseService(AdminService):
 
         out = found
         return out
+
+# ################################################################################################################################
+
+    @contextmanager
+    def _hold_queue(self, conn_type:'str', conn_id:'int', sub_key:'str') -> 'any_':
+        """ Holds one connection's queue still while its messages are changed - nothing joins the queue under
+        the publish lock and its delivery stops once the round it is in the middle of is over, or the greenlet
+        would go on with the message it already holds, sending a body that was replaced here or delivering
+        one that was discarded here and lowering the depth a second time.
+        """
+        config_manager = self.server.config_manager
+        delivery = self.server.pubsub_push_delivery
+
+        with config_manager.get_outgoing_publish_lock(conn_type, conn_id):
+            delivery.pause_sub_key(sub_key)
+
+            try:
+                yield
+            finally:
+                delivery.resume_sub_key(sub_key)
 
 # ################################################################################################################################
 
@@ -321,7 +342,7 @@ class MessageAction(_BrowseService):
         if kind == Kind_DLQ:
             self._act_on_dlq(sub_key, action, msg_id_list)
         else:
-            self._discard_from_queue(sub_key, msg_id_list)
+            self._discard_from_queue(conn_type, conn_id, sub_key, msg_id_list)
 
         self.response.payload = {
             'action': action,
@@ -341,16 +362,18 @@ class MessageAction(_BrowseService):
 
 # ################################################################################################################################
 
-    def _discard_from_queue(self, sub_key:'str', msg_id_list:'strlist') -> 'None':
+    def _discard_from_queue(self, conn_type:'str', conn_id:'int', sub_key:'str', msg_id_list:'strlist') -> 'None':
         """ Takes each message named out of the queue - a discarded message must not hold the queue up.
         """
         depth = self.server.config_manager.outgoing_queue_depth
 
-        for msg_id in msg_id_list:
-            was_acked = self.server.pubsub_backend.ack_message(sub_key, msg_id)
+        with self._hold_queue(conn_type, conn_id, sub_key):
+            for msg_id in msg_id_list:
+                was_acked = self.server.pubsub_backend.ack_message(sub_key, msg_id)
 
-            if was_acked:
-                depth.lower(sub_key, 1)
+                # A message the round just delivered is acked and counted already
+                if was_acked:
+                    depth.lower(sub_key, 1)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -370,14 +393,14 @@ class UpdateMessage(_BrowseService):
         msg_id = input.msg_id
 
         conn_name, _ = self._get_conn(conn_type, conn_id)
-        topic_name, _ = self._get_names(kind, conn_type, conn_id, conn_name)
+        topic_name, sub_key = self._get_names(kind, conn_type, conn_id, conn_name)
 
-        # The stored message is the whole envelope, so the body is replaced inside it ..
-        document = self._load_document(kind, conn_type, conn_id, conn_name, msg_id)
-        document[Key_Request][Key_Data] = input.data
-
-        # .. and the envelope is written back.
-        was_updated = self.server.pubsub_backend.update_message(topic_name, msg_id, dumps(document))
+        # A message in the DLQ has no delivery to hold, one in the queue does
+        if kind == Kind_DLQ:
+            was_updated = self._update(kind, conn_type, conn_id, conn_name, topic_name, msg_id, input.data)
+        else:
+            with self._hold_queue(conn_type, conn_id, sub_key):
+                was_updated = self._update(kind, conn_type, conn_id, conn_name, topic_name, msg_id, input.data)
 
         if not was_updated:
             raise Exception(f'No such message `{msg_id}` in `{topic_name}`')
@@ -388,6 +411,26 @@ class UpdateMessage(_BrowseService):
             'msg_id': msg_id,
             'size': len(data_bytes),
         }
+
+# ################################################################################################################################
+
+    def _update(
+        self,
+        kind:'str',
+        conn_type:'str',
+        conn_id:'int',
+        conn_name:'str',
+        topic_name:'str',
+        msg_id:'str',
+        data:'str',
+        ) -> 'bool':
+        """ Replaces the body inside the stored envelope and writes the envelope back.
+        """
+        document = self._load_document(kind, conn_type, conn_id, conn_name, msg_id)
+        document[Key_Request][Key_Data] = data
+
+        out = self.server.pubsub_backend.update_message(topic_name, msg_id, dumps(document))
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

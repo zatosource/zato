@@ -21,7 +21,7 @@ from zato.common.pubsub.sql.schema import message_table
 
 # Test support
 from queue_delivery.client import create_connection, delete_connection, edit_connection, get_client, get_pubsub_db_engine, \
-    get_queue, get_topic_subscribers, is_broker_backend, send, wait_for_queue_empty
+    get_queue, get_topic_subscribers, is_broker_backend, msg_ids_of, send, wait_for_queue_empty
 from queue_delivery.dlq import get_dlq, send_to_dlq
 from queue_delivery.scenarios.base import ScenarioBase
 from queue_delivery.type_under_test import Conn_DLQ_Keep
@@ -33,6 +33,13 @@ _broker_skip_reason = 'The topics of a broker backend are bound to their queues 
 
 _renamed_suffix = '.renamed'
 _throwaway_suffix = '.throwaway'
+
+# A rename or a delete holds the queue still first, which means waiting for the round of the message at its head to end -
+# and with the DLQ on, a round that ends with the endpoint still refusing moves that message to the DLQ. This is why the
+# tests below send two messages behind the one already in the DLQ, the head goes to the DLQ while the queue is held
+# and the one behind it is what waits in the queue through the rename or the delete.
+_head = {'seq': 2}
+_behind = {'seq': 3}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,19 +80,21 @@ class LifecycleScenarios(ScenarioBase):
 
         receiver.refuse_all()
 
-        waiting = send(client, old_name, {'seq': 2})
+        head = send(client, old_name, _head)
+        waiting = send(client, old_name, _behind)
+
+        assert head['is_in_queue'] is True
         assert waiting['is_in_queue'] is True
 
         conn_id = edit_connection(client, old_name, {'name': new_name})
 
         try:
             queue = get_queue(client, new_name)
-            assert queue['depth'] == 1
-            assert queue['messages'][0]['msg_id'] == waiting['msg_id']
+            assert queue['depth'] == 1, queue
+            assert msg_ids_of(queue['messages']) == [waiting['msg_id']]
 
             dlq = get_dlq(client, new_name)
-            assert len(dlq['messages']) == 1
-            assert dlq['messages'][0]['msg_id'] == in_dlq['msg_id']
+            assert msg_ids_of(dlq['messages']) == [in_dlq['msg_id'], head['msg_id']], dlq
 
             assert get_topic_subscribers(client, get_outgoing_topic_name(conn_type, old_name)) == []
             assert get_topic_subscribers(client, get_dlq_topic_name(conn_type, old_name)) == []
@@ -98,7 +107,7 @@ class LifecycleScenarios(ScenarioBase):
             receiver.accept_all()
 
             accepted = receiver.wait_for_accepted(1)
-            assert self.bodies(accepted) == [{'seq': 2}]
+            assert self.bodies(accepted) == [_behind]
 
             queue = wait_for_queue_empty(client, new_name)
             assert queue['depth'] == 0
@@ -107,7 +116,7 @@ class LifecycleScenarios(ScenarioBase):
             receiver.accept_all()
             _ = edit_connection(client, new_name, {'name': old_name})
 
-        assert len(get_dlq(client, old_name)['messages']) == 1
+        assert msg_ids_of(get_dlq(client, old_name)['messages']) == [in_dlq['msg_id'], head['msg_id']]
 
 # ################################################################################################################################
 
@@ -133,7 +142,10 @@ class LifecycleScenarios(ScenarioBase):
 
             receiver.refuse_all()
 
-            waiting = send(client, conn_name, {'seq': 2})
+            head = send(client, conn_name, _head)
+            waiting = send(client, conn_name, _behind)
+
+            assert head['is_in_queue'] is True
             assert waiting['is_in_queue'] is True
 
             queue_topic = get_outgoing_topic_name(conn_type, conn_name)
@@ -141,7 +153,7 @@ class LifecycleScenarios(ScenarioBase):
 
             assert get_topic_subscribers(client, queue_topic) == [get_outgoing_sub_key(conn_type, conn_id)]
             assert get_topic_subscribers(client, dlq_topic) == [get_dlq_sub_key(conn_type, conn_id)]
-            assert count_topic_messages(queue_topic) == 1
+            assert count_topic_messages(queue_topic) == 2
             assert count_topic_messages(dlq_topic) == 1
 
             deleted_id = delete_connection(client, conn_name)

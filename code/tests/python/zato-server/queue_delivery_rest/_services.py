@@ -249,7 +249,7 @@ class CreateConnection(Service):
         item = self.server.config_manager.config_store.out_plain_http[like_conn_name]
         config = item['config']
 
-        request = _build_create_edit_request(config, {'name': conn_name})
+        request = _build_create_edit_request(config, {'name': conn_name, 'is_internal': False})
         _ = request.pop('id')
 
         response = self.invoke('zato.http-soap.create', request)
