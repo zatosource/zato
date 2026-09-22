@@ -71,7 +71,7 @@ class ValidateArguments(TestCase):
             'max_rows': 50,
             'score': 3.5,
             'tags': ['vip', 'invoicing'],
-            'address': {'city': 'Warsaw', 'postcode': '00-001'},
+            'address': {'city': 'Springfield', 'postcode': '00-001'},
         }
 
         self.assertIsNone(validate_arguments(arguments, _test_schema))
@@ -111,7 +111,7 @@ class ValidateArguments(TestCase):
         error = validate_arguments({'customer_id': 'CRM-001', 'address': {'postcode': '00-001'}}, _test_schema)
         self.assertEqual(error, 'Missing required parameter: `address.city`')
 
-        error = validate_arguments({'customer_id': 'CRM-001', 'address': {'city': 'Warsaw', 'region': 'MZ'}}, _test_schema)
+        error = validate_arguments({'customer_id': 'CRM-001', 'address': {'city': 'Springfield', 'region': 'MZ'}}, _test_schema)
         self.assertEqual(error, 'Unknown parameter: `address.region`')
 
         error = validate_arguments({'customer_id': 'CRM-001', 'address': {'city': 123}}, _test_schema)
