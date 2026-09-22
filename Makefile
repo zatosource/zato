@@ -5,7 +5,7 @@
 	health-install health-build health-clean \
 	ruff pyright test-lint test-static test-static-python test-static-rust test-static-js \
 	qa-reqs-install rust-lint-tools-install unify \
-	analytics update cron-update stop-server restart-server restart-server-with-scheduler \
+	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
@@ -450,6 +450,9 @@ update:
 
 cron-update:
 	/opt/zato/current/bin/py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cron.py
+
+update-on-prem-gateway:
+	/opt/zato/current/bin/py $(CURDIR)/code/zato-common/src/zato/common/util/on_prem_gateway.py
 
 analytics: ## Aggregate new audit log events into the analytics store.
 	$(CURDIR)/code/bin/zato analytics rollup --verbose

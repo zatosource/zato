@@ -1454,6 +1454,14 @@ class On_Prem_Gateway:
         # An enrolled gateway enrolls again only after its key has been reset in the Dashboard.
         Is_Key_Reset_Required = True
 
+    # Where the container keeps the gateway binary and where new releases of it are published.
+    class Update:
+        Binary_Path  = '/opt/zato/on-prem-gateway/zato-on-prem-gateway'
+        Log_File     = 'on-prem-gateway.log'
+        Latest_URL   = 'https://github.com/zatosource/zato-on-prem-gateway/releases/latest'
+        Download_URL = 'https://github.com/zatosource/zato-on-prem-gateway/releases/download/{version}/' + \
+            'zato-on-prem-gateway-linux-{architecture}'
+
 # ################################################################################################################################
 # ################################################################################################################################
 

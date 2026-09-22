@@ -25,6 +25,7 @@ import humanize
 # Zato
 from zato.common.defaults import default_env_base_dir
 from zato.common.json_internal import dumps, loads
+from zato.common.util import on_prem_gateway
 from zato.common.util.tcp import wait_until_port_free
 
 # ################################################################################################################################
@@ -520,6 +521,8 @@ class Updater:
             result['version_to'] = version_to
             result['schedule'] = schedule
 
+            self.update_on_prem_gateway()
+
             changed_files = self.get_changed_files()
 
             logger.info('download_and_install: storing changed files for component restart checks')
@@ -546,6 +549,23 @@ class Updater:
             logger.info('')
 
         return result
+
+# ################################################################################################################################
+
+    def update_on_prem_gateway(self) -> 'None':
+        """ Installs the latest on-premises gateway release and restarts the hub if the binary changed.
+        """
+        if not on_prem_gateway.is_installed():
+            logger.info('update_on_prem_gateway: the on-premises gateway is not installed in this environment')
+            return
+
+        # The release is downloaded from GitHub, and a failure there must not undo an update of Zato that succeeded already.
+        try:
+            if on_prem_gateway.update_binary():
+                log_dir = os.path.join(self.config.base_dir, 'server1', 'logs')
+                on_prem_gateway.restart_hub(log_dir)
+        except Exception:
+            logger.error('update_on_prem_gateway: exception: {}'.format(format_exc()))
 
 # ################################################################################################################################
 
