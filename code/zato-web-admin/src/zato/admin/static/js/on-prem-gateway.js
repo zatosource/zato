@@ -1,407 +1,181 @@
-$.fn.zato = $.fn.zato || {};
-$.fn.zato.onPremGateway = $.fn.zato.onPremGateway || {};
 
-(function() {
+// /////////////////////////////////////////////////////////////////////////////
 
-    var dashboard = $.fn.zato.onPremGateway;
+$.fn.zato.data_table.OnPremGateway = new Class({
+    toString: function() {
+        var s = '<OnPremGateway id:{0} name:{1} is_active:{2}';
+        return String.format(s, this.id ? this.id : '(none)',
+                                this.name ? this.name : '(none)',
+                                this.is_active ? this.is_active : '(none)');
+    }
+});
 
-    dashboard.config = {
-        apiPrefix: '/zato/on-prem-gateway/',
-        hostsPlaceholder: '',
-        downloadUrl: '',
-        refreshInterval: 10000,
-        statusConnected: 'Connected',
-        statusOffline: 'Enrolled, offline',
-        statusNotEnrolled: 'Not enrolled',
-        statusInactive: 'Not active',
-        emptyLabel: 'No gateways yet',
-        formTitleNew: 'New gateway',
-        formTitleEdit: 'Edit gateway',
-        saveLabel: 'Save',
-        savingLabel: 'Saving...',
-        deleteConfirm: 'Delete {name}?',
-        resetKeyConfirm: 'Reset the key of {name}?',
-        tokenTitle: 'Enrollment token for {name}',
-        copyLabel: 'Copy',
-        copiedLabel: 'Copied'
-    };
+// /////////////////////////////////////////////////////////////////////////////
 
-    dashboard.state = {
-        gateways: [],
-        editId: null,
-        timer: null
-    };
+$.fn.zato.on_prem_gateway.status = {
+    notEnrolled: 'Not enrolled'
+};
 
-    // ////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
 
-    dashboard.getStatus = function(gateway) {
+$(document).ready(function() {
+    $('#data-table').tablesorter();
+    $.fn.zato.data_table.password_required = false;
+    $.fn.zato.data_table.class_ = $.fn.zato.data_table.OnPremGateway;
+    $.fn.zato.data_table.new_row_func = $.fn.zato.on_prem_gateway.data_table.new_row;
+    $.fn.zato.data_table.parse();
+    $.fn.zato.data_table.setup_forms(['name']);
 
-        if (!gateway.is_active) {
-            return dashboard.config.statusInactive;
+    $('#enrollment_token-div').dialog({
+        autoOpen: false,
+        width: '40em'
+    });
+
+    $('#enrollment-token-close').on('click', function() {
+        $('#enrollment_token-div').dialog('close');
+    });
+
+    var uniqueConstraints = [
+        {field: 'name', entity_type: 'on_prem_gateway', attr_name: 'name'}
+    ];
+
+    $.each(uniqueConstraints, function(constraintIndex, constraint) {
+        $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
+        $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
+    });
+})
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.create = function() {
+    $.fn.zato.data_table._create_edit('create', 'Create a new on-premises gateway', null);
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.edit = function(id) {
+    $.fn.zato.data_table._create_edit('edit', 'Update the on-premises gateway', id);
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.data_table.new_row = function(item, data, include_tr) {
+    var row = '';
+
+    if(include_tr) {
+        row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
+    }
+
+    var isActive = item.is_active == true;
+
+    // Only the hub knows how many of the addresses are in use and what the gateway is doing,
+    // so a row rebuilt here shows what the configuration alone says.
+    var hostCount = item.hosts ? item.hosts.split('\n').length : 0;
+
+    row += "<td class='numbering'>&nbsp;</td>";
+    row += "<td class='impexp'><input type='checkbox' /></td>";
+
+    // 1
+    row += String.format('<td>{0}</td>', item.name);
+    row += String.format('<td>{0}</td>', isActive ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', $.fn.zato.on_prem_gateway.status.notEnrolled);
+    row += String.format('<td>{0}</td>', hostCount);
+    row += '<td></td>';
+    row += '<td></td>';
+    row += '<td></td>';
+
+    // 2
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.on_prem_gateway.enrollment_token('{0}')\">Enrollment token</a>", item.id));
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.on_prem_gateway.reset_key('{0}')\">Reset key</a>", item.id));
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.on_prem_gateway.edit('{0}')\">Edit</a>", item.id));
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.on_prem_gateway.delete_('{0}');\">Delete</a>", item.id));
+
+    // 3
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.hosts);
+
+    if(include_tr) {
+        row += '</tr>';
+    }
+
+    return row;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.enrollment_token = function(id) {
+
+    var url = String.format('./enrollment-token/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+
+    var callback = function(data, status) {
+
+        if(status != 'success') {
+            $.fn.zato.user_message(false, data.responseText);
+            return;
         }
 
-        if (gateway.is_connected) {
-            return dashboard.config.statusConnected;
+        // The token is minted once and never stored, so the popup is the only place it is shown ..
+        var response = $.parseJSON(data.responseText);
+
+        $('#enrollment-token-name').text(response.name);
+        $('#enrollment-token-value').val(response.token);
+
+        // .. and the popup's own title says which gateway it belongs to.
+        var div = $('#enrollment_token-div');
+        var title = 'Enrollment token, valid until ' + response.expires_at;
+
+        div.prev().html('<span class="ui-dialog-title-text">' + title + '</span>');
+        div.dialog('open');
+    }
+
+    $.fn.zato.post(url, callback, {});
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.reset_key = function(id) {
+
+    var instance = $.fn.zato.data_table.data[id];
+    var question = String.format('Are you sure you want to reset the key of the on-premises gateway `{0}`?', instance.name);
+
+    var callback = function(data, status) {
+
+        if(status != 'success') {
+            $.fn.zato.user_message(false, data.responseText);
+            return;
         }
 
-        if (gateway.has_key) {
-            return dashboard.config.statusOffline;
+        // The gateway has to enroll again, which is what its Status column now says.
+        var response = $.parseJSON(data.responseText);
+        var statusCell = $.fn.zato.data_table.get_cell(id, '_status');
+
+        statusCell.text($.fn.zato.on_prem_gateway.status.notEnrolled);
+
+        $.fn.zato.data_table.row_updated(id);
+        $.fn.zato.user_message(true, response.message);
+    }
+
+    jConfirm(question, 'Please confirm', function(isConfirmed) {
+
+        if(!isConfirmed) {
+            return;
         }
 
-        return dashboard.config.statusNotEnrolled;
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.getStatusClass = function(gateway) {
-
-        if (gateway.is_active && gateway.is_connected) {
-            return 'on-prem-gateway-status-connected';
-        }
-
-        if (gateway.is_active && gateway.has_key) {
-            return 'on-prem-gateway-status-offline';
-        }
-
-        return 'on-prem-gateway-status-unknown';
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.escape = function(text) {
-
-        var container = $('<div/>');
-
-        return container.text(text).html();
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.buildRow = function(gateway) {
-
-        var status = dashboard.getStatus(gateway);
-        var statusClass = dashboard.getStatusClass(gateway);
-        var since = gateway.is_connected ? gateway.connected_since : '';
-
-        var out = [];
-
-        out.push('<tr data-id="' + gateway.id + '">');
-        out.push('<td class="on-prem-gateway-name">' + dashboard.escape(gateway.name) + '</td>');
-        out.push('<td><span class="' + statusClass + '">' + dashboard.escape(status) + '</span></td>');
-        out.push('<td>' + gateway.host_count + '</td>');
-        out.push('<td>' + dashboard.escape(since) + '</td>');
-        out.push('<td class="on-prem-gateway-actions">' +
-            '<a href="#" class="on-prem-gateway-token-link">Enrollment token</a>' +
-            '<a href="#" class="on-prem-gateway-edit-link">Edit</a>' +
-            '<a href="#" class="on-prem-gateway-reset-link">Reset key</a>' +
-            '<a href="#" class="on-prem-gateway-delete-link">Delete</a>' +
-            '</td>');
-        out.push('</tr>');
-
-        return out.join('');
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.render = function() {
-
-        var rows = $('#on-prem-gateway-rows');
-        var gateways = dashboard.state.gateways;
-        var hubError = '';
-
-        rows.empty();
-
-        if (!gateways.length) {
-            rows.append('<tr><td colspan="5" class="on-prem-gateway-empty">' +
-                dashboard.escape(dashboard.config.emptyLabel) + '</td></tr>');
-        }
-
-        for (var gatewayIndex = 0; gatewayIndex < gateways.length; gatewayIndex++) {
-
-            var gateway = gateways[gatewayIndex];
-
-            if (gateway.hub_error) {
-                hubError = gateway.hub_error;
-            }
-
-            rows.append(dashboard.buildRow(gateway));
-        }
-
-        if (hubError) {
-            $('#on-prem-gateway-hub-error').text(hubError).removeClass('hidden');
-        }
-        else {
-            $('#on-prem-gateway-hub-error').addClass('hidden');
-        }
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.findGateway = function(id) {
-
-        var gateways = dashboard.state.gateways;
-        var wanted = String(id);
-
-        for (var gatewayIndex = 0; gatewayIndex < gateways.length; gatewayIndex++) {
-
-            var gateway = gateways[gatewayIndex];
-
-            if (String(gateway.id) === wanted) {
-                return gateway;
-            }
-        }
-
-        return null;
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.showMessage = function(text, isError) {
-
-        var element = $('#on-prem-gateway-message');
-
-        element.text(text).removeClass('hidden');
-        element.toggleClass('on-prem-gateway-message-error', isError === true);
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.hideMessage = function() {
-        $('#on-prem-gateway-message').addClass('hidden').text('');
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.refresh = function() {
-
-        $.ajax({
-            url: dashboard.config.apiPrefix + 'get-list',
-            type: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    dashboard.state.gateways = response.data;
-                    dashboard.render();
-                }
-            }
-        });
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.post = function(path, payload, onSuccess) {
-
-        $.ajax({
-            url: dashboard.config.apiPrefix + path,
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(payload),
-            dataType: 'json',
-
-            success: function(response) {
-                if (response.success) {
-                    onSuccess(response.data);
-                }
-                else {
-                    dashboard.showMessage(response.error, true);
-                }
-            },
-
-            error: function(request) {
-
-                var message = request.responseText;
-
-                if (request.responseJSON) {
-                    message = request.responseJSON.error;
-                }
-
-                dashboard.showMessage(message, true);
-            }
-        });
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.resetForm = function() {
-
-        dashboard.state.editId = null;
-
-        $('#on-prem-gateway-form-title').text(dashboard.config.formTitleNew);
-        $('#on-prem-gateway-name').val('');
-        $('#on-prem-gateway-is-active').prop('checked', true);
-        $('#on-prem-gateway-hosts').val('');
-        $('#on-prem-gateway-cancel').addClass('hidden');
-
-        dashboard.hideMessage();
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.fillForm = function(gateway) {
-
-        var hosts = gateway.hosts.join('\n');
-
-        dashboard.state.editId = gateway.id;
-
-        $('#on-prem-gateway-form-title').text(dashboard.config.formTitleEdit);
-        $('#on-prem-gateway-name').val(gateway.name);
-        $('#on-prem-gateway-is-active').prop('checked', gateway.is_active);
-        $('#on-prem-gateway-hosts').val(hosts);
-        $('#on-prem-gateway-cancel').removeClass('hidden');
-
-        dashboard.hideMessage();
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.save = function() {
-
-        var payload = {
-            name: $('#on-prem-gateway-name').val(),
-            is_active: $('#on-prem-gateway-is-active').is(':checked'),
-            hosts: $('#on-prem-gateway-hosts').val()
-        };
-
-        var path = 'create';
-
-        if (dashboard.state.editId !== null) {
-            payload.id = dashboard.state.editId;
-            path = 'edit';
-        }
-
-        dashboard.hideMessage();
-
-        dashboard.post(path, payload, function() {
-            dashboard.resetForm();
-            dashboard.refresh();
-        });
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.showToken = function(name, token) {
-
-        var title = dashboard.config.tokenTitle.replace('{name}', name);
-
-        $('#on-prem-gateway-token-title').text(title);
-        $('#on-prem-gateway-token-value').val(token);
-        $('#on-prem-gateway-token-download').attr('href', dashboard.config.downloadUrl);
-        $('#on-prem-gateway-token-copy').text(dashboard.config.copyLabel);
-        $('#on-prem-gateway-token').removeClass('hidden');
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.getClickedGateway = function(element) {
-
-        var id = $(element).closest('tr').data('id');
-
-        return dashboard.findGateway(id);
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.bind = function() {
-
-        $('#on-prem-gateway-save').on('click', function(event) {
-            event.preventDefault();
-            dashboard.save();
-        });
-
-        $('#on-prem-gateway-cancel').on('click', function(event) {
-            event.preventDefault();
-            dashboard.resetForm();
-        });
-
-        $('#on-prem-gateway-rows').on('click', '.on-prem-gateway-edit-link', function(event) {
-
-            event.preventDefault();
-
-            var gateway = dashboard.getClickedGateway(this);
-
-            dashboard.fillForm(gateway);
-        });
-
-        $('#on-prem-gateway-rows').on('click', '.on-prem-gateway-delete-link', function(event) {
-
-            event.preventDefault();
-
-            var gateway = dashboard.getClickedGateway(this);
-            var question = dashboard.config.deleteConfirm.replace('{name}', gateway.name);
-
-            if (!window.confirm(question)) {
-                return;
-            }
-
-            dashboard.post('delete/' + gateway.id, {}, function() {
-                dashboard.resetForm();
-                dashboard.refresh();
-            });
-        });
-
-        $('#on-prem-gateway-rows').on('click', '.on-prem-gateway-reset-link', function(event) {
-
-            event.preventDefault();
-
-            var gateway = dashboard.getClickedGateway(this);
-            var question = dashboard.config.resetKeyConfirm.replace('{name}', gateway.name);
-
-            if (!window.confirm(question)) {
-                return;
-            }
-
-            dashboard.post('reset-key/' + gateway.id, {}, function() {
-                dashboard.refresh();
-            });
-        });
-
-        $('#on-prem-gateway-rows').on('click', '.on-prem-gateway-token-link', function(event) {
-
-            event.preventDefault();
-
-            var gateway = dashboard.getClickedGateway(this);
-
-            dashboard.post('enrollment-token/' + gateway.id, {}, function(data) {
-                dashboard.showToken(gateway.name, data.token);
-            });
-        });
-
-        $('#on-prem-gateway-token-copy').on('click', function(event) {
-
-            event.preventDefault();
-
-            var field = document.getElementById('on-prem-gateway-token-value');
-
-            field.select();
-            document.execCommand('copy');
-
-            $('#on-prem-gateway-token-copy').text(dashboard.config.copiedLabel);
-        });
-
-        $('#on-prem-gateway-token-close').on('click', function(event) {
-            event.preventDefault();
-            $('#on-prem-gateway-token').addClass('hidden');
-            $('#on-prem-gateway-token-value').val('');
-        });
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.init = function(options) {
-
-        dashboard.config.apiPrefix = options.apiPrefix;
-        dashboard.config.hostsPlaceholder = options.hostsPlaceholder;
-        dashboard.config.downloadUrl = options.downloadUrl;
-
-        dashboard.state.gateways = options.gateways;
-
-        $('#on-prem-gateway-hosts').attr('placeholder', dashboard.config.hostsPlaceholder);
-
-        dashboard.render();
-        dashboard.bind();
-        dashboard.resetForm();
-
-        dashboard.state.timer = window.setInterval(dashboard.refresh, dashboard.config.refreshInterval);
-    };
-
-})();
+        var url = String.format('./reset-key/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+        $.fn.zato.post(url, callback, {});
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.delete_ = function(id) {
+    $.fn.zato.data_table.delete_(id, 'td.item_id_',
+        'On-premises gateway `{0}` deleted',
+        'Are you sure you want to delete the on-premises gateway `{0}`?',
+        true);
+}

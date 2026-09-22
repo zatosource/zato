@@ -1,0 +1,232 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}On-premises gateways{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Tippy {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} On-premises gateways {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/on-prem-gateway.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            {% comment %} 1 {% endcomment %}
+            'name',
+            '_is_active',
+            '_status',
+            '_host_count',
+            '_connected_since',
+            '_remote_address',
+            '_gateway_version',
+
+            {% comment %} 2 {% endcomment %}
+            '_enrollment_token',
+            '_reset_key',
+            '_edit',
+            '_delete',
+
+            {% comment %} 3 {% endcomment %}
+            'id',
+            'is_active',
+            'hosts',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    {% if items.0.hub_error %}
+    <div id="user-message-div"><pre id="user-message" class="user-message user-message-failure">{{ items.0.hub_error }}</pre></div>
+    {% else %}
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+    {% endif %}
+
+    {% if cluster_id %}
+        <div id="markup">
+            <h2 class="zato">{% include "zato/include/header-brand.html" with badge="Gateway" %}On-premises gateways</h2>
+
+{% include "zato/search-form.html" with page_prompt="Show gateways" %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.on_prem_gateway.create()">Create a new on-premises gateway</a>
+        </div>
+
+            <table class="zato-table" id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Status</a></th>
+                        <th><a href="#">Addresses</a></th>
+                        <th><a href="#">Connected since</a></th>
+                        <th><a href="#">Remote address</a></th>
+                        <th><a href="#">Version</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.status }}</td>
+                        <td>{{ item.host_count }}</td>
+                        <td>{{ item.connected_since }}</td>
+                        <td>{{ item.remote_address }}</td>
+                        <td>{{ item.gateway_version }}</td>
+                        <td><a href="javascript:$.fn.zato.on_prem_gateway.enrollment_token('{{ item.id }}')">Enrollment token</a></td>
+                        <td><a href="javascript:$.fn.zato.on_prem_gateway.reset_key('{{ item.id }}')">Reset key</a></td>
+                        <td><a href="javascript:$.fn.zato.on_prem_gateway.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.on_prem_gateway.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.hosts }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='16'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+
+{% include "zato/paginate/action-panel.html" %}
+        </div>
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "on-prem-gateway-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:20%"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ create_form.is_active.id_for_label }}">Active</label></td>
+                            <td>{{ create_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2"><label for="{{ create_form.hosts.id_for_label }}">Addresses, one host:port per line</label></td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2">{{ create_form.hosts }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "on-prem-gateway-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:20%"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.is_active.id_for_label }}">Active</label></td>
+                            <td>{{ edit_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2"><label for="{{ edit_form.hosts.id_for_label }}">Addresses, one host:port per line</label></td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2">{{ edit_form.hosts }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        <div id="enrollment_token-div" class='data-popup ignore'>
+            <div class="bd">
+                <table class="form-data">
+                    <tr>
+                        <td style="vertical-align:middle; width:20%">Name</td>
+                        <td id="enrollment-token-name"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2"><label for="enrollment-token-value">Token</label></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <textarea id="enrollment-token-value" style="width:100%; height:90px" readonly></textarea>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="text-align:right">
+                            <button type='button' id="enrollment-token-close">OK</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

@@ -156,6 +156,8 @@ $.namespace('zato.invoker');
 $.namespace('zato.message');
 $.namespace('zato.monitoring');
 $.namespace('zato.monitoring.wizard');
+$.namespace('zato.on_prem_gateway');
+$.namespace('zato.on_prem_gateway.data_table');
 $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
 $.namespace('zato.outgoing.as2');

@@ -8,238 +8,176 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
-from traceback import format_exc
+
+# Bunch
+from zato.common.ext.bunch import Bunch
 
 # Django
-from django.http import HttpResponse
-from django.http.response import HttpResponseServerError
-from django.template.response import TemplateResponse
+from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
-from zato.admin.web.views import method_allowed
-from zato.admin.web.views.settings.config import on_prem_gateway_page_config
-from zato.common.json_internal import dumps, loads
+from zato.admin.web.forms.on_prem_gateway import CreateForm, EditForm
+from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed
+from zato.common.json_internal import dumps
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from django.http import HttpRequest
-    from zato.common.typing_ import any_, strdict, strdictnone
+    from zato.common.typing_ import any_, strdict
 
     # Dummy assignments to satisfy type checkers
+    HttpRequest = HttpRequest
     strdict = strdict
-    strdictnone = strdictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
 
-# ################################################################################################################################
-# ################################################################################################################################
-
 _service_prefix = 'zato.on-prem-gateway.'
 
-_template = 'zato/settings/on-prem-gateway/index.html'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
-def json_response(data:'strdict', success:'bool'=True) -> 'HttpResponse':
-
-    response_json = dumps(data)
-
-    if success:
-        response_class = HttpResponse
-    else:
-        response_class = HttpResponseServerError
-
-    out = response_class(response_json, content_type='application/json')
-
-    return out
-
-# ################################################################################################################################
-
-def error_response(error:'str') -> 'HttpResponse':
-
-    data = {'success': False, 'error': error}
-    out = json_response(data, success=False)
-
-    return out
-
-# ################################################################################################################################
-
-def _invoke(req:'HttpRequest', service:'str', request_data:'strdictnone'=None) -> 'strdict':
-    """ Invokes one of the on-premises gateway services and returns what came back.
+class _Status:
+    """ What the Status column shows for a gateway.
     """
-    if request_data is None:
-        request_data = {}
-
-    response = req.zato.client.invoke(_service_prefix + service, request_data)
-
-    if response.ok:
-        out = {'success': True, 'data': response.data}
-        return out
-
-    logger.error('on_prem_gateway %s: invoke failed: %s', service, response)
-
-    out = {'success': False, 'error': str(response.details)}
-
-    return out
+    Connected = 'Connected'
+    Offline = 'Enrolled, offline'
+    Not_Enrolled = 'Not enrolled'
+    Not_Active = 'Not active'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('GET')
-def index(req:'HttpRequest') -> 'any_':
+class Index(_Index):
+    method_allowed = 'GET'
+    url_name = 'on-prem-gateway'
+    template = 'zato/on-prem-gateway.html'
+    service_name = _service_prefix + 'get-list'
+    output_class = Bunch
+    paginate = True
 
-    gateways = []
+    input_required = ('cluster_id',)
+    output_required = 'id', 'name', 'is_active'
+    output_optional = 'hosts', 'host_count', 'is_connected', 'has_key', 'connected_since', 'remote_address', \
+        'gateway_version', 'hub_error'
+    output_repeated = True
 
-    try:
-        response = _invoke(req, 'get-list')
+    def on_before_append_item(self, item:'Bunch') -> 'Bunch':
 
-        if response['success']:
-            gateways = response['data']
+        # What the gateway is doing right now ..
+        if not item.is_active:
+            status = _Status.Not_Active
+        elif item.is_connected:
+            status = _Status.Connected
+        elif item.has_key:
+            status = _Status.Offline
+        else:
+            status = _Status.Not_Enrolled
 
-    except Exception:
-        logger.error('on_prem_gateway index: %s', format_exc())
+        # .. and the addresses, which reach the edit form through a hidden cell,
+        # .. keeping in mind that a gateway with no addresses has no such key at all.
+        if 'hosts' in item:
+            hosts = item.hosts
+        else:
+            hosts = []
 
-    context = {
-        'page_config': on_prem_gateway_page_config,
-        'gateways': gateways,
-        'gateways_json': dumps(gateways),
+        item.status = status
+        item.hosts = '\n'.join(hosts)
+
+        return item
+
+    def handle(self) -> 'strdict':
+        return {
+            'show_search_form': True,
+            'create_form': CreateForm(req=self.req),
+            'edit_form': EditForm(prefix='edit', req=self.req),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _CreateEdit(CreateEdit):
+    method_allowed = 'POST'
+
+    input_required = 'name', 'is_active'
+    input_optional = ('hosts',)
+    output_required = 'id', 'name'
+
+    def pre_process_item(self, name:'str', value:'any_') -> 'any_':
+
+        # The form holds one address per line whereas the service expects a list
+        if name == 'hosts':
+            value = value.splitlines()
+
+        return value
+
+    def success_message(self, item:'any_') -> 'str':
+        return f'Successfully {self.verb} on-premises gateway `{item.name}`'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Create(_CreateEdit):
+    url_name = 'on-prem-gateway-create'
+    service_name = _service_prefix + 'create'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Edit(_CreateEdit):
+    url_name = 'on-prem-gateway-edit'
+    form_prefix = 'edit-'
+    service_name = _service_prefix + 'edit'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Delete(_Delete):
+    url_name = 'on-prem-gateway-delete'
+    error_message = 'Could not delete the on-premises gateway'
+    service_name = _service_prefix + 'delete'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def enrollment_token(req:'HttpRequest', id:'str', cluster_id:'str') -> 'any_':
+    """ Mints a single-use enrollment token for one gateway.
+    """
+    initial = {'dashboard_host': req.get_host()}
+    response = id_only_service(req, _service_prefix + 'get-enrollment-token', id,
+        'Could not obtain an enrollment token, e:`{}`', initial)
+
+    if isinstance(response, HttpResponseServerError):
+        return response
+
+    out = {
+        'name': response.data.name,
+        'token': response.data.token,
+        'expires_at': response.data.expires_at,
     }
 
-    out = TemplateResponse(req, _template, context)
-
-    return out
+    return HttpResponse(dumps(out), content_type='application/javascript')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('GET')
-def get_list(req:'HttpRequest') -> 'HttpResponse':
-    """ The list of gateways on its own.
+@method_allowed('POST')
+def reset_key(req:'HttpRequest', id:'str', cluster_id:'str') -> 'any_':
+    """ Unbinds the key of a gateway, which makes its next connection enroll again.
     """
-    try:
-        response = _invoke(req, 'get-list')
-        out = json_response(response, success=response['success'])
+    response = id_only_service(req, _service_prefix + 'reset-key', id, 'Could not reset the key, e:`{}`')
 
-        return out
+    if isinstance(response, HttpResponseServerError):
+        return response
 
-    except Exception as e:
-        logger.error('on_prem_gateway get_list: %s', format_exc())
-        return error_response(str(e))
+    out = {'message': 'Key reset, the gateway needs to enroll again'}
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def create(req:'HttpRequest') -> 'HttpResponse':
-
-    try:
-        body = req.body.decode('utf-8')
-        payload = loads(body)
-
-        request_data = {
-            'name': payload['name'],
-            'is_active': payload['is_active'],
-            'hosts': payload['hosts'],
-        }
-
-        response = _invoke(req, 'create', request_data)
-        out = json_response(response, success=response['success'])
-
-        return out
-
-    except Exception as e:
-        logger.error('on_prem_gateway create: %s', format_exc())
-        return error_response(str(e))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def edit(req:'HttpRequest') -> 'HttpResponse':
-
-    try:
-        body = req.body.decode('utf-8')
-        payload = loads(body)
-
-        request_data = {
-            'id': payload['id'],
-            'name': payload['name'],
-            'is_active': payload['is_active'],
-            'hosts': payload['hosts'],
-        }
-
-        response = _invoke(req, 'edit', request_data)
-        out = json_response(response, success=response['success'])
-
-        return out
-
-    except Exception as e:
-        logger.error('on_prem_gateway edit: %s', format_exc())
-        return error_response(str(e))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def delete(req:'HttpRequest', id:'str') -> 'HttpResponse':
-
-    try:
-        request_data = {'id': id}
-
-        response = _invoke(req, 'delete', request_data)
-        out = json_response(response, success=response['success'])
-
-        return out
-
-    except Exception as e:
-        logger.error('on_prem_gateway delete: %s', format_exc())
-        return error_response(str(e))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def enrollment_token(req:'HttpRequest', id:'str') -> 'HttpResponse':
-    """ Mints an enrollment token for one gateway.
-    """
-    try:
-        request_data = {
-            'id': id,
-            'dashboard_host': req.get_host(),
-        }
-
-        response = _invoke(req, 'get-enrollment-token', request_data)
-        out = json_response(response, success=response['success'])
-
-        return out
-
-    except Exception as e:
-        logger.error('on_prem_gateway enrollment_token: %s', format_exc())
-        return error_response(str(e))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def reset_key(req:'HttpRequest', id:'str') -> 'HttpResponse':
-
-    try:
-        request_data = {'id': id}
-
-        response = _invoke(req, 'reset-key', request_data)
-        out = json_response(response, success=response['success'])
-
-        return out
-
-    except Exception as e:
-        logger.error('on_prem_gateway reset_key: %s', format_exc())
-        return error_response(str(e))
+    return HttpResponse(dumps(out), content_type='application/javascript')
 
 # ################################################################################################################################
 # ################################################################################################################################

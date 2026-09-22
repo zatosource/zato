@@ -1821,22 +1821,20 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # Settings - On-premises gateways
+    # On-premises gateways
 
     url(r'^zato/on-prem-gateway/$',
-        login_required(on_prem_gateway.index), name='settings-on-prem-gateway'),
-    url(r'^zato/on-prem-gateway/get-list$',
-        login_required(on_prem_gateway.get_list), name='settings-on-prem-gateway-get-list'),
-    url(r'^zato/on-prem-gateway/create$',
-        login_required(on_prem_gateway.create), name='settings-on-prem-gateway-create'),
-    url(r'^zato/on-prem-gateway/edit$',
-        login_required(on_prem_gateway.edit), name='settings-on-prem-gateway-edit'),
-    url(r'^zato/on-prem-gateway/delete/(?P<id>.*)$',
-        login_required(on_prem_gateway.delete), name='settings-on-prem-gateway-delete'),
-    url(r'^zato/on-prem-gateway/enrollment-token/(?P<id>.*)$',
-        login_required(on_prem_gateway.enrollment_token), name='settings-on-prem-gateway-enrollment-token'),
-    url(r'^zato/on-prem-gateway/reset-key/(?P<id>.*)$',
-        login_required(on_prem_gateway.reset_key), name='settings-on-prem-gateway-reset-key'),
+        login_required(on_prem_gateway.Index()), name=on_prem_gateway.Index.url_name),
+    url(r'^zato/on-prem-gateway/create/$',
+        login_required(on_prem_gateway.Create()), name=on_prem_gateway.Create.url_name),
+    url(r'^zato/on-prem-gateway/edit/$',
+        login_required(on_prem_gateway.Edit()), name=on_prem_gateway.Edit.url_name),
+    url(r'^zato/on-prem-gateway/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(on_prem_gateway.Delete()), name=on_prem_gateway.Delete.url_name),
+    url(r'^zato/on-prem-gateway/enrollment-token/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(on_prem_gateway.enrollment_token), name='on-prem-gateway-enrollment-token'),
+    url(r'^zato/on-prem-gateway/reset-key/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(on_prem_gateway.reset_key), name='on-prem-gateway-reset-key'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################

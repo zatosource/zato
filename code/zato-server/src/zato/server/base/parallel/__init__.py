@@ -32,8 +32,8 @@ from redis.exceptions import RedisError
 # Zato
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
 from zato.common.ext.bunch import Bunch, bunchify
-from zato.common.api import API_Key, AS4, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, PubSub, \
-    SCHEDULER, SEC_DEF_TYPE, SERVER_STARTUP, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common.api import API_Key, AS4, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, \
+    On_Prem_Gateway, PubSub, SCHEDULER, SEC_DEF_TYPE, SERVER_STARTUP, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
 from zato.common.bearer_token import BearerTokenManager
@@ -2691,6 +2691,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'outgoing_odoo': 'out_odoo',
             'outgoing_sql': 'sql_pool',
             'groups': 'generic_object',
+            'on_prem_gateway': 'generic_object',
             'scheduler': 'job',
             'channel_amqp': 'channel_amqp',
             'email_imap': 'email_imap',
@@ -2713,6 +2714,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'channel_as4':   "connection = 'channel' AND transport = 'as4'",
             'channel_openapi': "type_ = '{}'".format(GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI),
             'groups': "type_ = '{}'".format(Groups.Type.Group_Parent),
+            'on_prem_gateway': "type_ = '{}'".format(On_Prem_Gateway.Type.On_Prem_Gateway),
         }
 
         # Every entity type must be mapped explicitly - a silent fall-through to the entity type itself

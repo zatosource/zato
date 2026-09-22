@@ -55,6 +55,10 @@ _Public_Port_Default = '11224'
 _Port_Min = 1
 _Port_Max = 65535
 
+# Whether the hub answered the last time it was read. A hub that is down for a while
+# is reported once rather than on each read.
+_hub_was_reachable = True
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -425,6 +429,8 @@ class OnPremGatewayManager:
         in. A hub that is not up yet leaves the live half unknown.
         """
 
+        global _hub_was_reachable
+
         # Local variables
         out:'strdictlist' = []
         by_name:'strdict' = {}
@@ -436,7 +442,16 @@ class OnPremGatewayManager:
                 by_name[item['name']] = item
         except Exception as e:
             hub_error = str(e)
-            logger.warning('Could not read the on-premises gateway hub: %s', e)
+
+            # .. an outage is reported when it starts, not on each read that follows it ..
+            if _hub_was_reachable:
+                logger.warning('Could not read the on-premises gateway hub: %s', e)
+                _hub_was_reachable = False
+        else:
+            # .. and so is its end.
+            if not _hub_was_reachable:
+                logger.info('The on-premises gateway hub is reachable again')
+                _hub_was_reachable = True
 
         # .. merged into what the ODB holds, which is where a gateway exists before it
         # ever connects.
