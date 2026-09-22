@@ -29,6 +29,7 @@ if 0:
 
 # The order the top-level sections are written to enmasse files in.
 _top_level_order = [
+    'on_prem_gateway',
     'quota_tier',
     'security',
     'groups',
@@ -99,6 +100,8 @@ _object_order['security'] = 'name', 'is_active', 'type', 'username', 'mode', 'us
     'needs_delegation', 'auth_endpoint', 'client_id_field', \
     'client_secret_field', 'grant_type', 'data_format', 'extra_fields:list', \
     'static_header', 'is_static_token', 'static_token', 'static_prefix', 'rate_limiting:list', 'quota_tier',
+
+_object_order['on_prem_gateway'] = 'name', 'is_active', 'hosts:list',
 
 _object_order['quota_tier'] = 'name', 'description', 'rules:list',
 _object_order['groups']     = 'name', 'quota_tier', 'members:list',

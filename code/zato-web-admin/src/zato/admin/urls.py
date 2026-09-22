@@ -15,7 +15,7 @@ from django.views.static import serve as static_serve
 from zato.admin import settings
 from zato.admin.web.views import account, config_db, datadog, demo_config, destinations, env_variables, grafana_cloud, \
     highlight as highlight_view, http_soap, http_soap_limits, live_form_updates, log_streaming, logging_, \
-    main, news, openapi_, python_packages, redis_, sbom, scheduler, service, updates
+    main, news, on_prem_gateway, openapi_, python_packages, redis_, sbom, scheduler, service, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import as4 as channel_as4
 from zato.admin.web.views.channel.hl7 import dashboard as channel_hl7_dashboard
@@ -1815,6 +1815,28 @@ urlpatterns += [
         login_required(env_variables.test), name='settings-env-variables-test'),
     url(r'^zato/env-variables/save$',
         login_required(env_variables.save), name='settings-env-variables-save'),
+]
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Settings - On-premises gateways
+
+    url(r'^zato/on-prem-gateway/$',
+        login_required(on_prem_gateway.index), name='settings-on-prem-gateway'),
+    url(r'^zato/on-prem-gateway/get-list$',
+        login_required(on_prem_gateway.get_list), name='settings-on-prem-gateway-get-list'),
+    url(r'^zato/on-prem-gateway/create$',
+        login_required(on_prem_gateway.create), name='settings-on-prem-gateway-create'),
+    url(r'^zato/on-prem-gateway/edit$',
+        login_required(on_prem_gateway.edit), name='settings-on-prem-gateway-edit'),
+    url(r'^zato/on-prem-gateway/delete/(?P<id>.*)$',
+        login_required(on_prem_gateway.delete), name='settings-on-prem-gateway-delete'),
+    url(r'^zato/on-prem-gateway/enrollment-token/(?P<id>.*)$',
+        login_required(on_prem_gateway.enrollment_token), name='settings-on-prem-gateway-enrollment-token'),
+    url(r'^zato/on-prem-gateway/reset-key/(?P<id>.*)$',
+        login_required(on_prem_gateway.reset_key), name='settings-on-prem-gateway-reset-key'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################

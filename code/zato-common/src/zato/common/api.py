@@ -1429,6 +1429,28 @@ class Quota_Tiers:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class On_Prem_Gateway:
+    """ On-premises gateways - each one is a process running on the customer's own network
+    that Zato reaches on-premises systems through.
+    """
+    class Type:
+        On_Prem_Gateway = 'zato-on-prem-gateway'
+
+    # The ports the gateway hub listens on inside the container, both of them loopback only.
+    class Port:
+        Hub   = 11226
+        Admin = 11227
+
+    # The environment variables a deployment may set to move the two ports and to say how
+    # the instance is reached from the outside, which is what an enrollment token carries.
+    class Env:
+        Hub_Port       = 'Zato_Port_On_Prem_Gateway_Hub'
+        Admin_Port     = 'Zato_Port_On_Prem_Gateway_Admin'
+        Public_Address = 'Zato_On_Prem_Gateway_Public_Address'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Audit_Config:
     """ Generic-object types storing audit-related definitions - the retention
     policy and per-channel attribute-extraction rules.
@@ -1441,6 +1463,7 @@ class Audit_Config:
     class Object_Type:
         Generic_Connection = 'generic-connection'
         Quota_Tier         = 'quota-tier'
+        On_Prem_Gateway    = 'on-prem-gateway'
 
 # ################################################################################################################################
 # ################################################################################################################################

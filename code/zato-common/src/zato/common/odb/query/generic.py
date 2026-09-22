@@ -13,7 +13,7 @@ from logging import getLogger
 from sqlalchemy import and_, delete, exists, insert, update
 
 # Zato
-from zato.common.api import GENERIC, NotGiven
+from zato.common.api import GENERIC, NotGiven, On_Prem_Gateway
 from zato.common.odb.model import GenericConn as ModelGenericConn, GenericObject as ModelGenericObject
 from zato.common.odb.query import query_wrapper
 from zato.common.typing_ import cast_
@@ -264,6 +264,29 @@ class GenericObjectWrapper:
 
         self.session.execute(query)
         self.session.commit()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OnPremGatewayWrapper(GenericObjectWrapper):
+    """ Wraps access to on-premises gateways. Everything but the name lives in the opaque
+    attributes, which is why each row needs turning into the shape the callers expect.
+    """
+    type_ = On_Prem_Gateway.Type.On_Prem_Gateway
+
+    def build_list_item_from_sql_row(self, row:'strdict') -> 'strdict':
+
+        out:'strdict' = {}
+
+        out['id'] = row['id']
+        out['name'] = row['name']
+
+        # An older row may predate either attribute, so a gateway with neither reads back
+        # as one that is switched off and has nothing to reach
+        out['is_active'] = row.get('is_active', False)
+        out['hosts'] = row.get('hosts', [])
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

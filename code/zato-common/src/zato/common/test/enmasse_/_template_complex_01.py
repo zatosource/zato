@@ -11,6 +11,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 template_complex_01 = """
 
+on_prem_gateway:
+
+  - name: enmasse.on.prem.gateway.1
+    is_active: true
+    hosts:
+      - erp-db.corp.local:5432
+      - crm.corp.local:443
+
+  - name: enmasse.on.prem.gateway.2
+    is_active: false
+    hosts:
+      - files.corp.local:22
+
 quota_tier:
 
   - name: enmasse.quota.tier.1
