@@ -12,10 +12,13 @@ from http.client import BAD_REQUEST, OK
 from unittest import TestCase, main
 from unittest.mock import MagicMock, patch
 
+# requests
+from requests.exceptions import ConnectionError as RequestsConnectionError
+
 # Zato
 from zato.common.api import On_Prem_Gateway
-from zato.server.on_prem_gateway import get_hub_admin_url, get_public_address, HubClient, OnPremGatewayManager, \
-    parse_hosts
+from zato.server.on_prem_gateway import get_hub_admin_url, get_public_address, HubClient, HubRefused, HubUnavailable, \
+    OnPremGatewayManager, parse_hosts
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -237,19 +240,22 @@ class TestHubClient(TestCase):
         with patch('zato.server.on_prem_gateway.requests.request') as request:
             request.return_value = _get_response(BAD_REQUEST, payload)
 
-            with self.assertRaises(Exception) as context:
+            with self.assertRaises(HubRefused) as context:
                 _ = self.client.reset_key(_Other_Gateway_Name)
 
-        self.assertIn(error, str(context.exception))
+        self.assertEqual(str(context.exception), f'There is no gateway called {_Other_Gateway_Name}')
 
 # ################################################################################################################################
 
     def test_a_hub_that_is_down_is_reported_as_such(self) -> 'None':
 
         with patch('zato.server.on_prem_gateway.requests.request') as request:
-            request.side_effect = Exception('connection refused')
+            request.side_effect = RequestsConnectionError('connection refused')
 
             result = self.client.ping()
+
+            with self.assertRaises(HubUnavailable):
+                _ = self.client.get_gateways()
 
         self.assertFalse(result)
 
@@ -363,11 +369,24 @@ class TestManagerStatusList(TestCase):
 
         manager = self._get_manager(self._get_rows())
         manager.hub = MagicMock()
-        manager.hub.put_gateways.side_effect = Exception('the hub is not responding')
+        manager.hub.put_gateways.side_effect = HubUnavailable('the hub is not responding')
 
         manager.sync()
 
         manager.hub.put_gateways.assert_called_once()
+
+# ################################################################################################################################
+
+    def test_sync_reports_a_configuration_the_hub_refuses(self) -> 'None':
+
+        manager = self._get_manager(self._get_rows())
+        manager.hub = MagicMock()
+        manager.hub.put_gateways.side_effect = HubRefused('The address erp-db.corp.local:17010 cannot be served')
+
+        with self.assertRaises(HubRefused) as context:
+            manager.sync()
+
+        self.assertEqual(str(context.exception), 'The address erp-db.corp.local:17010 cannot be served')
 
 # ################################################################################################################################
 # ################################################################################################################################

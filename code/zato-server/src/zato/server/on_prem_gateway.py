@@ -61,6 +61,17 @@ _hub_was_reachable = True
 # ################################################################################################################################
 # ################################################################################################################################
 
+class HubUnavailable(Exception):
+    """ The hub did not respond. The configuration is retained in the ODB and published when the hub is available again.
+    """
+
+class HubRefused(Exception):
+    """ The hub responded and rejected the request. The message is the hub's own and is suitable for display.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _report_hub_outage(e:'Exception') -> 'None':
     """ Logs a hub outage once, at its onset.
     """
@@ -230,12 +241,12 @@ class HubClient:
         try:
             response = requests.request(method, url, json=data, timeout=_Hub_Timeout)
         except requests.exceptions.RequestException as e:
-            raise Exception(f'The on-premises gateway hub is not responding ({e})')
+            raise HubUnavailable(f'The on-premises gateway hub is not responding ({e})')
 
         try:
             payload = response.json()
         except ValueError:
-            raise Exception(f'The on-premises gateway hub returned a response that is not JSON ({response.text})')
+            raise HubUnavailable(f'The on-premises gateway hub returned a response that is not JSON ({response.text})')
 
         if not response.ok:
 
@@ -244,7 +255,8 @@ class HubClient:
             if not error:
                 error = response.text
 
-            raise Exception(f'The on-premises gateway hub refused the request - {error}')
+            # The hub's messages follow the Go convention of starting in lower case.
+            raise HubRefused(error[0].upper() + error[1:])
 
         out = cast_('strdict', payload)
 
@@ -436,7 +448,8 @@ class OnPremGatewayManager:
     def sync(self) -> 'None':
         """ Publishes the complete configuration to the hub. An unavailable hub does not
         constitute an error because the configuration is retained in the ODB and the startup
-        service publishes it when the hub becomes available.
+        service publishes it when the hub becomes available. A configuration the hub refuses
+        is an error, reported with the hub's own message.
         """
         gateways = []
 
@@ -450,7 +463,7 @@ class OnPremGatewayManager:
 
         try:
             self.hub.put_gateways(gateways)
-        except Exception as e:
+        except HubUnavailable as e:
             _report_hub_outage(e)
             return
 

@@ -45,11 +45,21 @@ $.fn.zato.on_prem_gateway.config = {
     // The columns refreshed along with the connection time
     refreshed_columns: ['status', 'remote_address', 'gateway_version', 'platform'],
 
-    // The links in a row that outcomes are reported beside
-    create_link_selector: 'a[href*="on_prem_gateway.create"]',
-    edit_link_text: 'Edit',
-    enrollment_token_link_text: 'Enrollment token',
+    // The link in a row that a successful key reset is confirmed beside
     reset_key_link_text: 'Reset key',
+
+    // The titles of the popups that report a failed action
+    error_titles: {
+        create: 'The on-premises gateway could not be created',
+        edit: 'The on-premises gateway could not be updated',
+        delete_: 'The on-premises gateway could not be deleted',
+        enrollment_token: 'The enrollment token could not be issued',
+        reset_key: 'The key could not be reset'
+    },
+
+    delete_confirmation: 'Are you sure you want to delete the on-premises gateway `{0}`?',
+    delete_confirmation_title: 'Please confirm',
+    delete_overlay_label: 'Deleting ...',
 
     format_error: '`{0}` is not in the host:port format',
     host_error: '`{0}` does not specify a host',
@@ -370,9 +380,8 @@ $.fn.zato.on_prem_gateway.on_refresh = function(data) {
 
 /////////////////////////////////////////////////////////////////////////////
 
-// Reports the outcome of an action in a tooltip beside the link that invoked it. A failure
-// remains visible until dismissed, a success is withdrawn on its own.
-$.fn.zato.on_prem_gateway.show_message = function(anchor, message, isSuccess) {
+// Confirms a successful action in a tooltip beside the link that invoked it, withdrawn on its own.
+$.fn.zato.on_prem_gateway.show_success = function(anchor, message) {
 
     var config = $.fn.zato.on_prem_gateway.config;
     var element = anchor.get(0);
@@ -392,15 +401,13 @@ $.fn.zato.on_prem_gateway.show_message = function(anchor, message, isSuccess) {
         inertia: true,
 
         // A confirmation of success is not cut short by a click elsewhere on the page
-        hideOnClick: !isSuccess,
+        hideOnClick: false,
 
         // The visible period is counted from the end of the show animation, not its start
         onShown: function(instance) {
-            if(isSuccess) {
-                setTimeout(function() {
-                    instance.hide();
-                }, config.success_visible_ms);
-            }
+            setTimeout(function() {
+                instance.hide();
+            }, config.success_visible_ms);
         },
         onHidden: function(instance) {
             instance.destroy();
@@ -408,6 +415,11 @@ $.fn.zato.on_prem_gateway.show_message = function(anchor, message, isSuccess) {
     });
 
     instance.show();
+}
+
+// Reports a failed action in a popup that the message can be copied from.
+$.fn.zato.on_prem_gateway.show_error = function(title, message) {
+    $.fn.zato.show_error_popup(title, message);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -424,7 +436,7 @@ $.fn.zato.on_prem_gateway.get_row_link = function(id, text) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // Replaces the page-wide message area for the create and edit forms. A rejection is
-// reported beside the link that opened the form, which is what remains once the form closes.
+// reported in a popup, with the form left open for the input to be corrected.
 $.fn.zato.on_prem_gateway.on_submit_complete = function(data, status) {
 
     $.fn.zato.hide_action_overlay();
@@ -433,30 +445,30 @@ $.fn.zato.on_prem_gateway.on_submit_complete = function(data, status) {
         return;
     }
 
-    var config = $.fn.zato.on_prem_gateway.config;
-    var anchor;
+    var titles = $.fn.zato.on_prem_gateway.config.error_titles;
+    var title;
 
     if($('#edit-div').dialog('isOpen')) {
-        anchor = $.fn.zato.on_prem_gateway.get_row_link($('#id_edit-id').val(), config.edit_link_text);
+        title = titles.edit;
     }
     else {
-        anchor = $(config.create_link_selector);
+        title = titles.create;
     }
 
-    $.fn.zato.on_prem_gateway.show_message(anchor, data.responseText, false);
+    $.fn.zato.on_prem_gateway.show_error(title, data.responseText);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.on_prem_gateway.enrollment_token = function(id) {
 
+    var config = $.fn.zato.on_prem_gateway.config;
     var url = String.format('./enrollment-token/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
-    var link = $.fn.zato.on_prem_gateway.get_row_link(id, $.fn.zato.on_prem_gateway.config.enrollment_token_link_text);
 
     var callback = function(data, status) {
 
         if(status != 'success') {
-            $.fn.zato.on_prem_gateway.show_message(link, data.responseText, false);
+            $.fn.zato.on_prem_gateway.show_error(config.error_titles.enrollment_token, data.responseText);
             return;
         }
 
@@ -483,12 +495,13 @@ $.fn.zato.on_prem_gateway.enrollment_token = function(id) {
 
 $.fn.zato.on_prem_gateway.reset_key = function(id) {
 
-    var link = $.fn.zato.on_prem_gateway.get_row_link(id, $.fn.zato.on_prem_gateway.config.reset_key_link_text);
+    var config = $.fn.zato.on_prem_gateway.config;
+    var link = $.fn.zato.on_prem_gateway.get_row_link(id, config.reset_key_link_text);
 
     var callback = function(data, status) {
 
         if(status != 'success') {
-            $.fn.zato.on_prem_gateway.show_message(link, data.responseText, false);
+            $.fn.zato.on_prem_gateway.show_error(config.error_titles.reset_key, data.responseText);
             return;
         }
 
@@ -499,7 +512,7 @@ $.fn.zato.on_prem_gateway.reset_key = function(id) {
         statusCell.text($.fn.zato.on_prem_gateway.status.notEnrolled);
 
         $.fn.zato.data_table.row_updated(id);
-        $.fn.zato.on_prem_gateway.show_message(link, response.message, true);
+        $.fn.zato.on_prem_gateway.show_success(link, response.message);
     }
 
     var url = String.format('./reset-key/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
@@ -508,9 +521,34 @@ $.fn.zato.on_prem_gateway.reset_key = function(id) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The generic deletion does not report a failure, so the request is made here and a
+// refusal is shown in a popup.
 $.fn.zato.on_prem_gateway.delete_ = function(id) {
-    $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'On-premises gateway `{0}` deleted',
-        'Are you sure you want to delete the on-premises gateway `{0}`?',
-        true);
+
+    var config = $.fn.zato.on_prem_gateway.config;
+    var name = $.fn.zato.data_table.data[id].name;
+
+    var callback = function(data, status) {
+
+        $.fn.zato.hide_action_overlay();
+
+        if(status != 'success' && status != 'parsererror') {
+            $.fn.zato.on_prem_gateway.show_error(config.error_titles.delete_, data.responseText);
+            return;
+        }
+
+        $.fn.zato.data_table.remove_row('td.item_id_', id);
+    }
+
+    jConfirm(String.format(config.delete_confirmation, name), config.delete_confirmation_title, function(ok) {
+
+        if(!ok) {
+            return;
+        }
+
+        $.fn.zato.show_action_overlay(config.delete_overlay_label);
+
+        var url = String.format('./delete/{0}/cluster/{1}/', id, $('#cluster_id').val());
+        $.fn.zato.post(url, callback, {});
+    });
 }

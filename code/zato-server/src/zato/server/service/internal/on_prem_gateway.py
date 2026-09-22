@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.api import Audit_Config, On_Prem_Gateway
 from zato.common.audit_log.common import AuditEvent
 from zato.server.config_audit import record_service_config_change
-from zato.server.on_prem_gateway import get_public_address, OnPremGatewayManager, parse_hosts
+from zato.server.on_prem_gateway import get_public_address, HubRefused, OnPremGatewayManager, parse_hosts
 from zato.server.service import Int
 from zato.server.service.internal import AdminService
 
@@ -63,7 +63,7 @@ class _Base(AdminService):
         """ Validates the addresses on input, applying the same rules as the hub.
         """
         if not hosts:
-            hosts = _No_Hosts
+            hosts = list(_No_Hosts)
 
         out = parse_hosts(hosts)
 
@@ -137,8 +137,13 @@ class Create(_Base):
         # .. create the gateway ..
         id = manager.create(name, input.is_active, hosts, is_key_reset_required)
 
-        # .. the hub translates the configuration into listeners and host names ..
-        manager.sync()
+        # .. the hub translates the configuration into listeners and host names, and a
+        # configuration it refuses is not retained ..
+        try:
+            manager.sync()
+        except HubRefused:
+            manager.delete(id)
+            raise
 
         # .. the creation is recorded in the audit trail ..
         after = manager.get_by_id(id)
@@ -193,8 +198,13 @@ class Edit(_Base):
         # .. store the changes ..
         manager.edit(id, name, input.is_active, hosts, is_key_reset_required)
 
-        # .. the hub reconciles its runtime configuration ..
-        manager.sync()
+        # .. the hub reconciles its runtime configuration, and changes it refuses are
+        # reverted to the previous configuration ..
+        try:
+            manager.sync()
+        except HubRefused:
+            manager.edit(id, before['name'], before['is_active'], before['hosts'], before['is_key_reset_required'])
+            raise
 
         # .. the update is recorded in the audit trail with its previous and current form ..
         after = manager.get_by_id(id)

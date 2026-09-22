@@ -3945,6 +3945,187 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.error_popup = {};
+
+$.fn.zato.error_popup.config = {
+    overlay_id: 'error-popup-overlay',
+    copy_label: 'Copy',
+    close_label: '\u2715',
+    keydown_event: 'keydown.error-popup',
+    z_index: 10000,
+    colors: {
+        overlay: 'rgba(0, 0, 0, 0.7)',
+        popup: '#1e1e1e',
+        header: '#1f1f1f',
+        border: 'rgba(255, 255, 255, 0.08)',
+        title: '#ffffff',
+        text: '#f48771',
+        text_background: '#2d2d2d',
+        text_border: '#3e3e3e',
+        button: '#999',
+        button_hover: '#fff',
+        button_hover_background: 'rgba(255, 255, 255, 0.1)'
+    }
+};
+
+// Reports a failure in a popup that the message can be copied from, in the same form as the
+// result of an enmasse import.
+$.fn.zato.show_error_popup = function(title_text, message) {
+
+    var config = $.fn.zato.error_popup.config;
+    var colors = config.colors;
+
+    $('#' + config.overlay_id).remove();
+
+    var overlay = $('<div/>', {
+        id: config.overlay_id,
+        css: {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: colors.overlay,
+            zIndex: config.z_index,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+        }
+    });
+
+    var popup = $('<div/>', {
+        css: {
+            backgroundColor: colors.popup,
+            color: colors.text,
+            borderRadius: '8px',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'hidden',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+            fontFamily: 'monospace'
+        }
+    });
+
+    var header = $('<div/>', {
+        css: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '16px 24px',
+            borderBottom: '1px solid ' + colors.border,
+            background: colors.header
+        }
+    });
+
+    var title = $('<h2/>', {
+        text: title_text,
+        css: {
+            margin: '0',
+            fontSize: '18px',
+            fontWeight: '600',
+            color: colors.title,
+            letterSpacing: '0.3px'
+        }
+    });
+
+    var close = function() {
+        overlay.remove();
+        $(document).off(config.keydown_event);
+    };
+
+    var button_hover = function() {
+        $(this).css({background: colors.button_hover_background, color: colors.button_hover});
+    };
+
+    var button_leave = function() {
+        $(this).css({background: 'transparent', color: colors.button});
+    };
+
+    var close_button = $('<button/>', {
+        type: 'button',
+        text: config.close_label,
+        css: {
+            background: 'transparent',
+            border: 'none',
+            color: colors.button,
+            fontSize: '24px',
+            cursor: 'pointer',
+            padding: '0',
+            width: '32px',
+            height: '32px',
+            borderRadius: '6px',
+            transition: 'all 0.2s ease'
+        }
+    });
+    close_button.hover(button_hover, button_leave);
+    close_button.click(close);
+
+    header.append(title);
+    header.append(close_button);
+    popup.append(header);
+
+    var content = $('<div/>', {
+        css: {
+            padding: '24px',
+            maxHeight: 'calc(80vh - 60px)',
+            overflow: 'auto'
+        }
+    });
+
+    var text_area = $('<textarea/>', {
+        val: message,
+        readonly: true,
+        css: {
+            width: '100%',
+            minHeight: '150px',
+            backgroundColor: colors.text_background,
+            color: colors.text,
+            border: '1px solid ' + colors.text_border,
+            borderRadius: '4px',
+            padding: '8px',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            resize: 'vertical',
+            boxSizing: 'border-box'
+        }
+    });
+
+    var footer = $('<div/>', {
+        css: {
+            marginTop: '12px',
+            display: 'flex',
+            justifyContent: 'flex-end'
+        }
+    });
+
+    var copy_button = $('<button/>', {type: 'button', 'class': 'zato-action-button', text: config.copy_label});
+    copy_button.click(function() {
+        $.fn.zato.ui_helpers.copy_to_clipboard(this, message);
+    });
+
+    footer.append(copy_button);
+    content.append(text_area);
+    content.append(footer);
+    popup.append(content);
+    overlay.append(popup);
+    $('body').append(overlay);
+
+    overlay.click(function(e) {
+        if(e.target === overlay[0]) {
+            close();
+        }
+    });
+
+    $(document).on(config.keydown_event, function(e) {
+        if(e.key === 'Escape') {
+            close();
+        }
+    });
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.system.show_version = function() {
     var version = $('meta[name="generator"]').attr('content') || 'Unknown';
 
