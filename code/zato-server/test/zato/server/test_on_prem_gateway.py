@@ -136,17 +136,17 @@ class TestPublicAddress(TestCase):
 
     def test_derived_from_the_dashboard_host(self) -> 'None':
 
-        os.environ['Zato_Port_Load_Balancer_SSL'] = '11224'
+        os.environ['Zato_Port_Load_Balancer'] = '11223'
 
         result = get_public_address('zato.example.com:8183')
 
-        self.assertEqual(result, 'https://zato.example.com:11224')
+        self.assertEqual(result, 'http://zato.example.com:11223')
 
 # ################################################################################################################################
 
     def test_without_a_load_balancer_the_hub_is_connected_to_directly(self) -> 'None':
 
-        _ = os.environ.pop('Zato_Port_Load_Balancer_SSL', None)
+        _ = os.environ.pop('Zato_Port_Load_Balancer', None)
         _ = os.environ.pop(On_Prem_Gateway.Env.Hub_Port, None)
 
         result = get_public_address('localhost:8183')
