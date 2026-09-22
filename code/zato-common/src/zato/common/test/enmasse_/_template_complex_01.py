@@ -21,6 +21,7 @@ on_prem_gateway:
 
   - name: enmasse.on.prem.gateway.2
     is_active: false
+    is_key_reset_required: false
     hosts:
       - files.corp.local:22
 

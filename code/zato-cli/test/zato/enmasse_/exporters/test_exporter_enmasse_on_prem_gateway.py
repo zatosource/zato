@@ -23,6 +23,7 @@ from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.on_prem_gateway import OnPremGatewayImporter
+from zato.common.api import On_Prem_Gateway
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -43,7 +44,9 @@ _Section = 'on_prem_gateway'
 _Name_Prefix = 'enmasse.'
 
 # Everything an exported gateway carries
-_Exported_Keys = ['hosts', 'is_active', 'name']
+_Exported_Keys = ['hosts', 'is_active', 'is_key_reset_required', 'name']
+
+_Default_Is_Key_Reset_Required = On_Prem_Gateway.Default.Is_Key_Reset_Required
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -150,13 +153,17 @@ class TestEnmasseOnPremGatewayExporter(TestCase):
             self.assertEqual(exported_gateway['name'], expected_name)
             self.assertEqual(exported_gateway['is_active'], expected_gateway['is_active'])
 
+            # A gateway declared without the setting is exported with the default
+            expected_is_key_reset_required = expected_gateway.get('is_key_reset_required', _Default_Is_Key_Reset_Required)
+            self.assertEqual(exported_gateway['is_key_reset_required'], expected_is_key_reset_required)
+
             # The importer sorts the addresses
             self.assertEqual(exported_gateway['hosts'], expected_hosts)
 
 # ################################################################################################################################
 
     def test_an_exported_gateway_carries_the_configuration_only(self) -> 'None':
-        """ A name, a flag and a list of addresses, and nothing else.
+        """ A name, the flags and a list of addresses, and nothing else.
         """
         self._setup_test_environment()
 

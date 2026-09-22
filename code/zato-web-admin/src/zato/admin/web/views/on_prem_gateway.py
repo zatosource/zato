@@ -42,7 +42,7 @@ _service_prefix = 'zato.on-prem-gateway.'
 # ################################################################################################################################
 
 class _Status:
-    """ What the Status column shows for a gateway.
+    """ The values reported in the Status column.
     """
     Connected = 'Connected'
     Offline = 'Enrolled, offline'
@@ -61,14 +61,14 @@ class Index(_Index):
     paginate = True
 
     input_required = ('cluster_id',)
-    output_required = 'id', 'name', 'is_active'
+    output_required = 'id', 'name', 'is_active', 'is_key_reset_required'
     output_optional = 'hosts', 'host_count', 'is_connected', 'has_key', 'connected_since', 'remote_address', \
-        'gateway_version', 'hub_error'
+        'gateway_version', 'platform'
     output_repeated = True
 
     def on_before_append_item(self, item:'Bunch') -> 'Bunch':
 
-        # What the gateway is doing right now ..
+        # The current state of the gateway ..
         if not item.is_active:
             status = _Status.Not_Active
         elif item.is_connected:
@@ -78,8 +78,8 @@ class Index(_Index):
         else:
             status = _Status.Not_Enrolled
 
-        # .. and the addresses, which reach the edit form through a hidden cell,
-        # .. keeping in mind that a gateway with no addresses has no such key at all.
+        # .. and its addresses, which the edit form reads from a hidden cell. A gateway
+        # .. configured with no addresses does not carry the key at all.
         if 'hosts' in item:
             hosts = item.hosts
         else:
@@ -103,13 +103,13 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    input_required = 'name', 'is_active'
+    input_required = 'name', 'is_active', 'is_key_reset_required'
     input_optional = ('hosts',)
     output_required = 'id', 'name'
 
     def pre_process_item(self, name:'str', value:'any_') -> 'any_':
 
-        # The form holds one address per line whereas the service expects a list
+        # The form submits one address per line whereas the service expects a list
         if name == 'hosts':
             value = value.splitlines()
 
@@ -146,7 +146,7 @@ class Delete(_Delete):
 
 @method_allowed('POST')
 def enrollment_token(req:'HttpRequest', id:'str', cluster_id:'str') -> 'any_':
-    """ Mints a single-use enrollment token for one gateway.
+    """ Issues a single-use enrollment token for one gateway.
     """
     initial = {'dashboard_host': req.get_host()}
     response = id_only_service(req, _service_prefix + 'get-enrollment-token', id,
@@ -156,7 +156,6 @@ def enrollment_token(req:'HttpRequest', id:'str', cluster_id:'str') -> 'any_':
         return response
 
     out = {
-        'name': response.data.name,
         'token': response.data.token,
         'expires_at': response.data.expires_at,
     }
@@ -168,14 +167,14 @@ def enrollment_token(req:'HttpRequest', id:'str', cluster_id:'str') -> 'any_':
 
 @method_allowed('POST')
 def reset_key(req:'HttpRequest', id:'str', cluster_id:'str') -> 'any_':
-    """ Unbinds the key of a gateway, which makes its next connection enroll again.
+    """ Revokes the key of a gateway, which requires the gateway to enroll again.
     """
     response = id_only_service(req, _service_prefix + 'reset-key', id, 'Could not reset the key, e:`{}`')
 
     if isinstance(response, HttpResponseServerError):
         return response
 
-    out = {'message': 'Key reset, the gateway needs to enroll again'}
+    out = {'message': 'Key reset, the gateway is required to enroll again'}
 
     return HttpResponse(dumps(out), content_type='application/javascript')
 

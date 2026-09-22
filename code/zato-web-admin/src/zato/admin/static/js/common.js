@@ -491,6 +491,13 @@ $.fn.zato.data_table.get_cell = function(id, column_name) {
     return $('#tr_' + id).find('td').eq(cell_index);
 }
 
+// The title bar is the dialog's drag handle, which would otherwise swallow the mouse events
+// that select text, so the title text keeps them to itself and remains selectable.
+$.fn.zato.data_table.set_dialog_title = function(div, title) {
+    div.prev().html('<span class="ui-dialog-title-text">' + title + '</span>');
+    div.prev().find('.ui-dialog-title-text').on('mousedown selectstart dblclick', function(e) { e.stopPropagation(); });
+}
+
 $.fn.zato.data_table.row_updated = function(id) {
 
     // Only one row carries the highlight at a time - marking this row takes it away
@@ -911,8 +918,7 @@ $.fn.zato.data_table.change_password = function(id, title, label, _label_lower) 
     var div = $('#change_password-div');
 
     div.prev().css('cursor', 'move');
-    div.prev().html('<span class="ui-dialog-title-text" style="user-select: text; cursor: text;">' + _title + '</span>');
-    div.prev().find('.ui-dialog-title-text').on('mousedown selectstart dblclick', function(e) { e.stopPropagation(); });
+    $.fn.zato.data_table.set_dialog_title(div, _title);
     div.dialog('open');
 }
 
@@ -985,8 +991,7 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow,
     }
 
     div.prev().css('cursor', 'move');
-    div.prev().html('<span class="ui-dialog-title-text" style="user-select: text; cursor: text;">' + title + '</span>');
-    div.prev().find('.ui-dialog-title-text').on('mousedown selectstart dblclick', function(e) { e.stopPropagation(); });
+    $.fn.zato.data_table.set_dialog_title(div, title);
     div.dialog('open');
 
     // Auto-focus the name field if one exists, placing the cursor at position 0

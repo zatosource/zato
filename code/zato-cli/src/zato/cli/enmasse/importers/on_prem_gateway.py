@@ -12,6 +12,7 @@ import logging
 # Zato
 from zato.cli.enmasse.client import get_server_client
 from zato.cli.enmasse.util.secrets import Session_Key_Server_Dir
+from zato.common.api import On_Prem_Gateway
 from zato.common.json_internal import dumps
 from zato.common.odb.query.generic import OnPremGatewayWrapper
 
@@ -35,18 +36,20 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The service that hands the configuration over to the hub.
+# The service that publishes the configuration to the hub.
 _Sync_Service = 'zato.on-prem-gateway.sync'
 
-# The range a port has to be in.
+# The permitted range of port numbers.
 _Port_Min = 1
 _Port_Max = 65535
 
-# What a gateway with no addresses in the file amounts to.
+# The value used for a gateway declared with no addresses.
 _No_Hosts = ()
 
-# Whether a gateway is active unless the file says otherwise.
+# Whether a gateway is active when the declaration does not state otherwise.
 _Default_Is_Active = True
+
+_Default_Is_Key_Reset_Required = On_Prem_Gateway.Default.Is_Key_Reset_Required
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,7 +87,7 @@ class OnPremGatewayImporter:
 # ################################################################################################################################
 
     def get_hosts(self, gateway:'anydict') -> 'strlist':
-        """ Validates the addresses of one gateway, which is the same check the hub makes.
+        """ Validates the addresses of one gateway, applying the same rules as the hub.
         """
 
         # Our response to produce
@@ -155,8 +158,8 @@ class OnPremGatewayImporter:
 
         wrapper = OnPremGatewayWrapper(session, self.importer.cluster_id)
 
-        # One loopback listener can only lead to one place, so an address belongs to one
-        # gateway
+        # A loopback listener serves a single endpoint, hence an address belongs to exactly
+        # one gateway
         seen_hosts = {}
 
         for gateway in gateway_list:
@@ -169,6 +172,11 @@ class OnPremGatewayImporter:
             if is_active is None:
                 is_active = _Default_Is_Active
 
+            is_key_reset_required = gateway.get('is_key_reset_required')
+
+            if is_key_reset_required is None:
+                is_key_reset_required = _Default_Is_Key_Reset_Required
+
             for item in hosts:
 
                 if owner := seen_hosts.get(item):
@@ -177,12 +185,12 @@ class OnPremGatewayImporter:
                 seen_hosts[item] = name
 
             # Serialize the gateway body to its opaque form
-            gateway_data = {'is_active': is_active, 'hosts': hosts}
+            gateway_data = {'is_active': is_active, 'hosts': hosts, 'is_key_reset_required': is_key_reset_required}
             opaque = dumps(gateway_data)
 
             if db_gateway := db_gateways.get(name):
 
-                # The gateway exists so it is updated in place.
+                # The gateway exists and is updated in place.
                 gateway_id = db_gateway['id']
 
                 update = wrapper.update(name, opaque, id=gateway_id)
@@ -193,7 +201,7 @@ class OnPremGatewayImporter:
 
             else:
 
-                # The gateway does not exist yet so it is created now ..
+                # The gateway does not exist and is created ..
                 insert = wrapper.create(name, opaque)
                 _ = session.execute(insert)
                 session.commit()
@@ -212,7 +220,7 @@ class OnPremGatewayImporter:
 
         session.commit()
 
-        # The database now holds what the file said, and the hub has to be told about it.
+        # The database now reflects the declaration and the hub is updated accordingly.
         self.push_to_hub(session)
 
         return out_created, out_updated
@@ -220,9 +228,9 @@ class OnPremGatewayImporter:
 # ################################################################################################################################
 
     def push_to_hub(self, session:'SASession') -> 'None':
-        """ Asks the running server to hand the configuration to the hub. A server that is
-        not up is not an error, as the startup service pushes the configuration the moment
-        the server comes back.
+        """ Requests the running server to publish the configuration to the hub. An unavailable
+        server does not constitute an error because the startup service publishes the
+        configuration when the server becomes available.
         """
         if not (server_dir := session.info.get(Session_Key_Server_Dir)):
             logger.info('No server directory in this session, not pushing to the on-premises gateway hub')

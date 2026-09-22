@@ -22,11 +22,18 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+_hosts_placeholder = 'erp-db.corp.local:5432\ncrm.corp.local:443'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_key_reset_required = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    hosts = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%; height:120px'}))
+    hosts = forms.CharField(required=False, widget=forms.Textarea(
+        attrs={'style':'width:100%; height:120px', 'placeholder':_hosts_placeholder}))
 
     def __init__(self, prefix:'strnone'=None, req:'any_'=None) -> 'None':
         super(CreateForm, self).__init__(prefix=prefix)
@@ -36,6 +43,7 @@ class CreateForm(forms.Form):
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_key_reset_required = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -12,7 +12,10 @@
     var _config = {
 
         // Which side of the element a flash appears on when the caller names none
-        flashPlacement: 'top'
+        flashPlacement: 'top',
+
+        // Above jQuery UI dialogs, so that a flash for a button in a dialog is not covered by it
+        flashZIndex: 100001
     };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -52,6 +55,7 @@
             content: message,
             trigger: 'manual',
             placement: placement,
+            zIndex: _config.flashZIndex,
             duration: [100, 100],
             onShown: function(instance) {
                 setTimeout(function() { _dismissTooltip(instance); }, 600);

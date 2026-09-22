@@ -1,10 +1,12 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
 {% block html_title %}On-premises gateways{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -20,6 +22,8 @@
 
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
 
     {% comment %} On-premises gateways {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/on-prem-gateway.js"></script>
@@ -38,6 +42,7 @@
             '_connected_since',
             '_remote_address',
             '_gateway_version',
+            '_platform',
 
             {% comment %} 2 {% endcomment %}
             '_enrollment_token',
@@ -49,6 +54,7 @@
             'id',
             'is_active',
             'hosts',
+            'is_key_reset_required',
         ]
     }
     </script>
@@ -60,11 +66,7 @@
     {% include "zato/no-clusters.html" %}
 {% else %}
 
-    {% if items.0.hub_error %}
-    <div id="user-message-div"><pre id="user-message" class="user-message user-message-failure">{{ items.0.hub_error }}</pre></div>
-    {% else %}
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
-    {% endif %}
 
     {% if cluster_id %}
         <div id="markup">
@@ -84,14 +86,16 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Status</a></th>
-                        <th><a href="#">Addresses</a></th>
+                        <th><a href="#">Systems</a></th>
                         <th><a href="#">Connected since</a></th>
                         <th><a href="#">Remote address</a></th>
                         <th><a href="#">Version</a></th>
+                        <th><a href="#">Platform</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -107,9 +111,10 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.status }}</td>
                         <td>{{ item.host_count }}</td>
-                        <td>{{ item.connected_since }}</td>
-                        <td>{{ item.remote_address }}</td>
-                        <td>{{ item.gateway_version }}</td>
+                        <td>{{ item.connected_since|no_value_indicator }}</td>
+                        <td>{{ item.remote_address|no_value_indicator }}</td>
+                        <td>{{ item.gateway_version|no_value_indicator }}</td>
+                        <td>{{ item.platform|no_value_indicator }}</td>
                         <td><a href="javascript:$.fn.zato.on_prem_gateway.enrollment_token('{{ item.id }}')">Enrollment token</a></td>
                         <td><a href="javascript:$.fn.zato.on_prem_gateway.reset_key('{{ item.id }}')">Reset key</a></td>
                         <td><a href="javascript:$.fn.zato.on_prem_gateway.edit('{{ item.id }}')">Edit</a></td>
@@ -117,11 +122,12 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.hosts }}</td>
+                        <td class='ignore'>{{ item.is_key_reset_required }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='16'>No results</td>
+                        <td colspan='18'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -136,17 +142,24 @@
                 <form novalidate action="{% url "on-prem-gateway-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:20%"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
+                            <td class="label-column"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle"><label for="{{ create_form.is_active.id_for_label }}">Active</label></td>
-                            <td>{{ create_form.is_active }}</td>
+                            <td class="label-column"><label for="{{ create_form.is_active.id_for_label }}">Active</label></td>
+                            <td>
+                                {{ create_form.is_active }}
+                                |
+                                <label for="{{ create_form.is_key_reset_required.id_for_label }}">
+                                    Require key resets
+                                    {{ create_form.is_key_reset_required }}
+                                </label>
+                            </td>
                         </tr>
 
                         <tr>
-                            <td colspan="2"><label for="{{ create_form.hosts.id_for_label }}">Addresses, one host:port per line</label></td>
+                            <td colspan="2"><label for="{{ create_form.hosts.id_for_label }}">On-premises systems</label></td>
                         </tr>
 
                         <tr>
@@ -154,9 +167,12 @@
                         </tr>
 
                         <tr>
-                            <td colspan="2" style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            <td colspan="2" class="form-actions">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                                <span class="form-buttons">
+                                    <input type="submit" value="OK" />
+                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                </span>
                             </td>
                         </tr>
                     </table>
@@ -170,17 +186,24 @@
                 <form novalidate action="{% url "on-prem-gateway-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:20%"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>
+                            <td class="label-column"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle"><label for="{{ edit_form.is_active.id_for_label }}">Active</label></td>
-                            <td>{{ edit_form.is_active }}</td>
+                            <td class="label-column"><label for="{{ edit_form.is_active.id_for_label }}">Active</label></td>
+                            <td>
+                                {{ edit_form.is_active }}
+                                |
+                                <label for="{{ edit_form.is_key_reset_required.id_for_label }}">
+                                    Require key resets
+                                    {{ edit_form.is_key_reset_required }}
+                                </label>
+                            </td>
                         </tr>
 
                         <tr>
-                            <td colspan="2"><label for="{{ edit_form.hosts.id_for_label }}">Addresses, one host:port per line</label></td>
+                            <td colspan="2"><label for="{{ edit_form.hosts.id_for_label }}">On-premises systems</label></td>
                         </tr>
 
                         <tr>
@@ -188,9 +211,12 @@
                         </tr>
 
                         <tr>
-                            <td colspan="2" style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            <td colspan="2" class="form-actions">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                                <span class="form-buttons">
+                                    <input type="submit" value="OK" />
+                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                </span>
                             </td>
                         </tr>
                     </table>
@@ -204,20 +230,15 @@
             <div class="bd">
                 <table class="form-data">
                     <tr>
-                        <td style="vertical-align:middle; width:20%">Name</td>
-                        <td id="enrollment-token-name"></td>
-                    </tr>
-                    <tr>
-                        <td colspan="2"><label for="enrollment-token-value">Token</label></td>
-                    </tr>
-                    <tr>
-                        <td colspan="2">
+                        <td>
                             <textarea id="enrollment-token-value" style="width:100%; height:90px" readonly></textarea>
                         </td>
                     </tr>
                     <tr>
-                        <td colspan="2" style="text-align:right">
-                            <button type='button' id="enrollment-token-close">OK</button>
+                        <td class="form-actions">
+                            <span class="form-buttons">
+                                <button type='button' id="enrollment-token-copy">Copy</button>
+                            </span>
                         </td>
                     </tr>
                 </table>

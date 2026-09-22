@@ -40,8 +40,8 @@ class OnPremGatewayExporter:
 # ################################################################################################################################
 
     def export(self, session:'SASession', cluster_id:'int') -> 'gateway_def_list':
-        """ Exports on-premises gateway definitions - a name, a flag and a list of
-        addresses, which is everything the ODB holds about one.
+        """ Exports on-premises gateway definitions - a name, the flags and a list of
+        addresses, which is everything the ODB stores about one.
         """
         logger.info('Exporting on-premises gateway definitions')
 
@@ -57,6 +57,7 @@ class OnPremGatewayExporter:
             gateway_def = {
                 'name': row['name'],
                 'is_active': row['is_active'],
+                'is_key_reset_required': row['is_key_reset_required'],
                 'hosts': row['hosts'],
             }
 

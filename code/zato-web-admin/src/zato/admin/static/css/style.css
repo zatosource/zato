@@ -393,6 +393,27 @@ span.like-a {
     padding-right: 0px
 }
 
+/* A label column is sized to its own text rather than to a share of the table's
+   remaining width. */
+
+.form-data td.label-column {
+    width: 1%;
+    padding-right: 10px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* The action row spans the full width so that its contents do not determine a column width. */
+
+.form-data td.form-actions {
+    vertical-align: middle;
+    text-align: left;
+}
+
+.form-data td.form-actions .form-buttons {
+    float: right;
+}
+
 #login-form .form-data td {
     padding: 8px
 }
@@ -485,6 +506,17 @@ p.big-notice {
 .ui-dialog-titlebar.ui-helper-clearfix::before,
 .ui-dialog-titlebar.ui-helper-clearfix::after {
     display: none;
+}
+
+.ui-dialog-title-text {
+    user-select: text;
+    cursor: text;
+}
+
+/* The system colours are the browser's own selection colours. */
+.ui-dialog-title-text::selection {
+    background-color: Highlight;
+    color: HighlightText;
 }
 
 .ui-icon-closethick {
