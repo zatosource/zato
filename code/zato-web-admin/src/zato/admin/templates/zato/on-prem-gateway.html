@@ -29,6 +29,8 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/on-prem-gateway.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.center_column_names.push('Status', 'Systems', 'Connected since', 'Remote address', 'Version');
+
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
@@ -87,7 +89,7 @@
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Status</a></th>
                         <th><a href="#">Systems</a></th>
-                        <th><a href="#">Connected since</a></th>
+                        <th class="zato-time-ago-header"><a href="#">Connected since</a></th>
                         <th><a href="#">Remote address</a></th>
                         <th><a href="#">Version</a></th>
                         <th><a href="#">Platform</a></th>
@@ -111,7 +113,7 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.status }}</td>
                         <td>{{ item.host_count }}</td>
-                        <td>{{ item.connected_since|no_value_indicator }}</td>
+                        <td class="zato-time-ago" data-time-ago-id="{{ item.id }}" data-time-utc="{{ item.connected_since }}" data-time-ago-title="Connected since" data-time-ago-row-label="Connected for"></td>
                         <td>{{ item.remote_address|no_value_indicator }}</td>
                         <td>{{ item.gateway_version|no_value_indicator }}</td>
                         <td>{{ item.platform|no_value_indicator }}</td>

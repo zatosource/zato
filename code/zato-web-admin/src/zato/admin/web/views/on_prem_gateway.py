@@ -52,6 +52,23 @@ class _Status:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_status(item:'any_') -> 'str':
+    """ The value of the Status column for one gateway.
+    """
+    if not item['is_active']:
+        out = _Status.Not_Active
+    elif item['is_connected']:
+        out = _Status.Connected
+    elif item['has_key']:
+        out = _Status.Offline
+    else:
+        out = _Status.Not_Enrolled
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'on-prem-gateway'
@@ -69,14 +86,7 @@ class Index(_Index):
     def on_before_append_item(self, item:'Bunch') -> 'Bunch':
 
         # The current state of the gateway ..
-        if not item.is_active:
-            status = _Status.Not_Active
-        elif item.is_connected:
-            status = _Status.Connected
-        elif item.has_key:
-            status = _Status.Offline
-        else:
-            status = _Status.Not_Enrolled
+        status = _get_status(item)
 
         # .. and its addresses, which the edit form reads from a hidden cell. A gateway
         # .. configured with no addresses does not carry the key at all.
@@ -177,6 +187,39 @@ def reset_key(req:'HttpRequest', id:'str', cluster_id:'str') -> 'any_':
     out = {'message': 'Key reset, the gateway is required to enroll again'}
 
     return HttpResponse(dumps(out), content_type='application/javascript')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def refresh(req:'HttpRequest') -> 'any_':
+    """ Returns the runtime state of the gateways shown on the page, keyed by their IDs.
+    """
+    id_list = req.POST['id_list'].split(',')
+
+    response = req.zato.client.invoke(_service_prefix + 'get-list', {})
+
+    if not response.ok:
+        return HttpResponseServerError(response.details)
+
+    out = {}
+
+    for item in response.data:
+
+        id = str(item['id'])
+
+        if id not in id_list:
+            continue
+
+        out[id] = {
+            'status': _get_status(item),
+            'connected_since': item['connected_since'],
+            'remote_address': item['remote_address'],
+            'gateway_version': item['gateway_version'],
+            'platform': item['platform'],
+        }
+
+    return HttpResponse(dumps(out), content_type='application/json')
 
 # ################################################################################################################################
 # ################################################################################################################################

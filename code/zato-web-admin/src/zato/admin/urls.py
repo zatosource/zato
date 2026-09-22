@@ -1835,6 +1835,8 @@ urlpatterns += [
         login_required(on_prem_gateway.enrollment_token), name='on-prem-gateway-enrollment-token'),
     url(r'^zato/on-prem-gateway/reset-key/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(on_prem_gateway.reset_key), name='on-prem-gateway-reset-key'),
+    url(r'^zato/on-prem-gateway/refresh/$',
+        login_required(on_prem_gateway.refresh), name='on-prem-gateway-refresh'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################

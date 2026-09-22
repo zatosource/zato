@@ -1391,6 +1391,9 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
    never wrap, so the narrow column is safe. */
 #data-table th.zato-time-ago-header {
     width: 1%;
+
+    /* The narrow column must not break a multi-word name or push the countdown to a line of its own. */
+    white-space: nowrap;
 }
 
 #data-table td.zato-time-ago {

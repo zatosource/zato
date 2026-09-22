@@ -13,7 +13,8 @@ $.fn.zato.data_table.OnPremGateway = new Class({
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.on_prem_gateway.status = {
-    notEnrolled: 'Not enrolled'
+    notEnrolled: 'Not enrolled',
+    notActive: 'Not active'
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -34,6 +35,15 @@ $.fn.zato.on_prem_gateway.config = {
 
     // What a cell without a value displays, matching the no_value_indicator template filter
     no_value_html: '<span class="form_hint">---</span>',
+    no_value_text: '---',
+    no_value_class: 'form_hint',
+
+    // The runtime state of the gateways is read periodically from here
+    refresh_url: '/zato/on-prem-gateway/refresh/',
+    refresh_time_field: 'connected_since',
+
+    // The columns refreshed along with the connection time
+    refreshed_columns: ['status', 'remote_address', 'gateway_version', 'platform'],
 
     // The links in a row that outcomes are reported beside
     create_link_selector: 'a[href*="on_prem_gateway.create"]',
@@ -51,7 +61,18 @@ $.fn.zato.on_prem_gateway.config = {
 // /////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
-    $('#data-table').tablesorter();
+
+    var config = $.fn.zato.on_prem_gateway.config;
+    var timeAgo = $.fn.zato.time_ago;
+
+    timeAgo.config.refresh_url = config.refresh_url;
+    timeAgo.config.refresh_time_field = config.refresh_time_field;
+    timeAgo.config.never_label = config.no_value_text;
+    timeAgo.config.never_class = config.no_value_class;
+    timeAgo.config.local_time_prefix = true;
+    timeAgo.config.on_refresh = $.fn.zato.on_prem_gateway.on_refresh;
+    timeAgo.init_table('#data-table');
+
     $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.OnPremGateway;
     $.fn.zato.data_table.new_row_func = $.fn.zato.on_prem_gateway.data_table.new_row;
@@ -97,10 +118,7 @@ $.fn.zato.on_prem_gateway.field_descriptions = {
         'has been reset. When disabled, a new enrollment token replaces the key on file, for instance ' +
         'when the gateway is reinstalled or moved to another host.',
     'id_hosts': 'The on-premises addresses served by this gateway, one host:port entry per line, ' +
-        'for example erp-db.corp.local:5432. Each entry is resolvable within the Zato environment, ' +
-        'so an outgoing connection configured with the same host and port is transported over the ' +
-        'gateway connection. The list also constitutes an allowlist and connections to addresses ' +
-        'outside it are refused.',
+        'for example erp-db.corp.local:5432.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -249,19 +267,35 @@ $.fn.zato.on_prem_gateway.data_table.new_row = function(item, data, include_tr) 
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
+    var config = $.fn.zato.on_prem_gateway.config;
     var isActive = item.is_active == true;
-
-    // A row constructed here reflects the configuration only, the runtime state is
-    // reported by the hub on the next read of the list.
     var hostCount = item.hosts ? item.hosts.split('\n').length : 0;
 
-    // Enrollment requires a token, which is therefore issued immediately after creation.
-    // The identifier is available only once the server has responded, so the callback
-    // is registered here rather than in the create function.
-    if(include_tr) {
-        $.fn.zato.data_table.on_submit_complete_callback = $.fn.zato.on_prem_gateway.enrollment_token;
-        $.fn.zato.data_table.on_submit_complete_callback_args = item.id;
+    // A new gateway has no runtime state yet ..
+    var status = $.fn.zato.on_prem_gateway.status.notEnrolled;
+    var connectedSince = '';
+    var remoteAddress = config.no_value_html;
+    var gatewayVersion = config.no_value_html;
+    var platform = config.no_value_html;
+
+    // .. whereas an edited one keeps what its row reports until the refresh that follows the edit.
+    if(!include_tr) {
+        status = $.fn.zato.data_table.get_cell(item.id, '_status').text();
+        connectedSince = $.fn.zato.data_table.get_cell(item.id, '_connected_since').attr('data-time-utc');
+        remoteAddress = $.fn.zato.data_table.get_cell(item.id, '_remote_address').html();
+        gatewayVersion = $.fn.zato.data_table.get_cell(item.id, '_gateway_version').html();
+        platform = $.fn.zato.data_table.get_cell(item.id, '_platform').html();
     }
+
+    if(!isActive) {
+        status = $.fn.zato.on_prem_gateway.status.notActive;
+    }
+
+    // The runtime state is read again as soon as the row is in place, and a new gateway
+    // additionally requires an enrollment token. The identifier is available only once
+    // the server has responded, so the callback is registered here rather than in the create function.
+    $.fn.zato.data_table.on_submit_complete_callback = $.fn.zato.on_prem_gateway.after_submit;
+    $.fn.zato.data_table.on_submit_complete_callback_args = {id: item.id, is_new: include_tr};
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -269,12 +303,13 @@ $.fn.zato.on_prem_gateway.data_table.new_row = function(item, data, include_tr) 
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', isActive ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', $.fn.zato.on_prem_gateway.status.notEnrolled);
+    row += String.format('<td>{0}</td>', status);
     row += String.format('<td>{0}</td>', hostCount);
-    row += String.format('<td>{0}</td>', $.fn.zato.on_prem_gateway.config.no_value_html);
-    row += String.format('<td>{0}</td>', $.fn.zato.on_prem_gateway.config.no_value_html);
-    row += String.format('<td>{0}</td>', $.fn.zato.on_prem_gateway.config.no_value_html);
-    row += String.format('<td>{0}</td>', $.fn.zato.on_prem_gateway.config.no_value_html);
+    row += String.format('<td class="zato-time-ago" data-time-ago-id="{0}" data-time-utc="{1}" ' +
+        'data-time-ago-title="Connected since" data-time-ago-row-label="Connected for"></td>', item.id, connectedSince);
+    row += String.format('<td>{0}</td>', remoteAddress);
+    row += String.format('<td>{0}</td>', gatewayVersion);
+    row += String.format('<td>{0}</td>', platform);
 
     // 2
     row += String.format('<td>{0}</td>',
@@ -300,6 +335,40 @@ $.fn.zato.on_prem_gateway.data_table.new_row = function(item, data, include_tr) 
 }
 
 // /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.after_submit = function(args) {
+
+    $.fn.zato.time_ago.refresh('#data-table', $.fn.zato.on_prem_gateway.config.refresh_url);
+
+    if(args.is_new) {
+        $.fn.zato.on_prem_gateway.enrollment_token(args.id);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+// Updates the columns refreshed along with the connection time, which the framework updates itself.
+$.fn.zato.on_prem_gateway.on_refresh = function(data) {
+
+    var config = $.fn.zato.on_prem_gateway.config;
+
+    $.each(data, function(id, entry) {
+        $.each(config.refreshed_columns, function(ignored, name) {
+
+            var cell = $.fn.zato.data_table.get_cell(id, '_' + name);
+            var value = entry[name];
+
+            if(value) {
+                cell.text(value);
+            }
+            else {
+                cell.html(config.no_value_html);
+            }
+        });
+    });
+}
+
+/////////////////////////////////////////////////////////////////////////////
 
 // Reports the outcome of an action in a tooltip beside the link that invoked it. A failure
 // remains visible until dismissed, a success is withdrawn on its own.

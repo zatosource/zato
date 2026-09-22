@@ -469,9 +469,13 @@ $.fn.zato.data_table.center_columns = function() {
 
         // The header link is a block element with its own padding,
         // so it needs the same treatment or the label stays offset.
+        // A header with a refresh countdown keeps its link inline so the countdown
+        // stays to the right of the column name instead of wrapping below it.
+        var header_link_display = header_cell.hasClass('zato-time-ago-header') ? 'inline-block' : 'block';
+
         header_cell.find('a').css({
             'text-align': 'center',
-            'display': 'block',
+            'display': header_link_display,
             'padding-right': '0'
         });
 
@@ -2315,6 +2319,17 @@ $.fn.zato.time_ago.paused = false;
 
 $.fn.zato.time_ago.config = {
     'never_label': 'Never',
+
+    // A CSS class the never label is shown with, none by default
+    'never_class': '',
+
+    // Whether a cell without a prefix of its own leads with its timestamp in the browser's timezone
+    'local_time_prefix': false,
+
+    // Invoked with the whole response after each refresh, for pages whose other columns
+    // are refreshed from the same response, none by default
+    'on_refresh': null,
+
     'never_sort_value': '99999999999',
     'just_now_label': 'Just now',
     'ago_label': 'ago',
@@ -2616,6 +2631,11 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
     // "2026-09-21 10:32:55 - 1 hour ago". Such a cell links its own text only and the
     // humanized age follows it as plain text.
     var prefix = cell.attr('data-time-ago-prefix');
+
+    if(!prefix && iso_utc && config.local_time_prefix) {
+        prefix = $.fn.zato.time_ago.format_timestamp(new Date(iso_utc), false);
+    }
+
     var link_text = new_text;
     var suffix_text = '';
 
@@ -2628,8 +2648,16 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
     // .. this is what actually writes the new content out ..
     var apply_text = function() {
 
-        // A cell without a timestamp shows a plain label only.
+        if(config.never_class) {
+            value_element.toggleClass(config.never_class, !iso_utc);
+        }
+
+        // A cell without a timestamp shows a plain label only, without the tooltip
+        // it may have had while it had a timestamp.
         if(!iso_utc) {
+            if(value_element[0]._tippy) {
+                value_element[0]._tippy.destroy();
+            }
             value_element.text(new_text);
             return;
         }
@@ -2931,6 +2959,10 @@ $.fn.zato.time_ago.refresh = function(container_selector, url) {
                         $.fn.zato.time_ago.update_cell(cell, latest[config.refresh_time_field], latest[config.refresh_duration_field]);
                     }
                 });
+                if(config.on_refresh !== null) {
+                    config.on_refresh(data);
+                }
+
                 $.fn.zato.time_ago.hide_spinners(container_selector);
 
                 // Refreshed sort values need to reach the sorter's cache.
