@@ -1,0 +1,2 @@
+{% comment %} The link to the delivery page of one outgoing connection, included with conn_type and item {% endcomment %}
+<td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Delivery queue</span>{% else %}<a href="/zato/outgoing/delivery/{{ conn_type }}/{{ item.id }}/?cluster={{ cluster_id }}&amp;tab=queue">Delivery queue</a>{% endif %}</td>

@@ -317,6 +317,11 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
         'volume_bytes': 0,
         'tool_count': 0,
 
+        # The queue delivery of an outgoing connection - how many messages wait in its queue and how many its DLQ
+        # holds right now, both read off the connection itself rather than the audit log, so neither has a window
+        'queue_depth': 0,
+        'dlq_depth': 0,
+
         # How many days the object's TLS certificate has left. Zero means unmeasured,
         # which is why the certificate rules also require a value of at least one.
         'cert_days_left': 0,

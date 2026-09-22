@@ -318,10 +318,31 @@ wizard.helpDescriptions = function() {
         'address can be tried before the connection is created.';
     out['mllp-outconn-wizard-review-check'] = out['mllp-outconn-wizard-check'];
 
-    // .. the three decisions of step 2 ..
+    // .. the decisions of step 2 - the Retries and Dead-letter queue lines and the inputs of their
+    // popovers are explained the way the Delivery tab of the other outgoing connections explains them ..
+    var deliveryConfig = $.fn.zato.delivery_tab.config;
+
     out['mllp-outconn-wizard-edit-pool'] = shared['id_pool_size'];
-    out['mllp-outconn-wizard-edit-retries'] = 'How many times a message the receiving system did not take ' +
-        'is sent again, and how long the platform waits between the attempts.';
+    out['mllp-outconn-wizard-edit-retries'] = deliveryConfig.helpRetries;
+    out['mllp-outconn-wizard-edit-dlq'] = deliveryConfig.helpUseDLQ;
+
+    var deliveryHelp = {};
+    deliveryHelp[deliveryConfig.fieldMaxRetries] = deliveryConfig.helpMaxRetries;
+    deliveryHelp[deliveryConfig.fieldSleepTime] = deliveryConfig.helpSleepTime;
+    deliveryHelp[deliveryConfig.fieldBackoffThreshold] = deliveryConfig.helpBackoffThreshold;
+    deliveryHelp[deliveryConfig.fieldBackoffMultiplier] = deliveryConfig.helpBackoffMultiplier;
+    deliveryHelp[deliveryConfig.fieldUseQueue] = deliveryConfig.helpUseQueue;
+    deliveryHelp[deliveryConfig.fieldUseDLQ] = deliveryConfig.helpUseDLQ;
+    deliveryHelp[deliveryConfig.fieldAction] = deliveryConfig.helpAction;
+    deliveryHelp[deliveryConfig.fieldRetries] = deliveryConfig.helpRetries;
+    deliveryHelp[deliveryConfig.fieldRetryInterval] = deliveryConfig.helpRetryInterval;
+    deliveryHelp[deliveryConfig.fieldForwardTo] = deliveryConfig.helpForwardTo;
+    deliveryHelp[deliveryConfig.fieldKeepHeader] = deliveryConfig.helpKeepHeader;
+
+    for(var fieldName in deliveryHelp) {
+        out[wizard.forms.inputId(fieldName)] = deliveryHelp[fieldName];
+    }
+
     out['mllp-outconn-wizard-edit-send-limit'] = 'How much may go wrong before the platform stops sending - once ' +
         'the given share of sends within the window fails, sending stops for the given time rather than ' +
         'queueing up work for an endpoint that is down. One trial message then decides whether it resumes.';
@@ -358,7 +379,8 @@ wizard.titleHelp = function() {
         'and say which system it reaches, with a test message that can be sent ' +
         'before anything is saved. ' +
         'On <span class="wizard-title-help-step">02</span> you choose how many connections ' +
-        'to keep open, what happens to a message the far side did not take and when to be alerted. ' +
+        'to keep open, what happens to a message the far side did not take, where one that keeps ' +
+        'failing ends up and when to be alerted. ' +
         '<span class="wizard-title-help-step">03</span> is a review before the ' +
         'connection is created.</p>' +
 

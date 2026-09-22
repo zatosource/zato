@@ -366,7 +366,7 @@ class TestSOAPBillingLive:
         record = soap_test_server.last_request
 
         # The {env} and {company} parameters were substituted into the path,
-        # with the pre-encoded company name preserved
+        # with the company name percent-encoded by the connection
         assert record['path'] == _Path_Rest_Invoice
 
         # The adapter's static headers arrived

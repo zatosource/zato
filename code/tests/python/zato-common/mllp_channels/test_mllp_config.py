@@ -48,15 +48,6 @@ class TestHL7DefaultValues:
 
 # ################################################################################################################################
 
-    def test_retry_defaults(self:'any_') -> 'None':
-
-        assert HL7.Default.max_retries == 5
-        assert HL7.Default.backoff_base_seconds == 1
-        assert HL7.Default.backoff_cap_seconds == 300
-        assert HL7.Default.backoff_jitter_percent == 10
-
-# ################################################################################################################################
-
     def test_circuit_breaker_defaults(self:'any_') -> 'None':
 
         assert HL7.Default.circuit_breaker_threshold_percent == 50

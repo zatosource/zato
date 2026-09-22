@@ -86,6 +86,28 @@ class SQLAdminAPI(SQLBrowseAPI):
 
 # ################################################################################################################################
 
+    def get_pending_counts_by_prefix(self, prefix:'str') -> 'anydict':
+        """ Returns how many messages wait for each subscriber key that starts with the given prefix - one grouped
+        count over the delivery rows, which is how the queues of outgoing connections learn their depth at startup.
+        A subscriber with nothing waiting is not in the result.
+        """
+        pattern = prefix + '%'
+
+        query = select(delivery_table.c.sub_key, func.count())
+        query = query.select_from(delivery_table)
+        query = query.where(delivery_table.c.sub_key.like(pattern))
+        query = query.group_by(delivery_table.c.sub_key)
+
+        out:'anydict' = {}
+
+        with self.engine.connect() as connection:
+            for sub_key, count in connection.execute(query):
+                out[sub_key] = count
+
+        return out
+
+# ################################################################################################################################
+
     def get_topic_subscribers(self, topic_name:'str') -> 'strlist':
         """ Get list of subscribers for a topic.
         """

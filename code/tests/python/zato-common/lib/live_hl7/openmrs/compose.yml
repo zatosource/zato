@@ -1,0 +1,43 @@
+services:
+
+  db:
+    image: mysql:5.6
+    command: "mysqld --character-set-server=utf8 --collation-server=utf8_general_ci"
+    environment:
+      MYSQL_DATABASE: openmrs
+      MYSQL_ROOT_PASSWORD: "${OPENMRS_PASSWORD}"
+      MYSQL_USER: openmrs
+      MYSQL_PASSWORD: "${OPENMRS_PASSWORD}"
+    ports:
+      - "${OPENMRS_MYSQL_PORT}:3306"
+    volumes:
+      - db:/var/lib/mysql
+
+  openmrs:
+    image: openmrs/openmrs-reference-application-distro:2.12.2
+    depends_on:
+      - db
+    environment:
+      DB_DATABASE: openmrs
+      DB_HOST: db
+      DB_USERNAME: openmrs
+      DB_PASSWORD: "${OPENMRS_PASSWORD}"
+      DB_CREATE_TABLES: "true"
+      DB_AUTO_UPDATE: "true"
+      MODULE_WEB_ADMIN: "true"
+    ports:
+      - "${OPENMRS_WEB_PORT}:8080"
+    volumes:
+      - data:/usr/local/tomcat/.OpenMRS
+      - "${OPENMRS_MODULES_DIR}:/usr/local/tomcat/.OpenMRS/modules"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+# The installed application and its database outlive the stack
+volumes:
+  db:
+    name: zato-hl7-openmrs-db
+    external: true
+  data:
+    name: zato-hl7-openmrs-data
+    external: true

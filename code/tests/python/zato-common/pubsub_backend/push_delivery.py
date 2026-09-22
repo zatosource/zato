@@ -108,6 +108,19 @@ def run_push_delivery_scenario() -> 'None':
     server = _StubServer()
     delivery = PushDelivery(server, backend) # type: ignore[arg-type]
 
+    # The delivery is stopped however the scenario ends - a failure before its own stop would otherwise leave
+    # a greenlet behind that keeps fetching from a database the process has since moved away from.
+    try:
+        _run_push_delivery_flow(backend, server, delivery)
+    finally:
+        delivery.stop()
+
+# ################################################################################################################################
+
+def _run_push_delivery_flow(backend:'SQLPubSubBackend', server:'_StubServer', delivery:'PushDelivery') -> 'None':
+    """ The scenario itself, with the delivery whose greenlets it runs on.
+    """
+
     # The push subscription and its runtime queue state.
     sub_config = {
         'topic_name': _topic,
@@ -176,9 +189,8 @@ def run_push_delivery_scenario() -> 'None':
 
     assert retained_payload_count == 1, retained_payload_count
 
-    # .. stopping the subscriber's greenlet and the whole delivery ends the run cleanly.
+    # .. stopping the subscriber's greenlet ends the run cleanly.
     delivery.stop_sub_key(_sub_key)
-    delivery.stop()
 
 # ################################################################################################################################
 # ################################################################################################################################

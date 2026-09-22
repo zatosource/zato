@@ -1,0 +1,226 @@
+/* ------------------------------------------------------------ */
+/* Delivery - the queue and the DLQ of an outgoing connection    */
+/* ------------------------------------------------------------ */
+
+.delivery-tabs {
+    margin: 0 0 8px 2%;
+}
+
+.delivery-tabs > .dashboard-tab[disabled],
+.delivery-tabs > .dashboard-tab[disabled]:hover {
+    cursor: default;
+    opacity: 0.45;
+    color: rgba(0, 0, 0, 0.36);
+    background: transparent none;
+}
+
+/* ------------------------------------------------------------ */
+/* Delivery - the action links above the table                  */
+/* ------------------------------------------------------------ */
+
+div.page_prompt a.common.delivery-action-disabled,
+div.page_prompt a.common.delivery-action-disabled:hover {
+    color: rgba(0, 0, 0, 0.5) !important;
+    cursor: default;
+    pointer-events: none;
+    text-decoration: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Delivery - the chip that counts the ticked rows              */
+/* ------------------------------------------------------------ */
+
+.delivery-table-wrap {
+    position: relative;
+}
+
+/* The chip sits astride the table's left border, its middle on the border and nudged a
+   little to the left of it, level with the header's checkbox - JavaScript sets its top.
+   It is out of the table's flow, so nothing moves when it comes and goes, and it comes
+   and goes in one step, with no motion of its own. JavaScript also gives it the width of
+   the widest count its table can show, so "1 row" and "12 rows" are one and the same block.
+
+   It looks the way a tippy does on this page - the same dark box, white text, corner
+   radius and padding - only without the arrow, and in the table header's type size. */
+.delivery-selected-chip {
+    display: none;
+    position: absolute;
+    right: 98%;
+    z-index: 1;
+    transform: translate(calc(50% - 6px), -50%);
+    box-sizing: border-box;
+    padding: 5px 9px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: center;
+    white-space: nowrap;
+    color: #fff;
+    background-color: #333;
+    pointer-events: none;
+}
+
+.delivery-selected-chip.delivery-selected-chip-visible {
+    display: inline-block;
+}
+
+/* A copy of the chip that exists only to be measured, off the table so that a hidden
+   tab's chip can be measured too */
+.delivery-selected-chip.delivery-selected-chip-sizer {
+    visibility: hidden;
+    top: 0;
+    right: auto;
+    left: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Delivery - the table                                         */
+/* ------------------------------------------------------------ */
+
+/* Two tables share the page, so the #data-table layout is repeated here */
+.delivery-table {
+    width: 96%;
+    margin-left: 2%;
+    counter-reset: data_table_counter;
+}
+
+.delivery-table th {
+    white-space: nowrap;
+}
+
+.delivery-table tbody tr:not(.ignore):nth-child(even) {
+    background-color: rgba(6, 60, 101, 0.025);
+}
+
+.delivery-table tbody tr:not(.ignore):hover {
+    background-color: var(--zato-row-hover);
+}
+
+.delivery-table td.numbering {
+    position: relative;
+    text-align: center;
+}
+
+.delivery-table td.numbering:before {
+    content: counter(data_table_counter);
+    counter-increment: data_table_counter;
+    font-weight: 500;
+}
+
+.delivery-table th.delivery-cell-select,
+.delivery-table td.delivery-cell-select {
+    width: 1%;
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* A block box rather than an inline one, so the cell holds the checkbox alone and
+   centres it exactly - an inline checkbox sits on the text baseline instead.
+   formalize.css nudges every checkbox 3px down through position and top, which
+   is undone here, otherwise the box lands 3px below the middle of its cell. */
+.delivery-table .zato-plain-checkbox {
+    display: block;
+    margin: 0 auto;
+    position: static;
+    top: auto;
+    cursor: pointer;
+}
+
+.delivery-cell-nowrap {
+    white-space: nowrap;
+}
+
+.delivery-table th.delivery-cell-center,
+.delivery-table td.delivery-cell-center {
+    text-align: center;
+}
+
+.delivery-table th.zato-time-ago-header,
+.delivery-table td.zato-time-ago {
+    white-space: nowrap;
+}
+
+/* Left to itself the layout breaks an address after every slash and dot, which is why
+   the column used to collapse to a few characters wide - one line keeps the method and
+   the URL readable as the one thing they are and makes the column ask for that room. */
+.delivery-table td.delivery-cell-address {
+    white-space: nowrap;
+}
+
+/* An error is the longest text in the row, so it reads a notch smaller than the rest */
+.delivery-cell-error {
+    color: var(--zato-ui-error);
+    font-size: 12px;
+}
+
+/* ------------------------------------------------------------ */
+/* Delivery - the action popovers                               */
+/* ------------------------------------------------------------ */
+
+.delivery-popover-target {
+    font-size: 12px;
+    color: var(--zato-ui-text);
+}
+
+.delivery-popover-target-count {
+    font-weight: 700;
+}
+
+.delivery-popover .micro-form-checkbox-text {
+    flex: 0 0 auto;
+}
+
+/* ------------------------------------------------------------ */
+/* Delivery - the details window                                */
+/* ------------------------------------------------------------ */
+
+.delivery-details {
+    --delivery-details-label-color: #999;
+    --delivery-details-value-color: #e8e8e8;
+    --delivery-details-error-color: #ff8a80;
+    --delivery-details-font: 'Menlo', 'Consolas', 'Monaco', monospace;
+}
+
+.delivery-details-facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: 18px;
+    row-gap: 4px;
+    margin: 0 0 6px 0;
+    font-family: var(--delivery-details-font);
+    font-size: 12px;
+}
+
+.delivery-details-label {
+    color: var(--delivery-details-label-color);
+    white-space: nowrap;
+}
+
+.delivery-details-value {
+    color: var(--delivery-details-value-color);
+    word-break: break-word;
+}
+
+.delivery-details-value-error {
+    color: var(--delivery-details-error-color);
+}
+
+.delivery-details-headers {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.delivery-details-body-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 10px;
+    font-family: var(--delivery-details-font);
+    font-size: 12px;
+    color: var(--delivery-details-label-color);
+}
+
+.delivery-details-editor {
+    margin-top: 6px;
+}

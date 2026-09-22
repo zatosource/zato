@@ -1,0 +1,70 @@
+bridge:
+  security:
+    enabled: true
+    username: ${BRIDGE_USERNAME}
+    password: ${BRIDGE_PASSWORD}
+  analyzers: {}
+  file:
+    enabled: false
+    watchDirectories: []
+    archiveDirectory: /mnt/analyzer-archive
+    errorDirectory: /mnt/analyzer-error
+    pollIntervalMs: 5000
+    fileStabilityTimeoutMs: 3000
+    maxRetryAttempts: 3
+    retryDelayMs: 1000
+    filePatterns: []
+    csvMappings: {}
+
+org:
+  itech:
+    ahb:
+      forward-http-server:
+        uri: ${WEBAPP_ANALYZER_URI}
+        username: ${WEBAPP_USERNAME}
+        password: ${WEBAPP_PASSWORD}
+        insecure-tls: true
+        connect-timeout-seconds: 30
+        read-timeout-seconds: 30
+        max-attempts: 3
+        backoff-ms: 1000
+      listen-astm-server:
+        port: 12001
+        establishment-timeout-seconds: 15
+        receive-timeout-seconds: 30
+      listen-astm-e1381-95-server:
+        port: 12011
+      forward-astm-server:
+        host-name: localhost
+        port: 5000
+      mllp:
+        enabled: true
+        port: 2575
+      serial:
+        enabled: false
+
+server:
+  port: 8443
+
+logging:
+  level:
+    root: INFO
+    org.itech: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+  health:
+    mllp:
+      enabled: true
+    serial:
+      enabled: false
+    filewatcher:
+      enabled: false
+    httpforward:
+      enabled: true

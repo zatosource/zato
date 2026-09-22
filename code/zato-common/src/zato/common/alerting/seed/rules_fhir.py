@@ -8,7 +8,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The default alert rules of outgoing FHIR connections - the rules of an outgoing REST connection over
 # the fhir and fhir-health sources, plus the operation outcomes a FHIR server answers with. The other
-# connection types live in rules_connections.py, the cross-type rules in rules_common.py.
+# connection types live in rules_connections.py, the cross-type rules in rules_common.py, and the queue delivery
+# rules are built from rules_queue.py.
+
+# Zato
+from zato.common.alerting.seed.rules_queue import build_queue_rules
 
 fhir_rules = """
 rule
@@ -109,7 +113,7 @@ then
     outcome.action = 'email'
     outcome.severity = 'error'
 
-""".strip()
+""".strip() + '\n\n' + build_queue_rules('fhir', 'A FHIR outgoing connection')
 
 # ################################################################################################################################
 # ################################################################################################################################

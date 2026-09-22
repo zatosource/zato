@@ -214,10 +214,26 @@ class HL7MessageRouter:
         route.is_audit_log_active       = is_audit_log_active
         route.settings                  = settings
 
+        # A channel has one rule - a rule built again for the same channel, which is what a configuration
+        # reload does, takes the place of the one it had rather than queueing up behind it, since the first
+        # match wins and a stale rule in front would keep answering for the channel with its old service
         with self._lock:
-            self._routes.append(route)
 
-        logger.info('Added MLLP route for channel `%s` -> %s (default: %s)', channel_name, route.get_target(), is_default)
+            updated_routes:'channel_route_list' = []
+
+            for existing_route in self._routes:
+                if existing_route.channel_name != channel_name:
+                    updated_routes.append(existing_route)
+
+            is_replacing = len(updated_routes) != len(self._routes)
+
+            updated_routes.append(route)
+            self._routes = updated_routes
+
+        if is_replacing:
+            logger.info('Replaced MLLP route for channel `%s` -> %s (default: %s)', channel_name, route.get_target(), is_default)
+        else:
+            logger.info('Added MLLP route for channel `%s` -> %s (default: %s)', channel_name, route.get_target(), is_default)
 
 # ################################################################################################################################
 
@@ -236,6 +252,18 @@ class HL7MessageRouter:
             self._routes = updated_routes
 
         logger.info('Removed MLLP route for channel `%s`', channel_name)
+
+# ################################################################################################################################
+
+    def has_route(self, channel_name:'str') -> 'bool':
+        """ Returns True if the given channel has a routing rule.
+        """
+        with self._lock:
+            for route in self._routes:
+                if route.channel_name == channel_name:
+                    return True
+
+        return False
 
 # ################################################################################################################################
 

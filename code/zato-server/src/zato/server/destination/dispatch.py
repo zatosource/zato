@@ -22,6 +22,7 @@ from zato.common.api import SMTPMessage
 from zato.common.destination.constants import Default_Method, Default_Path, Default_Subject, Default_To, \
     DestinationOption, DestinationType
 from zato.common.destination.model import get_option, DestinationException
+from zato.common.pubsub.outgoing import SendResult
 from zato.hl7v2 import parse_hl7
 
 # ################################################################################################################################
@@ -98,6 +99,11 @@ def _send_mllp(connections:'DestinationConnections', entry:'DestinationEntry', p
     invoker = connections.mllp[entry.connection]
 
     result = invoker.send(payload, needs_audit=False)
+
+    # A connection with the queue switch on answers with what became of the message rather than
+    # with an acknowledgment, the way a REST destination with the switch on does
+    if isinstance(result, SendResult):
+        return result
 
     out = result.ack_text
     return out

@@ -30,6 +30,7 @@ from zato.common.alerting.collectors.mllp import collect_ack_code_facts, collect
 from zato.common.alerting.collectors.outgoing import collect_outgoing_status_facts
 from zato.common.alerting.collectors.probes import collect_certificate_facts, collect_health_facts, \
     collect_test_transfer_facts
+from zato.common.alerting.collectors.queues import collect_queue_facts
 from zato.common.alerting.collectors.rates import collect_auth_failure_facts, collect_consecutive_failure_facts, \
     collect_error_rate_facts, collect_latency_facts
 from zato.common.alerting.collectors.scheduler import collect_scheduler_facts
@@ -281,6 +282,7 @@ def collect_facts(
     schedule_expectations:'anydict | None' = None,
     silence_expected_names:'strset | None' = None,
     tool_counts:'strintdict | None' = None,
+    queue_rows:'dictlist | None' = None,
     ) -> 'dictlist':
     """ Runs every fact producer and merges their measures into one fact
     per (source, object) pair - the input the alert rules match over. The per-source
@@ -288,7 +290,8 @@ def collect_facts(
     a source without one is measured over window_seconds, the health sources over their own hour,
     and an object with windows of its own, by source, then by object name and then by measure, over those.
     The silence of a channel is measured for the channels named as expecting traffic alone, and the tool
-    counts of the MCP gateways arrive from the gateways themselves rather than the audit log.
+    counts of the MCP gateways and the queue and DLQ depths of the outgoing connections arrive from the objects
+    themselves rather than the audit log.
     """
     if window_seconds_by_source is None:
         window_seconds_by_source = {}
@@ -358,6 +361,7 @@ def collect_facts(
     file_transfer_facts = collect_file_transfer_facts(engine, now, arrival_windows, schedule_expectations, run_window_seconds,
         run_window_seconds_by_object)
     tool_count_facts = collect_tool_count_facts(tool_counts)
+    queue_facts = collect_queue_facts(queue_rows)
 
     fact_lists = windowed_fact_lists + [
         consecutive_facts,
@@ -370,6 +374,7 @@ def collect_facts(
         scheduler_facts,
         file_transfer_facts,
         tool_count_facts,
+        queue_facts,
     ]
 
     out = _merge_facts(fact_lists)

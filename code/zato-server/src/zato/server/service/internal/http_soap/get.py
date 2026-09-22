@@ -23,6 +23,7 @@ from zato.server.service import AsIs, Boolean
 from zato.server.service.internal.http_soap.alert_settings import alert_input, apply_list_defaults
 from zato.server.service.internal.http_soap.common import _as2_input, _as4_input, _BaseGet, _invocation_input, \
     _pem_secret_fields, _retry_input
+from zato.server.service.internal.http_soap.delivery_settings import apply_delivery_list_defaults, delivery_input
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,7 +99,8 @@ class GetList(_BaseGet):
         *_retry_input, \
         *_as4_input, \
         *_as2_input, \
-        *alert_input
+        *alert_input, \
+        *delivery_input
 
     def get_data(self, session):
 
@@ -159,6 +161,9 @@ class GetList(_BaseGet):
             # .. a channel or an outgoing REST connection created before a setting existed reads the same
             # .. as one created after it ..
             apply_list_defaults(item)
+
+            # .. and so does an outgoing REST connection created before a delivery setting existed ..
+            apply_delivery_list_defaults(item)
 
             # .. if we are here, it means that this element is to be returned ..
             out.append(item)

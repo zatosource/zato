@@ -1,0 +1,95 @@
+{% extends "zato/settings-base.html" %}
+
+{% block page_title %}{{ page_config.title }}{% endblock %}
+
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/textarea-settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/on-prem-gateway.css">
+{% endblock %}
+
+{% block extra_page_js %}
+<script type="text/javascript" src="/static/js/on-prem-gateway.js" nonce="{{ CSP_NONCE }}"></script>
+<script type="text/javascript" nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        $.fn.zato.onPremGateway.init({
+            gateways: {{ gateways_json|safe }},
+            apiPrefix: '{{ page_config.api_prefix }}',
+            hostsPlaceholder: '{{ page_config.hosts_placeholder|escapejs }}',
+            downloadUrl: '{{ page_config.download_url }}'
+        });
+    });
+</script>
+{% endblock %}
+
+{% block section_title %}{{ page_config.version_section_title }}{% endblock %}
+{% block help_icon_id %}on-prem-gateway-help{% endblock %}
+
+{% block content_rows %}
+<div class="info-container on-prem-gateway-container">
+
+    <table class="zato-table on-prem-gateway-table" id="on-prem-gateway-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Addresses</th>
+                <th>Last connection</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="on-prem-gateway-rows"></tbody>
+    </table>
+
+    <div class="on-prem-gateway-hub-error hidden" id="on-prem-gateway-hub-error"></div>
+
+    <div class="on-prem-gateway-form" id="on-prem-gateway-form">
+
+        <div class="on-prem-gateway-form-title" id="on-prem-gateway-form-title">New gateway</div>
+
+        <div class="info-row">
+            <div class="info-label">Name</div>
+            <div class="info-value">
+                <input type="text" id="on-prem-gateway-name" autocomplete="off">
+            </div>
+        </div>
+
+        <div class="info-row">
+            <div class="info-label">Active</div>
+            <div class="info-value">
+                <input type="checkbox" id="on-prem-gateway-is-active" checked>
+            </div>
+        </div>
+
+        <div class="info-row textarea-row">
+            <div class="info-label">Hosts</div>
+            <div class="info-value textarea-value">
+                <textarea id="on-prem-gateway-hosts"></textarea>
+            </div>
+        </div>
+
+        <div class="on-prem-gateway-message hidden" id="on-prem-gateway-message"></div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block buttons %}
+<div class="button-container">
+    <div class="button-left-options">
+        <a href="#" id="on-prem-gateway-cancel" class="hidden">Cancel</a>
+    </div>
+    <button class="action-button" id="on-prem-gateway-save">Save</button>
+</div>
+{% endblock %}
+
+{% block action_steps %}
+<div class="on-prem-gateway-token hidden" id="on-prem-gateway-token">
+    <div class="on-prem-gateway-token-title" id="on-prem-gateway-token-title">Enrollment token</div>
+    <textarea id="on-prem-gateway-token-value" readonly></textarea>
+    <div class="on-prem-gateway-token-buttons">
+        <a href="#" id="on-prem-gateway-token-download" target="_blank">Documentation</a>
+        <button class="secondary-button" id="on-prem-gateway-token-copy">Copy</button>
+        <button class="action-button" id="on-prem-gateway-token-close">Close</button>
+    </div>
+</div>
+{% endblock %}

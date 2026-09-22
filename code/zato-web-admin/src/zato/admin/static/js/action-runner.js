@@ -164,7 +164,8 @@ var _run_defaults = {
     spinner_label: 'Pinging ..',
     show_delay_ms: 0,
     min_wait_ms: 0,
-    placement: 'top'
+    placement: 'top',
+    success_hide_ms: 800
 };
 
 // What the details modal shows when the response body came back empty
@@ -279,11 +280,19 @@ function _default_parse(jqXHR, textStatus) {
     };
 }
 
-function _render_success(instance, label) {
+function _render_success(instance, label, hide_ms) {
     var html = '<div style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:13px;color:#fff;margin:-5px -9px;padding:5px 9px">' +
         _escape_html(label) + '</div>';
     instance.setContent(html);
-    _hide_timer = setTimeout(function() { instance.hide(); }, 800);
+
+    var hide = function() {
+        $(document).off('mousedown.action_runner_success');
+        instance.hide();
+    };
+
+    // A click anywhere takes the tooltip down before its time is up
+    $(document).off('mousedown.action_runner_success').on('mousedown.action_runner_success', hide);
+    _hide_timer = setTimeout(hide, hide_ms);
 }
 
 function _render_error(instance, label, details_id) {
@@ -310,6 +319,7 @@ $.fn.zato.action_runner = {
         var show_delay_ms = _opt(opts, 'show_delay_ms');
         var min_wait_ms = _opt(opts, 'min_wait_ms');
         var placement = _opt(opts, 'placement');
+        var success_hide_ms = _opt(opts, 'success_hide_ms');
 
         var started_at = Date.now();
 
@@ -428,7 +438,7 @@ $.fn.zato.action_runner = {
                         on_success(instance, r);
                     } else {
                         instance.show();
-                        _render_success(instance, r.label);
+                        _render_success(instance, r.label, success_hide_ms);
                     }
                 } else {
                     if(on_error) {
@@ -499,12 +509,14 @@ $.fn.zato.action_runner = {
                 '<div class="invoker-modal-body" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">' +
                     '<div class="invoker-modal-response-header" style="flex-shrink:0">' +
                         '<span class="invoker-modal-response-label">Response body</span>' +
-                        '<a class="invoker-modal-response-copy" href="javascript:void(0)">Copy</a>' +
                     '</div>' +
                     // Error text wraps rather than scrolling sideways, so there is no line gutter here -
                     // wrapped lines would not align with it anyway
                     '<div class="invoker-modal-response-wrap" style="flex:1;min-height:0;overflow:auto">' +
                         '<pre class="invoker-modal-response-pre" style="white-space:pre-wrap;word-break:break-word"></pre>' +
+                    '</div>' +
+                    '<div class="invoker-modal-buttons" style="flex-shrink:0">' +
+                        '<button type="button" class="zato-action-button invoker-modal-response-copy">Copy</button>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
@@ -520,10 +532,10 @@ $.fn.zato.action_runner = {
 
         $overlay.find('.invoker-modal-response-copy').on('click', function() {
             var text = $overlay.find('.invoker-modal-response-pre').text();
-            var copy_link = this;
+            var copy_button = this;
             navigator.clipboard.writeText(text).then(function() {
                 if(typeof tippy !== 'undefined') {
-                    var t = tippy(copy_link, {
+                    var t = tippy(copy_button, {
                         content: 'Copied to clipboard',
                         trigger: 'manual',
                         placement: 'top',
@@ -554,6 +566,7 @@ $.fn.zato.action_runner = {
     },
 
     close_all: function() {
+        $(document).off('mousedown.action_runner_success');
         if(_hide_timer) {
             clearTimeout(_hide_timer);
             _hide_timer = null;

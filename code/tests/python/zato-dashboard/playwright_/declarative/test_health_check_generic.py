@@ -147,6 +147,7 @@ def create_health_checked_rest_outconn(page:'Page', base_url:'str', name:'str', 
 
 def create_health_checked_soap_outconn(page:'Page', base_url:'str', name:'str', host:'str', url_path:'str') -> 'str':
     """ Creates an outgoing SOAP connection with the module's health check and returns its ID.
+    The check is a line of the Alerts tab, so this is where it is filled in.
     """
 
     # Navigate to the outgoing SOAP connections page and open the create dialog ..
@@ -162,7 +163,7 @@ def create_health_checked_soap_outconn(page:'Page', base_url:'str', name:'str', 
         'security_value': ZATO_NONE,
     })
 
-    # .. fill the Health check tab ..
+    # .. fill the health check line of the Alerts tab ..
     fill_soap_invocation_tabs(page, _Health_Check_Options, 'create')
 
     # .. submit and wait for the row.

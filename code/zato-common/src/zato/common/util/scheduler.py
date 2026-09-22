@@ -27,7 +27,7 @@ from traceback import format_exc
 from zato.common.ext.bunch import Bunch
 
 # Zato
-from zato.common.api import Alerting, AS2, AS4, SCHEDULER
+from zato.common.api import Alerting, AS2, AS4, PubSub, SCHEDULER
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service
 
 # ################################################################################################################################
@@ -67,6 +67,9 @@ _as2_resend_service_impl_name = 'zato.server.service.internal.as2.ResendOverdueM
 
 # The Python path of the service the AS4 reception awareness job invokes, created upfront the same way.
 _as4_resend_service_impl_name = 'zato.server.service.internal.as4.ResendOverdueMessages'
+
+# The Python path of the service the DLQ rule job invokes
+_dlq_rule_service_impl_name = 'zato.server.service.internal.pubsub.dlq.DLQRun'
 
 # Whether the AS2/AS4 jobs are created on startup
 _as2_as4_jobs_enabled = False
@@ -349,6 +352,17 @@ def ensure_test_transfer_job_exists(session:'any_', cluster_id:'int') -> 'bool':
     """
     out = _ensure_interval_job_exists(session, cluster_id, Alerting.Test_Transfer_Job_Name, Alerting.Test_Transfer_Service,
         _test_transfer_service_impl_name, minutes=Alerting.Test_Transfer_Job_Interval_Minutes, is_active=False)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_dlq_rule_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+    """ Creates the DLQ rule job if it does not exist.
+    """
+    out = _ensure_interval_job_exists(session, cluster_id, PubSub.Outgoing.DLQ_Job_Name, PubSub.Outgoing.DLQ_Rule_Service,
+        _dlq_rule_service_impl_name, minutes=PubSub.Outgoing.DLQ_Job_Interval_Minutes)
 
     return out
 

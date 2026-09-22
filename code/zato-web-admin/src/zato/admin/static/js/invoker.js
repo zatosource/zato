@@ -566,7 +566,7 @@ $.fn.zato.invoker._toggle_response_detail = function(wrapper, index, item) {
 
     let header = $('<div class="invoker-history-response-detail-header"></div>');
     let title = $('<div class="invoker-history-response-detail-title">Response</div>');
-    let copyButton = $('<button class="invoker-history-response-detail-copy">Copy</button>');
+    let copyButton = $('<button type="button" class="zato-action-button invoker-history-response-detail-copy">Copy</button>');
 
     copyButton.on('click', function(event) {
         event.stopPropagation();
@@ -973,12 +973,22 @@ $.fn.zato.invoker.open_overlay = function(config) {
     $('#invoker-modal-path-params').val(savedPathParams);
     $('#invoker-modal-status').text('');
 
-    if (saved.more_options_open) {
-        $('#invoker-more-options').removeClass('hidden');
+    // A caller may open the overlay with a request of its own, e.g. the one a queued message carries -
+    // what it gives wins over what was saved last time
+    if (config.request !== undefined) {
+        requestValue = config.request;
     }
-    else {
-        $('#invoker-more-options').addClass('hidden');
+    if (config.method !== undefined) {
+        savedMethod = config.method;
+        $('#invoker-modal-method').val(savedMethod);
     }
+    if (config.query_params !== undefined) {
+        savedQueryParams = config.query_params;
+        $('#invoker-modal-query-params').val(savedQueryParams);
+    }
+
+    // The overlay always opens with the more options section closed, whatever was filled in behind it
+    $('#invoker-more-options').addClass('hidden');
 
     // Show the overlay first so Ace can measure its container ..
     $('#invoker-modal-overlay').removeClass('hidden');
@@ -991,10 +1001,16 @@ $.fn.zato.invoker.open_overlay = function(config) {
         $.fn.zato.invoker._request_pane.destroy();
     }
 
+    // A caller may name the mode the request is highlighted in, otherwise the text itself decides
+    if (config.request_mode !== undefined) {
+        $.fn.zato.invoker._request_ace_mode = config.request_mode;
+    }
+
     $.fn.zato.invoker._request_pane = $.fn.zato.highlight_pane.init({
         container: $requestContainer,
         text: requestValue,
         editable: true,
+        ace_mode: $.fn.zato.invoker._request_ace_mode,
         ace_options: {maxLines: 12, minLines: 12, alwaysShowScrollbars: true, resizable: true}
     });
 
@@ -1070,8 +1086,7 @@ $.fn.zato.invoker._save_overlay_state = function(historyKey) {
         variables: $('#invoker-modal-variables').val(),
         extra_fields: $.fn.zato.invoker._collect_extra_fields(),
         response_raw: responseRaw,
-        status: $('#invoker-modal-status').text(),
-        more_options_open: !$('#invoker-more-options').hasClass('hidden')
+        status: $('#invoker-modal-status').text()
     };
     localStorage.setItem('zato_invoker_state_' + historyKey, JSON.stringify(state));
 };

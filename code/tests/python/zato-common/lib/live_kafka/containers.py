@@ -8,8 +8,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import subprocess
-from time import sleep, time
+from functools import partial
 from typing import NamedTuple
+
+# Zato
+from live_containers.ready import wait_until
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,12 +37,6 @@ class ModuleCtx:
 
     # Name of the container so stale ones can be removed
     Kafka_Container = 'zato-kafka-test'
-
-    # How long to wait for the broker to accept connections
-    Ready_Timeout = 300
-
-    # How long to sleep between readiness checks
-    Ready_Sleep = 2
 
     # Where the Kafka CLI tools live inside the container
     Kafka_Bin_Dir = '/opt/kafka/bin'
@@ -68,12 +65,9 @@ def stop_container(name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _wait_until_ready(container_name:'str', port:'int') -> 'None':
-    """ Retries listing topics inside the container until the broker responds or the timeout is reached.
+def _list_topics(container_name:'str', port:'int') -> 'bool':
+    """ One attempt at listing topics inside the container - the broker's output is the error when it fails.
     """
-    deadline = time() + ModuleCtx.Ready_Timeout
-    last_output = ''
-
     command = [
         'docker', 'exec', container_name,
         f'{ModuleCtx.Kafka_Bin_Dir}/kafka-topics.sh',
@@ -81,15 +75,21 @@ def _wait_until_ready(container_name:'str', port:'int') -> 'None':
         '--list',
     ]
 
-    while time() < deadline:
-        result = subprocess.run(command, capture_output=True, check=False)
-        if result.returncode == 0:
-            return
+    result = subprocess.run(command, capture_output=True, check=False)
 
-        last_output = result.stdout.decode('utf-8') + result.stderr.decode('utf-8')
-        sleep(ModuleCtx.Ready_Sleep)
+    if result.returncode != 0:
+        output = result.stdout.decode('utf-8') + result.stderr.decode('utf-8')
+        raise Exception(output.strip())
 
-    raise Exception(f'Kafka broker in `{container_name}` did not become ready, last output: {last_output}')
+    return True
+
+# ################################################################################################################################
+
+def _wait_until_ready(container_name:'str', port:'int') -> 'None':
+    """ Retries listing topics inside the container until the broker responds.
+    """
+    check = partial(_list_topics, container_name, port)
+    wait_until(check, f'the Kafka broker in `{container_name}`')
 
 # ################################################################################################################################
 

@@ -288,24 +288,6 @@
     text-shadow: none;
 }
 
-.invoker-history-response-detail-copy {
-    padding: 8px 16px;
-    background: #252525;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 6px;
-    font-family: 'Zato_IDE_Font', monospace;
-    font-size: 13px;
-    color: #e0e0e0;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    text-shadow: none;
-}
-
-.invoker-history-response-detail-copy:hover {
-    background: #333;
-    border-color: rgba(255, 255, 255, 0.2);
-}
-
 .invoker-history-response-detail-content {
     font-family: 'Zato_IDE_Font', monospace;
     font-size: 13px;
@@ -514,17 +496,6 @@
 
 .invoker-modal-response-label {
     color: #999;
-}
-
-.invoker-modal-response-copy {
-    color: #7ab3ef !important;
-    cursor: pointer;
-    text-decoration: none !important;
-    background-image: none;
-    padding-bottom: 0;
-    position: relative;
-    display: inline-block;
-    font-family: 'Zato_IDE_Font', monospace;
 }
 
 .invoker-modal-response-wrap {

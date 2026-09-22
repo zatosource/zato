@@ -26,9 +26,10 @@ if 0:
 # The environment segment of the ERP's URL paths
 _Default_Environment = 'production'
 
-# Maps company codes from the query string to the percent-encoded names the ERP's URL paths expect
-_Company_North = 'North%20Trading%20Ltd.'
-_Company_South = 'South%20Retail%20Group'
+# Maps company codes from the query string to the names the ERP's URL paths carry - the
+# outgoing connection percent-encodes a path parameter itself, so these are the plain names
+_Company_North = 'North Trading Ltd.'
+_Company_South = 'South Retail Group'
 
 # ################################################################################################################################
 # ################################################################################################################################

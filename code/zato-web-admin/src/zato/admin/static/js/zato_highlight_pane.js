@@ -59,7 +59,9 @@
 //   ace_options      - optional object with theme and fontSize overrides
 //   ace_mode         - optional ace mode string (e.g. 'ace/mode/json'), defaults to 'ace/mode/text'
 //   buttons          - optional array of {id, label, on_click} button definitions,
-//                      if omitted or empty, no footer is rendered
+//                      if omitted or empty, no footer is rendered.
+//                      A definition with href instead of on_click is rendered as a
+//                      download link that looks exactly like the other buttons
 //
 // Returned pane instance:
 //
@@ -73,6 +75,10 @@
 //   $.fn.zato.highlight_pane.buttons.copy()
 //     Creates a Copy button that copies selected text (or all text if nothing
 //     is selected) to the clipboard with a tooltip confirmation.
+//
+//   $.fn.zato.highlight_pane.buttons.download(config)
+//     Creates a button that downloads the file its address serves.
+//     Config: id, label, url.
 //
 //   $.fn.zato.highlight_pane.buttons.save(config)
 //     Creates a Save button that posts editor content to config.poll_url.
@@ -137,6 +143,14 @@
             out = 'ace/mode/hl7';
         }
 
+        // .. a document that opens like JSON or XML is highlighted as one ..
+        else if (trimmed.charAt(0) === '{' || trimmed.charAt(0) === '[') {
+            out = 'ace/mode/json';
+        }
+        else if (trimmed.charAt(0) === '<') {
+            out = 'ace/mode/xml';
+        }
+
         // .. check for Python traceback markers ..
         else if (trimmed.indexOf('Traceback') !== -1) {
             out = 'ace/mode/python_traceback';
@@ -194,7 +208,9 @@
         editor.setFontSize(12);
         editor.setOptions({
             fontFamily: 'Menlo, Consolas, Monaco, monospace',
-            firstLineNumber: 1
+            firstLineNumber: 1,
+            // Ace's syntax checker runs in a blob: worker, which the CSP does not allow
+            useWorker: false
         });
         editor.renderer.setScrollMargin(7, 0, 0, 0);
         editor.setReadOnly(!editable);
@@ -229,6 +245,17 @@
                 editorElement.style.resize = 'vertical';
                 editorElement.style.overflow = 'hidden';
                 resizeObserver = new ResizeObserver(function() {
+
+                    // With maxLines set, Ace sizes the element to its lines on every render and writes
+                    // that height into the inline style - a height in there that is not Ace's own is the
+                    // person dragging the handle, and from then on the element keeps the height it is given.
+                    var renderer = editor.renderer;
+                    var isDragged = renderer.desiredHeight && editorElement.style.height !== renderer.desiredHeight + 'px';
+
+                    if (isDragged && renderer.$maxLines) {
+                        editor.setOptions({maxLines: null, minLines: null});
+                    }
+
                     editor.resize();
                 });
                 resizeObserver.observe(editorElement);
@@ -289,16 +316,31 @@
 
                 for (var buttonIndex = 0; buttonIndex < config.buttons.length; buttonIndex++) {
                     var buttonConfig = config.buttons[buttonIndex];
-                    var buttonElement = document.createElement('button');
-                    buttonElement.className = 'zato-action-button';
-                    buttonElement.setAttribute('type', 'button');
+                    var buttonElement;
+
+                    // A button that carries an address is a download, which is a navigation and not a click handler.
+                    // Such an anchor also carries .zato-link-unstyled, which keeps the dashboard's link face off it.
+                    if (buttonConfig.href) {
+                        buttonElement = document.createElement('a');
+                        buttonElement.setAttribute('href', buttonConfig.href);
+                        buttonElement.setAttribute('download', '');
+                        buttonElement.className = 'zato-action-button zato-link-unstyled';
+                    }
+                    else {
+                        buttonElement = document.createElement('button');
+                        buttonElement.setAttribute('type', 'button');
+                        buttonElement.className = 'zato-action-button';
+                    }
+
                     buttonElement.textContent = buttonConfig.label;
 
                     if (buttonConfig.id) {
                         buttonElement.id = buttonConfig.id;
                     }
 
-                    _bindButtonClick(buttonElement, buttonConfig.on_click, pane);
+                    if (buttonConfig.on_click) {
+                        _bindButtonClick(buttonElement, buttonConfig.on_click, pane);
+                    }
 
                     footer.appendChild(buttonElement);
                 }
@@ -331,6 +373,16 @@
 
                 uiHelpers.copy_to_clipboard(buttonElement, text);
             }
+        };
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.highlight_pane.buttons.download = function(config) {
+        return {
+            id: config.id,
+            label: config.label,
+            href: config.url
         };
     };
 

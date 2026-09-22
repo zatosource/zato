@@ -89,6 +89,18 @@ def _format_status_code_counts(counts:'strintdict') -> 'str':
 
 # ################################################################################################################################
 
+def _count_of_messages(count:'int') -> 'str':
+    """ A depth as a count of messages - `1 message`, `1,204 messages`.
+    """
+    if count == 1:
+        out = '1 message'
+    else:
+        out = f'{count:,} messages'
+
+    return out
+
+# ################################################################################################################################
+
 def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
     """ One readable line saying which rule fired on which object and what
     the measures were at that moment - only the measures that are non-zero speak,
@@ -220,6 +232,13 @@ def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
     if tool_count := fact['tool_count']:
         tools_label = pluralize(tool_count, 'tool')
         parts.append(f'{tools_label} exposed')
+
+    # The depths of a queue and a DLQ read as counts of messages, a thousand and more with a separator
+    if dlq_depth := fact['dlq_depth']:
+        parts.append(f'{_count_of_messages(dlq_depth)} in the DLQ')
+
+    if queue_depth := fact['queue_depth']:
+        parts.append(f'{_count_of_messages(queue_depth)} in the queue')
 
     if refusal_count := fact['refusal_count']:
         refusals_label = pluralize(refusal_count, 'refusal')

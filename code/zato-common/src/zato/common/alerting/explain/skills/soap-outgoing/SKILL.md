@@ -64,6 +64,19 @@ does not speak, `MustUnderstand` that it did not understand a header the message
 `DataEncodingUnknown` that it does not accept the encoding - all three are this side's to fix. A code
 with a prefix, `x:Timeout`, is the endpoint's own and its reason text says what it means.
 
+Queue delivery - the Object's `Use queue` line says whether a call the endpoint did not take waits in the
+connection's queue and is delivered from there, in order, under the connection's retries, and its `Use DLQ` line
+whether a message every attempt from the queue failed on goes to the connection's DLQ rather than being dropped.
+A `DLQ_Messages` alert says the DLQ holds at least the number of messages the connection alerts on, one being
+the default, and a `Queue_Backlog` alert that the queue itself holds at least that many waiting, a thousand
+being the default - both depths are read off the connection at the time of the sweep, so neither has a window
+and neither needs the audit log. Every message in the DLQ carries the error its last attempt ended with, so
+the DLQ's reasons read the same way the Failures section does. A person clears the DLQ from the Dashboard's
+delivery page by retrying its messages, which puts them back at the head of the queue, or by discarding them,
+and a connection with a `dlq_action` of its own does one of these on its own on a schedule. A DLQ that keeps
+filling while the Baseline shows successes is a endpoint that rejects some messages and not others - name
+the error the DLQ messages carry rather than proposing to retry them blindly.
+
 ## Failure modes to consider
 
 Connection errors - the error text mentions name resolution, connection refused or no route

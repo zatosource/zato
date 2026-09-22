@@ -1,54 +1,25 @@
 
-// /////////////////////////////////////////////////////////////////////////////
-//
-// Delivery tab - the retry settings, the queue switch and the dead-letter
-// queue settings of an outgoing connection's create or edit form, a tab
-// shared by every connection type that can deliver through a queue.
-//
-// The tab's lines are in shared/delivery-tab.html and read the way the Alerts
-// tab's do - decision lines of common/decision-lines.js, popover micro-forms
-// of common/micro-forms/core.js for the retries and the DLQ action - and they
-// wear the Alerts tab's own classes, so the two tabs look the same in a dialog.
-//
-// How to use, in a page's JS:
-//
-//     // Once, when the page is ready
-//     $.fn.zato.delivery_tab.init();
-//
-//     // Before opening a dialog, after its form is populated
-//     $.fn.zato.delivery_tab.bind({
-//         panel_id: 'http-soap-create-tab-panel-delivery',
-//         field_prefix: ''
-//     });
-//
-//     // When building the how-it-works descriptions
-//     var descriptions = $.extend({}, own_descriptions, $.fn.zato.delivery_tab.descriptions());
-//
-// The field_prefix is the Django form prefix with its trailing dash, the empty
-// string for the create form and 'edit-' for the edit form.
-//
-// /////////////////////////////////////////////////////////////////////////////
+// The Delivery tab of an outgoing connection's create and edit forms.
 
 $.fn.zato.delivery_tab.config = {
 
-    // Every element the popover makes is named after this
     idPrefix: 'delivery-tab',
     idPrefixDjango: 'id_',
 
-    // The popover wears the Alerts tab's look, so it is the same popover in the same dialog,
-    // and a layout of its own, shared/delivery-tab.css, where a count is as wide as a count needs
     popoverClass: 'delivery-tab-popover',
     popupClass: 'alerts-tab-micro-form',
 
-    // The lines of the tab are covered by the dialog's own How does it work? badge
+    // The dialog's own How does it work? badge covers the tab
     showHowItWorks: false,
 
-    // The Alerts tab's classes that dim the lines - the whole panel while the queue is off,
-    // the action line while the DLQ is off
+    // The popovers open inside a dialog, so their buttons are the dialog's plain ones
+    doneButtonClass: '',
+    otherButtonClass: '',
+
+    // The panel is dimmed while the queue is off, the action line while the DLQ is off
     offClass: 'alerts-tab-off',
     lineOffClass: 'alerts-tab-line-off',
 
-    // The fields of the tab, by role
     fieldMaxRetries: 'max_retries',
     fieldSleepTime: 'retry_sleep_time',
     fieldBackoffThreshold: 'retry_backoff_threshold',
@@ -61,47 +32,41 @@ $.fn.zato.delivery_tab.config = {
     fieldForwardTo: 'dlq_forward_to',
     fieldKeepHeader: 'dlq_keep_header',
 
-    // A count of seconds is edited as a count with a unit select named after it - `retry_sleep_time_unit` -
-    // whose option values are the noun in the singular and whose labels are the plural
+    // The suffix of the unit select of a count of seconds
     unitFieldSuffix: '_unit',
 
-    // The lines the popovers belong to
     retriesLine: 'retries',
     actionLine: 'dlq_action',
 
-    // No retries at all is a count of zero - the kit's numbers start at one, a fractional
-    // one at zero, so the count is a fraction stepping by whole numbers
+    // The kit's numbers start at one, a fractional one at zero
     noRetries: 0,
     retriesStep: 1,
 
-    // A wait that does not grow - each next wait is as long as the first one
     flatMultiplier: 1,
 
-    // What the retries line reads as - with no retries at all, with waits that grow and with waits that do not
     summaryNoRetries: 'No retries',
-    summaryRetriesGrowing: 'Retry {retries}, {sleep} before the first, each next wait {multiplier} times the previous one, {threshold} of waiting at most',
-    summaryRetriesFlat: 'Retry {retries}, {sleep} apart, {threshold} of waiting at most',
+    summaryRetriesGrowing: '{retries}, {sleep} then {multiplier}x longer, {threshold} at most',
+    summaryRetriesFlat: '{retries}, {sleep} apart, {threshold} at most',
 
-    // The stored values of the DLQ actions
     actionKeep: 'keep',
     actionRetry: 'retry',
     actionForward: 'forward',
     actionDiscard: 'discard',
 
-    // What the action line reads as, per action
-    summaryKeep: 'Keep messages for an operator',
-    summaryRetry: 'Retry {retries}, {interval} apart',
+    summaryKeep: 'Keep in DLQ',
+    summaryRetry: '{retries}, every {interval}',
     summaryForwardWithHeader: 'Forward to {topic} with the DLQ header',
     summaryForwardWithoutHeader: 'Forward to {topic} without the DLQ header',
-    summaryForwardNoTopic: 'Forward - no topic picked yet',
+    summaryForwardNoTopic: 'Forward to topic - none picked yet',
     summaryDiscard: 'Discard',
 
-    // The noun of a number of retries
-    retrySingular: 'time',
-    retryPlural: 'times',
+    retrySingular: 'retry',
+    retryPlural: 'retries',
 
-    // The popovers' titles and their labels
     retriesTitle: 'Retries',
+    dlqTitle: 'Dead-letter queue',
+    labelUseQueue: 'Use queue',
+    labelUseDLQ: 'Use DLQ',
     labelMaxRetries: 'Max. retries',
     labelSleepTime: 'Wait before the first retry',
     labelBackoffThreshold: 'Wait in total at most',
@@ -111,10 +76,9 @@ $.fn.zato.delivery_tab.config = {
     labelAction: 'Action',
     labelRetries: 'Max. retries',
     labelRetryInterval: 'Every',
-    labelForwardTo: 'Topic',
+    labelForwardTo: 'Forward to topic',
     labelKeepHeader: 'Keep the DLQ header',
 
-    // The how-it-works texts of the tab's lines and of the popovers' inputs
     helpRetries: 'What happens to a message that fails - how many times it is sent again, how long the first wait is, ' +
         'how much longer each next wait is and how long all the waits may add up to. With no retries a message ' +
         'is sent once.',
@@ -122,8 +86,9 @@ $.fn.zato.delivery_tab.config = {
     helpSleepTime: 'How long to wait before the first retry. Each next wait is longer by the multiplier.',
     helpBackoffThreshold: 'A cap on the total time spent waiting between retries. Once reached, no more retries take place.',
     helpBackoffMultiplier: 'Each retry waits this many times longer than the previous one, up to 8 seconds per a single wait.',
-    helpUseQueue: 'When on, each message is placed in the connection\'s own queue and delivered one at a time, ' +
-        'in order, retried as the retry settings say. When off, each message is sent right away and retried on its own.',
+    helpUseQueue: 'When on, a message is sent right away and, if the endpoint does not accept it, it is placed in ' +
+        'the connection\'s own queue and delivered from there one at a time, in order, retried as the retry settings say. ' +
+        'While the queue holds messages, new ones join it behind them. When off, each message is sent and retried on its own.',
     helpUseDLQ: 'When on, a message that still fails after its last retry moves to the connection\'s DLQ and the ' +
         'queue delivers the next one. When off, the message stays at the head of the queue and is retried in rounds, ' +
         'nothing behind it moves until it goes through or an operator discards it.',
@@ -136,14 +101,77 @@ $.fn.zato.delivery_tab.config = {
         'and how many attempts were made.'
 };
 
-// Which form's panel is bound at the moment
 $.fn.zato.delivery_tab.state = {
     panelId: null,
-    fieldPrefix: ''
+    fieldPrefix: '',
+
+    // The names of the hidden columns, read once off the page's json_script element
+    fieldNames: null
 };
 
 // The micro-forms kit installs the popover engine here
 $.fn.zato.delivery_tab.forms = {};
+
+// The json_script element a list page hands the tab's settings through
+$.fn.zato.delivery_tab.config.settingsId = 'delivery-tab-config';
+$.fn.zato.delivery_tab.config.cellEmpty = '';
+
+// The link to a connection's delivery page
+$.fn.zato.delivery_tab.config.deliveryPageUrl = '/zato/outgoing/delivery/';
+$.fn.zato.delivery_tab.config.deliveryPageTab = 'queue';
+$.fn.zato.delivery_tab.config.deliveryLinkLabel = 'Delivery queue';
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The cell of a new row that links to the connection's delivery page
+$.fn.zato.delivery_tab.link_cell = function(connType, item, clusterId) {
+
+    var config = $.fn.zato.delivery_tab.config;
+
+    var url = config.deliveryPageUrl + connType + '/' + item.id + '/?cluster=' + clusterId + '&tab=' + config.deliveryPageTab;
+
+    var out = String.format('<td><a href="{0}">{1}</a></td>', url, config.deliveryLinkLabel);
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The hidden columns of a row the tab's fields travel in, in the order the Django side lists them
+$.fn.zato.delivery_tab.columns = function() {
+
+    var tab = $.fn.zato.delivery_tab;
+    var state = tab.state;
+
+    if(state.fieldNames === null) {
+        var settings = JSON.parse(document.getElementById(tab.config.settingsId).textContent);
+        state.fieldNames = settings.field_names;
+    }
+
+    var out = state.fieldNames.slice();
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The hidden cells of a new row, one per column above
+$.fn.zato.delivery_tab.row_cells = function(item) {
+
+    var tab = $.fn.zato.delivery_tab;
+    var out = '';
+
+    tab.columns().forEach(function(fieldName) {
+
+        var value = item[fieldName];
+
+        if(value === undefined) {
+            value = tab.config.cellEmpty;
+        }
+
+        out += String.format("<td class='ignore'>{0}</td>", value);
+    });
+
+    return out;
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -156,6 +184,8 @@ $.fn.zato.delivery_tab.init = function() {
         descriptors: tab.buildDescriptors(),
         popupClass: config.popoverClass + ' ' + config.popupClass,
         showHowItWorks: config.showHowItWorks,
+        doneButtonClass: config.doneButtonClass,
+        otherButtonClass: config.otherButtonClass,
         showCancel: true,
         onDone: tab.render
     });
@@ -163,7 +193,7 @@ $.fn.zato.delivery_tab.init = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The two micro-forms of the tab - the retries, and the action with what each action needs under it
+// The descriptors of the two micro-forms
 $.fn.zato.delivery_tab.buildDescriptors = function() {
 
     var tab = $.fn.zato.delivery_tab;
@@ -173,8 +203,6 @@ $.fn.zato.delivery_tab.buildDescriptors = function() {
     out[config.retriesLine] = {
         title: config.retriesTitle,
         fitContent: true,
-        // Two rows read in order - how many retries and the first wait, then how the waits grow and where they stop -
-        // with a plain count in the left column and a count with its unit in the right one, so the columns line up
         pages: [[
             [
                 {field: config.fieldMaxRetries, label: config.labelMaxRetries, kind: 'number', fractional: true, step: config.retriesStep},
@@ -212,8 +240,7 @@ $.fn.zato.delivery_tab.unitField = function(fieldName) {
     return out;
 }
 
-// A count of seconds as the form holds it, read with its unit's noun - `1 second`, `2 minutes` -
-// the unit select's value being the singular and the label of its option the plural
+// A count of seconds as the form holds it, with its unit
 $.fn.zato.delivery_tab.durationText = function(fieldName) {
 
     var tab = $.fn.zato.delivery_tab;
@@ -228,20 +255,20 @@ $.fn.zato.delivery_tab.durationText = function(fieldName) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The DOM id of one of the tab's fields on the form bound at the moment
+// The DOM id of one of the tab's fields
 $.fn.zato.delivery_tab.fieldId = function(fieldName) {
     var tab = $.fn.zato.delivery_tab;
     var out = tab.config.idPrefixDjango + tab.state.fieldPrefix + fieldName;
     return out;
 }
 
-// The one way into the rendered Django form, which is what the popover reads and writes
+// One of the tab's fields
 $.fn.zato.delivery_tab.field = function(fieldName) {
     var out = $('#' + $.fn.zato.delivery_tab.fieldId(fieldName));
     return out;
 }
 
-// The id of one element of the bound panel - a line, a summary or an edit link
+// The id of one element of the bound panel
 $.fn.zato.delivery_tab.elementId = function(part, lineName) {
     var out = $.fn.zato.delivery_tab.state.panelId + '-' + part + '-' + lineName;
     return out;
@@ -249,7 +276,7 @@ $.fn.zato.delivery_tab.elementId = function(part, lineName) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The how-it-works texts of the popover's inputs, under the ids the micro-forms kit gives them
+// The how-it-works texts of the popovers' inputs
 $.fn.zato.delivery_tab.helpDescriptions = function() {
 
     var tab = $.fn.zato.delivery_tab;
@@ -269,8 +296,7 @@ $.fn.zato.delivery_tab.helpDescriptions = function() {
     return out;
 }
 
-// The how-it-works descriptions of the lines of the bound panel, keyed by the
-// id each line's label points at - the switch or the edit link
+// The how-it-works texts of the lines
 $.fn.zato.delivery_tab.descriptions = function() {
 
     var tab = $.fn.zato.delivery_tab;
@@ -287,7 +313,7 @@ $.fn.zato.delivery_tab.descriptions = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What the retries line reads as, from the form's fields
+// The summary of the retries line
 $.fn.zato.delivery_tab.formatRetriesSummary = function() {
 
     var tab = $.fn.zato.delivery_tab;
@@ -302,7 +328,6 @@ $.fn.zato.delivery_tab.formatRetriesSummary = function() {
         var multiplier = parseInt(tab.field(config.fieldBackoffMultiplier).val());
         var template;
 
-        // Waits that do not grow read as a plain interval
         if(multiplier === config.flatMultiplier) {
             template = config.summaryRetriesFlat;
         }
@@ -322,7 +347,7 @@ $.fn.zato.delivery_tab.formatRetriesSummary = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What the action line reads as, from the form's fields
+// The summary of the action line
 $.fn.zato.delivery_tab.formatSummary = function() {
 
     var tab = $.fn.zato.delivery_tab;
@@ -362,8 +387,7 @@ $.fn.zato.delivery_tab.formatSummary = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Writes every line of the bound panel from the form - the summaries of the retries and the action lines,
-// the whole panel but the retries dimmed while the queue is off, the action line while the DLQ is off
+// Renders the bound panel from the form
 $.fn.zato.delivery_tab.render = function() {
 
     var tab = $.fn.zato.delivery_tab;
@@ -386,20 +410,19 @@ $.fn.zato.delivery_tab.render = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Shows in the open popover only the rows the action picked in it needs
-$.fn.zato.delivery_tab.applyActionRows = function() {
+// Shows only the rows the picked action needs, in the popover of the given micro-forms instance
+$.fn.zato.delivery_tab.applyActionRows = function(forms) {
 
     var tab = $.fn.zato.delivery_tab;
     var config = tab.config;
-    var popper = tab.forms._instance.popper;
+    var popper = forms._instance.popper;
 
-    var select = popper.querySelector('#' + tab.forms.inputId(config.fieldAction));
+    var select = popper.querySelector('#' + forms.inputId(config.fieldAction));
     var action = select.value;
 
-    // The two counts share one row, the topic and the header switch have a row each
-    var retryRow = popper.querySelector('#' + tab.forms.inputId(config.fieldRetries)).closest('.micro-form-row');
-    var forwardToRow = popper.querySelector('#' + tab.forms.inputId(config.fieldForwardTo)).closest('.micro-form-field');
-    var keepHeaderRow = popper.querySelector('#' + tab.forms.inputId(config.fieldKeepHeader)).closest('.micro-form-field');
+    var retryRow = popper.querySelector('#' + forms.inputId(config.fieldRetries)).closest('.micro-form-row');
+    var forwardToRow = popper.querySelector('#' + forms.inputId(config.fieldForwardTo)).closest('.micro-form-field');
+    var keepHeaderRow = popper.querySelector('#' + forms.inputId(config.fieldKeepHeader)).closest('.micro-form-field');
 
     retryRow.hidden = action !== config.actionRetry;
     forwardToRow.hidden = action !== config.actionForward;
@@ -408,24 +431,56 @@ $.fn.zato.delivery_tab.applyActionRows = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Opens the action popover off its link and keeps its rows in step with the action picked in it
+// Gives an open popover of another micro-forms instance the tab's own class, under which
+// delivery-tab.css lays its rows out and hides the ones an action does not need
+$.fn.zato.delivery_tab.markPopover = function(forms) {
+
+    var tab = $.fn.zato.delivery_tab;
+    var popper = forms._instance.popper;
+
+    var out = popper.querySelector('#' + forms.config.popupId);
+    out.classList.add(tab.config.popoverClass);
+
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Wires the action select of an open popover - the rows follow the pick, and the popover keeps
+// the width of all its rows, so it does not resize as rows hide
+$.fn.zato.delivery_tab.bindActionRows = function(forms) {
+
+    var tab = $.fn.zato.delivery_tab;
+    var config = tab.config;
+    var popper = forms._instance.popper;
+
+    var select = popper.querySelector('#' + forms.inputId(config.fieldAction));
+
+    var container = tab.markPopover(forms);
+    container.style.width = container.offsetWidth + 'px';
+
+    select.addEventListener('change', function() {
+        tab.applyActionRows(forms);
+    });
+
+    tab.applyActionRows(forms);
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Opens the action popover
 $.fn.zato.delivery_tab.openAction = function(link) {
 
     var tab = $.fn.zato.delivery_tab;
     var config = tab.config;
 
     tab.forms.open(config.actionLine, link, config.fieldAction);
-
-    var popper = tab.forms._instance.popper;
-    var select = popper.querySelector('#' + tab.forms.inputId(config.fieldAction));
-
-    select.addEventListener('change', tab.applyActionRows);
-    tab.applyActionRows();
+    tab.bindActionRows(tab.forms);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Wires one form's panel - call it each time before the dialog opens
+// Binds one form's panel, before the dialog opens
 $.fn.zato.delivery_tab.bind = function(options) {
 
     var tab = $.fn.zato.delivery_tab;
@@ -437,7 +492,6 @@ $.fn.zato.delivery_tab.bind = function(options) {
     tab.field(config.fieldUseQueue).off('change.delivery_tab').on('change.delivery_tab', tab.render);
     tab.field(config.fieldUseDLQ).off('change.delivery_tab').on('change.delivery_tab', tab.render);
 
-    // The cursor lands in the first field of each popover, its value left as it stands
     $('#' + tab.elementId('edit', config.retriesLine)).off('click.delivery_tab').on('click.delivery_tab', function() {
         tab.forms.open(config.retriesLine, this, config.fieldMaxRetries);
     });

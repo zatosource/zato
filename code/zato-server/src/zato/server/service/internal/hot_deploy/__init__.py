@@ -434,17 +434,18 @@ class Create(AdminService):
             return
 
         # If it's just a file name, it means it must've been uploaded via the plugin,
-        # so we need to save it in our local deployment directory and it will be picked up
-        # by a background listener, which will in turn invokes again, but this time the file
-        # will be already on disk. But we need to do it only for files that are not internal ones.
+        # so we save it in our local deployment directory and then deploy it from there below,
+        # the same way a file found in that directory on startup is deployed.
+        # But we need to do it only for files that are not internal ones.
 
         internal_path = os.path.join('server', 'service', 'internal')
         payload_name = os.path.normpath(payload_name)
 
         is_external = internal_path not in payload_name
         is_relative = not os.path.isabs(payload_name)
+        is_ide_upload = is_external and is_relative
 
-        if is_external and is_relative:
+        if is_ide_upload:
 
             full_path = os.path.join(self.server.hot_deploy_config.pickup_dir, payload_name)
             full_path = os.path.abspath(full_path)
@@ -455,13 +456,8 @@ class Create(AdminService):
             with open_w(full_path) as f:
                 _ = f.write(payload)
 
-            # All went fine
-            self.response.payload.zato_ide_deploy_create_response = Bunch()
-            self.response.payload.zato_ide_deploy_create_response.success = True
-            self.response.payload.zato_ide_deploy_create_response.msg = _msg_deployed
-
-            # Now, we can return early
-            return
+            # From now on the file is deployed from where it was just written to
+            payload_name = full_path
 
         server_token = self.server.fs_server_config.main.token
         lock_name = '{}{}:{}'.format('uploading', server_token, payload_name)
@@ -500,6 +496,12 @@ class Create(AdminService):
                 self._rebuild_mcp_tool_registries(services_deployed)
 
                 self.response.payload.services_deployed = services_deployed
+
+                # An IDE plugin reads a confirmation rather than the list of what was deployed
+                if is_ide_upload:
+                    self.response.payload.zato_ide_deploy_create_response = Bunch()
+                    self.response.payload.zato_ide_deploy_create_response.success = True
+                    self.response.payload.zato_ide_deploy_create_response.msg = _msg_deployed
 
             except OSError as e:
                 if e.errno == ENOENT:

@@ -10,7 +10,8 @@ import logging
 from json import loads
 
 # Zato
-from zato.cli.enmasse.util import export_invocation_fields, export_retry_fields, Invocation_Fields_SOAP
+from zato.cli.enmasse.util import export_delivery_fields, export_invocation_fields, export_retry_fields, \
+    Invocation_Fields_SOAP
 from zato.cli.enmasse.util.alerts import group_alerts
 from zato.common.alerting.object_config import alert_type_soap, Alerts_Key
 from zato.common.api import CONNECTION, MISC, URL_TYPE
@@ -127,8 +128,9 @@ class OutgoingSOAPExporter:
             # with row-based fields as YAML lists and without the environment-local job IDs.
             export_invocation_fields(exported_conn, opaque, Invocation_Fields_SOAP)
 
-            # The retry config is exported only when it differs from the shared defaults
+            # The retry config, the queue switch and the DLQ settings are exported only when they differ from the shared defaults
             export_retry_fields(exported_conn, opaque)
+            export_delivery_fields(exported_conn, opaque)
 
             # The audit log is on by default so only the off state is exported
             if opaque.get('is_audit_log_active') is False:

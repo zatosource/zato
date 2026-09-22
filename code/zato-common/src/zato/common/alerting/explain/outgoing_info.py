@@ -14,7 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # Zato
-from zato.common.alerting.explain.settings_info import settings_lines, Off, On
+from zato.common.alerting.explain.settings_info import queue_lines, settings_lines, Off, On
 from zato.common.alerting.object_config import get_alert_type, transport_by_outgoing_source
 from zato.common.api import CONNECTION, HTTP_SOAP, Sec_Def_Type_Name, URL_TYPE
 from zato.common.odb.model import HTTPSOAP
@@ -152,6 +152,9 @@ def describe_outgoing_http(session:'SASession', cluster_id:'int', source:'str', 
 
     if max_retries:
         out.append(('Retries', max_retries))
+
+    # A send the endpoint did not take waits in the connection's queue, and one the queue gave up on goes to its DLQ
+    out.extend(queue_lines(opaque))
 
     # A connection created before the flag existed logs, the same as one whose flag is on
     is_audit_log_active = True

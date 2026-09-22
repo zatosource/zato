@@ -17,6 +17,7 @@ from __future__ import annotations
 from zato.common.alerting.config_map import format_size, type_fields, Kind_Size
 from zato.common.alerting.object_config import field_display, from_storage, get_defaults, Email_Connection_Field, \
     Is_Active_Field, LLM_Connection_Field
+from zato.common.api import HTTP_SOAP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,6 +41,13 @@ No_Own_Settings = 'none, the defaults apply'
 # The labels of the two lines
 Label_Alerts = 'Alerts'
 Label_Own_Settings = 'Alert settings of its own'
+
+# The labels of the two queue delivery switches every kind of outgoing connection that can use a queue carries
+Label_Use_Queue = 'Use queue'
+Label_Use_DLQ = 'Use DLQ'
+
+_queue = HTTP_SOAP.Queue
+_dlq = HTTP_SOAP.DLQ
 
 # The settings that are not thresholds - the switch is said on its own line and the connections
 # are not what an object measures
@@ -105,6 +113,27 @@ def own_settings_line(alert_type:'str', settings:'anydict') -> 'str':
     else:
         out = No_Own_Settings
 
+    return out
+
+# ################################################################################################################################
+
+def queue_lines(opaque:'anydict') -> 'anylist':
+    """ The two lines an outgoing connection's queue delivery switches make - whether a send the receiving system
+    did not take waits in the connection's queue, and whether a message the queue gave up on goes to the DLQ.
+    A connection saved before the switches existed carries their defaults.
+    """
+    is_queue_on = _queue.Default_Use_Queue
+    if _queue.Field_Use_Queue in opaque:
+        is_queue_on = opaque[_queue.Field_Use_Queue] is True
+
+    is_dlq_on = _dlq.Default_Use_DLQ
+    if _dlq.Field_Use_DLQ in opaque:
+        is_dlq_on = opaque[_dlq.Field_Use_DLQ] is True
+
+    out = [
+        (Label_Use_Queue, On if is_queue_on else Off),
+        (Label_Use_DLQ, On if is_dlq_on else Off),
+    ]
     return out
 
 # ################################################################################################################################

@@ -1226,8 +1226,9 @@ div.action-panel span.previous-next {
 }
 
 /* Excluded from the slider look: row-selection checkboxes in list tables (td.impexp),
-   tri-state checkboxes (.tri-state) and item pickers in multi-select tables. */
-input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-table input) {
+   tri-state checkboxes (.tri-state), item pickers in multi-select tables and any checkbox
+   that says so itself (.zato-plain-checkbox). */
+input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-table input):not(.zato-plain-checkbox) {
     display: inline-block;
     position: relative;
     top: 0;
@@ -1244,7 +1245,7 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     transition: background-color 0.24s;
 }
 
-input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-table input):before {
+input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-table input):not(.zato-plain-checkbox):before {
     content: "";
     position: absolute;
     left: var(--toggle-knob-offset);
@@ -1256,11 +1257,11 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     transition: transform 0.24s;
 }
 
-input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-table input):checked {
+input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-table input):not(.zato-plain-checkbox):checked {
     background-color: var(--toggle-on-background);
 }
 
-input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-table input):checked:before {
+input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-table input):not(.zato-plain-checkbox):checked:before {
     transform: translateX(var(--toggle-travel));
 }
 
@@ -1345,6 +1346,13 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     opacity: var(--zato-time-ago-value-fade-opacity);
 }
 
+/* The humanized age that trails a timestamp is the lesser of the two readings,
+   so it is a touch smaller and a touch dimmer than the timestamp it follows. */
+.zato-time-ago-suffix {
+    font-size: 80%;
+    opacity: 0.8;
+}
+
 /* The column takes no spare width - with left-aligned values, any room the table
    hands this column piles up to the right of the values and pushes the columns
    after it away, so the column stays as wide as its header and no wider. The values
@@ -1414,7 +1422,7 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
 }
 
 /* A gentle hint - the tiny muted text that sits next to whatever it explains,
-   like the "Refreshes in 5s" countdown next to a column name or the
+   like the "5s" countdown next to a column name or the
    "Click to edit" note after a summary link. */
 .zato-soft-hint {
     display: inline-block;
@@ -1432,12 +1440,11 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     font-size: 0.75rem;
 }
 
-/* The countdown to the next refresh - a soft hint that additionally keeps
-   a fixed minimum width and only toggles its opacity while the spinner is
-   shown, so it never shifts the layout around it. */
+/* The countdown to the next refresh - a soft hint that reads right after the
+   column name and only toggles its opacity while the spinner is shown, so the
+   spinner never shifts the layout around it. */
 .zato-time-ago-countdown {
     --zato-time-ago-countdown-fade-ms: 350ms;
-    min-width: 2.2ch;
     opacity: 0;
     vertical-align: middle;
     transition: opacity var(--zato-time-ago-countdown-fade-ms) ease;

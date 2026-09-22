@@ -39,6 +39,8 @@ a failed one opens when its details are asked for {% endcomment %}
 <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
 {% comment %} How the popovers of the Alerts lines lay their fields out - their look is the wizard's {% endcomment %}
 <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
+{% comment %} How the Retries and Dead-letter queue popovers lay their rows out - they are the Delivery tab's {% endcomment %}
+<link rel="stylesheet" type="text/css" href="/static/css/shared/delivery-tab.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-alerts.css">
 <link rel="stylesheet" type="text/css" href="/static/css/outgoing/hl7/mllp-wizard.css">
@@ -63,6 +65,8 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab-slots.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/wizard-alerts.js"></script>
+{% comment %} The Retries and Dead-letter queue popovers are the shared Delivery tab's own micro-forms {% endcomment %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/delivery-tab.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/probe.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/review.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/mllp-descriptions.js"></script>
@@ -170,8 +174,8 @@ $(document).ready(function() {
 
                 </div>
 
-                <!-- Step 2 - the pool, what happens to a send that fails and the
-                     logging folded away underneath -->
+                <!-- Step 2 - the pool, what happens to a send that fails, where a message
+                     that keeps failing ends up and the logging folded away underneath -->
                 <div class="wizard-step-body" id="mllp-outconn-wizard-step-body-1" hidden>
 
                     <!-- One decision per line, each value the summary of the
@@ -187,6 +191,12 @@ $(document).ready(function() {
                             <div class="decision-line" id="mllp-outconn-wizard-row-retries">
                                 <label class="decision-line-label" for="mllp-outconn-wizard-edit-retries">Retries</label>
                                 <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-retries"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-retries"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
+                            <!-- Where a message that fails its last retry goes, and what happens to it there -->
+                            <div class="decision-line" id="mllp-outconn-wizard-row-dlq">
+                                <label class="decision-line-label" for="mllp-outconn-wizard-edit-dlq">Dead-letter queue</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mllp-outconn-wizard-edit-dlq"><span class="zato-link-face summary-link-text" id="mllp-outconn-wizard-summary-dlq"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
 
                             <div class="decision-line" id="mllp-outconn-wizard-row-send-limit">
@@ -275,9 +285,20 @@ $(document).ready(function() {
                     {{ form.pool_size }}
 
                     {{ form.max_retries }}
-                    {{ form.backoff_base_seconds }}
-                    {{ form.backoff_cap_seconds }}
-                    {{ form.backoff_jitter_percent }}
+                    {{ form.retry_sleep_time }}
+                    {{ form.retry_sleep_time_unit }}
+                    {{ form.retry_backoff_threshold }}
+                    {{ form.retry_backoff_threshold_unit }}
+                    {{ form.retry_backoff_multiplier }}
+                    {{ form.use_queue }}
+
+                    {{ form.use_dlq }}
+                    {{ form.dlq_action }}
+                    {{ form.dlq_retries }}
+                    {{ form.dlq_retry_interval }}
+                    {{ form.dlq_retry_interval_unit }}
+                    {{ form.dlq_forward_to }}
+                    {{ form.dlq_keep_header }}
 
                     {{ form.circuit_breaker_threshold_percent }}
                     {{ form.circuit_breaker_window_seconds }}

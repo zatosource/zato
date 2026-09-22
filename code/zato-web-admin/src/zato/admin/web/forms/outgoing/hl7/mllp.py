@@ -10,10 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.admin.web import alerts_tab
+from zato.admin.web import alerts_tab, delivery_tab
 from zato.admin.web.forms import add_select
 from zato.common.alerting.object_config import alert_type_mllp_outgoing
-from zato.common.api import HL7
+from zato.common.api import HL7, HTTP_SOAP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,6 +28,7 @@ if 0:
 # ################################################################################################################################
 
 _default = HL7.Default
+_retry = HTTP_SOAP.Retry
 
 # What a checkbox that starts out ticked renders with.
 _checked_attrs = {'checked':'checked'}
@@ -51,6 +52,8 @@ def _new_checkbox_field(is_checked:'bool'=False) -> 'any_':
 # ################################################################################################################################
 
 class CreateForm(forms.Form):
+    is_edit_form = False
+
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = _new_checkbox_field(is_checked=True)
     should_log_messages = _new_checkbox_field()
@@ -65,23 +68,11 @@ class CreateForm(forms.Form):
     start_seq = forms.CharField(initial=_default.start_seq, widget=forms.TextInput(attrs={'style':'width:35%'}))
     end_seq = forms.CharField(initial=_default.end_seq, widget=forms.TextInput(attrs={'style':'width:26%'}))
 
-    # Retry engine
-    max_retries = forms.CharField(
-        initial=_default.max_retries,
-        widget=forms.TextInput(attrs={'style':'width:8%'}),
-    )
-    backoff_base_seconds = forms.CharField(
-        initial=_default.backoff_base_seconds,
-        widget=forms.TextInput(attrs={'style':'width:8%'}),
-    )
-    backoff_cap_seconds = forms.CharField(
-        initial=_default.backoff_cap_seconds,
-        widget=forms.TextInput(attrs={'style':'width:10%'}),
-    )
-    backoff_jitter_percent = forms.CharField(
-        initial=_default.backoff_jitter_percent,
-        widget=forms.TextInput(attrs={'style':'width:8%'}),
-    )
+    # Retries - the same fields an outgoing REST connection has, edited through the wizard's Retries popover
+    max_retries = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Max_Retries)
+    retry_sleep_time = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Sleep_Time)
+    retry_backoff_threshold = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Backoff_Threshold)
+    retry_backoff_multiplier = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Backoff_Multiplier)
 
     # Circuit breaker
     circuit_breaker_threshold_percent = forms.CharField(
@@ -109,10 +100,14 @@ class CreateForm(forms.Form):
         # The alert settings the wizard's Alerts popup edits, the email and LLM connections it picks from read off the request
         alerts_tab.add_alerts_fields(self, alert_type_mllp_outgoing, req)
 
+        # The queue switch, the DLQ fields and the unit selects of the retry durations
+        delivery_tab.add_delivery_fields(self, self.is_edit_form)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class EditForm(CreateForm):
+    is_edit_form = True
     is_active = _new_checkbox_field()
 
     # An existing connection with the audit log off opens with the box unticked.

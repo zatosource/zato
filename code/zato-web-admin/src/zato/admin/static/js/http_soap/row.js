@@ -219,6 +219,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     if(is_outgoing && !is_soap) {
         row += String.format('<td><a href="/zato/audit-log/?source=rest-outgoing&object_name={0}&cluster={1}">Audit log</a></td>', encodeURIComponent(item.name), cluster_id);
         row += String.format('<td><a href="/zato/channel-usage/?sources=rest-outgoing&objects={0}&cluster={1}">Usage</a></td>', encodeURIComponent(item.name), cluster_id);
+        row += $.fn.zato.delivery_tab.link_cell('rest', item, cluster_id);
     }
 
     /* 31, 32 */
@@ -264,16 +265,8 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
             row += String.format("<td class='ignore'>{0}</td>", item[name] ? item[name] : '');
         });
 
-        /* 41 - the Delivery tab - the retries, each count of seconds as a count and a unit, the queue switch and the DLQ config */
-        var delivery_fields = [
-            'max_retries', 'retry_sleep_time', 'retry_sleep_time_unit', 'retry_backoff_threshold', 'retry_backoff_threshold_unit',
-            'retry_backoff_multiplier',
-            'use_queue', 'use_dlq', 'dlq_action', 'dlq_retries', 'dlq_retry_interval', 'dlq_retry_interval_unit',
-            'dlq_forward_to', 'dlq_keep_header'
-        ];
-        $.each(delivery_fields, function(ignored, name) {
-            row += String.format("<td class='ignore'>{0}</td>", item[name]);
-        });
+        /* 41 - the Delivery tab */
+        row += $.fn.zato.delivery_tab.row_cells(item);
     }
 
     // 42 - the Alerts tab of REST and SOAP channels and of REST outgoing connections

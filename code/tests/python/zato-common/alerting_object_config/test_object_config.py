@@ -95,12 +95,16 @@ class TestFieldNames:
     def test_an_outgoing_llm_connection_maps_to_the_llm_type(self) -> 'None':
         assert conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.OUTCONN_LLM] == alert_type_llm
 
-        # The LLM type carries the REST type's failure fields, with its own two latencies in place of the one ..
+        # The LLM type carries the REST type's failure fields, with its own two latencies in place of the one
+        # and without the queue delivery fields, since an LLM connection has no queue ..
         llm_names = get_field_names(alert_type_llm)
         for name in get_field_names(alert_type_rest):
-            if name == 'max_latency':
+            if name in ('max_latency', 'dlq_messages', 'queue_depth'):
                 continue
             assert name in llm_names, name
+
+        assert 'dlq_messages' not in llm_names
+        assert 'queue_depth' not in llm_names
 
         assert 'max_latency' not in llm_names
         assert 'warning_latency' in llm_names

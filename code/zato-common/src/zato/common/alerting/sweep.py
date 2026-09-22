@@ -22,6 +22,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from urllib.parse import quote
 
+# gevent
+from gevent import sleep
+
 # Zato
 from zato.common.alerting.ack_codes import apply_ack_codes
 from zato.common.alerting.collectors import collect_facts
@@ -53,7 +56,7 @@ if 0:
     from zato.common.audit_log.api import AuditLog
     from zato.common.rule_engine.models import Rule
     from zato.common.rule_engine.sql import RuleSQLBackend
-    from zato.common.typing_ import anydict, anylist, stranydict, strintdict, strlist
+    from zato.common.typing_ import anydict, anylist, dictlist, stranydict, strintdict, strlist
 
     AlertDefaults = AlertDefaults
     AlertRule = AlertRule
@@ -119,6 +122,10 @@ Use_LLM_Field = 'use_llm'
 # The fact's keys that name the object rather than measure it - a rule reads them,
 # but there is no evidence to collect for them.
 _identity_keys = ('source', 'object_name')
+
+# After this many facts a rule yields to the other greenlets - the sweep is pure CPU work
+# over every (rule, fact) pair and without a yield it would hold the server for its whole duration.
+Yield_Every_Facts = 200
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -411,6 +418,7 @@ def run_sweep(
     arrival_windows:'strintdict | None' = None,
     schedule_expectations:'anydict | None' = None,
     tool_counts:'strintdict | None' = None,
+    queue_rows:'dictlist | None' = None,
     object_settings:'anydict | None' = None,
     ) -> 'SweepResult':
     """ Runs one full sweep - the fact producers measure everything once, each fact runs
@@ -439,7 +447,8 @@ def run_sweep(
 
     facts = collect_facts(engine, metrics_by_name, metrics_source, now, window_seconds_by_source=window_seconds_by_source,
         window_seconds_by_object=window_seconds_by_object, job_intervals=job_intervals, arrival_windows=arrival_windows,
-        schedule_expectations=schedule_expectations, silence_expected_names=silence_expected_names, tool_counts=tool_counts)
+        schedule_expectations=schedule_expectations, silence_expected_names=silence_expected_names, tool_counts=tool_counts,
+        queue_rows=queue_rows)
     out.fact_count = len(facts)
 
     for rule in rules:
@@ -461,7 +470,11 @@ def run_sweep(
             if alert_type in object_settings:
                 settings_by_object = object_settings[alert_type]
 
-        for fact in facts:
+        for fact_index, fact in enumerate(facts, 1):
+
+            # Let other greenlets run - a request that came in mid-sweep must not wait for the end of it
+            if fact_index % Yield_Every_Facts == 0:
+                sleep(0)
 
             settings:'stranydict' = {}
             rule_values:'stranydict' = {}

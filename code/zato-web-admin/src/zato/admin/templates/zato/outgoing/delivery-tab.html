@@ -1,0 +1,101 @@
+{% load humanize %}
+
+{% comment %} One tab of the delivery page {% endcomment %}
+
+<div class="search-bar" style="overflow:hidden">
+    <div class="prompt" style="float:left; width:60%">
+        <form novalidate action="." method="get">
+            <input type="hidden" name="cluster" value="{{ cluster_id }}" />
+            <input type="hidden" name="tab" value="{{ tab.kind }}" />
+            <input type="text" name="query" value="{{ tab.query }}" style="width:40%" class="required" placeholder="Enter search terms" />
+            <input type="submit" style="vertical-align:top" value="Search" />
+        </form>
+    </div>
+
+    {% if tab.meta.total %}
+    <div class="action-panel">
+        <span style="vertical-align:middle;" class="pagination-wrapper">
+            <span class="form_hint">{{ tab.meta.total|intcomma }}</span>
+            <span class="form_hint">result{% if tab.meta.total > 1 %}s{% endif %}</span>
+            |
+            <span class="form_hint">Page {{ tab.meta.cur_page|intcomma }} of {{ tab.meta.num_pages|intcomma }}</span>
+            |
+            {% if tab.meta.has_prev_page %}
+            <a class="prev-slot" href="{{ tab.meta.prev_page_url }}">Previous</a>
+            {% else %}
+            <span class="previous-next form_hint prev-slot">Previous</span>
+            {% endif %}
+            {% if tab.meta.has_next_page %}
+            <a class="next-slot" href="{{ tab.meta.next_page_url }}">Next</a>
+            {% else %}
+            <span class="previous-next next-slot">Next</span>
+            {% endif %}
+        </span>
+    </div>
+    {% endif %}
+</div>
+
+<div class="page_prompt" style="clear:left">
+    {% if tab.is_dlq %}
+    <a href="javascript:void(0)" class="common delivery-action-link" data-kind="{{ tab.kind }}" data-action="retry">Retry selected</a> |
+    {% endif %}
+    <a href="javascript:void(0)" class="common delivery-action-link" data-kind="{{ tab.kind }}" data-action="discard">Discard selected</a>
+</div>
+
+<div class="delivery-table-wrap">
+
+{% comment %} How many rows are ticked - it floats in the gutter to the left of the table {% endcomment %}
+<span class="delivery-selected-chip" data-kind="{{ tab.kind }}"></span>
+
+<table class="zato-table delivery-table" id="delivery-table-{{ tab.kind }}" data-kind="{{ tab.kind }}">
+    <thead>
+        <tr class='ignore'>
+            <th>&nbsp;</th>
+            <th class="delivery-cell-select"><input type="checkbox" class="zato-plain-checkbox delivery-select-all"></th>
+            <th>Message ID</th>
+            {% if tab.is_dlq %}
+            <th class="zato-time-ago-header">Moved to DLQ time</th>
+            {% else %}
+            <th class="zato-time-ago-header">Pub time</th>
+            {% endif %}
+            {% if tab.is_dlq %}
+            <th class="delivery-cell-center">Retries so far</th>
+            <th>Last error</th>
+            {% endif %}
+            <th>Destination</th>
+        </tr>
+    </thead>
+
+    <tbody>
+    {% if tab.items %}
+    {% for item in tab.items %}
+        <tr data-msg-id="{{ item.msg_id }}">
+            {% comment %} The row number itself comes from this cell's :before counter {% endcomment %}
+            <td class="numbering"></td>
+            <td class="delivery-cell-select"><input type="checkbox" class="zato-plain-checkbox delivery-row-select"></td>
+            <td class="delivery-cell-nowrap"><a href="javascript:void(0)" class="delivery-message-link" data-kind="{{ tab.kind }}" data-msg-id="{{ item.msg_id }}">{{ item.msg_id }}</a></td>
+            {% if tab.is_dlq %}
+            <td class="zato-time-ago" data-time-ago-id="{{ tab.kind }}:{{ item.msg_id }}" data-time-utc="{{ item.moved_time_iso }}" data-time-ago-prefix="{{ item.moved_time }}" data-time-ago-title="Moved to DLQ" data-time-ago-row-label="In DLQ for"></td>
+            {% else %}
+            <td class="zato-time-ago" data-time-ago-id="{{ tab.kind }}:{{ item.msg_id }}" data-time-utc="{{ item.pub_time_iso }}" data-time-ago-prefix="{{ item.pub_time }}" data-time-ago-title="Published" data-time-ago-row-label="In queue for"></td>
+            {% endif %}
+            {% if tab.is_dlq %}
+            <td class="delivery-cell-center">{{ item.rounds }}</td>
+            <td class="delivery-cell-error">{{ item.error }}</td>
+            {% endif %}
+            {% if has_invoker %}
+            <td class="delivery-cell-address"><a href="javascript:void(0)" class="delivery-address-link" data-kind="{{ tab.kind }}" data-msg-id="{{ item.msg_id }}">{{ item.destination }}</a></td>
+            {% else %}
+            <td class="delivery-cell-address">{{ item.destination }}</td>
+            {% endif %}
+        </tr>
+    {% endfor %}
+    {% else %}
+        <tr class='ignore'>
+            <td colspan='7'>No results</td>
+        </tr>
+    {% endif %}
+    </tbody>
+</table>
+
+</div>

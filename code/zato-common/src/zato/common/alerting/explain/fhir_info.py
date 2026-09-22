@@ -15,7 +15,7 @@ from __future__ import annotations
 
 # Zato
 from zato.common.alerting.explain.outgoing_info import health_check_line
-from zato.common.alerting.explain.settings_info import settings_lines, Off, On
+from zato.common.alerting.explain.settings_info import queue_lines, settings_lines, Off, On
 from zato.common.alerting.object_config import alert_type_fhir
 from zato.common.api import GENERIC, Sec_Def_Type_Name
 from zato.common.odb.model import GenericConn, SecurityBase
@@ -93,6 +93,9 @@ def describe_outgoing_fhir(session:'SASession', cluster_id:'int', name:'str') ->
             security_id = opaque['security_id']
 
     out.append(('Security', _security_line(session, cluster_id, security_id)))
+
+    # A save the server did not take waits in the connection's queue, and one the queue gave up on goes to its DLQ
+    out.extend(queue_lines(opaque))
 
     # A connection created before the flag existed logs, the same as one whose flag is on
     is_audit_log_active = True

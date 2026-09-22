@@ -1,0 +1,9 @@
+services:
+
+  tools:
+    image: dcm4che/dcm4che-tools:5.33.1
+    entrypoint: ["sleep", "infinity"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - "${DCM4CHE_TOOLS_WORK_DIR}:/work"

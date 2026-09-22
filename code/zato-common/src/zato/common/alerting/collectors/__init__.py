@@ -42,6 +42,7 @@ from zato.common.alerting.collectors.mllp import collect_ack_code_facts as colle
 from zato.common.alerting.collectors.outgoing import collect_outgoing_status_facts as collect_outgoing_status_facts
 from zato.common.alerting.collectors.probes import collect_certificate_facts as collect_certificate_facts, \
     collect_health_facts as collect_health_facts, collect_test_transfer_facts as collect_test_transfer_facts
+from zato.common.alerting.collectors.queues import collect_queue_facts as collect_queue_facts
 from zato.common.alerting.collectors.rates import collect_auth_failure_facts as collect_auth_failure_facts, \
     collect_consecutive_failure_facts as collect_consecutive_failure_facts, \
     collect_error_rate_facts as collect_error_rate_facts, collect_latency_facts as collect_latency_facts

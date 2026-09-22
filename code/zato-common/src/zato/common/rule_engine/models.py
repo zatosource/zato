@@ -7,12 +7,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from copy import deepcopy
+from collections.abc import Mapping
 from dataclasses import dataclass
 from logging import getLogger
 
 # rule-engine
-from rule_engine import Rule as RuleImpl
+from rule_engine import Context as ContextImpl, Rule as RuleImpl
 
 # Zato
 from zato.common.marshal_.api import Model
@@ -25,12 +25,64 @@ from zato.common.rule_engine.evaluation import evaluate_ruleset, RulesetOutcome
 
 if 0:
     from zato.common.rule_engine.cache import CachedRule
-    from zato.common.typing_ import anydict, dict_, dictlist, strdict
+    from zato.common.typing_ import any_, anydict, dict_, dictlist, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DataView(Mapping):
+    """ A read-only view of a dict that is not a dict itself - the library copies and converts
+    every dict it resolves, key by key and value by value, whereas a plain mapping passes through as is.
+    """
+    __slots__ = ('_data',)
+
+    def __init__(self, data:'anydict') -> 'None':
+        self._data = data
+
+    def __getitem__(self, key:'str') -> 'any_':
+        return self._data[key]
+
+    def __iter__(self) -> 'any_':
+        return iter(self._data)
+
+    def __len__(self) -> 'int':
+        return len(self._data)
+
+# ################################################################################################################################
+
+class Context(ContextImpl):
+    """ The evaluation context of every rule.
+    """
+
+    def resolve(self, thing:'any_', name:'str', scope:'any_'=None) -> 'any_':
+
+        # A top-level symbol that is a dict, e.g. the whole fact a rule looks at, is handed out as a view,
+        # otherwise the library would convert all of it on every single evaluation
+        out = super().resolve(thing, name, scope)
+
+        if isinstance(out, dict):
+            out = DataView(out)
+
+        return out
+
+    def resolve_attribute(self, thing:'any_', object_:'anydict', name:'str') -> 'any_':
+
+        # The library types the whole mapping on each access before it looks the name up
+        # among the built-in attributes and falls back to the key - so the key comes first here
+        if isinstance(object_, Mapping) and name in object_:
+            out = object_[name]
+            return out
+
+        out = super().resolve_attribute(thing, object_, name)
+        return out
+
+# The one context every rule is compiled with
+_context = Context()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,9 +138,9 @@ class Rule(Model):
         for key, value in self.defaults.items():
             if key not in data:
 
-                # .. the first missing default triggers the copy ..
+                # .. the first missing default triggers the copy - a shallow one, only top-level keys are added ..
                 if modified_data is None:
-                    modified_data = deepcopy(data)
+                    modified_data = dict(data)
 
                 # .. and each missing default lands in the copy.
                 modified_data[key] = value
@@ -148,7 +200,7 @@ def rule_from_document(document:'anydict') -> 'Rule | None':
     rule.when = compile_when(document)
 
     try:
-        rule.when_impl = RuleImpl(rule.when)
+        rule.when_impl = RuleImpl(rule.when, context=_context)
     except Exception as e:
         logger.warning(f'Rule loading error -> {rule.full_name} -> {rule.when} -> {e}')
         return None

@@ -46,7 +46,7 @@ from zato.common.typing_ import cast_, date_, datetime_, datetimez, extract_from
 
 if 0:
     from dataclasses import Field
-    from zato.common.typing_ import any_, anydict, anylist, boolnone, dictnone, intnone, optional, tuplist
+    from zato.common.typing_ import any_, anydict, anylist, boolnone, dictnone, intnone, optional, strset, tuplist
     from zato.server.base.parallel import ParallelServer
     from zato.server.service import Service
     boolnone = boolnone
@@ -59,6 +59,9 @@ if 0:
 # ################################################################################################################################
 
 _None_Type = type(None)
+
+# Where a model keeps the names of the fields that a read created rather than the caller.
+_vivified_names_key = '_zato_vivified_names_set'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -129,8 +132,18 @@ class Model(BaseModel):
             raise AttributeError('No such field `{}` in `{}` among `{}`'.format(
                 name, type(self).__name__, sorted(fields)))
 
+        zato_field = fields[name]
+
+        # Models are declared with init=False so the dataclass-generated __init__ that would
+        # run the factories never exists - the first read is what materialises such a field.
+        default_factory = zato_field.default_factory
+        if default_factory is not MISSING:
+            value = default_factory()
+            self._zato_set_vivified(name, value)
+            return value
+
         # An optional field resolves to its underlying type first.
-        field_type = fields[name].type
+        field_type = zato_field.type
         if is_union(field_type):
             _, field_type, _ = extract_from_union(field_type)
 
@@ -138,7 +151,7 @@ class Model(BaseModel):
         # so repeated reads return the same object and assignments below it stick.
         if isclass(field_type) and issubclass(field_type, Model):
             instance = field_type.__new__(field_type)
-            setattr(self, name, instance)
+            self._zato_set_vivified(name, instance)
             return instance
 
         # A scalar field that was never set cannot vivify - only nested models can.
@@ -152,10 +165,62 @@ class Model(BaseModel):
         # Underscore names are internal helpers and a class that is not a dataclass yet accepts anything -
         # otherwise, only declared fields may be assigned so typos fail at the assignment line.
         if fields is None or name.startswith('_') or name in fields:
+
+            # An explicit assignment overrides whatever a read had vivified before it,
+            # tested against __dict__ directly so a plain assignment never builds the set.
+            instance_dict = self.__dict__
+            if _vivified_names_key in instance_dict:
+                instance_dict[_vivified_names_key].discard(name)
+
             object.__setattr__(self, name, value)
         else:
             raise AttributeError('No such field `{}` in `{}` among `{}`'.format(
                 name, type(self).__name__, sorted(fields)))
+
+    @property
+    def _zato_vivified_names(self) -> 'strset':
+        """ The fields that a read created rather than the caller, kept apart from
+        the assigned ones so an untouched model stays recognisable.
+        """
+        instance_dict = self.__dict__
+
+        if _vivified_names_key not in instance_dict:
+            instance_dict[_vivified_names_key] = set()
+
+        return instance_dict[_vivified_names_key]
+
+    def _zato_set_vivified(self, name:'str', value:'any_') -> 'None':
+
+        # Bypasses __setattr__ because that is what clears the flag an assignment overrides.
+        self._zato_vivified_names.add(name)
+        object.__setattr__(self, name, value)
+
+    def zato_has_content(self) -> 'bool':
+        """ True if anything in this model, at any depth, came from the caller rather than
+        from a read - an empty container or an untouched nested model is not content.
+        """
+        vivified = self._zato_vivified_names
+
+        for name, value in self.__dict__.items():
+
+            # Internal bookkeeping says nothing about what the caller did.
+            if name.startswith('_'):
+                continue
+
+            # Anything assigned outright is content, no matter what its value is.
+            if name not in vivified:
+                return True
+
+            # A vivified nested model only counts if something was put into it.
+            if isinstance(value, Model):
+                if value.zato_has_content():
+                    return True
+
+            # A vivified container only counts once it has elements.
+            elif value:
+                return True
+
+        return False
 
     def __getitem__(self, name, default=None):
         if not isinstance(name, str):

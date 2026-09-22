@@ -55,13 +55,15 @@ _ruleset_name = 'alerts_mllp_outgoing'
 _channel_ruleset_name = 'alerts_mllp_channel'
 _conn_name = 'lab.results'
 
-# The five rules the ruleset ships, with the defaults each one carries
+# The seven rules the ruleset ships, with the defaults each one carries
 _rule_defaults = {
     'Connection_Down':     {'max_consecutive_failures': 3},
     'Error_Rate':          {'error_rate_threshold': 0.1, 'min_events': 10, 'window_seconds': 300},
     'Negative_Acks':       {'ack_codes': 'AE, AR, CE, CR', 'ack_threshold': 3, 'window_seconds': 300},
     'Connection_Failures': {'connection_failure_threshold': 3, 'window_seconds': 300},
     'Slow_Responses':      {'max_avg_duration_ms': 5000, 'window_seconds': 300},
+    'DLQ_Messages':        {'dlq_threshold': 1},
+    'Queue_Backlog':       {'queue_depth_threshold': 1000},
 }
 
 # One fact per rule, each crafted to clear the rule's default threshold
@@ -71,6 +73,8 @@ _rule_measures = {
     'Negative_Acks':       {'ack_count': 3},
     'Connection_Failures': {'connection_failure_count': 3},
     'Slow_Responses':      {'avg_duration_ms': 5000},
+    'DLQ_Messages':        {'dlq_depth': 1},
+    'Queue_Backlog':       {'queue_depth': 1000},
 }
 
 # The MLLP channel rules, with a fact each - none of them may read an outgoing connection
@@ -159,7 +163,7 @@ def _seed_channel_ruleset_alone(backend:'RuleSQLBackend') -> 'RuleDefinitionReco
 
 class TestMllpOutgoingRules:
 
-    def test_the_ruleset_ships_five_rules_with_their_defaults(self, backend:'RuleSQLBackend') -> 'None':
+    def test_the_ruleset_ships_seven_rules_with_their_defaults(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)
 
         documents = _get_documents(backend, _ruleset_name)

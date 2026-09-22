@@ -852,20 +852,17 @@ class HTTP_SOAP:
         FieldList = (Field_Max_Retries, Field_Sleep_Time, Field_Backoff_Threshold, Field_Backoff_Multiplier)
 
     class Queue:
-        """ The queue switch of outgoing REST, SOAP, HL7 MLLP and FHIR connections - with it on, each send goes
-        to the connection's own queue and is delivered one message at a time, in order. Stored in the opaque attributes.
+        """ The queue switch of outgoing connections, stored in the opaque attributes.
         """
 
         Field_Use_Queue = 'use_queue'
 
-        # By default, a send is made right away, the way it always was
         Default_Use_Queue = False
 
         FieldList = (Field_Use_Queue,)
 
     class DLQ:
-        """ The DLQ config of outgoing connections that use a queue - what happens to a message that still fails
-        after its last retry. All the fields are stored in the connection's opaque attributes.
+        """ The DLQ config of outgoing connections, stored in the opaque attributes.
         """
 
         Field_Use_DLQ = 'use_dlq'
@@ -881,22 +878,11 @@ class HTTP_SOAP:
             Forward = 'forward'
             Discard = 'discard'
 
-        # By default, a message that exhausted its retries moves to the DLQ and the queue moves on
         Default_Use_DLQ = True
-
-        # By default, the DLQ rule leaves a message where it is
         Default_Action = Action.Keep
-
-        # How many times the rule puts a message back into the queue before leaving it in the DLQ
         Default_Retries = 3
-
-        # How many seconds pass between two rounds of the rule for one message
         Default_Retry_Interval = 60
-
-        # A forwarded message goes to this topic
         Default_Forward_To = ''
-
-        # A forwarded message keeps its DLQ header
         Default_Keep_Header = True
 
         FieldList = (Field_Use_DLQ, Field_Action, Field_Retries, Field_Retry_Interval, Field_Forward_To, Field_Keep_Header)
@@ -1443,6 +1429,28 @@ class Quota_Tiers:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class On_Prem_Gateway:
+    """ On-premises gateways - each one is a process running on the customer's own network
+    that Zato reaches on-premises systems through.
+    """
+    class Type:
+        On_Prem_Gateway = 'zato-on-prem-gateway'
+
+    # The ports the gateway hub listens on inside the container, both of them loopback only.
+    class Port:
+        Hub   = 11226
+        Admin = 11227
+
+    # The environment variables a deployment may set to move the two ports and to say how
+    # the instance is reached from the outside, which is what an enrollment token carries.
+    class Env:
+        Hub_Port       = 'Zato_Port_On_Prem_Gateway_Hub'
+        Admin_Port     = 'Zato_Port_On_Prem_Gateway_Admin'
+        Public_Address = 'Zato_On_Prem_Gateway_Public_Address'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Audit_Config:
     """ Generic-object types storing audit-related definitions - the retention
     policy and per-channel attribute-extraction rules.
@@ -1455,6 +1463,7 @@ class Audit_Config:
     class Object_Type:
         Generic_Connection = 'generic-connection'
         Quota_Tier         = 'quota-tier'
+        On_Prem_Gateway    = 'on-prem-gateway'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -2278,12 +2287,6 @@ class HL7:
         max_msg_size_unit  = 'mb'
         max_msg_size       = 2 * 1024 * 1024
 
-        # Retry engine defaults (outbound)
-        max_retries                      = 5
-        backoff_base_seconds             = 1
-        backoff_cap_seconds              = 300
-        backoff_jitter_percent           = 10
-
         # Circuit breaker defaults (outbound)
         circuit_breaker_threshold_percent = 50
         circuit_breaker_window_seconds    = 60
@@ -2382,6 +2385,21 @@ class PubSub:
 
         # Every such queue is subscribed by this one service.
         Delivery_Service = 'zato.pubsub.outgoing.deliver'
+
+        # Seconds between two rounds of one message
+        Retry_Round_Wait = 8
+
+        # The DLQ topic and sub key prefixes, followed by the connection's type and name or id
+        DLQ_Topic_Prefix = 'zato.out.dlq.'
+        DLQ_Sub_Key_Prefix = 'zato.out.dlq.'
+
+        # Why a message is in the DLQ
+        DLQ_Reason_Retries_Exhausted = 'retries-exhausted'
+
+        # The scheduler job that runs the DLQ rule
+        DLQ_Job_Name             = 'zato.pubsub.dlq'
+        DLQ_Job_Interval_Minutes = 1
+        DLQ_Rule_Service         = 'zato.pubsub.dlq.run'
 
     class REST_Server:
 

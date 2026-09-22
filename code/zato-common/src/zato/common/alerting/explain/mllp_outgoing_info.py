@@ -14,9 +14,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # Zato
-from zato.common.alerting.explain.settings_info import settings_lines, Off, On
+from zato.common.alerting.explain.settings_info import queue_lines, settings_lines, Off, On
 from zato.common.alerting.object_config import alert_type_mllp_outgoing
-from zato.common.api import GENERIC, HL7
+from zato.common.api import GENERIC, HL7, HTTP_SOAP
 from zato.common.odb.model import GenericConn
 from zato.common.util.sql import parse_instance_opaque_attr
 
@@ -36,13 +36,15 @@ if 0:
 # What the Type line of the connection reads as
 _type_label = 'MLLP outgoing connection'
 
+_retry = HTTP_SOAP.Retry
+
 # The stored fields whose absence means the connection was saved before the field existed, and what they read as then
 _defaults = {
     'pool_size': HL7.Default.pool_size,
     'max_wait_time': HL7.Default.max_wait_time,
-    'max_retries': HL7.Default.max_retries,
-    'backoff_base_seconds': HL7.Default.backoff_base_seconds,
-    'backoff_cap_seconds': HL7.Default.backoff_cap_seconds,
+    _retry.Field_Max_Retries: _retry.Default_Max_Retries,
+    _retry.Field_Sleep_Time: _retry.Default_Sleep_Time,
+    _retry.Field_Backoff_Threshold: _retry.Default_Backoff_Threshold,
     'circuit_breaker_threshold_percent': HL7.Default.circuit_breaker_threshold_percent,
     'circuit_breaker_window_seconds': HL7.Default.circuit_breaker_window_seconds,
     'circuit_breaker_reset_seconds': HL7.Default.circuit_breaker_reset_seconds,
@@ -97,10 +99,16 @@ def describe_mllp_outgoing(session:'SASession', cluster_id:'int', name:'str') ->
     out.append(('Connections kept open', row.pool_size))
     out.append(('Ack wait', f'{_stored_value(opaque, "max_wait_time")}s'))
 
-    max_retries = _stored_value(opaque, 'max_retries')
-    backoff_base = _stored_value(opaque, 'backoff_base_seconds')
-    backoff_cap = _stored_value(opaque, 'backoff_cap_seconds')
-    out.append(('Retries', f'{max_retries}, backing off from {backoff_base}s up to {backoff_cap}s'))
+    # A connection that retries says so - a retried send counts once in the measures, by its final outcome
+    max_retries = _stored_value(opaque, _retry.Field_Max_Retries)
+
+    if max_retries:
+        sleep_time = _stored_value(opaque, _retry.Field_Sleep_Time)
+        backoff_threshold = _stored_value(opaque, _retry.Field_Backoff_Threshold)
+        out.append(('Retries', f'{max_retries}, waiting from {sleep_time}s, up to {backoff_threshold}s in total'))
+
+    # A send the receiving system did not take waits in the connection's queue, and one the queue gave up on goes to its DLQ
+    out.extend(queue_lines(opaque))
 
     breaker_threshold = _stored_value(opaque, 'circuit_breaker_threshold_percent')
     breaker_window = _stored_value(opaque, 'circuit_breaker_window_seconds')

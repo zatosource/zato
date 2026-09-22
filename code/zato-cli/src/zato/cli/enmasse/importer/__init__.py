@@ -17,6 +17,7 @@ from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.cli.enmasse.importers.channel_as4 import ChannelAS4Importer
 from zato.cli.enmasse.importers.channel_soap import ChannelSOAPImporter
 from zato.cli.enmasse.importers.group import GroupImporter
+from zato.cli.enmasse.importers.on_prem_gateway import OnPremGatewayImporter
 from zato.cli.enmasse.importers.quota_tier import QuotaTierImporter
 from zato.cli.enmasse.importers.alert_config import AlertConfigImporter
 from zato.cli.enmasse.importers.audit_retention import AuditRetentionImporter
@@ -136,6 +137,7 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         self.sec_defs = {}
         self.group_defs = {}
         self.quota_tier_defs = {}
+        self.on_prem_gateway_defs = {}
         self.audit_retention_defs = {}
         self.audit_extraction_defs = {}
         self.odoo_defs = {}
@@ -193,6 +195,7 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         self.channel_as4_importer = ChannelAS4Importer(self)
         self.group_importer = GroupImporter(self)
         self.quota_tier_importer = QuotaTierImporter(self)
+        self.on_prem_gateway_importer = OnPremGatewayImporter(self)
         self.audit_retention_importer = AuditRetentionImporter(self)
         self.audit_extraction_importer = AuditExtractionImporter(self)
         self.alert_config_importer = AlertConfigImporter(self)
@@ -277,6 +280,29 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         logger.info(f'Processed quota tiers: created={created_count} updated={updated_count}')
 
         return tiers_created, tiers_updated
+
+# ################################################################################################################################
+
+    def sync_on_prem_gateways(self, gateway_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes on-premises gateways from a YAML configuration with the database.
+        """
+        if not gateway_list:
+            return [], []
+
+        count = len(gateway_list)
+        noun = 'gateway' if count == 1 else 'gateways'
+        logger.info(f'Processing {count} on-premises {noun}')
+
+        gateways_created, gateways_updated = self.on_prem_gateway_importer.sync_on_prem_gateways(gateway_list, session)
+
+        # Get gateway definitions from the gateway importer and store them in our instance
+        self.on_prem_gateway_defs = self.on_prem_gateway_importer.gateway_defs
+
+        created_count = len(gateways_created)
+        updated_count = len(gateways_updated)
+        logger.info(f'Processed on-premises gateways: created={created_count} updated={updated_count}')
+
+        return gateways_created, gateways_updated
 
 # ################################################################################################################################
 

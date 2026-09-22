@@ -239,6 +239,15 @@ class AlertingRun(AdminService):
 
 # ################################################################################################################################
 
+    def _get_queue_rows(self) -> 'dictlist':
+        """ How many messages wait in each outgoing connection's queue and how many its DLQ holds - the rows the
+        delivery page lists, one per connection that has a queue or a DLQ, read off the connections themselves.
+        """
+        out = self.server.config_manager.get_outgoing_queue_list()
+        return out
+
+# ################################################################################################################################
+
     def handle(self) -> 'None':
 
         # The job's extra data arrives as a dict - an empty extra arrives as something else,
@@ -305,6 +314,9 @@ class AlertingRun(AdminService):
         # How many tools each MCP gateway exposes.
         tool_counts = self._get_tool_counts()
 
+        # How deep each outgoing connection's queue and DLQ are.
+        queue_rows = self._get_queue_rows()
+
         # What each object's own Alerts tab says - its thresholds, toggles, window and email connection.
         with closing(self.odb.session()) as session:
             object_settings = load_object_settings(session, self.server.cluster_id)
@@ -312,7 +324,7 @@ class AlertingRun(AdminService):
         result = run_sweep(engine, rules, metrics_by_name, AuditSource.MLLP_Channel, transports, audit_log, self.cid, now,
             defaults=defaults, dashboard_url=dashboard_url, template_dir=template_dir, job_intervals=job_intervals,
             arrival_windows=arrival_windows, schedule_expectations=schedule_expectations, tool_counts=tool_counts,
-            object_settings=object_settings)
+            queue_rows=queue_rows, object_settings=object_settings)
 
         rule_label       = pluralize(result.rule_count, 'rule')
         fact_label       = pluralize(result.fact_count, 'fact')

@@ -15,23 +15,72 @@ from urllib.parse import quote, urlencode
 from requests_toolbelt import MultipartEncoder
 
 # Zato
-from zato.common.api import ContentType, DATA_FORMAT
+from zato.common.api import ContentType, DATA_FORMAT, HTTP_SOAP
 from zato.common.exception import BadRequest, BackendInvocationError
 from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import extract_model_class, is_list, Model
+from zato.common.pubsub.outgoing import Attempts_None, Key_Data, Key_Headers, Key_Method, Key_Params, SendRejected, SendResult
 from zato.common.typing_ import cast_
+from zato.common.util.api import new_cid_server
 from zato.common.util.open_ import open_rb
 from zato.server.connection.http_soap.invocation import build_jsonata_context, maybe_run_callback, merge_declarative_request
 from zato.server.connection.http_soap.outgoing.audit import record_request_sent, record_response_received, \
     record_transport_error
-from zato.server.connection.http_soap.outgoing.common import logger, Response, _needs_serialization
+from zato.server.connection.http_soap.outgoing.common import get_rest_rejection_error, is_rest_rejection, logger, \
+    Read_Methods, Response, _needs_serialization
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callnone, dictnone, list_, stranydict, type_
+    from zato.common.pubsub.outgoing import OutgoingPublisher
+    from zato.common.pubsub.sql.backend import PublishResult
+    from zato.common.typing_ import any_, anytuple, callnone, dictnone, list_, stranydict, strstrdict, type_
     callnone = callnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_queue = HTTP_SOAP.Queue
+_retry = HTTP_SOAP.Retry
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _PreparedRequest:
+    """ One request right before it goes to the wire.
+    """
+
+    def __init__(
+        self,
+        *,
+        method:'str',
+        address:'str',
+        data:'any_',
+        headers:'strstrdict',
+        qs_params:'stranydict',
+        model:'any_',
+        needs_audit:'bool',
+        is_soap:'bool',
+        data_text:'str | None',
+        user_headers:'strstrdict',
+        params:'stranydict',
+    ) -> 'None':
+
+        self.method = method
+        self.address = address
+        self.data = data
+        self.headers = headers
+        self.qs_params = qs_params
+
+        self.model = model
+        self.needs_audit = needs_audit
+        self.is_soap = is_soap
+
+        # What the queue stores
+        self.data_text = data_text
+        self.user_headers = user_headers
+        self.params = params
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,6 +90,8 @@ class RESTCallMixin:
     the request itself with its audit pair, the per-method shortcuts, file uploads and the typed
     calls that turn a response into a model.
     """
+
+    publisher: 'OutgoingPublisher'
 
     def format_address(self, cid:'str', params:'stranydict') -> 'tuple[str, stranydict]':
         """ Formats a URL path to an external resource. Note that exceptions raised
@@ -82,15 +133,17 @@ class RESTCallMixin:
 
 # ################################################################################################################################
 
-    def http_request(
+    def _prepare_request(
         self,
         method:'str',
         cid:'str',
-        data:'any_'='',
-        params:'dictnone'=None,
-        *args:'any_',
-        **kwargs:'any_'
-    ) -> 'Response':
+        data:'any_',
+        params:'dictnone',
+        kwargs:'stranydict',
+        needs_declarative_merge:'bool',
+    ) -> '_PreparedRequest':
+        """ Everything a request is before it goes to the wire, what is left in kwargs is what the requests library receives.
+        """
 
         # First, make sure that the connection is active
         self._enforce_is_active()
@@ -112,7 +165,7 @@ class RESTCallMixin:
         # Fill in the blanks from the connection's declarative invocation profile (REST only) -
         # explicit arguments always win and JSONata values are evaluated at call time
         # against the data the caller passed in.
-        if not _is_soap:
+        if (not _is_soap) and needs_declarative_merge:
             declarative_headers = kwargs.pop('headers', None)
             context = build_jsonata_context(data)
             method, data, params, declarative_headers = merge_declarative_request(
@@ -148,10 +201,10 @@ class RESTCallMixin:
                     data = urlencode(data)
 
         # .. check if we have custom headers on input ..
-        headers = kwargs.pop('headers', None) or {}
+        user_headers = kwargs.pop('headers', None) or {}
 
         # .. build a default set of headers now ..
-        headers = self._create_headers(cid, headers)
+        headers = self._create_headers(cid, user_headers)
 
         # .. SOAP requests need to be specifically formatted now ..
         if _is_soap:
@@ -166,20 +219,55 @@ class RESTCallMixin:
         else:
             address, qs_params = self.address, dict(params)
 
+        # Only a text body can be queued
+        if isinstance(data, str):
+            data_text = data
+        else:
+            data_text = None
+
         # .. make sure that Unicode objects are turned into bytes ..
         if needs_serialize_based_on_content_type and (not _is_soap):
             if isinstance(data, str):
                 data = data.encode('utf-8')
 
+        out = _PreparedRequest(
+            method=method,
+            address=address,
+            data=data,
+            headers=headers,
+            qs_params=qs_params,
+            model=model,
+            needs_audit=needs_audit,
+            is_soap=_is_soap,
+            data_text=data_text,
+            user_headers=user_headers,
+            params=params,
+        )
+
+        return out
+
+# ################################################################################################################################
+
+    def _send_prepared(self, cid:'str', prepared:'_PreparedRequest', args:'anytuple', kwargs:'stranydict') -> 'Response':
+        """ Sends one prepared request to the wire and turns the answer into a response.
+        """
+        method = prepared.method
+        address = prepared.address
+        qs_params = prepared.qs_params
+        needs_audit = prepared.needs_audit
+        model = prepared.model
+        _is_soap = prepared.is_soap
+
         # .. record the outgoing request in the audit log ..
         endpoint = f'{method} {address}'
 
         if needs_audit:
-            record_request_sent(self, cid, endpoint, data, method)
+            record_request_sent(self, cid, endpoint, prepared.data, method)
 
         # .. do invoke the connection ..
         try:
-            response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
+            response = self.invoke_http(
+                cid, method, address, prepared.data, prepared.headers, {}, params=qs_params, *args, **kwargs)
         except Exception as e:
 
             # .. record the error in the audit log before re-raising ..
@@ -228,6 +316,117 @@ class RESTCallMixin:
 
         # .. now, return the response to the caller.
         return response
+
+# ################################################################################################################################
+
+    def _needs_queue(self, prepared:'_PreparedRequest') -> 'bool':
+        """ Whether a request goes through the connection's queue.
+        """
+        if not self.config[_queue.Field_Use_Queue]:
+            return False
+
+        if prepared.is_soap:
+            return False
+
+        if prepared.method in Read_Methods:
+            return False
+
+        out = prepared.data_text is not None
+        return out
+
+# ################################################################################################################################
+
+    def _send_or_queue(self, cid:'str', prepared:'_PreparedRequest', args:'anytuple', kwargs:'stranydict') -> 'SendResult':
+        """ A send with the queue switch on.
+        """
+        request = {
+            Key_Method: prepared.method,
+            Key_Data: prepared.data_text,
+            Key_Headers: prepared.user_headers,
+            Key_Params: prepared.params,
+        }
+
+        # The direct attempt has no retries of its own
+        kwargs[_retry.Field_Max_Retries] = 0
+
+        def attempt() -> 'Response':
+            response = self._send_prepared(cid, prepared, args, kwargs)
+
+            if is_rest_rejection(response):
+                raise SendRejected(get_rest_rejection_error(response), response)
+
+            return response
+
+        out = self.publisher.send_or_queue(cid, request, attempt)
+        return out
+
+# ################################################################################################################################
+
+    def http_request(
+        self,
+        method:'str',
+        cid:'str',
+        data:'any_'='',
+        params:'dictnone'=None,
+        *args:'any_',
+        **kwargs:'any_'
+    ) -> 'Response | SendResult':
+
+        prepared = self._prepare_request(method, cid, data, params, kwargs, needs_declarative_merge=True)
+
+        if self._needs_queue(prepared):
+            out = self._send_or_queue(cid, prepared, args, kwargs)
+            return out
+
+        out = self._send_prepared(cid, prepared, args, kwargs)
+        return out
+
+# ################################################################################################################################
+
+    def send_from_queue(self, cid:'str', request:'stranydict') -> 'Response':
+        """ Makes one attempt to deliver a request the queue holds, raising when the endpoint turned it down.
+        """
+        kwargs:'stranydict' = {
+            'headers': request[Key_Headers],
+            _retry.Field_Max_Retries: 0,
+        }
+
+        # A request without a method was never merged with the declarative profile
+        method = request[Key_Method]
+        needs_declarative_merge = not method
+
+        prepared = self._prepare_request(
+            method, cid, request[Key_Data], request[Key_Params], kwargs, needs_declarative_merge=needs_declarative_merge)
+
+        response = self._send_prepared(cid, prepared, (), kwargs)
+
+        if is_rest_rejection(response):
+            raise SendRejected(get_rest_rejection_error(response), response)
+
+        return response
+
+# ################################################################################################################################
+
+    def publish(self, data:'any_'='', cid:'str'='', **kwargs:'any_') -> 'PublishResult':
+        """ Queues one message for delivery to this connection without trying the wire first.
+        """
+
+        # Handlers are given the body as text
+        if not isinstance(data, str):
+            data = dumps(data)
+
+        if not cid:
+            cid = new_cid_server()
+
+        request = {
+            Key_Method: '',
+            Key_Data: data,
+            Key_Headers: {},
+            Key_Params: {},
+        }
+
+        out = self.publisher.publish_request(cid, Attempts_None, request, **kwargs)
+        return out
 
 # ################################################################################################################################
 

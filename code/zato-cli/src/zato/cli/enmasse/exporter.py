@@ -14,6 +14,7 @@ from zato.cli.enmasse.exporters.email_imap import IMAPExporter
 from zato.cli.enmasse.exporters.email_smtp import SMTPExporter
 from zato.cli.enmasse.exporters.group import GroupExporter
 from zato.cli.enmasse.exporters.odoo import OdooExporter
+from zato.cli.enmasse.exporters.on_prem_gateway import OnPremGatewayExporter
 from zato.cli.enmasse.exporters.quota_tier import QuotaTierExporter
 from zato.cli.enmasse.exporters.alert_config import AlertConfigExporter
 from zato.cli.enmasse.importers.alert_config import get_rule_backend
@@ -92,6 +93,7 @@ class EnmasseYAMLExporter:
         self.group_exporter = GroupExporter(self)
         self.odoo_exporter = OdooExporter(self)
         self.quota_tier_exporter = QuotaTierExporter(self)
+        self.on_prem_gateway_exporter = OnPremGatewayExporter(self)
         self.audit_retention_exporter = AuditRetentionExporter(self)
         self.alert_config_exporter = AlertConfigExporter(self)
         self.audit_extraction_exporter = AuditExtractionExporter(self)
@@ -188,6 +190,15 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
         quota_tier_list = self.quota_tier_exporter.export(session, self.cluster_id)
         return quota_tier_list
+
+# ################################################################################################################################
+
+    def export_on_prem_gateway(self, session:'SASession') -> 'list':
+        """ Exports on-premises gateway definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
+        on_prem_gateway_list = self.on_prem_gateway_exporter.export(session, self.cluster_id)
+        return on_prem_gateway_list
 
 # ################################################################################################################################
 
@@ -687,6 +698,11 @@ class EnmasseYAMLExporter:
         quota_tier_defs = self.export_quota_tier(session)
         if quota_tier_defs:
             output_dict['quota_tier'] = quota_tier_defs
+
+        # Export on-premises gateway definitions
+        on_prem_gateway_defs = self.export_on_prem_gateway(session)
+        if on_prem_gateway_defs:
+            output_dict['on_prem_gateway'] = on_prem_gateway_defs
 
         # Export audit retention policy definitions
         audit_retention_defs = self.export_audit_retention(session)

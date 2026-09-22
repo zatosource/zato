@@ -45,19 +45,6 @@ class HL7MLLPChannelConfigObject:
 # ################################################################################################################################
 
 @dataclass
-class HL7MLLPOutconnConfigObject:
-    id: int = 0
-    name: str = ''
-    is_active: bool = False
-    is_internal: bool = False
-    address: str = ''
-    security_name: strnone = None
-    pool_size: int = 1
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass
 class HL7RESTChannelConfigObject:
     id: int = 0
     name: str = ''

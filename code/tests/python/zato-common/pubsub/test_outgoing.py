@@ -14,16 +14,16 @@ from unittest.mock import MagicMock
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.pubsub.outgoing import conn_locators, delivery_handlers, deliver_envelope, find_outgoing_conn, \
-    get_outgoing_sub_config, get_outgoing_sub_key, get_outgoing_topic_name, locate_outgoing_conn, OutgoingPublisher, \
-    parse_outgoing_sub_key, register_outgoing_conn_type
+from zato.common.pubsub.outgoing import build_envelope, conn_locators, delivery_handlers, deliver_envelope, \
+    find_outgoing_conn, get_outgoing_sub_config, get_outgoing_sub_key, get_outgoing_topic_name, Key_Data, \
+    locate_outgoing_conn, OutgoingPublisher, parse_outgoing_sub_key, register_outgoing_conn_type
 from zato.common.pubsub.sql.backend import PublishResult
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, anytuple
+    from zato.common.typing_ import any_, anylist, anytuple, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,6 +43,17 @@ _conn_name_renamed = 'Order Intake EU'
 
 # The id of the second connection, the one the registry tests deliver to as well.
 _other_conn_id = 23
+
+_cid = 'test-cid'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _new_envelope(conn_type:'str', conn_id:'int', conn_name:'str', data:'str') -> 'stranydict':
+    """ The envelope of a publication of data alone.
+    """
+    out = build_envelope(conn_type, conn_id, conn_name, _cid, 0, {Key_Data: data})
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -177,8 +188,8 @@ class OutgoingRegistryTestCase(unittest.TestCase):
             out = (conn_name, conn_name)
             return out
 
-        def handler(server:'any_', cid:'str', wrapper:'any_', data:'str') -> 'None':
-            received.append((conn_type, wrapper, data))
+        def handler(server:'any_', cid:'str', wrapper:'any_', request:'stranydict') -> 'None':
+            received.append((conn_type, wrapper, request[Key_Data]))
 
         register_outgoing_conn_type(conn_type, locator, handler)
 
@@ -188,7 +199,7 @@ class OutgoingRegistryTestCase(unittest.TestCase):
 
         self._register(_type_ftp)
 
-        envelope = {'conn_type': _type_ftp, 'conn_id': _conn_id, 'conn_name': _conn_name, 'data': 'Order 1234'}
+        envelope = _new_envelope(_type_ftp, _conn_id, _conn_name, 'Order 1234')
         deliver_envelope(self.server, 'test-cid', envelope)
 
         self.assertEqual(self.received, [(_type_ftp, _conn_name, 'Order 1234')])
@@ -201,7 +212,7 @@ class OutgoingRegistryTestCase(unittest.TestCase):
         self._register(_type_ftp)
         self.connections[_conn_id] = _conn_name_renamed
 
-        envelope = {'conn_type': _type_ftp, 'conn_id': _conn_id, 'conn_name': _conn_name, 'data': 'Order 1234'}
+        envelope = _new_envelope(_type_ftp, _conn_id, _conn_name, 'Order 1234')
         deliver_envelope(self.server, 'test-cid', envelope)
 
         self.assertEqual(self.received, [(_type_ftp, _conn_name_renamed, 'Order 1234')])
@@ -214,7 +225,7 @@ class OutgoingRegistryTestCase(unittest.TestCase):
         self._register(_type_ftp)
         del self.connections[_conn_id]
 
-        envelope = {'conn_type': _type_ftp, 'conn_id': _conn_id, 'conn_name': _conn_name, 'data': 'Order 1234'}
+        envelope = _new_envelope(_type_ftp, _conn_id, _conn_name, 'Order 1234')
 
         with self.assertRaises(Exception) as context:
             deliver_envelope(self.server, 'test-cid', envelope)
@@ -247,7 +258,7 @@ class OutgoingRegistryTestCase(unittest.TestCase):
 
     def test_unregistered_conn_type_raises(self) -> 'None':
 
-        envelope = {'conn_type': _type_ftp, 'conn_id': _conn_id, 'conn_name': _conn_name, 'data': 'Order 1234'}
+        envelope = _new_envelope(_type_ftp, _conn_id, _conn_name, 'Order 1234')
 
         with self.assertRaises(Exception) as context:
             deliver_envelope(self.server, 'test-cid', envelope)
@@ -261,8 +272,8 @@ class OutgoingRegistryTestCase(unittest.TestCase):
         self._register(_type_ftp)
         self._register(_type_smb)
 
-        first = {'conn_type': _type_ftp, 'conn_id': _conn_id, 'conn_name': _conn_name, 'data': 'Order 1234'}
-        second = {'conn_type': _type_smb, 'conn_id': _other_conn_id, 'conn_name': 'Archive', 'data': 'Order 5678'}
+        first = _new_envelope(_type_ftp, _conn_id, _conn_name, 'Order 1234')
+        second = _new_envelope(_type_smb, _other_conn_id, 'Archive', 'Order 5678')
 
         deliver_envelope(self.server, 'test-cid', first)
         deliver_envelope(self.server, 'test-cid', second)
@@ -289,7 +300,7 @@ class OutgoingRegistryTestCase(unittest.TestCase):
 
         register_outgoing_conn_type(_type_ftp, locator, handler)
 
-        envelope = {'conn_type': _type_ftp, 'conn_id': _conn_id, 'conn_name': _conn_name, 'data': 'Order 1234'}
+        envelope = _new_envelope(_type_ftp, _conn_id, _conn_name, 'Order 1234')
 
         with self.assertRaises(Exception) as context:
             deliver_envelope(self.server, 'test-cid', envelope)
@@ -311,15 +322,14 @@ class OutgoingPublisherTestCase(unittest.TestCase):
         self.server.config_manager._outgoing_conn_locks = {}
         self.server.config_manager._push_subs = {}
 
-        # The topic and the connection's current name are what the config manager hands back ..
         self.topic_name = get_outgoing_topic_name('rest', _conn_name)
         self.server.config_manager.ensure_outgoing_subscription.return_value = (self.topic_name, _conn_name)
 
-        # .. the publication takes the connection's own lock while it runs ..
         self.lock = threading.RLock()
         self.server.config_manager.get_outgoing_publish_lock.return_value = self.lock
 
-        # .. and this is what the backend answers each publication with.
+        self.server.config_manager.get_pubsub_topic_backend.return_value = None
+
         publish_result = PublishResult()
         publish_result.msg_id = 'test-message-id-001'
         self.server.pubsub_backend.publish.return_value = publish_result
@@ -392,7 +402,7 @@ class OutgoingPublisherTestCase(unittest.TestCase):
         self.assertEqual(envelope['conn_type'], 'rest')
         self.assertEqual(envelope['conn_id'], _conn_id)
         self.assertEqual(envelope['conn_name'], _conn_name)
-        self.assertEqual(envelope['data'], 'Order 1234')
+        self.assertEqual(envelope['request']['data'], 'Order 1234')
 
 # ################################################################################################################################
 
@@ -402,17 +412,24 @@ class OutgoingPublisherTestCase(unittest.TestCase):
         _ = self.publisher.publish({'order_id': 1234, 'customer': 'Maria Johnson'})
 
         envelope = self._get_published_envelope()
-        data = loads(envelope['data'])
+        data = loads(envelope['request']['data'])
 
         self.assertEqual(data['order_id'], 1234)
         self.assertEqual(data['customer'], 'Maria Johnson')
 
 # ################################################################################################################################
 
-    def test_publish_returns_what_the_backend_answered(self) -> 'None':
-
+    def test_publish_answers_with_the_id_the_envelope_carries(self) -> 'None':
+        """ The id a caller learns is the one stamped into the envelope.
+        """
         out = self.publisher.publish('Order 1234')
-        self.assertEqual(out.msg_id, 'test-message-id-001')
+
+        call_kwargs = self.server.pubsub_backend.publish.call_args[1]
+        envelope = loads(self.server.pubsub_backend.publish.call_args[0][1])
+
+        self.assertEqual(out.msg_id, envelope['msg_id'])
+        self.assertEqual(call_kwargs['msg_id'], envelope['msg_id'])
+        self.assertNotEqual(out.msg_id, 'test-message-id-001')
 
 # ################################################################################################################################
 
@@ -426,6 +443,48 @@ class OutgoingPublisherTestCase(unittest.TestCase):
 
         self.assertEqual(keyword['priority'], 7)
         self.assertEqual(keyword['expiration'], 60)
+
+# ################################################################################################################################
+
+    def test_publish_is_recorded_under_the_delivery_service(self) -> 'None':
+        """ The publisher of every queued message is the delivery service.
+        """
+        _ = self.publisher.publish('Order 1234')
+
+        call_args = self.server.pubsub_backend.publish.call_args
+        keyword = call_args[1]
+
+        self.assertEqual(keyword['publisher'], PubSub.Outgoing.Delivery_Service)
+
+# ################################################################################################################################
+
+    def test_publish_to_an_amqp_backed_topic_goes_to_the_broker(self) -> 'None':
+        """ A publication to an AMQP-backed topic goes to the broker and nothing reaches the database.
+        """
+        backend_config = {'backend_type': 'amqp'}
+        self.server.config_manager.get_pubsub_topic_backend.return_value = backend_config
+
+        broker_result = PublishResult()
+        broker_result.msg_id = 'test-broker-message-id'
+        self.server.config_manager.pubsub_publish_to_amqp.return_value = broker_result
+
+        out = self.publisher.publish('Order 1234')
+
+        self.server.pubsub_backend.publish.assert_not_called()
+
+        call_args = self.server.config_manager.pubsub_publish_to_amqp.call_args
+        positional = call_args[0]
+
+        self.assertIs(positional[0], backend_config)
+        self.assertEqual(positional[2], self.topic_name)
+
+        envelope = loads(positional[1])
+        self.assertEqual(envelope['conn_id'], _conn_id)
+        self.assertEqual(envelope['request']['data'], 'Order 1234')
+
+        # The caller learns the envelope's id, not the broker's
+        self.assertEqual(out.msg_id, envelope['msg_id'])
+        self.assertNotEqual(out.msg_id, 'test-broker-message-id')
 
 # ################################################################################################################################
 # ################################################################################################################################

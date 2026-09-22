@@ -25,6 +25,7 @@ from zato.common.util.url_dispatcher import resolve_match_slash
 from zato.server.connection.http_soap import BadRequest
 from zato.server.service import AsIs, Boolean, Int
 from zato.server.service.internal import AdminService
+from zato.server.service.internal.http_soap.delivery_settings import delivery_input
 from zato.server.service.internal.http_soap.health_check import has_health_check_config, \
     has_scheduler_config, validate_run_every
 
@@ -308,7 +309,8 @@ class _BaseGet(AdminService):
         *_invocation_input, \
         *_retry_input, \
         *_as4_input, \
-        *_as2_input
+        *_as2_input, \
+        *delivery_input
 
 # ################################################################################################################################
 

@@ -1,0 +1,5 @@
+{% load extras %}
+{% comment %} The hidden cells of one row of a list page the Delivery tab's fields travel in, included with delivery_tab_config and item {% endcomment %}
+{% for field_name in delivery_tab_config.field_names %}
+<td class='ignore'>{{ item|get_item:field_name }}</td>
+{% endfor %}

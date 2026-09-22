@@ -9,12 +9,12 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
-	test-pubsub test-pubsub-perf \
+	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-as2 test-as4 test-edifact test-x12 test-soap \
 	test-llm \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce \
-	test-hl7 test-ui \
+	test-hl7 hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-alerting test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
@@ -365,7 +365,8 @@ pyright:
 		zato-common/src/zato/common/rule_engine/notify/ \
 		zato-common/src/zato/common/test/config_pubsub_outgoing.py \
 		zato-common/src/zato/common/test/rabbitmq_.py \
-		zato-server/src/zato/server/connection/outgoing_delivery.py \
+		zato-server/src/zato/server/connection/outgoing_delivery/ \
+		zato-server/src/zato/server/base/config_manager/outgoing_queues.py \
 		zato-server/src/zato/server/generic/api/outconn_hl7_fhir.py \
 		zato-server/src/zato/server/service/internal/pubsub/outgoing.py \
 		tests/python/
@@ -604,6 +605,7 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_outgoing/ \
 		$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_outgoing \
 		-W "ignore:This process:DeprecationWarning" \
@@ -618,6 +620,40 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_amqp \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-queue-delivery-rest: ## Queue delivery of outgoing REST connections, live, on every pub/sub backend.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/queue_delivery_rest/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_rest \
+		-W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-queue-delivery-soap: ## Queue delivery of outgoing SOAP connections, live, on every pub/sub backend.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/queue_delivery_soap/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_soap \
+		-W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-queue-delivery-fhir: ## Queue delivery of outgoing FHIR connections, live, on every pub/sub backend.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/queue_delivery_fhir/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_fhir \
+		-W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-queue-delivery-mllp: ## Queue delivery of outgoing MLLP connections, live, on every pub/sub backend.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/queue_delivery_mllp/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_mllp \
+		-W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-queue-delivery: test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp ## Queue delivery of every kind of outgoing connection.
 
 test-pubsub-perf: ## Every pub/sub performance test - SQL, AMQP, system-level load and mass recovery.
 	$(Zato_Log_Reset)
@@ -1114,7 +1150,7 @@ Zato_Test_Toolchain := \
 # Suites needing a live server or an external service
 # test-as2
 Zato_Test_Live := \
-	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-mongodb test-es \
+	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
 	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
 	test-ibm-mq test-kafka test-sdk test-hl7 test-llm test-rule-engine test-enmasse
 
@@ -1389,3 +1425,91 @@ hl7-backend-rest: ## Start the HTTP echo backend on dev port.
 hl7-send-message: ## Send the wellness HL7v2 message to the dev HAProxy frontend via MLLP.
 	@echo ">>> Sending wellness HL7v2 message to 127.0.0.1:$(HL7_DEV_FRONTEND_PORT)"
 	cd $(MLLP_TESTS) && $(ZATO_PY) mllp_send_message.py --port $(HL7_DEV_FRONTEND_PORT)
+
+# ----------------------------------------------------------------------------
+# Live HL7 systems - real clinical systems in containers, started standalone
+# on fixed ports. Every target is one call of the live_hl7 command and needs
+# Zato_Password exported.
+# ----------------------------------------------------------------------------
+
+HL7_LIVE_PYTHONPATH := $(CURDIR)/code/tests/python/zato-common/lib:$(CURDIR)/code/zato-common/src
+HL7_LIVE_RUN = Zato_Health_Root=$(Zato_Health) PYTHONPATH=$(HL7_LIVE_PYTHONPATH) $(ZATO_PY) -m live_hl7.cli
+HL7_LIVE_SYSTEMS := dcm4che_tools dcm4chee openelis openemr openhim openmrs oscar sftp
+
+# .PHONY expands its prerequisites where it stands, so the generated targets are declared here, after the lists they come from
+.PHONY: $(addprefix hl7-,$(filter-out dcm4che_tools,$(HL7_LIVE_SYSTEMS))) \
+	$(addprefix hl7-start-,$(HL7_LIVE_SYSTEMS)) $(addprefix hl7-stop-,$(HL7_LIVE_SYSTEMS)) \
+	$(addprefix hl7-logs-,$(HL7_LIVE_SYSTEMS)) $(addprefix hl7-describe-,$(HL7_LIVE_SYSTEMS))
+
+hl7-dcm4chee: ## Bring the dcm4chee archive up standalone, stopping what runs of it first.
+	$(HL7_LIVE_RUN) start dcm4chee --follow
+
+hl7-openelis: ## Bring OpenELIS up standalone, stopping what runs of it first.
+	$(HL7_LIVE_RUN) start openelis --follow
+
+hl7-openemr: ## Bring OpenEMR up standalone, stopping what runs of it first.
+	$(HL7_LIVE_RUN) start openemr --follow
+
+hl7-openhim: ## Bring OpenHIM up standalone, stopping what runs of it first.
+	$(HL7_LIVE_RUN) start openhim --follow
+
+hl7-openmrs: ## Bring OpenMRS up standalone, stopping what runs of it first.
+	$(HL7_LIVE_RUN) start openmrs --follow
+
+hl7-oscar: ## Bring OSCAR up standalone, stopping what runs of it first.
+	$(HL7_LIVE_RUN) start oscar --follow
+
+hl7-sftp: ## Bring the SFTP server up standalone, stopping what runs of it first.
+	$(HL7_LIVE_RUN) start sftp --follow
+
+$(addprefix hl7-start-,$(HL7_LIVE_SYSTEMS)): hl7-start-%:
+	$(HL7_LIVE_RUN) start $*
+
+$(addprefix hl7-stop-,$(HL7_LIVE_SYSTEMS)): hl7-stop-%:
+	$(HL7_LIVE_RUN) stop $*
+
+$(addprefix hl7-logs-,$(HL7_LIVE_SYSTEMS)): hl7-logs-%:
+	$(HL7_LIVE_RUN) logs $*
+
+$(addprefix hl7-describe-,$(HL7_LIVE_SYSTEMS)): hl7-describe-%:
+	$(HL7_LIVE_RUN) describe $*
+
+# ----------------------------------------------------------------------------
+# Live HL7 scenario suites - each drives the real systems of one clinical
+# scenario in their containers against a throwaway Zato environment.
+# ----------------------------------------------------------------------------
+
+hl7-scenario-hie: ## The health information exchange scenario - facility, interoperability layer, shared record and client registry, live.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) \
+	Zato_Test_HL7_HIE=1 \
+	Zato_Health_Root=$(Zato_Health) \
+	PYTHONPATH=$(HL7_LIVE_PYTHONPATH) \
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/hl7_hie/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_hie -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+hl7-scenario-registration: ## The registration scenario - the ADT feed, orders and identity between the integration engine, a PACS and a department, live.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) \
+	Zato_Test_HL7_Registration=1 \
+	Zato_Health_Root=$(Zato_Health) \
+	PYTHONPATH=$(HL7_LIVE_PYTHONPATH) \
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/hl7_registration/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_registration -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+hl7-scenario-lab: ## The laboratory scenario - the LIS orders on an analyzer and takes its results through the middleware, live.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) \
+	Zato_Test_HL7_Lab=1 \
+	Zato_Health_Root=$(Zato_Health) \
+	PYTHONPATH=$(HL7_LIVE_PYTHONPATH) \
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/hl7_lab/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_lab -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+hl7-scenarios: hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab ## Every live clinical scenario, one after another.

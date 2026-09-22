@@ -16,6 +16,7 @@ from zato.admin.web.alerts_tab_lines import Checkbox_On_Value, Edit_Hint, field_
     Line_Kind_Popover, Line_Kind_Toggle, Tab_Label, type_lines as shared_type_lines, unit_fields
 from zato.admin.web.alerts_tab_lines_llm import llm_lines
 from zato.admin.web.alerts_tab_lines_mcp import mcp_lines
+from zato.admin.web.alerts_tab_lines_queue import add_queue_lines
 from zato.admin.web.alerts_tab_picks import get_empty_html, get_pick_choices, Pick_Select_Class
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import alert_type_llm, alert_type_mcp, Field_Prefix, \
@@ -36,11 +37,12 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The lines of every alert type - the ones alerts_tab_lines.py builds and the LLM and MCP ones built from them
-# in modules of their own
+# The lines of every alert type - the ones alerts_tab_lines.py builds, the LLM and MCP ones built from them
+# in modules of their own and the queue delivery ones the outgoing connections carry on top of their own
 type_lines:'anydict' = dict(shared_type_lines)
 type_lines[alert_type_llm] = llm_lines()
 type_lines[alert_type_mcp] = mcp_lines()
+add_queue_lines(type_lines)
 
 # The kinds of field stored as one number and edited as a count with a unit select - a duration's seconds,
 # an amount's ones and a size's bytes - each with what splits the stored number for the form and what joins the form's two back

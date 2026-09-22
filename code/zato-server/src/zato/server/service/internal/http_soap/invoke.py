@@ -15,7 +15,7 @@ from time import time
 from lxml import etree
 
 # Zato
-from zato.common.api import MISC, SEC_DEF_TYPE, URL_TYPE
+from zato.common.api import HTTP_SOAP, MISC, SEC_DEF_TYPE, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, SecurityBase
 from zato.common.soap.common import SOAPFault
 from zato.common.soap.message import parse as parse_soap_message, serialize as serialize_soap_message
@@ -179,6 +179,9 @@ class InvokeChannel(AdminService):
             # The channel side already records this traffic in its own audit log
             'is_internal': True,
             'method': method,
+
+            # A hop to a channel of this very server is never queued
+            HTTP_SOAP.Queue.Field_Use_Queue: False,
             'data_format': 'json',
             'name': 'temp-invoke-channel-{}'.format(self.cid),
             'transport': 'plain_http',

@@ -445,6 +445,10 @@ class ChannelHL7MLLPWrapper(Wrapper):
             # .. the listener has to exist before a route can be built against its bounds ..
             internal_port = self._ensure_shared_server_built()
 
+            # .. a channel built again, which is what a configuration reload does, is already counted
+            # among the listener's users - its rule below replaces the one it had ..
+            is_rebuilt = _shared_state.router.has_route(self.config.name)
+
             # .. register this channel's routing rule only if the channel is active ..
             if self.config.is_active:
                 _shared_state.router.add_route(
@@ -469,7 +473,9 @@ class ChannelHL7MLLPWrapper(Wrapper):
             if internal_port:
                 self._start_shared_listener(internal_port)
 
-            _shared_state.listener_channel_count += 1
+            if not is_rebuilt:
+                _shared_state.listener_channel_count += 1
+
             self.is_connected = True
 
 # ################################################################################################################################

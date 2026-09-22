@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 # Zato
 from zato.common.marshal_.api import Model
 from zato.common.marshal_.io import DataClassIO
-from zato.common.typing_ import optional
+from zato.common.typing_ import anydict, anylist, dict_field, list_field, optional
 from zato.server.reqresp.response import Response
 from zato.server.service import Service
 
@@ -39,6 +39,14 @@ class OrderDetails(Model):
     status: str
     address: Address
     backup_address: 'optional[Address]' = None
+
+# ################################################################################################################################
+
+@dataclass(init=False)
+class OrderSummary(Model):
+    customer_id: 'str'
+    item_list: 'anylist' = list_field()
+    item_meta: 'anydict' = dict_field()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -117,6 +125,35 @@ class TestModelVivification(unittest.TestCase):
         order = OrderDetails.__new__(OrderDetails)
 
         self.assertIsNone(order.backup_address)
+
+# ################################################################################################################################
+
+    def test_field_with_a_factory_default_vivifies_an_empty_container(self) -> 'None':
+        summary = OrderSummary.__new__(OrderSummary)
+
+        self.assertEqual(summary.item_list, [])
+        self.assertEqual(summary.item_meta, {})
+
+# ################################################################################################################################
+
+    def test_vivified_container_is_the_same_object_across_reads(self) -> 'None':
+        summary = OrderSummary.__new__(OrderSummary)
+        summary.item_list.append('SKU-1')
+
+        self.assertEqual(summary.item_list, ['SKU-1'])
+
+# ################################################################################################################################
+
+    def test_to_dict_includes_the_untouched_factory_defaults(self) -> 'None':
+        summary = OrderSummary.__new__(OrderSummary)
+        summary.customer_id = 'C-1001'
+
+        expected = {
+            'customer_id': 'C-1001',
+            'item_list': [],
+            'item_meta': {},
+        }
+        self.assertEqual(summary.to_dict(), expected)
 
 # ################################################################################################################################
 
@@ -256,6 +293,66 @@ class TestSetResponseDataWithModels(unittest.TestCase):
 
         self.assertIsInstance(result, OrderDetails)
         self.assertEqual(result.customer_id, 'C-1001')
+
+# ################################################################################################################################
+
+    def test_reading_a_nested_model_is_not_content(self) -> 'None':
+        service = self._make_service(OrderDetails)
+
+        # A read vivifies the nested instance without putting anything into it.
+        _ = service.response.payload.address
+
+        result = service.set_response_data(service, data_format='json', transport='')
+
+        self.assertEqual(result, '')
+
+# ################################################################################################################################
+
+    def test_assignment_below_a_vivified_nested_model_is_content(self) -> 'None':
+        service = self._make_service(OrderDetails)
+        service.response.payload.address.city = 'Amsterdam'
+
+        result = service.set_response_data(service, data_format='json', transport='')
+
+        self.assertIsInstance(result, OrderDetails)
+        self.assertEqual(result.address.city, 'Amsterdam')
+
+# ################################################################################################################################
+
+    def test_reading_an_empty_container_is_not_content(self) -> 'None':
+        service = self._make_service(OrderSummary)
+
+        # A read materialises the list but leaves it empty.
+        _ = service.response.payload.item_list
+
+        result = service.set_response_data(service, data_format='json', transport='')
+
+        self.assertEqual(result, '')
+
+# ################################################################################################################################
+
+    def test_appending_to_a_vivified_container_is_content(self) -> 'None':
+        service = self._make_service(OrderSummary)
+        service.response.payload.item_list.append('SKU-1')
+
+        result = service.set_response_data(service, data_format='json', transport='')
+
+        self.assertIsInstance(result, OrderSummary)
+        self.assertEqual(result.item_list, ['SKU-1'])
+
+# ################################################################################################################################
+
+    def test_an_empty_container_assigned_outright_is_content(self) -> 'None':
+        service = self._make_service(OrderSummary)
+
+        # A read first, then an assignment of the very same field - the assignment is what counts.
+        _ = service.response.payload.item_list
+        service.response.payload.item_list = []
+
+        result = service.set_response_data(service, data_format='json', transport='')
+
+        self.assertIsInstance(result, OrderSummary)
+        self.assertEqual(result.item_list, [])
 
 # ################################################################################################################################
 # ################################################################################################################################

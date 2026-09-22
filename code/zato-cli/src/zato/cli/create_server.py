@@ -151,6 +151,7 @@ log_connection_info_sleep_time=5 # In seconds
 
 [startup_services]
 zato.updates.check-updates=
+zato.on-prem-gateway.sync=
 
 [user_config]
 # All paths are either absolute or relative to the directory server.conf is in

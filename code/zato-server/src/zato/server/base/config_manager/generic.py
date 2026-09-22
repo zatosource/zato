@@ -29,8 +29,10 @@ from zato.server.generic.api.outconn_es import outconn_es_bool_config_keys, outc
     outconn_es_int_config_keys
 from zato.server.generic.api.outconn_grpc import outconn_grpc_bool_config_keys, outconn_grpc_config_defaults, \
     outconn_grpc_int_config_keys
-from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_config_defaults, outconn_fhir_int_config_keys
-from zato.server.generic.api.outconn_hl7_mllp import outconn_config_defaults, outconn_int_config_keys
+from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_bool_config_keys, outconn_fhir_config_defaults, \
+    outconn_fhir_int_config_keys
+from zato.server.generic.api.outconn_hl7_mllp import outconn_bool_config_keys, outconn_config_defaults, \
+    outconn_int_config_keys
 from zato.server.generic.api.outconn_llm import llm_config_defaults, llm_int_config_keys
 from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys, outconn_odata_config_defaults, \
     outconn_odata_int_config_keys, outconn_sap_config_defaults
@@ -93,6 +95,7 @@ class Generic(ConfigManagerImpl):
     _generic_conn_handler: 'stranydict'
     _get_generic_impl_func: 'callable_'
     get_outgoing_publish_lock: 'callable_'
+    hold_outgoing_queue: 'callable_'
     rename_outgoing_subscription: 'callable_'
     delete_outgoing_subscription: 'callable_'
 
@@ -289,14 +292,15 @@ class Generic(ConfigManagerImpl):
         is_rename = bool(conn_type) and old_name != msg['name']
 
         # A renamed connection that can be published to has its topic moved to the new name, and both
-        # that and the config this method replaces happen with nothing being published to it in between,
-        # because a publication resolves its topic from what the config says the connection is called.
+        # that and the config this method replaces happen with the queue held still - nothing is published
+        # to it and no round of its delivery is in flight in between, because both resolve their topics
+        # from what the config says the connection is called.
         if is_rename:
-            lock = self.get_outgoing_publish_lock(conn_type, msg['id'])
+            hold = self.hold_outgoing_queue(conn_type, msg['id'])
         else:
-            lock = nullcontext()
+            hold = nullcontext()
 
-        with lock:
+        with hold:
 
             # Delete the connection, although not the queue in front of it, which this edit keeps
             self._delete_generic_connection(msg, needs_queue_delete=False)
@@ -515,6 +519,12 @@ class Generic(ConfigManagerImpl):
             if isinstance(value, str):
                 config[key] = int(value)
 
+        # .. and that boolean fields are booleans ..
+        for key in outconn_fhir_bool_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = as_bool(value)
+
         # .. without a security definition, there is nothing more to resolve.
         security_id = config['security_id']
         if not security_id:
@@ -543,8 +553,8 @@ class Generic(ConfigManagerImpl):
             if config.get(key) is None:
                 config[key] = default
 
-        # .. and make sure numeric fields are integers - an empty string means
-        # .. the create path had no value for the field, so its default applies.
+        # .. make sure numeric fields are integers - an empty string means
+        # .. the create path had no value for the field, so its default applies ..
         for key in outconn_int_config_keys:
             value = config[key]
             if isinstance(value, str):
@@ -552,6 +562,12 @@ class Generic(ConfigManagerImpl):
                     config[key] = int(value)
                 else:
                     config[key] = outconn_config_defaults[key]
+
+        # .. and that boolean fields are booleans.
+        for key in outconn_bool_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = as_bool(value)
 
 # ################################################################################################################################
 

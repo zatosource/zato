@@ -194,6 +194,8 @@ field_display = {
     'status_codes_window':  ('Status codes window', ''),
     'connection_failures':  ('Connection failures', ''),
     'connection_failures_window': ('Connection failures window', ''),
+    'dlq_messages':         ('DLQ messages', ''),
+    'queue_depth':          ('Queue depth', ''),
     'fault_codes':          ('Fault codes', ''),
     'fault_threshold':      ('Faults', ''),
     'faults_window':        ('Faults window', ''),
@@ -266,6 +268,10 @@ field_help = {
     'connection_failures':  'How many calls that failed before any response arrived - a timeout, a refused connection, ' + \
                             'a TLS failure - raise an alert.',
     'connection_failures_window': 'How long the window the connection failures are counted over is.',
+    'dlq_messages':         'How many messages in the connection\'s DLQ raise an alert - one is one message somebody has to ' + \
+                            'look at, and the alert stays open until the DLQ is emptied.',
+    'queue_depth':          'How many messages waiting in the connection\'s queue raise an alert - a deep queue is a receiving ' + \
+                            'system that has been unavailable for a while.',
     'fault_codes':          'The SOAP fault codes that count, comma-separated - Receiver and Server are the endpoint\'s own faults, ' + \
                             'Sender and Client the caller\'s, and a code of the endpoint\'s own is written with its prefix, e.g. x:Timeout.',
     'fault_threshold':      'How many faults with one of the fault codes in the window raise an alert.',

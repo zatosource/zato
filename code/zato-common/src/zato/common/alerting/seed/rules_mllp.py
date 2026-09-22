@@ -9,7 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The default alert rules of HL7 MLLP channels and outgoing connections - the rules of a REST or SOAP channel over
 # the mllp-channel source, minus everything that reads an HTTP status, plus the negative acknowledgments a channel
 # sends, and the rules of an outgoing HTTP connection over the mllp-outgoing source, plus the negative acknowledgments
-# a connection is answered. The HTTP channels live in rules_common.py, the connection types in rules_connections.py.
+# a connection is answered. The HTTP channels live in rules_common.py, the connection types in rules_connections.py,
+# and the queue delivery rules of the outgoing connections are built from rules_queue.py.
+
+# Zato
+from zato.common.alerting.seed.rules_queue import build_queue_rules
 
 mllp_channel_rules = """
 rule
@@ -171,7 +175,7 @@ when
 then
     outcome.action = 'email'
     outcome.severity = 'warning'
-""".strip()
+""".strip() + '\n\n' + build_queue_rules('mllp-outgoing', 'An outgoing MLLP connection')
 
 # ################################################################################################################################
 # ################################################################################################################################

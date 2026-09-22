@@ -73,6 +73,8 @@ outgoing_rest:
       status_code_threshold: 5
       connection_failures: 2
       max_latency: 2500
+      dlq_messages: 2
+      queue_depth: 500
       email_connection: smtp:{_smtp_name}
       llm_connection: {_llm_name}
 
@@ -200,6 +202,8 @@ class TestOutgoingRESTAlertsImport:
         assert opaque[storage_name('status_code_threshold')] == 5
         assert opaque[storage_name('connection_failures')] == 2
         assert opaque[storage_name('max_latency')] == 2500
+        assert opaque[storage_name('dlq_messages')] == 2
+        assert opaque[storage_name('queue_depth')] == 500
         assert opaque[storage_name('email_connection')] == f'smtp:{_smtp_name}'
         assert opaque[storage_name('llm_connection')] == _llm_name
 
@@ -239,6 +243,8 @@ class TestOutgoingRESTAlertsImport:
         assert opaque[storage_name('status_code_threshold')] == 3
         assert opaque[storage_name('connection_failures')] == 3
         assert opaque[storage_name('max_latency')] == 5000
+        assert opaque[storage_name('dlq_messages')] == 1
+        assert opaque[storage_name('queue_depth')] == 1000
         assert opaque[storage_name('email_connection')] == ''
         assert opaque[storage_name('llm_connection')] == ''
 
@@ -342,6 +348,8 @@ class TestOutgoingRESTAlertsExport:
             'status_code_threshold': 5,
             'connection_failures': 2,
             'max_latency': 2500,
+            'dlq_messages': 2,
+            'queue_depth': 500,
             'email_connection': f'smtp:{_smtp_name}',
             'llm_connection': _llm_name,
         }

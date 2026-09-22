@@ -1,0 +1,106 @@
+pubsub_topic:
+
+  # Where the connection that forwards its DLQ messages sends them
+  - name: test.queue-delivery.forwarded
+
+outgoing_soap:
+
+  # The switch off - an invocation goes to the wire the way it always did and nothing here ever reaches a queue
+  - name: test.queue-delivery.plain
+    host: "http://127.0.0.1:{{port_plain}}"
+    url_path: /services/plain
+    soap_action: urn:test:plain
+    soap_version: "1.2"
+    timeout: 30
+
+  # The switch on with a couple of quick retries and no DLQ - the connection most tests invoke through, whose
+  # messages stay at the head of the queue for as long as they fail, which is what the ordering tests rely on
+  - name: test.queue-delivery.orders
+    host: "http://127.0.0.1:{{port_orders}}"
+    url_path: /services/orders
+    soap_action: urn:test:orders
+    soap_version: "1.2"
+    timeout: 30
+    max_retries: 2
+    retry_sleep_time: 1
+    retry_backoff_threshold: 10
+    retry_backoff_multiplier: 1
+    use_queue: true
+    use_dlq: false
+
+  # The switch on and no retries at all - a message that fails once has exhausted them
+  - name: test.queue-delivery.no-retries
+    host: "http://127.0.0.1:{{port_no_retries}}"
+    url_path: /services/no-retries
+    soap_action: urn:test:no-retries
+    soap_version: "1.2"
+    timeout: 30
+    max_retries: 0
+    use_queue: true
+    use_dlq: false
+
+  # The switch on and the DLQ on with the rule leaving messages alone - a message that exhausted its retries
+  # moves to the DLQ and stays there until someone acts on it
+  - name: test.queue-delivery.dlq-keep
+    host: "http://127.0.0.1:{{port_dlq_keep}}"
+    url_path: /services/dlq-keep
+    soap_action: urn:test:dlq-keep
+    soap_version: "1.2"
+    timeout: 30
+    max_retries: 1
+    retry_sleep_time: 1
+    use_queue: true
+    dlq_action: keep
+
+  # The switch on and the DLQ off - a message that exhausted its retries stays at the head of the queue
+  - name: test.queue-delivery.no-dlq
+    host: "http://127.0.0.1:{{port_no_dlq}}"
+    url_path: /services/no-dlq
+    soap_action: urn:test:no-dlq
+    soap_version: "1.2"
+    timeout: 30
+    max_retries: 1
+    retry_sleep_time: 1
+    use_queue: true
+    use_dlq: false
+
+  # The DLQ rule puts a message back into the queue, a couple of times, quickly
+  - name: test.queue-delivery.dlq-retry
+    host: "http://127.0.0.1:{{port_dlq_retry}}"
+    url_path: /services/dlq-retry
+    soap_action: urn:test:dlq-retry
+    soap_version: "1.2"
+    timeout: 30
+    max_retries: 1
+    retry_sleep_time: 1
+    use_queue: true
+    dlq_action: retry
+    dlq_retries: 2
+    dlq_retry_interval: 1
+
+  # The DLQ rule forwards a message to a topic, with its DLQ header
+  - name: test.queue-delivery.dlq-forward
+    host: "http://127.0.0.1:{{port_dlq_forward}}"
+    url_path: /services/dlq-forward
+    soap_action: urn:test:dlq-forward
+    soap_version: "1.2"
+    timeout: 30
+    max_retries: 1
+    retry_sleep_time: 1
+    use_queue: true
+    dlq_action: forward
+    dlq_retry_interval: 1
+    dlq_forward_to: test.queue-delivery.forwarded
+
+  # The DLQ rule discards a message
+  - name: test.queue-delivery.dlq-discard
+    host: "http://127.0.0.1:{{port_dlq_discard}}"
+    url_path: /services/dlq-discard
+    soap_action: urn:test:dlq-discard
+    soap_version: "1.2"
+    timeout: 30
+    max_retries: 1
+    retry_sleep_time: 1
+    use_queue: true
+    dlq_action: discard
+    dlq_retry_interval: 1

@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, Index, Integer, MetaData, String, Table, Text
+from sqlalchemy import BigInteger, Boolean, Column, Identity, Index, Integer, MetaData, String, Table, Text
 from sqlalchemy.dialects.mysql import LONGTEXT
 
 # Zato
@@ -38,6 +38,13 @@ _data_preview_len = PubSub.Message.Data_Preview_Len
 # primary key must be a plain INTEGER to become an alias of the built-in rowid.
 _id_column_type = BigInteger().with_variant(Integer(), 'sqlite')
 
+# How the identifiers are generated - an identity column, which is what Oracle DB needs spelled out
+# to number rows at all, and what PostgreSQL renders in place of a serial. MySQL renders its
+# auto-increment and SQLite its rowid alias, both as they always did.
+def _new_id_column() -> 'Column':
+    out = Column('id', _id_column_type, Identity(), primary_key=True)
+    return out
+
 # MySQL's plain TEXT caps at 64 kB, so payloads need LONGTEXT there.
 _payload_column_type = Text().with_variant(LONGTEXT(), 'mysql')
 
@@ -55,7 +62,7 @@ metadata = MetaData()
 # has acknowledged the message and the row stays behind as the delivered-message trace
 # until the retention sweep removes it. The primary key is the publication sequence.
 message_table = Table('pubsub_message', metadata,
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column(),
     Column('msg_id', String(_short_column_len), nullable=False),
     Column('topic_name', String(_short_column_len), nullable=False),
     Column('payload', _payload_column_type, nullable=True),
@@ -96,7 +103,7 @@ message_table = Table('pubsub_message', metadata,
 # Priority and expiration are denormalized from the message and there is no
 # foreign key on purpose.
 delivery_table = Table('pubsub_delivery', metadata,
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column(),
     Column('message_id', BigInteger, nullable=False),
     Column('sub_key', String(_short_column_len), nullable=False),
     Column('topic_name', String(_short_column_len), nullable=False),

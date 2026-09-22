@@ -17,7 +17,7 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerEr
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web import alerts_tab
+from zato.admin.web import alerts_tab, delivery_tab
 from zato.admin.web.forms import add_http_soap_select, add_select_from_service
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
@@ -386,6 +386,10 @@ def index(req): # type: ignore
         return_data['create_alerts_tab'] = alerts_tab.get_alerts_tab_context(create_form, alert_type)
         return_data['edit_alerts_tab'] = alerts_tab.get_alerts_tab_context(edit_form, alert_type)
         return_data['alerts_tab_config'] = alerts_tab.get_alerts_tab_config(alert_type)
+
+    # Outgoing REST connections carry the Delivery tab, the template's includes and its JS read the tab's field names off this
+    if connection == 'outgoing' and transport == 'plain_http':
+        return_data['delivery_tab_config'] = delivery_tab.get_delivery_tab_config()
 
     return TemplateResponse(req, 'zato/http_soap/index.html', return_data)
 

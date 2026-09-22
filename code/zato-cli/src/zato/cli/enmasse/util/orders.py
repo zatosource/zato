@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.cli.enmasse.util.delivery import Delivery_Fields
 from zato.cli.enmasse.util.invocation import Health_Check_Fields, Invocation_Order_Fields_REST, Invocation_Order_Fields_SOAP, \
     Retry_Fields
 from zato.common.api import MCP
@@ -28,6 +29,7 @@ if 0:
 
 # The order the top-level sections are written to enmasse files in.
 _top_level_order = [
+    'on_prem_gateway',
     'quota_tier',
     'security',
     'groups',
@@ -99,6 +101,8 @@ _object_order['security'] = 'name', 'is_active', 'type', 'username', 'mode', 'us
     'client_secret_field', 'grant_type', 'data_format', 'extra_fields:list', \
     'static_header', 'is_static_token', 'static_token', 'static_prefix', 'rate_limiting:list', 'quota_tier',
 
+_object_order['on_prem_gateway'] = 'name', 'is_active', 'hosts:list',
+
 _object_order['quota_tier'] = 'name', 'description', 'rules:list',
 _object_order['groups']     = 'name', 'quota_tier', 'members:list',
 
@@ -112,10 +116,12 @@ _object_order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'sec
     'groups:list', 'rate_limiting:list', 'response_cache:dict', 'alerts:dict',
 
 _object_order['outgoing_rest'] = ('name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'content_type', \
-    'timeout', 'ping_method', 'tls_verify', 'is_audit_log_active') + Retry_Fields + Invocation_Order_Fields_REST + ('alerts:dict',)
+    'timeout', 'ping_method', 'tls_verify', 'is_audit_log_active') + Retry_Fields + Delivery_Fields + \
+    Invocation_Order_Fields_REST + ('alerts:dict',)
 _object_order['outgoing_soap'] = ('name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', \
     'content_type', 'timeout', 'tls_verify', 'is_audit_log_active', 'use_ws_addressing', 'use_mtom', \
-    'tls_client_cert', 'tls_client_key', 'body_credentials') + Retry_Fields + Invocation_Order_Fields_SOAP + ('alerts:dict',)
+    'tls_client_cert', 'tls_client_key', 'body_credentials') + Retry_Fields + Delivery_Fields + Invocation_Order_Fields_SOAP + \
+    ('alerts:dict',)
 
 _object_order['scheduler'] = 'name', 'is_active', 'service', 'job_type', 'start_date', 'seconds', 'minutes', 'hours', \
     'days', 'extra:list',
@@ -238,7 +244,7 @@ _object_order['channel_openapi'] = 'name', 'is_active', 'url_path', 'rest_channe
 
 _object_order['alert_rules'] = 'type', 'is_active', 'consecutive_failures', 'error_rate', \
     'max_latency', 'max_query_time', 'warning_latency', 'error_latency', 'invalid_calls', 'rejections', \
-    'throttled_calls', 'repeat_calls', 'truncations', 'volume_budget', 'max_tools', \
+    'throttled_calls', 'repeat_calls', 'truncations', 'volume_budget', 'max_tools', 'dlq_messages', 'queue_depth', \
     'max_call_time', 'health_alerts', 'auth_failures', 'warning_failures', 'error_failures', 'window', \
     'test_transfers', 'arrival_overdue', 'overdue_multiplier', 'start_delay', 'certificate_warning', \
     'outstanding_backlog', 'feed_silence', 'use_llm',

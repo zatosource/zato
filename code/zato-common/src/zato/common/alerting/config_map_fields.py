@@ -148,7 +148,16 @@ _use_llm_fields:'list[stranydict]' = [
     {'name': 'use_llm', 'kind': Kind_Ruleset_Toggle, 'key': Explain_With_LLM_Key},
 ]
 
-_http_traffic_fields:'list[stranydict]' = _connection_failure_fields + _latency_fields + _use_llm_fields
+# The queue delivery of an outgoing connection - how many messages in its DLQ and how many waiting in its queue
+# raise an alert, both depths read off the connection itself, so neither has a window
+_queue_fields:'list[stranydict]' = [
+    {'name': 'dlq_messages', 'kind': Kind_Number, 'rules': ['DLQ_Messages'],
+        'default': 'dlq_threshold', 'is_percent': False},
+    {'name': 'queue_depth', 'kind': Kind_Number, 'rules': ['Queue_Backlog'],
+        'default': 'queue_depth_threshold', 'is_percent': False},
+]
+
+_http_traffic_fields:'list[stranydict]' = _connection_failure_fields + _latency_fields + _queue_fields + _use_llm_fields
 
 # What is an LLM connection's own - completions the provider cut short at the token limit, completions it refused,
 # both of which arrive as an HTTP 200, and the tokens every call used, added up over a window of their own
@@ -381,7 +390,7 @@ type_fields:'dict[str, list[stranydict]]' = {
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
             'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Error_Rate]},
-    ] + _ack_fields + _connection_failure_fields + _latency_fields + _use_llm_fields,
+    ] + _ack_fields + _connection_failure_fields + _latency_fields + _queue_fields + _use_llm_fields,
     'common': [
         {'name': 'certificate_warning', 'kind': Kind_Number, 'rules': ['Certificate_Expiring'],
             'default': 'cert_warning_days', 'is_percent': False},

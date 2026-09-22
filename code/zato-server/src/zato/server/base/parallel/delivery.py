@@ -50,6 +50,11 @@ _retry_interval_initial = PubSub.Delivery.Retry_Interval_Initial
 _retry_interval_max = PubSub.Delivery.Retry_Interval_Max
 _retry_jitter_percent = PubSub.Delivery.Retry_Jitter_Percent
 
+# How long a delivery greenlet waits after a fetch that raised
+_fetch_error_sleep = _retry_interval_initial
+
+_outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
+
 sub_key_greenlet_dict = dict[str, 'Greenlet']
 
 # ################################################################################################################################
@@ -85,6 +90,10 @@ class PushDelivery:
         """ Kill the delivery greenlet for the given subscriber key.
         """
         with self._lock:
+
+            # A stopped subscriber is not a paused one either, or the same key would never run again if it came back
+            self._paused.discard(sub_key)
+
             if greenlet := self._greenlets.pop(sub_key, None):
                 greenlet.kill()
 
@@ -172,6 +181,8 @@ class PushDelivery:
             except Exception:
                 logger.warning('PubSub delivery error for sub_key `%s`: %s', sub_key, format_exc())
 
+                sleep(_fetch_error_sleep)
+
         logger.info('PubSub delivery greenlet stopped for sub_key `%s`', sub_key)
 
 # ################################################################################################################################
@@ -201,9 +212,13 @@ class PushDelivery:
             topic_name = message['topic_name']
             sub_config = config_by_topic[topic_name]
 
-            # A message the pause interrupted has not been concluded either way, so it is not acked
-            is_concluded = self._deliver_with_retry(message, sub_config, sub_key)
+            # Outgoing queues retry as their connection says, not as this loop does
+            if sub_key.startswith(_outgoing_sub_key_prefix):
+                is_concluded = self._deliver_outgoing(message, sub_config, sub_key)
+            else:
+                is_concluded = self._deliver_with_retry(message, sub_config, sub_key)
 
+            # A message that was not concluded is not acked, and nothing behind it is either
             if not is_concluded:
                 break
 
@@ -213,6 +228,44 @@ class PushDelivery:
         # Delivered, expired and given-up messages all leave the queue - retrying
         # ran its course above, so nothing here is awaiting another attempt.
         _ = self.backend.ack_messages(sub_key, msg_ids, sequence_ids)
+
+# ################################################################################################################################
+
+    def _deliver_outgoing(
+        self,
+        message:'anydict',
+        sub_config:'anydict',
+        sub_key:'str',
+    ) -> 'bool':
+        """ Delivers one message of an outgoing connection's queue, returning whether it was concluded.
+        """
+        msg_id = message['msg_id']
+
+        expiration_time_iso = message['expiration_time_iso']
+        normalized_expiration_iso = expiration_time_iso.replace('Z', '+00:00')
+        expiration_time = datetime.fromisoformat(normalized_expiration_iso)
+
+        try:
+            self._deliver_message(message, sub_config)
+        except Exception:
+            msg = f'PubSub outgoing delivery round failed for sub_key `{sub_key}`'
+            msg += f', msg_id `{msg_id}`: {format_exc()}'
+            logger.debug(msg)
+
+            now = utcnow()
+            if now <= expiration_time:
+                return False
+
+            # A message that expired during a failed round leaves the queue
+            msg = f'PubSub outgoing message expired before delivery for sub_key `{sub_key}`'
+            msg += f', msg_id `{msg_id}`, expiration_time_iso `{expiration_time_iso}`'
+            logger.info(msg)
+            self._insert_audit_event(message, sub_config, sub_key, False, True)
+            self.server.config_manager.outgoing_queue_depth.lower(sub_key, 1)
+            return True
+
+        self._insert_audit_event(message, sub_config, sub_key, True, False)
+        return True
 
 # ################################################################################################################################
 

@@ -10,11 +10,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import time
 from base64 import b64encode
+from http.client import OK
 from json import dumps, loads
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+# pytest
+import pytest
+
 # Zato
+from zato.common.api import IDEDeploy
 from zato.common.const import ServiceConst
 from zato.common.test.config_hot_deploy import TestConfig
 
@@ -27,25 +32,36 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The service an IDE plugin's /ide-deploy channel points to
-_service_name = 'zato.hot-deploy.create'
+# The channel an IDE plugin deploys through - a direct one to zato.hot-deploy.create, which is why its reply
+# keeps the zato_ide_deploy_create_response wrapper that the plugin reads. Through /zato/api/invoke the wrapper
+# would be stripped, as it is for any service with a direct I/O declaration invoked that way.
+_ide_deploy_path = '/ide-deploy'
+
+# The channel's security definition is created with a random password, so the tests set one they know first
+_service_change_password = 'zato.security.basic-auth.change-password'
+_ide_password = 'test.ide.deploy.password'
+
+# How long to wait for the new password to reach the server's in-RAM config, in seconds
+_password_wait = 30
+
+# How often to check whether the new password is accepted, in seconds
+_password_poll_interval = 0.5
 
 # How long to wait for the pickup directory listener to deploy what the plugin uploaded
 _deploy_wait = 15
 
-# Timeout in seconds for the admin invoke HTTP requests
+# Timeout in seconds for the HTTP requests
 _invoke_timeout = 30
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _admin_invoke(service_name:'str', payload:'anydict') -> 'any_':
-    """ Invokes a service on the live server through the admin.invoke channel.
+def _post_json(url:'str', username:'str', password:'str', payload:'anydict') -> 'tuple[int, bytes]':
+    """ Posts a JSON payload with basic auth and returns the status code with the raw body, whatever the status was.
     """
-    url = f'{TestConfig.base_url}/zato/api/invoke/{service_name}'
     body = dumps(payload).encode()
 
-    credentials = f'{ServiceConst.API_Admin_Invoke_Username}:{TestConfig.password}'
+    credentials = f'{username}:{password}'
     auth = b64encode(credentials.encode()).decode()
 
     request = Request(url, data=body, method='POST')
@@ -54,11 +70,41 @@ def _admin_invoke(service_name:'str', payload:'anydict') -> 'any_':
 
     try:
         with urlopen(request, timeout=_invoke_timeout) as response:
-            raw = response.read()
+            out = (response.status, response.read())
     except HTTPError as error:
-        raw = error.read()
+        out = (error.code, error.read())
+
+    return out
+
+# ################################################################################################################################
+
+def _admin_invoke(service_name:'str', payload:'anydict') -> 'any_':
+    """ Invokes a service on the live server through the admin.invoke channel.
+    """
+    url = f'{TestConfig.base_url}/zato/api/invoke/{service_name}'
+    status, raw = _post_json(url, ServiceConst.API_Admin_Invoke_Username, TestConfig.password, payload)
+
+    if status != OK:
         error_text = raw.decode('utf-8', errors='replace')
-        raise Exception(f'{service_name} returned HTTP {error.code}: {error_text}')
+        raise Exception(f'{service_name} returned HTTP {status}: {error_text}')
+
+    if not raw:
+        return {}
+
+    out = loads(raw)
+    return out
+
+# ################################################################################################################################
+
+def _ide_deploy(payload:'anydict') -> 'any_':
+    """ Sends a request the way an IDE plugin does - through the /ide-deploy channel with the ide_publisher credentials.
+    """
+    url = f'{TestConfig.base_url}{_ide_deploy_path}'
+    status, raw = _post_json(url, IDEDeploy.Username, _ide_password, payload)
+
+    if status != OK:
+        error_text = raw.decode('utf-8', errors='replace')
+        raise Exception(f'{_ide_deploy_path} returned HTTP {status}: {error_text}')
 
     out = loads(raw)
     return out
@@ -74,10 +120,38 @@ def _read_server_log() -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_empty_request_confirms_the_server_is_reachable(zato_server:'any_') -> 'None':
+@pytest.fixture(scope='module')
+def ide_credentials(zato_server:'any_') -> 'None':
+    """ Gives the ide_publisher security definition a password the tests know and waits until the channel accepts it.
+    """
+    _ = _admin_invoke(_service_change_password, {
+        'name': IDEDeploy.Username,
+        'password': _ide_password,
+    })
+
+    # The change reaches the server's in-RAM config asynchronously, so the channel is polled until it lets us in
+    url = f'{TestConfig.base_url}{_ide_deploy_path}'
+    deadline = time.monotonic() + _password_wait
+
+    while True:
+        status, raw = _post_json(url, IDEDeploy.Username, _ide_password, {})
+
+        if status == OK:
+            return
+
+        if time.monotonic() >= deadline:
+            error_text = raw.decode('utf-8', errors='replace')
+            raise Exception(f'{_ide_deploy_path} still refuses the new password after {_password_wait}s -> HTTP {status}: {error_text}')
+
+        time.sleep(_password_poll_interval)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def test_empty_request_confirms_the_server_is_reachable(ide_credentials:'None') -> 'None':
     """ A request with nothing to deploy is a connection test and receives a success reply.
     """
-    response = _admin_invoke(_service_name, {})
+    response = _ide_deploy({})
 
     result = response['zato_ide_deploy_create_response']
     assert result['success'] is True
@@ -86,7 +160,7 @@ def test_empty_request_confirms_the_server_is_reachable(zato_server:'any_') -> '
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_file_name_with_payload_is_deployed(zato_server:'any_') -> 'None':
+def test_file_name_with_payload_is_deployed(ide_credentials:'None') -> 'None':
     """ A bare file name with a payload is written to the pickup directory and deployed from there.
     """
     service_content = '''
@@ -101,7 +175,7 @@ class IDEDeployTestService(Service):
 
     payload = b64encode(service_content.encode()).decode()
 
-    response = _admin_invoke(_service_name, {
+    response = _ide_deploy({
         'payload': payload,
         'payload_name': 'test_ide_deploy_service.py',
     })

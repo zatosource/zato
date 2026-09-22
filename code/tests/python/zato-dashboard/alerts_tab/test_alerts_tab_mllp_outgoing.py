@@ -87,7 +87,7 @@ class TestMllpOutgoingPopup:
             line_names.append(line['name'])
 
         assert line_names == ['active', 'use_llm', 'llm', 'email', 'failures_in_a_row', 'error_rate', 'negative_acks',
-            'connection_failures', 'slow_responses']
+            'connection_failures', 'slow_responses', 'dlq_messages', 'queue_backlog']
 
         lines = _lines_by_name(config)
 
@@ -194,7 +194,7 @@ class TestMllpOutgoingPopup:
         assert _type_titles['mllp_outgoing'] == 'MLLP outgoing'
 
         assert _type_cells['mllp_outgoing'] == ['consecutive_failures', 'error_rate', 'window', 'ack_codes',
-            'connection_failures', 'max_latency', 'use_llm']
+            'connection_failures', 'max_latency', 'dlq_messages', 'queue_depth', 'use_llm']
 
         assert 'connection_failures' not in _type_cells['mllp_channel']
 

@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django.http import HttpResponseServerError
 
 # Zato
-from zato.admin.web import alerts_tab, from_user_to_utc, from_utc_to_user
+from zato.admin.web import alerts_tab, delivery_tab, from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms import add_http_soap_select, add_select_from_service, health_check_unit_for_form, \
     health_check_unit_to_scheduler
 from zato.admin.web.forms.outgoing.soap import CreateForm, EditForm
@@ -69,6 +69,9 @@ _callback_widget_names = {
 _alert_type = get_alert_type(CONNECTION.OUTGOING, URL_TYPE.SOAP)
 _alert_field_names = alerts_tab.get_storage_field_names(_alert_type)
 
+# The queue switch and the DLQ config of the Delivery tab, stored in the connection's opaque attributes
+_delivery_field_names = tuple(delivery_tab.field_defaults)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -100,7 +103,8 @@ class Index(_Index):
     output_optional = ('host', 'url_path', 'soap_action', 'soap_version', 'security_id', 'security_name', 'sec_type', \
         'sec_type_name', 'validate_tls', 'ping_method', 'timeout', 'content_type', \
         'use_ws_addressing', 'use_mtom', 'body_credentials', 'tls_client_cert', 'tls_client_key', \
-        'is_audit_log_active') + _invocation_field_names + tuple(_retry_field_defaults) + _alert_field_names
+        'is_audit_log_active') + _invocation_field_names + tuple(_retry_field_defaults) + _delivery_field_names + \
+        _alert_field_names
     output_repeated = True
 
 # ################################################################################################################################
@@ -122,6 +126,10 @@ class Index(_Index):
             value = getattr(item, name, None)
             if value is None:
                 setattr(item, name, default)
+
+        # The Delivery tab's fields are opaque attributes too, shown with their defaults and durations split into a count and a unit
+        delivery_tab.fill_row(item, item)
+        delivery_tab.split_unit_fields(item)
 
         # The start date is stored in UTC and displayed in the user's own timezone and format,
         # and only connections with a scheduler configured carry it at all.
@@ -160,6 +168,7 @@ class Index(_Index):
             'create_alerts_tab': alerts_tab.get_alerts_tab_context(create_form, _alert_type),
             'edit_alerts_tab': alerts_tab.get_alerts_tab_context(edit_form, _alert_type),
             'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
+            'delivery_tab_config': delivery_tab.get_delivery_tab_config(),
         }
 
         # The scheduler tab's start date picker needs the user's date and time format
@@ -177,8 +186,8 @@ class _CreateEdit(CreateEdit):
     input_optional = ('is_active', 'is_audit_log_active', 'url_path', 'soap_action', 'soap_version', 'security_id', \
         'validate_tls', 'ping_method', 'timeout', 'content_type', \
         'use_ws_addressing', 'use_mtom', 'body_credentials', 'tls_client_cert', 'tls_client_key') + \
-        _invocation_field_names + tuple(_retry_field_defaults) + ('callback_service', 'callback_topic', 'callback_rest') + \
-        _alert_field_names
+        _invocation_field_names + tuple(_retry_field_defaults) + _delivery_field_names + \
+        ('callback_service', 'callback_topic', 'callback_rest') + _alert_field_names
     output_required = 'id', 'name'
 
 # ################################################################################################################################
@@ -222,6 +231,11 @@ class _CreateEdit(CreateEdit):
                 input_dict[name] = int(value)
             else:
                 input_dict[name] = default
+
+        # The Delivery tab's fields arrive as text and are stored typed, with each duration's count and unit joined
+        # into seconds - the retry durations among them, which is why the join runs over the whole input
+        input_dict.update(delivery_tab.get_message_fields(self.req.POST, self.form_prefix))
+        delivery_tab.join_unit_fields(self.req.POST, self.form_prefix, input_dict)
 
         # The callback name comes from whichever widget matches the callback type selected
         if callback_type := input_dict.get('callback_type'):

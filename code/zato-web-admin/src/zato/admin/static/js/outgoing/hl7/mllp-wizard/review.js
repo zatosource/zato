@@ -16,9 +16,19 @@ $.fn.zato.wizard_kit.review.setup(wizard);
 
 var review = wizard.review;
 
+// The shared Delivery tab - the retry and DLQ summaries are its own
+var deliveryTab = $.fn.zato.delivery_tab;
+var deliveryConfig = deliveryTab.config;
+
 // ////////////////////////////////////////////////////////////////////////
 
 review.config_own = {
+
+    // What the Retries line adds when the queue is on, and what the DLQ line and
+    // the review say of a switch that is off or on
+    queueOnSuffix: ', through the queue',
+    offText: 'Off',
+    onText: 'On',
 
     // What a summary says when TLS is off, when only the server is verified
     // and when the far side asks for a certificate of this side too
@@ -110,14 +120,50 @@ review.summaryPool = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+review.isQueueOn = function() {
+    var out = wizard.field(deliveryConfig.fieldUseQueue).prop('checked');
+    return out;
+};
+
+review.isDlqOn = function() {
+    var out = wizard.field(deliveryConfig.fieldUseDLQ).prop('checked');
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The tab's own sentence about the retries, and where they run when the queue is on
 review.summaryRetries = function() {
 
-    var attempts = wizard.field('max_retries').val();
-    var firstWait = wizard.field('backoff_base_seconds').val();
-    var longestWait = wizard.field('backoff_cap_seconds').val();
-    var jitter = wizard.field('backoff_jitter_percent').val();
+    var out = deliveryTab.formatRetriesSummary();
 
-    var out = attempts + ' attempts, ' + firstWait + '-' + longestWait + ' s, ' + jitter + '% jitter';
+    if(review.isQueueOn()) {
+        out += review.config_own.queueOnSuffix;
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Off, or the tab's own sentence about what the DLQ rule does with a message
+review.summaryDlq = function() {
+
+    if(!review.isDlqOn()) {
+        return review.config_own.offText;
+    }
+
+    var out = deliveryTab.formatSummary();
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+review._switchText = function(isOn) {
+
+    var ownConfig = review.config_own;
+    var out = isOn ? ownConfig.onText : ownConfig.offText;
+
     return out;
 };
 
@@ -201,6 +247,7 @@ review.refreshSummaries = function() {
 
     review.setSummary('mllp-outconn-wizard-summary-pool', review.summaryPool());
     review.setSummary('mllp-outconn-wizard-summary-retries', review.summaryRetries());
+    review.setSummary('mllp-outconn-wizard-summary-dlq', review.summaryDlq());
     review.setSummary('mllp-outconn-wizard-summary-send-limit', review.summarySendLimit());
     review.setSummary(wizard.alerts.config.summaryId, wizard.alerts.summary());
 
@@ -271,10 +318,14 @@ review.render = function() {
         {
             label: groups.delivery,
             step: 1,
-            edit: review._buildEdit('retries', 'mllp-outconn-wizard-edit-retries'),
+            edit: function() {
+                wizard.forms.openRetries(document.getElementById(wizard.forms.config_own.retriesEditLinkId));
+            },
             rows: [
                 ['Pool', review.summaryPool()],
-                ['Retries', review.summaryRetries()],
+                ['Retries', deliveryTab.formatRetriesSummary()],
+                ['Use queue', review._switchText(review.isQueueOn())],
+                ['Dead-letter queue', review.summaryDlq()],
                 ['Send limit', review.summarySendLimit()]
             ]
         },

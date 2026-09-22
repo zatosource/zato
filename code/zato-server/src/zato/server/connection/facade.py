@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
+from copy import copy
 from datetime import datetime, timedelta, timezone
 
 # Arrow
@@ -31,10 +32,12 @@ from requests import \
 from zato.common.api import AS4, SCHEDULER
 from zato.common.as2.common import DeliveryKind as AS2DeliveryKind
 from zato.common.json_internal import dumps
+from zato.common.pubsub.outgoing import Key_Data, SendRejected
 from zato.common.typing_ import cast_
 from zato.server.connection.ftp import FTPConnection
 from zato.server.connection.sftp import SFTPConnection
 from zato.server.connection.smb import SMBConnection
+from zato.server.generic.api.outconn_hl7_mllp import get_ack_rejection, to_message_text
 
 ################################################################################################################################
 ################################################################################################################################
@@ -46,6 +49,8 @@ if 0:
     from zato.common.as2.outbound import SendResult as AS2SendResult
     from zato.common.as4.outbound import PullResult, SendResult
     from zato.common.as4.resend import ResendCandidate
+    from zato.common.hl7.mllp.ack import AckResult
+    from zato.common.pubsub.outgoing import SendResult as QueueSendResult
     from zato.common.pubsub.sql.backend import PublishResult
     from zato.common.typing_ import any_, anydict, callnone, strbytes, strnone
     from zato.server.base.parallel import ParallelServer
@@ -287,10 +292,9 @@ class RESTInvoker:
 # ################################################################################################################################
 
     def publish(self, data:'any_'='', **kwargs:'any_') -> 'any_':
-        """ Queues a message for delivery to this connection. This is the same publisher that
-        self.out.rest reaches, so both ways of naming a connection publish to the same queue.
+        """ Queues a message for delivery to this connection, under the calling service's correlation id.
         """
-        out = self.item.publish(data, **kwargs)
+        out = self.conn.publish(data, cid=self.container.cid, **kwargs)
         return out
 
 # ################################################################################################################################
@@ -829,10 +833,12 @@ class HL7MLLPInvoker:
     """ Wraps a single HL7 MLLP outgoing connection for use from services.
     """
     _conn_name: 'str'
+    _cid: 'str'
     _outconn_hl7_mllp: 'anydict'
 
-    def __init__(self, conn_name:'str', outconn_hl7_mllp:'anydict') -> 'None':
+    def __init__(self, conn_name:'str', cid:'str', outconn_hl7_mllp:'anydict') -> 'None':
         self._conn_name = conn_name
+        self._cid = cid
         self._outconn_hl7_mllp = outconn_hl7_mllp
 
     def __repr__(self) -> 'str':
@@ -843,15 +849,60 @@ class HL7MLLPInvoker:
 
 # ################################################################################################################################
 
-    def send(self, data:'str | bytes', *, needs_audit:'bool'=True) -> 'object':
-        """ Sends an HL7 message through the named outgoing connection and returns an AckResult.
+    def send(self, data:'str | bytes', *, needs_audit:'bool'=True) -> 'AckResult | QueueSendResult':
+        """ Sends an HL7 message through the named outgoing connection. With the queue switch off, what comes back
+        is the AckResult of whatever code the receiving system answered with, and a send that no acknowledgment
+        came back from raises. With the switch on, what comes back is a SendResult and nothing is raised.
         """
         wrapper = self._outconn_hl7_mllp[self._conn_name].conn
 
-        # Take a pooled connection for the duration of the send, it goes back to the pool afterwards
-        with wrapper.client() as connection:
-            out = connection.invoke(data, needs_audit=needs_audit)
+        if wrapper.use_queue:
+            out = self._send_or_queue(wrapper, data, needs_audit)
+        else:
+            out = self._send_direct(wrapper, data, needs_audit, needs_retry=True)
 
+        return out
+
+# ################################################################################################################################
+
+    def ping(self) -> 'None':
+        """ Opens a connection to the receiving system and closes it again, through a pooled connection - a system that
+        is not there raises. Nothing is sent, so a ping goes to the wire whether or not the queue holds messages.
+        """
+        wrapper = self._outconn_hl7_mllp[self._conn_name].conn
+
+        with wrapper.client() as connection:
+            connection.ping()
+
+# ################################################################################################################################
+
+    def _send_direct(self, wrapper:'any_', data:'str | bytes', needs_audit:'bool', *, needs_retry:'bool') -> 'AckResult':
+        """ One send through a pooled connection, which goes back to the pool afterwards.
+        """
+        with wrapper.client() as connection:
+            out = connection.invoke(data, cid=self._cid, needs_audit=needs_audit, needs_retry=needs_retry)
+
+        return out
+
+# ################################################################################################################################
+
+    def _send_or_queue(self, wrapper:'any_', data:'str | bytes', needs_audit:'bool') -> 'QueueSendResult':
+        """ A send with the queue switch on - one direct attempt if the queue is empty, otherwise or on a rejection
+        the message is queued, and the caller reads what happened off the result rather than catching anything.
+        """
+        request = {
+            Key_Data: to_message_text(data),
+        }
+
+        def attempt() -> 'AckResult':
+            ack = self._send_direct(wrapper, data, needs_audit, needs_retry=False)
+
+            if rejection := get_ack_rejection(ack):
+                raise SendRejected(rejection, ack)
+
+            return ack
+
+        out = wrapper.publisher.send_or_queue(self._cid, request, attempt)
         return out
 
 # ################################################################################################################################
@@ -860,16 +911,18 @@ class HL7MLLPInvoker:
 class MLLPFacade:
     """ Provides dict-like access to HL7 MLLP outgoing connections from services via self.mllp.
     """
+    cid: 'str'
     _outconn_hl7_mllp: 'anydict'
 
-    def init(self, config_manager:'ConfigManager') -> 'None':
+    def init(self, cid:'str', config_manager:'ConfigManager') -> 'None':
+        self.cid = cid
         self._outconn_hl7_mllp = config_manager.outconn_hl7_mllp
 
 # ################################################################################################################################
 
     def __getitem__(self, name:'str') -> 'HL7MLLPInvoker':
         self._outconn_hl7_mllp[name]
-        return HL7MLLPInvoker(name, self._outconn_hl7_mllp)
+        return HL7MLLPInvoker(name, self.cid, self._outconn_hl7_mllp)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -877,9 +930,11 @@ class MLLPFacade:
 class FHIRFacade:
     """ Provides dict-like access to HL7 FHIR outgoing connections from services via self.fhir.
     """
+    cid: 'str'
     _outconn_hl7_fhir: 'anydict'
 
-    def init(self, config_manager:'ConfigManager') -> 'None':
+    def init(self, cid:'str', config_manager:'ConfigManager') -> 'None':
+        self.cid = cid
         self._outconn_hl7_fhir = config_manager.outconn_hl7_fhir
 
 # ################################################################################################################################
@@ -892,7 +947,12 @@ class FHIRFacade:
         # Take a pooled client, blocking to cover the window while the queue is still being built,
         # and put it right back - the client is safe for concurrent use so all callers share the one object.
         with wrapper.client(should_block=True, block_timeout=_fhir_block_timeout) as client:
-            out = cast_('_HL7FHIRConnection', client)
+            client = cast_('_HL7FHIRConnection', client)
+
+        # What the service is handed is a copy sharing everything with the pooled client but the correlation id,
+        # so that the calls the service makes are audited and queued under the service's own id
+        out = copy(client)
+        out.zato_cid = self.cid
 
         return out
 

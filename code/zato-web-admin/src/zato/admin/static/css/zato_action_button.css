@@ -46,6 +46,15 @@ div.page_prompt a:not(.common):active {
     transition: box-shadow 0.15s, background 0.15s;
 }
 
+/* A download is an anchor rather than a button - it carries .zato-link-unstyled
+   as well, which keeps the dashboard's link face away from it, and the underline
+   the browser itself adds goes here. */
+a.zato-action-button,
+a.zato-action-button:hover {
+    color: var(--zato-action-button-text);
+    text-decoration: none;
+}
+
 .zato-action-button:disabled,
 .zato-action-button:disabled:hover,
 .record-edit-action-button:disabled,

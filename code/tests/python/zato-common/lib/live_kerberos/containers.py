@@ -10,7 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import shutil
 import subprocess
-from time import sleep, time
+
+# Zato
+from live_containers.ready import ContainerExited, wait_until
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,16 +56,6 @@ class ModuleCtx:
 
     # The marker file the container touches once provisioning is complete
     Ready_Marker_Path = os.path.join(Shared_Dir, 'ready')
-
-    # How long to wait for the container to provision itself - the first run
-    # includes an apt-get install, which is the slow part.
-    Ready_Timeout = 300
-
-    # How long to sleep between readiness checks
-    Ready_Sleep = 1
-
-    # After how many checks the wait reports its progress
-    Ready_Report_Every = 15
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -184,36 +176,31 @@ def _write_shared_files() -> 'None':
 
 # ################################################################################################################################
 
-def _wait_until_ready() -> 'None':
-    """ Waits until the container reports that the realm and the keytabs are in place.
+def _is_provisioned() -> 'bool':
+    """ True once the container has touched its marker file. A container that exited first is a failure
+    rather than something to keep waiting for, so that ends the wait with the container's own logs.
     """
-    deadline = time() + ModuleCtx.Ready_Timeout
-    attempt_count = 0
+    if os.path.exists(ModuleCtx.Ready_Marker_Path):
+        return True
 
-    while time() < deadline:
+    result = subprocess.run(
+        ['docker', 'inspect', '--format', '{{.State.Running}}', ModuleCtx.KDC_Container_Name],
+        capture_output=True, text=True, check=False)
 
-        if os.path.exists(ModuleCtx.Ready_Marker_Path):
-            return
+    if result.returncode == 0 and result.stdout.strip() != 'true':
+        logs = subprocess.run(
+            ['docker', 'logs', ModuleCtx.KDC_Container_Name], capture_output=True, text=True, check=False)
+        raise ContainerExited(f'The KDC container exited during provisioning -> {logs.stdout}\n{logs.stderr}')
 
-        # The container may have exited with an error, in which case waiting further is pointless
-        result = subprocess.run(
-            ['docker', 'inspect', '--format', '{{.State.Running}}', ModuleCtx.KDC_Container_Name],
-            capture_output=True, text=True, check=False)
+    return False
 
-        if result.returncode == 0 and result.stdout.strip() != 'true':
-            logs = subprocess.run(
-                ['docker', 'logs', ModuleCtx.KDC_Container_Name], capture_output=True, text=True, check=False)
-            raise Exception(f'The KDC container exited during provisioning -> {logs.stdout}\n{logs.stderr}')
+# ################################################################################################################################
 
-        # The first run pulls the image and installs packages, so a long wait reports that it is still alive
-        attempt_count += 1
-
-        if attempt_count % ModuleCtx.Ready_Report_Every == 0:
-            print(f'Still waiting for the KDC, attempt {attempt_count}', flush=True)
-
-        sleep(ModuleCtx.Ready_Sleep)
-
-    raise Exception(f'The KDC did not become ready within {ModuleCtx.Ready_Timeout}s')
+def _wait_until_ready() -> 'None':
+    """ Waits until the container reports that the realm and the keytabs are in place -
+    the first run includes an apt-get install, which is the slow part.
+    """
+    wait_until(_is_provisioned, 'the KDC')
 
 # ################################################################################################################################
 

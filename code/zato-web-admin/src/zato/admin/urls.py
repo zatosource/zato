@@ -15,7 +15,7 @@ from django.views.static import serve as static_serve
 from zato.admin import settings
 from zato.admin.web.views import account, config_db, datadog, demo_config, destinations, env_variables, grafana_cloud, \
     highlight as highlight_view, http_soap, http_soap_limits, live_form_updates, log_streaming, logging_, \
-    main, news, openapi_, python_packages, redis_, sbom, scheduler, service, updates
+    main, news, on_prem_gateway, openapi_, python_packages, redis_, sbom, scheduler, service, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import as4 as channel_as4
 from zato.admin.web.views.channel.hl7 import dashboard as channel_hl7_dashboard
@@ -50,6 +50,7 @@ from zato.admin.web.views.outgoing import as2 as out_as2
 from zato.admin.web.views.outgoing import as4 as out_as4
 from zato.admin.web.views.outgoing import es as out_es
 from zato.admin.web.views.outgoing import file_transfer_schedule as out_file_transfer_schedule
+from zato.admin.web.views.outgoing import delivery as out_delivery
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import llm as out_llm
@@ -1265,6 +1266,21 @@ urlpatterns += [
     url(r'^zato/mongodb/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_mongodb.ping), name='out-mongodb-ping'),
 
+    # .. The queue and the DLQ of an outgoing connection
+
+    path('zato/outgoing/delivery/<str:conn_type>/<int:conn_id>/',
+        login_required(out_delivery.index), name='out-delivery'),
+    url(r'^zato/outgoing/delivery/message/$',
+        login_required(out_delivery.message), name='out-delivery-message'),
+    url(r'^zato/outgoing/delivery/download/$',
+        login_required(out_delivery.download), name='out-delivery-download'),
+    url(r'^zato/outgoing/delivery/refresh/$',
+        login_required(out_delivery.refresh), name='out-delivery-refresh'),
+    url(r'^zato/outgoing/delivery/action/$',
+        login_required(out_delivery.action), name='out-delivery-action'),
+    url(r'^zato/outgoing/delivery/save/$',
+        login_required(out_delivery.save), name='out-delivery-save'),
+
     # .. Redis
 
     url(r'^zato/redis/$',
@@ -1799,6 +1815,28 @@ urlpatterns += [
         login_required(env_variables.test), name='settings-env-variables-test'),
     url(r'^zato/env-variables/save$',
         login_required(env_variables.save), name='settings-env-variables-save'),
+]
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Settings - On-premises gateways
+
+    url(r'^zato/on-prem-gateway/$',
+        login_required(on_prem_gateway.index), name='settings-on-prem-gateway'),
+    url(r'^zato/on-prem-gateway/get-list$',
+        login_required(on_prem_gateway.get_list), name='settings-on-prem-gateway-get-list'),
+    url(r'^zato/on-prem-gateway/create$',
+        login_required(on_prem_gateway.create), name='settings-on-prem-gateway-create'),
+    url(r'^zato/on-prem-gateway/edit$',
+        login_required(on_prem_gateway.edit), name='settings-on-prem-gateway-edit'),
+    url(r'^zato/on-prem-gateway/delete/(?P<id>.*)$',
+        login_required(on_prem_gateway.delete), name='settings-on-prem-gateway-delete'),
+    url(r'^zato/on-prem-gateway/enrollment-token/(?P<id>.*)$',
+        login_required(on_prem_gateway.enrollment_token), name='settings-on-prem-gateway-enrollment-token'),
+    url(r'^zato/on-prem-gateway/reset-key/(?P<id>.*)$',
+        login_required(on_prem_gateway.reset_key), name='settings-on-prem-gateway-reset-key'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################

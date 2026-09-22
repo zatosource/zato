@@ -172,6 +172,8 @@ _popover_labels = {
     'token_budget':         'Alert above',
     'volume_budget':        'Alert above',
     'max_tools':            'Alert above',
+    'dlq_messages':         'Alert at',
+    'queue_depth':          'Alert at',
     'warning_latency':      'Warning above',
     'error_latency':        'Error above',
     'arrival_overdue':      'Alert after',

@@ -48,6 +48,7 @@ _OAuth = SEC_DEF_TYPE.OAUTH
 _SPNEGO = SEC_DEF_TYPE.SPNEGO
 
 _retry = HTTP_SOAP.Retry
+_queue = HTTP_SOAP.Queue
 _invocation = HTTP_SOAP.Invocation
 
 # What a retry of an outgoing REST request is called in the logs.
@@ -63,6 +64,9 @@ Default_Content_Type = 'text/plain'
 # An outgoing request goes to the address its connection is configured with and to no other one,
 # so a redirect, which names a different address, is not followed.
 Allow_Redirects = False
+
+# Methods that read rather than deliver - never queued
+Read_Methods = ('GET', 'HEAD', 'OPTIONS')
 
 # What a configuration field's value is replaced with before the configuration is logged.
 Masked_Value = '***'
@@ -112,6 +116,22 @@ def _needs_serialization(data:'any_') -> 'bool':
     else:
         out = True
 
+    return out
+
+# ################################################################################################################################
+
+def is_rest_rejection(response:'_RequestsResponse') -> 'bool':
+    """ Whether an endpoint turned a REST request down.
+    """
+    out = not response.ok
+    return out
+
+# ################################################################################################################################
+
+def get_rest_rejection_error(response:'_RequestsResponse') -> 'str':
+    """ The error a rejected REST request is reported with.
+    """
+    out = f'HTTP {response.status_code} {response.text}'
     return out
 
 # ################################################################################################################################
