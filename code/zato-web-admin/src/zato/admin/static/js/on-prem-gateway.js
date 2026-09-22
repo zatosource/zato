@@ -113,7 +113,7 @@ $.fn.zato.on_prem_gateway.field_descriptions = {
     'id_name': 'The unique name of the gateway. Enrollment tokens are issued per gateway name ' +
         'and each instance enrolled under this name serves the same set of addresses.',
     'id_is_active': 'Determines whether the environment accepts connections from this gateway. ' +
-        'An inactive gateway is disconnected and its addresses cease to resolve.',
+        'An inactive gateway is disconnected.',
     'id_is_key_reset_required': 'Determines whether an enrolled gateway enrolls again only after its key ' +
         'has been reset. When disabled, a new enrollment token replaces the key on file, for instance ' +
         'when the gateway is reinstalled or moved to another host.',
