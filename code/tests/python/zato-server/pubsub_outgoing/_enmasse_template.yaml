@@ -60,8 +60,11 @@ outgoing_rest:
 
 outgoing_fhir:
 
+  # The DLQ switch is off for the same reason as with the two REST connections above - the tests have this one's
+  # endpoint refuse a document and go down for a restart, and the document has to stay in the queue through both
   - name: test.outgoing.fhir
     address: "http://127.0.0.1:{{port_fhir}}/fhir/r4"
+    use_dlq: false
 
   - name: test.outgoing.fhir-secured
     address: "http://127.0.0.1:{{port_fhir_secured}}/fhir/r4"

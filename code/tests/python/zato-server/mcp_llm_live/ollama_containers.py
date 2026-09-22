@@ -204,6 +204,18 @@ def _has_expected_context_length() -> 'bool':
 
 # ################################################################################################################################
 
+def _is_port_published(container_name:'str', internal_port:'int') -> 'bool':
+    """ Whether the running container actually publishes its port on the host - a start that failed
+    on a busy port can leave the container running with no network endpoint at all, so its port
+    bindings are recorded but not in effect and nothing on the host reaches it.
+    """
+    result = _run_docker(['port', container_name, f'{internal_port}/tcp'])
+
+    out = result.returncode == 0 and result.stdout.strip() != ''
+    return out
+
+# ################################################################################################################################
+
 def _ensure_container_running() -> 'None':
     """ Starts the Ollama container, creating it first if it does not exist at all.
     The model weights live on a named volume, so recreating the container never repeats the pull.
@@ -218,14 +230,16 @@ def _ensure_container_running() -> 'None':
         # the model volume outlives it, so nothing is pulled again ..
         if _has_expected_context_length():
 
-            # .. an existing but stopped container only needs to be started again.
+            # .. an existing but stopped container only needs to be started again ..
             if result.stdout.strip() != 'true':
                 result = _run_docker_publishing_port(['start', Ollama_Container_Name], Ollama_Container_Name, is_create=False)
 
                 if result.returncode != 0:
                     raise Exception(f'Could not restart Ollama -> {result.stderr}')
 
-            return
+            # .. and it is only kept if the host can reach it, otherwise it is replaced below.
+            if _is_port_published(Ollama_Container_Name, _ollama_internal_port):
+                return
 
         result = _run_docker(['rm', '--force', Ollama_Container_Name])
 
@@ -365,34 +379,44 @@ def _ensure_console_container_running() -> 'None':
     # Find out whether the container exists and whether it is running ..
     result = _run_docker(['inspect', '--format', '{{.State.Running}}', Console_Container_Name])
 
-    # .. a non-zero exit code means there is no such container, so create it ..
+    if result.returncode == 0:
+
+        # .. an existing but stopped container only needs to be started again ..
+        if result.stdout.strip() != 'true':
+            result = _run_docker_publishing_port(['start', Console_Container_Name], Console_Container_Name, is_create=False)
+
+            if result.returncode != 0:
+                raise Exception(f'Could not restart the console -> {result.stderr}')
+
+        # .. and it is only kept if the host can reach it, otherwise it is replaced below.
+        if _is_port_published(Console_Container_Name, _console_internal_port):
+            return
+
+        result = _run_docker(['rm', '--force', Console_Container_Name])
+
+        if result.returncode != 0:
+            raise Exception(f'Could not remove the console -> {result.stderr}')
+
+    # .. there is no container now, so create it.
+    _pull_image(Console_Image)
+
+    run_arguments = [
+        'run', '-d',
+        '--name', Console_Container_Name,
+        '-p', f'{Console_Port}:{_console_internal_port}',
+        '--add-host', f'{_console_host_name}:host-gateway',
+        '-e', f'OLLAMA_BASE_URL=http://{_console_host_name}:{Ollama_Port}',
+        '-e', f'WEBUI_SECRET_KEY={_console_secret_key}',
+        '-e', 'RAG_EMBEDDING_ENGINE=ollama',
+        '-e', 'OFFLINE_MODE=1',
+        '-v', f'{Console_Volume_Name}:/app/backend/data',
+        Console_Image,
+    ]
+
+    result = _run_docker_publishing_port(run_arguments, Console_Container_Name, is_create=True)
+
     if result.returncode != 0:
-        _pull_image(Console_Image)
-
-        run_arguments = [
-            'run', '-d',
-            '--name', Console_Container_Name,
-            '-p', f'{Console_Port}:{_console_internal_port}',
-            '--add-host', f'{_console_host_name}:host-gateway',
-            '-e', f'OLLAMA_BASE_URL=http://{_console_host_name}:{Ollama_Port}',
-            '-e', f'WEBUI_SECRET_KEY={_console_secret_key}',
-            '-e', 'RAG_EMBEDDING_ENGINE=ollama',
-            '-e', 'OFFLINE_MODE=1',
-            '-v', f'{Console_Volume_Name}:/app/backend/data',
-            Console_Image,
-        ]
-
-        result = _run_docker_publishing_port(run_arguments, Console_Container_Name, is_create=True)
-
-        if result.returncode != 0:
-            raise Exception(f'Could not start the console -> {result.stderr}')
-
-    # .. an existing but stopped container only needs to be started again.
-    elif result.stdout.strip() != 'true':
-        result = _run_docker_publishing_port(['start', Console_Container_Name], Console_Container_Name, is_create=False)
-
-        if result.returncode != 0:
-            raise Exception(f'Could not restart the console -> {result.stderr}')
+        raise Exception(f'Could not start the console -> {result.stderr}')
 
 # ################################################################################################################################
 
