@@ -144,6 +144,14 @@ ul {
    width: 9rem;
 }
 
+/* A submenu marked as wide holds entries that do not fit the default width, e.g. the System
+   menu's On-premises gateways. Only its own children are widened, the menus nested
+   under them keep the default. */
+
+.pure-css-nav > nav ul.wide > li.child {
+   width: 11.5rem;
+}
+
 .pure-css-nav > nav ul li a {
     display:block;
      height:100%;

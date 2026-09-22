@@ -1,407 +1,516 @@
-$.fn.zato = $.fn.zato || {};
-$.fn.zato.onPremGateway = $.fn.zato.onPremGateway || {};
 
-(function() {
+// /////////////////////////////////////////////////////////////////////////////
 
-    var dashboard = $.fn.zato.onPremGateway;
+$.fn.zato.data_table.OnPremGateway = new Class({
+    toString: function() {
+        var s = '<OnPremGateway id:{0} name:{1} is_active:{2}';
+        return String.format(s, this.id ? this.id : '(none)',
+                                this.name ? this.name : '(none)',
+                                this.is_active ? this.is_active : '(none)');
+    }
+});
 
-    dashboard.config = {
-        apiPrefix: '/zato/on-prem-gateway/',
-        hostsPlaceholder: '',
-        downloadUrl: '',
-        refreshInterval: 10000,
-        statusConnected: 'Connected',
-        statusOffline: 'Enrolled, offline',
-        statusNotEnrolled: 'Not enrolled',
-        statusInactive: 'Not active',
-        emptyLabel: 'No gateways yet',
-        formTitleNew: 'New gateway',
-        formTitleEdit: 'Edit gateway',
-        saveLabel: 'Save',
-        savingLabel: 'Saving...',
-        deleteConfirm: 'Delete {name}?',
-        resetKeyConfirm: 'Reset the key of {name}?',
-        tokenTitle: 'Enrollment token for {name}',
-        copyLabel: 'Copy',
-        copiedLabel: 'Copied'
-    };
+// /////////////////////////////////////////////////////////////////////////////
 
-    dashboard.state = {
-        gateways: [],
-        editId: null,
-        timer: null
-    };
+$.fn.zato.on_prem_gateway.status = {
+    notEnrolled: 'Not enrolled',
+    notActive: 'Not active'
+};
 
-    // ////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
 
-    dashboard.getStatus = function(gateway) {
+$.fn.zato.on_prem_gateway.config = {
 
-        if (!gateway.is_active) {
-            return dashboard.config.statusInactive;
+    // The range that a port number is required to fall in
+    port_min: 1,
+    port_max: 65535,
+
+    // Where a validation message is displayed in relation to the field it concerns
+    error_placement: 'bottom',
+
+    // Where the outcome of an action is displayed in relation to the link that invoked it,
+    // and for how long a confirmation of success remains visible
+    message_placement: 'top',
+    success_visible_ms: 1500,
+
+    // What a cell without a value displays, matching the no_value_indicator template filter
+    no_value_html: '<span class="form_hint">---</span>',
+    no_value_text: '---',
+    no_value_class: 'form_hint',
+
+    // The runtime state of the gateways is read periodically from here
+    refresh_url: '/zato/on-prem-gateway/refresh/',
+    refresh_time_field: 'connected_since',
+
+    // The columns refreshed along with the connection time
+    refreshed_columns: ['status', 'remote_address', 'gateway_version', 'platform'],
+
+    // The links in a row that outcomes are reported beside
+    create_link_selector: 'a[href*="on_prem_gateway.create"]',
+    edit_link_text: 'Edit',
+    enrollment_token_link_text: 'Enrollment token',
+    reset_key_link_text: 'Reset key',
+
+    format_error: '`{0}` is not in the host:port format',
+    host_error: '`{0}` does not specify a host',
+    port_error: '`{0}` does not specify a numeric port',
+    port_range_error: '`{0}` specifies a port outside the {1}-{2} range',
+    duplicate_error: '`{0}` is listed more than once'
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$(document).ready(function() {
+
+    var config = $.fn.zato.on_prem_gateway.config;
+    var timeAgo = $.fn.zato.time_ago;
+
+    timeAgo.config.refresh_url = config.refresh_url;
+    timeAgo.config.refresh_time_field = config.refresh_time_field;
+    timeAgo.config.never_label = config.no_value_text;
+    timeAgo.config.never_class = config.no_value_class;
+    timeAgo.config.local_time_prefix = true;
+    timeAgo.config.on_refresh = $.fn.zato.on_prem_gateway.on_refresh;
+    timeAgo.init_table('#data-table');
+
+    $.fn.zato.data_table.password_required = false;
+    $.fn.zato.data_table.class_ = $.fn.zato.data_table.OnPremGateway;
+    $.fn.zato.data_table.new_row_func = $.fn.zato.on_prem_gateway.data_table.new_row;
+    $.fn.zato.data_table.parse();
+    $.fn.zato.data_table.setup_forms(['name']);
+    $.fn.zato.data_table.before_submit_hook = $.fn.zato.on_prem_gateway.before_submit_hook;
+    $.fn.zato.data_table._on_submit_complete = $.fn.zato.on_prem_gateway.on_submit_complete;
+
+    $('#enrollment_token-div').dialog({
+        autoOpen: false,
+        width: '40em'
+    });
+
+    $('#enrollment-token-copy').on('click', function() {
+        $.fn.zato.ui_helpers.copy_to_clipboard(this, $('#enrollment-token-value').val());
+    });
+
+    // A message left behind by a rejected attempt does not outlive the dialog it was shown in
+    $.each({'#create-div':'', '#edit-div':'edit-'}, function(divId, prefix) {
+        $(divId).on('dialogclose', function() {
+            $.fn.zato.on_prem_gateway.clear_field_error($('#id_' + prefix + 'hosts'));
+        });
+    });
+
+    var uniqueConstraints = [
+        {field: 'name', entity_type: 'on_prem_gateway', attr_name: 'name'}
+    ];
+
+    $.each(uniqueConstraints, function(constraintIndex, constraint) {
+        $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
+        $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
+    });
+})
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.field_descriptions = {
+    'id_name': 'The unique name of the gateway. Enrollment tokens are issued per gateway name ' +
+        'and each instance enrolled under this name serves the same set of addresses.',
+    'id_is_active': 'Determines whether the environment accepts connections from this gateway. ' +
+        'An inactive gateway is disconnected and its addresses cease to resolve.',
+    'id_is_key_reset_required': 'Determines whether an enrolled gateway enrolls again only after its key ' +
+        'has been reset. When disabled, a new enrollment token replaces the key on file, for instance ' +
+        'when the gateway is reinstalled or moved to another host.',
+    'id_hosts': 'The on-premises addresses served by this gateway, one host:port entry per line, ' +
+        'for example erp-db.corp.local:5432.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.how_it_works_placement = 'left';
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Applies to the list of addresses the same rules as the server, so that an invalid
+// entry is reported in the form instead of by a rejected request. Returns an empty
+// string when the list is valid.
+$.fn.zato.on_prem_gateway.get_hosts_error = function(value) {
+
+    var config = $.fn.zato.on_prem_gateway.config;
+    var lines = value.split('\n');
+    var seen = {};
+
+    for(var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+
+        var item = lines[lineIndex].trim();
+
+        if(!item) {
+            continue;
         }
 
-        if (gateway.is_connected) {
-            return dashboard.config.statusConnected;
+        var separator = item.lastIndexOf(':');
+
+        if(separator === -1) {
+            return String.format(config.format_error, item);
         }
 
-        if (gateway.has_key) {
-            return dashboard.config.statusOffline;
+        var host = item.substring(0, separator).trim();
+        var port = item.substring(separator + 1).trim();
+
+        if(!host) {
+            return String.format(config.host_error, item);
         }
 
-        return dashboard.config.statusNotEnrolled;
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.getStatusClass = function(gateway) {
-
-        if (gateway.is_active && gateway.is_connected) {
-            return 'on-prem-gateway-status-connected';
+        if(!/^\d+$/.test(port)) {
+            return String.format(config.port_error, item);
         }
 
-        if (gateway.is_active && gateway.has_key) {
-            return 'on-prem-gateway-status-offline';
+        var portNumber = parseInt(port, 10);
+
+        if(portNumber < config.port_min || portNumber > config.port_max) {
+            return String.format(config.port_range_error, item, config.port_min, config.port_max);
         }
 
-        return 'on-prem-gateway-status-unknown';
-    };
+        var address = host + ':' + portNumber;
 
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.escape = function(text) {
-
-        var container = $('<div/>');
-
-        return container.text(text).html();
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.buildRow = function(gateway) {
-
-        var status = dashboard.getStatus(gateway);
-        var statusClass = dashboard.getStatusClass(gateway);
-        var since = gateway.is_connected ? gateway.connected_since : '';
-
-        var out = [];
-
-        out.push('<tr data-id="' + gateway.id + '">');
-        out.push('<td class="on-prem-gateway-name">' + dashboard.escape(gateway.name) + '</td>');
-        out.push('<td><span class="' + statusClass + '">' + dashboard.escape(status) + '</span></td>');
-        out.push('<td>' + gateway.host_count + '</td>');
-        out.push('<td>' + dashboard.escape(since) + '</td>');
-        out.push('<td class="on-prem-gateway-actions">' +
-            '<a href="#" class="on-prem-gateway-token-link">Enrollment token</a>' +
-            '<a href="#" class="on-prem-gateway-edit-link">Edit</a>' +
-            '<a href="#" class="on-prem-gateway-reset-link">Reset key</a>' +
-            '<a href="#" class="on-prem-gateway-delete-link">Delete</a>' +
-            '</td>');
-        out.push('</tr>');
-
-        return out.join('');
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.render = function() {
-
-        var rows = $('#on-prem-gateway-rows');
-        var gateways = dashboard.state.gateways;
-        var hubError = '';
-
-        rows.empty();
-
-        if (!gateways.length) {
-            rows.append('<tr><td colspan="5" class="on-prem-gateway-empty">' +
-                dashboard.escape(dashboard.config.emptyLabel) + '</td></tr>');
+        if(seen[address]) {
+            return String.format(config.duplicate_error, item);
         }
 
-        for (var gatewayIndex = 0; gatewayIndex < gateways.length; gatewayIndex++) {
+        seen[address] = true;
+    }
 
-            var gateway = gateways[gatewayIndex];
+    return '';
+}
 
-            if (gateway.hub_error) {
-                hubError = gateway.hub_error;
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.show_field_error = function(field, message) {
+
+    var element = field.get(0);
+
+    // A message from a previous attempt is replaced rather than stacked upon
+    if(element._tippy) {
+        element._tippy.destroy();
+    }
+
+    $.fn.zato.draw_attention_to(field);
+    $.fn.zato.show_tooltip_common($.fn.zato.on_prem_gateway.config.error_placement, '#' + element.id, message, false);
+
+    // The message concerns the value as it was, so editing it withdraws the message
+    field.off('input.on_prem_gateway').on('input.on_prem_gateway', function() {
+        $.fn.zato.on_prem_gateway.clear_field_error(field);
+    });
+
+    field.focus();
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.clear_field_error = function(field) {
+
+    var element = field.get(0);
+
+    if(element._tippy) {
+        element._tippy.destroy();
+    }
+
+    // Only the highlight is withdrawn here, the field keeps the placeholder it was rendered with
+    $.fn.zato.remove_css_attention(field);
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.before_submit_hook = function(form) {
+
+    var prefix = $(form).attr('id').indexOf('edit') === -1 ? '' : 'edit-';
+    var field = $('#id_' + prefix + 'hosts');
+
+    $.fn.zato.on_prem_gateway.clear_field_error(field);
+
+    var error = $.fn.zato.on_prem_gateway.get_hosts_error(field.val());
+
+    if(error) {
+        $.fn.zato.on_prem_gateway.show_field_error(field, error);
+        return false;
+    }
+
+    return true;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.create = function() {
+    $.fn.zato.data_table._create_edit('create', 'Create a new on-premises gateway', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        placement: $.fn.zato.on_prem_gateway.how_it_works_placement,
+        descriptions: $.fn.zato.on_prem_gateway.field_descriptions
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.edit = function(id) {
+    $.fn.zato.data_table._create_edit('edit', 'Update the on-premises gateway', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        placement: $.fn.zato.on_prem_gateway.how_it_works_placement,
+        descriptions: $.fn.zato.on_prem_gateway.field_descriptions
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.data_table.new_row = function(item, data, include_tr) {
+    var row = '';
+
+    if(include_tr) {
+        row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
+    }
+
+    var config = $.fn.zato.on_prem_gateway.config;
+    var isActive = item.is_active == true;
+    var hostCount = item.hosts ? item.hosts.split('\n').length : 0;
+
+    // A new gateway has no runtime state yet ..
+    var status = $.fn.zato.on_prem_gateway.status.notEnrolled;
+    var connectedSince = '';
+    var remoteAddress = config.no_value_html;
+    var gatewayVersion = config.no_value_html;
+    var platform = config.no_value_html;
+
+    // .. whereas an edited one keeps what its row reports until the refresh that follows the edit.
+    if(!include_tr) {
+        status = $.fn.zato.data_table.get_cell(item.id, '_status').text();
+        connectedSince = $.fn.zato.data_table.get_cell(item.id, '_connected_since').attr('data-time-utc');
+        remoteAddress = $.fn.zato.data_table.get_cell(item.id, '_remote_address').html();
+        gatewayVersion = $.fn.zato.data_table.get_cell(item.id, '_gateway_version').html();
+        platform = $.fn.zato.data_table.get_cell(item.id, '_platform').html();
+    }
+
+    if(!isActive) {
+        status = $.fn.zato.on_prem_gateway.status.notActive;
+    }
+
+    // The runtime state is read again as soon as the row is in place, and a new gateway
+    // additionally requires an enrollment token. The identifier is available only once
+    // the server has responded, so the callback is registered here rather than in the create function.
+    $.fn.zato.data_table.on_submit_complete_callback = $.fn.zato.on_prem_gateway.after_submit;
+    $.fn.zato.data_table.on_submit_complete_callback_args = {id: item.id, is_new: include_tr};
+
+    row += "<td class='numbering'>&nbsp;</td>";
+    row += "<td class='impexp'><input type='checkbox' /></td>";
+
+    // 1
+    row += String.format('<td>{0}</td>', item.name);
+    row += String.format('<td>{0}</td>', isActive ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', status);
+    row += String.format('<td>{0}</td>', hostCount);
+    row += String.format('<td class="zato-time-ago" data-time-ago-id="{0}" data-time-utc="{1}" ' +
+        'data-time-ago-title="Connected since" data-time-ago-row-label="Connected for"></td>', item.id, connectedSince);
+    row += String.format('<td>{0}</td>', remoteAddress);
+    row += String.format('<td>{0}</td>', gatewayVersion);
+    row += String.format('<td>{0}</td>', platform);
+
+    // 2
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.on_prem_gateway.enrollment_token('{0}')\">Enrollment token</a>", item.id));
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.on_prem_gateway.reset_key('{0}')\">Reset key</a>", item.id));
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.on_prem_gateway.edit('{0}')\">Edit</a>", item.id));
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.on_prem_gateway.delete_('{0}');\">Delete</a>", item.id));
+
+    // 3
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.hosts);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_key_reset_required);
+
+    if(include_tr) {
+        row += '</tr>';
+    }
+
+    return row;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.on_prem_gateway.after_submit = function(args) {
+
+    $.fn.zato.time_ago.refresh('#data-table', $.fn.zato.on_prem_gateway.config.refresh_url);
+
+    if(args.is_new) {
+        $.fn.zato.on_prem_gateway.enrollment_token(args.id);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+// Updates the columns refreshed along with the connection time, which the framework updates itself.
+$.fn.zato.on_prem_gateway.on_refresh = function(data) {
+
+    var config = $.fn.zato.on_prem_gateway.config;
+
+    $.each(data, function(id, entry) {
+        $.each(config.refreshed_columns, function(ignored, name) {
+
+            var cell = $.fn.zato.data_table.get_cell(id, '_' + name);
+            var value = entry[name];
+
+            if(value) {
+                cell.text(value);
             }
-
-            rows.append(dashboard.buildRow(gateway));
-        }
-
-        if (hubError) {
-            $('#on-prem-gateway-hub-error').text(hubError).removeClass('hidden');
-        }
-        else {
-            $('#on-prem-gateway-hub-error').addClass('hidden');
-        }
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.findGateway = function(id) {
-
-        var gateways = dashboard.state.gateways;
-        var wanted = String(id);
-
-        for (var gatewayIndex = 0; gatewayIndex < gateways.length; gatewayIndex++) {
-
-            var gateway = gateways[gatewayIndex];
-
-            if (String(gateway.id) === wanted) {
-                return gateway;
-            }
-        }
-
-        return null;
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.showMessage = function(text, isError) {
-
-        var element = $('#on-prem-gateway-message');
-
-        element.text(text).removeClass('hidden');
-        element.toggleClass('on-prem-gateway-message-error', isError === true);
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.hideMessage = function() {
-        $('#on-prem-gateway-message').addClass('hidden').text('');
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.refresh = function() {
-
-        $.ajax({
-            url: dashboard.config.apiPrefix + 'get-list',
-            type: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    dashboard.state.gateways = response.data;
-                    dashboard.render();
-                }
+            else {
+                cell.html(config.no_value_html);
             }
         });
-    };
+    });
+}
 
-    // ////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 
-    dashboard.post = function(path, payload, onSuccess) {
+// Reports the outcome of an action in a tooltip beside the link that invoked it. A failure
+// remains visible until dismissed, a success is withdrawn on its own.
+$.fn.zato.on_prem_gateway.show_message = function(anchor, message, isSuccess) {
 
-        $.ajax({
-            url: dashboard.config.apiPrefix + path,
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(payload),
-            dataType: 'json',
+    var config = $.fn.zato.on_prem_gateway.config;
+    var element = anchor.get(0);
 
-            success: function(response) {
-                if (response.success) {
-                    onSuccess(response.data);
-                }
-                else {
-                    dashboard.showMessage(response.error, true);
-                }
-            },
+    if(element._tippy) {
+        element._tippy.destroy();
+    }
 
-            error: function(request) {
+    var instance = tippy(element, {
+        content: message,
+        allowHTML: false,
+        theme: 'dark',
+        trigger: 'manual',
+        placement: config.message_placement,
+        arrow: true,
+        interactive: false,
+        inertia: true,
 
-                var message = request.responseText;
+        // A confirmation of success is not cut short by a click elsewhere on the page
+        hideOnClick: !isSuccess,
 
-                if (request.responseJSON) {
-                    message = request.responseJSON.error;
-                }
-
-                dashboard.showMessage(message, true);
+        // The visible period is counted from the end of the show animation, not its start
+        onShown: function(instance) {
+            if(isSuccess) {
+                setTimeout(function() {
+                    instance.hide();
+                }, config.success_visible_ms);
             }
-        });
-    };
+        },
+        onHidden: function(instance) {
+            instance.destroy();
+        }
+    });
 
-    // ////////////////////////////////////////////////////////////////////////
+    instance.show();
+}
 
-    dashboard.resetForm = function() {
+// /////////////////////////////////////////////////////////////////////////////
 
-        dashboard.state.editId = null;
+$.fn.zato.on_prem_gateway.get_row_link = function(id, text) {
 
-        $('#on-prem-gateway-form-title').text(dashboard.config.formTitleNew);
-        $('#on-prem-gateway-name').val('');
-        $('#on-prem-gateway-is-active').prop('checked', true);
-        $('#on-prem-gateway-hosts').val('');
-        $('#on-prem-gateway-cancel').addClass('hidden');
+    var links = $('#tr_' + id + ' a').filter(function() {
+        return $(this).text() === text;
+    });
 
-        dashboard.hideMessage();
-    };
+    return links.first();
+}
 
-    // ////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
 
-    dashboard.fillForm = function(gateway) {
+// Replaces the page-wide message area for the create and edit forms. A rejection is
+// reported beside the link that opened the form, which is what remains once the form closes.
+$.fn.zato.on_prem_gateway.on_submit_complete = function(data, status) {
 
-        var hosts = gateway.hosts.join('\n');
+    $.fn.zato.hide_action_overlay();
 
-        dashboard.state.editId = gateway.id;
+    if(status == 'success') {
+        return;
+    }
 
-        $('#on-prem-gateway-form-title').text(dashboard.config.formTitleEdit);
-        $('#on-prem-gateway-name').val(gateway.name);
-        $('#on-prem-gateway-is-active').prop('checked', gateway.is_active);
-        $('#on-prem-gateway-hosts').val(hosts);
-        $('#on-prem-gateway-cancel').removeClass('hidden');
+    var config = $.fn.zato.on_prem_gateway.config;
+    var anchor;
 
-        dashboard.hideMessage();
-    };
+    if($('#edit-div').dialog('isOpen')) {
+        anchor = $.fn.zato.on_prem_gateway.get_row_link($('#id_edit-id').val(), config.edit_link_text);
+    }
+    else {
+        anchor = $(config.create_link_selector);
+    }
 
-    // ////////////////////////////////////////////////////////////////////////
+    $.fn.zato.on_prem_gateway.show_message(anchor, data.responseText, false);
+}
 
-    dashboard.save = function() {
+// /////////////////////////////////////////////////////////////////////////////
 
-        var payload = {
-            name: $('#on-prem-gateway-name').val(),
-            is_active: $('#on-prem-gateway-is-active').is(':checked'),
-            hosts: $('#on-prem-gateway-hosts').val()
-        };
+$.fn.zato.on_prem_gateway.enrollment_token = function(id) {
 
-        var path = 'create';
+    var url = String.format('./enrollment-token/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+    var link = $.fn.zato.on_prem_gateway.get_row_link(id, $.fn.zato.on_prem_gateway.config.enrollment_token_link_text);
 
-        if (dashboard.state.editId !== null) {
-            payload.id = dashboard.state.editId;
-            path = 'edit';
+    var callback = function(data, status) {
+
+        if(status != 'success') {
+            $.fn.zato.on_prem_gateway.show_message(link, data.responseText, false);
+            return;
         }
 
-        dashboard.hideMessage();
+        // The token is issued once and is not retained, so this dialog is the only
+        // opportunity to record it ..
+        var response = $.parseJSON(data.responseText);
 
-        dashboard.post(path, payload, function() {
-            dashboard.resetForm();
-            dashboard.refresh();
-        });
-    };
+        $('#enrollment-token-value').val(response.token);
 
-    // ////////////////////////////////////////////////////////////////////////
+        // .. and its expiration is stated in the dialog title, in the browser's time zone.
+        var div = $('#enrollment_token-div');
+        var expiresAt = $.fn.zato.time_ago.format_timestamp(new Date(response.expires_at), false);
+        var timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        var title = String.format('Enrollment token, valid until {0} ({1})', expiresAt, timezone);
 
-    dashboard.showToken = function(name, token) {
+        $.fn.zato.data_table.set_dialog_title(div, title);
+        div.dialog('open');
+    }
 
-        var title = dashboard.config.tokenTitle.replace('{name}', name);
+    $.fn.zato.post(url, callback, {});
+}
 
-        $('#on-prem-gateway-token-title').text(title);
-        $('#on-prem-gateway-token-value').val(token);
-        $('#on-prem-gateway-token-download').attr('href', dashboard.config.downloadUrl);
-        $('#on-prem-gateway-token-copy').text(dashboard.config.copyLabel);
-        $('#on-prem-gateway-token').removeClass('hidden');
-    };
+// /////////////////////////////////////////////////////////////////////////////
 
-    // ////////////////////////////////////////////////////////////////////////
+$.fn.zato.on_prem_gateway.reset_key = function(id) {
 
-    dashboard.getClickedGateway = function(element) {
+    var link = $.fn.zato.on_prem_gateway.get_row_link(id, $.fn.zato.on_prem_gateway.config.reset_key_link_text);
 
-        var id = $(element).closest('tr').data('id');
+    var callback = function(data, status) {
 
-        return dashboard.findGateway(id);
-    };
+        if(status != 'success') {
+            $.fn.zato.on_prem_gateway.show_message(link, data.responseText, false);
+            return;
+        }
 
-    // ////////////////////////////////////////////////////////////////////////
+        // Enrollment is required again, which the Status column now reports.
+        var response = $.parseJSON(data.responseText);
+        var statusCell = $.fn.zato.data_table.get_cell(id, '_status');
 
-    dashboard.bind = function() {
+        statusCell.text($.fn.zato.on_prem_gateway.status.notEnrolled);
 
-        $('#on-prem-gateway-save').on('click', function(event) {
-            event.preventDefault();
-            dashboard.save();
-        });
+        $.fn.zato.data_table.row_updated(id);
+        $.fn.zato.on_prem_gateway.show_message(link, response.message, true);
+    }
 
-        $('#on-prem-gateway-cancel').on('click', function(event) {
-            event.preventDefault();
-            dashboard.resetForm();
-        });
+    var url = String.format('./reset-key/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+    $.fn.zato.post(url, callback, {});
+}
 
-        $('#on-prem-gateway-rows').on('click', '.on-prem-gateway-edit-link', function(event) {
+// /////////////////////////////////////////////////////////////////////////////
 
-            event.preventDefault();
-
-            var gateway = dashboard.getClickedGateway(this);
-
-            dashboard.fillForm(gateway);
-        });
-
-        $('#on-prem-gateway-rows').on('click', '.on-prem-gateway-delete-link', function(event) {
-
-            event.preventDefault();
-
-            var gateway = dashboard.getClickedGateway(this);
-            var question = dashboard.config.deleteConfirm.replace('{name}', gateway.name);
-
-            if (!window.confirm(question)) {
-                return;
-            }
-
-            dashboard.post('delete/' + gateway.id, {}, function() {
-                dashboard.resetForm();
-                dashboard.refresh();
-            });
-        });
-
-        $('#on-prem-gateway-rows').on('click', '.on-prem-gateway-reset-link', function(event) {
-
-            event.preventDefault();
-
-            var gateway = dashboard.getClickedGateway(this);
-            var question = dashboard.config.resetKeyConfirm.replace('{name}', gateway.name);
-
-            if (!window.confirm(question)) {
-                return;
-            }
-
-            dashboard.post('reset-key/' + gateway.id, {}, function() {
-                dashboard.refresh();
-            });
-        });
-
-        $('#on-prem-gateway-rows').on('click', '.on-prem-gateway-token-link', function(event) {
-
-            event.preventDefault();
-
-            var gateway = dashboard.getClickedGateway(this);
-
-            dashboard.post('enrollment-token/' + gateway.id, {}, function(data) {
-                dashboard.showToken(gateway.name, data.token);
-            });
-        });
-
-        $('#on-prem-gateway-token-copy').on('click', function(event) {
-
-            event.preventDefault();
-
-            var field = document.getElementById('on-prem-gateway-token-value');
-
-            field.select();
-            document.execCommand('copy');
-
-            $('#on-prem-gateway-token-copy').text(dashboard.config.copiedLabel);
-        });
-
-        $('#on-prem-gateway-token-close').on('click', function(event) {
-            event.preventDefault();
-            $('#on-prem-gateway-token').addClass('hidden');
-            $('#on-prem-gateway-token-value').val('');
-        });
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    dashboard.init = function(options) {
-
-        dashboard.config.apiPrefix = options.apiPrefix;
-        dashboard.config.hostsPlaceholder = options.hostsPlaceholder;
-        dashboard.config.downloadUrl = options.downloadUrl;
-
-        dashboard.state.gateways = options.gateways;
-
-        $('#on-prem-gateway-hosts').attr('placeholder', dashboard.config.hostsPlaceholder);
-
-        dashboard.render();
-        dashboard.bind();
-        dashboard.resetForm();
-
-        dashboard.state.timer = window.setInterval(dashboard.refresh, dashboard.config.refreshInterval);
-    };
-
-})();
+$.fn.zato.on_prem_gateway.delete_ = function(id) {
+    $.fn.zato.data_table.delete_(id, 'td.item_id_',
+        'On-premises gateway `{0}` deleted',
+        'Are you sure you want to delete the on-premises gateway `{0}`?',
+        true);
+}

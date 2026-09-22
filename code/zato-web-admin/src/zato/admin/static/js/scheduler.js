@@ -227,8 +227,7 @@ $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
     var div = $('#'+ div_id);
 
     div.prev().css('cursor', 'move');
-    div.prev().html('<span class="ui-dialog-title-text" style="user-select: text; cursor: text;">' + title + '</span>');
-    div.prev().find('.ui-dialog-title-text').on('mousedown selectstart dblclick', function(e) { e.stopPropagation(); });
+    $.fn.zato.data_table.set_dialog_title(div, title);
     div.dialog('open');
 
     if(action == 'create' && job_type == 'interval_based') {

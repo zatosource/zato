@@ -141,6 +141,17 @@ class TestPublicAddress(TestCase):
 
 # ################################################################################################################################
 
+    def test_without_a_load_balancer_the_hub_is_connected_to_directly(self) -> 'None':
+
+        _ = os.environ.pop('Zato_Port_Load_Balancer_SSL', None)
+        _ = os.environ.pop(On_Prem_Gateway.Env.Hub_Port, None)
+
+        result = get_public_address('localhost:8183')
+
+        self.assertEqual(result, f'http://localhost:{On_Prem_Gateway.Port.Hub}')
+
+# ################################################################################################################################
+
     def test_nothing_to_derive_from_is_an_error(self) -> 'None':
 
         with self.assertRaises(Exception):
@@ -268,7 +279,7 @@ class TestManagerStatusList(TestCase):
 
     def _get_rows(self) -> 'strdictlist':
 
-        out = [{'id': 1, 'name': _Gateway_Name, 'is_active': True, 'hosts': [_Erp_Address]}]
+        out = [{'id': 1, 'name': _Gateway_Name, 'is_active': True, 'hosts': [_Erp_Address], 'is_key_reset_required': False}]
 
         return out
 
@@ -305,6 +316,7 @@ class TestManagerStatusList(TestCase):
         self.assertTrue(gateway['is_connected'])
         self.assertEqual(gateway['key_fingerprint'], _Key_Fingerprint)
         self.assertEqual(gateway['host_count'], 1)
+        self.assertFalse(gateway['is_key_reset_required'])
         self.assertEqual(gateway['hub_error'], '')
 
 # ################################################################################################################################
@@ -340,9 +352,22 @@ class TestManagerStatusList(TestCase):
             'name': _Gateway_Name,
             'is_active': True,
             'hosts': [_Erp_Address],
+            'is_key_reset_required': False,
         }]
 
         manager.hub.put_gateways.assert_called_once_with(expected)
+
+# ################################################################################################################################
+
+    def test_sync_tolerates_a_hub_that_is_down(self) -> 'None':
+
+        manager = self._get_manager(self._get_rows())
+        manager.hub = MagicMock()
+        manager.hub.put_gateways.side_effect = Exception('the hub is not responding')
+
+        manager.sync()
+
+        manager.hub.put_gateways.assert_called_once()
 
 # ################################################################################################################################
 # ################################################################################################################################

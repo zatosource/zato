@@ -192,16 +192,6 @@ python_packages_page_config['textarea_label'] = 'Requirements'
 python_packages_page_config['textarea_placeholder'] = 'One package per line, e.g.:\natlassian-python-api\nazure-storage-blob'
 python_packages_page_config['content_rows'] = []
 
-on_prem_gateway_page_config = {}
-on_prem_gateway_page_config['title'] = 'On-premises gateways'
-on_prem_gateway_page_config['version_section_title'] = 'On-premises gateways'
-on_prem_gateway_page_config['api_prefix'] = '/zato/on-prem-gateway/'
-on_prem_gateway_page_config['panel_width'] = '1100px'
-on_prem_gateway_page_config['hosts_placeholder'] = 'host:port'
-on_prem_gateway_page_config['download_url'] = 'https://zato.io/docs/admin/on-prem-gateway/install.html'
-on_prem_gateway_page_config['show_sidebar'] = False
-on_prem_gateway_page_config['show_restart_steps'] = False
-
 env_variables_page_config = {}
 env_variables_page_config['title'] = 'Environment variables'
 env_variables_page_config['api_prefix'] = '/zato/env-variables/'

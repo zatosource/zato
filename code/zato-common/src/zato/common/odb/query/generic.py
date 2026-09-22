@@ -285,6 +285,7 @@ class OnPremGatewayWrapper(GenericObjectWrapper):
         # as one that is switched off and has nothing to reach
         out['is_active'] = row.get('is_active', False)
         out['hosts'] = row.get('hosts', [])
+        out['is_key_reset_required'] = row.get('is_key_reset_required', On_Prem_Gateway.Default.Is_Key_Reset_Required)
 
         return out
 

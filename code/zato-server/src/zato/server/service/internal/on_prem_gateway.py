@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import Audit_Config
+from zato.common.api import Audit_Config, On_Prem_Gateway
 from zato.common.audit_log.common import AuditEvent
 from zato.server.config_audit import record_service_config_change
 from zato.server.on_prem_gateway import get_public_address, OnPremGatewayManager, parse_hosts
@@ -18,9 +18,10 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import boolnone, strlist
 
-    # Dummy assignment to satisfy type checkers
+    # Dummy assignments to satisfy type checkers
+    boolnone = boolnone
     strlist = strlist
 
 # ################################################################################################################################
@@ -28,14 +29,16 @@ if 0:
 
 _service_name_prefix = 'zato.on-prem-gateway.'
 
-# What an optional list of addresses amounts to when the caller sent none.
+# The value used when the caller supplies no list of addresses.
 _No_Hosts = ()
+
+_Default_Is_Key_Reset_Required = On_Prem_Gateway.Default.Is_Key_Reset_Required
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _Base(AdminService):
-    """ Gives every service in this module the manager that does the actual work.
+    """ Provides every service in this module with the manager that performs the work.
     """
 
     def get_manager(self) -> 'OnPremGatewayManager':
@@ -46,8 +49,18 @@ class _Base(AdminService):
 
 # ################################################################################################################################
 
+    def get_is_key_reset_required(self, is_key_reset_required:'boolnone') -> 'bool':
+        """ Applies the default when the caller does not state the setting.
+        """
+        if is_key_reset_required is None:
+            is_key_reset_required = _Default_Is_Key_Reset_Required
+
+        return is_key_reset_required
+
+# ################################################################################################################################
+
     def get_hosts(self, hosts:'strlist') -> 'strlist':
-        """ Validates the addresses on input, which is the same check the hub makes.
+        """ Validates the addresses on input, applying the same rules as the hub.
         """
         if not hosts:
             hosts = _No_Hosts
@@ -60,7 +73,7 @@ class _Base(AdminService):
 # ################################################################################################################################
 
 class GetList(_Base):
-    """ Returns every on-premises gateway, each one with whatever the hub knows about it.
+    """ Returns every on-premises gateway, each one with its runtime state from the hub.
     """
     name = _service_name_prefix + 'get-list'
 
@@ -91,7 +104,7 @@ class Get(_Base):
         if not gateway:
             raise Exception(f'On-premises gateway with id `{id}` not found')
 
-        # .. and return it to our caller.
+        # .. and return it to the caller.
         self.response.payload = gateway
 
 # ################################################################################################################################
@@ -101,7 +114,7 @@ class Create(_Base):
     """ Creates a new on-premises gateway.
     """
     name = _service_name_prefix + 'create'
-    input = 'name', 'is_active', '-hosts'
+    input = 'name', 'is_active', '-hosts', '-is_key_reset_required'
     output = 'id', 'name'
 
     def handle(self) -> 'None':
@@ -110,23 +123,24 @@ class Create(_Base):
         input = self.request.input
         name = input.name.strip()
         hosts = self.get_hosts(input.hosts)
+        is_key_reset_required = self.get_is_key_reset_required(input.is_key_reset_required)
 
         if not name:
             raise Exception('An on-premises gateway needs a name')
 
         manager = self.get_manager()
 
-        # .. refuse to create a duplicate ..
+        # .. reject a duplicate ..
         if manager.get(name):
             raise Exception(f'An on-premises gateway named `{name}` already exists')
 
-        # .. create it now ..
-        id = manager.create(name, input.is_active, hosts)
+        # .. create the gateway ..
+        id = manager.create(name, input.is_active, hosts, is_key_reset_required)
 
-        # .. the hub is what turns the configuration into listeners and host names ..
+        # .. the hub translates the configuration into listeners and host names ..
         manager.sync()
 
-        # .. the creation lands in the audit trail ..
+        # .. the creation is recorded in the audit trail ..
         after = manager.get_by_id(id)
 
         record_service_config_change(
@@ -137,7 +151,7 @@ class Create(_Base):
             after=after,
         )
 
-        # .. and the details go back to our caller.
+        # .. and the details are returned to the caller.
         self.response.payload.id = id
         self.response.payload.name = name
 
@@ -148,7 +162,7 @@ class Edit(_Base):
     """ Updates an existing on-premises gateway.
     """
     name = _service_name_prefix + 'edit'
-    input = Int('id'), 'name', 'is_active', '-hosts'
+    input = Int('id'), 'name', 'is_active', '-hosts', '-is_key_reset_required'
     output = 'id', 'name'
 
     def handle(self) -> 'None':
@@ -158,30 +172,31 @@ class Edit(_Base):
         id = input.id
         name = input.name.strip()
         hosts = self.get_hosts(input.hosts)
+        is_key_reset_required = self.get_is_key_reset_required(input.is_key_reset_required)
 
         if not name:
             raise Exception('An on-premises gateway needs a name')
 
         manager = self.get_manager()
 
-        # .. the gateway has to exist ..
+        # .. the gateway is required to exist ..
         before = manager.get_by_id(id)
 
         if not before:
             raise Exception(f'On-premises gateway with id `{id}` not found')
 
-        # .. a rename must not clash with another one ..
+        # .. a change of name must not conflict with an existing gateway ..
         if other := manager.get(name):
             if other['id'] != id:
                 raise Exception(f'An on-premises gateway named `{name}` already exists')
 
-        # .. save the changes ..
-        manager.edit(id, name, input.is_active, hosts)
+        # .. store the changes ..
+        manager.edit(id, name, input.is_active, hosts, is_key_reset_required)
 
-        # .. let the hub reconcile what it is running ..
+        # .. the hub reconciles its runtime configuration ..
         manager.sync()
 
-        # .. the edit lands in the audit trail with a before and after ..
+        # .. the update is recorded in the audit trail with its previous and current form ..
         after = manager.get_by_id(id)
 
         record_service_config_change(
@@ -193,7 +208,7 @@ class Edit(_Base):
             after=after,
         )
 
-        # .. and the details go back to our caller.
+        # .. and the details are returned to the caller.
         self.response.payload.id = id
         self.response.payload.name = name
 
@@ -201,7 +216,7 @@ class Edit(_Base):
 # ################################################################################################################################
 
 class Delete(_Base):
-    """ Deletes an on-premises gateway, along with the key the hub held for it.
+    """ Deletes an on-premises gateway along with the key retained for it by the hub.
     """
     name = _service_name_prefix + 'delete'
     input = Int('id')
@@ -213,19 +228,19 @@ class Delete(_Base):
 
         manager = self.get_manager()
 
-        # .. the gateway has to exist ..
+        # .. the gateway is required to exist ..
         before = manager.get_by_id(id)
 
         if not before:
             raise Exception(f'On-premises gateway with id `{id}` not found')
 
-        # .. delete it now ..
+        # .. delete the gateway ..
         manager.delete(id)
 
-        # .. the hub closes its listeners and forgets the key ..
+        # .. the hub closes its listeners and discards the key ..
         manager.sync()
 
-        # .. and the deletion lands in the audit trail with what the gateway looked like.
+        # .. and the deletion is recorded in the audit trail with the previous configuration.
         record_service_config_change(
             self,
             action=AuditEvent.Config_Deleted,
@@ -252,23 +267,23 @@ class GetEnrollmentToken(_Base):
 
         manager = self.get_manager()
 
-        # .. the gateway has to exist ..
+        # .. the gateway is required to exist ..
         gateway = manager.get_by_id(id)
 
         if not gateway:
             raise Exception(f'On-premises gateway with id `{id}` not found')
 
-        # .. the hub only knows about gateways that were pushed to it ..
+        # .. the hub recognizes only gateways that were published to it ..
         manager.sync()
 
-        # .. the token carries the address the gateway is to connect back to ..
+        # .. the token conveys the address that the gateway connects to ..
         address = get_public_address(input.dashboard_host)
 
-        # .. mint it now ..
+        # .. issue the token ..
         name = gateway['name']
         response = manager.hub.mint_token(name, address)
 
-        # .. and hand it to our caller.
+        # .. and return it to the caller.
         self.response.payload.name = name
         self.response.payload.token = response['token']
         self.response.payload.expires_at = response['expires_at']
@@ -277,7 +292,7 @@ class GetEnrollmentToken(_Base):
 # ################################################################################################################################
 
 class ResetKey(_Base):
-    """ Unbinds the key of a gateway. Its next connection has to enroll again.
+    """ Revokes the key of a gateway, which requires the gateway to enroll again.
     """
     name = _service_name_prefix + 'reset-key'
     input = Int('id')
@@ -289,20 +304,20 @@ class ResetKey(_Base):
 
         manager = self.get_manager()
 
-        # .. the gateway has to exist ..
+        # .. the gateway is required to exist ..
         gateway = manager.get_by_id(id)
 
         if not gateway:
             raise Exception(f'On-premises gateway with id `{id}` not found')
 
-        # .. and the hub is what holds the key.
+        # .. and the key is retained by the hub.
         manager.hub.reset_key(gateway['name'])
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Sync(_Base):
-    """ Pushes the whole configuration to the hub. This runs on startup and after every
+    """ Publishes the complete configuration to the hub. Invoked on startup and after every
     change made anywhere else.
     """
     name = _service_name_prefix + 'sync'
@@ -311,14 +326,14 @@ class Sync(_Base):
 
         manager = self.get_manager()
 
-        # There is nothing to push if no gateway was ever configured ..
+        # No publication is required if no gateway has been configured ..
         gateways = manager.get_list()
 
         if not gateways:
             self.logger.info('No on-premises gateways are configured, nothing to push')
             return
 
-        # .. otherwise the hub has to be up for the push to land.
+        # .. otherwise the configuration is published, an unavailable hub being reported in the log.
         manager.sync()
 
 # ################################################################################################################################

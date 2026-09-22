@@ -1448,6 +1448,12 @@ class On_Prem_Gateway:
         Admin_Port     = 'Zato_Port_On_Prem_Gateway_Admin'
         Public_Address = 'Zato_On_Prem_Gateway_Public_Address'
 
+    # The values applied when a gateway definition does not state them.
+    class Default:
+
+        # An enrolled gateway enrolls again only after its key has been reset in the Dashboard.
+        Is_Key_Reset_Required = True
+
 # ################################################################################################################################
 # ################################################################################################################################
 

@@ -22,6 +22,7 @@ from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.on_prem_gateway import OnPremGatewayImporter
 from zato.common.crypto.api import CryptoManager
+from zato.common.odb.query.generic import OnPremGatewayWrapper
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -149,6 +150,54 @@ class TestEnmasseOnPremGateways(TestCase):
         gateway_id_2 = gateway_def_2['id']
 
         self.assertEqual(gateway_id, gateway_id_2)
+
+# ################################################################################################################################
+
+    def _get_stored_gateway(self, name:'str') -> 'any_':
+        """ Reads one gateway back from the ODB.
+        """
+        wrapper = OnPremGatewayWrapper(self.session, self.importer.cluster_id)
+
+        for item in wrapper.get_list():
+            if item['name'] == name:
+                return item
+
+        raise Exception(f'On-premises gateway `{name}` not found')
+
+# ################################################################################################################################
+
+    def test_key_resets_are_required_by_default(self) -> 'None':
+        """ A gateway declared without the setting requires key resets.
+        """
+        self._setup_test_environment()
+
+        suffix = self._get_suffix()
+
+        gateway = self._get_gateway(suffix)
+
+        _, _ = self.gateway_importer.sync_on_prem_gateways([gateway], self.session)
+
+        stored = self._get_stored_gateway(gateway['name'])
+
+        self.assertTrue(stored['is_key_reset_required'])
+
+# ################################################################################################################################
+
+    def test_key_resets_can_be_disabled(self) -> 'None':
+        """ A gateway declared with the setting disabled accepts a new enrollment token in place of its key.
+        """
+        self._setup_test_environment()
+
+        suffix = self._get_suffix()
+
+        gateway = self._get_gateway(suffix)
+        gateway['is_key_reset_required'] = False
+
+        _, _ = self.gateway_importer.sync_on_prem_gateways([gateway], self.session)
+
+        stored = self._get_stored_gateway(gateway['name'])
+
+        self.assertFalse(stored['is_key_reset_required'])
 
 # ################################################################################################################################
 

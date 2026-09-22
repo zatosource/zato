@@ -41,26 +41,52 @@ logger = getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How long the hub is given to answer.
+# The time allowed for the hub to respond.
 _Hub_Timeout = 10
 
-# What the hub's admin API is reached at.
+# The host of the hub's administrative API.
 _Hub_Host = '127.0.0.1'
 
-# The port of the API the on-premises gateways connect to.
+# The port of the TLS load balancer that on-premises gateways connect to.
 _Public_Port_Env = 'Zato_Port_Load_Balancer_SSL'
-_Public_Port_Default = '11224'
 
-# The range a port has to be in.
+# The permitted range of port numbers.
 _Port_Min = 1
 _Port_Max = 65535
+
+# Whether the hub responded to the previous call. An outage is reported once rather than
+# on each subsequent call.
+_hub_was_reachable = True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _report_hub_outage(e:'Exception') -> 'None':
+    """ Logs a hub outage once, at its onset.
+    """
+    global _hub_was_reachable
+
+    if _hub_was_reachable:
+        logger.warning('Could not reach the on-premises gateway hub: %s', e)
+        _hub_was_reachable = False
+
+# ################################################################################################################################
+
+def _report_hub_available() -> 'None':
+    """ Logs the conclusion of a hub outage once.
+    """
+    global _hub_was_reachable
+
+    if not _hub_was_reachable:
+        logger.info('The on-premises gateway hub is reachable again')
+        _hub_was_reachable = True
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _get_unknown_state() -> 'strdict':
-    """ What a gateway looks like when the hub cannot be reached - the configuration is
-    known and nothing about the live state is.
+    """ The state reported for a gateway while the hub is unavailable, in which case its
+    configuration is known and its runtime state is not.
     """
     out = {
         'is_connected': False,
@@ -94,47 +120,54 @@ def get_hub_admin_url() -> 'str':
 # ################################################################################################################################
 
 def get_public_address(host:'strnone'=None) -> 'str':
-    """ The address an on-premises gateway is to connect back to.
+    """ The address that an on-premises gateway connects to.
     """
 
-    # An explicit setting always wins ..
+    # An explicit setting takes precedence ..
     address = os.environ.get(On_Prem_Gateway.Env.Public_Address)
 
     if address:
         out = address.strip()
         return out
 
-    # .. otherwise there has to be something to derive it from ..
+    # .. otherwise the address is derived from the request host ..
     if not host:
         raise Exception(f'Set {On_Prem_Gateway.Env.Public_Address} to the address gateways are to connect to')
 
-    # .. the Dashboard runs on a port of its own, so only the host part of it is of use ..
+    # .. the Dashboard uses a separate port, so only the host part is retained ..
     host = host.strip()
 
     if ':' in host:
         host = host.split(':')[0]
 
-    # .. and the port is the one the API listens on with TLS.
-    port = os.environ.get(_Public_Port_Env)
+    # .. the Docker image always defines the port of its TLS load balancer, which forwards
+    # .. gateway connections to the hub ..
+    if port := os.environ.get(_Public_Port_Env):
+        out = f'https://{host}:{port}'
 
-    if not port:
-        port = _Public_Port_Default
+    # .. whereas an environment without it has no load balancer, so gateways connect
+    # .. to the hub directly.
+    else:
+        port = os.environ.get(On_Prem_Gateway.Env.Hub_Port)
 
-    out = f'https://{host}:{port}'
+        if not port:
+            port = On_Prem_Gateway.Port.Hub
+
+        out = f'http://{host}:{port}'
 
     return out
 
 # ################################################################################################################################
 
 def parse_hosts(hosts:'strlist') -> 'strlist':
-    """ Turns the addresses a caller gave us into a validated list of host:port entries.
+    """ Validates the addresses supplied and returns them as a list of host:port entries.
     """
 
     # Local variables
     out:'strlist' = []
     seen = set()
 
-    # Each entry has to be an address of an on-premises system ..
+    # Each entry is required to be the address of an on-premises system ..
     for item in hosts:
 
         item = item.strip()
@@ -165,14 +198,14 @@ def parse_hosts(hosts:'strlist') -> 'strlist':
 
         item = f'{host}:{port_number}'
 
-        # .. and one address leads to one place, so it may appear only once ..
+        # .. each address designates a single endpoint, so duplicates are rejected ..
         if item in seen:
             raise Exception(f'`{item}` is listed more than once')
 
         seen.add(item)
         out.append(item)
 
-    # .. and the result is sorted so that the same input always gives the same list.
+    # .. and the result is sorted so that identical input yields an identical list.
     out = sorted(out)
 
     return out
@@ -181,7 +214,7 @@ def parse_hosts(hosts:'strlist') -> 'strlist':
 # ################################################################################################################################
 
 class HubClient:
-    """ Talks to the gateway hub.
+    """ The client of the gateway hub's administrative API.
     """
 
     def __init__(self, base_url:'str') -> 'None':
@@ -190,7 +223,7 @@ class HubClient:
 # ################################################################################################################################
 
     def _invoke(self, method:'str', path:'str', data:'strdictnone'=None) -> 'strdict':
-        """ Invokes the hub, turning whatever went wrong into a message that can be shown.
+        """ Invokes the hub and reports any failure as a message suitable for display.
         """
         url = f'{self.base_url}{path}'
 
@@ -220,7 +253,7 @@ class HubClient:
 # ################################################################################################################################
 
     def ping(self) -> 'bool':
-        """ Whether the hub is up.
+        """ Indicates whether the hub is available.
         """
         try:
             _ = self._invoke('GET', '/ping')
@@ -232,7 +265,7 @@ class HubClient:
 # ################################################################################################################################
 
     def get_gateways(self) -> 'strdictlist':
-        """ The live state of every gateway the hub knows about.
+        """ The runtime state of every gateway registered with the hub.
         """
         response = self._invoke('GET', '/gateways')
         gateways = response['gateways']
@@ -244,7 +277,7 @@ class HubClient:
 # ################################################################################################################################
 
     def put_gateways(self, gateways:'strdictlist') -> 'None':
-        """ Replaces the hub's configuration with the one given.
+        """ Replaces the hub's configuration with the one supplied.
         """
         data = {'gateways': gateways}
 
@@ -265,7 +298,7 @@ class HubClient:
 # ################################################################################################################################
 
     def reset_key(self, name:'str') -> 'None':
-        """ Unbinds a gateway's key.
+        """ Revokes a gateway's key.
         """
         path = f'/gateways/{name}/key'
 
@@ -275,8 +308,8 @@ class HubClient:
 # ################################################################################################################################
 
 class OnPremGatewayManager:
-    """ Stores on-premises gateways in the ODB and keeps the hub in step with them. The ODB
-    holds a name, a flag and a list of addresses, and the hub holds the key.
+    """ Stores on-premises gateways in the ODB and synchronizes the hub with them. The ODB
+    stores the name, the flags and the list of addresses, the hub stores the key.
     """
 
     def __init__(self, server:'ParallelServer', session:'any_'=None) -> 'None':
@@ -295,7 +328,7 @@ class OnPremGatewayManager:
 # ################################################################################################################################
 
     def get_list(self) -> 'strdictlist':
-        """ Every gateway as it is configured, without anything about its live state.
+        """ The configuration of every gateway, excluding its runtime state.
         """
         with closing(self.session()) as session:
             wrapper = OnPremGatewayWrapper(session, self.cluster_id)
@@ -306,7 +339,7 @@ class OnPremGatewayManager:
 # ################################################################################################################################
 
     def get(self, name:'str') -> 'strdictnone':
-        """ One gateway by its name, or None if there is no such gateway.
+        """ A single gateway by name, or None if no such gateway exists.
         """
         with closing(self.session()) as session:
 
@@ -324,7 +357,7 @@ class OnPremGatewayManager:
 # ################################################################################################################################
 
     def get_by_id(self, id:'int') -> 'strdictnone':
-        """ One gateway by its ID, or None if there is no such gateway.
+        """ A single gateway by ID, or None if no such gateway exists.
         """
         with closing(self.session()) as session:
 
@@ -347,10 +380,10 @@ class OnPremGatewayManager:
 
 # ################################################################################################################################
 
-    def create(self, name:'str', is_active:'bool', hosts:'strlist') -> 'int':
+    def create(self, name:'str', is_active:'bool', hosts:'strlist', is_key_reset_required:'bool') -> 'int':
         """ Creates a gateway and returns its ID.
         """
-        data = {'is_active': is_active, 'hosts': hosts}
+        data = {'is_active': is_active, 'hosts': hosts, 'is_key_reset_required': is_key_reset_required}
         opaque = dumps(data)
 
         with closing(self.session()) as session:
@@ -361,7 +394,7 @@ class OnPremGatewayManager:
             session.execute(insert)
             session.commit()
 
-            # The ID is assigned by the database, so the row is read back to learn it.
+            # The ID is assigned by the database, hence the row is read back to obtain it.
             created = wrapper.get(name)
 
         created = cast_('strdict', created)
@@ -371,10 +404,10 @@ class OnPremGatewayManager:
 
 # ################################################################################################################################
 
-    def edit(self, id:'int', name:'str', is_active:'bool', hosts:'strlist') -> 'None':
-        """ Updates a gateway, including a potential rename.
+    def edit(self, id:'int', name:'str', is_active:'bool', hosts:'strlist', is_key_reset_required:'bool') -> 'None':
+        """ Updates a gateway, including a change of its name.
         """
-        data = {'is_active': is_active, 'hosts': hosts}
+        data = {'is_active': is_active, 'hosts': hosts, 'is_key_reset_required': is_key_reset_required}
         opaque = dumps(data)
 
         with closing(self.session()) as session:
@@ -401,7 +434,9 @@ class OnPremGatewayManager:
 # ################################################################################################################################
 
     def sync(self) -> 'None':
-        """ Pushes the whole configuration to the hub.
+        """ Publishes the complete configuration to the hub. An unavailable hub does not
+        constitute an error because the configuration is retained in the ODB and the startup
+        service publishes it when the hub becomes available.
         """
         gateways = []
 
@@ -410,9 +445,16 @@ class OnPremGatewayManager:
                 'name': item['name'],
                 'is_active': item['is_active'],
                 'hosts': item['hosts'],
+                'is_key_reset_required': item['is_key_reset_required'],
             })
 
-        self.hub.put_gateways(gateways)
+        try:
+            self.hub.put_gateways(gateways)
+        except Exception as e:
+            _report_hub_outage(e)
+            return
+
+        _report_hub_available()
 
         gateway_count = len(gateways)
 
@@ -421,8 +463,8 @@ class OnPremGatewayManager:
 # ################################################################################################################################
 
     def get_status_list(self) -> 'strdictlist':
-        """ Every gateway as it is configured, with whatever the hub knows about it merged
-        in. A hub that is not up yet leaves the live half unknown.
+        """ The configuration of every gateway, merged with its runtime state from the hub.
+        The runtime state is reported as unknown while the hub is unavailable.
         """
 
         # Local variables
@@ -430,16 +472,18 @@ class OnPremGatewayManager:
         by_name:'strdict' = {}
         hub_error = ''
 
-        # What the hub knows, if it is up ..
+        # The runtime state from the hub, if it is available ..
         try:
             for item in self.hub.get_gateways():
                 by_name[item['name']] = item
         except Exception as e:
             hub_error = str(e)
-            logger.warning('Could not read the on-premises gateway hub: %s', e)
+            _report_hub_outage(e)
+        else:
+            _report_hub_available()
 
-        # .. merged into what the ODB holds, which is where a gateway exists before it
-        # ever connects.
+        # .. merged with the ODB configuration, in which a gateway is defined before
+        # it connects for the first time.
         for item in self.get_list():
 
             hosts = item['hosts']
@@ -451,6 +495,7 @@ class OnPremGatewayManager:
                 'is_active': item['is_active'],
                 'hosts': hosts,
                 'host_count': host_count,
+                'is_key_reset_required': item['is_key_reset_required'],
                 'hub_error': hub_error,
             }
 
