@@ -80,6 +80,16 @@ _docker_timeout = 120
 # Timeout for docker commands that create a container, in seconds - the first creation also downloads the image
 _docker_create_timeout = 1800
 
+# How many times publishing a host port is attempted - the host's ephemeral range covers the test ports,
+# so an outgoing connection of any process may hold one of them for a moment
+_start_attempts = 5
+
+# How long to sleep between such attempts, in seconds
+_start_retry_sleep = 1.0
+
+# What docker says when the host port is not free
+_port_in_use_marker = 'address already in use'
+
 # Read timeout for the model pull, in seconds
 _pull_timeout = 4 * 60 * 60
 
@@ -96,6 +106,39 @@ def _run_docker(arguments:'strlist', timeout:'int' = _docker_timeout) -> 'subpro
 
     out = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
     return out
+
+# ################################################################################################################################
+
+def _run_docker_publishing_port(
+    arguments:'strlist',
+    container_name:'str',
+    *,
+    is_create:'bool',
+    timeout:'int' = _docker_timeout,
+) -> 'subprocess.CompletedProcess':
+    """ Runs a docker command that publishes a host port, retrying while that port is momentarily busy.
+    Any other failure is returned to the caller right away because retrying it would not help.
+    """
+
+    result = _run_docker(arguments, timeout=timeout)
+
+    for _ in range(_start_attempts - 1):
+
+        if result.returncode == 0:
+            break
+
+        if _port_in_use_marker not in result.stderr:
+            break
+
+        # Docker creates the container before it sets its networking up, so a failed creation leaves one behind
+        # that would make the next attempt fail on the name - a failed start of an existing one leaves nothing new.
+        if is_create:
+            _ = _run_docker(['rm', '--force', container_name])
+
+        time.sleep(_start_retry_sleep)
+        result = _run_docker(arguments, timeout=timeout)
+
+    return result
 
 # ################################################################################################################################
 
@@ -177,7 +220,7 @@ def _ensure_container_running() -> 'None':
 
             # .. an existing but stopped container only needs to be started again.
             if result.stdout.strip() != 'true':
-                result = _run_docker(['start', Ollama_Container_Name])
+                result = _run_docker_publishing_port(['start', Ollama_Container_Name], Ollama_Container_Name, is_create=False)
 
                 if result.returncode != 0:
                     raise Exception(f'Could not restart Ollama -> {result.stderr}')
@@ -205,7 +248,7 @@ def _ensure_container_running() -> 'None':
 
     run_arguments.append(Ollama_Image)
 
-    result = _run_docker(run_arguments)
+    result = _run_docker_publishing_port(run_arguments, Ollama_Container_Name, is_create=True)
 
     if result.returncode != 0:
         raise Exception(f'Could not start Ollama -> {result.stderr}')
@@ -326,7 +369,7 @@ def _ensure_console_container_running() -> 'None':
     if result.returncode != 0:
         _pull_image(Console_Image)
 
-        result = _run_docker([
+        run_arguments = [
             'run', '-d',
             '--name', Console_Container_Name,
             '-p', f'{Console_Port}:{_console_internal_port}',
@@ -337,14 +380,16 @@ def _ensure_console_container_running() -> 'None':
             '-e', 'OFFLINE_MODE=1',
             '-v', f'{Console_Volume_Name}:/app/backend/data',
             Console_Image,
-        ])
+        ]
+
+        result = _run_docker_publishing_port(run_arguments, Console_Container_Name, is_create=True)
 
         if result.returncode != 0:
             raise Exception(f'Could not start the console -> {result.stderr}')
 
     # .. an existing but stopped container only needs to be started again.
     elif result.stdout.strip() != 'true':
-        result = _run_docker(['start', Console_Container_Name])
+        result = _run_docker_publishing_port(['start', Console_Container_Name], Console_Container_Name, is_create=False)
 
         if result.returncode != 0:
             raise Exception(f'Could not restart the console -> {result.stderr}')
