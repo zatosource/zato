@@ -31,8 +31,8 @@ if 0:
 # ################################################################################################################################
 
 # What a gateway is called and what it reaches
-_Gateway_Name = 'warsaw-office'
-_Other_Gateway_Name = 'london-office'
+_Gateway_Name = 'head-office'
+_Other_Gateway_Name = 'branch-office'
 _Erp_Address = 'erp-db.corp.local:5432'
 
 # What the hub reports for an enrolled gateway
