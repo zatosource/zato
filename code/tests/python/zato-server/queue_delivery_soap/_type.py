@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # lxml
-from lxml import etree
+from lxml.etree import QName, tostring as etree_tostring
 
 # Zato
 from zato.common.audit_log.api import AuditSource
@@ -99,7 +99,7 @@ def document_from_xml(xml:'str') -> 'anydict':
     out = {}
 
     for child in root:
-        name = etree.QName(child).localname
+        name = QName(child).localname
         out[name] = value_from_text(child.text)
 
     return out
@@ -116,7 +116,7 @@ def xml_from_document(document:'anydict', operation:'str') -> 'str':
 
     element = serialize_soap_message(message, operation)
 
-    out = etree.tostring(element, encoding=_xml_encoding)
+    out = etree_tostring(element, encoding=_xml_encoding)
     return out
 
 # ################################################################################################################################

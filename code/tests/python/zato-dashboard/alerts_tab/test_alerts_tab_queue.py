@@ -169,6 +169,7 @@ class TestQueueCells:
         }
 
         cell = _build_config_cell('queue_depth', 'number', values)
+        assert cell is not None
         assert cell['label'] == 'Queue depth'
         assert cell['display'] == '1000'
 

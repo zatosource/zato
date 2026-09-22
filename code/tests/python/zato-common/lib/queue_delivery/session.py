@@ -21,6 +21,7 @@ from tempfile import mkdtemp
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import cast_
 from zato.common.test.conftest_base_pubsub import find_free_port, render_template, run_quickstart_and_enmasse, \
     SessionState, start_server_process
 
@@ -77,7 +78,7 @@ class Session:
             f'server-logs-queue-delivery-{self.suite_name}-{backend_name}.txt',
         )
 
-        self.backend:'Backend' = None # type: ignore[assignment]
+        self.backend:'Backend' = cast_('Backend', None)
 
         # Holds the pub/sub database environment for as long as the session runs
         self._exit_stack = ExitStack()

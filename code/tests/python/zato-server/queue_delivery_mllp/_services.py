@@ -269,6 +269,9 @@ class Read(Service):
 
         conn_name = self.request.raw_request['conn_name']
 
+        # Our response to produce
+        out:'anydict'
+
         try:
             self.mllp[conn_name].ping()
             out = {

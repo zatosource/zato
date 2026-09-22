@@ -60,7 +60,7 @@ def count_topic_messages(topic_name:'str') -> 'int':
     query = query.where(delivery_table.c.topic_name == topic_name.lower())
 
     with engine.connect() as connection:
-        out = connection.execute(query).scalar()
+        out = connection.execute(query).scalar_one()
 
     return out
 

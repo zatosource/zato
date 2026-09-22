@@ -77,7 +77,7 @@ class MLLPRecordedRequest(RecordedRequest):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MLLPRecordingReceiver(RecordingReceiver):
+class MLLPRecordingReceiver(RecordingReceiver[MLLPRecordedRequest]):
     """ The endpoint of an outgoing MLLP connection.
     """
 
@@ -136,10 +136,14 @@ class MLLPRecordingReceiver(RecordingReceiver):
         """
         listener = self._listener
 
+        # Only start puts the thread on, and it sets the listener first
+        if listener is None:
+            return
+
         while self._is_running:
 
             try:
-                connection, _ = listener.accept() # type: ignore[union-attr]
+                connection, _ = listener.accept()
             except socket.timeout:
                 continue
             except OSError:

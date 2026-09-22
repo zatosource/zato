@@ -32,7 +32,7 @@ from queue_delivery.type_under_test import Conn_DLQ_Keep, Conn_Orders
 
 if 0:
     from zato.common.test.client import AdminClient
-    from zato.common.typing_ import anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist
     from queue_delivery.receiver import RecordingReceiver
 
 # ################################################################################################################################
@@ -83,10 +83,10 @@ def fill_dlq_with(client:'AdminClient', conn_name:'str', receiver:'RecordingRece
 
 class BrowseScenarios(ScenarioBase):
 
-    def _list(self, client:'AdminClient', conn_key:'str', kind:'str', **extra:'anydict') -> 'anydict':
+    def _list(self, client:'AdminClient', conn_key:'str', kind:'str', **extra:'any_') -> 'anydict':
         """ One page of a connection's queue or DLQ.
         """
-        request = {
+        request:'anydict' = {
             'conn_type': self.t.conn_type,
             'conn_id': self._conn_id(client, conn_key),
             'kind': kind,

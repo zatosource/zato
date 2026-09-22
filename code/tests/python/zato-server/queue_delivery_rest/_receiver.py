@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http.client import OK, SERVICE_UNAVAILABLE
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlsplit
@@ -49,7 +49,7 @@ class HTTPRecordedRequest(RecordedRequest):
     method: str = ''
     path: str = ''
     query_string: str = ''
-    headers: 'strstrdict' = None # type: ignore[assignment]
+    headers: 'strstrdict' = field(default_factory=dict)
 
     @property
     def status_code(self) -> 'int':
@@ -134,7 +134,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HTTPRecordingReceiver(RecordingReceiver):
+class HTTPRecordingReceiver(RecordingReceiver[HTTPRecordedRequest]):
     """ The endpoint of an outgoing REST connection.
     """
 

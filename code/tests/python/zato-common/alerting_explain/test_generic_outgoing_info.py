@@ -22,6 +22,7 @@ from zato.common.alerting.explain.fhir_info import describe_outgoing_fhir
 from zato.common.alerting.explain.mllp_outgoing_info import describe_mllp_outgoing
 from zato.common.api import GENERIC, HTTP_SOAP
 from zato.common.odb.model import Base, Cluster, GenericConn, SecurityBase
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -78,7 +79,7 @@ def _seed_connection(session_maker:'any_', type_:'str', opaque:'anydict') -> 'No
     session = session_maker()
     cluster = session.query(Cluster).filter(Cluster.id==_cluster_id).one()
 
-    row = GenericConn()
+    row = cast_('any_', GenericConn())
     row.name = _conn_name
     row.type_ = type_
     row.is_active = True

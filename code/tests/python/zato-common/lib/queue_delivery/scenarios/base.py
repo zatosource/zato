@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # What every group of shared scenarios builds on. A type's suite subclasses SharedScenarios and names its type, pytest
 # collects the inherited test methods and each runs through the type's connections, receivers and services.
 
+# Zato
+from zato.common.typing_ import cast_
+
 # Test support
 from queue_delivery.client import get_receiver
 from queue_delivery.type_under_test import TestConfig
@@ -29,7 +32,7 @@ class ScenarioBase:
     """
 
     # A type's suite sets this, the harness points TestConfig at the same object
-    type_under_test:'TypeUnderTest' = None # type: ignore[assignment]
+    type_under_test:'TypeUnderTest' = cast_('TypeUnderTest', None)
 
 # ################################################################################################################################
 

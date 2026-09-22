@@ -14,6 +14,7 @@ import logging
 import threading
 import time
 from dataclasses import dataclass, field
+from typing import Generic, TypeVar
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,12 +55,13 @@ class RecordedRequest:
 
 # ################################################################################################################################
 
-request_list = list[RecordedRequest]
+# The kind of request a type's receiver records - each type's own, carrying what its protocol saw
+RequestT = TypeVar('RequestT', bound=RecordedRequest)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RecordingReceiver:
+class RecordingReceiver(Generic[RequestT]):
     """ The endpoint of an outgoing connection - what a type's own receiver builds on.
     """
 
@@ -71,7 +73,7 @@ class RecordingReceiver:
         self.port = port
 
         # Every request received, accepted or not
-        self.requests:'request_list' = []
+        self.requests:'list[RequestT]' = []
 
         # The outcomes the next requests are answered with, one per request
         self._scripted:'anylist' = []
@@ -105,7 +107,7 @@ class RecordingReceiver:
 
 # ################################################################################################################################
 
-    def add_request(self, request:'RecordedRequest') -> 'None':
+    def add_request(self, request:'RequestT') -> 'None':
         """ Stores one request a type's receiver built.
         """
         with self._lock:
@@ -175,7 +177,7 @@ class RecordingReceiver:
 
 # ################################################################################################################################
 
-    def accepted(self) -> 'request_list':
+    def accepted(self) -> 'list[RequestT]':
         """ The requests the endpoint accepted, in the order they arrived.
         """
         with self._lock:
@@ -205,7 +207,7 @@ class RecordingReceiver:
 
 # ################################################################################################################################
 
-    def reads(self) -> 'request_list':
+    def reads(self) -> 'list[RequestT]':
         """ The reads and pings the endpoint saw, in the order they arrived.
         """
         with self._lock:
@@ -219,7 +221,7 @@ class RecordingReceiver:
         self,
         expected_count:'int'=1,
         timeout:'float'=_default_wait_timeout_seconds,
-        ) -> 'request_list':
+        ) -> 'list[RequestT]':
         """ Blocks until that many requests have arrived, accepted or not, then returns all of them.
         """
         deadline = time.monotonic() + timeout
@@ -245,7 +247,7 @@ class RecordingReceiver:
         self,
         expected_count:'int'=1,
         timeout:'float'=_default_wait_timeout_seconds,
-        ) -> 'request_list':
+        ) -> 'list[RequestT]':
         """ Blocks until that many requests have been accepted, then returns the accepted ones.
         """
         deadline = time.monotonic() + timeout

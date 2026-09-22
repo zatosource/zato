@@ -12,13 +12,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http.client import INTERNAL_SERVER_ERROR, OK
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlsplit
 
 # lxml
-from lxml import etree
+from lxml.etree import QName, SubElement, tostring as etree_tostring
 
 # Zato
 from zato.common.soap.common import Content_Type, FaultCode, SOAPVersion
@@ -65,7 +65,7 @@ class SOAPRecordedRequest(RecordedRequest):
     path: str = ''
     operation: str = ''
     soap_version: str = ''
-    headers: 'strstrdict' = None # type: ignore[assignment]
+    headers: 'strstrdict' = field(default_factory=dict)
 
     @property
     def status_code(self) -> 'int':
@@ -95,7 +95,7 @@ def _operation_element(envelope_bytes:'bytes') -> 'tuple[str, str, any_]':
     body = get_body(envelope)
     operation_element = body[0]
 
-    operation = etree.QName(operation_element).localname
+    operation = QName(operation_element).localname
 
     return version, operation, operation_element
 
@@ -107,8 +107,8 @@ def _response_envelope(version:'str', operation:'str') -> 'bytes':
     envelope = build_envelope(version)
     body = get_body(envelope)
 
-    response = etree.SubElement(body, operation + _response_suffix)
-    status = etree.SubElement(response, _response_status_tag)
+    response = SubElement(body, operation + _response_suffix)
+    status = SubElement(response, _response_status_tag)
     status.text = _response_status_text
 
     out = to_bytes(envelope)
@@ -158,7 +158,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
         # A delivery carries an envelope, whose operation element is what is recorded, a ping carries nothing
         if raw_body:
             version, operation, operation_element = _operation_element(raw_body)
-            body = etree.tostring(operation_element, encoding='unicode')
+            body = etree_tostring(operation_element, encoding='unicode')
         else:
             version = _default_version
             operation = ''
@@ -201,7 +201,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SOAPRecordingReceiver(RecordingReceiver):
+class SOAPRecordingReceiver(RecordingReceiver[SOAPRecordedRequest]):
     """ The endpoint of an outgoing SOAP connection.
     """
 

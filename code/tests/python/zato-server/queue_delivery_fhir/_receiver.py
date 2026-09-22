@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http.client import CREATED, OK, UNPROCESSABLE_ENTITY
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from json import dumps, loads
@@ -59,7 +59,7 @@ class FHIRRecordedRequest(RecordedRequest):
     method: str = ''
     path: str = ''
     query_string: str = ''
-    headers: 'strstrdict' = None # type: ignore[assignment]
+    headers: 'strstrdict' = field(default_factory=dict)
 
     @property
     def status_code(self) -> 'int':
@@ -179,7 +179,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FHIRRecordingReceiver(RecordingReceiver):
+class FHIRRecordingReceiver(RecordingReceiver[FHIRRecordedRequest]):
     """ The endpoint of an outgoing FHIR connection.
     """
 

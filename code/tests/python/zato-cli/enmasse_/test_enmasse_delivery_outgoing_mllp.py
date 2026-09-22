@@ -391,17 +391,21 @@ class TestOutgoingMLLPDeliveryExport:
 
         # In field order, the retry fields first and the DLQ fields right after the switch
         written = path.read_text()
-        expected = '    max_retries: 4\n' \
-            '    retry_sleep_time: 5\n' \
-            '    retry_backoff_threshold: 120\n' \
-            '    retry_backoff_multiplier: 3\n' \
-            '    use_queue: True\n' \
-            '    use_dlq: False\n' \
-            '    dlq_action: forward\n' \
-            '    dlq_retries: 5\n' \
-            '    dlq_retry_interval: 300\n' \
-            f'    dlq_forward_to: {_forward_to}\n' \
-            '    dlq_keep_header: False\n'
+        expected_lines = [
+            '    max_retries: 4',
+            '    retry_sleep_time: 5',
+            '    retry_backoff_threshold: 120',
+            '    retry_backoff_multiplier: 3',
+            '    use_queue: True',
+            '    use_dlq: False',
+            '    dlq_action: forward',
+            '    dlq_retries: 5',
+            '    dlq_retry_interval: 300',
+            f'    dlq_forward_to: {_forward_to}',
+            '    dlq_keep_header: False',
+            '',
+        ]
+        expected = '\n'.join(expected_lines)
         assert expected in written, written
 
         read_back = yaml.safe_load(written)

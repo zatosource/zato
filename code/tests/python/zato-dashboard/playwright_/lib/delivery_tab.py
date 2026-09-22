@@ -125,11 +125,24 @@ def click_switch(page:'Page', form_type:'str', field_name:'str') -> 'None':
 
 # ################################################################################################################################
 
+def _has_class(page:'Page', selector:'str', class_name:'str') -> 'bool':
+    """ Whether the element carries the class - every element the tab dims has a class attribute, so a missing one
+    is a page that did not render.
+    """
+    class_names = page.get_attribute(selector, 'class')
+
+    if class_names is None:
+        raise ValueError(f'No class attribute on `{selector}`')
+
+    out = class_name in class_names.split()
+    return out
+
+# ################################################################################################################################
+
 def panel_is_off(page:'Page', page_prefix:'str', form_type:'str') -> 'bool':
     """ Whether the whole tab but its retries is dimmed.
     """
-    class_names = page.get_attribute(f'#{panel_id(page_prefix, form_type)}', 'class')
-    out = Panel_Off_Class in class_names.split()
+    out = _has_class(page, f'#{panel_id(page_prefix, form_type)}', Panel_Off_Class)
     return out
 
 # ################################################################################################################################
@@ -137,8 +150,7 @@ def panel_is_off(page:'Page', page_prefix:'str', form_type:'str') -> 'bool':
 def line_is_off(page:'Page', page_prefix:'str', form_type:'str', line_name:'str') -> 'bool':
     """ Whether one line of the tab is dimmed.
     """
-    class_names = page.get_attribute(f'#{panel_id(page_prefix, form_type)}-line-{line_name}', 'class')
-    out = Line_Off_Class in class_names.split()
+    out = _has_class(page, f'#{panel_id(page_prefix, form_type)}-line-{line_name}', Line_Off_Class)
     return out
 
 # ################################################################################################################################

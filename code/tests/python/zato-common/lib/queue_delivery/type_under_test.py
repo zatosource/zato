@@ -14,6 +14,7 @@ from json import dumps, loads
 
 # Zato
 from zato.common.audit_log.api import AuditEvent
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,7 +109,7 @@ class TypeUnderTest:
     services_source = ''
 
     # The receiver class of the type, constructed with a port
-    receiver_class:'type[RecordingReceiver]' = None # type: ignore[assignment]
+    receiver_class:'type[RecordingReceiver]' = cast_('type[RecordingReceiver]', None)
 
     # What a send's error starts with when the endpoint refuses the message
     refused_error_prefix = ''
@@ -172,7 +173,7 @@ class TestConfig:
     """ What the tests need to know about the environment the session fixture built for them.
     """
 
-    type_under_test:'TypeUnderTest' = None # type: ignore[assignment]
+    type_under_test:'TypeUnderTest' = cast_('TypeUnderTest', None)
 
     base_url = ''
     password = ''
@@ -181,7 +182,7 @@ class TestConfig:
     server_port = 0
     zato_bin = ''
 
-    backend:'Backend' = None # type: ignore[assignment]
+    backend:'Backend' = cast_('Backend', None)
 
     # The endpoints, by the keys of Connection_Keys
     receivers:'dict[str, RecordingReceiver]' = {}

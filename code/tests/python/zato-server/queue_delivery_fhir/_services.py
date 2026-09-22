@@ -161,6 +161,9 @@ class Read(Service):
 
         client = self.fhir[conn_name]
 
+        # Our response to produce
+        out:'anydict'
+
         try:
             resource = client.get(_resource_type, _read_resource_id)
             out = {
