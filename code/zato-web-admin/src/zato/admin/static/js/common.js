@@ -211,6 +211,7 @@ $.namespace('zato.query');
 $.namespace('zato.rate_limiting');
 $.namespace('zato.redis');
 $.namespace('zato.response_caching');
+$.namespace('zato.ssl_config');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.apikey');
@@ -2338,6 +2339,14 @@ $.fn.zato.time_ago.config = {
     'duration_ms_label': 'ms',
     'tooltip_title': 'Last run',
 
+    // A cell whose data-time-ago-direction is this counts down to a moment rather than up from one,
+    // e.g. "6 hours 1 minute" until a certificate expires, and reads the labels below
+    'future_direction': 'future',
+    'future_tooltip_title': 'Expires',
+    'future_row_label': 'Expires in',
+    'expired_label': 'Expired',
+    'local_label': 'Local',
+
     // What separates a cell's own leading text from the humanized age after it
     'prefix_separator': ' \u00b7 ',
 
@@ -2390,8 +2399,25 @@ $.fn.zato.time_ago.humanize = function(age_seconds) {
         return config.just_now_label;
     }
 
+    var out = $.fn.zato.time_ago.humanize_span(age_seconds);
+
+    // A page that shows durations rather than moments has no trailing word here.
+    if(config.ago_label) {
+        out += ' ' + config.ago_label;
+    }
+
+    return out;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// The coarse reading of a span of at least one second, without any trailing word,
+// which is what both the ages and the time left until a moment in the future read as.
+$.fn.zato.time_ago.humanize_span = function(span_seconds) {
+    var config = $.fn.zato.time_ago.config;
+
     var units = config.units;
-    var remaining = Math.floor(age_seconds);
+    var remaining = Math.floor(span_seconds);
 
     // Find the largest unit that fits - the last one, seconds, always does ..
     var unit_idx = 0;
@@ -2425,11 +2451,6 @@ $.fn.zato.time_ago.humanize = function(age_seconds) {
         if(lesser_count) {
             out += ' ' + $.fn.zato.count_text(lesser_count, lesser_unit.name, lesser_unit.name + 's');
         }
-    }
-
-    // A page that shows durations rather than moments has no trailing word here.
-    if(config.ago_label) {
-        out += ' ' + config.ago_label;
     }
 
     return out;
@@ -2559,6 +2580,38 @@ $.fn.zato.time_ago.build_tooltip_html = function(iso_utc, duration_ms, title, ro
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+// The tooltip of a cell that counts down to a moment - the exact time left, then the moment itself
+// in the browser's timezone, with that timezone's name after it, and in UTC.
+$.fn.zato.time_ago.build_future_tooltip_html = function(iso_utc, title, row_label) {
+    var config = $.fn.zato.time_ago.config;
+    var when = new Date(iso_utc);
+
+    var browser_timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    var local_text = $.fn.zato.time_ago.format_timestamp(when, false) + ' (' + browser_timezone + ')';
+    var utc_text = $.fn.zato.time_ago.format_timestamp(when, true);
+
+    var left_seconds = Math.floor((when.getTime() - Date.now()) / 1000);
+    var left_text;
+    if(left_seconds < 1) {
+        left_text = config.expired_label;
+    }
+    else {
+        left_text = $.fn.zato.time_ago.humanize_detailed(left_seconds);
+    }
+
+    var out = '<div class="zato-time-ago-tooltip-title">' + title + '</div>';
+    out += '<table class="zato-time-ago-tooltip">';
+    out += '<tr><th>' + row_label + '</th><td>' + left_text + '</td></tr>';
+    out += '<tr><th>' + config.utc_label + '</th><td>' + utc_text + '</td></tr>';
+    out += '<tr><th>' + config.local_label + '</th><td>' + local_text + '</td></tr>';
+    out += '</table>';
+
+    return out;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 // Updates one cell in place - existing link and tippy instances are reused
 // so that periodic refreshes never make the cell flicker.
 $.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
@@ -2595,9 +2648,35 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
     var new_text;
     var tooltip_html = '';
 
+    var is_future = cell.attr('data-time-ago-direction') === config.future_direction;
+
     if(!iso_utc) {
         cell.attr('data-sort-value', config.never_sort_value);
         new_text = config.never_label;
+    }
+    else if(is_future) {
+        var future_when = new Date(iso_utc);
+        var left_seconds = Math.floor((future_when.getTime() - Date.now()) / 1000);
+
+        cell.attr('data-sort-value', left_seconds);
+
+        // A moment already passed has no time left to count down.
+        if(left_seconds < 1) {
+            new_text = config.expired_label;
+        }
+        else {
+            new_text = $.fn.zato.time_ago.humanize_span(left_seconds);
+        }
+
+        var future_title = cell.attr('data-time-ago-title');
+        if(!future_title) {
+            future_title = config.future_tooltip_title;
+        }
+        var future_row_label = cell.attr('data-time-ago-row-label');
+        if(!future_row_label) {
+            future_row_label = config.future_row_label;
+        }
+        tooltip_html = $.fn.zato.time_ago.build_future_tooltip_html(iso_utc, future_title, future_row_label);
     }
     else {
         var when = new Date(iso_utc);
@@ -2908,7 +2987,7 @@ $.fn.zato.time_ago.refresh = function(container_selector, url) {
 
     // Collect the IDs of the cells currently shown ..
     var id_list = [];
-    $(container_selector).find('td.zato-time-ago').each(function() {
+    $(container_selector).find('.zato-time-ago').each(function() {
         $.each($.fn.zato.time_ago.cell_ids($(this)), function(ignored, item_id) {
 
             // Two cells may stand for the same item, e.g. a timestamp and the age since it
@@ -2937,7 +3016,7 @@ $.fn.zato.time_ago.refresh = function(container_selector, url) {
             }
 
             var apply_update = function() {
-                $(container_selector).find('td.zato-time-ago').each(function() {
+                $(container_selector).find('.zato-time-ago').each(function() {
                     var cell = $(this);
 
                     // A cell standing for several items shows the latest run among them - the timestamps

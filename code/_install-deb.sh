@@ -89,6 +89,32 @@ if [ -f "$HOME/.cargo/env" ]; then
     . "$HOME/.cargo/env"
 fi
 
+# lego obtains certificates from Let's Encrypt and Pebble is the local ACME server that its tests run against
+Lego_Version=v5.5.1
+Pebble_Version=v2.10.1
+
+case "$(uname -m)" in
+    x86_64)  ACME_Architecture=amd64 ;;
+    aarch64) ACME_Architecture=arm64 ;;
+    *)       echo "Unsupported architecture for lego and Pebble: $(uname -m)"; exit 1 ;;
+esac
+
+ACME_Download_Dir=$(mktemp -d)
+
+echo Installing lego $Lego_Version
+curl -fsSL -o "$ACME_Download_Dir/lego.tar.gz" \
+    "https://github.com/go-acme/lego/releases/download/$Lego_Version/lego_${Lego_Version}_linux_$ACME_Architecture.tar.gz"
+tar -xzf "$ACME_Download_Dir/lego.tar.gz" -C "$ACME_Download_Dir" lego
+install -m 0755 "$ACME_Download_Dir/lego" "$CURDIR/bin/lego"
+
+echo Installing Pebble $Pebble_Version
+curl -fsSL -o "$ACME_Download_Dir/pebble.tar.gz" \
+    "https://github.com/letsencrypt/pebble/releases/download/$Pebble_Version/pebble-linux-$ACME_Architecture.tar.gz"
+tar -xzf "$ACME_Download_Dir/pebble.tar.gz" -C "$ACME_Download_Dir"
+install -m 0755 "$ACME_Download_Dir/pebble-linux-$ACME_Architecture/linux/$ACME_Architecture/pebble" "$CURDIR/bin/pebble"
+
+rm -rf "$ACME_Download_Dir"
+
 echo Installing maturin
 $UV_BIN pip install maturin
 
