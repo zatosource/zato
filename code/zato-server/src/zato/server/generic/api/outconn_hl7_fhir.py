@@ -35,7 +35,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid_server
 from zato.common.util.http_retry import RetryPolicy, send_with_retry
 from zato.server.connection.queue import Wrapper
-from zato.server.generic.api.outconn_hl7_fhir_audit import FHIRAuditMixin, Operation_Outcome_Type
+from zato.server.generic.api.outconn_hl7_fhir_audit import FHIRAuditMixin, get_fhir_rejection, Operation_Outcome_Type
 from zato.server.generic.api.outconn_hl7_fhir_resource import HL7FHIRResource
 
 # ################################################################################################################################
@@ -116,37 +116,6 @@ def is_fhir_rejection(response:'Response') -> 'bool':
 
     out = response.status_code != _status_not_modified
     return out
-
-# ################################################################################################################################
-
-def get_fhir_rejection(response:'Response') -> 'tuple[str, any_]':
-    """ Why a write was turned down and what the server answered with - the status line with the text of the
-    OperationOutcome the body carries, or with the body itself when it is not one, and the body as parsed.
-    """
-    body:'any_' = response.text
-
-    try:
-        parsed = json.loads(response.content.decode())
-    except (ValueError, UnicodeDecodeError):
-        parsed = None
-
-    if isinstance(parsed, dict):
-        body = parsed
-
-        if parsed.get('resourceType') == Operation_Outcome_Type:
-            issues = parsed.get('issue')
-            if issues:
-                reason = issues[0].get('diagnostics', '')
-            else:
-                reason = ''
-        else:
-            reason = response.text
-    else:
-        reason = response.text
-
-    error = f'HTTP {response.status_code} {reason}'.strip()
-
-    return error, body
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -426,7 +395,7 @@ class _HL7FHIRConnection(FHIRAuditMixin, SyncFHIRClient):
             if not cid:
                 cid = new_cid_server()
 
-            attrs = self._record_request(cid, method, path, data, is_health_check)
+            attrs = self._record_request(cid, method, path, data, params, is_health_check)
             request_start = monotonic()
 
             # A failure before any response arrived names how it failed - a timeout is a timeout.
@@ -487,6 +456,19 @@ class _HL7FHIRConnection(FHIRAuditMixin, SyncFHIRClient):
 
     def _raise_for_status(self, response:'Response') -> 'None':
         """ The exceptions fhirpy 2.2.0 raises for each status - what every caller of this client expects.
+        The response the status came on travels with the exception, the exception class alone not
+        saying which status it was.
+        """
+        try:
+            self._do_raise_for_status(response)
+        except Exception as e:
+            e.zato_response = response
+            raise
+
+# ################################################################################################################################
+
+    def _do_raise_for_status(self, response:'Response') -> 'None':
+        """ Raises what fhirpy raises for one status, with nothing said about where it is raised from.
         """
         status_code = response.status_code
 

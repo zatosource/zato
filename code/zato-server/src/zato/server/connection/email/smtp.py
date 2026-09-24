@@ -21,6 +21,8 @@ from zato.server.ext.outbox import AnonymousOutbox, Attachment, Email, Outbox
 from zato.common.api import EMAIL
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.attachment import build_attachment
+from zato.common.email.audit import split_addresses, Key_Charset, Key_Headers, Key_Is_HTML, Key_Is_RFC2231, \
+    Key_Recipients
 from zato.common.util.api import new_cid_server
 from zato.server.connection.cloud.microsoft_365 import Microsoft365Client
 from zato.server.connection.email.common import is_auth_error, join_addresses, BaseConnection
@@ -62,7 +64,8 @@ _default_needs_tls_verify = True
 # ################################################################################################################################
 
 def _get_send_summary(msg:'any_', from_:'any_') -> 'str':
-    """ Builds a JSON summary of an outgoing e-mail message for the audit log.
+    """ Builds a JSON summary of an outgoing e-mail message for the audit log - everything
+    the same message needs to be built again and sent as it was, and no more.
     """
 
     # The body may be bytes, depending on how the caller built the message
@@ -71,13 +74,37 @@ def _get_send_summary(msg:'any_', from_:'any_') -> 'str':
     if isinstance(body, bytes):
         body = body.decode('utf-8', errors='replace')
 
+    # An address that was never set arrives as None
+    if from_ is None:
+        from_ = msg.from_
+
+    # A message built without headers carries None there
+    headers = msg.headers
+    if headers is None:
+        headers = {}
+
     out = dumps({
         'subject': msg.subject,
-        'from': from_ or msg.from_,
+        'from': from_,
         'to': join_addresses(msg.to),
         'cc': join_addresses(msg.cc),
         'bcc': join_addresses(msg.bcc),
         'body': body,
+
+        # The recipients are kept as they were given as well as joined for reading, because a display
+        # name may itself hold a comma and splitting the joined form back would break that address
+        Key_Recipients: {
+            'to': split_addresses(msg.to),
+            'cc': split_addresses(msg.cc),
+            'bcc': split_addresses(msg.bcc),
+        },
+
+        # What decides how the body is encoded and framed - a message sent again without these
+        # would arrive as plain text where it was HTML, or in the wrong character set
+        Key_Headers: headers,
+        Key_Is_HTML: msg.is_html,
+        Key_Charset: msg.charset,
+        Key_Is_RFC2231: msg.is_rfc2231,
     })
 
     return out
@@ -266,7 +293,7 @@ class SMTPConnection(BaseConnection):
             event_type = AuditEvent.Request_Sent
 
         self.audit_log.insert(
-            AuditSource.Email_SMTP,
+            AuditSource.Email_SMTP_Health,
             event_type,
             self.config.name,
             cid=cid,
@@ -278,7 +305,11 @@ class SMTPConnection(BaseConnection):
 
 # ################################################################################################################################
 
-    def send(self, msg:'any_', from_:'any_'=None, cid:'str'='') -> 'bool':
+    def send(self, msg:'any_', from_:'any_'=None, cid:'str'='', needs_audit:'bool'=True) -> 'bool':
+
+        # A resubmit records the attempt itself, which is how it links the new row to the
+        # original one, so the connection stays out of the log for that one send.
+        needs_audit = needs_audit and self.needs_audit
 
         # A message built without headers carries None there
         headers = msg.headers
@@ -295,7 +326,7 @@ class SMTPConnection(BaseConnection):
                 atts.append(att)
 
                 # The audit log keeps the attachment's bytes as they went out
-                if self.needs_audit:
+                if needs_audit:
                     attachment_envelopes.append(_build_send_attachment_envelope(item['name'], contents))
 
         # Messages without an explicit From address use the connection's own one, filled in by the underlying transport
@@ -323,7 +354,7 @@ class SMTPConnection(BaseConnection):
             logger.warning('Could not send an SMTP message to `%s`, e:`%s`', self.config_no_sensitive, format_exc())
 
             # .. record the failure before telling the caller ..
-            if self.needs_audit:
+            if needs_audit:
                 _insert_send_event(self.audit_log, self.config.name, msg, from_, cid, send_start, attachment_envelopes,
                     outcome=AuditOutcome.Error, status=str(e), is_auth_error=is_auth_error(e))
 
@@ -338,7 +369,7 @@ class SMTPConnection(BaseConnection):
                     msg.subject, msg.from_, msg.to, atts_info)
 
             # .. record what went out on the wire ..
-            if self.needs_audit:
+            if needs_audit:
                 _insert_send_event(self.audit_log, self.config.name, msg, from_, cid, send_start, attachment_envelopes,
                     outcome=AuditOutcome.OK)
 
@@ -417,7 +448,7 @@ class Microsoft365SMTPConnection(BaseConnection):
         duration_ms = int((monotonic() - start) * 1000)
 
         self.audit_log.insert(
-            AuditSource.Email_SMTP,
+            AuditSource.Email_SMTP_Health,
             AuditEvent.Request_Sent,
             self.config['name'],
             cid=cid,
@@ -429,7 +460,11 @@ class Microsoft365SMTPConnection(BaseConnection):
 
 # ################################################################################################################################
 
-    def send(self, msg:'any_', from_:'any_'=None, cid:'str'='') -> 'bool':
+    def send(self, msg:'any_', from_:'any_'=None, cid:'str'='', needs_audit:'bool'=True) -> 'bool':
+
+        # A resubmit records the attempt itself, which is how it links the new row to the
+        # original one, so the connection stays out of the log for that one send.
+        needs_audit = needs_audit and self.needs_audit
 
         attachment_envelopes:'anylist' = []
         send_start = monotonic()
@@ -472,7 +507,7 @@ class Microsoft365SMTPConnection(BaseConnection):
                     message.attachments.add([(BytesIO(contents), item['name'])])
 
                     # The audit log keeps the attachment's bytes as they went out
-                    if self.needs_audit:
+                    if needs_audit:
                         attachment_envelopes.append(_build_send_attachment_envelope(item['name'], contents))
 
             # .. and now the message can be sent ..
@@ -488,7 +523,7 @@ class Microsoft365SMTPConnection(BaseConnection):
             logger.warning('Could not send a Microsoft 365 message to `%s`, e:`%s`', self.config_no_sensitive, format_exc())
 
             # .. record the failure before telling the caller ..
-            if self.needs_audit:
+            if needs_audit:
                 _insert_send_event(self.audit_log, self.config['name'], msg, from_, cid, send_start, attachment_envelopes,
                     outcome=AuditOutcome.Error, status=str(e))
 
@@ -502,7 +537,7 @@ class Microsoft365SMTPConnection(BaseConnection):
                     msg.subject, msg.to, self.config['name'])
 
             # .. record what went out on the wire ..
-            if self.needs_audit:
+            if needs_audit:
                 _insert_send_event(self.audit_log, self.config['name'], msg, from_, cid, send_start, attachment_envelopes,
                     outcome=AuditOutcome.OK)
 

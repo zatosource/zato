@@ -27,6 +27,8 @@ _source_page_url = {
     AuditSource.REST_Outgoing_Health:
         f'/zato/http-soap/?cluster={default_cluster_id}&connection=outgoing&transport=plain_http',
     AuditSource.SOAP_Outgoing_Health: f'/zato/http-soap/?cluster={default_cluster_id}&connection=outgoing&transport=soap',
+    AuditSource.FHIR_Health: f'/zato/outgoing/hl7/fhir/?cluster={default_cluster_id}',
+    AuditSource.Email_SMTP_Health: f'/zato/email/smtp/?cluster={default_cluster_id}',
 
     AuditSource.MLLP_Channel: f'/zato/channel/hl7/mllp/?cluster={default_cluster_id}',
     AuditSource.MLLP_Outgoing: f'/zato/outgoing/hl7/mllp/?cluster={default_cluster_id}',

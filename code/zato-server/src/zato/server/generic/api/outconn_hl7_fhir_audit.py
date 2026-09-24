@@ -14,6 +14,7 @@ import json
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.common import classify_transport_error
+from zato.common.audit_log.request_context import Key_Method, Key_Params, Key_Payload
 from zato.common.json_internal import dumps
 
 # ################################################################################################################################
@@ -22,7 +23,9 @@ from zato.common.json_internal import dumps
 if 0:
     from requests import Response
     from zato.common.audit_log.api import AuditLog
-    from zato.common.typing_ import stranydict, strdictnone
+    from zato.common.typing_ import any_, stranydict, strdictnone
+
+    fhirrejection = tuple[str, any_]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,11 +33,52 @@ if 0:
 # The resource type of a failed response that carries an issue code
 Operation_Outcome_Type = 'OperationOutcome'
 
+# The keys of an OperationOutcome that say why a write was turned down
+_resource_type_key = 'resourceType'
+_issue_key         = 'issue'
+_diagnostics_key   = 'diagnostics'
+
 # The audit source a call's pair is written under - the connection's own traffic or its health checks
 _source_by_is_health_check = {
     False: AuditSource.FHIR,
     True: AuditSource.FHIR_Health,
 }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_fhir_rejection(response:'Response') -> 'fhirrejection':
+    """ Why a write was turned down and what the server answered with - the status line with the text of the
+    OperationOutcome the body carries, or with the body itself when it is not one, and the body as parsed.
+    """
+    body:'any_' = response.text
+    reason = response.text
+
+    try:
+        parsed = json.loads(response.content.decode())
+    except (ValueError, UnicodeDecodeError):
+        parsed = None
+
+    if isinstance(parsed, dict):
+        body = parsed
+
+        if parsed.get(_resource_type_key) == Operation_Outcome_Type:
+            issues = parsed.get(_issue_key)
+            reason = ''
+
+            # A server names the reason under an optional key, so there may be nothing to read.
+            if issues:
+                first_issue = issues[0]
+
+                if _diagnostics_key in first_issue:
+                    reason = first_issue[_diagnostics_key]
+
+    error = f'HTTP {response.status_code} {reason}'.strip()
+
+    # Our response to produce
+    out = error, body
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,6 +97,7 @@ class FHIRAuditMixin:
         method:'str',
         path:'str',
         data:'strdictnone',
+        params:'strdictnone',
         is_health_check:'bool',
         ) -> 'stranydict':
         """ The first event of a call's pair - the request as it went out, stored as the resubmit convention document.
@@ -73,12 +118,17 @@ class FHIRAuditMixin:
         else:
             request_body = dumps(data)
 
-        # The stored document is the resubmit convention - payload plus the method
-        # and path a per-hop resend needs to repeat the exact same call.
+        if params is None:
+            params = {}
+
+        # The stored document is the resubmit convention - payload plus the method, the path and the
+        # search parameters a per-hop resend needs to repeat the exact same call. A search whose
+        # parameters were dropped would come back as every resource of its type rather than the one.
         stored_data = dumps({
-            'payload': request_body,
-            'method': method,
+            Key_Payload: request_body,
+            Key_Method: method,
             'path': path,
+            Key_Params: params,
         })
 
         _ = self.zato_audit_log.insert(

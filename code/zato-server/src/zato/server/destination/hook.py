@@ -28,7 +28,7 @@ from zato.server.destination.dispatch import send as dispatch_send
 
 if 0:
     from zato.common.destination.coordinator import DeliveryResult, DeliveryTransports
-    from zato.common.destination.model import ChannelDestinationConfig, DestinationEntry
+    from zato.common.destination.model import ChannelDestinationConfig, DestinationEntry, HopSendResult
     from zato.common.destination.payload import PayloadOverrides
     from zato.common.typing_ import any_, stranydict, strlist
     from zato.server.destination.dispatch import DestinationConnections
@@ -65,7 +65,7 @@ class ConnectionDispatcher:
 
 # ################################################################################################################################
 
-    def send(self, entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'any_':
+    def send(self, entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'HopSendResult':
         out = dispatch_send(self.connections, entry, payload, cid)
         return out
 

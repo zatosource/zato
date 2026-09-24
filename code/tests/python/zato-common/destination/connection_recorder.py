@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # what reached them and fail whichever of them a test needs to see fail, the destination list a
 # channel stores, and the recorded rows the deliveries left behind.
 
+# stdlib
+from http.client import BAD_REQUEST, SERVICE_UNAVAILABLE
+
 # SQLAlchemy
 from sqlalchemy import select
 
@@ -17,17 +20,19 @@ from sqlalchemy import select
 from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditEvent, AuditLog
 from zato.common.destination.constants import DestinationType
 from zato.common.destination.coordinator import new_context, new_transports
+from zato.common.destination.model import new_send_result
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.destination.coordinator import DeliveryContext, DeliveryTransports
-    from zato.common.destination.model import DestinationEntry
+    from zato.common.destination.model import DestinationEntry, HopSendResult
     from zato.common.typing_ import any_, anydict, anylist, stranydict, strintdict
 
     anydict = anydict
     anylist = anylist
+    HopSendResult = HopSendResult
     stranydict = stranydict
     strintdict = strintdict
 
@@ -54,6 +59,15 @@ Request_Payload = 'MSH|^~\\&|SENDER|FACILITY|RECEIVER|FACILITY|20260101120000||A
 # A failure another attempt can get past, and one it never can
 Transient_Error = 'Connection refused by the receiver'
 Permanent_Error = 'Message failed validation against the schema'
+
+# What a destination that turned the message down answers with - one refusal another attempt
+# can get past and one that is answered the same way however often it is repeated.
+Rejected_Status = f'HTTP {SERVICE_UNAVAILABLE} Service Unavailable'
+Permanently_Rejected_Status = f'HTTP {BAD_REQUEST} Bad Request'
+
+# Two statuses whose wording says the opposite of what the adapter knows.
+Reads_Transient_Status = 'The receiver is unavailable for now'
+Reads_Permanent_Status = 'The message is invalid'
 
 # How long the tests wait between two attempts at the same destination
 Retry_Sleep_Seconds = 0.01
@@ -82,6 +96,10 @@ class ConnectionRecorder:
         # Destinations that fail a number of times before going through
         self.failing_attempts:'strintdict' = {}
 
+        # Destinations that answer every message by turning it down, by the status each
+        # of them answers with.
+        self.always_rejecting:'stranydict' = {}
+
 # ################################################################################################################################
 
     def make(self) -> 'DeliveryTransports':
@@ -90,7 +108,7 @@ class ConnectionRecorder:
 
 # ################################################################################################################################
 
-    def send(self, entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'str':
+    def send(self, entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'HopSendResult':
         name = entry.name
         self.deliveries.append((name, payload))
 
@@ -101,7 +119,16 @@ class ConnectionRecorder:
             self.failing_attempts[name] = remaining - 1
             raise Exception(Transient_Error)
 
-        out = f'Accepted by {name}'
+        # A destination that turned the message down still answered, so the refusal comes back
+        # as data with the answer alongside it rather than as an exception.
+        if status := self.always_rejecting.get(name):
+            body = f'Refused by {name}'
+            out = new_send_result(body, is_rejected=True, status=status, response_text=body)
+            return out
+
+        response = f'Accepted by {name}'
+
+        out = new_send_result(response, response_text=response)
         return out
 
 # ################################################################################################################################
@@ -123,6 +150,50 @@ class ConnectionRecorder:
         for name, _ in self.deliveries:
             out.append(name)
 
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RejectThenFailRecorder(ConnectionRecorder):
+    """ A connection whose first attempt is turned down and whose every later attempt gets
+    no answer at all.
+    """
+    def __init__(self, name:'str') -> 'None':
+        super().__init__()
+        self.name = name
+
+    def send(self, entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'HopSendResult':
+        self.deliveries.append((entry.name, payload))
+        delivery_count = len(self.deliveries)
+
+        if delivery_count == 1:
+            body = f'Refused by {self.name}'
+            out = new_send_result(body, is_rejected=True, status=Rejected_Status, response_text=body)
+            return out
+
+        raise Exception(Transient_Error)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ClassifyingRecorder(ConnectionRecorder):
+    """ A connection whose every refusal carries the classification the adapter made of it,
+    with a status whose wording says the opposite.
+    """
+    def __init__(self, name:'str', classification:'str', status:'str') -> 'None':
+        super().__init__()
+        self.name = name
+        self.classification = classification
+        self.status = status
+
+    def send(self, entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'HopSendResult':
+        self.deliveries.append((entry.name, payload))
+
+        body = f'Refused by {self.name}'
+
+        out = new_send_result(body, is_rejected=True, status=self.status, response_text=body,
+            classification=self.classification)
         return out
 
 # ################################################################################################################################

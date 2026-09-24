@@ -393,7 +393,7 @@ class TestCollectFacts:
         assert fact[Window_Seconds_By_Measure_Key][Measure_Ack_Codes] == 600
         assert fact[Window_Seconds_By_Measure_Key][Measure_Connection_Failures] == 600
 
-    def test_the_newest_failure_pointed_at_is_the_ack_itself(self) -> 'None':
+    def test_the_newest_failure_points_at_the_message_its_ack_answered(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         now = utcnow()
@@ -404,8 +404,11 @@ class TestCollectFacts:
         facts = collect_facts(engine, {}, AuditSource.MLLP_Outgoing, now, window_seconds=_window_seconds)
         fact = _fact_of(facts, _conn_name)
 
-        # The ack row carries the failed outcome, the message-sent row before it is always OK
-        assert fact['last_error_event_id'] == ack_id
+        # The ack row carries the failed outcome but nothing goes out again from it - the message
+        # it never answered is what the operator sends once more, so the link lands one row earlier,
+        # and it is the newest message of this cid rather than any message the cid names.
+        assert fact['last_error_event_id'] == ack_id - 1
+        assert fact['is_resubmittable'] == 1
         assert fact['error_count'] == 1
 
 # ################################################################################################################################

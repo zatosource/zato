@@ -17,8 +17,11 @@ from zato.admin.web.views.audit_log.columns import _data_preview_length, _row_nu
     _source_attr_columns, _source_body_preview
 from zato.admin.web.views.audit_log.sources import _source_resubmit, _source_row_enrich
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table
-from zato.common.audit_log.common import AuditEvent, AuditSource
+from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Payload_Kind_Described
+from zato.common.audit_log.resubmit import Resend_Hop_Service
 from zato.common.audit_log.service import Attribute_Channel
+from zato.common.json_internal import loads
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,12 +105,15 @@ def _hydrate_rows(connection:'any_', rows:'anylist') -> 'None':
         if source == AuditSource.Service:
             _attach_note_fields(connection, source_rows)
 
-        # .. and a row can only carry the resubmitted marker on a source that has resubmits at all.
+        # .. and a row can only carry the resubmitted marker, or offer the action, on a source
+        # that has resubmits at all.
         if source in _source_resubmit:
             _mark_resubmitted(connection, source, source_rows)
+            _mark_resubmittable(source, source_rows)
         else:
             for row in source_rows:
                 row['is_resubmitted'] = False
+                row['is_resubmittable'] = False
 
     # Lineage and message bodies are keyed on the event id alone, so they answer for every
     # row at once no matter which source wrote it.
@@ -193,7 +199,7 @@ def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None'
     whose correlation id is the CID of the original one. Only a row that can be resubmitted
     at all is ever flagged - a source may use the correlation id for other kinship too, e.g.
     a file transfer run's own events all name the run by it, and a run summary is no resubmit
-    of itself.
+    of itself. An attempt that failed is no resubmit either.
     """
     resubmittable_types = _source_resubmit[source]
     cids:'anylist' = []
@@ -215,6 +221,7 @@ def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None'
     conditions = and_(
         event_table.c.source == source,
         is_resubmit_of_row,
+        event_table.c.outcome == AuditOutcome.OK,
     )
 
     statement = select(event_table.c.correl_id).where(conditions)
@@ -231,6 +238,52 @@ def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None'
 
         if row['cid'] in resubmitted:
             row['is_resubmitted'] = True
+
+# ################################################################################################################################
+
+def _carries_a_repeatable_call(data:'str') -> 'bool':
+    """ Whether one row's stored document holds the call a per-hop resend would repeat. A row with
+    no body at all is no such call, and neither is one whose body was recorded by description.
+    """
+
+    # Our response to produce
+    out = False
+
+    if data:
+        try:
+            details = loads(data)
+        except ValueError:
+            details = None
+
+        # Only a JSON object follows the resubmit convention, a plain string payload does not.
+        if isinstance(details, dict):
+            if Key_Payload in details:
+                out = details.get(Key_Payload_Kind) != Payload_Kind_Described
+
+    return out
+
+# ################################################################################################################################
+
+def _mark_resubmittable(source:'str', rows:'anylist') -> 'None':
+    """ Flags the rows the page offers its Resubmit action on.
+    """
+    actions = _source_resubmit[source]
+
+    for row in rows:
+        event_type = row['event_type']
+
+        if event_type not in actions:
+            row['is_resubmittable'] = False
+            continue
+
+        action = actions[event_type]
+
+        # Everything a resend needs beyond the call itself is the service's own business,
+        # so only the per-hop resend has anything for the page to check here.
+        if action['service'] == Resend_Hop_Service:
+            row['is_resubmittable'] = _carries_a_repeatable_call(row['data'])
+        else:
+            row['is_resubmittable'] = True
 
 # ################################################################################################################################
 

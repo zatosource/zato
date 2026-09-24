@@ -59,8 +59,9 @@ class DeliveryTransports:
     """
 
     # send(entry, payload, cid) - delivers one payload through one destination and returns
-    # whatever the connection answered with. The cid ties the rows the connection itself
-    # writes to the hop rows the coordinator writes.
+    # a HopSendResult saying what the connection answered with and whether that answer was
+    # a refusal. Only a delivery that got no answer at all raises. The cid ties the rows the
+    # connection itself writes to the hop rows the coordinator writes.
     send: 'callable_' = None
 
     # sleep(seconds) - waits between two attempts at the same destination.
@@ -128,6 +129,9 @@ class HopResult:
 
     # What stopped the delivery, when something did.
     error: str = ''
+
+    # Whether an answer came back at all, a refusal counting as one.
+    has_response: bool = False
 
 # ################################################################################################################################
 
@@ -225,11 +229,14 @@ def plan_hops(
 
 # ################################################################################################################################
 
-def _is_worth_another_attempt(error:'str') -> 'bool':
+def _is_worth_another_attempt(error:'str', classification:'str') -> 'bool':
     """ Tells whether the same message can work at the same destination a moment later.
     A failure that says the message itself is wrong never can, everything else may.
+    A failure the adapter classified itself is taken as it stands.
     """
-    classification = derive_classification(AuditOutcome.Error, error)
+    if not classification:
+        classification = derive_classification(AuditOutcome.Error, error)
+
     out = classification != AuditClassification.Permanent
 
     return out
@@ -259,22 +266,42 @@ def deliver_hop(context:'DeliveryContext', planned:'PlannedHop') -> 'HopResult':
         out.attempt_count = attempt
         attempt_start = monotonic()
         error = ''
+        classification = ''
+        response_text = ''
+
+        # Whatever a previous attempt came back with belongs to that attempt alone.
+        out.response = None
+        out.has_response = False
 
         # The delivery itself, whatever it is that the destination's type does ..
         try:
-            response = transports.send(entry, planned.payload, context.cid)
+            result = transports.send(entry, planned.payload, context.cid)
 
-        # .. a delivery that raised has its error recorded and may be tried again ..
+        # .. a delivery that never got an answer has its error recorded and may be tried again ..
         except Exception as e:
             error = str(e)
             out.error = error
             out.is_ok = False
 
-        # .. and one that went through is the end of it.
         else:
-            out.response = response
-            out.error = ''
-            out.is_ok = True
+            # .. a destination that answered is one the channel can reply from, whatever it said ..
+            out.response = result.response
+            out.has_response = True
+
+            # .. an answer that turned the message down is a failed delivery, the same as one
+            # that never arrived ..
+            if result.is_rejected:
+                error = result.status
+                classification = result.classification
+                response_text = result.response_text
+                out.error = error
+                out.is_ok = False
+
+            # .. and one that took it is the end of it.
+            else:
+                response_text = result.response_text
+                out.error = ''
+                out.is_ok = True
 
         duration_ms = int((monotonic() - attempt_start) * _ms_per_second)
 
@@ -288,13 +315,15 @@ def deliver_hop(context:'DeliveryContext', planned:'PlannedHop') -> 'HopResult':
             attempt=attempt,
             duration_ms=duration_ms,
             error=error,
+            classification=classification,
+            response_text=response_text,
         )
 
         if out.is_ok:
             break
 
         # A message the destination will never accept is not sent again ..
-        if not _is_worth_another_attempt(error):
+        if not _is_worth_another_attempt(error, classification):
             break
 
         # .. neither is one that has had all the attempts it is allowed ..
@@ -370,12 +399,13 @@ def deliver(
             hop = deliver_hop(context, responding)
             out.hops.append(hop)
 
-            # .. and its failure is what the caller learns about, the remaining destinations
-            # never being reached at all.
-            if not hop.is_ok:
+            # .. a destination nothing came back from is what the caller learns about, the
+            # remaining destinations never being reached at all ..
+            if not hop.has_response:
                 raise Exception(
                     f'Channel `{config.channel_name}` could not deliver to `{hop.destination_name}`; e:`{hop.error}`')
 
+            # .. while one that answered is replied with, a refusal included.
             out.has_response = True
             out.response = hop.response
 

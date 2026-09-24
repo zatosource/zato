@@ -41,7 +41,7 @@ from zato.server.connection.http_soap.outgoing.soap import SOAPMixin
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, stranydict, strlist, strstrdict
+    from zato.common.typing_ import any_, dictnone, stranydict, strlist, strstrdict
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
 
@@ -163,9 +163,14 @@ class BaseHTTPSOAPWrapper(AuthMixin):
         *,
         is_health_check:'bool' = False,
         application_outcome:'str' = '',
+        address:'str' = '',
+        qs_params:'dictnone' = None,
+        user_headers:'dictnone' = None,
+        redacted:'strlist | None' = None,
     ) -> 'None':
         insert_audit_event(self, cid, event_type, endpoint, outcome, data, status, method, is_health_check=is_health_check,
-            application_outcome=application_outcome)
+            application_outcome=application_outcome,
+            address=address, qs_params=qs_params, user_headers=user_headers, redacted=redacted)
 
 # ################################################################################################################################
 # ################################################################################################################################

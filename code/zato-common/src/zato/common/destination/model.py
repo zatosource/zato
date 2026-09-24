@@ -71,6 +71,31 @@ class DestinationEntry:
 # ################################################################################################################################
 
 @dataclass(init=False)
+class HopSendResult:
+    """ What one delivery to one destination came back with, a rejection included.
+    """
+
+    # What the connection answered with, in the shape the caller of the channel expects.
+    response: 'any_' = None
+
+    # Whether the destination turned the message down - a REST error status, an SMTP send that
+    # did not go through, an HL7 acknowledgment that did not accept the message.
+    is_rejected: bool = False
+
+    # The status line of a rejection, which the row is recorded with. It never carries the
+    # response body, because the body is not what the classification is derived from.
+    status: str = ''
+
+    # What came back on the wire, stored as the response body of the row.
+    response_text: str = ''
+
+    # Whether another attempt with the same message can work, when the adapter knows it rather
+    # than leaving it to be derived from the wording of the status.
+    classification: str = ''
+
+# ################################################################################################################################
+
+@dataclass(init=False)
 class ChannelDestinationConfig:
     """ Everything one channel declares about its destinations.
     """
@@ -112,6 +137,30 @@ def new_entry(
     out.connection = connection
     out.is_active = is_active
     out.options = options
+
+    return out
+
+# ################################################################################################################################
+
+def new_send_result(
+    response:'any_',
+    *,
+    is_rejected:'bool' = False,
+    status:'str' = '',
+    response_text:'str' = '',
+    classification:'str' = '',
+    ) -> 'HopSendResult':
+    """ Builds what one delivery came back with.
+    """
+
+    # Our response to produce
+    out = HopSendResult()
+
+    out.response = response
+    out.is_rejected = is_rejected
+    out.status = status
+    out.response_text = response_text
+    out.classification = classification
 
     return out
 

@@ -1,0 +1,301 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+# The language extensions give Fn::ForEach, which is what turns the two list parameters below
+# into one ingress rule for every combination of an allowed address and a port.
+Transform: AWS::LanguageExtensions
+
+Description: Deploys a Linux EC2 instance running the Zato quickstart Docker container.
+
+Parameters:
+
+  InstanceName:
+    Type: String
+    Default: zato
+    Description: Name of the instance and the prefix of the resources created along with it.
+
+  InstanceType:
+    Type: String
+    Default: m6id.large
+    Description: Size of the instance. Types with a local NVMe disk give the best Docker performance.
+
+  AdminUsername:
+    Type: String
+    Default: ubuntu
+    Description: Administrator user name for SSH access to the host.
+
+  AuthenticationType:
+    Type: String
+    Default: sshPublicKey
+    AllowedValues:
+      - sshPublicKey
+      - password
+    Description: How the administrator authenticates over SSH to the host.
+
+  AdminPasswordOrKey:
+    Type: String
+    NoEcho: true
+    Description: SSH public key or password for the administrator account.
+
+  ZatoPassword:
+    Type: String
+    NoEcho: true
+    Description: Password for the Zato Dashboard user.
+
+  AllowedSourceAddresses:
+    Type: CommaDelimitedList
+    Default: 0.0.0.0/0
+    Description: >-
+      Source IP addresses or CIDR ranges allowed to reach the instance, given as a list. Use your own addresses
+      rather than the default of 0.0.0.0/0, which is the whole internet. One rule is created for each address
+      and port, and a security group holds sixty rules, which is what limits how long the two lists can be.
+
+  Ports:
+    Type: CommaDelimitedList
+    Default: 22,8184,11224
+    Description: >-
+      Ports to open for the allowed source addresses. Add 11553 for HL7 over MLLP, 22022 for SSH into the container.
+      Leave 443 out of the list because it is always open to the whole internet, which Let's Encrypt requires.
+
+  RootVolumeSizeGB:
+    Type: Number
+    Default: 64
+    MinValue: 30
+    MaxValue: 1023
+    Description: Size of the root volume in GB. Larger volumes are given more throughput by AWS.
+
+  ImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id
+    Description: The image to start, looked up in Systems Manager so that the current Ubuntu 24.04 one is always used.
+
+Conditions:
+
+  UseSshPublicKey: !Equals [!Ref AuthenticationType, sshPublicKey]
+
+Resources:
+
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${InstanceName}-vpc'
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${InstanceName}-igw'
+
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  # An address is assigned on launch so that the instance can install packages and pull the container image
+  # right away. It is replaced by the Elastic IP as soon as that one is associated.
+  Subnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${InstanceName}-subnet'
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${InstanceName}-rtb'
+
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Subnet
+      RouteTableId: !Ref RouteTable
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Ports that the Zato instance is reached on.
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${InstanceName}-sg'
+
+  # A rule of its own for every address and port, because a single rule carries one of each. The logical ID
+  # uses the &{} form rather than ${}, so that the dots and the slash of an address are dropped from it,
+  # leaving a name made of the digits alone, which is what a logical ID is allowed to contain.
+  Fn::ForEach::AllowedSources:
+    - SourceAddress
+    - !Ref AllowedSourceAddresses
+    - Fn::ForEach::AllowedPorts:
+        - Port
+        - !Ref Ports
+        - 'Ingress&{SourceAddress}Port${Port}':
+            Type: AWS::EC2::SecurityGroupIngress
+            Properties:
+              GroupId: !GetAtt SecurityGroup.GroupId
+              IpProtocol: tcp
+              FromPort: !Ref Port
+              ToPort: !Ref Port
+              CidrIp: !Ref SourceAddress
+              Description: !Sub 'Zato - port ${Port}'
+
+  # Let's Encrypt validates the certificate from its own servers, whose addresses are not known in advance,
+  # so this one port is open to everyone no matter what the allowed addresses are.
+  LetsEncryptIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt SecurityGroup.GroupId
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      CidrIp: 0.0.0.0/0
+      Description: Zato - Let's Encrypt validation
+
+  # The address is allocated before the instance because the certificate is issued for it, which means
+  # that it has to be known while the container's environment is being put together.
+  ElasticIp:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${InstanceName}-ip'
+
+  Instance:
+    Type: AWS::EC2::Instance
+    DependsOn: DefaultRoute
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref Subnet
+      SecurityGroupIds:
+        - !GetAtt SecurityGroup.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: !Ref RootVolumeSizeGB
+            DeleteOnTermination: true
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpTokens: required
+      Tags:
+        - Key: Name
+          Value: !Ref InstanceName
+      UserData:
+        Fn::Base64:
+          Fn::Sub:
+            - |
+              #cloud-config
+              package_update: true
+              packages:
+                - docker.io
+              ${UserBlock}
+              write_files:
+                - path: /usr/local/bin/zato-setup-storage.sh
+                  permissions: "0755"
+                  content: |
+                    #!/bin/bash
+                    # Docker and containerd are moved onto the local NVMe disk when the instance type has one,
+                    # since the root volume is throttled to a fraction of the throughput a container image
+                    # extract needs. Types without a local disk keep the default layout.
+                    set -e
+                    device=$(lsblk -dpno NAME,MODEL | grep -i "Amazon EC2 NVMe Instance Storage" | cut -d" " -f1 | head -1)
+                    if [ -z "$device" ] || [ ! -e "$device" ]; then
+                      exit 0
+                    fi
+                    if findmnt --source "$device" >/dev/null; then
+                      umount "$device"
+                    fi
+                    mkfs.ext4 -F "$device"
+                    mkdir -p /mnt/nvme
+                    mount "$device" /mnt/nvme
+                    systemctl stop docker docker.socket containerd
+                    mv /var/lib/docker /mnt/nvme/docker
+                    ln -s /mnt/nvme/docker /var/lib/docker
+                    mv /var/lib/containerd /mnt/nvme/containerd
+                    ln -s /mnt/nvme/containerd /var/lib/containerd
+                    systemctl start containerd docker
+                - path: /usr/local/bin/zato-wait-for-address.sh
+                  permissions: "0755"
+                  content: |
+                    #!/bin/bash
+                    # The instance launches with an address of its own and the Elastic IP replaces it moments later.
+                    # The certificate is issued for the Elastic IP, so the container waits here until the instance
+                    # is actually reached on it, rather than starting on an address that is about to go away.
+                    expected=${ElasticIp}
+                    for _ in $(seq 1 60); do
+                      token=$(curl -sX PUT http://169.254.169.254/latest/api/token \
+                        -H "X-aws-ec2-metadata-token-ttl-seconds: 300")
+                      current=$(curl -s -H "X-aws-ec2-metadata-token: $token" \
+                        http://169.254.169.254/latest/meta-data/public-ipv4)
+                      if [ "$current" = "$expected" ]; then
+                        exit 0
+                      fi
+                      sleep 5
+                    done
+              runcmd:
+                - /usr/local/bin/zato-setup-storage.sh
+                - /usr/local/bin/zato-wait-for-address.sh
+                - echo "Zato - pulling the container image, this takes several minutes" > /dev/ttyS0
+                - docker run -d --pull=always --restart=always -p 22022:22 -p 443:11228 -p 8184:8184 -p 11224:11224 -p 11553:11553 --name zato -e Zato_Password="${ZatoPassword}" -e Zato_Use_Lets_Encrypt=True -e Zato_Lets_Encrypt_Public_IP="${ElasticIp}" -e Zato_SSL_Subject_Alt_Name="subjectAltName=IP:${ElasticIp}" -e Zato_Dashboard_CSRF_Trusted_Origins="https://${ElasticIp}:8184" zatosource/zato-4.1 2>&1 | tee /dev/ttyS0
+                - echo "Zato - the container is up, the Dashboard is starting on https://${ElasticIp}:8184" > /dev/ttyS0
+            # The block is substituted at the start of a line and brings its own indentation with it,
+            # which is what keeps the cloud-config document valid whichever of the two is used.
+            - UserBlock: !If
+                - UseSshPublicKey
+                - !Sub |-
+                    users:
+                      - name: ${AdminUsername}
+                        sudo: ALL=(ALL) NOPASSWD:ALL
+                        shell: /bin/bash
+                        ssh_authorized_keys:
+                          - ${AdminPasswordOrKey}
+                - !Sub |-
+                    users:
+                      - name: ${AdminUsername}
+                        sudo: ALL=(ALL) NOPASSWD:ALL
+                        shell: /bin/bash
+                        lock_passwd: false
+                        plain_text_passwd: ${AdminPasswordOrKey}
+                    ssh_pwauth: true
+
+  ElasticIpAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt ElasticIp.AllocationId
+      InstanceId: !Ref Instance
+
+Outputs:
+
+  dashboardUrl:
+    Description: The address of the Zato Dashboard.
+    Value: !Sub 'https://${ElasticIp}:8184/'
+
+  sshCommand:
+    Description: The command that logs in to the host.
+    Value: !Sub 'ssh ${AdminUsername}@${ElasticIp}'
+
+  publicIpAddress:
+    Description: The Elastic IP address of the instance.
+    Value: !Ref ElasticIp

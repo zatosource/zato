@@ -10,13 +10,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
+from zato.common.audit_log.common import AuditClassification
 from zato.common.destination.constants import DeliveryMode, Respond_From_Service
 from zato.common.destination.coordinator import deliver, plan_hops
 from zato.common.destination.model import parse_config
 from zato.common.destination.payload import new_overrides
 
-from connection_recorder import get_stored_list, new_test_context, Channel_Name, ConnectionRecorder, FHIR_Connection, \
-    MLLP_Connection, Permanent_Error, Request_Payload, REST_Connection, Retry_Sleep_Seconds, Transient_Error
+from connection_recorder import get_stored_list, new_test_context, Channel_Name, ClassifyingRecorder, \
+    ConnectionRecorder, FHIR_Connection, MLLP_Connection, Permanent_Error, Permanently_Rejected_Status, \
+    Reads_Permanent_Status, Reads_Transient_Status, Rejected_Status, RejectThenFailRecorder, Request_Payload, \
+    REST_Connection, Retry_Sleep_Seconds, Transient_Error
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -263,6 +266,126 @@ class TestRetries:
 
         assert len(recorder.deliveries) == 1
         assert recorder.sleeps == []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestRejections:
+    """ A destination that answered by turning the message down is a failed delivery whose
+    answer the channel still has.
+    """
+
+    def test_a_destination_that_turned_the_message_down_leaves_a_failed_row(self) -> 'None':
+        recorder = ConnectionRecorder()
+        recorder.always_rejecting[MLLP_Connection] = Rejected_Status
+
+        context = new_test_context(recorder)
+        stored = get_stored_list()[:1]
+        config = parse_config(Channel_Name, stored, MLLP_Connection)
+
+        result = deliver(context, config, new_overrides(), Request_Payload)
+
+        hop = result.hops[0]
+
+        assert hop.is_ok is False
+        assert hop.error == Rejected_Status
+
+# ################################################################################################################################
+
+    def test_a_channel_replies_from_a_destination_that_turned_the_message_down(self) -> 'None':
+        recorder = ConnectionRecorder()
+        recorder.always_rejecting[FHIR_Connection] = Rejected_Status
+
+        context = new_test_context(recorder)
+        config = parse_config(Channel_Name, get_stored_list(), FHIR_Connection, DeliveryMode.In_Order)
+
+        result = deliver(context, config, new_overrides(), Request_Payload)
+
+        # What the destination said is what the caller of the channel is answered with ..
+        assert result.has_response is True
+        assert result.response == f'Refused by {FHIR_Connection}'
+
+        # .. and the remaining destinations were reached all the same.
+        assert recorder.get_delivered_names() == [FHIR_Connection, MLLP_Connection, REST_Connection]
+
+# ################################################################################################################################
+
+    def test_a_refusal_another_attempt_can_get_past_is_tried_again(self) -> 'None':
+        recorder = ConnectionRecorder()
+        recorder.always_rejecting[MLLP_Connection] = Rejected_Status
+
+        context = new_test_context(recorder, retry_count=2)
+        stored = get_stored_list()[:1]
+        config = parse_config(Channel_Name, stored)
+
+        _ = deliver(context, config, new_overrides(), Request_Payload)
+
+        assert len(recorder.deliveries) == 3
+        assert len(recorder.sleeps) == 2
+
+# ################################################################################################################################
+
+    def test_a_refusal_the_destination_will_never_take_back_is_not_sent_again(self) -> 'None':
+        recorder = ConnectionRecorder()
+        recorder.always_rejecting[MLLP_Connection] = Permanently_Rejected_Status
+
+        context = new_test_context(recorder, retry_count=5)
+        stored = get_stored_list()[:1]
+        config = parse_config(Channel_Name, stored)
+
+        _ = deliver(context, config, new_overrides(), Request_Payload)
+
+        assert len(recorder.deliveries) == 1
+        assert recorder.sleeps == []
+
+# ################################################################################################################################
+
+    def test_a_refusal_the_adapter_called_permanent_is_not_sent_again_whatever_it_reads_like(self) -> 'None':
+        """ A refusal the adapter called permanent is left at one attempt.
+        """
+        recorder = ClassifyingRecorder(MLLP_Connection, AuditClassification.Permanent, Reads_Transient_Status)
+
+        context = new_test_context(recorder, retry_count=5)
+        stored = get_stored_list()[:1]
+        config = parse_config(Channel_Name, stored)
+
+        _ = deliver(context, config, new_overrides(), Request_Payload)
+
+        assert len(recorder.deliveries) == 1
+        assert recorder.sleeps == []
+
+# ################################################################################################################################
+
+    def test_a_refusal_the_adapter_called_transient_is_tried_again_whatever_it_reads_like(self) -> 'None':
+        """ A refusal the adapter called transient is tried again.
+        """
+        recorder = ClassifyingRecorder(MLLP_Connection, AuditClassification.Transient, Reads_Permanent_Status)
+
+        context = new_test_context(recorder, retry_count=2)
+        stored = get_stored_list()[:1]
+        config = parse_config(Channel_Name, stored)
+
+        _ = deliver(context, config, new_overrides(), Request_Payload)
+
+        assert len(recorder.deliveries) == 3
+        assert len(recorder.sleeps) == 2
+
+# ################################################################################################################################
+
+    def test_a_refusal_followed_by_a_failure_to_reach_leaves_nothing_to_reply_with(self) -> 'None':
+        """ A destination turned down once and then unreachable leaves the channel with nothing.
+        """
+        recorder = RejectThenFailRecorder(MLLP_Connection)
+
+        context = new_test_context(recorder, retry_count=2)
+        stored = get_stored_list()[:1]
+        config = parse_config(Channel_Name, stored, MLLP_Connection)
+
+        with pytest.raises(Exception) as raised:
+            _ = deliver(context, config, new_overrides(), Request_Payload)
+
+        assert Transient_Error in str(raised.value)
+        assert f'could not deliver to `{MLLP_Connection}`' in str(raised.value)
 
 # ################################################################################################################################
 # ################################################################################################################################

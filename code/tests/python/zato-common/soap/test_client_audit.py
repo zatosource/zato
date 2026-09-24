@@ -56,14 +56,18 @@ def _record_audit(client:'SOAPClient') -> 'list':
     recorded = []
 
     def callback(cid:'any_', event:'any_', endpoint:'any_', outcome:'any_', data:'any_', status:'any_'='',
-        application_outcome:'any_'=''):
+        method:'any_'='', application_outcome:'any_'='', address:'any_'='', redacted:'any_'=None,
+        **kwargs:'any_'):
         recorded.append({
             'event': event,
             'endpoint': endpoint,
             'outcome': outcome,
             'data': data,
             'status': status,
+            'method': method,
             'application_outcome': application_outcome,
+            'address': address,
+            'redacted': redacted,
         })
 
     client.audit_callback = callback

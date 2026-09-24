@@ -165,6 +165,68 @@ class TestErrorRateFacts:
 
 # ################################################################################################################################
 
+    def test_a_failing_response_points_at_the_request_it_answered(self) -> 'None':
+        audit_log = AuditLog(Server_Name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # One call - the request went out fine and the response came back a failure.
+        request_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, Connection_Name,
+            cid='pair-1', outcome=AuditOutcome.OK)
+        _ = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Response_Received, Connection_Name,
+            cid='pair-1', outcome=AuditOutcome.Error)
+
+        facts = collect_error_rate_facts(engine, Window_Seconds, now)
+
+        assert len(facts) == 1
+        assert facts[0]['last_error_event_id'] == request_id
+        assert facts[0]['is_resubmittable'] == 1
+
+# ################################################################################################################################
+
+    def test_the_paired_request_is_the_nearest_one_before_the_failure(self) -> 'None':
+        audit_log = AuditLog(Server_Name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # One service call makes three requests to the same connection, all under the one
+        # correlation id it runs under, and only the last of them fails.
+        for _ in (1, 2):
+            _ = audit_log.insert(AuditSource.SOAP_Outgoing, AuditEvent.Request_Sent, Connection_Name,
+                cid='pair-2', outcome=AuditOutcome.OK)
+            _ = audit_log.insert(AuditSource.SOAP_Outgoing, AuditEvent.Response_Received, Connection_Name,
+                cid='pair-2', outcome=AuditOutcome.OK)
+
+        third_request_id = audit_log.insert(AuditSource.SOAP_Outgoing, AuditEvent.Request_Sent, Connection_Name,
+            cid='pair-2', outcome=AuditOutcome.OK)
+        _ = audit_log.insert(AuditSource.SOAP_Outgoing, AuditEvent.Response_Received, Connection_Name,
+            cid='pair-2', outcome=AuditOutcome.Error)
+
+        facts = collect_error_rate_facts(engine, Window_Seconds, now)
+
+        assert len(facts) == 1
+        assert facts[0]['last_error_event_id'] == third_request_id
+        assert facts[0]['is_resubmittable'] == 1
+
+# ################################################################################################################################
+
+    def test_a_failing_response_whose_request_is_gone_points_at_itself(self) -> 'None':
+        audit_log = AuditLog(Server_Name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # Retention deletes the older row first, so a response may outlive the request it answered.
+        response_id = audit_log.insert(AuditSource.FHIR, AuditEvent.Response_Received, Connection_Name,
+            cid='pair-3', outcome=AuditOutcome.Error)
+
+        facts = collect_error_rate_facts(engine, Window_Seconds, now)
+
+        assert len(facts) == 1
+        assert facts[0]['last_error_event_id'] == response_id
+        assert facts[0]['is_resubmittable'] == 0
+
+# ################################################################################################################################
+
     def test_an_object_without_failures_points_at_nothing(self) -> 'None':
         audit_log = AuditLog(Server_Name)
         engine = get_audit_engine()

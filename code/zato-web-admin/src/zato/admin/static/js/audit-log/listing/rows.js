@@ -54,6 +54,7 @@ listing.buildRow = function(row) {
         children: row.children,
         bodyKinds: row.body_kinds,
         isResubmitted: row.is_resubmitted,
+        isResubmittable: row.is_resubmittable,
         role: presenter.role(row)
     };
 
@@ -62,7 +63,9 @@ listing.buildRow = function(row) {
     var sourceLabels = $.fn.zato.audit_log.config.resubmitLabels[row.source];
 
     if (sourceLabels !== undefined) {
-        out.actionLabel = sourceLabels[row.event_type];
+        if (out.isResubmittable) {
+            out.actionLabel = sourceLabels[row.event_type];
+        }
     }
 
     // A source names its messages by something of its own - its control id, its message

@@ -94,6 +94,9 @@ class AuditSource:
     SOAP_Outgoing_Health = 'soap-outgoing-health'
     FHIR_Health          = 'fhir-health'
 
+    # Where an SMTP connection's pings are recorded, apart from the e-mails it sent.
+    Email_SMTP_Health    = 'email-smtp-health'
+
     # The probe sources - the default scheduler jobs that measure what no
     # per-call event can, writing ordinary audit events the collectors read.
     Certificate      = 'certificate'
@@ -103,7 +106,12 @@ class AuditSource:
 # ################################################################################################################################
 
 # What tells a check's event or measure from the connection's own.
-health_sources = {AuditSource.REST_Outgoing_Health, AuditSource.SOAP_Outgoing_Health, AuditSource.FHIR_Health}
+health_sources = {
+    AuditSource.REST_Outgoing_Health,
+    AuditSource.SOAP_Outgoing_Health,
+    AuditSource.FHIR_Health,
+    AuditSource.Email_SMTP_Health,
+}
 
 # ################################################################################################################################
 
@@ -120,6 +128,7 @@ _source_label = {
     AuditSource.FHIR_Health: 'FHIR check',
     AuditSource.Email_IMAP: 'IMAP',
     AuditSource.Email_SMTP: 'SMTP',
+    AuditSource.Email_SMTP_Health: 'SMTP check',
     AuditSource.File_Outgoing: 'File transfer',
     AuditSource.SQL_Outgoing: 'SQL',
     AuditSource.AS2: 'AS2',
@@ -222,6 +231,7 @@ _source_retention_days = {
     AuditSource.REST_Outgoing_Health: _default_health_check_retention_days,
     AuditSource.SOAP_Outgoing_Health: _default_health_check_retention_days,
     AuditSource.FHIR_Health: _default_health_check_retention_days,
+    AuditSource.Email_SMTP_Health: _default_health_check_retention_days,
 }
 
 # ################################################################################################################################
@@ -636,9 +646,13 @@ _transient_markers = (
     f'{REQUEST_TIMEOUT}', f'{TOO_MANY_REQUESTS}', f'{BAD_GATEWAY}', f'{SERVICE_UNAVAILABLE}', f'{GATEWAY_TIMEOUT}',
 )
 
+# What the status of a delivery an HL7 receiver answered with an AE or an AR opens with.
+Ack_Rejected_Marker = 'HL7 ack rejected'
+
 # Markers meaning a failure is permanent - the message needs to change before another attempt
 _permanent_markers = (
     'validation', 'invalid', 'malformed', 'parse', 'schema', 'unauthorized', 'forbidden', 'not found', 'duplicate',
+    Ack_Rejected_Marker.lower(),
     f'{BAD_REQUEST}', f'{UNAUTHORIZED}', f'{FORBIDDEN}', f'{NOT_FOUND}', f'{UNPROCESSABLE_ENTITY}',
 )
 

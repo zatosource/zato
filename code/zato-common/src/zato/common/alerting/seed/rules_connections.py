@@ -323,10 +323,12 @@ rule
 docs
     An email connection that failed three consecutive times is considered down and raises an error email alert,
     dispatched through the remaining notification connections when the failing one is itself the email connection.
+    An SMTP connection's health check is measured on its own, so three failed checks say the same
+    thing as three failed sends.
 defaults
     max_consecutive_failures = 3
 when
-    alert.source in ['email-smtp', 'email-imap'] and
+    alert.source in ['email-smtp', 'email-smtp-health', 'email-imap'] and
     alert.consecutive_failures is at least default.max_consecutive_failures
 then
     outcome.action = 'email'
@@ -340,7 +342,7 @@ docs
 defaults
     auth_failure_threshold = 3
 when
-    alert.source in ['email-smtp', 'email-imap'] and
+    alert.source in ['email-smtp', 'email-smtp-health', 'email-imap'] and
     alert.auth_failure_count is at least default.auth_failure_threshold
 then
     outcome.action = 'email'
@@ -350,12 +352,14 @@ rule
     Error_Rate
 docs
     An email connection whose failed-send or failed-fetch share reaches a tenth of its recent traffic raises an email alert.
+    An SMTP connection's health check is measured on its own, so the share of failed checks counts
+    apart from the share of failed sends.
 defaults
     error_rate_threshold = 0.1
     min_events = 10
     window_seconds = 300
 when
-    alert.source in ['email-smtp', 'email-imap'] and
+    alert.source in ['email-smtp', 'email-smtp-health', 'email-imap'] and
     alert.total_count is at least default.min_events and
     alert.error_rate is at least default.error_rate_threshold
 then
