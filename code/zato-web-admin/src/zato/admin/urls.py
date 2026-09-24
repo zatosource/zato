@@ -15,7 +15,7 @@ from django.views.static import serve as static_serve
 from zato.admin import settings
 from zato.admin.web.views import account, config_db, datadog, demo_config, destinations, env_variables, grafana_cloud, \
     highlight as highlight_view, http_soap, http_soap_limits, live_form_updates, log_streaming, logging_, \
-    main, news, on_prem_gateway, openapi_, python_packages, redis_, sbom, scheduler, service, updates
+    main, news, on_prem_gateway, openapi_, python_packages, redis_, sbom, scheduler, service, ssl_config, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import as4 as channel_as4
 from zato.admin.web.views.channel.hl7 import dashboard as channel_hl7_dashboard
@@ -1883,6 +1883,22 @@ urlpatterns += [
         login_required(logging_.destination_delete), name='settings-logging-destination-delete'),
     url(r'^zato/logging/destination/ping$',
         login_required(logging_.destination_ping), name='settings-logging-destination-ping'),
+]
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Settings - SSL config
+
+    url(r'^zato/ssl-config/$',
+        login_required(ssl_config.index), name='settings-ssl-config'),
+    url(r'^zato/ssl-config/refresh/$',
+        login_required(ssl_config.refresh), name='settings-ssl-config-refresh'),
+    url(r'^zato/ssl-config/lets-encrypt/$',
+        login_required(ssl_config.set_lets_encrypt), name='settings-ssl-config-lets-encrypt'),
+    url(r'^zato/ssl-config/check-port/$',
+        login_required(ssl_config.check_port), name='settings-ssl-config-check-port'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################

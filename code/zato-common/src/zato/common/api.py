@@ -1465,6 +1465,69 @@ class On_Prem_Gateway:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class Lets_Encrypt:
+    """ Certificates obtained from Let's Encrypt, or from another ACME server, and presented on all the TLS ports.
+    """
+
+    # The environment variables that turn the feature on and point it at its files and servers.
+    class Env:
+        Use_Lets_Encrypt = 'Zato_Use_Lets_Encrypt'
+        Subject_Alt_Name = 'Zato_SSL_Subject_Alt_Name'
+        SSL_Dir          = 'Zato_SSL_Dir'
+        Server           = 'Zato_Lets_Encrypt_Server'
+        Staging_Server   = 'Zato_Lets_Encrypt_Staging_Server'
+        CA_File          = 'Zato_Lets_Encrypt_CA_File'
+        Public_IP        = 'Zato_Lets_Encrypt_Public_IP'
+        Port             = 'Zato_Lets_Encrypt_Port'
+        HAProxy_Config   = 'Zato_Lets_Encrypt_HAProxy_Config'
+        Check_Interval   = 'Zato_Lets_Encrypt_Check_Interval'
+
+    # The values used when the corresponding environment variables are not set.
+    class Default:
+        SSL_Dir        = '/opt/hot-deploy/ssl'
+        Server         = 'https://acme-v02.api.letsencrypt.org/directory'
+        Staging_Server = 'https://acme-staging-v02.api.letsencrypt.org/directory'
+        Public_IP_URL  = 'https://checkip.amazonaws.com'
+        Port           = 11228
+        HAProxy_Config = '/opt/zato/env/qs-1/haproxy.cfg'
+        Check_Interval = 43200
+
+    # The files in the SSL directory - HAProxy reads the user one, which is a copy of one of the others.
+    class File:
+        User_PEM = 'user.pem'
+        Auto_PEM = 'auto.pem'
+        Own_PEM  = 'zato.pem'
+        Data_Dir = 'lets-encrypt'
+        Settings = 'settings.json'
+        Status   = 'status.json'
+        Lock     = 'lock'
+
+    # What a running check is doing, recorded in the lock file while it holds the lock.
+    class Operation:
+        Certificate = 'certificate'
+        Port        = 'port'
+
+    # Where the certificate HAProxy presents comes from.
+    class Source:
+        Own          = 'own'
+        Lets_Encrypt = 'lets-encrypt'
+        Generated    = 'generated'
+
+    # The name the ACME client stores the certificate under, the profile that IP address certificates require
+    # and the one of DNS names, which is always requested by name because a CA may pick any profile for orders without one.
+    Cert_Name   = 'zato'
+    IP_Profile  = 'shortlived'
+    DNS_Profile = 'classic'
+
+    # The services behind the SSL config page in the Dashboard.
+    class Service:
+        Get              = 'zato.ssl-config.get'
+        Set_Lets_Encrypt = 'zato.ssl-config.set-lets-encrypt'
+        Check_Port       = 'zato.ssl-config.check-port'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Audit_Config:
     """ Generic-object types storing audit-related definitions - the retention
     policy and per-channel attribute-extraction rules.
@@ -2181,6 +2244,10 @@ class Echo(Service):
         # Log the request ..
         payload = self.request.payload
         self.logger.info(f'Received request: `{{payload}}`')
+
+        # .. there is no payload when the request is empty ..
+        if payload is None:
+            payload = {{}}
 
         # .. write a note with the payload as its data ..
         item_count = len(payload)

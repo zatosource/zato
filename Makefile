@@ -16,7 +16,7 @@
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce \
 	test-hl7 hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
-	test-audit-log test-alerting test-destinations test-analytics test-demo-seed test-logging \
+	test-audit-log test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
 	test-all test test-all-reset test-clean-test-all test-perf \
@@ -201,7 +201,9 @@ Zato_Rule_Engine_Dashboard_DB_URL ?= sqlite:///$(HOME)/env/qs-1/zato-rule-engine
 
 server:
 	clear
-	cd ~/env/qs-1/ && Zato_Rule_Engine_Dashboard_DB_URL=$(Zato_Rule_Engine_Dashboard_DB_URL) zato start server1/ --fg --verbose
+	cd ~/env/qs-1/ && Zato_Rule_Engine_Dashboard_DB_URL=$(Zato_Rule_Engine_Dashboard_DB_URL) \
+		Zato_SSL_Dir=$(HAPROXY_DEV_DIR) Zato_Lets_Encrypt_HAProxy_Config=$(HAPROXY_DEV_DIR)/haproxy.cfg \
+		zato start server1/ --fg --verbose
 
 # The password the admin account is created with on the first start against a new database,
 # the same one the rest of the environment uses
@@ -234,6 +236,8 @@ haproxy:
 	@touch $(HOME)/env/qs-1/blocked-paths.txt
 	@if [ -f $(HAPROXY_DEV_DIR)/zato.pem ]; then \
 		cp $(HAPROXY_DEV_DIR)/zato.pem $(HAPROXY_DEV_DIR)/user.pem; \
+	else \
+		rm -f $(HAPROXY_DEV_DIR)/user.pem; \
 	fi
 	@if [ "$(Zato_SSL_Key_Algorithm)" = "rsa" ]; then \
 		openssl genrsa -out $(HAPROXY_DEV_DIR)/auto.key $(Zato_SSL_Key_Size); \
@@ -247,11 +251,12 @@ haproxy:
 		-signkey $(HAPROXY_DEV_DIR)/auto.key -out $(HAPROXY_DEV_DIR)/auto.crt -copy_extensions copy
 	@cat $(HAPROXY_DEV_DIR)/auto.crt $(HAPROXY_DEV_DIR)/auto.key > $(HAPROXY_DEV_DIR)/auto.pem
 	@rm -f $(HAPROXY_DEV_DIR)/auto.key $(HAPROXY_DEV_DIR)/auto.csr $(HAPROXY_DEV_DIR)/auto.crt
-	@pem_file=auto.pem; \
-	if [ -f $(HAPROXY_DEV_DIR)/user.pem ]; then pem_file=user.pem; fi; \
-	sed \
+	@if [ ! -f $(HAPROXY_DEV_DIR)/user.pem ]; then \
+		cp $(HAPROXY_DEV_DIR)/auto.pem $(HAPROXY_DEV_DIR)/user.pem; \
+	fi
+	@sed \
 		-e 's|/opt/zato/env/qs-1/blocked-paths.txt|$(HOME)/env/qs-1/blocked-paths.txt|g' \
-		-e 's|bind 0.0.0.0:$${Zato_Port_MLLP}$$|&\n    bind 0.0.0.0:$${Zato_Port_MLLP_SSL} ssl crt $(HAPROXY_DEV_DIR)/'"$$pem_file"'|' \
+		-e 's|bind 0.0.0.0:$${Zato_Port_MLLP}$$|&\n    bind 0.0.0.0:$${Zato_Port_MLLP_SSL} ssl crt $(HAPROXY_DEV_DIR)/user.pem|' \
 		$(HAPROXY_CFG) > $(HAPROXY_DEV_DIR)/haproxy.cfg
 	Zato_Port_Server=$(Zato_Port_Server) \
 	Zato_Port_Dashboard=$(Zato_Port_Dashboard) \
@@ -262,7 +267,7 @@ haproxy:
 	Zato_HL7_MLLP_Port=$(Zato_HL7_MLLP_Port) \
 	Zato_Load_Balancer_Stats_Password=dev \
 	Zato_Load_Balancer_Metrics_Password=dev \
-	haproxy -d -f $(HAPROXY_DEV_DIR)/haproxy.cfg
+	haproxy -W -d -f $(HAPROXY_DEV_DIR)/haproxy.cfg
 
 dev:
 	$$Zato_Dev_Prefix -t dashboard -- bash -c 'make -C $(CURDIR) dashboard; exec bash -i'
@@ -987,6 +992,12 @@ test-alerting: ## Alerting engine tests - rules, actions, dedup, lifecycle and c
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/alerting/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_alerting -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-lets-encrypt: ## Let's Encrypt tests - lego obtains and renews certificates from a local Pebble, zato.test must point to 127.0.0.1 in /etc/hosts.
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/lets_encrypt/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_lets_encrypt -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-ftp: ## FTP and FTPS tests - the outconn, enmasse and scheduler suites against live FTP servers, plus the audit and delivery suites against stubs.
