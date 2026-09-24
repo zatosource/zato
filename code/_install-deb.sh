@@ -56,6 +56,10 @@ PY_BINARY_PATH=$(command -v $PY_BINARY)
 echo Creating virtual environment in $CURDIR using uv and $PY_BINARY_PATH
 $UV_BIN venv "$(realpath $CURDIR)" --python $PY_BINARY_PATH --python-preference only-system --allow-existing -q
 
+# uv writes a .gitignore with "*" into the venv root, which is this source directory,
+# and that would hide every new file from git.
+rm -f "$CURDIR/.gitignore"
+
 echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate
 
