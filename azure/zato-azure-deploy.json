@@ -107,7 +107,7 @@
         ]
       }
     },
-    "cloudInit": "[concat('#cloud-config\npackage_update: true\npackages:\n  - docker.io\nwrite_files:\n  - path: /usr/local/bin/zato-setup-storage.sh\n    permissions: \"0755\"\n    content: |\n      #!/bin/bash\n      # Docker and containerd are moved onto the local NVMe disk when the VM size has one,\n      # since the OS disk is throttled to a fraction of the throughput a container image\n      # extract needs. Sizes without a local disk keep the default layout.\n      set -e\n      device=/dev/disk/azure/local/by-index/1\n      if [ ! -e \"$device\" ]; then\n        device=$(lsblk -dpno NAME,MODEL | grep -i \"direct disk\" | cut -d\" \" -f1 | head -1)\n      fi\n      if [ -z \"$device\" ] || [ ! -e \"$device\" ]; then\n        exit 0\n      fi\n      if findmnt --source \"$device\" >/dev/null; then\n        umount \"$device\"\n      fi\n      mkfs.ext4 -F \"$device\"\n      mkdir -p /mnt/nvme\n      mount \"$device\" /mnt/nvme\n      systemctl stop docker docker.socket containerd\n      mv /var/lib/docker /mnt/nvme/docker\n      ln -s /mnt/nvme/docker /var/lib/docker\n      mv /var/lib/containerd /mnt/nvme/containerd\n      ln -s /mnt/nvme/containerd /var/lib/containerd\n      systemctl start containerd docker\nruncmd:\n  - /usr/local/bin/zato-setup-storage.sh\n  - docker run -d --pull=always --restart=always -p 22022:22 -p 8183:8183 -p 11223:11223 -p 11553:11553 --name zato -e Zato_Password=\"', parameters('zatoPassword'), '\" zatosource/zato-4.1\n')]"
+    "cloudInit": "[concat('#cloud-config\npackage_update: true\npackages:\n  - docker.io\nwrite_files:\n  - path: /usr/local/bin/zato-setup-storage.sh\n    permissions: \"0755\"\n    content: |\n      #!/bin/bash\n      # Docker and containerd are moved onto the local NVMe disk when the VM size has one,\n      # since the OS disk is throttled to a fraction of the throughput a container image\n      # extract needs. Sizes without a local disk keep the default layout.\n      set -e\n      device=/dev/disk/azure/local/by-index/1\n      if [ ! -e \"$device\" ]; then\n        device=$(lsblk -dpno NAME,MODEL | grep -i \"direct disk\" | cut -d\" \" -f1 | head -1)\n      fi\n      if [ -z \"$device\" ] || [ ! -e \"$device\" ]; then\n        exit 0\n      fi\n      if findmnt --source \"$device\" >/dev/null; then\n        umount \"$device\"\n      fi\n      mkfs.ext4 -F \"$device\"\n      mkdir -p /mnt/nvme\n      mount \"$device\" /mnt/nvme\n      systemctl stop docker docker.socket containerd\n      mv /var/lib/docker /mnt/nvme/docker\n      ln -s /mnt/nvme/docker /var/lib/docker\n      mv /var/lib/containerd /mnt/nvme/containerd\n      ln -s /mnt/nvme/containerd /var/lib/containerd\n      systemctl start containerd docker\nruncmd:\n  - /usr/local/bin/zato-setup-storage.sh\n  - echo \"Zato - pulling the container image, this takes several minutes\" > /dev/ttyS0\n  - docker run -d --pull=always --restart=always -p 22022:22 -p 8183:8183 -p 11223:11223 -p 11553:11553 --name zato -e Zato_Password=\"', parameters('zatoPassword'), '\" zatosource/zato-4.1 2>&1 | tee /dev/ttyS0\n  - echo \"Zato - the container is up, the Dashboard is starting on port 8183\" > /dev/ttyS0\n')]"
   },
   "resources": [
     {
@@ -226,6 +226,11 @@
             "managedDisk": {
               "storageAccountType": "Premium_LRS"
             }
+          }
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true
           }
         },
         "osProfile": {
