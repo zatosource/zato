@@ -1,0 +1,262 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Deploys a Linux VM running the Zato quickstart Docker container."
+  },
+  "parameters": {
+    "vmName": {
+      "type": "string",
+      "defaultValue": "zato",
+      "metadata": {
+        "description": "Name of the virtual machine."
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2lds_v6",
+      "metadata": {
+        "description": "Size of the virtual machine. Sizes with a local NVMe disk give the best Docker performance."
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "azureuser",
+      "metadata": {
+        "description": "Administrator user name for SSH access to the host."
+      }
+    },
+    "authenticationType": {
+      "type": "string",
+      "defaultValue": "sshPublicKey",
+      "allowedValues": [
+        "sshPublicKey",
+        "password"
+      ],
+      "metadata": {
+        "description": "How the administrator authenticates over SSH to the host."
+      }
+    },
+    "adminPasswordOrKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH public key or password for the administrator account."
+      }
+    },
+    "zatoPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for the Zato Dashboard user."
+      }
+    },
+    "allowedSourceAddresses": {
+      "type": "array",
+      "defaultValue": [
+        "0.0.0.0/0"
+      ],
+      "metadata": {
+        "description": "Source IP addresses or CIDR ranges allowed to reach the VM, given as a list. Use your own addresses rather than the default of 0.0.0.0/0, which is the whole internet."
+      }
+    },
+    "extraPorts": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Ports to open in addition to SSH, the Dashboard and the load balancer. Add 11553 for HL7 over MLLP, 22022 for SSH into the container."
+      }
+    },
+    "osDiskSizeGB": {
+      "type": "int",
+      "defaultValue": 64,
+      "minValue": 30,
+      "maxValue": 1023,
+      "metadata": {
+        "description": "Size of the OS disk in GB. Larger disks are given more IOPS by Azure."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Region to deploy into."
+      }
+    }
+  },
+  "variables": {
+    "vnetName": "[concat(parameters('vmName'), '-vnet')]",
+    "subnetName": "default",
+    "nsgName": "[concat(parameters('vmName'), '-nsg')]",
+    "nicName": "[concat(parameters('vmName'), '-nic')]",
+    "publicIpName": "[concat(parameters('vmName'), '-ip')]",
+    "dnsLabel": "[concat(parameters('vmName'), '-', uniqueString(resourceGroup().id))]",
+    "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]",
+    "basePorts": [
+      "22",
+      "8183",
+      "11223"
+    ],
+    "openPorts": "[union(variables('basePorts'), parameters('extraPorts'))]",
+    "linuxConfiguration": {
+      "disablePasswordAuthentication": true,
+      "ssh": {
+        "publicKeys": [
+          {
+            "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+            "keyData": "[parameters('adminPasswordOrKey')]"
+          }
+        ]
+      }
+    },
+    "cloudInit": "[concat('#cloud-config\npackage_update: true\npackages:\n  - docker.io\nwrite_files:\n  - path: /usr/local/bin/zato-setup-storage.sh\n    permissions: \"0755\"\n    content: |\n      #!/bin/bash\n      # Docker and containerd are moved onto the local NVMe disk when the VM size has one,\n      # since the OS disk is throttled to a fraction of the throughput a container image\n      # extract needs. Sizes without a local disk keep the default layout.\n      set -e\n      device=/dev/disk/azure/local/by-index/1\n      if [ ! -e \"$device\" ]; then\n        device=$(lsblk -dpno NAME,MODEL | grep -i \"direct disk\" | cut -d\" \" -f1 | head -1)\n      fi\n      if [ -z \"$device\" ] || [ ! -e \"$device\" ]; then\n        exit 0\n      fi\n      if findmnt --source \"$device\" >/dev/null; then\n        umount \"$device\"\n      fi\n      mkfs.ext4 -F \"$device\"\n      mkdir -p /mnt/nvme\n      mount \"$device\" /mnt/nvme\n      systemctl stop docker docker.socket containerd\n      mv /var/lib/docker /mnt/nvme/docker\n      ln -s /mnt/nvme/docker /var/lib/docker\n      mv /var/lib/containerd /mnt/nvme/containerd\n      ln -s /mnt/nvme/containerd /var/lib/containerd\n      systemctl start containerd docker\nruncmd:\n  - /usr/local/bin/zato-setup-storage.sh\n  - docker run -d --pull=always --restart=always -p 22022:22 -p 8183:8183 -p 11223:11223 -p 11553:11553 --name zato -e Zato_Password=\"', parameters('zatoPassword'), '\" zatosource/zato-4.1\n')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('nsgName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "zato-inbound",
+            "properties": {
+              "priority": 300,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "Tcp",
+              "sourceAddressPrefixes": "[parameters('allowedSourceAddresses')]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRanges": "[variables('openPorts')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.0.0/24",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('publicIpName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('dnsLabel')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('nicName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2024-07-01",
+      "name": "[parameters('vmName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "ubuntu-24_04-lts",
+            "sku": "server",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage",
+            "diskSizeGB": "[parameters('osDiskSizeGB')]",
+            "managedDisk": {
+              "storageAccountType": "Premium_LRS"
+            }
+          }
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPasswordOrKey')]",
+          "linuxConfiguration": "[if(equals(parameters('authenticationType'), 'password'), null(), variables('linuxConfiguration'))]",
+          "customData": "[base64(variables('cloudInit'))]"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "dashboardUrl": {
+      "type": "string",
+      "value": "[concat('http://', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).dnsSettings.fqdn, ':8183/')]"
+    },
+    "sshCommand": {
+      "type": "string",
+      "value": "[concat('ssh ', parameters('adminUsername'), '@', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).dnsSettings.fqdn)]"
+    },
+    "publicIpAddress": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).ipAddress]"
+    }
+  }
+}
