@@ -2245,6 +2245,10 @@ class Echo(Service):
         payload = self.request.payload
         self.logger.info(f'Received request: `{{payload}}`')
 
+        # .. there is no payload when the request is empty ..
+        if payload is None:
+            payload = {{}}
+
         # .. write a note with the payload as its data ..
         item_count = len(payload)
         self.audit.write('Echoed the request back', data=payload, item_count=item_count)
