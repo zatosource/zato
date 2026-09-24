@@ -20,6 +20,7 @@ from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericObject as ModelGenericObject
 from zato.common.odb.query.generic import OnPremGatewayWrapper
 from zato.common.typing_ import cast_
+from zato.common.util.logging_ import count_text
 from zato.common.util.sql import get_dict_with_opaque
 
 # ################################################################################################################################
@@ -47,8 +48,8 @@ _Hub_Timeout = 10
 # The host of the hub's administrative API.
 _Hub_Host = '127.0.0.1'
 
-# The port of the TLS load balancer that on-premises gateways connect to.
-_Public_Port_Env = 'Zato_Port_Load_Balancer_SSL'
+# The port of the load balancer that on-premises gateways connect to.
+_Public_Port_Env = 'Zato_Port_Load_Balancer'
 
 # The permitted range of port numbers.
 _Port_Min = 1
@@ -151,10 +152,10 @@ def get_public_address(host:'strnone'=None) -> 'str':
     if ':' in host:
         host = host.split(':')[0]
 
-    # .. the Docker image always defines the port of its TLS load balancer, which forwards
+    # .. the Docker image always defines the port of its load balancer, which forwards
     # .. gateway connections to the hub ..
     if port := os.environ.get(_Public_Port_Env):
-        out = f'https://{host}:{port}'
+        out = f'http://{host}:{port}'
 
     # .. whereas an environment without it has no load balancer, so gateways connect
     # .. to the hub directly.
@@ -469,9 +470,9 @@ class OnPremGatewayManager:
 
         _report_hub_available()
 
-        gateway_count = len(gateways)
+        gateway_count = count_text(len(gateways), 'on-premises gateway', 'on-premises gateways')
 
-        logger.info('Pushed %d on-premises gateway(s) to the hub', gateway_count)
+        logger.info('Pushed %s to the hub', gateway_count)
 
 # ################################################################################################################################
 
