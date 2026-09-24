@@ -74,6 +74,9 @@ Default_Encoding = 'utf-8'
 # has anything to add - a document that declares its own encoding is self-describing.
 _xml_declaration_prefix = b'<?xml'
 
+# The HTTP method every SOAP request goes out with.
+_soap_method = 'POST'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -427,10 +430,12 @@ class SOAPClient:
         than from what goes on the wire - the wire carries the credentials and the record must not.
         """
 
-        # The request is recorded with every credential in it masked ..
+        # The request is recorded with every credential in it masked, with the row naming which
+        # elements those were, and with the address and the method the call went out with ..
         if self.audit_callback:
-            recorded = mask_credentials(envelope, body_credential_names(self.body_credentials))
-            self.audit_callback(cid, AuditEvent.Request_Sent, endpoint, AuditOutcome.OK, recorded)
+            recorded, masked_names = mask_credentials(envelope, body_credential_names(self.body_credentials))
+            self.audit_callback(cid, AuditEvent.Request_Sent, endpoint, AuditOutcome.OK, recorded,
+                method=_soap_method, address=self.address, redacted=masked_names)
 
         try:
             out = self._post(body, content_type, cid)

@@ -40,6 +40,7 @@ class DestinationOption:
     """
     Method  = 'method'
     Path    = 'path'
+    Params  = 'params'
     To      = 'to'
     Subject = 'subject'
 
@@ -87,6 +88,10 @@ Default_Method = 'POST'
 
 # The path a FHIR destination posts to when its options do not name one
 Default_Path = ''
+
+# The query string a FHIR call carries when nothing names one - a search repeats only
+# when the parameters it searched by were recorded along with it.
+Default_Params = None
 
 # The recipient and the subject line an email destination uses when its options do not name them
 Default_To = ''

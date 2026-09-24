@@ -22,6 +22,8 @@ if 0:
     any_ = any_
     strlist = strlist
 
+    maskedenvelope = tuple[bytes, strlist]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -39,31 +41,41 @@ _always_masked = (
 # ################################################################################################################################
 # ################################################################################################################################
 
-def mask_credentials(envelope:'any_', body_credential_names:'strlist | None'=None) -> 'bytes':
-    """ Returns the bytes of an envelope with every credential it carries replaced by a marker.
+def mask_credentials(envelope:'any_', body_credential_names:'strlist | None'=None) -> 'maskedenvelope':
+    """ Returns the bytes of an envelope with every credential it carries replaced by a marker,
+    along with the names of the elements replaced.
 
     An audit log is written to be read later, by more people than the request was made for and for
     longer than the request lived, so a password in it is a password stored in plaintext for as long
     as the log is kept. Masking happens on a copy, so what goes on the wire is untouched.
     """
     masked = deepcopy(envelope)
+    masked_names:'strlist' = []
 
     for tag in _always_masked:
+        local_name = tag.rpartition('}')[2]
+
         for element in masked.iter(tag):
             element.text = Mask
+            masked_names.append(local_name)
 
     # A connection may also carry its credentials as plain body elements, and only the connection
     # knows which of the operation's children those are - they are named by its own mapping.
     if body_credential_names:
-        _mask_body_credentials(masked, body_credential_names)
+        _mask_body_credentials(masked, body_credential_names, masked_names)
 
-    out = to_bytes(masked)
+    masked_bytes = to_bytes(masked)
+
+    # Our response to produce
+    out = masked_bytes, masked_names
+
     return out
 
 # ################################################################################################################################
 
-def _mask_body_credentials(envelope:'any_', names:'strlist') -> 'None':
-    """ Masks the body elements a connection's credential mapping names.
+def _mask_body_credentials(envelope:'any_', names:'strlist', masked_names:'strlist') -> 'None':
+    """ Masks the body elements a connection's credential mapping names, adding each one it
+    replaced to the names the caller collects.
 
     The names are matched on the local name alone, because a mapping names an element the way the
     remote service's schema does and the namespace it lands in is the operation's, not the mapping's.
@@ -82,6 +94,7 @@ def _mask_body_credentials(envelope:'any_', names:'strlist') -> 'None':
 
         if local_name in wanted:
             element.text = Mask
+            masked_names.append(local_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

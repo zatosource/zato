@@ -37,7 +37,7 @@ if 0:
 Env_Max_Attachment_Size = 'Zato_Audit_Log_Max_Attachment_Size'
 
 # How big one attachment may be for its bytes to be kept when the environment does not say otherwise
-_default_max_attachment_size = 10 * 1024 * 1024
+_default_max_attachment_size = 50 * 1024 * 1024
 
 # ################################################################################################################################
 

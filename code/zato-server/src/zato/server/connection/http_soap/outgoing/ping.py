@@ -80,7 +80,7 @@ def ping(
     # .. a ping writes the same request/response pair a regular invocation does, sharing one CID,
     # .. but under the connection's health source, so what the check measures stays its own ..
     if needs_audit:
-        record_request_sent(wrapper, cid, endpoint, '', ping_method, is_health_check=True)
+        record_request_sent(wrapper, cid, endpoint, '', ping_method, is_health_check=True, address=address)
 
     # .. invoke the other end ..
     try:

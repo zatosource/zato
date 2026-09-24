@@ -6,29 +6,36 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from http.client import INTERNAL_SERVER_ERROR
+
 # SQLAlchemy
 from sqlalchemy import select
 
 # Zato
 from common import delete_all_events
-from zato.common.audit_log.api import event_attr_table, event_link_table, event_table, get_audit_engine, \
-    AuditEvent, AuditLog, AuditOutcome, AuditSource
-from zato.common.audit_log.common import event_dedup_table
+from resubmit_context import run_hop_ack_checks, run_request_context_checks, run_run_once_checks
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
+    get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_dedup_table, AuditBody, AuditClassification
 from zato.common.audit_log.dedup import acquire_dedup_key, build_dedup_key, complete_dedup_key, get_in_doubt, \
     release_dedup_key
 from zato.common.audit_log.resubmit import bulk_resubmit, find_event_ids, get_resubmit_handler, get_stored_payload, \
     is_event_type_resubmittable, load_event, register_resubmit_handler, require_event_type, resend_hop, \
     source_resubmit_actions, Action_Reprocess, Action_Resend, Resubmit_Label, ResubmitFilter, ResubmitException, \
     Retry_Label, Row_Error, Row_Resubmitted, Row_Would_Resubmit
+from zato.common.destination.model import new_send_result
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.destination.model import HopSendResult
     from zato.common.typing_ import anydict, anylist
     anydict = anydict
     anylist = anylist
+    HopSendResult = HopSendResult
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -242,9 +249,10 @@ def _run_hop_resend_checks(audit_log:'AuditLog') -> 'None':
 
     sent:'anylist' = []
 
-    def send(payload:'str') -> 'str':
+    def send(payload:'str') -> 'HopSendResult':
         sent.append(payload)
-        return 'hop-response'
+        out = new_send_result('hop-response', response_text='hop-response')
+        return out
 
     result = resend_hop(load_event(original_id), send, audit_log, 'cid-core-hop-new', _actor)
 
@@ -292,9 +300,10 @@ def _run_hop_resend_checks(audit_log:'AuditLog') -> 'None':
 
     bodyless_sent:'anylist' = []
 
-    def bodyless_send(payload:'str') -> 'str':
+    def bodyless_send(payload:'str') -> 'HopSendResult':
         bodyless_sent.append(payload)
-        return 'hop-bodyless-response'
+        out = new_send_result('hop-bodyless-response')
+        return out
 
     bodyless_result = resend_hop(load_event(bodyless_id), bodyless_send, audit_log, 'cid-core-hop-bodyless-new')
 
@@ -317,14 +326,15 @@ def _run_hop_resend_checks(audit_log:'AuditLog') -> 'None':
     else:
         raise Exception('An inbound event was expected to be rejected')
 
-    # .. and a failed attempt is recorded as its own error event before the caller learns about it.
-    def failing_send(payload:'str') -> 'str':
-        raise ValueError('The hop target is down')
+    # .. an attempt nothing came back from is recorded as its own error event before
+    # the caller learns about it ..
+    def failing_send(payload:'str') -> 'HopSendResult':
+        raise Exception('The hop target is down')
 
     try:
         _ = resend_hop(load_event(original_id), failing_send, audit_log, 'cid-core-hop-fail')
-    except ValueError:
-        pass
+    except Exception as e:
+        assert str(e) == 'The hop target is down'
     else:
         raise Exception('A failed send was expected to propagate')
 
@@ -342,6 +352,48 @@ def _run_hop_resend_checks(audit_log:'AuditLog') -> 'None':
     assert error_row['outcome'] == AuditOutcome.Error
     assert error_row['status'] == 'The hop target is down'
     assert error_row['correl_id'] == 'cid-core-hop-orig'
+
+    # .. and an attempt the destination answered by turning the message down is a failed resend
+    # just the same, recorded with the status the destination answered with and with what it said.
+    rejected_status = f'HTTP {INTERNAL_SERVER_ERROR} Internal Server Error'
+    rejected_body = 'The endpoint refused it'
+
+    def rejecting_send(payload:'str') -> 'HopSendResult':
+        out = new_send_result(rejected_body, is_rejected=True, status=rejected_status,
+            response_text=rejected_body, classification=AuditClassification.Transient)
+        return out
+
+    try:
+        _ = resend_hop(load_event(original_id), rejecting_send, audit_log, 'cid-core-hop-rejected-send')
+    except ResubmitException as e:
+        assert str(e) == rejected_status
+    else:
+        raise Exception('A rejected send was expected to be reported as a failed resend')
+
+    query = select(event_table)
+    query = query.where(event_table.c.cid == 'cid-core-hop-rejected-send')
+
+    with engine.connect() as connection:
+        rejected_rows = connection.execute(query).fetchall()
+
+    assert len(rejected_rows) == 1
+
+    rejected_row = dict(rejected_rows[0]._mapping)
+    assert rejected_row['outcome'] == AuditOutcome.Error
+    assert rejected_row['status'] == rejected_status
+    assert rejected_row['classification'] == AuditClassification.Transient
+    assert rejected_row['correl_id'] == 'cid-core-hop-orig'
+
+    # .. with what the destination said kept as the response body of the row.
+    body_query = select(event_body_table.c.data)
+    body_query = body_query.where(event_body_table.c.event_id == rejected_row['id'])
+    body_query = body_query.where(event_body_table.c.kind == AuditBody.Response)
+
+    with engine.connect() as connection:
+        body_rows = connection.execute(body_query).fetchall()
+
+    assert len(body_rows) == 1
+    assert body_rows[0][0] == rejected_body
 
 # ################################################################################################################################
 
@@ -503,8 +555,9 @@ def _run_bulk_resubmit_checks(audit_log:'AuditLog') -> 'None':
 def run_resubmit_core_scenario() -> 'None':
     """ The shared resubmit core scenario every backend must pass: loading stored events
     back with every rejection path, the per-source declarations of what can be sent again,
-    the per-source handler registry, the per-hop resend, the dedup ledger and bulk resubmit
-    with dry runs and double-apply prevention.
+    the per-source handler registry, the per-hop resend, what a call the log could not keep
+    whole refuses, the acknowledgment a repeated MLLP delivery records, one resubmit per row,
+    the dedup ledger and bulk resubmit with dry runs and double-apply prevention.
     """
     delete_all_events()
 
@@ -514,6 +567,9 @@ def run_resubmit_core_scenario() -> 'None':
     _run_resubmittable_declaration_checks()
     _run_registry_checks()
     _run_hop_resend_checks(audit_log)
+    run_request_context_checks(audit_log)
+    run_hop_ack_checks(audit_log)
+    run_run_once_checks(audit_log)
     _run_dedup_checks()
     _run_bulk_resubmit_checks(audit_log)
 

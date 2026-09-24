@@ -79,6 +79,7 @@ _alert_sources = [
     AuditSource.FHIR_Health,
     AuditSource.Email_IMAP,
     AuditSource.Email_SMTP,
+    AuditSource.Email_SMTP_Health,
     AuditSource.File_Outgoing,
     AuditSource.SQL_Outgoing,
     AuditSource.AS2,

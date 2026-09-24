@@ -125,10 +125,16 @@ def test_a_response_carries_its_http_status(tmp_path:'os.PathLike') -> 'None':
         # The request went out before any response existed, so it carries no status
         assert request_sent['status'] == ''
 
-        # The stored document is the resubmit convention - the payload plus the method
-        # a per-hop resend needs to repeat the exact same call - while the size recorded
-        # is the wire size of the payload itself.
-        assert loads(request_sent['data']) == {'payload': 'The request body', 'method': 'POST'}
+        # The stored document is the resubmit convention - the whole call, so that repeating it
+        # repeats this one call rather than whatever the connection would build today - while
+        # the size recorded is the wire size of the payload itself.
+        assert loads(request_sent['data']) == {
+            'payload': 'The request body',
+            'method': 'POST',
+            'address': _address,
+            'params': {},
+            'headers': {},
+        }
         assert request_sent['size'] == len('The request body')
 
         response_received = events[1]
@@ -186,8 +192,14 @@ def test_a_ping_writes_a_request_response_pair(tmp_path:'os.PathLike') -> 'None'
         assert request_sent['endpoint'] == f'HEAD {_address}'
 
         # A ping goes out with no body, and its stored document says so - the empty payload
-        # plus the method, which is what makes even a ping row repeatable per hop.
-        assert loads(request_sent['data']) == {'payload': '', 'method': 'HEAD'}
+        # alongside the rest of the call, which is what makes even a ping row repeatable per hop.
+        assert loads(request_sent['data']) == {
+            'payload': '',
+            'method': 'HEAD',
+            'address': _address,
+            'params': {},
+            'headers': {},
+        }
         assert request_sent['size'] == 0
 
         response_received = events[1]

@@ -181,6 +181,7 @@ class TestResubmitResponse:
     def test_a_failure_answers_with_the_summary_and_the_traceback_as_details(self):
         report = {
             'is_ok': False,
+            'is_duplicate': False,
             'event_id': None,
             'error': _traceback_text,
             'action': 'reprocess',
@@ -196,9 +197,31 @@ class TestResubmitResponse:
 
 # ################################################################################################################################
 
+    def test_a_row_already_sent_again_reads_as_that_rather_than_as_a_crash(self) -> 'None':
+        report = {
+            'is_ok': False,
+            'is_duplicate': True,
+            'event_id': None,
+            'error': 'Event `127` was already resubmitted',
+            'action': 'resend',
+            'cid': 'cid-10',
+        }
+
+        body = _body(_get_resubmit_response(report))
+
+        assert body['is_success'] is False
+        assert body['message'] == 'Resubmit failed - already resubmitted'
+
+        # There is no traceback behind a refusal of this kind.
+        assert body['details'] == 'Event `127` was already resubmitted'
+        assert body['details_lexer'] == 'python'
+
+# ################################################################################################################################
+
     def test_a_failure_without_a_traceback_highlights_as_python(self):
         report = {
             'is_ok': False,
+            'is_duplicate': False,
             'error': 'Connection refused',
             'cid': 'cid-9',
         }

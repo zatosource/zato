@@ -14,8 +14,10 @@ from zato.common.alerting.collectors.channels import collect_channel_silence_fac
     collect_channel_status_facts as collect_channel_status_facts
 from zato.common.alerting.collectors.common import ack_sources as ack_sources, all_channel_sources as all_channel_sources, \
     apply_newest_error as apply_newest_error, channel_sources as channel_sources, \
-    collect_newest_error_events as collect_newest_error_events, new_fact as new_fact, outgoing_sources as outgoing_sources, \
+    collect_newest_error_events as collect_newest_error_events, find_paired_request_id as find_paired_request_id, \
+    new_fact as new_fact, outgoing_sources as outgoing_sources, \
     request_event_type_by_source as request_event_type_by_source, \
+    resubmit_event_type_by_response as resubmit_event_type_by_response, \
     response_event_type_by_source as response_event_type_by_source, silence_sources as silence_sources, \
     Attr_Days_Left as Attr_Days_Left, Default_Begin_Event_Type as Default_Begin_Event_Type, \
     Default_Consecutive_Depth as Default_Consecutive_Depth, Default_End_Event_Type as Default_End_Event_Type, \

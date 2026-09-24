@@ -62,9 +62,12 @@ class TestRowRetention:
         # the connection it watches while being worth far less once it is past.
         assert get_retention_days(AuditSource.REST_Outgoing_Health) == _health_check_retention_days
         assert get_retention_days(AuditSource.SOAP_Outgoing_Health) == _health_check_retention_days
+        assert get_retention_days(AuditSource.FHIR_Health) == _health_check_retention_days
+        assert get_retention_days(AuditSource.Email_SMTP_Health) == _health_check_retention_days
 
         # The connection's own traffic is unaffected
         assert get_retention_days(AuditSource.REST_Outgoing) == _default_retention_days
+        assert get_retention_days(AuditSource.Email_SMTP) == _default_retention_days
 
 # ################################################################################################################################
 

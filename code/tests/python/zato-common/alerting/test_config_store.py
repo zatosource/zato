@@ -132,6 +132,28 @@ class TestApplyTypeConfig:
 
 # ################################################################################################################################
 
+    def test_an_smtp_check_is_judged_by_the_email_rules(self, backend:'RuleSQLBackend') -> 'None':
+        """ An SMTP connection's health source is judged by the same rules as its own sends.
+        """
+        rules_by_full_name = {}
+
+        for rule in load_alert_rules(backend):
+            rules_by_full_name[rule.full_name] = rule
+
+        down_rule = rules_by_full_name['alerts_email_Connection_Down']
+
+        for source in (AuditSource.Email_SMTP, AuditSource.Email_SMTP_Health):
+
+            at_the_threshold = new_fact(source, _connection_name)
+            at_the_threshold['consecutive_failures'] = 3
+            assert down_rule.match({Fact_Entity: at_the_threshold}), source
+
+            below_it = new_fact(source, _connection_name)
+            below_it['consecutive_failures'] = 2
+            assert not down_rule.match({Fact_Entity: below_it}), source
+
+# ################################################################################################################################
+
     def test_saving_what_is_already_there_stores_nothing(self, backend:'RuleSQLBackend') -> 'None':
 
         # The seeded values, in screen units

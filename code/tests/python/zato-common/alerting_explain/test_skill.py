@@ -16,6 +16,7 @@ import pytest
 from zato.common.audit_log.api import AuditSource
 from zato.common.alerting.explain.skill import get_default_skills_dir, get_skill_source, load_skill, parse_skill, \
     Skill_File_Name
+from zato.common.audit_log.resubmit import source_resubmit_actions
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -253,6 +254,14 @@ class TestShippedSkills:
         else:
             assert skill.remediations == []
             assert '"remediation": null' in skill.instructions
+
+# ################################################################################################################################
+
+    @pytest.mark.parametrize('source', _resubmit_sources)
+    def test_a_skill_only_offers_what_the_catalog_can_actually_do(self, source:'str') -> 'None':
+
+        # A source the skill names is a source the resubmit catalog covers.
+        assert source in source_resubmit_actions
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -100,6 +100,19 @@ class AckResult:
     ack_text:    'str'  = ''
 
 # ################################################################################################################################
+
+def get_ack_rejection(ack:'AckResult') -> 'str':
+    """ Why an acknowledgment is a no - its code and the error it named. Empty for one that accepted the message,
+    which is what the direct attempt and the attempts from the queue both go by.
+    """
+    if ack.is_accepted:
+        out = ''
+    else:
+        out = f'{ack.ack_code} {ack.error_text}'.strip()
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def build_ack(

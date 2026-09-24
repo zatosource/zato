@@ -15,7 +15,7 @@ from urllib.parse import quote, urlencode
 from requests_toolbelt import MultipartEncoder
 
 # Zato
-from zato.common.api import ContentType, DATA_FORMAT, HTTP_SOAP
+from zato.common.api import ContentType, DATA_FORMAT, HTTP_SOAP, URL_TYPE
 from zato.common.exception import BadRequest, BackendInvocationError
 from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import extract_model_class, is_list, Model
@@ -261,8 +261,11 @@ class RESTCallMixin:
         # .. record the outgoing request in the audit log ..
         endpoint = f'{method} {address}'
 
+        # The whole call is recorded, not only its body - the address a path template resolved to,
+        # the query string and the caller's own headers go with it.
         if needs_audit:
-            record_request_sent(self, cid, endpoint, prepared.data, method)
+            record_request_sent(self, cid, endpoint, prepared.data, method,
+                address=address, qs_params=qs_params, user_headers=prepared.user_headers)
 
         # .. do invoke the connection ..
         try:
@@ -316,6 +319,55 @@ class RESTCallMixin:
 
         # .. now, return the response to the caller.
         return response
+
+# ################################################################################################################################
+
+    def resend_recorded(
+        self,
+        cid:'str',
+        method:'str',
+        address:'str',
+        data:'any_',
+        qs_params:'stranydict',
+        user_headers:'strstrdict',
+        ) -> 'Response':
+        """ Repeats one recorded call exactly as it was made - the address already resolved, the
+        query string and the caller's headers as they went out. Only the connection's own security
+        headers are built afresh, out of the credentials it is configured with today.
+
+        The connection's audit log is off for the call, the resend recording the attempt itself
+        as a row linked to the original.
+        """
+        self._enforce_is_active()
+
+        headers = self._create_headers(cid, user_headers)
+
+        is_soap = self.config['transport'] == URL_TYPE.SOAP
+
+        # A recorded SOAP body is the envelope as it went on the wire, and `_soap_data` leaves
+        # an envelope alone while still settling the content type.
+        if is_soap:
+            data, headers = self._soap_data(data, headers)
+
+        elif isinstance(data, str):
+            data = data.encode('utf-8')
+
+        prepared = _PreparedRequest(
+            method=method,
+            address=address,
+            data=data,
+            headers=headers,
+            qs_params=qs_params,
+            model=None,
+            needs_audit=False,
+            is_soap=is_soap,
+            data_text=None,
+            user_headers=user_headers,
+            params=qs_params,
+        )
+
+        out = self._send_prepared(cid, prepared, (), {})
+        return out
 
 # ################################################################################################################################
 

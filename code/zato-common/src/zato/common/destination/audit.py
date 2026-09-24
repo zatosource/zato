@@ -17,9 +17,9 @@ from __future__ import annotations
 from json import dumps
 
 # Zato
-from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
-from zato.common.destination.constants import Default_Method, Default_Path, Default_Subject, Default_To, \
-    DestinationOption, DestinationType, Hop_Destination_Name
+from zato.common.audit_log.common import AuditBody, AuditEvent, AuditOutcome, AuditSource
+from zato.common.destination.constants import Default_Method, Default_Params, Default_Path, Default_Subject, \
+    Default_To, DestinationOption, DestinationType, Hop_Destination_Name
 from zato.common.destination.model import get_option, new_entry, DestinationException
 
 # ################################################################################################################################
@@ -55,6 +55,10 @@ _stored_options = {
     DestinationType.FHIR: {
         DestinationOption.Method: Default_Method,
         DestinationOption.Path: Default_Path,
+
+        # A search is its parameters - repeating one without them asks for every resource
+        # of the type rather than for the one resource the call was about
+        DestinationOption.Params: Default_Params,
     },
     DestinationType.SMTP: {
         DestinationOption.To: Default_To,
@@ -146,14 +150,24 @@ def record_hop(
     attempt:'int',
     duration_ms:'int',
     error:'str' = '',
+    classification:'str' = '',
+    response_text:'str' = '',
     ) -> 'intnone':
     """ Records one delivery attempt to one destination, whether it succeeded or not, so the
-    delivery history of every destination of a channel has no holes in it.
+    delivery history of every destination of a channel has no holes in it. What came back is
+    stored as the row's response body, so an operator reading a refusal sees what the
+    destination said without going to the server log for it.
     """
     source = _source_by_type[entry.type]
 
     payload_text = get_payload_text(payload)
     stored_data = build_stored_data(entry, payload_text)
+
+    # A delivery that came back with nothing at all has no response body to keep
+    if response_text:
+        bodies = {AuditBody.Response: response_text}
+    else:
+        bodies = None
 
     attrs = {
         'channel_name': channel_name,
@@ -179,10 +193,12 @@ def record_hop(
         cid=cid,
         size=len(payload_text),
         outcome=outcome,
+        classification=classification,
         status=error,
         duration_ms=duration_ms,
         data=stored_data,
         attrs=attrs,
+        bodies=bodies,
     )
 
     return out

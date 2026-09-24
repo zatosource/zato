@@ -381,6 +381,35 @@ class TestReprocess:
 
 # ################################################################################################################################
 
+    def test_a_failed_reprocess_is_recorded_before_it_propagates(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        original_id = _seed_event(audit_log, AuditEvent.Message_Received, _channel_name, _adt_a01)
+
+        def failing_invoke(service_name:'str', payload:'str') -> 'None':
+            raise Exception('The channel service is down')
+
+        with pytest.raises(Exception):
+            _ = reprocess(load_event(original_id), _service_name, failing_invoke, audit_log, 'cid-reprocess-failed')
+
+        # The attempt is on the trail even though it did not go through.
+        failed:'anylist' = []
+
+        for row in _get_events(AuditEvent.Message_Received):
+            if row['cid'] == 'cid-reprocess-failed':
+                failed.append(row)
+
+        assert len(failed) == 1
+
+        failed_row = failed[0]
+        assert failed_row['outcome'] == AuditOutcome.Error
+        assert failed_row['status'] == 'The channel service is down'
+        assert failed_row['correl_id'] == 'cid-original'
+        assert failed_row['object_name'] == _channel_name
+
+        assert _get_parent_ids(failed_row['id']) == [original_id]
+
+# ################################################################################################################################
+
     def test_reprocess_with_an_edited_payload(self) -> 'None':
         audit_log = AuditLog(_server_name)
         original_id = _seed_event(audit_log, AuditEvent.Message_Received, _channel_name, _adt_a01)

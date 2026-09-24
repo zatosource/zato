@@ -352,6 +352,8 @@ _source_columns = {
     # A check's rows have the same shape as the calls it watches.
     'rest-outgoing-health': _rest_outgoing_columns,
     'soap-outgoing-health': _soap_outgoing_columns,
+    'fhir-health': _fhir_columns,
+    'email-smtp-health': _email_smtp_columns,
     'email-imap': _email_imap_columns,
     'email-smtp': _email_smtp_columns,
     'file-outgoing': _file_outgoing_columns,

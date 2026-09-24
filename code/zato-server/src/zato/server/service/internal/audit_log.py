@@ -22,7 +22,9 @@ from zato.common.as4.resubmit import describe_send_result as as4_describe_send_r
 from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.common import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import load_transfer_content, record_schedule_event
-from zato.common.audit_log.resubmit import load_event as load_audit_event, resend_hop, ResubmitException
+from zato.common.audit_log.resubmit import get_stored_payload, load_event as load_audit_event, \
+    require_resendable_request, resend_hop, run_once, Action_Reprocess, Action_Resend, DuplicateResubmitException, \
+    ResubmitException
 from zato.common.destination.audit import get_hop_entry
 from zato.common.hl7.resubmit import reprocess as hl7_reprocess, resend as hl7_resend
 from zato.common.json_internal import dumps
@@ -32,7 +34,7 @@ from zato.common.util.api import asbool
 from zato.hl7v2 import parse_hl7
 from zato.server.connection.as4 import AS4ChannelRuntime
 from zato.server.destination.channel import new_channel_item, run_for_channel
-from zato.server.destination.dispatch import send as dispatch_send
+from zato.server.destination.dispatch import send as dispatch_send, is_own_recorded_call, send_recorded
 from zato.server.destination.hook import narrow_to
 from zato.server.service import Int
 from zato.server.service.internal import AdminService
@@ -45,12 +47,14 @@ if 0:
     from zato.common.as4.ebms import UserMessageDetails
     from zato.common.as4.outbound import SendResult as AS4SendResult
     from zato.common.as4.resend import ResendCandidate
+    from zato.common.destination.model import HopSendResult
     from zato.common.typing_ import any_, anylist, callable_, dictlist, stranydict, strlist, strnone
     from zato.common.util.xml_.mime_ import part_list
     any_ = any_
     anylist = anylist
     AS4SendResult = AS4SendResult
     callable_ = callable_
+    HopSendResult = HopSendResult
     part_list = part_list
     ResendCandidate = ResendCandidate
     SendResult = SendResult
@@ -153,6 +157,7 @@ class ReprocessAS2Message(AdminService):
         # never as a bare exception, so the caller always sees the same shape.
         report:'stranydict' = {
             'is_ok': False,
+            'is_duplicate': False,
             'target_kind': '',
             'target_name': '',
             'message_count': 0,
@@ -295,6 +300,7 @@ class ReprocessAS4Message(AdminService):
         # so the caller always sees the same shape with the details inside.
         report:'stranydict' = {
             'is_ok': False,
+            'is_duplicate': False,
             'target_kind': '',
             'target_name': '',
             'message_count': 0,
@@ -394,6 +400,7 @@ class ResendHL7Message(AdminService):
         # so the caller always sees the same shape with the details inside.
         report:'stranydict' = {
             'is_ok': False,
+            'is_duplicate': False,
             'event_id': None,
             'control_id': '',
             'ack_status': '',
@@ -423,13 +430,28 @@ class ResendHL7Message(AdminService):
                 return out
 
             audit_log = AuditLog(self.server.name)
-            result = hl7_resend(event, send, audit_log, self.cid, payload=edited_payload)
+
+            def resubmit_one() -> 'any_':
+                out = hl7_resend(event, send, audit_log, self.cid, payload=edited_payload)
+                return out
+
+            # The key covers the payload that actually goes out.
+            if edited_payload is None:
+                key_payload = get_stored_payload(event)
+            else:
+                key_payload = edited_payload
+
+            result = run_once(Action_Resend, event_id, key_payload, self.cid, '', resubmit_one)
 
             report['is_ok'] = True
             report['event_id'] = result.event_id
             report['control_id'] = result.control_id
             report['ack_status'] = result.ack_status
             report['ack_outcome'] = result.ack_outcome
+
+        except DuplicateResubmitException as e:
+            report['is_duplicate'] = True
+            report['error'] = str(e)
 
         except Exception:
             report['error'] = format_exc()
@@ -476,6 +498,7 @@ class ReprocessHL7Message(AdminService):
         # so the caller always sees the same shape with the details inside.
         report:'stranydict' = {
             'is_ok': False,
+            'is_duplicate': False,
             'event_id': None,
             'control_id': '',
             'service_name': '',
@@ -518,14 +541,34 @@ class ReprocessHL7Message(AdminService):
                     _ = run_for_channel(self.server, channel_item, payload)
 
             audit_log = AuditLog(self.server.name)
-            result = hl7_reprocess(event, config['service'], invoke_service, audit_log, self.cid,
-                payload=edited_payload, destination_names=destination_names)
+
+            def resubmit_one() -> 'any_':
+                out = hl7_reprocess(event, config['service'], invoke_service, audit_log, self.cid,
+                    payload=edited_payload, destination_names=destination_names)
+                return out
+
+            # The key covers the payload that actually goes through.
+            if edited_payload is None:
+                key_payload = get_stored_payload(event)
+            else:
+                key_payload = edited_payload
+
+            # Which destinations the message reaches is part of what the key covers, catching one
+            # receiver up and then another being two operations rather than one repeated.
+            key_destinations = ','.join(destination_names)
+            key_material = f'{key_payload}:{key_destinations}'
+
+            result = run_once(Action_Reprocess, event_id, key_material, self.cid, '', resubmit_one)
 
             report['is_ok'] = True
             report['event_id'] = result.event_id
             report['control_id'] = result.control_id
             report['service_name'] = result.service_name
             report['destinations'] = result.destination_names
+
+        except DuplicateResubmitException as e:
+            report['is_duplicate'] = True
+            report['error'] = str(e)
 
         except Exception:
             report['error'] = format_exc()
@@ -591,6 +634,7 @@ class ReprocessFileTransfer(AdminService):
         # so the caller always sees the same shape with the details inside.
         report:'stranydict' = {
             'is_ok': False,
+            'is_duplicate': False,
             'event_id': None,
             'error': '',
         }
@@ -637,31 +681,45 @@ class ReprocessFileTransfer(AdminService):
             if actor:
                 attrs_extra['actor'] = actor
 
-            # The file is handed to the target service again under this cid, a failed attempt is recorded too.
-            service_start = monotonic()
+            def resubmit_one() -> 'int':
 
-            try:
-                _ = self.server.invoke(service_name, item, cid=self.cid)
-            except Exception:
-                error = format_exc()
+                # The file is handed to the target service again under this cid,
+                # a failed attempt being recorded too.
+                service_start = monotonic()
+
+                try:
+                    _ = self.server.invoke(service_name, item, cid=self.cid)
+                except Exception:
+                    error = format_exc()
+                    service_ms = _elapsed_ms(service_start)
+                    event_extra['service_ms'] = service_ms
+                    _ = record_schedule_event(audit_log, event.object_name, AuditEvent.Delivery_Failed, full_path,
+                        cid=self.cid, correl_id=event.cid, schedule=schedule_name, outcome=AuditOutcome.Error,
+                        file_name=file_name, service=service_name, size=len(data), error=error,
+                        duration_ms=service_ms, extra=event_extra, attrs_extra=attrs_extra, parents=[event.id])
+                    raise
+
                 service_ms = _elapsed_ms(service_start)
                 event_extra['service_ms'] = service_ms
-                _ = record_schedule_event(audit_log, event.object_name, AuditEvent.Delivery_Failed, full_path,
-                    cid=self.cid, correl_id=event.cid, schedule=schedule_name, outcome=AuditOutcome.Error,
-                    file_name=file_name, service=service_name, size=len(data), error=error, duration_ms=service_ms,
+
+                out = record_schedule_event(audit_log, event.object_name, AuditEvent.Delivered, full_path,
+                    cid=self.cid, correl_id=event.cid, schedule=schedule_name, outcome=AuditOutcome.OK,
+                    file_name=file_name, service=service_name, size=len(data), duration_ms=service_ms,
                     extra=event_extra, attrs_extra=attrs_extra, parents=[event.id])
-                raise
 
-            service_ms = _elapsed_ms(service_start)
-            event_extra['service_ms'] = service_ms
+                return out
 
-            new_event_id = record_schedule_event(audit_log, event.object_name, AuditEvent.Delivered, full_path,
-                cid=self.cid, correl_id=event.cid, schedule=schedule_name, outcome=AuditOutcome.OK,
-                file_name=file_name, service=service_name, size=len(data), duration_ms=service_ms,
-                extra=event_extra, attrs_extra=attrs_extra, parents=[event.id])
+            # The key covers the bytes of the file.
+            key_payload = data.decode('utf-8', errors='replace')
+
+            new_event_id = run_once(Action_Reprocess, event_id, key_payload, self.cid, actor, resubmit_one)
 
             report['is_ok'] = True
             report['event_id'] = new_event_id
+
+        except DuplicateResubmitException as e:
+            report['is_duplicate'] = True
+            report['error'] = str(e)
 
         except Exception:
             report['error'] = format_exc()
@@ -697,6 +755,7 @@ class ResendHop(AdminService):
         # so the caller always sees the same shape with the details inside.
         report:'stranydict' = {
             'is_ok': False,
+            'is_duplicate': False,
             'event_id': None,
             'error': '',
         }
@@ -707,10 +766,20 @@ class ResendHop(AdminService):
             send = self._build_send(event)
 
             audit_log = AuditLog(self.server.name)
-            result = resend_hop(event, send, audit_log, self.cid, actor)
+
+            def resubmit_one() -> 'any_':
+                out = resend_hop(event, send, audit_log, self.cid, actor)
+                return out
+
+            payload = get_stored_payload(event)
+            result = run_once(Action_Resend, event_id, payload, self.cid, actor, resubmit_one)
 
             report['is_ok'] = True
             report['event_id'] = result.event_id
+
+        except DuplicateResubmitException as e:
+            report['is_duplicate'] = True
+            report['error'] = str(e)
 
         except Exception:
             report['error'] = format_exc()
@@ -727,9 +796,24 @@ class ResendHop(AdminService):
         the delivery went out through - with the connection's own recording off, because the
         per-hop resend records the attempt itself.
         """
-        entry = get_hop_entry(event.source, event.object_name, event.details)
+        details = event.details
 
-        def send(payload:'str') -> 'any_':
+        # A row a channel's fan-out engine wrote names the destination it went to, and a row an
+        # outgoing connection wrote for a call a service made itself does not. The second kind
+        # carries the whole call and is repeated as that call, the first kind through the
+        # destination it was declared as.
+        if is_own_recorded_call(event.source, details):
+            require_resendable_request(event)
+
+            def send(payload:'str') -> 'HopSendResult':
+                out = send_recorded(self, event.source, event.object_name, details, payload, self.cid)
+                return out
+
+            return send
+
+        entry = get_hop_entry(event.source, event.object_name, details)
+
+        def send(payload:'str') -> 'HopSendResult':
             out = dispatch_send(self, entry, payload, self.cid)
             return out
 

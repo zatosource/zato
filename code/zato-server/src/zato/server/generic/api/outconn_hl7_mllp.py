@@ -15,7 +15,7 @@ from traceback import format_exc
 from zato.common.api import HTTP_SOAP
 from zato.common.audit_log.api import AuditLog
 from zato.common.hl7.audit import audit_ack_received, audit_message_sent, get_wire_attrs, ACKStatus
-from zato.common.hl7.mllp.ack import AckResult
+from zato.common.hl7.mllp.ack import AckResult, get_ack_rejection
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.hl7.mllp.fields import Outgoing_Bool_Names, Outgoing_Defaults, Outgoing_Int_Names
@@ -66,18 +66,6 @@ outconn_int_config_keys = Outgoing_Int_Names
 outconn_bool_config_keys = Outgoing_Bool_Names
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def get_ack_rejection(ack:'AckResult') -> 'str':
-    """ Why an acknowledgment is a no - its code and the error it named. Empty for one that accepted the message,
-    which is what the direct attempt and the attempts from the queue both go by.
-    """
-    if ack.is_accepted:
-        return ''
-
-    out = f'{ack.ack_code} {ack.error_text}'.strip()
-    return out
-
 # ################################################################################################################################
 
 def to_message_text(data:'bytes | str | any_') -> 'str':

@@ -131,7 +131,7 @@ def collect_error_rate_facts(
 
         # Only a pair with failures has a failing event to point at
         if error_count:
-            apply_newest_error(fact, newest_errors)
+            apply_newest_error(fact, newest_errors, engine)
 
         out.append(fact)
 
@@ -239,7 +239,7 @@ def collect_consecutive_failure_facts(
 
         # Only an object mid-streak has a failing event to point at
         if streak:
-            apply_newest_error(fact, newest_errors)
+            apply_newest_error(fact, newest_errors, engine)
 
         out.append(fact)
 

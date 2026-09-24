@@ -34,9 +34,10 @@ if 0:
 # ################################################################################################################################
 
 # What a resubmit's outcome reads as in the tippy
-_resubmit_ok_label    = 'Resubmitted'
-_resubmit_error_label = 'Resubmit failed'
-_retry_ok_label       = 'Retried'
+_resubmit_ok_label        = 'Resubmitted'
+_resubmit_error_label     = 'Resubmit failed'
+_resubmit_duplicate_label = 'Resubmit failed - already resubmitted'
+_retry_ok_label           = 'Retried'
 
 # What the services call a reprocess and a retry in their reports - a report without
 # the action key at all is a per-hop resend
@@ -117,6 +118,12 @@ def _get_resubmit_response(report:'anydict') -> 'any_':
         details = json.dumps(report, indent=2)
         details_lexer = 'json'
 
+    # A row that was already sent again exactly as it stands is refused rather than failed.
+    elif report['is_duplicate']:
+        message = _resubmit_duplicate_label
+        details = report['error']
+        details_lexer = 'python'
+
     else:
         message = f'{_resubmit_error_label} - {_get_error_summary(report["error"])}'
         details = report['error']
@@ -149,6 +156,12 @@ def resubmit(req:'any_') -> 'HttpResponse':
         result = connection.execute(lookup_query)
         row = result.fetchone()
 
+    # The row may be gone by the time the button is pressed - retention deletes old events and
+    # the page the operator is looking at was rendered before that happened.
+    if row is None:
+        out = action_json_response(False, f'Audit event {event_id} was not found', '', 'python')
+        return out
+
     source, event_type = row
 
     # Each source declares which of its events are resubmittable and which service performs it.
@@ -163,7 +176,7 @@ def resubmit(req:'any_') -> 'HttpResponse':
     # be reached - answers with the exception it was caught with
     if isinstance(response, HttpResponseServerError):
         error_text = response.content.decode('utf-8', 'replace')
-        report = {'is_ok': False, 'error': error_text}
+        report = {'is_ok': False, 'is_duplicate': False, 'error': error_text}
 
     # Every service answers with a report, a failed resubmit included -
     # the outcome and its details are inside

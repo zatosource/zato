@@ -25,9 +25,10 @@ from zato.common.audit_log.resubmit import is_event_type_resubmittable
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, intnone, stranydict
     any_ = any_
     Engine = Engine
+    intnone = intnone
     stranydict = stranydict
 
 # ################################################################################################################################
@@ -124,6 +125,15 @@ response_event_type_by_source = {
     # An MCP gateway writes one row per request, and only its tool calls say how the backend fares -
     # an initialize or a tools/list row counted alongside them would water down every rate
     AuditSource.MCP:                  AuditEvent.MCP_Tools_Call,
+}
+
+# Which row of a call's pair can be sent again, by the row the failure was recorded on. A call
+# fails on its response and what goes out again is its request.
+resubmit_event_type_by_response = {
+    AuditSource.REST_Outgoing: {AuditEvent.Response_Received: AuditEvent.Request_Sent},
+    AuditSource.SOAP_Outgoing: {AuditEvent.Response_Received: AuditEvent.Request_Sent},
+    AuditSource.FHIR:          {AuditEvent.Response_Received: AuditEvent.Request_Sent},
+    AuditSource.MLLP_Outgoing: {AuditEvent.Ack_Received:      AuditEvent.Message_Sent},
 }
 
 # The one event type a source's failure streak is counted over - a source absent from here has every
@@ -375,9 +385,9 @@ def collect_newest_error_events(
     source:'str' = '',
     object_name:'str' = '',
     ) -> 'dict':
-    """ The newest failing event of each (source, object) pair - its id and event type,
-    keyed by the pair. The type is what says whether that failure can be resubmitted
-    from the audit log page.
+    """ The newest failing event of each (source, object) pair - its id, event type and
+    correlation id, keyed by the pair. The type is what says whether that failure can be
+    resubmitted from the audit log page, the correlation id what finds its request.
     """
 
     # Our response to produce
@@ -406,33 +416,85 @@ def collect_newest_error_events(
         event_table.c.source,
         event_table.c.object_name,
         event_table.c.event_type,
+        event_table.c.cid,
     ).where(event_table.c.id.in_(latest_ids))
 
     with engine.connect() as connection:
         rows = connection.execute(statement).fetchall()
 
-    for event_id, row_source, row_object_name, event_type in rows:
-        out[(row_source, row_object_name)] = (event_id, event_type)
+    for event_id, row_source, row_object_name, event_type, cid in rows:
+        out[(row_source, row_object_name)] = (event_id, event_type, cid)
 
     return out
 
 # ################################################################################################################################
 
-def apply_newest_error(fact:'stranydict', newest_errors:'dict') -> 'None':
-    """ Puts the fact's newest failing event on it - its id, and whether its type
-    is resubmittable per the source's own declaration.
+def find_paired_request_id(
+    engine:'Engine',
+    source:'str',
+    object_name:'str',
+    cid:'str',
+    event_type:'str',
+    before_event_id:'int',
+    ) -> 'intnone':
+    """ The request one failing response answers - the newest row of the request type that this
+    connection wrote under the same correlation id before the failure. One service call may make
+    several requests under the one correlation id, so the newest is the one that failed.
     """
-    key = (fact['source'], fact['object_name'])
+    conditions = [
+        event_table.c.source == source,
+        event_table.c.object_name == object_name,
+        event_table.c.cid == cid,
+        event_table.c.event_type == event_type,
+        event_table.c.id < before_event_id,
+    ]
+
+    statement = select(func.max(event_table.c.id)).where(and_(*conditions))
+
+    with engine.connect() as connection:
+        row = connection.execute(statement).first()
+
+    # Our response to produce
+    out:'intnone' = None
+
+    # A row from before the pair existed has no such request behind it.
+    if row is not None:
+        out = row[0]
+
+    return out
+
+# ################################################################################################################################
+
+def apply_newest_error(fact:'stranydict', newest_errors:'dict', engine:'Engine') -> 'None':
+    """ Puts the fact's newest failing event on it - its id, and whether its type is resubmittable
+    per the source's own declaration. A failure recorded on the response of a call points at the
+    request that call went out as.
+    """
+    source = fact['source']
+    key = (source, fact['object_name'])
 
     # An object whose window holds no failing event has nothing to point at
     if key not in newest_errors:
         return
 
-    event_id, event_type = newest_errors[key]
+    event_id, event_type, cid = newest_errors[key]
+
+    if source in resubmit_event_type_by_response:
+        paired_types = resubmit_event_type_by_response[source]
+
+        if event_type in paired_types:
+            if cid:
+                paired_type = paired_types[event_type]
+                paired_id = find_paired_request_id(engine, source, fact['object_name'], cid, paired_type, event_id)
+
+                # A response whose request is gone keeps pointing at itself.
+                if paired_id is not None:
+                    event_id = paired_id
+                    event_type = paired_type
 
     fact['last_error_event_id'] = event_id
 
-    if is_event_type_resubmittable(fact['source'], event_type):
+    if is_event_type_resubmittable(source, event_type):
         fact['is_resubmittable'] = 1
 
 # ################################################################################################################################

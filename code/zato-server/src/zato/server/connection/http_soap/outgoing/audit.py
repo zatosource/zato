@@ -10,13 +10,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.api import URL_TYPE
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.common import classify_transport_error
+from zato.common.audit_log.request_context import build_request_context
 from zato.common.json_ import dumps
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, dictnone, strlist
     from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
     from zato.server.connection.http_soap.outgoing.common import Response
 
@@ -55,13 +56,20 @@ def insert_audit_event(
     *,
     is_health_check:'bool' = False,
     application_outcome:'str' = '',
+    address:'str' = '',
+    qs_params:'dictnone' = None,
+    user_headers:'dictnone' = None,
+    redacted:'strlist | None' = None,
 ) -> 'None':
     """ Writes one audit event describing a request sent to or a response received
-    from an outgoing REST or SOAP connection. A request-sent event names the method
-    it went out with and is stored as the resubmit convention document,
-    which is what makes it repeatable per hop later. A response that is a SOAP fault
-    names the fault's code as its application outcome, next to the HTTP status it arrived with.
+    from an outgoing REST or SOAP connection. A request-sent event is stored as the resubmit
+    convention document - the body along with the address the call went to, the query string,
+    the caller's headers and the method. A response that is a SOAP fault names the fault's code
+    as its application outcome, next to the HTTP status it arrived with.
     """
+
+    # Whether the body is the bytes that went out or only a description of them.
+    is_described = False
 
     # Payloads reach here in whatever shape their caller had them in - bytes as they went on the
     # wire, which are decoded with what cannot be decoded replaced ..
@@ -71,14 +79,23 @@ def insert_audit_event(
     # .. or an object such as a dict or a multipart encoder, which is described rather than decoded.
     elif not isinstance(data, str):
         data = str(data)
+        is_described = True
 
     # .. the size recorded is always the wire size of the payload itself ..
     size = len(data)
 
-    # .. a request-sent event stores the resubmit convention document - the payload plus
-    # .. the method a per-hop resend needs to repeat the exact same call ..
+    # .. a request-sent event stores the resubmit convention document ..
     if method:
-        data = dumps({'payload': data, 'method': method})
+
+        if qs_params is None:
+            qs_params = {}
+
+        if user_headers is None:
+            user_headers = {}
+
+        details = build_request_context(data, method, address, qs_params, user_headers,
+            is_described=is_described, redacted=redacted)
+        data = dumps(details)
 
     # .. the source depends on the connection's transport, and on whether this is
     # .. the connection's own health check rather than the traffic it carries ..
@@ -108,11 +125,16 @@ def record_request_sent(
     method:'str',
     *,
     is_health_check:'bool' = False,
+    address:'str' = '',
+    qs_params:'dictnone' = None,
+    user_headers:'dictnone' = None,
 ) -> 'None':
-    """ The first event of a call's pair - the request as it went out, with the method a resend repeats it with.
+    """ The first event of a call's pair - the request as it went out, with the address it
+    resolved to, its query string, the caller's headers and the method.
     """
     insert_audit_event(wrapper, cid, AuditEvent.Request_Sent, endpoint, AuditOutcome.OK, data,
-        method=method, is_health_check=is_health_check)
+        method=method, is_health_check=is_health_check,
+        address=address, qs_params=qs_params, user_headers=user_headers)
 
 # ################################################################################################################################
 

@@ -24,8 +24,11 @@ from sqlalchemy import select
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, event_body_table, event_table, get_audit_engine
 from zato.common.audit_log.common import AuditBody
 from zato.common.audit_log.dedup import acquire_dedup_key, build_dedup_key, complete_dedup_key, release_dedup_key
+from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Key_Redacted, Payload_Kind_Described
+from zato.common.hl7.audit import interpret_ack
 from zato.common.json_internal import dumps, loads
 from zato.common.typing_ import dict_field, list_field
+from zato.hl7v2 import parse_hl7
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,6 +66,9 @@ Row_Error          = 'error'
 # tells a resend from a reprocess.
 Resubmit_Label = 'Resubmit'
 
+# The service that repeats one recorded delivery as it stands.
+Resend_Hop_Service = 'zato.audit-log.resend-hop'
+
 # Per-source resubmit actions - each source declares which of its events are resubmittable,
 # how the row action is labelled and which service performs it. The audit log page renders
 # its per-row actions out of this catalog and the alerting collectors read it to say whether
@@ -88,13 +94,20 @@ _mllp_channel_actions = {
 # again without the rest of the destinations being involved
 _mllp_outgoing_actions = {
     AuditEvent.Message_Sent: {'label': Resubmit_Label, 'service': 'zato.audit-log.hl7.resend'},
-    AuditEvent.Request_Sent: {'label': Resubmit_Label, 'service': 'zato.audit-log.resend-hop'},
+    AuditEvent.Request_Sent: {'label': Resubmit_Label, 'service': Resend_Hop_Service},
 }
 
 # One recorded delivery to one destination is repeated on its own, whatever kind of connection
 # it went through - the row says which destination it went to and what repeating it needs.
 _hop_actions = {
-    AuditEvent.Request_Sent: {'label': Resubmit_Label, 'service': 'zato.audit-log.resend-hop'},
+    AuditEvent.Request_Sent: {'label': Resubmit_Label, 'service': Resend_Hop_Service},
+}
+
+# An SMTP connection writes two kinds of row, a message-sent one that is rebuilt and sent again
+# as itself, and a request-sent one that is repeated per hop.
+_smtp_actions = {
+    AuditEvent.Message_Sent: {'label': Resubmit_Label, 'service': 'zato.audit-log.smtp.resend'},
+    AuditEvent.Request_Sent: {'label': Resubmit_Label, 'service': Resend_Hop_Service},
 }
 
 # The label of the action on a quarantined file.
@@ -117,7 +130,8 @@ source_resubmit_actions = {
     AuditSource.MLLP_Outgoing: _mllp_outgoing_actions,
     AuditSource.FHIR: _hop_actions,
     AuditSource.REST_Outgoing: _hop_actions,
-    AuditSource.Email_SMTP: _hop_actions,
+    AuditSource.SOAP_Outgoing: _hop_actions,
+    AuditSource.Email_SMTP: _smtp_actions,
     AuditSource.File_Outgoing: _file_transfer_actions,
 }
 
@@ -142,6 +156,36 @@ def is_event_type_resubmittable(source:'str', event_type:'str') -> 'bool':
 class ResubmitException(Exception):
     """ Raised when a stored event cannot be resubmitted.
     """
+
+# ################################################################################################################################
+
+class DuplicateResubmitException(ResubmitException):
+    """ Raised when one row was already sent again exactly as it stands.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def run_once(action:'str', event_id:'int', payload:'str', cid:'str', actor:'str', resubmit_one:'callable_') -> 'any_':
+    """ Runs one single-row resubmit under a dedup key built from the action, the event and the
+    payload. A failure releases the key and a success keeps it claimed for good.
+    """
+    engine = get_audit_engine()
+    dedup_key = build_dedup_key(action, event_id, payload)
+
+    if not acquire_dedup_key(engine, dedup_key, cid, action, actor):
+        raise DuplicateResubmitException(f'Event `{event_id}` was already resubmitted')
+
+    try:
+        out = resubmit_one()
+
+    # A resubmit that did not go through leaves nothing behind, so the key goes back too.
+    except Exception:
+        release_dedup_key(engine, dedup_key)
+        raise
+
+    complete_dedup_key(engine, dedup_key, AuditOutcome.OK)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -230,12 +274,33 @@ def get_stored_payload(event:'StoredEvent') -> 'str':
     e.g. a reconciliation-only entry, cannot be resubmitted. An empty payload is
     a payload too - a GET request goes out with no body and resends the same way.
     """
-    if 'payload' in event.details:
-        out = event.details['payload']
-    else:
+    details = event.details
+
+    if Key_Payload not in details:
         raise ResubmitException(f'Audit event `{event.id}` does not carry a payload to resubmit')
 
+    # A body that was never text is recorded by what it says it is, a multipart upload being
+    # recorded as what its encoder describes. Sending that back would POST the description.
+    if details.get(Key_Payload_Kind) == Payload_Kind_Described:
+        raise ResubmitException(
+            f'Audit event `{event.id}` describes its request body rather than carrying it, so it cannot be resubmitted')
+
+    out = details[Key_Payload]
     return out
+
+# ################################################################################################################################
+
+def require_resendable_request(event:'StoredEvent') -> 'None':
+    """ Confirms one recorded call can go out again exactly as it went out the first time.
+    A call whose credentials were replaced by a marker in the log cannot.
+    """
+    if redacted := event.details.get(Key_Redacted):
+        names = ', '.join(redacted)
+        raise ResubmitException(
+            f'Audit event `{event.id}` was recorded without its credentials `{names}`, so it cannot be resubmitted')
+
+    # A described body is refused here too, so nothing is reached before the refusal
+    _ = get_stored_payload(event)
 
 # ################################################################################################################################
 
@@ -285,12 +350,41 @@ class HopResendResult:
 
 # ################################################################################################################################
 
+def _record_hop_ack(event:'StoredEvent', audit_log:'AuditLog', cid:'str', ack_text:'str') -> 'None':
+    """ Records the acknowledgment one repeated MLLP delivery brought back, accepted or not.
+    """
+    if event.source != AuditSource.MLLP_Outgoing:
+        return
+
+    # A delivery the queue took over, and one to a connection that never answers, bring back nothing
+    if not ack_text:
+        return
+
+    ack_message = parse_hl7(ack_text, validate=False)
+    ack_result = interpret_ack(ack_message)
+
+    _ = audit_log.insert(
+        AuditSource.MLLP_Outgoing, AuditEvent.Ack_Received, event.object_name,
+        cid=cid,
+        msg_id=event.msg_id,
+        correl_id=event.cid,
+        size=len(ack_text),
+        outcome=ack_result.outcome,
+        application_outcome=ack_result.application_outcome,
+        classification=ack_result.classification,
+        data=dumps({Key_Payload: ack_text}),
+    )
+
+# ################################################################################################################################
+
 def resend_hop(event:'StoredEvent', send:'callable_', audit_log:'AuditLog', cid:'str', actor:'str'='') -> 'HopResendResult':
     """ Sends the exact payload stored with one outgoing event through the same connection again -
     repeating a single delivery to one destination without re-running the service that produced it
     and without involving any other destination. The attempt is recorded as its own outgoing event
-    linked to the original by the correlation id, regardless of the outcome. The actor is who
-    asked for the resend, recorded with the new event so the trail says by whom.
+    linked to the original by the correlation id, regardless of the outcome. A destination that
+    answered by turning the message down is a failed resend as surely as one that could not be
+    reached, so it is recorded with the status it answered with and the caller is told.
+    The actor is who asked for the resend, recorded with the new event so the trail says by whom.
     """
     require_event_type(event, AuditEvent.Request_Sent, 'resent per hop')
 
@@ -301,7 +395,7 @@ def resend_hop(event:'StoredEvent', send:'callable_', audit_log:'AuditLog', cid:
     stored_details = dict(event.details)
     stored_details['payload'] = payload
 
-    # The recording is shared by both branches - only the outcome fields differ
+    # The recording is shared by all branches - only the outcome fields differ
     values:'stranydict' = {
         'cid': cid,
         'msg_id': event.msg_id,
@@ -317,10 +411,9 @@ def resend_hop(event:'StoredEvent', send:'callable_', audit_log:'AuditLog', cid:
 
     # Deliver the payload through the connection the original went through ..
     try:
-        response = send(payload)
+        result = send(payload)
 
-    # .. a failed attempt is recorded too, as its own row with an error outcome,
-    # so the per-destination delivery history has no holes - then the caller learns about it.
+    # .. an attempt nothing came back from is recorded as its own row before the caller learns of it.
     except Exception as e:
         error_status = str(e)
 
@@ -334,14 +427,35 @@ def resend_hop(event:'StoredEvent', send:'callable_', audit_log:'AuditLog', cid:
 
         raise
 
+    # What came back is kept with the row either way.
+    if result.response_text:
+        values['bodies'] = {AuditBody.Response: result.response_text}
+
+    # An answer that turned the message down is a failed resend, recorded with the status
+    # the destination answered with before the caller is told about it.
+    if result.is_rejected:
+
+        rejected_options = {
+            'outcome': AuditOutcome.Error,
+            'status': result.status,
+            'classification': result.classification,
+        }
+        rejected_options.update(values)
+
+        _ = audit_log.insert(event.source, AuditEvent.Request_Sent, event.object_name, **rejected_options)
+        _record_hop_ack(event, audit_log, cid, result.response_text)
+
+        raise ResubmitException(result.status)
+
     # Our response to produce
     out = HopResendResult()
-    out.response = response
+    out.response = result.response
 
     ok_options = {'outcome': AuditOutcome.OK}
     ok_options.update(values)
 
     out.event_id = audit_log.insert(event.source, AuditEvent.Request_Sent, event.object_name, **ok_options)
+    _record_hop_ack(event, audit_log, cid, result.response_text)
 
     return out
 

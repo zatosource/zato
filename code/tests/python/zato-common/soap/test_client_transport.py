@@ -62,8 +62,8 @@ def _record_audit(client:'SOAPClient') -> 'list':
     recorded = []
 
     def callback(cid:'any_', event:'any_', endpoint:'any_', outcome:'any_', data:'any_', status:'any_'='',
-        application_outcome:'any_'=''):
-        recorded.append((event, data))
+        redacted:'any_'=None, **kwargs:'any_'):
+        recorded.append((event, data, redacted))
 
     client.audit_callback = callback
     return recorded
@@ -73,11 +73,28 @@ def _record_audit(client:'SOAPClient') -> 'list':
 def _sent_request(recorded:'list') -> 'bytes':
     """ Returns the data of the one request event out of a recorded audit exchange.
     """
-    for event, data in recorded:
+    for event, data, _ in recorded:
         if event == AuditEvent.Request_Sent:
-            return data
+            out = data
+            break
+    else:
+        raise Exception('No request event was recorded')
 
-    raise AssertionError('No request event was recorded')
+    return out
+
+# ################################################################################################################################
+
+def _masked_names(recorded:'list') -> 'any_':
+    """ Returns what the one request event said it had to mask.
+    """
+    for event, _, redacted in recorded:
+        if event == AuditEvent.Request_Sent:
+            out = redacted
+            break
+    else:
+        raise Exception('No request event was recorded')
+
+    return out
 
 # ################################################################################################################################
 
@@ -416,6 +433,10 @@ class TestAuditMasking:
         # The endpoint still received the real password, otherwise it would have faulted.
         assert b'MYPASS' in soap_server.last_request['raw_body']
 
+        # The row says what it had to mask, which is what refuses a resend of an envelope
+        # that would otherwise go out carrying the marker instead of the password.
+        assert _masked_names(recorded) == ['Password']
+
     def test_body_credentials_are_masked(self, soap_server:'any_'):
         expected = {'username': 'BODYUSER', 'password': 'BODYPASS'}
         soap_server.configure('/audit-body', expect_credentials=expected)
@@ -438,6 +459,10 @@ class TestAuditMasking:
         assert b'BODYPASS' not in request_data
         assert b'BODYPASS' in soap_server.last_request['raw_body']
 
+        # Both mapped elements were masked, the username as much as the password, because the
+        # mapping names them together and the row has to say the whole call lost something.
+        assert _masked_names(recorded) == ['username', 'password']
+
     def test_a_message_without_credentials_is_recorded_whole(self, soap_server:'any_'):
         soap_server.configure('/audit-plain')
 
@@ -453,6 +478,9 @@ class TestAuditMasking:
         # Masking must not cost the record anything when there is nothing to mask.
         assert b'FL0001' in request_data
         assert Mask.encode('utf-8') not in request_data
+
+        # A row that lost nothing says so, which is what lets it be sent again as it stands
+        assert _masked_names(recorded) == []
 
 # ################################################################################################################################
 # ################################################################################################################################

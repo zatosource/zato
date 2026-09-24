@@ -93,7 +93,7 @@ class _ServerStub:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _new_wrapper(transport:'str', is_audit_log_active:'bool') -> 'HTTPSOAPWrapper':
+def _new_wrapper(transport:'str', is_audit_log_active:'bool', url_path:'str'=Address_Path) -> 'HTTPSOAPWrapper':
     """ Builds one connection under test - real except for invoke_http, which the tests
     replace so that nothing ever goes on the wire.
     """
@@ -109,7 +109,7 @@ def _new_wrapper(transport:'str', is_audit_log_active:'bool') -> 'HTTPSOAPWrappe
         'sec_type': '',
         'transport': transport,
         'address_host': Address_Host,
-        'address_url_path': Address_Path,
+        'address_url_path': url_path,
         'content_type': '',
         'data_format': '',
         'password': '',
@@ -126,10 +126,10 @@ def _new_wrapper(transport:'str', is_audit_log_active:'bool') -> 'HTTPSOAPWrappe
 
 # ################################################################################################################################
 
-def new_rest_wrapper(*, is_audit_log_active:'bool'=True) -> 'HTTPSOAPWrapper':
-    """ The REST connection under test.
+def new_rest_wrapper(*, is_audit_log_active:'bool'=True, url_path:'str'=Address_Path) -> 'HTTPSOAPWrapper':
+    """ The REST connection under test, pointing at the given path.
     """
-    out = _new_wrapper(URL_TYPE.PLAIN_HTTP, is_audit_log_active)
+    out = _new_wrapper(URL_TYPE.PLAIN_HTTP, is_audit_log_active, url_path)
     return out
 
 # ################################################################################################################################

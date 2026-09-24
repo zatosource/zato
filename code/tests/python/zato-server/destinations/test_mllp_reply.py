@@ -14,7 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.hl7.mllp.settings import RouteSettings
 
-from service_stub import REST_Response
+from service_stub import REST_Response_Text
 from mllp_test_channel import handle_one_message, new_parallel_server, new_route, new_stored_list, new_wrapper, \
     running_synchronously, Request_Message, REST_Connection
 
@@ -131,7 +131,7 @@ class TestWhatTheSenderIsAnswered:
 
         assert len(replies) == 1
         assert 'MSA|AA|' in replies[0]
-        assert REST_Response not in replies[0]
+        assert REST_Response_Text not in replies[0]
 
 # ################################################################################################################################
 

@@ -215,8 +215,26 @@ def reprocess(
     if destination_names:
         attrs[Reprocess_Destinations] = ', '.join(destination_names)
 
-    # The channel's service receives the message the way a live delivery would arrive
-    invoke_service(service_name, effective_payload)
+    values = {
+        'cid': cid,
+        'msg_id': control_id,
+        'correl_id': event.cid,
+        'size': len(effective_payload),
+        'data': dumps({'payload': effective_payload}),
+        'attrs': attrs,
+        'parents': [event.id],
+    }
+
+    # The channel's service receives the message the way a live delivery would arrive ..
+    try:
+        invoke_service(service_name, effective_payload)
+
+    # .. and a run that raised is recorded as its own failed row before the caller learns of it.
+    except Exception as e:
+        _ = audit_log.insert(
+            AuditSource.MLLP_Channel, AuditEvent.Message_Received, event.object_name,
+            outcome=AuditOutcome.Error, status=str(e), **values)
+        raise
 
     # Our response to produce
     out = HL7ReprocessResult()
@@ -226,15 +244,7 @@ def reprocess(
 
     out.event_id = audit_log.insert(
         AuditSource.MLLP_Channel, AuditEvent.Message_Received, event.object_name,
-        cid=cid,
-        msg_id=control_id,
-        correl_id=event.cid,
-        size=len(effective_payload),
-        outcome=AuditOutcome.OK,
-        data=dumps({'payload': effective_payload}),
-        attrs=attrs,
-        parents=[event.id],
-    )
+        outcome=AuditOutcome.OK, **values)
 
     return out
 

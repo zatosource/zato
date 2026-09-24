@@ -117,8 +117,9 @@ def test_a_good_response_carries_its_status_and_no_outcome(tmp_path:'os.PathLike
         assert request_sent['endpoint'] == f'GET {_patient_path}'
         assert request_sent['status'] == ''
 
-        # The stored document is the resubmit convention - payload plus the method and path a resend repeats
-        assert loads(request_sent['data']) == {'payload': '', 'method': 'get', 'path': _patient_path}
+        # The stored document is the resubmit convention - payload plus the method, path and
+        # query string a resend repeats.
+        assert loads(request_sent['data']) == {'payload': '', 'method': 'get', 'path': _patient_path, 'params': {}}
         assert _get_attrs(request_sent['id']) == {'resource_type': 'Patient', 'method': 'GET'}
 
         response_received = events[1]

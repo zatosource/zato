@@ -136,6 +136,7 @@ def _get_buckets(tmp_path:'any_', **overrides:'any_') -> 'anylist':
         'time_from': '',
         'time_to': '',
         'event_types': [],
+        'statuses_excluded': [],
         'bucket_count': _strip_min_buckets,
     }
 

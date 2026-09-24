@@ -13,12 +13,14 @@ from json import dumps
 import pytest
 
 # Zato
+from zato.common.audit_log.common import AuditClassification
 from zato.common.destination.constants import DestinationType
 from zato.common.destination.model import new_entry, DestinationException
 from zato.common.typing_ import cast_
 from zato.server.destination.dispatch import send
 
-from service_stub import ServiceStub, FHIR_Response, MLLP_Response, REST_Response, SMTP_Response
+from service_stub import ServiceStub, FHIR_Response, MLLP_Rejected_Status, MLLP_Rejected_Text, MLLP_Response, \
+    REST_Queued_Response, REST_Rejected_Response, REST_Rejected_Status, REST_Rejected_Text, REST_Response, SMTP_Response
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,7 +70,8 @@ class TestREST:
 
         entry = new_entry(_rest_connection, DestinationType.REST, _rest_connection, options={'method': 'PUT'})
 
-        response = send(service, entry, _request_payload)
+        result = send(service, entry, _request_payload)
+        response = result.response
 
         assert response == REST_Response
 
@@ -145,7 +148,8 @@ class TestMLLP:
 
         entry = new_entry(_mllp_connection, DestinationType.MLLP, _mllp_connection)
 
-        response = send(service, entry, _request_payload)
+        result = send(service, entry, _request_payload)
+        response = result.response
 
         assert response == MLLP_Response
 
@@ -169,7 +173,8 @@ class TestFHIR:
         entry = new_entry(_fhir_connection, DestinationType.FHIR, _fhir_connection,
             options={'method': 'PUT', 'path': '/Patient'})
 
-        response = send(service, entry, resource)
+        result = send(service, entry, resource)
+        response = result.response
 
         assert response == FHIR_Response
 
@@ -223,7 +228,8 @@ class TestEmail:
         entry = new_entry(_smtp_connection, DestinationType.SMTP, _smtp_connection,
             options={'to': _recipient, 'subject': _subject})
 
-        response = send(service, entry, _request_payload)
+        result = send(service, entry, _request_payload)
+        response = result.response
 
         assert response == SMTP_Response
 
@@ -262,6 +268,93 @@ class TestEmail:
             _ = send(service, entry, _request_payload)
 
         assert 'e-mail is not enabled' in str(raised.value)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestRejections:
+    """ A destination that turned the message down answered, so every adapter reports that
+    as part of its result.
+    """
+
+    def test_a_rest_endpoint_that_answered_with_an_error_status_turned_the_message_down(self) -> 'None':
+        stub = _new_service()
+        stub.rest.rejecting.append(_rest_connection)
+        service = _as_service(stub)
+
+        entry = new_entry(_rest_connection, DestinationType.REST, _rest_connection)
+
+        result = send(service, entry, _request_payload)
+
+        assert result.is_rejected is True
+        assert result.response is REST_Rejected_Response
+        assert result.response_text == REST_Rejected_Text
+
+        # The status line alone is what the row is classified by, never the body.
+        assert result.status == REST_Rejected_Status
+
+# ################################################################################################################################
+
+    def test_an_hl7_receiver_that_did_not_accept_the_message_turned_it_down(self) -> 'None':
+        stub = _new_service()
+        stub.mllp.rejecting.append(_mllp_connection)
+        service = _as_service(stub)
+
+        entry = new_entry(_mllp_connection, DestinationType.MLLP, _mllp_connection)
+
+        result = send(service, entry, _request_payload)
+
+        assert result.is_rejected is True
+        assert result.status == MLLP_Rejected_Status
+
+        # The acknowledgment is still what a channel replying from this destination answers with.
+        assert result.response == MLLP_Rejected_Text
+
+        # An AE or an AR is the receiving application saying no, so nothing here is guessed
+        # from the wording of the error.
+        assert result.classification == AuditClassification.Permanent
+
+# ################################################################################################################################
+
+    def test_a_message_the_transport_could_not_send_is_not_recorded_as_one_it_did(self) -> 'None':
+        stub = _new_service()
+        email = stub.email
+        assert email
+
+        email.smtp.rejecting.append(_smtp_connection)
+        service = _as_service(stub)
+
+        entry = new_entry(_smtp_connection, DestinationType.SMTP, _smtp_connection, options={'to': _recipient})
+
+        result = send(service, entry, _request_payload)
+
+        assert result.is_rejected is True
+        assert result.response is False
+        assert result.status
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestQueuedDeliveries:
+    """ A connection with the queue switch on hands the message over rather than sending it.
+    """
+
+    def test_a_queued_delivery_is_neither_rejected_nor_read_for_a_status(self) -> 'None':
+        stub = _new_service()
+        stub.rest.queued.append(_rest_connection)
+        service = _as_service(stub)
+
+        entry = new_entry(_rest_connection, DestinationType.REST, _rest_connection)
+
+        result = send(service, entry, _request_payload)
+
+        # A queue result has no `ok` to read, so nothing here reads it as a response.
+        assert result.is_rejected is False
+        assert result.status == ''
+        assert result.response is REST_Queued_Response
+
+        # There is no response body to keep either, the message not having been sent yet.
+        assert result.response_text == ''
 
 # ################################################################################################################################
 # ################################################################################################################################
