@@ -1,0 +1,106 @@
+/* ------------------------------------------------------------ */
+/* SSL config - page heading                                    */
+/* ------------------------------------------------------------ */
+
+#markup > h2.zato {
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 1rem;
+}
+
+/* ------------------------------------------------------------ */
+/* SSL config - container                                       */
+/* ------------------------------------------------------------ */
+
+.ssl-config-container {
+    box-sizing: border-box;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+/* ------------------------------------------------------------ */
+/* SSL config - card                                            */
+/* ------------------------------------------------------------ */
+
+.ssl-config-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid #d8dce0;
+    border-radius: 5px;
+    background: #fdfefe;
+    font-size: 12px;
+    transition: border-color 0.15s;
+
+    /* The same small toggle look that dialog forms get from .data-popup */
+    --toggle-width: 32px;
+    --toggle-height: 16px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 2px;
+    --toggle-travel: 16px;
+    --toggle-off-background: #999;
+    --toggle-on-background: #2d6392;
+}
+
+.ssl-config-card:hover {
+    border-color: #b0b0b0;
+}
+
+/* ------------------------------------------------------------ */
+/* SSL config - rows                                            */
+/* ------------------------------------------------------------ */
+
+.ssl-config-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ssl-config-label {
+    display: inline-block;
+    width: 200px;
+    flex-shrink: 0;
+    color: #333333;
+    font-weight: bold;
+}
+
+.ssl-config-hint {
+    color: #888888;
+    font-size: 11px;
+}
+
+/* An error from the ACME client can be long, so only its last line is shown and the whole of it is in the title. */
+#ssl-config-port-error,
+#ssl-config-last-check-error {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.ssl-config-link {
+    font-size: 80%;
+}
+
+.ssl-config-link.is-disabled {
+    color: #888888;
+    pointer-events: none;
+}
+
+.ssl-config-value-ok {
+    color: #2e7d32;
+}
+
+.ssl-config-value-error {
+    color: #c62828;
+}
+
+/* The time-ago cells here sit next to other values rather than fill a table column. */
+.ssl-config-row .zato-time-ago-value {
+    min-width: 0;
+}

@@ -1,0 +1,77 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}SSL config{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/ssl-config.css">
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ssl-config.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        $.fn.zato.ssl_config.init({{ ssl_config_json|safe }});
+    });
+    </script>
+{% endblock %}
+
+{% block "content" %}
+
+<div id="markup">
+<h2 class="zato">SSL config</h2>
+
+<div class="ssl-config-container" id="ssl-config">
+    <div class="ssl-config-card">
+
+        <div class="ssl-config-row">
+            <label class="ssl-config-label" for="ssl-config-is-enabled">Let's Encrypt</label>
+            <input type="checkbox" id="ssl-config-is-enabled" onchange="$.fn.zato.ssl_config.set_lets_encrypt(this.checked)" />
+            <span class="zato-time-ago-header"></span>
+            <span class="status-message" id="ssl-config-status"></span>
+            <span class="ssl-config-hint" id="ssl-config-is-enabled-hint"></span>
+        </div>
+
+        <div class="ssl-config-row">
+            <label class="ssl-config-label">Port 443 ready</label>
+            <span class="ssl-config-value" id="ssl-config-port-ready"></span>
+            <span class="zato-time-ago" id="ssl-config-port-check" data-time-ago-id="port_check" data-time-ago-title="Port 443 checked" data-time-ago-row-label="Checked"></span>
+            <a href="javascript:void(0)" class="ssl-config-link" id="ssl-config-check-port" onclick="$.fn.zato.ssl_config.check_port()">Check</a>
+            <span class="ssl-config-hint" id="ssl-config-port-error"></span>
+        </div>
+
+        <div class="ssl-config-row">
+            <label class="ssl-config-label">Last check</label>
+            <span class="ssl-config-value" id="ssl-config-last-check-result"></span>
+            <span class="zato-time-ago" id="ssl-config-last-check" data-time-ago-id="last_check" data-time-ago-title="Certificate checked" data-time-ago-row-label="Checked"></span>
+            <span class="ssl-config-hint" id="ssl-config-last-check-error"></span>
+        </div>
+
+        <div class="ssl-config-row">
+            <label class="ssl-config-label">Certificate</label>
+            <span class="ssl-config-value" id="ssl-config-source"></span>
+        </div>
+
+        <div class="ssl-config-row">
+            <label class="ssl-config-label">Names</label>
+            <span class="ssl-config-value" id="ssl-config-names"></span>
+        </div>
+
+        <div class="ssl-config-row">
+            <label class="ssl-config-label">Issuer</label>
+            <span class="ssl-config-value" id="ssl-config-issuer"></span>
+        </div>
+
+        <div class="ssl-config-row">
+            <label class="ssl-config-label">Expires in</label>
+            <span class="zato-time-ago" id="ssl-config-expires" data-time-ago-id="certificate" data-time-ago-direction="future"></span>
+        </div>
+
+    </div>
+</div>
+
+</div>
+
+{% endblock %}
