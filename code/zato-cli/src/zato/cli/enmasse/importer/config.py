@@ -249,7 +249,7 @@ class ConfigSync:
         if tiers_updated:
             self.updated_objects['quota_tier'] = tiers_updated
 
-        # Process on-premises gateways - outgoing connections may point at addresses that
+        # Process on-prem gateways - outgoing connections may point at addresses that
         # only exist because a gateway makes them reachable
         gateways_created, gateways_updated = self.sync_on_prem_gateways(yaml_config.get('on_prem_gateway', []), session)
         if gateways_created:

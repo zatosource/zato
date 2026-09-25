@@ -76,7 +76,7 @@ def update_binary() -> 'bool':
     latest_version = get_latest_version()
 
     if installed_version == latest_version:
-        logger.info('On-premises gateway %s is the latest version', installed_version)
+        logger.info('On-prem gateway %s is the latest version', installed_version)
         return False
 
     architecture = _Architecture_Map[platform.machine()]
@@ -96,7 +96,7 @@ def update_binary() -> 'bool':
     # A rename replaces the file without affecting a hub that is running from it.
     os.replace(new_path, binary_path)
 
-    logger.info('On-premises gateway updated from %s to %s', installed_version, latest_version)
+    logger.info('On-prem gateway updated from %s to %s', installed_version, latest_version)
     return True
 
 # ################################################################################################################################
@@ -124,7 +124,7 @@ def restart_hub(log_dir:'str') -> 'None':
             start_new_session=True
         )
 
-    logger.info('On-premises gateway hub restarted')
+    logger.info('On-prem gateway hub restarted')
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -52,7 +52,7 @@ _Default_Is_Key_Reset_Required = On_Prem_Gateway.Default.Is_Key_Reset_Required
 # ################################################################################################################################
 
 class TestEnmasseOnPremGatewayExporter(TestCase):
-    """ Tests exporting on-premises gateway definitions to YAML-compatible dicts using enmasse.
+    """ Tests exporting on-prem gateway definitions to YAML-compatible dicts using enmasse.
     """
 
     def setUp(self) -> 'None':
@@ -123,7 +123,7 @@ class TestEnmasseOnPremGatewayExporter(TestCase):
 # ################################################################################################################################
 
     def test_on_prem_gateway_export(self) -> 'None':
-        """ Tests the export of on-premises gateway definitions.
+        """ Tests the export of on-prem gateway definitions.
         """
         self._setup_test_environment()
 

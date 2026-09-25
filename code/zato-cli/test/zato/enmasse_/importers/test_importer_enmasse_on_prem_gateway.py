@@ -44,7 +44,7 @@ _Suffix_Bits = 32
 # ################################################################################################################################
 
 class TestEnmasseOnPremGateways(TestCase):
-    """ Tests for importing on-premises gateways from YAML using enmasse.
+    """ Tests for importing on-prem gateways from YAML using enmasse.
     """
 
     def setUp(self) -> 'None':
@@ -162,7 +162,7 @@ class TestEnmasseOnPremGateways(TestCase):
             if item['name'] == name:
                 return item
 
-        raise Exception(f'On-premises gateway `{name}` not found')
+        raise Exception(f'On-prem gateway `{name}` not found')
 
 # ################################################################################################################################
 

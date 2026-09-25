@@ -1430,8 +1430,8 @@ class Quota_Tiers:
 # ################################################################################################################################
 
 class On_Prem_Gateway:
-    """ On-premises gateways - each one is a process running on the customer's own network
-    that Zato reaches on-premises systems through.
+    """ On-prem gateways - each one is a process running on the customer's own network
+    that Zato reaches on-prem systems through.
     """
     class Type:
         On_Prem_Gateway = 'zato-on-prem-gateway'
