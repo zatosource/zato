@@ -1,7 +1,7 @@
 {% extends "zato/index.html" %}
 {% load extras %}
 
-{% block html_title %}On-premises gateways{% endblock %}
+{% block html_title %}On-prem gateways{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -25,7 +25,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
 
-    {% comment %} On-premises gateways {% endcomment %}
+    {% comment %} On-prem gateways {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/on-prem-gateway.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -72,12 +72,12 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">{% include "zato/include/header-brand.html" with badge="Gateway" %}On-premises gateways</h2>
+            <h2 class="zato">{% include "zato/include/header-brand.html" with badge="Gateway" %}On-prem gateways</h2>
 
 {% include "zato/search-form.html" with page_prompt="Show gateways" %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.on_prem_gateway.create()">Create a new on-premises gateway</a>
+            <a href="javascript:$.fn.zato.on_prem_gateway.create()">Create a new on-prem gateway</a>
         </div>
 
             <table class="zato-table" id="data-table">
@@ -161,7 +161,7 @@
                         </tr>
 
                         <tr>
-                            <td colspan="2"><label for="{{ create_form.hosts.id_for_label }}">On-premises systems</label></td>
+                            <td colspan="2"><label for="{{ create_form.hosts.id_for_label }}">On-prem systems</label></td>
                         </tr>
 
                         <tr>
@@ -205,7 +205,7 @@
                         </tr>
 
                         <tr>
-                            <td colspan="2"><label for="{{ edit_form.hosts.id_for_label }}">On-premises systems</label></td>
+                            <td colspan="2"><label for="{{ edit_form.hosts.id_for_label }}">On-prem systems</label></td>
                         </tr>
 
                         <tr>

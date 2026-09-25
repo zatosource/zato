@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 class OnPremGatewayExporter:
-    """ Exports on-premises gateways to YAML.
+    """ Exports on-prem gateways to YAML.
     """
 
     def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
@@ -40,10 +40,10 @@ class OnPremGatewayExporter:
 # ################################################################################################################################
 
     def export(self, session:'SASession', cluster_id:'int') -> 'gateway_def_list':
-        """ Exports on-premises gateway definitions - a name, the flags and a list of
+        """ Exports on-prem gateway definitions - a name, the flags and a list of
         addresses, which is everything the ODB stores about one.
         """
-        logger.info('Exporting on-premises gateway definitions')
+        logger.info('Exporting on-prem gateway definitions')
 
         # Our response to produce
         out = []
@@ -65,7 +65,7 @@ class OnPremGatewayExporter:
 
         gateway_count = len(out)
 
-        logger.info('Successfully prepared %d on-premises gateway definitions for export', gateway_count)
+        logger.info('Successfully prepared %d on-prem gateway definitions for export', gateway_count)
 
         return out
 

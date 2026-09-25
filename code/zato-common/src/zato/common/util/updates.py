@@ -553,10 +553,10 @@ class Updater:
 # ################################################################################################################################
 
     def update_on_prem_gateway(self) -> 'None':
-        """ Installs the latest on-premises gateway release and restarts the hub if the binary changed.
+        """ Installs the latest on-prem gateway release and restarts the hub if the binary changed.
         """
         if not on_prem_gateway.is_installed():
-            logger.info('update_on_prem_gateway: the on-premises gateway is not installed in this environment')
+            logger.info('update_on_prem_gateway: the on-prem gateway is not installed in this environment')
             return
 
         # The release is downloaded from GitHub, and a failure there must not undo an update of Zato that succeeded already.

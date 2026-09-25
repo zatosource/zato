@@ -284,14 +284,14 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
 # ################################################################################################################################
 
     def sync_on_prem_gateways(self, gateway_list:'list', session:'SASession') -> 'tuple':
-        """ Synchronizes on-premises gateways from a YAML configuration with the database.
+        """ Synchronizes on-prem gateways from a YAML configuration with the database.
         """
         if not gateway_list:
             return [], []
 
         count = len(gateway_list)
         noun = 'gateway' if count == 1 else 'gateways'
-        logger.info(f'Processing {count} on-premises {noun}')
+        logger.info(f'Processing {count} on-prem {noun}')
 
         gateways_created, gateways_updated = self.on_prem_gateway_importer.sync_on_prem_gateways(gateway_list, session)
 
@@ -300,7 +300,7 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
 
         created_count = len(gateways_created)
         updated_count = len(gateways_updated)
-        logger.info(f'Processed on-premises gateways: created={created_count} updated={updated_count}')
+        logger.info(f'Processed on-prem gateways: created={created_count} updated={updated_count}')
 
         return gateways_created, gateways_updated
 

@@ -269,7 +269,7 @@ class GenericObjectWrapper:
 # ################################################################################################################################
 
 class OnPremGatewayWrapper(GenericObjectWrapper):
-    """ Wraps access to on-premises gateways. Everything but the name lives in the opaque
+    """ Wraps access to on-prem gateways. Everything but the name lives in the opaque
     attributes, which is why each row needs turning into the shape the callers expect.
     """
     type_ = On_Prem_Gateway.Type.On_Prem_Gateway

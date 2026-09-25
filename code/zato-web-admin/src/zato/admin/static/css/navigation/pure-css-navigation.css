@@ -145,7 +145,7 @@ ul {
 }
 
 /* A submenu marked as wide holds entries that do not fit the default width, e.g. the System
-   menu's On-premises gateways. Only its own children are widened, the menus nested
+   menu's On-prem gateways. Only its own children are widened, the menus nested
    under them keep the default. */
 
 .pure-css-nav > nav ul.wide > li.child {

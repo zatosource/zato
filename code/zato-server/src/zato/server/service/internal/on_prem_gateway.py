@@ -73,7 +73,7 @@ class _Base(AdminService):
 # ################################################################################################################################
 
 class GetList(_Base):
-    """ Returns every on-premises gateway, each one with its runtime state from the hub.
+    """ Returns every on-prem gateway, each one with its runtime state from the hub.
     """
     name = _service_name_prefix + 'get-list'
 
@@ -87,7 +87,7 @@ class GetList(_Base):
 # ################################################################################################################################
 
 class Get(_Base):
-    """ Returns details of a single on-premises gateway.
+    """ Returns details of a single on-prem gateway.
     """
     name = _service_name_prefix + 'get'
     input = Int('id')
@@ -102,7 +102,7 @@ class Get(_Base):
         gateway = manager.get_by_id(id)
 
         if not gateway:
-            raise Exception(f'On-premises gateway with id `{id}` not found')
+            raise Exception(f'On-prem gateway with id `{id}` not found')
 
         # .. and return it to the caller.
         self.response.payload = gateway
@@ -111,7 +111,7 @@ class Get(_Base):
 # ################################################################################################################################
 
 class Create(_Base):
-    """ Creates a new on-premises gateway.
+    """ Creates a new on-prem gateway.
     """
     name = _service_name_prefix + 'create'
     input = 'name', 'is_active', '-hosts', '-is_key_reset_required'
@@ -126,13 +126,13 @@ class Create(_Base):
         is_key_reset_required = self.get_is_key_reset_required(input.is_key_reset_required)
 
         if not name:
-            raise Exception('An on-premises gateway needs a name')
+            raise Exception('An on-prem gateway needs a name')
 
         manager = self.get_manager()
 
         # .. reject a duplicate ..
         if manager.get(name):
-            raise Exception(f'An on-premises gateway named `{name}` already exists')
+            raise Exception(f'An on-prem gateway named `{name}` already exists')
 
         # .. create the gateway ..
         id = manager.create(name, input.is_active, hosts, is_key_reset_required)
@@ -164,7 +164,7 @@ class Create(_Base):
 # ################################################################################################################################
 
 class Edit(_Base):
-    """ Updates an existing on-premises gateway.
+    """ Updates an existing on-prem gateway.
     """
     name = _service_name_prefix + 'edit'
     input = Int('id'), 'name', 'is_active', '-hosts', '-is_key_reset_required'
@@ -180,7 +180,7 @@ class Edit(_Base):
         is_key_reset_required = self.get_is_key_reset_required(input.is_key_reset_required)
 
         if not name:
-            raise Exception('An on-premises gateway needs a name')
+            raise Exception('An on-prem gateway needs a name')
 
         manager = self.get_manager()
 
@@ -188,12 +188,12 @@ class Edit(_Base):
         before = manager.get_by_id(id)
 
         if not before:
-            raise Exception(f'On-premises gateway with id `{id}` not found')
+            raise Exception(f'On-prem gateway with id `{id}` not found')
 
         # .. a change of name must not conflict with an existing gateway ..
         if other := manager.get(name):
             if other['id'] != id:
-                raise Exception(f'An on-premises gateway named `{name}` already exists')
+                raise Exception(f'An on-prem gateway named `{name}` already exists')
 
         # .. store the changes ..
         manager.edit(id, name, input.is_active, hosts, is_key_reset_required)
@@ -226,7 +226,7 @@ class Edit(_Base):
 # ################################################################################################################################
 
 class Delete(_Base):
-    """ Deletes an on-premises gateway along with the key retained for it by the hub.
+    """ Deletes an on-prem gateway along with the key retained for it by the hub.
     """
     name = _service_name_prefix + 'delete'
     input = Int('id')
@@ -242,7 +242,7 @@ class Delete(_Base):
         before = manager.get_by_id(id)
 
         if not before:
-            raise Exception(f'On-premises gateway with id `{id}` not found')
+            raise Exception(f'On-prem gateway with id `{id}` not found')
 
         # .. delete the gateway ..
         manager.delete(id)
@@ -281,7 +281,7 @@ class GetEnrollmentToken(_Base):
         gateway = manager.get_by_id(id)
 
         if not gateway:
-            raise Exception(f'On-premises gateway with id `{id}` not found')
+            raise Exception(f'On-prem gateway with id `{id}` not found')
 
         # .. the hub recognizes only gateways that were published to it ..
         manager.sync()
@@ -318,7 +318,7 @@ class ResetKey(_Base):
         gateway = manager.get_by_id(id)
 
         if not gateway:
-            raise Exception(f'On-premises gateway with id `{id}` not found')
+            raise Exception(f'On-prem gateway with id `{id}` not found')
 
         # .. and the key is retained by the hub.
         manager.hub.reset_key(gateway['name'])
@@ -340,7 +340,7 @@ class Sync(_Base):
         gateways = manager.get_list()
 
         if not gateways:
-            self.logger.info('No on-premises gateways are configured, nothing to push')
+            self.logger.info('No on-prem gateways are configured, nothing to push')
             return
 
         # .. otherwise the configuration is published, an unavailable hub being reported in the log.

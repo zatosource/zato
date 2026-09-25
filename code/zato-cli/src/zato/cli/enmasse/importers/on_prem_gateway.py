@@ -55,7 +55,7 @@ _Default_Is_Key_Reset_Required = On_Prem_Gateway.Default.Is_Key_Reset_Required
 # ################################################################################################################################
 
 class OnPremGatewayImporter:
-    """ Imports on-premises gateways from YAML.
+    """ Imports on-prem gateways from YAML.
     """
 
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
@@ -65,7 +65,7 @@ class OnPremGatewayImporter:
 # ################################################################################################################################
 
     def get_gateways_from_db(self, session:'SASession') -> 'anydict':
-        """ Returns all on-premises gateways from the database, keyed by name.
+        """ Returns all on-prem gateways from the database, keyed by name.
         """
 
         # Our response to produce
@@ -108,17 +108,17 @@ class OnPremGatewayImporter:
                 continue
 
             if ':' not in item:
-                raise Exception(f'`{item}` of on-premises gateway `{name}` is not in the host:port format')
+                raise Exception(f'`{item}` of on-prem gateway `{name}` is not in the host:port format')
 
             host, _, port = item.rpartition(':')
             host = host.strip()
             port = port.strip()
 
             if not host:
-                raise Exception(f'`{item}` of on-premises gateway `{name}` has no host')
+                raise Exception(f'`{item}` of on-prem gateway `{name}` has no host')
 
             if not port.isdigit():
-                raise Exception(f'`{item}` of on-premises gateway `{name}` has no numeric port')
+                raise Exception(f'`{item}` of on-prem gateway `{name}` has no numeric port')
 
             port_number = int(port)
 
@@ -127,12 +127,12 @@ class OnPremGatewayImporter:
 
             if is_port_too_low or is_port_too_high:
                 raise Exception(
-                    f'`{item}` of on-premises gateway `{name}` has a port outside the {_Port_Min}-{_Port_Max} range')
+                    f'`{item}` of on-prem gateway `{name}` has a port outside the {_Port_Min}-{_Port_Max} range')
 
             item = f'{host}:{port_number}'
 
             if item in seen:
-                raise Exception(f'`{item}` is listed more than once for on-premises gateway `{name}`')
+                raise Exception(f'`{item}` is listed more than once for on-prem gateway `{name}`')
 
             seen.add(item)
             out.append(item)
@@ -144,7 +144,7 @@ class OnPremGatewayImporter:
 # ################################################################################################################################
 
     def sync_on_prem_gateways(self, gateway_list:'anylist', session:'SASession') -> 'listtuple':
-        """ Synchronizes on-premises gateways from YAML with the database.
+        """ Synchronizes on-prem gateways from YAML with the database.
 
         Gateways are updated in place, never deleted and recreated, so that a gateway keeps
         the id and the name the hub bound its key to.
@@ -197,7 +197,7 @@ class OnPremGatewayImporter:
                 _ = session.execute(update)
                 out_updated.append(gateway)
 
-                logger.info('Updated on-premises gateway %s with id %s', name, gateway_id)
+                logger.info('Updated on-prem gateway %s with id %s', name, gateway_id)
 
             else:
 
@@ -211,7 +211,7 @@ class OnPremGatewayImporter:
                 gateway_id = row['id']
                 out_created.append(gateway)
 
-                logger.info('Created on-premises gateway %s with id %s', name, gateway_id)
+                logger.info('Created on-prem gateway %s with id %s', name, gateway_id)
 
             self.gateway_defs[name] = {
                 'id': gateway_id,
@@ -233,7 +233,7 @@ class OnPremGatewayImporter:
         configuration when the server becomes available.
         """
         if not (server_dir := session.info.get(Session_Key_Server_Dir)):
-            logger.info('No server directory in this session, not pushing to the on-premises gateway hub')
+            logger.info('No server directory in this session, not pushing to the on-prem gateway hub')
             return
 
         try:
@@ -241,10 +241,10 @@ class OnPremGatewayImporter:
             response = client.invoke(_Sync_Service, {})
 
             if not response.ok:
-                logger.warning('Could not push the on-premises gateways to the hub -> %s', response.details)
+                logger.warning('Could not push the on-prem gateways to the hub -> %s', response.details)
 
         except Exception as e:
-            logger.warning('Could not push the on-premises gateways to the hub -> %s', e)
+            logger.warning('Could not push the on-prem gateways to the hub -> %s', e)
 
 # ################################################################################################################################
 # ################################################################################################################################

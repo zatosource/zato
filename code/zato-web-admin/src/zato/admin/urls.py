@@ -1821,7 +1821,7 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # On-premises gateways
+    # On-prem gateways
 
     url(r'^zato/on-prem-gateway/$',
         login_required(on_prem_gateway.Index()), name=on_prem_gateway.Index.url_name),

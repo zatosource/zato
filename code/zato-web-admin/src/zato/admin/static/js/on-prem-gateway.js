@@ -50,14 +50,14 @@ $.fn.zato.on_prem_gateway.config = {
 
     // The titles of the popups that report a failed action
     error_titles: {
-        create: 'The on-premises gateway could not be created',
-        edit: 'The on-premises gateway could not be updated',
-        delete_: 'The on-premises gateway could not be deleted',
+        create: 'The on-prem gateway could not be created',
+        edit: 'The on-prem gateway could not be updated',
+        delete_: 'The on-prem gateway could not be deleted',
         enrollment_token: 'The enrollment token could not be issued',
         reset_key: 'The key could not be reset'
     },
 
-    delete_confirmation: 'Are you sure you want to delete the on-premises gateway `{0}`?',
+    delete_confirmation: 'Are you sure you want to delete the on-prem gateway `{0}`?',
     delete_confirmation_title: 'Please confirm',
     delete_overlay_label: 'Deleting ...',
 
@@ -127,7 +127,7 @@ $.fn.zato.on_prem_gateway.field_descriptions = {
     'id_is_key_reset_required': 'Determines whether an enrolled gateway enrolls again only after its key ' +
         'has been reset. When disabled, a new enrollment token replaces the key on file, for instance ' +
         'when the gateway is reinstalled or moved to another host.',
-    'id_hosts': 'The on-premises addresses served by this gateway, one host:port entry per line, ' +
+    'id_hosts': 'The on-prem addresses served by this gateway, one host:port entry per line, ' +
         'for example erp-db.corp.local:5432.',
 };
 
@@ -247,7 +247,7 @@ $.fn.zato.on_prem_gateway.before_submit_hook = function(form) {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.on_prem_gateway.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new on-premises gateway', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new on-prem gateway', null);
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
         divId: '#create-div',
@@ -259,7 +259,7 @@ $.fn.zato.on_prem_gateway.create = function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.on_prem_gateway.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the on-premises gateway', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update the on-prem gateway', id);
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',
         divId: '#edit-div',

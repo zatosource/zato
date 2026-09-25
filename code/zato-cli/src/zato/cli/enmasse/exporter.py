@@ -194,7 +194,7 @@ class EnmasseYAMLExporter:
 # ################################################################################################################################
 
     def export_on_prem_gateway(self, session:'SASession') -> 'list':
-        """ Exports on-premises gateway definitions.
+        """ Exports on-prem gateway definitions.
         """
         _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
         on_prem_gateway_list = self.on_prem_gateway_exporter.export(session, self.cluster_id)
@@ -699,7 +699,7 @@ class EnmasseYAMLExporter:
         if quota_tier_defs:
             output_dict['quota_tier'] = quota_tier_defs
 
-        # Export on-premises gateway definitions
+        # Export on-prem gateway definitions
         on_prem_gateway_defs = self.export_on_prem_gateway(session)
         if on_prem_gateway_defs:
             output_dict['on_prem_gateway'] = on_prem_gateway_defs

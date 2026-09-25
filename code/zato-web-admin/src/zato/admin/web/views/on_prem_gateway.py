@@ -126,7 +126,7 @@ class _CreateEdit(CreateEdit):
         return value
 
     def success_message(self, item:'any_') -> 'str':
-        return f'Successfully {self.verb} on-premises gateway `{item.name}`'
+        return f'Successfully {self.verb} on-prem gateway `{item.name}`'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -148,7 +148,7 @@ class Edit(_CreateEdit):
 
 class Delete(_Delete):
     url_name = 'on-prem-gateway-delete'
-    error_message = 'Could not delete the on-premises gateway'
+    error_message = 'Could not delete the on-prem gateway'
     service_name = _service_prefix + 'delete'
 
 # ################################################################################################################################

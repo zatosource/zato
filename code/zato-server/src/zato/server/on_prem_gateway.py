@@ -48,7 +48,7 @@ _Hub_Timeout = 10
 # The host of the hub's administrative API.
 _Hub_Host = '127.0.0.1'
 
-# The port of the load balancer that on-premises gateways connect to.
+# The port of the load balancer that on-prem gateways connect to.
 _Public_Port_Env = 'Zato_Port_Load_Balancer'
 
 # The permitted range of port numbers.
@@ -79,7 +79,7 @@ def _report_hub_outage(e:'Exception') -> 'None':
     global _hub_was_reachable
 
     if _hub_was_reachable:
-        logger.warning('Could not reach the on-premises gateway hub: %s', e)
+        logger.warning('Could not reach the on-prem gateway hub: %s', e)
         _hub_was_reachable = False
 
 # ################################################################################################################################
@@ -90,7 +90,7 @@ def _report_hub_available() -> 'None':
     global _hub_was_reachable
 
     if not _hub_was_reachable:
-        logger.info('The on-premises gateway hub is reachable again')
+        logger.info('The on-prem gateway hub is reachable again')
         _hub_was_reachable = True
 
 # ################################################################################################################################
@@ -132,7 +132,7 @@ def get_hub_admin_url() -> 'str':
 # ################################################################################################################################
 
 def get_public_address(host:'strnone'=None) -> 'str':
-    """ The address that an on-premises gateway connects to.
+    """ The address that an on-prem gateway connects to.
     """
 
     # An explicit setting takes precedence ..
@@ -179,7 +179,7 @@ def parse_hosts(hosts:'strlist') -> 'strlist':
     out:'strlist' = []
     seen = set()
 
-    # Each entry is required to be the address of an on-premises system ..
+    # Each entry is required to be the address of an on-prem system ..
     for item in hosts:
 
         item = item.strip()
@@ -242,12 +242,12 @@ class HubClient:
         try:
             response = requests.request(method, url, json=data, timeout=_Hub_Timeout)
         except requests.exceptions.RequestException as e:
-            raise HubUnavailable(f'The on-premises gateway hub is not responding ({e})')
+            raise HubUnavailable(f'The on-prem gateway hub is not responding ({e})')
 
         try:
             payload = response.json()
         except ValueError:
-            raise HubUnavailable(f'The on-premises gateway hub returned a response that is not JSON ({response.text})')
+            raise HubUnavailable(f'The on-prem gateway hub returned a response that is not JSON ({response.text})')
 
         if not response.ok:
 
@@ -321,7 +321,7 @@ class HubClient:
 # ################################################################################################################################
 
 class OnPremGatewayManager:
-    """ Stores on-premises gateways in the ODB and synchronizes the hub with them. The ODB
+    """ Stores on-prem gateways in the ODB and synchronizes the hub with them. The ODB
     stores the name, the flags and the list of addresses, the hub stores the key.
     """
 
@@ -470,7 +470,7 @@ class OnPremGatewayManager:
 
         _report_hub_available()
 
-        gateway_count = count_text(len(gateways), 'on-premises gateway', 'on-premises gateways')
+        gateway_count = count_text(len(gateways), 'on-prem gateway', 'on-prem gateways')
 
         logger.info('Pushed %s to the hub', gateway_count)
 
