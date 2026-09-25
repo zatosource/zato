@@ -80,6 +80,13 @@
       "metadata": {
         "description": "Region to deploy into."
       }
+    },
+    "dnsSuffix": {
+      "type": "string",
+      "defaultValue": "[newGuid()]",
+      "metadata": {
+        "description": "Random part of the DNS name of the VM, drawn once when the deployment form opens. Leave it as it is."
+      }
     }
   },
   "variables": {
@@ -88,7 +95,7 @@
     "nsgName": "[concat(parameters('vmName'), '-nsg')]",
     "nicName": "[concat(parameters('vmName'), '-nic')]",
     "publicIpName": "[concat(parameters('vmName'), '-ip')]",
-    "dnsLabel": "[concat(parameters('vmName'), '-', uniqueString(resourceGroup().id))]",
+    "dnsLabel": "[concat(parameters('vmName'), '-', substring(replace(parameters('dnsSuffix'), '-', ''), 0, 8))]",
     "fqdn": "[concat(variables('dnsLabel'), '.', toLower(replace(parameters('location'), ' ', '')), '.cloudapp.azure.com')]",
     "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]",
     "basePorts": [
