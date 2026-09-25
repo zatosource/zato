@@ -13,10 +13,10 @@ import json
 from sqlalchemy import select
 
 # Django
-from django.http import HttpResponse, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseServerError, JsonResponse
 
 # Zato
-from zato.admin.web.views import action_json_response, invoke_action_handler, method_allowed, \
+from zato.admin.web.views import get_action_json, invoke_action_handler, method_allowed, \
     Action_Message_Max_Length, _traceback_marker
 from zato.admin.web.views.audit_log.sources import _source_resubmit
 from zato.common.audit_log.api import event_table, get_audit_engine
@@ -25,10 +25,11 @@ from zato.common.audit_log.api import event_table, get_audit_engine
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist, intnone
     any_ = any_
     anydict = anydict
     anylist = anylist
+    intnone = intnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,11 +109,33 @@ def _get_resubmit_message(report:'anydict') -> 'str':
 
 # ################################################################################################################################
 
+def _get_resubmit_json_response(
+    is_success:'bool',
+    message:'str',
+    details:'str',
+    details_lexer:'str',
+    new_event_id:'intnone',
+    ) -> 'JsonResponse':
+    """ The action answer with the id of the event the resubmit produced, None when it produced no event of its own.
+    """
+    body = get_action_json(is_success, message, details, details_lexer)
+    body['new_event_id'] = new_event_id
+
+    out = JsonResponse(body)
+    return out
+
+# ################################################################################################################################
+
 def _get_resubmit_response(report:'anydict') -> 'any_':
     """ The display-ready answer a resubmit gives - a one-line summary for the tippy,
     the details for the modal and the lexer they highlight with. A failure's details
     are the traceback alone, a success's the whole report.
     """
+    new_event_id = None
+
+    if event_id := report.get('event_id'):
+        new_event_id = event_id
+
     if report['is_ok']:
         message = _get_resubmit_message(report)
         details = json.dumps(report, indent=2)
@@ -133,7 +156,7 @@ def _get_resubmit_response(report:'anydict') -> 'any_':
         else:
             details_lexer = 'python'
 
-    out = action_json_response(report['is_ok'], message, details, details_lexer)
+    out = _get_resubmit_json_response(report['is_ok'], message, details, details_lexer, new_event_id)
     return out
 
 # ################################################################################################################################
@@ -159,7 +182,7 @@ def resubmit(req:'any_') -> 'HttpResponse':
     # The row may be gone by the time the button is pressed - retention deletes old events and
     # the page the operator is looking at was rendered before that happened.
     if row is None:
-        out = action_json_response(False, f'Audit event {event_id} was not found', '', 'python')
+        out = _get_resubmit_json_response(False, f'Audit event {event_id} was not found', '', 'python', None)
         return out
 
     source, event_type = row

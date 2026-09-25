@@ -332,7 +332,8 @@ $.fn.zato.audit_log.parseResubmitBody = function(jqXHR) {
             details_title: config.resubmitErrorLabel,
             details_body: body,
             details_lexer: '',
-            status_code: jqXHR.status
+            status_code: jqXHR.status,
+            newEventId: null
         };
     }
 
@@ -348,7 +349,8 @@ $.fn.zato.audit_log.parseResubmitBody = function(jqXHR) {
         details_title: parsed.message,
         details_body: parsed.details,
         details_lexer: parsed.details_lexer,
-        status_code: 0
+        status_code: 0,
+        newEventId: parsed.new_event_id
     };
 };
 
