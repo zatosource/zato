@@ -13,7 +13,7 @@ from logging import getLogger
 # Zato
 from zato.common.lets_encrypt.certificate import get_certificate_info
 from zato.common.lets_encrypt.client import CertificateNotObtained, check_port, obtain, use_generated
-from zato.common.lets_encrypt.config import get_config, get_haproxy_config, has_own_certificate, is_enabled
+from zato.common.lets_encrypt.config import get_config, get_haproxy_config, is_enabled
 from zato.common.lets_encrypt.paths import get_paths
 from zato.common.lets_encrypt.state import get_running_operation, LockBusy, load_status, save_certificate_check, \
      save_is_enabled, save_port_check
@@ -33,11 +33,16 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 def get_ssl_config(environ:'strstrdict') -> 'anydict':
-    """ Returns everything the SSL config page in the Dashboard shows.
+    """ Returns everything the SSL config page in the Dashboard shows, all of it from Let's Encrypt only.
     """
     paths = get_paths(environ)
-    certificate = get_certificate_info(paths)
     status = load_status(paths)
+    is_lets_encrypt_enabled = is_enabled(environ)
+
+    if is_lets_encrypt_enabled:
+        certificate = get_certificate_info(paths)
+    else:
+        certificate = None
 
     if certificate is None:
         certificate_dict = None
@@ -45,8 +50,7 @@ def get_ssl_config(environ:'strstrdict') -> 'anydict':
         certificate_dict = certificate.to_dict()
 
     out = {
-        'is_enabled': is_enabled(environ),
-        'has_own_certificate': has_own_certificate(paths),
+        'is_enabled': is_lets_encrypt_enabled,
         'running_operation': get_running_operation(paths),
         'certificate': certificate_dict,
         'status': status.to_dict(),

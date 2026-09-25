@@ -1,6 +1,6 @@
 
 // ////////////////////////////////////////////////////////////////////////////
-// SSL config - the certificate HAProxy presents and Let's Encrypt
+// SSL config - Let's Encrypt
 // ////////////////////////////////////////////////////////////////////////////
 
 (function($) {
@@ -23,20 +23,12 @@
         failed_label: 'Failed',
         names_separator: ', ',
 
-        // What each source of the certificate reads as
-        source_labels: {
-            'own': 'Your own',
-            'lets-encrypt': 'Let\'s Encrypt',
-            'generated': 'Generated'
-        },
-
         // What the process holding the lock is doing, keyed by the name it writes into the lock file
         running_labels: {
             'certificate': 'Obtaining a certificate ..',
             'port': 'Checking port 443 ..'
         },
 
-        own_certificate_hint: 'Not used, your own certificate is mounted',
         enabled_message: 'OK, enabled',
         disabled_message: 'OK, disabled',
         check_port_message: 'OK, checking',
@@ -132,17 +124,11 @@
         var certificate = details.certificate;
         var running_operation = details.running_operation;
 
-        // The slider is locked while the user's own certificate is mounted, because Let's Encrypt is never used then ..
-        var is_enabled_elem = document.getElementById('ssl-config-is-enabled');
-        is_enabled_elem.checked = details.is_enabled;
-        is_enabled_elem.disabled = details.has_own_certificate;
+        document.getElementById('ssl-config-is-enabled').checked = details.is_enabled;
 
-        // .. and the hint next to it says either that or what is going on right now.
+        // The hint next to the slider says what is going on right now.
         var hint;
-        if(details.has_own_certificate) {
-            hint = config.own_certificate_hint;
-        }
-        else if(running_operation) {
+        if(running_operation) {
             hint = config.running_labels[running_operation];
         }
         else {
@@ -160,12 +146,10 @@
         $.fn.zato.ssl_config.set_error('#ssl-config-last-check-error', status.last_check_error);
 
         if(certificate === null) {
-            $.fn.zato.ssl_config.set_text('#ssl-config-source', config.none_label, true);
             $.fn.zato.ssl_config.set_text('#ssl-config-names', config.none_label, true);
             $.fn.zato.ssl_config.set_text('#ssl-config-issuer', config.none_label, true);
         }
         else {
-            $.fn.zato.ssl_config.set_text('#ssl-config-source', config.source_labels[certificate.source], false);
             $.fn.zato.ssl_config.set_text('#ssl-config-names', certificate.names.join(config.names_separator), false);
             $.fn.zato.ssl_config.set_text('#ssl-config-issuer', certificate.issuer, false);
         }

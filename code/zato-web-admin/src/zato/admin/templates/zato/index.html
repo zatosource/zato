@@ -300,6 +300,7 @@
                                     <li class="child"><a class="menu-link" href="{% url "security-spnego" %}?cluster={{ cluster_id|default:"1" }}">Kerberos</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-mtls" %}?cluster={{ cluster_id|default:"1" }}">mTLS</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-ntlm" %}?cluster={{ cluster_id|default:"1" }}">NTLM</a></li>
+                                    <li class="child"><a class="menu-link" href="/zato/ssl-config/">Let's Encrypt</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-wss" %}?cluster={{ cluster_id|default:"1" }}">WS-Security</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-tier" %}?cluster={{ cluster_id|default:"1" }}">Quota tiers</a></li>
                                     {% if 0 %}
@@ -597,7 +598,6 @@
                                     <li class="child"><a class="menu-link" href="/zato/python-packages/">Python packages</a></li>
                                     <li class="child"><a class="menu-link" href="/zato/env-variables/">Env. variables</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "on-prem-gateway" %}?cluster={{ cluster_id|default:"1" }}">On-prem gateways</a></li>
-                                    <li class="child"><a class="menu-link" href="/zato/ssl-config/">SSL config</a></li>
                                     <li class="child"><a class="menu-link" href="/zato/sbom/">SBOM</a></li>
                                     {% if 0 %}
                                     <li class="child">

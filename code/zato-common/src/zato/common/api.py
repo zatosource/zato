@@ -1507,12 +1507,6 @@ class Lets_Encrypt:
         Certificate = 'certificate'
         Port        = 'port'
 
-    # Where the certificate HAProxy presents comes from.
-    class Source:
-        Own          = 'own'
-        Lets_Encrypt = 'lets-encrypt'
-        Generated    = 'generated'
-
     # The name the ACME client stores the certificate under, the profile that IP address certificates require
     # and the one of DNS names, which is always requested by name because a CA may pick any profile for orders without one.
     Cert_Name   = 'zato'

@@ -219,41 +219,15 @@ def test_certificate_info_none(tmp_path:'Path') -> 'None':
 
 # ################################################################################################################################
 
-def test_certificate_info_generated(tmp_path:'Path') -> 'None':
+def test_certificate_info_ignores_other_certificates(tmp_path:'Path') -> 'None':
     paths = get_paths(_get_offline_environ(tmp_path))
 
+    # Neither the generated certificate, nor the user's own one, nor what HAProxy presents is from Let's Encrypt.
     generated_pem = _write_generated(paths)
-    certificate = x509.load_pem_x509_certificates(generated_pem.encode())[0]
-
-    # HAProxy falls back to auto.pem while there is no user.pem ..
-    info = get_certificate_info(paths)
-    assert info is not None
-
-    assert info.source == Lets_Encrypt.Source.Generated
-    assert info.names == [ModuleCtx.Generated_DNS_Name, ModuleCtx.Generated_IP_Address]
-    assert info.issuer == ModuleCtx.Generated_Common_Name
-    assert info.not_after_utc == certificate.not_valid_after_utc.isoformat()
-
-    # .. and a copy of it in user.pem is still the generated one.
     _write_file(paths.user_pem, generated_pem)
+    _write_file(paths.own_pem, _build_self_signed_pem())
 
-    info = get_certificate_info(paths)
-    assert info is not None
-    assert info.source == Lets_Encrypt.Source.Generated
-
-# ################################################################################################################################
-
-def test_certificate_info_own(tmp_path:'Path') -> 'None':
-    paths = get_paths(_get_offline_environ(tmp_path))
-    _ = _write_generated(paths)
-
-    own_pem = _build_self_signed_pem()
-    _write_file(paths.own_pem, own_pem)
-    _write_file(paths.user_pem, own_pem)
-
-    info = get_certificate_info(paths)
-    assert info is not None
-    assert info.source == Lets_Encrypt.Source.Own
+    assert get_certificate_info(paths) is None
 
 # ################################################################################################################################
 
@@ -269,10 +243,23 @@ def test_get_ssl_config_own_certificate(tmp_path:'Path') -> 'None':
     ssl_config = get_ssl_config(environ)
 
     assert ssl_config['is_enabled'] is False
-    assert ssl_config['has_own_certificate'] is True
     assert ssl_config['running_operation'] == ''
-    assert ssl_config['certificate']['source'] == Lets_Encrypt.Source.Own
+    assert ssl_config['certificate'] is None
     assert ssl_config['status']['last_check_utc'] is None
+
+# ################################################################################################################################
+
+def test_get_ssl_config_disabled(tmp_path:'Path') -> 'None':
+    environ = _get_offline_environ(tmp_path)
+
+    paths = get_paths(environ)
+    generated_pem = _write_generated(paths)
+    _write_file(paths.user_pem, generated_pem)
+
+    ssl_config = get_ssl_config(environ)
+
+    assert ssl_config['is_enabled'] is False
+    assert ssl_config['certificate'] is None
 
 # ################################################################################################################################
 
@@ -312,7 +299,6 @@ def test_certificate_info_lets_encrypt(lets_encrypt_environ:'strstrdict') -> 'No
     info = get_certificate_info(config.paths)
     assert info is not None
 
-    assert info.source == Lets_Encrypt.Source.Lets_Encrypt
     assert info.names == [PebbleCtx.Host]
     assert info.issuer.startswith(ModuleCtx.Pebble_Issuer_Prefix)
 
@@ -330,9 +316,8 @@ def test_get_ssl_config_lets_encrypt(lets_encrypt_environ:'strstrdict') -> 'None
     ssl_config = get_ssl_config(lets_encrypt_environ)
 
     assert ssl_config['is_enabled'] is True
-    assert ssl_config['has_own_certificate'] is False
     assert ssl_config['running_operation'] == ''
-    assert ssl_config['certificate']['source'] == Lets_Encrypt.Source.Lets_Encrypt
+    assert ssl_config['certificate']['names'] == [PebbleCtx.Host]
     assert ssl_config['status']['is_last_check_ok'] is True
 
 # ################################################################################################################################
@@ -362,7 +347,7 @@ def test_set_lets_encrypt_disable(lets_encrypt_environ:'strstrdict') -> 'None':
     ssl_config = get_ssl_config(lets_encrypt_environ)
 
     assert ssl_config['is_enabled'] is False
-    assert ssl_config['certificate']['source'] == Lets_Encrypt.Source.Generated
+    assert ssl_config['certificate'] is None
     assert _read_file(config.paths.user_pem) == generated_pem
 
 # ################################################################################################################################
@@ -381,7 +366,7 @@ def test_set_lets_encrypt_enable(lets_encrypt_environ:'strstrdict') -> 'None':
     ssl_config = get_ssl_config(lets_encrypt_environ)
 
     assert ssl_config['is_enabled'] is True
-    assert ssl_config['certificate']['source'] == Lets_Encrypt.Source.Lets_Encrypt
+    assert ssl_config['certificate']['names'] == [PebbleCtx.Host]
     assert ssl_config['status']['is_last_check_ok'] is True
 
 # ################################################################################################################################
