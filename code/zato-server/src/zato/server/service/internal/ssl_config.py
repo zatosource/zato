@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import Lets_Encrypt
-from zato.common.lets_encrypt.actions import check_port_now, get_environ, get_ssl_config, obtain_now, set_lets_encrypt
+from zato.common.lets_encrypt.actions import check_port_now, enable_now, get_environ, get_public_endpoint, get_ssl_config, \
+     set_lets_encrypt
 from zato.common.util.api import spawn_greenlet
 from zato.server.service import Bool
 from zato.server.service.internal import AdminService
@@ -30,9 +31,23 @@ class Get(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class GetPublicEndpoint(AdminService):
+    """ Returns the public IP address of this host and the DNS name it resolves back to, checked from the server itself.
+    """
+    name = Lets_Encrypt.Service.Get_Public_Endpoint
+
+    def handle(self) -> 'None':
+
+        environ = get_environ()
+
+        self.response.payload = {'public_endpoint': get_public_endpoint(environ)}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SetLetsEncrypt(AdminService):
-    """ Enables or disables Let's Encrypt. Enabling it obtains the certificate in the background,
-    and the Dashboard learns how that went from the next Get.
+    """ Enables or disables Let's Encrypt. Enabling it installs or obtains the certificate in the background,
+    and the Dashboard follows each step of that through the next Gets.
     """
     name = Lets_Encrypt.Service.Set_Lets_Encrypt
     input = Bool('is_enabled')
@@ -45,7 +60,7 @@ class SetLetsEncrypt(AdminService):
         set_lets_encrypt(environ, is_enabled)
 
         if is_enabled:
-            _ = spawn_greenlet(obtain_now, environ)
+            _ = spawn_greenlet(enable_now, environ)
 
 # ################################################################################################################################
 # ################################################################################################################################

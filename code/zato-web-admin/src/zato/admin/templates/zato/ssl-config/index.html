@@ -3,7 +3,7 @@
 {% block html_title %}SSL config{% endblock %}
 
 {% block "extra_css" %}
-    <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
     <link rel="stylesheet" type="text/css" href="/static/css/ssl-config.css">
 {% endblock %}
 
@@ -27,15 +27,28 @@
     <div class="ssl-config-card">
 
         <div class="ssl-config-row">
-            <label class="ssl-config-label" for="ssl-config-is-enabled">Let's Encrypt</label>
+            <label class="ssl-config-label" for="ssl-config-is-enabled">Use Let's Encrypt</label>
             <input type="checkbox" id="ssl-config-is-enabled" onchange="$.fn.zato.ssl_config.set_lets_encrypt(this.checked)" />
-            <span class="zato-time-ago-header"></span>
-            <span class="status-message" id="ssl-config-status"></span>
-            <span class="ssl-config-hint" id="ssl-config-is-enabled-hint"></span>
+            <span class="ssl-config-message" id="ssl-config-message">
+                <img class="info-spinner ssl-config-message-spinner" src="/static/gfx/spinner.svg" alt="">
+                <span class="ssl-config-message-text" id="ssl-config-message-text"></span>
+            </span>
         </div>
 
         <div class="ssl-config-row">
-            <label class="ssl-config-label">Port 443 ready</label>
+            <label class="ssl-config-label">Public IP</label>
+            <span class="zato-time-ago-spinner ssl-config-spinner" id="ssl-config-public-ip-spinner"></span>
+            <span class="ssl-config-value ssl-config-fade" id="ssl-config-public-ip"></span>
+        </div>
+
+        <div class="ssl-config-row">
+            <label class="ssl-config-label">Public DNS name</label>
+            <span class="zato-time-ago-spinner ssl-config-spinner" id="ssl-config-public-dns-name-spinner"></span>
+            <span class="ssl-config-value ssl-config-fade" id="ssl-config-public-dns-name"></span>
+        </div>
+
+        <div class="ssl-config-row">
+            <label class="ssl-config-label">Is port 443 reachable?</label>
             <span class="ssl-config-value" id="ssl-config-port-ready"></span>
             <span class="zato-time-ago" id="ssl-config-port-check" data-time-ago-id="port_check" data-time-ago-title="Port 443 checked" data-time-ago-row-label="Checked"></span>
             <a href="javascript:void(0)" class="ssl-config-link" id="ssl-config-check-port" onclick="$.fn.zato.ssl_config.check_port()">Check</a>

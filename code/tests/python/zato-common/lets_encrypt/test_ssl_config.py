@@ -24,13 +24,13 @@ import pytest
 # Zato
 from conftest import PebbleCtx
 from zato.common.api import Lets_Encrypt
-from zato.common.lets_encrypt.actions import check_port_now, get_ssl_config, obtain_now, set_lets_encrypt
+from zato.common.lets_encrypt.actions import check_port_now, enable_now, get_public_endpoint, get_ssl_config, set_lets_encrypt
 from zato.common.lets_encrypt.certificate import get_certificate_info
-from zato.common.lets_encrypt.client import check_port, obtain, use_generated
+from zato.common.lets_encrypt.client import check_port, connect, obtain, use_generated
 from zato.common.lets_encrypt.config import get_config
 from zato.common.lets_encrypt.paths import get_paths
-from zato.common.lets_encrypt.state import acquire_lock, get_running_operation, load_status, LockBusy, save_certificate_check, \
-     save_is_enabled, save_port_check
+from zato.common.lets_encrypt.state import acquire_lock, get_running_operation, load_progress, load_status, LockBusy, \
+     save_certificate_check, save_is_enabled, save_port_check
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,6 +58,8 @@ class ModuleCtx:
     Unresolvable_Host = 'no-such-host.invalid'
 
     Public_IP = '203.0.113.10'
+    Loopback_IP = '127.0.0.1'
+    Loopback_Name = 'localhost'
     Invalid_Port = 'no-such-port'
     Check_Error = 'The check failed'
 
@@ -243,7 +245,7 @@ def test_get_ssl_config_own_certificate(tmp_path:'Path') -> 'None':
     ssl_config = get_ssl_config(environ)
 
     assert ssl_config['is_enabled'] is False
-    assert ssl_config['running_operation'] == ''
+    assert ssl_config['progress'] is None
     assert ssl_config['certificate'] is None
     assert ssl_config['status']['last_check_utc'] is None
 
@@ -263,16 +265,48 @@ def test_get_ssl_config_disabled(tmp_path:'Path') -> 'None':
 
 # ################################################################################################################################
 
-def test_obtain_now_failure_before_client(tmp_path:'Path') -> 'None':
+def test_get_public_endpoint(tmp_path:'Path') -> 'None':
+    environ = _get_offline_environ(tmp_path)
+
+    # The loopback address is the one address whose reverse DNS entry every host has.
+    environ[Lets_Encrypt.Env.Public_IP] = ModuleCtx.Loopback_IP
+
+    public_endpoint = get_public_endpoint(environ)
+
+    assert public_endpoint['public_ip'] == ModuleCtx.Loopback_IP
+    assert public_endpoint['public_dns_name'] == ModuleCtx.Loopback_Name
+
+# ################################################################################################################################
+
+def test_enable_now_failure_before_client(tmp_path:'Path') -> 'None':
     environ = _get_offline_environ(tmp_path)
     environ[Lets_Encrypt.Env.Port] = ModuleCtx.Invalid_Port
 
-    obtain_now(environ)
+    enable_now(environ)
 
-    status = load_status(get_paths(environ))
+    paths = get_paths(environ)
+    status = load_status(paths)
+    progress = load_progress(paths)
 
     assert status.is_last_check_ok is False
     assert ModuleCtx.Invalid_Port in status.last_check_error
+
+    # Nothing had started yet, so the failure is pinned on the step that would have run first.
+    assert progress is not None
+    assert progress.step == Lets_Encrypt.Step.Install
+    assert progress.state == Lets_Encrypt.Progress_State.Error
+    assert ModuleCtx.Invalid_Port in progress.error
+
+# ################################################################################################################################
+
+def test_connect_failure(tmp_path:'Path') -> 'None':
+    environ = _get_offline_environ(tmp_path)
+    environ[Lets_Encrypt.Env.Server] = f'https://{ModuleCtx.Unresolvable_Host}/dir'
+
+    config = get_config(environ)
+
+    with pytest.raises(Exception):
+        connect(config)
 
 # ################################################################################################################################
 
@@ -316,9 +350,12 @@ def test_get_ssl_config_lets_encrypt(lets_encrypt_environ:'strstrdict') -> 'None
     ssl_config = get_ssl_config(lets_encrypt_environ)
 
     assert ssl_config['is_enabled'] is True
-    assert ssl_config['running_operation'] == ''
     assert ssl_config['certificate']['names'] == [PebbleCtx.Host]
     assert ssl_config['status']['is_last_check_ok'] is True
+
+    # Obtaining records the last two steps, and the last of them is done.
+    assert ssl_config['progress']['step'] == Lets_Encrypt.Step.Install
+    assert ssl_config['progress']['state'] == Lets_Encrypt.Progress_State.Done
 
 # ################################################################################################################################
 
@@ -348,6 +385,7 @@ def test_set_lets_encrypt_disable(lets_encrypt_environ:'strstrdict') -> 'None':
 
     assert ssl_config['is_enabled'] is False
     assert ssl_config['certificate'] is None
+    assert ssl_config['progress'] is None
     assert _read_file(config.paths.user_pem) == generated_pem
 
 # ################################################################################################################################
@@ -358,16 +396,62 @@ def test_set_lets_encrypt_enable(lets_encrypt_environ:'strstrdict') -> 'None':
     lets_encrypt_environ[Lets_Encrypt.Env.Use_Lets_Encrypt] = 'False'
 
     paths = get_paths(lets_encrypt_environ)
-    _ = _write_generated(paths)
+    generated_pem = _write_generated(paths)
 
     set_lets_encrypt(lets_encrypt_environ, True)
-    obtain_now(lets_encrypt_environ)
+    enable_now(lets_encrypt_environ)
 
     ssl_config = get_ssl_config(lets_encrypt_environ)
 
     assert ssl_config['is_enabled'] is True
     assert ssl_config['certificate']['names'] == [PebbleCtx.Host]
     assert ssl_config['status']['is_last_check_ok'] is True
+    assert ssl_config['status']['is_port_ready'] is True
+    assert ssl_config['progress']['step'] == Lets_Encrypt.Step.Install
+    assert ssl_config['progress']['state'] == Lets_Encrypt.Progress_State.Done
+
+    lets_encrypt_pem = _read_file(paths.user_pem)
+    assert lets_encrypt_pem != generated_pem
+
+    # Disabling goes back to the generated certificate ..
+    set_lets_encrypt(lets_encrypt_environ, False)
+    assert _read_file(paths.user_pem) == generated_pem
+
+    # .. and enabling again installs the certificate from before, without asking the ACME server for a new one,
+    # which is what the port check not having run again shows.
+    set_lets_encrypt(lets_encrypt_environ, True)
+    port_check_utc = load_status(paths).port_check_utc
+
+    enable_now(lets_encrypt_environ)
+
+    assert _read_file(paths.user_pem) == lets_encrypt_pem
+    assert load_status(paths).port_check_utc == port_check_utc
+
+    progress = load_progress(paths)
+    assert progress is not None
+    assert progress.step == Lets_Encrypt.Step.Install
+    assert progress.state == Lets_Encrypt.Progress_State.Done
+
+# ################################################################################################################################
+
+def test_enable_now_port_not_ready(lets_encrypt_environ:'strstrdict') -> 'None':
+    lets_encrypt_environ[Lets_Encrypt.Env.Subject_Alt_Name] = f'subjectAltName=DNS:{ModuleCtx.Unresolvable_Host}'
+
+    paths = get_paths(lets_encrypt_environ)
+    _ = _write_generated(paths)
+
+    set_lets_encrypt(lets_encrypt_environ, True)
+    enable_now(lets_encrypt_environ)
+
+    # The port check failed, so nothing else ran and HAProxy still has the generated certificate.
+    progress = load_progress(paths)
+    assert progress is not None
+    assert progress.step == Lets_Encrypt.Step.Port
+    assert progress.state == Lets_Encrypt.Progress_State.Error
+    assert ModuleCtx.Unresolvable_Host in progress.error
+
+    assert not os.path.exists(paths.user_pem)
+    assert load_status(paths).last_check_utc is None
 
 # ################################################################################################################################
 

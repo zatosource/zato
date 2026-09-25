@@ -67,6 +67,34 @@ class Status:
 
 # ################################################################################################################################
 # ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class Progress:
+
+    # Which of the steps of enabling Let's Encrypt this is.
+    step: 'str'
+
+    # Whether the step runs now, finished or failed.
+    state: 'str'
+
+    # Why the step failed, empty if it did not.
+    error: 'str'
+
+    # When the step reached this state, in ISO 8601 and UTC.
+    updated_utc: 'str'
+
+    def to_dict(self) -> 'anydict':
+        out = {
+            'step': self.step,
+            'state': self.state,
+            'error': self.error,
+            'updated_utc': self.updated_utc,
+        }
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def utc_now() -> 'str':
     out = datetime.now(timezone.utc).isoformat()
@@ -170,9 +198,49 @@ def save_port_check(paths:'SSLPaths', is_ready:'bool', error:'str') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def load_progress(paths:'SSLPaths') -> 'Progress | None':
+    """ Returns the current or last step, or None if there is none.
+    """
+    if not os.path.exists(paths.progress):
+        return None
+
+    data = _read_json(paths.progress)
+
+    out = Progress()
+    out.step = data['step']
+    out.state = data['state']
+    out.error = data['error']
+    out.updated_utc = data['updated_utc']
+
+    return out
+
+# ################################################################################################################################
+
+def save_progress(paths:'SSLPaths', step:'str', state:'str', error:'str'='') -> 'None':
+    """ Records the state of a step.
+    """
+    progress = Progress()
+    progress.step = step
+    progress.state = state
+    progress.error = error
+    progress.updated_utc = utc_now()
+
+    _write_json(paths.progress, progress.to_dict())
+
+# ################################################################################################################################
+
+def clear_progress(paths:'SSLPaths') -> 'None':
+    """ Removes the progress file.
+    """
+    if os.path.exists(paths.progress):
+        os.remove(paths.progress)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @contextmanager
 def acquire_lock(paths:'SSLPaths', operation:'str') -> 'Iterator[None]':
-    """ Holds the lock for as long as the ACME client runs, raising LockBusy if another process already holds it.
+    """ Holds the lock while the ACME client runs, raises LockBusy if it is already held.
     """
     os.makedirs(paths.data_dir, mode=_Dir_Mode, exist_ok=True)
 

@@ -3,10 +3,19 @@
 /* ------------------------------------------------------------ */
 
 #markup > h2.zato {
+    box-sizing: border-box;
     width: 75%;
     margin-left: auto;
     margin-right: auto;
     padding-top: 1rem;
+}
+
+/* The sun rays at the top of the logo push its wordmark into the lower part of the image,
+   so the image is moved up for the header text to sit in the middle of the wordmark. */
+#markup > h2.zato > .header-logo {
+    height: 24px;
+    position: relative;
+    top: -5px;
 }
 
 /* ------------------------------------------------------------ */
@@ -63,7 +72,7 @@
 
 .ssl-config-label {
     display: inline-block;
-    width: 200px;
+    width: 150px;
     flex-shrink: 0;
     color: #333333;
     font-weight: bold;
@@ -100,7 +109,66 @@
     color: #c62828;
 }
 
-/* The time-ago cells here sit next to other values rather than fill a table column. */
+/* The public IP and DNS name arrive after the page loaded - a spinner turns until they do and then they fade in. */
+.ssl-config-spinner {
+    --zato-time-ago-spinner-fade-in-ms: 0ms;
+    top: 0;
+    margin-left: 6px;
+    margin-right: 0;
+}
+
+.ssl-config-fade {
+    opacity: 0;
+    transition: opacity 300ms ease;
+}
+
+.ssl-config-fade.is-visible {
+    opacity: 1;
+}
+
+/* ------------------------------------------------------------ */
+/* SSL config - the message next to the slider                  */
+/* ------------------------------------------------------------ */
+
+/* Fixed height and an always reserved spinner box, so nothing shifts when the spinner comes and goes */
+.ssl-config-message {
+    display: inline-flex;
+    align-items: center;
+    height: var(--toggle-height);
+    margin-left: 4px;
+    opacity: 0;
+    transition: opacity 600ms ease;
+}
+
+.ssl-config-message.is-visible {
+    opacity: 1;
+}
+
+.ssl-config-message-spinner {
+    width: var(--toggle-height);
+    height: var(--toggle-height);
+    top: 0;
+    visibility: hidden;
+}
+
+.ssl-config-message.has-spinner .ssl-config-message-spinner {
+    visibility: visible;
+}
+
+.ssl-config-message-text {
+    color: #333333;
+}
+
+.ssl-config-message.is-error .ssl-config-message-text {
+    color: #c62828;
+}
+/* The time-ago cells here sit next to other values rather than fill a table column,
+   and they never give up their width to the long error hints next to them. */
+.ssl-config-row .zato-time-ago {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
 .ssl-config-row .zato-time-ago-value {
     min-width: 0;
 }

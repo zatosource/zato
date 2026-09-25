@@ -1895,6 +1895,8 @@ urlpatterns += [
         login_required(ssl_config.index), name='settings-ssl-config'),
     url(r'^zato/ssl-config/refresh/$',
         login_required(ssl_config.refresh), name='settings-ssl-config-refresh'),
+    url(r'^zato/ssl-config/public-endpoint/$',
+        login_required(ssl_config.public_endpoint), name='settings-ssl-config-public-endpoint'),
     url(r'^zato/ssl-config/lets-encrypt/$',
         login_required(ssl_config.set_lets_encrypt), name='settings-ssl-config-lets-encrypt'),
     url(r'^zato/ssl-config/check-port/$',

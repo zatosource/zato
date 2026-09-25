@@ -14,10 +14,13 @@ from dataclasses import dataclass
 from logging import getLogger
 from tempfile import TemporaryDirectory
 
+# requests
+import requests
+
 # Zato
 from zato.common.api import Lets_Encrypt
 from zato.common.haproxy.config import reload_haproxy
-from zato.common.lets_encrypt.state import acquire_lock, load_is_enabled, save_certificate_check, save_port_check
+from zato.common.lets_encrypt.state import acquire_lock, load_is_enabled, save_certificate_check, save_port_check, save_progress
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,6 +42,9 @@ logger = getLogger(__name__)
 _Lego_Binary_Name = 'lego'
 _Lego_Timeout = 600
 
+# How long to wait for the ACME server to answer when checking that it can be reached at all.
+_Connect_Timeout = 30
+
 _PEM_Mode = 0o600
 
 # ################################################################################################################################
@@ -47,6 +53,16 @@ _PEM_Mode = 0o600
 class CertificateNotObtained(Exception):
     """ Raised when the ACME client could not obtain a certificate, after the reason was recorded in the status.
     """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def last_line(text:'str') -> 'str':
+    """ Returns the last line of text.
+    """
+    lines = text.strip().split('\n')
+    out = lines[-1]
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -116,8 +132,7 @@ def build_env(config:'LetsEncryptConfig') -> 'strstrdict':
 # ################################################################################################################################
 
 def run_lego(command:'strlist', env:'strstrdict') -> 'LegoResult':
-    """ Runs the ACME client and returns whether it succeeded along with what it printed,
-    which is where it explains why it failed.
+    """ Runs the ACME client and returns whether it succeeded along with its output.
     """
     out = LegoResult()
 
@@ -192,6 +207,21 @@ def install_pem(paths:'SSLPaths', haproxy_config:'str', pem:'str', needs_reload:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def connect(config:'LetsEncryptConfig') -> 'None':
+    """ Raises an exception if the ACME server's directory cannot be fetched.
+    """
+    if config.ca_file is None:
+        verify = True
+    else:
+        verify = config.ca_file
+
+    logger.info('Connecting to %s', config.server)
+
+    response = requests.get(config.server, verify=verify, timeout=_Connect_Timeout)
+    response.raise_for_status()
+
+# ################################################################################################################################
+
 def obtain(config:'LetsEncryptConfig', needs_reload:'bool') -> 'bool':
     """ Obtains or renews the certificate and returns True if HAProxy has a new one to read.
     """
@@ -201,11 +231,13 @@ def obtain(config:'LetsEncryptConfig', needs_reload:'bool') -> 'bool':
         env = build_env(config)
 
         logger.info('Checking the certificate for %s at %s', ', '.join(config.domains), config.server)
+        save_progress(config.paths, Lets_Encrypt.Step.Request, Lets_Encrypt.Progress_State.Running)
 
         result = run_lego(command, env)
 
         if not result.is_ok:
             save_certificate_check(config.paths, False, result.output)
+            save_progress(config.paths, Lets_Encrypt.Step.Request, Lets_Encrypt.Progress_State.Error, last_line(result.output))
             raise CertificateNotObtained(f'Certificate for {config.domains} could not be obtained: {result.output}')
 
         save_certificate_check(config.paths, True, '')
@@ -218,8 +250,10 @@ def obtain(config:'LetsEncryptConfig', needs_reload:'bool') -> 'bool':
             return False
 
         # The ACME client leaves its files as they are when nothing was due, in which case HAProxy already uses this very certificate.
+        save_progress(config.paths, Lets_Encrypt.Step.Install, Lets_Encrypt.Progress_State.Running)
         pem = read_file(config.paths.lego_pem)
         is_changed = install_pem(config.paths, config.haproxy_config, pem, needs_reload)
+        save_progress(config.paths, Lets_Encrypt.Step.Install, Lets_Encrypt.Progress_State.Done)
 
     if is_changed:
         logger.info('New certificate for %s written to %s', ', '.join(config.domains), config.paths.user_pem)
@@ -241,8 +275,7 @@ def use_generated(paths:'SSLPaths', haproxy_config:'str', needs_reload:'bool') -
 # ################################################################################################################################
 
 def check_port(config:'LetsEncryptConfig') -> 'bool':
-    """ Asks the staging server of Let's Encrypt for a certificate, which succeeds only if it can reach this host
-    through port 443, and returns whether it could.
+    """ Returns whether the staging server can reach this host through port 443.
     """
     with acquire_lock(config.paths, Lets_Encrypt.Operation.Port):
 
@@ -254,13 +287,16 @@ def check_port(config:'LetsEncryptConfig') -> 'bool':
             env = build_env(config)
 
             logger.info('Checking port 443 for %s at %s', ', '.join(config.domains), config.staging_server)
+            save_progress(config.paths, Lets_Encrypt.Step.Port, Lets_Encrypt.Progress_State.Running)
 
             result = run_lego(command, env)
 
         if result.is_ok:
             save_port_check(config.paths, True, '')
+            save_progress(config.paths, Lets_Encrypt.Step.Port, Lets_Encrypt.Progress_State.Done)
         else:
             save_port_check(config.paths, False, result.output)
+            save_progress(config.paths, Lets_Encrypt.Step.Port, Lets_Encrypt.Progress_State.Error, last_line(result.output))
 
     return result.is_ok
 

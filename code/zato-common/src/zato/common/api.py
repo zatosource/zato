@@ -1500,12 +1500,26 @@ class Lets_Encrypt:
         Data_Dir = 'lets-encrypt'
         Settings = 'settings.json'
         Status   = 'status.json'
+        Progress = 'progress.json'
         Lock     = 'lock'
 
     # What a running check is doing, recorded in the lock file while it holds the lock.
     class Operation:
         Certificate = 'certificate'
         Port        = 'port'
+
+    # The steps of enabling Let's Encrypt, in the order the Dashboard shows them.
+    class Step:
+        Port    = 'port'
+        Connect = 'connect'
+        Request = 'request'
+        Install = 'install'
+
+    # How far a step got, which is what the Dashboard shows next to the slider.
+    class Progress_State:
+        Running = 'running'
+        Done    = 'done'
+        Error   = 'error'
 
     # The name the ACME client stores the certificate under, the profile that IP address certificates require
     # and the one of DNS names, which is always requested by name because a CA may pick any profile for orders without one.
@@ -1515,9 +1529,10 @@ class Lets_Encrypt:
 
     # The services behind the SSL config page in the Dashboard.
     class Service:
-        Get              = 'zato.ssl-config.get'
-        Set_Lets_Encrypt = 'zato.ssl-config.set-lets-encrypt'
-        Check_Port       = 'zato.ssl-config.check-port'
+        Get                 = 'zato.ssl-config.get'
+        Get_Public_Endpoint = 'zato.ssl-config.get-public-endpoint'
+        Set_Lets_Encrypt    = 'zato.ssl-config.set-lets-encrypt'
+        Check_Port          = 'zato.ssl-config.check-port'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -2239,13 +2254,8 @@ class Echo(Service):
         payload = self.request.payload
         self.logger.info(f'Received request: `{{payload}}`')
 
-        # .. there is no payload when the request is empty ..
-        if payload is None:
-            payload = {{}}
-
         # .. write a note with the payload as its data ..
-        item_count = len(payload)
-        self.audit.write('Echoed the request back', data=payload, item_count=item_count)
+        self.audit.write('Echoed the request back', data=payload, item_count=len(payload))
 
         # .. and return the payload unchanged.
         self.response.payload = payload
