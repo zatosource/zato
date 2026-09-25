@@ -18,10 +18,6 @@ $.fn.zato.ide.tokenizers.config = {
     // The separators of ER7 values - fields, components, repetitions and subcomponents
     "er7_separator_pattern": /[|^~&]/g,
 
-    // The JSON tokens - a string with an optional key colon, a number,
-    // a keyword or a piece of punctuation
-    "json_token_pattern": /("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false|null)\b|([{}\[\],:])/g,
-
     // The XML tokens - a comment, a CDATA section, a declaration
     // or processing instruction, or a tag
     "xml_token_pattern": /(<!--[\s\S]*?-->)|(<!\[CDATA\[[\s\S]*?\]\]>)|(<[!?][^>]*>)|(<\/?[^>]*>)/g,
@@ -138,45 +134,8 @@ $.fn.zato.ide.tokenizers.hl7_to_html = function(text) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-// A JSON payload - keys, strings, numbers, keywords and punctuation.
-$.fn.zato.ide.tokenizers.json_to_html = function(text) {
-
-    let wrap_match = function(match) {
-
-        let escape = $.fn.zato.ide.tokenizers.escape;
-
-        // A string right before a colon is a key ..
-        if(match[1]) {
-
-            let string = escape(match[1]);
-
-            if(match[2]) {
-                let colon = escape(match[2]);
-                return `<span class="highlight-key">${string}</span><span class="highlight-punctuation">${colon}</span>`;
-            }
-
-            return `<span class="highlight-string">${string}</span>`;
-        }
-
-        // .. numbers and keywords carry no characters that need escaping ..
-        if(match[3]) {
-            return `<span class="highlight-number">${match[3]}</span>`;
-        }
-
-        if(match[4]) {
-            return `<span class="highlight-keyword">${match[4]}</span>`;
-        }
-
-        // .. and what remains is punctuation.
-        let punctuation = escape(match[5]);
-        return `<span class="highlight-punctuation">${punctuation}</span>`;
-    }
-
-    let out = $.fn.zato.ide.tokenizers.replace_tokens(
-        text, $.fn.zato.ide.tokenizers.config.json_token_pattern, wrap_match);
-
-    return out;
-}
+// A JSON payload is read the same way as any other JSON document on the dashboard.
+$.fn.zato.ide.tokenizers.json_to_html = $.fn.zato.highlight.json_to_html;
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 

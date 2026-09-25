@@ -1,6 +1,12 @@
 {% extends "zato/settings/textarea-page.html" %}
 
+{% block textarea_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/shared/highlight.css">
+<link rel="stylesheet" type="text/css" href="/static/css/sbom.css">
+{% endblock %}
+
 {% block textarea_page_js %}
+<script type="text/javascript" src="/static/js/shared/highlight.js" nonce="{{ CSP_NONCE }}"></script>
 <script type="text/javascript" src="/static/js/sbom.js" nonce="{{ CSP_NONCE }}"></script>
 {% endblock %}
 
@@ -8,7 +14,7 @@
 <div class="info-container textarea-settings-container">
     <div class="info-row textarea-row">
         <div class="info-value textarea-value">
-            <textarea id="{{ page_config.textarea_id }}" readonly>{{ textarea_content }}</textarea>
+            <textarea id="{{ page_config.textarea_id }}" spellcheck="false" readonly>{{ textarea_content }}</textarea>
         </div>
     </div>
 </div>
