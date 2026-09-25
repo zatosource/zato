@@ -18,6 +18,7 @@ import shutil
 
 # This directory must stay first so `import conftest` in test modules resolves to this very file,
 # not to the conftest of the config_store suite added below.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'zato-common', 'lib'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'zato-server', 'config_store'))
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -35,6 +36,9 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
 from zato.common.util.config import get_config_object, update_config_file
 from zato.common.typing_ import cast_
+
+# Live environment
+from live_environment.scheduler import SchedulerProcess
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,9 +60,8 @@ _ZATO_PY = os.path.join(_ZATO_BASE, 'code', 'bin', 'python')
 
 _PASSWORD = 'test.invoke.' + CryptoManager.generate_hex_string()
 
-# A per-session Redis stream prefix so the server and scheduler started here never exchange
-# fire events or commands with any other Zato environment sharing the same Redis instance.
-_STREAM_PREFIX = 'zato:scheduler:test-' + CryptoManager.generate_hex_string()
+# The scheduler of this session, on Redis streams and an HTTP port of its own.
+_scheduler = SchedulerProcess()
 
 _REPORTS_DIR = os.path.join(_ZATO_BASE, 'code', 'tests', 'python', 'zato-scheduler', 'reports')
 
@@ -66,7 +69,6 @@ _COVERAGE_SOURCE = os.path.join(
     _ZATO_BASE, 'code', 'zato-server', 'src', 'zato', 'server', 'service', 'internal')
 
 _server_proc = None
-_scheduler_proc = None
 _tmpdir = None
 _pre_start_service_files = []
 
@@ -89,75 +91,9 @@ def _kill_server():
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _find_scheduler_binary():
-    """ Locates the Rust scheduler binary, preferring the release build.
-    """
-    candidates = [
-        os.path.join(_ZATO_BASE, 'code', 'zato-rust', 'zato_scheduler_core', 'target', 'release', '_zato_scheduler'),
-        os.path.join(_ZATO_BASE, 'code', 'zato-rust', 'zato_scheduler_core', 'target', 'debug', '_zato_scheduler'),
-    ]
-
-    for path in candidates:
-        if os.path.isfile(path) and os.access(path, os.X_OK):
-            return path
-
-    raise RuntimeError('Could not find the Rust scheduler binary, looked in: {}'.format(', '.join(candidates)))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _wait_for_scheduler_api(port:'any_', timeout:'any_' = 30):
-    """ Polls the scheduler's HTTP query API until it answers, proving the scheduler
-    completed its initial job reload handshake with the server.
-    """
-    from urllib.request import urlopen
-
-    url = f'http://127.0.0.1:{port}/metrics'
-    deadline = time.monotonic() + timeout
-
-    while time.monotonic() < deadline:
-        try:
-            with urlopen(url, timeout=5) as response:
-                if response.status == 200:
-                    return
-        except Exception:
-            pass
-        time.sleep(0.5)
-
-    raise RuntimeError(f'Scheduler HTTP API at {url} did not respond within {timeout}s')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _kill_scheduler():
-    global _scheduler_proc
-    kill_process_tree(_scheduler_proc)
-    _scheduler_proc = None
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _delete_stream_keys():
-    """ Removes this session's namespaced scheduler streams from Redis so they do not accumulate across sessions.
-    """
-    from redis import Redis
-
-    redis_conn = Redis(host='localhost', port=6379, decode_responses=True)
-
-    try:
-        keys = cast_('anylist', redis_conn.keys(_STREAM_PREFIX + ':stream:*'))
-        if keys:
-            _ = redis_conn.delete(*keys)
-    except Exception:
-        pass
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def _cleanup():
     _kill_server()
-    _kill_scheduler()
-    _delete_stream_keys()
+    _scheduler.cleanup()
     global _tmpdir
     if _tmpdir and os.path.isdir(_tmpdir):
         shutil.rmtree(_tmpdir, ignore_errors=True)
@@ -290,10 +226,6 @@ def zato_server(request:'any_'):
 
     broker_port = _find_free_port()
 
-    # A per-session port for the scheduler's HTTP query API so this session never binds to
-    # or answers through the port of any other scheduler running on the same host.
-    scheduler_http_port = _find_free_port()
-
     # A fresh audit database per session, with the audit log explicitly enabled -
     # job execution history lives there and the history tests read it back through
     # the server's own services.
@@ -302,8 +234,8 @@ def zato_server(request:'any_'):
     env = os.environ.copy()
     env['Zato_Config_Bind_Port'] = str(port)
     env['Zato_Broker_HTTP_Port'] = str(broker_port)
-    env['Zato_Scheduler_Stream_Prefix'] = _STREAM_PREFIX
-    env['Zato_Scheduler_HTTP_Port'] = str(scheduler_http_port)
+    scheduler_environment = _scheduler.server_environment()
+    env.update(scheduler_environment)
     env[AuditLogCtx.Env_Enabled] = 'True'
     env[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
     env[AuditLogCtx.Env_Name] = audit_db_path
@@ -345,44 +277,13 @@ def zato_server(request:'any_'):
         _kill_server()
         raise
 
-    # Start the scheduler component now that the server can answer its initial job request.
-    # The Rust binary is run directly, not through `zato start`, so that terminating it
-    # actually stops the scheduler instead of leaving it behind as a reparented child.
-    global _scheduler_proc
-
+    # Start the scheduler, ending the server if it does not come up.
     scheduler_dir = os.path.join(_tmpdir, 'scheduler')
-    scheduler_env = os.environ.copy()
-    scheduler_env['Zato_Scheduler_Stream_Prefix'] = _STREAM_PREFIX
-    scheduler_env['Zato_Scheduler_HTTP_Port'] = str(scheduler_http_port)
-    _ = scheduler_env.pop('COVERAGE_PROCESS_START', None)
-
-    _scheduler_proc = subprocess.Popen(
-        [_find_scheduler_binary()],
-        env=scheduler_env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
-    )
-
-    _scheduler_output_lines = []
-
-    def _capture_scheduler_output():
-        for line in iter(cast_('any_', _scheduler_proc).stdout.readline, b''):
-            text = line.decode('utf-8', errors='replace').rstrip()
-            _scheduler_output_lines.append(f'[SCHEDULER] {text}')
-
-    _scheduler_stdout_thread = threading.Thread(target=_capture_scheduler_output, daemon=True)
-    _scheduler_stdout_thread.start()
 
     try:
-        _wait_for_scheduler_api(scheduler_http_port)
+        _scheduler.start()
     except Exception:
-        print('\n--- Scheduler did not become ready, captured output: ---')
-        for line in _scheduler_output_lines:
-            print(line)
-        print('--- End of scheduler output ---\n')
         _kill_server()
-        _kill_scheduler()
         raise
 
     server_info = {
@@ -398,8 +299,7 @@ def zato_server(request:'any_'):
     yield server_info
 
     _kill_server()
-    _kill_scheduler()
-    _delete_stream_keys()
+    _scheduler.cleanup()
 
     if use_coverage and cov_data_dir and coveragerc_path:
         time.sleep(2)

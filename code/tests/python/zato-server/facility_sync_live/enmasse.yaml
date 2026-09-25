@@ -1,0 +1,35 @@
+sql:
+
+  - name: Facility Standby
+    type: oracle
+    host: localhost
+    port: 21522
+    db_name: FREEPDB1
+    username: FACILITY_READER
+    password: ${Facility_Standby_Password}
+    pool_size: 2
+
+  - name: Records Writer
+    type: oracle
+    host: localhost
+    port: 21522
+    db_name: FREEPDB1
+    username: SYNC_WRITER
+    password: ${Records_Writer_Password}
+    pool_size: 2
+
+scheduler:
+
+  - name: facility.sync.treatments
+    is_active: true
+    service: facility.sync.run
+    job_type: interval_based
+    seconds: 5
+    extra: '{"source": "LOG_TREATMENTS"}'
+
+  - name: facility.sync.consult-notes
+    is_active: true
+    service: facility.sync.run
+    job_type: interval_based
+    seconds: 5
+    extra: '{"source": "LOG_CONSULT_NOTES"}'

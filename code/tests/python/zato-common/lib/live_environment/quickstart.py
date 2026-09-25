@@ -164,9 +164,9 @@ class ZatoEnvironment:
 
 # ################################################################################################################################
 
-    def create(self) -> 'None':
+    def create(self, *, needs_scheduler:'bool'=False) -> 'None':
         """ Lays the environment down with quickstart - into a directory of its own, because quickstart
-        refuses to write into one that already holds anything.
+        refuses to write into one that already holds anything. Without needs_scheduler the scheduler component is left out.
         """
         os.makedirs(self.environment_directory)
 
@@ -175,8 +175,10 @@ class ZatoEnvironment:
             '--servers', '1',
             '--password', self.password,
             '--server-api-client-for-scheduler-password', self.password,
-            '--no-scheduler',
         ]
+
+        if not needs_scheduler:
+            command.append('--no-scheduler')
 
         result = subprocess.run(
             command, capture_output=True, text=True, timeout=_quickstart_timeout, env=_subprocess_environment())
