@@ -276,24 +276,29 @@ page.fetchJourney = function(term, onData, onError) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The journey on screen read again and drawn afresh, with whatever was picked
-// still picked. `onDrawn` runs once the new drawing stands.
-page.refreshJourney = function(onDrawn) {
+// The journey on screen read again and drawn afresh, with `pickedEventId` picked, or
+// whatever was picked before when it is null. `onDrawn` runs once the new drawing stands.
+page.refreshJourney = function(pickedEventId, onDrawn) {
     var detail = $.fn.zato.message_flow.detail;
     var drawing = $.fn.zato.message_flow.drawing;
     var canvas = drawing.canvas();
 
     var isRoot = false;
+    var eventId = pickedEventId;
 
-    if (detail.openDetail !== null) {
-        if (detail.openDetail.key === '') {
-            isRoot = true;
+    if (pickedEventId === null) {
+        eventId = detail.currentEventId;
+
+        if (detail.openDetail !== null) {
+            if (detail.openDetail.key === '') {
+                isRoot = true;
+            }
         }
     }
 
     var keptSelection = {
         isRoot: isRoot,
-        eventId: detail.currentEventId
+        eventId: eventId
     };
 
     // Wherever the drawing was pulled to is where the fresh one stands - the

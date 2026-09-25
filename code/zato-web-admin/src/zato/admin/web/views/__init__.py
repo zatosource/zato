@@ -50,9 +50,10 @@ slugify = slugify
 
 if 0:
     from zato.client import _APIResponse
-    from zato.common.typing_ import any_, anylist, strlistnone
+    from zato.common.typing_ import any_, anydict, anylist, strlistnone
 
     # Add dummy assignments to satisfy type checkers
+    anydict = anydict
     strlistnone = strlistnone
 
 # ################################################################################################################################
@@ -809,16 +810,24 @@ def _get_ping_error_message(error_text:'str') -> 'str':
 
 # ################################################################################################################################
 
-def action_json_response(is_success:'bool', message:'str', details:'str', details_lexer:'str') -> 'JsonResponse':
+def get_action_json(is_success:'bool', message:'str', details:'str', details_lexer:'str') -> 'anydict':
     """ The shape every action's view answers with - a display-ready summary for the tippy,
     the full text for the details modal and the lexer the details highlight with.
     """
-    out = JsonResponse({
+    out = {
         'is_success': is_success,
         'message': message,
         'details': details,
         'details_lexer': details_lexer,
-    })
+    }
+    return out
+
+# ################################################################################################################################
+
+def action_json_response(is_success:'bool', message:'str', details:'str', details_lexer:'str') -> 'JsonResponse':
+    body = get_action_json(is_success, message, details, details_lexer)
+
+    out = JsonResponse(body)
     return out
 
 # ################################################################################################################################

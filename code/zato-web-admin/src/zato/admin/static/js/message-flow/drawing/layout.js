@@ -91,8 +91,9 @@ drawing.config = {
     resubmittedLabel: 'RESUBMITTED',
 
     // What the tippy beside a pressed action chip says while the message is going out
-    // again and once it has
+    // again and once it has.
     resubmittingLabel: 'Resubmitting',
+    resubmittedDoneLabel: 'Resubmitted.',
     resubmittedOpenLabel: 'Resubmitted. Click to open.',
 
     // The room between a card's title and the action chips at the band's right,

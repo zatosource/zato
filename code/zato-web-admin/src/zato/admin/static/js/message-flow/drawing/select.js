@@ -159,21 +159,6 @@ drawing.wirePanning = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What a resubmit from a card answered - the runner's shape plus the id of the new event.
-drawing.parseResubmitResponse = function(jqXHR) {
-    var out = $.fn.zato.audit_log.parseResubmitBody(jqXHR);
-    out.newEventId = null;
-
-    if (out.is_success) {
-        var report = JSON.parse(out.details_body);
-        out.newEventId = report.event_id;
-    }
-
-    return out;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
 // The tippies the chips opened, in the order they opened.
 drawing.resubmitTippies = [];
 
@@ -215,27 +200,56 @@ drawing.closeAllResubmitTippies = function() {
 };
 
 // A tippy cannot be handed a new anchor, so it measures the redrawn chip's place instead.
+// Returns whether the chip is still there to stand beside.
 drawing.reanchorResubmitTippy = function(instance, eventId) {
-    if (!drawing.isResubmitTippyUp(instance)) {
-        return;
-    }
+    var out = false;
 
-    var chip = drawing.canvas().querySelector('.message-flow-action-slot[data-id="' + eventId + '"]');
+    if (!instance.state.isDestroyed) {
+        var chip = drawing.canvas().querySelector('.message-flow-action-slot[data-id="' + eventId + '"]');
 
-    // A chip that is no more leaves the tippy nothing to stand beside
-    if (chip === null) {
-        instance.hide();
-        return;
-    }
+        if (chip !== null) {
+            instance.setProps({
+                getReferenceClientRect: function() {
+                    var rect = chip.getBoundingClientRect();
+                    return rect;
+                }
+            });
 
-    instance.setProps({
-        getReferenceClientRect: function() {
-            var rect = chip.getBoundingClientRect();
-            return rect;
+            chip._tippy = instance;
+            out = true;
         }
-    });
+        else {
+            instance.hide();
+        }
+    }
 
-    chip._tippy = instance;
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// What the tippy reads once the message went out again - a way to the new event when there is one.
+drawing.showResubmitted = function(instance, newEventId) {
+    var config = drawing.config;
+    var content = config.resubmittedDoneLabel;
+
+    if (newEventId !== null) {
+        var link = document.createElement('a');
+        link.href = 'javascript:void(0)';
+        link.className = 'message-flow-resubmit-done';
+        link.textContent = config.resubmittedOpenLabel;
+
+        link.addEventListener('click', function(event) {
+            event.stopPropagation();
+            instance.hide();
+            drawing.selectEvent(newEventId);
+        });
+
+        content = link;
+    }
+
+    instance.setContent(content);
+    instance.show();
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -251,29 +265,21 @@ drawing.resubmit = function(action) {
         link_elem: action,
         url: auditConfig.resubmitURL,
         data: 'id=' + encodeURIComponent(eventId),
-        parse: drawing.parseResubmitResponse,
+        parse: $.fn.zato.audit_log.parseResubmitBody,
         placement: 'left',
         spinner_label: config.resubmittingLabel,
         details_modal_title: auditConfig.resubmitModalTitle,
 
         on_success: function(instance, result) {
-            var link = document.createElement('a');
-            link.href = 'javascript:void(0)';
-            link.className = 'message-flow-resubmit-done';
-            link.textContent = config.resubmittedOpenLabel;
+            var newEventId = result.newEventId;
 
-            link.addEventListener('click', function(event) {
-                event.stopPropagation();
-                instance.hide();
-                window.alert(result.newEventId);
-            });
+            // The drawing is read again with the new card on it and picked, and the tippy follows its chip.
+            $.fn.zato.message_flow.page.refreshJourney(newEventId, function() {
+                var hasChip = drawing.reanchorResubmitTippy(instance, eventId);
 
-            instance.setContent(link);
-            instance.show();
-
-            // The drawing is read again with the new card on it and the tippy follows its chip
-            $.fn.zato.message_flow.page.refreshJourney(function() {
-                drawing.reanchorResubmitTippy(instance, eventId);
+                if (hasChip) {
+                    drawing.showResubmitted(instance, newEventId);
+                }
             });
         }
     });
@@ -427,6 +433,12 @@ drawing.wireDrawing = function(svg) {
             var waySet = connectorByTo[wayKey];
 
             waySet.classList.toggle('message-flow-connector-current', isOn);
+
+            // A lit connector paints over the legs of the other rows sharing its elbow.
+            if (isOn) {
+                waySet.parentNode.appendChild(waySet);
+            }
+
             wayKey = waySet.getAttribute('data-connector-from');
 
             // The next node up the way - the picked node itself already
@@ -694,8 +706,13 @@ drawing.init = function() {
         drawing.deselect();
     });
 
-    // The click, not the press, so a canvas drag leaves the tippies up.
+    // The click, not the press, so a canvas drag leaves the tippies up. A click the
+    // page dispatches itself to pick a node is not a person's.
     document.addEventListener('click', function(event) {
+        if (!event.isTrusted) {
+            return;
+        }
+
         if (event.target.closest(drawing.config.resubmitTippyKeepSelector) !== null) {
             return;
         }

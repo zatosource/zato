@@ -172,6 +172,7 @@ class TestResubmitResponse:
         assert body['is_success'] is True
         assert body['message'] == 'Resubmitted; CID cid-7'
         assert body['details_lexer'] == 'json'
+        assert body['new_event_id'] == 127
 
         # The details are the whole report, readable in the modal
         assert loads(body['details']) == report
@@ -194,6 +195,7 @@ class TestResubmitResponse:
         assert body['message'] == f'Resubmit failed - {_traceback_last_line}'
         assert body['details'] == _traceback_text
         assert body['details_lexer'] == 'pytb'
+        assert body['new_event_id'] is None
 
 # ################################################################################################################################
 
@@ -215,6 +217,7 @@ class TestResubmitResponse:
         # There is no traceback behind a refusal of this kind.
         assert body['details'] == 'Event `127` was already resubmitted'
         assert body['details_lexer'] == 'python'
+        assert body['new_event_id'] is None
 
 # ################################################################################################################################
 
@@ -230,6 +233,7 @@ class TestResubmitResponse:
 
         assert body['message'] == 'Resubmit failed - Connection refused'
         assert body['details_lexer'] == 'python'
+        assert body['new_event_id'] is None
 
 # ################################################################################################################################
 # ################################################################################################################################
