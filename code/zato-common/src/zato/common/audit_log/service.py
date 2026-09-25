@@ -41,6 +41,10 @@ _async_message_key = 'zato.request_ctx.async_msg'
 # The attribute holding the channel type the invocation came in through.
 Attribute_Channel = 'channel'
 
+# The request context keys a resubmit sets to name the event it repeats.
+Resubmit_Of_Event_Id_Key = 'zato.request_ctx.resubmit_of_event_id'
+Resubmit_Of_Cid_Key = 'zato.request_ctx.resubmit_of_cid'
+
 # What is recorded when there is no caller, no body or no error line to record.
 _empty = ''
 
@@ -112,6 +116,19 @@ def _last_line(text:'str') -> 'str':
 
 # ################################################################################################################################
 
+def get_resubmit_links(request_ctx:'stranydict') -> 'stranydict':
+    """ Returns the insert keywords linking an event to the one its invocation repeats, none for an ordinary invocation.
+    """
+    out:'stranydict' = {}
+
+    if event_id := request_ctx.get(Resubmit_Of_Event_Id_Key):
+        out['correl_id'] = request_ctx[Resubmit_Of_Cid_Key]
+        out['parents'] = [event_id]
+
+    return out
+
+# ################################################################################################################################
+
 def record_service_request(
     audit_log:'AuditLog',
     service_name:'str',
@@ -119,6 +136,7 @@ def record_service_request(
     channel:'str',
     caller:'str',
     request:'any_',
+    request_ctx:'stranydict',
     ) -> 'None':
     """ Records the request a service was given, before the service runs.
     """
@@ -127,6 +145,8 @@ def record_service_request(
 
     attrs  = {Attribute_Channel: channel}
     bodies = {AuditBody.Request: request_text}
+
+    links = get_resubmit_links(request_ctx)
 
     # A refused audit write drops this one event with a logged warning, the service runs regardless.
     try:
@@ -139,6 +159,7 @@ def record_service_request(
             size=request_size,
             attrs=attrs,
             bodies=bodies,
+            **links,
         )
     except Exception:
         logger.warning('Audit event dropped for service `%s`:\n%s', service_name, format_exc())
@@ -154,6 +175,7 @@ def record_service_response(
     response:'any_',
     duration_milliseconds:'int',
     error_traceback:'str',
+    request_ctx:'stranydict',
     ) -> 'None':
     """ Records the response a service returned, with the traceback as a second body if it failed.
     """
@@ -171,6 +193,8 @@ def record_service_response(
         outcome = AuditOutcome.OK
         status = _empty
 
+    links = get_resubmit_links(request_ctx)
+
     # A refused audit write drops this one event with a logged warning, the response goes out regardless.
     try:
         _ = audit_log.insert(
@@ -185,6 +209,7 @@ def record_service_response(
             duration_ms=duration_milliseconds,
             attrs=attrs,
             bodies=bodies,
+            **links,
         )
     except Exception:
         logger.warning('Audit event dropped for service `%s`:\n%s', service_name, format_exc())

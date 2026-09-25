@@ -51,7 +51,53 @@ drawing.lineOf = function(model) {
     line.note = presenter.lineNote(model);
     line.tooltip = presenter.lineTooltip(model);
 
+    // Which chip the line wears for its action is decided in markActions.
+    line.isResubmitted = model.isResubmitted;
+    line.actionLabel = '';
+
+    if (model.actionLabel !== undefined) {
+        line.actionLabel = model.actionLabel.toUpperCase();
+    }
+
+    line.actionChip = null;
+
     return line;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Only a card with a bad outcome offers actions, and only on the lines
+// whose source declared them resubmittable.
+drawing.markActions = function(lines) {
+    var config = drawing.config;
+
+    var hasError = false;
+
+    for (var errorIndex = 0; errorIndex < lines.length; errorIndex++) {
+        if (lines[errorIndex].kind === 'bad') {
+            hasError = true;
+            break;
+        }
+    }
+
+    if (!hasError) {
+        return;
+    }
+
+    for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        var line = lines[lineIndex];
+
+        if (line.actionLabel === '') {
+            continue;
+        }
+
+        if (line.isResubmitted) {
+            line.actionChip = {label: config.resubmittedLabel, kind: 'muted', isLive: false};
+        }
+        else {
+            line.actionChip = {label: line.actionLabel, kind: 'action', isLive: true};
+        }
+    }
 };
 
 // /////////////////////////////////////////////////////////////////////////////

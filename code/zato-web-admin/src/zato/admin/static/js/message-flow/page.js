@@ -184,8 +184,9 @@ page.showError = function(statusCode) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // One journey on both tabs - the models are built once and the drawing and the
-// list read the same rows, so what one shows is what the other says
-page.showJourney = function(data) {
+// list read the same rows, so what one shows is what the other says. A null
+// keptSelection picks the seed, otherwise what was picked before stays picked.
+page.showJourney = function(data, keptSelection) {
     var detail = $.fn.zato.message_flow.detail;
     var drawing = $.fn.zato.message_flow.drawing;
     var flow = $.fn.zato.audit_log.flow;
@@ -220,7 +221,102 @@ page.showJourney = function(data) {
 
     // .. and the event the term resolved to stands picked on the drawing, its node
     // selected and the pane open on that very event's own tabs.
-    drawing.selectEvent(data.seed_id);
+    if (keptSelection === null) {
+        drawing.selectEvent(data.seed_id);
+        return;
+    }
+
+    // A journey drawn afresh keeps what was picked - the root, one event's node,
+    // or nothing at all
+    if (keptSelection.isRoot) {
+        var root = drawing.canvas().querySelector('.message-flow-root');
+        var click = new MouseEvent('click', {bubbles: true, cancelable: true});
+        root.dispatchEvent(click);
+    }
+    else if (keptSelection.eventId !== null) {
+        drawing.selectEvent(keptSelection.eventId);
+    }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Asks the server for the journey of a term - `onData` gets the parsed answer, `onError`
+// the failed request. Neither is called for a request the page has since moved on from.
+page.fetchJourney = function(term, onData, onError) {
+    var config = page.config;
+    var token = page.state.token;
+
+    $.ajax({
+        url: config.journeyURL,
+        type: 'POST',
+        data: JSON.stringify({term: term}),
+        contentType: 'application/json',
+        dataType: 'json',
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        success: function(data) {
+
+            // An answer to a term the page has since been brought away from
+            // is not drawn at all
+            if (page.state.token !== token) {
+                return;
+            }
+
+            onData(data);
+        },
+
+        error: function(jqXHR) {
+            if (page.state.token !== token) {
+                return;
+            }
+
+            onError(jqXHR);
+        }
+    });
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The journey on screen read again and drawn afresh, with whatever was picked
+// still picked. `onDrawn` runs once the new drawing stands.
+page.refreshJourney = function(onDrawn) {
+    var detail = $.fn.zato.message_flow.detail;
+    var drawing = $.fn.zato.message_flow.drawing;
+    var canvas = drawing.canvas();
+
+    var isRoot = false;
+
+    if (detail.openDetail !== null) {
+        if (detail.openDetail.key === '') {
+            isRoot = true;
+        }
+    }
+
+    var keptSelection = {
+        isRoot: isRoot,
+        eventId: detail.currentEventId
+    };
+
+    // Wherever the drawing was pulled to is where the fresh one stands - the
+    // room it was pulled through and the place in it both
+    var keptRoom = drawing.room;
+    var keptScrollLeft = canvas.scrollLeft;
+    var keptScrollTop = canvas.scrollTop;
+
+    page.fetchJourney(page.state.term, function(data) {
+        page.showJourney(data, keptSelection);
+
+        if (keptRoom !== null) {
+            drawing.room = keptRoom;
+            drawing.applyRoom();
+        }
+
+        canvas.scrollLeft = keptScrollLeft;
+        canvas.scrollTop = keptScrollTop;
+
+        onDrawn();
+    }, function(jqXHR) {
+        page.showError(jqXHR.status);
+    });
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -255,44 +351,21 @@ page.search = function(term) {
         page.showListHint(kit.spinner_label_html());
     }, config.spinnerDelayMs);
 
-    $.ajax({
-        url: config.journeyURL,
-        type: 'POST',
-        data: JSON.stringify({term: term}),
-        contentType: 'application/json',
-        headers: {'X-CSRFToken': $.cookie('csrftoken')},
-        success: function(data) {
+    page.fetchJourney(term, function(data) {
+        clearTimeout(spinnerTimer);
 
-            // An answer to a term the page has since been brought away from
-            // is not drawn at all
-            if (page.state.token !== token) {
-                return;
-            }
-
-            clearTimeout(spinnerTimer);
-
-            if (typeof data === 'string') {
-                data = JSON.parse(data);
-            }
-
-            if (data.resolved_by === '') {
-                page.showNotFound(term);
-            }
-            else {
-                page.showJourney(data);
-            }
-        },
+        if (data.resolved_by === '') {
+            page.showNotFound(term);
+        }
+        else {
+            page.showJourney(data, null);
+        }
+    }, function(jqXHR) {
 
         // A failed read says so where the journey would have stood - without this,
         // the page keeps its spinner up forever.
-        error: function(jqXHR) {
-            if (page.state.token !== token) {
-                return;
-            }
-
-            clearTimeout(spinnerTimer);
-            page.showError(jqXHR.status);
-        }
+        clearTimeout(spinnerTimer);
+        page.showError(jqXHR.status);
     });
 };
 
@@ -349,9 +422,10 @@ page.init = function() {
         on_change: function(tab) {
             kit.url_state.replace({tab: tab});
 
-            // The bar is placed against the frame only once the frame is shown.
+            // The bar is placed against the frame and the drawing gets its room only once the frame is shown.
             if (tab === config.flowTab) {
                 page.placeReplayBar();
+                $.fn.zato.message_flow.drawing.ensureRoom();
             }
         }
     });

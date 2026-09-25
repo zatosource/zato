@@ -87,6 +87,31 @@ drawing.config = {
     // The outcome worn as a good chip - every other reported outcome is a bad one
     goodOutcome: 'ok',
 
+    // What a card's line wears in place of its action once the message did go out again
+    resubmittedLabel: 'RESUBMITTED',
+
+    // What the tippy beside a pressed action chip says while the message is going out
+    // again and once it has
+    resubmittingLabel: 'Resubmitting',
+    resubmittedOpenLabel: 'Resubmitted. Click to open.',
+
+    // The room between a card's title and the action chips at the band's right,
+    // and between two such chips - and the chips' own height, top and text baseline
+    bandActionGap: 12,
+    bandChipGap: 6,
+    bandActionChipHeight: 28,
+    bandActionChipTop: -3,
+    bandActionChipTextOffset: 4,
+
+    // How much room past the point a pull reached is added at a time
+    roomStep: 400,
+
+    // The theme, the arrow and the keep selector of a chip's tippy
+    resubmitTippyTheme: 'message-flow',
+    resubmitTippyArrow: '<svg width="16" height="6" viewBox="0 0 16 6" xmlns="http://www.w3.org/2000/svg">' +
+        '<path d="M0 6 L8 1.2 L16 6" stroke-linejoin="round"/></svg>',
+    resubmitTippyKeepSelector: '.tippy-box, .message-flow-action',
+
     // The word a connector wears for why the chained exchange exists at all -
     // relations that name no event in particular never chain, so they are not here
     relationWords: {
@@ -201,6 +226,102 @@ drawing.newSVG = function(width, height) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The margins around the drawing, grown on whichever side a pull reaches. Null until a drawing is up.
+drawing.room = null;
+
+drawing.applyRoom = function() {
+    var svg = drawing.canvas().querySelector('svg');
+    var room = drawing.room;
+
+    svg.style.margin = room.top + 'px ' + room.right + 'px ' + room.bottom + 'px ' + room.left + 'px';
+};
+
+// A fresh drawing gets room on every side as large as the canvas, a hidden canvas has no size to measure yet.
+drawing.giveRoom = function() {
+    var host = drawing.canvas();
+
+    var roomX = host.clientWidth;
+    var roomY = host.clientHeight;
+
+    if (roomX === 0) {
+        drawing.room = null;
+        return;
+    }
+
+    if (roomY === 0) {
+        drawing.room = null;
+        return;
+    }
+
+    drawing.room = {top: roomY, right: roomX, bottom: roomY, left: roomX};
+    drawing.applyRoom();
+
+    host.scrollLeft = roomX;
+    host.scrollTop = roomY;
+};
+
+// A drawing that came up while its canvas was hidden gets its room the first time the canvas is shown.
+drawing.ensureRoom = function() {
+    var svg = drawing.canvas().querySelector('svg');
+
+    if (svg !== null) {
+        if (drawing.room === null) {
+            drawing.giveRoom();
+        }
+    }
+};
+
+// Scrolls the canvas to a position, growing the room wherever the position lies past it.
+// Returns what was added on the left and the top, which shifts every scroll position by as much.
+drawing.panTo = function(left, top) {
+    var config = drawing.config;
+    var host = drawing.canvas();
+    var room = drawing.room;
+
+    var grown = {left: 0, top: 0};
+
+    if (room !== null) {
+
+        // Past the left or the top - the room there grows by what is missing and a step more
+        if (left < 0) {
+            grown.left = config.roomStep - left;
+            room.left += grown.left;
+            left += grown.left;
+        }
+
+        if (top < 0) {
+            grown.top = config.roomStep - top;
+            room.top += grown.top;
+            top += grown.top;
+        }
+
+        drawing.applyRoom();
+
+        // Past the right or the bottom - the room there simply grows, nothing on the canvas moves
+        var mostLeft = host.scrollWidth - host.clientWidth;
+        var mostTop = host.scrollHeight - host.clientHeight;
+
+        if (left > mostLeft) {
+            var missingRight = left - mostLeft;
+            room.right += config.roomStep + missingRight;
+        }
+
+        if (top > mostTop) {
+            var missingBottom = top - mostTop;
+            room.bottom += config.roomStep + missingBottom;
+        }
+
+        drawing.applyRoom();
+    }
+
+    host.scrollLeft = left;
+    host.scrollTop = top;
+
+    return grown;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // The gradient every node face is filled with - a touch of light along the top
 // falling away toward the foot, the way the flow's raised cards catch it
 drawing.addDefs = function(svg) {
@@ -244,6 +365,7 @@ drawing.addGroup = function(host, className) {
 
 drawing.clear = function() {
     drawing.canvas().textContent = '';
+    drawing.room = null;
     drawing.nodeDetails = [];
     drawing.selectedNode = null;
     drawing.selectedKey = '';

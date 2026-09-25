@@ -119,6 +119,16 @@ class TestResubmitLabels:
         assert labels['rest-outgoing'] == {AuditEvent.Request_Sent: 'Resubmit'}
 
 # ################################################################################################################################
+
+    def test_a_job_run_a_service_request_and_a_channel_request_are_resubmittable(self):
+        labels = get_resubmit_labels()
+
+        assert labels['scheduler'] == {AuditEvent.Job_Executed: 'Resubmit'}
+        assert labels['service'] == {AuditEvent.Service_Request: 'Resubmit'}
+        assert labels['rest-channel'] == {AuditEvent.Request_Received: 'Resubmit'}
+        assert labels['soap-channel'] == {AuditEvent.Request_Received: 'Resubmit'}
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestPageContext:

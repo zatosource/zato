@@ -62,6 +62,22 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     --message-flow-good: #74cf92;
     --message-flow-bad: #ff8a94;
 
+    /* The one chip on a card that is pressed rather than read - the action fill,
+       the action hover fill and the action text color */
+    --message-flow-action-fill: var(--message-flow-selected);
+    --message-flow-action-fill-hover: #ffb400;
+    --message-flow-action-text: var(--message-flow-canvas-surface);
+
+    /* The tippy beside a pressed chip - its frame, its fill, its text and its shadow.
+       The tippy hangs off the body, which is why these live on the body selector. */
+    --message-flow-tippy-border: #7a7a86;
+    --message-flow-tippy-fill: #333;
+    --message-flow-tippy-text: #fff;
+    --message-flow-tippy-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.9),
+        0 6px 24px rgba(0, 0, 0, 0.95),
+        0 0 18px rgba(255, 255, 255, 0.14);
+
     /* The face a raised card on this page wears - the same two colours the nodes'
        own SVG gradient is built from - and that face under the amber wash selection
        paints everywhere here. The drag handle reads off these two, so it invents

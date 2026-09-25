@@ -912,7 +912,8 @@ class Service:
             if not needs_audit:
                 return
 
-            record_service_request(server.service_audit_log, service.name, cid, channel, caller, service.request.raw)
+            record_service_request(server.service_audit_log, service.name, cid, channel, caller, service.request.raw,
+                request_ctx)
 
         def _record_response(error_traceback:'str') -> 'None':
             if not needs_audit:
@@ -923,7 +924,7 @@ class Service:
             duration_milliseconds = int(elapsed_seconds * _milliseconds_per_second)
 
             record_service_response(server.service_audit_log, service.name, cid, channel, caller,
-                service.response.payload, duration_milliseconds, error_traceback)
+                service.response.payload, duration_milliseconds, error_traceback, request_ctx)
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being

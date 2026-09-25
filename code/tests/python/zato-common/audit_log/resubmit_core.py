@@ -187,6 +187,23 @@ def _run_load_event_checks(audit_log:'AuditLog') -> 'None':
     else:
         raise Exception('A payloadless event was expected to be rejected')
 
+    # A source that stores the body itself in the data column is read raw - the non-JSON body
+    # that was refused above is the payload as it stands ..
+    raw = load_event(raw_id, is_raw_payload=True)
+
+    assert raw.id == raw_id
+    assert raw.cid == 'cid-core-load-2'
+    assert get_stored_payload(raw) == 'this is not JSON'
+
+    # .. a JSON body read raw stays the text it is rather than being parsed ..
+    raw_json = load_event(event_id, is_raw_payload=True)
+
+    assert get_stored_payload(raw_json) == dumps({'payload': 'the-stored-payload'})
+
+    # .. and the default path is what it was.
+    plain = load_event(event_id)
+    assert get_stored_payload(plain) == 'the-stored-payload'
+
 # ################################################################################################################################
 
 def _run_registry_checks() -> 'None':
@@ -236,6 +253,27 @@ def _run_resubmittable_declaration_checks() -> 'None':
 
     # .. and a source with no catalog cannot send anything again.
     assert is_event_type_resubmittable(AuditSource.SQL_Outgoing, AuditEvent.Response_Received) is False
+
+    # A job run, a service request and a channel request can each be run again ..
+    assert is_event_type_resubmittable(AuditSource.Scheduler, AuditEvent.Job_Executed) is True
+    assert is_event_type_resubmittable(AuditSource.Service, AuditEvent.Service_Request) is True
+    assert is_event_type_resubmittable(AuditSource.REST_Channel, AuditEvent.Request_Received) is True
+    assert is_event_type_resubmittable(AuditSource.SOAP_Channel, AuditEvent.Request_Received) is True
+
+    # .. each through the service of its own kind, the two channels sharing one ..
+    scheduler_actions = source_resubmit_actions[AuditSource.Scheduler]
+    service_actions = source_resubmit_actions[AuditSource.Service]
+    rest_channel_actions = source_resubmit_actions[AuditSource.REST_Channel]
+    soap_channel_actions = source_resubmit_actions[AuditSource.SOAP_Channel]
+
+    assert scheduler_actions[AuditEvent.Job_Executed]['service'] == 'zato.audit-log.scheduler.reprocess'
+    assert service_actions[AuditEvent.Service_Request]['service'] == 'zato.audit-log.service.reprocess'
+    assert rest_channel_actions[AuditEvent.Request_Received]['service'] == 'zato.audit-log.http-channel.reprocess'
+    assert soap_channel_actions[AuditEvent.Request_Received]['service'] == 'zato.audit-log.http-channel.reprocess'
+
+    # .. while a service's response and a channel's response are not what gets run again.
+    assert is_event_type_resubmittable(AuditSource.Service, AuditEvent.Service_Response) is False
+    assert is_event_type_resubmittable(AuditSource.REST_Channel, AuditEvent.Response_Sent) is False
 
 # ################################################################################################################################
 

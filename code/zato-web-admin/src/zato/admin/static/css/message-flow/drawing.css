@@ -224,6 +224,65 @@
     fill: #a8aebc;
 }
 
+/* The action chip - the only solid chip on a card */
+
+.message-flow-action {
+    cursor: pointer;
+}
+
+.message-flow-chip-action {
+    fill: var(--message-flow-action-fill);
+    transition: fill 0.15s;
+    transition-delay: 0s;
+}
+
+.message-flow-action:hover .message-flow-chip-action {
+    fill: var(--message-flow-action-fill-hover);
+    transition-delay: 0.15s;
+}
+
+.message-flow-chip-text-action {
+    fill: var(--message-flow-action-text);
+}
+
+/* The tippy beside a pressed chip wears a frame and a shadow of its own */
+.tippy-box[data-theme~='message-flow'] {
+    border: 1px solid var(--message-flow-tippy-border);
+    box-shadow: var(--message-flow-tippy-shadow);
+}
+
+/* The point's two slanted edges are stroked, its base is not. */
+.tippy-box[data-theme~='message-flow'] > .tippy-svg-arrow {
+    fill: var(--message-flow-tippy-fill);
+    stroke: var(--message-flow-tippy-border);
+    stroke-width: 1;
+}
+
+.tippy-box[data-theme~='message-flow'] > .tippy-svg-arrow > svg {
+    overflow: visible;
+}
+
+/* The tippy's link to the new event. */
+.message-flow-resubmit-done {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: -5px -9px;
+    padding: 5px 9px;
+    white-space: nowrap;
+    font-size: 13px;
+    color: var(--message-flow-tippy-text);
+    text-decoration: none;
+    cursor: pointer;
+    transition: text-decoration-color 0.15s;
+    transition-delay: 0s;
+}
+
+.message-flow-resubmit-done:hover {
+    text-decoration: underline;
+    transition-delay: 0.15s;
+}
+
 /* Connectors - soft translucent guides with rounded elbows */
 
 .message-flow-connector {

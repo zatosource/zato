@@ -41,8 +41,10 @@ drawing.wirePanning = function() {
     };
 
     var glideStep = function() {
-        host.scrollLeft -= velocityX;
-        host.scrollTop -= velocityY;
+        var nextLeft = host.scrollLeft - velocityX;
+        var nextTop = host.scrollTop - velocityY;
+
+        drawing.panTo(nextLeft, nextTop);
 
         // Friction takes its share of the speed every frame
         velocityX *= config.panFriction;
@@ -107,8 +109,14 @@ drawing.wirePanning = function() {
             host.classList.add('message-flow-panning');
         }
 
-        host.scrollLeft = startScrollLeft - deltaX;
-        host.scrollTop = startScrollTop - deltaY;
+        // Room added on the left or the top moves the grab's starting point too
+        var nextLeft = startScrollLeft - deltaX;
+        var nextTop = startScrollTop - deltaY;
+
+        var grown = drawing.panTo(nextLeft, nextTop);
+
+        startScrollLeft += grown.left;
+        startScrollTop += grown.top;
 
         // The pointer's speed right now, scaled to one frame - what the glide
         // will start from if the grab ends here
@@ -147,6 +155,138 @@ drawing.wirePanning = function() {
             hasDragged = false;
         }
     }, true);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// What a resubmit from a card answered - the runner's shape plus the id of the new event.
+drawing.parseResubmitResponse = function(jqXHR) {
+    var out = $.fn.zato.audit_log.parseResubmitBody(jqXHR);
+    out.newEventId = null;
+
+    if (out.is_success) {
+        var report = JSON.parse(out.details_body);
+        out.newEventId = report.event_id;
+    }
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The tippies the chips opened, in the order they opened.
+drawing.resubmitTippies = [];
+
+// A hidden or destroyed tippy is not up.
+drawing.isResubmitTippyUp = function(instance) {
+    var out = false;
+
+    if (!instance.state.isDestroyed) {
+        if (instance.state.isVisible) {
+            out = true;
+        }
+    }
+
+    return out;
+};
+
+// Takes the newest tippy still up down, true when there was one
+drawing.closeNewestResubmitTippy = function() {
+    while (drawing.resubmitTippies.length > 0) {
+        var instance = drawing.resubmitTippies.pop();
+
+        if (drawing.isResubmitTippyUp(instance)) {
+            instance.hide();
+            return true;
+        }
+    }
+
+    return false;
+};
+
+drawing.closeAllResubmitTippies = function() {
+    while (drawing.resubmitTippies.length > 0) {
+        var instance = drawing.resubmitTippies.pop();
+
+        if (drawing.isResubmitTippyUp(instance)) {
+            instance.hide();
+        }
+    }
+};
+
+// A tippy cannot be handed a new anchor, so it measures the redrawn chip's place instead.
+drawing.reanchorResubmitTippy = function(instance, eventId) {
+    if (!drawing.isResubmitTippyUp(instance)) {
+        return;
+    }
+
+    var chip = drawing.canvas().querySelector('.message-flow-action-slot[data-id="' + eventId + '"]');
+
+    // A chip that is no more leaves the tippy nothing to stand beside
+    if (chip === null) {
+        instance.hide();
+        return;
+    }
+
+    instance.setProps({
+        getReferenceClientRect: function() {
+            var rect = chip.getBoundingClientRect();
+            return rect;
+        }
+    });
+
+    chip._tippy = instance;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// A pressed chip sends the message out again at once, the runner keeps its own error tippy for a failed attempt.
+drawing.resubmit = function(action) {
+    var config = drawing.config;
+    var auditConfig = $.fn.zato.audit_log.config;
+
+    var eventId = action.getAttribute('data-id');
+
+    $.fn.zato.action_runner.run({
+        link_elem: action,
+        url: auditConfig.resubmitURL,
+        data: 'id=' + encodeURIComponent(eventId),
+        parse: drawing.parseResubmitResponse,
+        placement: 'left',
+        spinner_label: config.resubmittingLabel,
+        details_modal_title: auditConfig.resubmitModalTitle,
+
+        on_success: function(instance, result) {
+            var link = document.createElement('a');
+            link.href = 'javascript:void(0)';
+            link.className = 'message-flow-resubmit-done';
+            link.textContent = config.resubmittedOpenLabel;
+
+            link.addEventListener('click', function(event) {
+                event.stopPropagation();
+                instance.hide();
+                window.alert(result.newEventId);
+            });
+
+            instance.setContent(link);
+            instance.show();
+
+            // The drawing is read again with the new card on it and the tippy follows its chip
+            $.fn.zato.message_flow.page.refreshJourney(function() {
+                drawing.reanchorResubmitTippy(instance, eventId);
+            });
+        }
+    });
+
+    // The runner's tippy gets the page's own frame and joins the stack
+    var instance = action._tippy;
+
+    instance.setProps({
+        theme: config.resubmitTippyTheme,
+        arrow: config.resubmitTippyArrow
+    });
+
+    drawing.resubmitTippies.push(instance);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -477,6 +617,24 @@ drawing.wireDrawing = function(svg) {
         wireNode(nodes[nodeIndex]);
     }
 
+    // An action chip pressed on a line sends the message out again there and
+    // then. The press is the chip's alone, so the card under it is neither
+    // picked nor let go of.
+    var actions = svg.querySelectorAll('.message-flow-action');
+
+    for (var actionIndex = 0; actionIndex < actions.length; actionIndex++) {
+
+        var wireAction = function(action) {
+
+            action.addEventListener('click', function(event) {
+                event.stopPropagation();
+                drawing.resubmit(action);
+            });
+        };
+
+        wireAction(actions[actionIndex]);
+    }
+
     // Letting a held selection go - the canvas click and the Esc key, both wired
     // once in init, call whatever render left here last
     drawing.deselect = function() {
@@ -535,6 +693,37 @@ drawing.init = function() {
 
         drawing.deselect();
     });
+
+    // The click, not the press, so a canvas drag leaves the tippies up.
+    document.addEventListener('click', function(event) {
+        if (event.target.closest(drawing.config.resubmitTippyKeepSelector) !== null) {
+            return;
+        }
+
+        drawing.closeAllResubmitTippies();
+    });
+
+    // A tippy measuring a redrawn chip's place hears nothing of the canvas scrolling unless told.
+    drawing.canvas().addEventListener('scroll', function() {
+        for (var tippyIndex = 0; tippyIndex < drawing.resubmitTippies.length; tippyIndex++) {
+            var instance = drawing.resubmitTippies[tippyIndex];
+
+            if (drawing.isResubmitTippyUp(instance)) {
+                instance.popperInstance.update();
+            }
+        }
+    });
+
+    // Capture phase, so it runs before the runner's own Esc.
+    document.addEventListener('keydown', function(event) {
+        if (event.key !== 'Escape') {
+            return;
+        }
+
+        if (drawing.closeNewestResubmitTippy()) {
+            event.stopImmediatePropagation();
+        }
+    }, true);
 
     // Esc lets go too, from wherever the pointer happens to be - unless the
     // replay is on, whose own Esc it then is

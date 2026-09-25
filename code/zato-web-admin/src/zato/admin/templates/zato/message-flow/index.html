@@ -3,6 +3,8 @@
 {% block html_title %}Message flow{% endblock %}
 
 {% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+<link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/kit.css">
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/tabs.css">
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/chips.css">
@@ -72,6 +74,7 @@
 </div>
 
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/palette.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/detail-kit/url_state.js"></script>
@@ -129,6 +132,7 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/replay/camera.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/page.js"></script>
 <script nonce="{{ CSP_NONCE }}">
+$.fn.zato.audit_log.config.resubmitLabels = {{ resubmit_labels_json|safe }};
 $.fn.zato.audit_log.config.sourceLabels = {{ source_labels_json|safe }};
 $.fn.zato.audit_log.config.objectLinks = {{ object_links_json|safe }};
 $.fn.zato.audit_log.config.endpointLabels = {{ endpoint_labels_json|safe }};

@@ -122,6 +122,23 @@ _file_transfer_actions = {
     AuditEvent.File_Quarantined: {'label': Retry_Label,    'service': 'zato.audit-log.file-transfer-retry'},
 }
 
+# A job's run is repeated - the job's service runs once more with the job's own payload,
+# recorded as a new run linked to the one that was repeated.
+_scheduler_actions = {
+    AuditEvent.Job_Executed: {'label': Resubmit_Label, 'service': 'zato.audit-log.scheduler.reprocess'},
+}
+
+# A service is invoked once more with the very request it was given the first time.
+_service_actions = {
+    AuditEvent.Service_Request: {'label': Resubmit_Label, 'service': 'zato.audit-log.service.reprocess'},
+}
+
+# What a REST or SOAP channel received is run through the channel's service again - REST and
+# SOAP channels share one reprocess service.
+_http_channel_actions = {
+    AuditEvent.Request_Received: {'label': Resubmit_Label, 'service': 'zato.audit-log.http-channel.reprocess'},
+}
+
 # The sources whose events carry resubmit actions at all, each with its own catalog
 source_resubmit_actions = {
     AuditSource.AS2: _as2_actions,
@@ -133,6 +150,10 @@ source_resubmit_actions = {
     AuditSource.SOAP_Outgoing: _hop_actions,
     AuditSource.Email_SMTP: _smtp_actions,
     AuditSource.File_Outgoing: _file_transfer_actions,
+    AuditSource.Scheduler: _scheduler_actions,
+    AuditSource.Service: _service_actions,
+    AuditSource.REST_Channel: _http_channel_actions,
+    AuditSource.SOAP_Channel: _http_channel_actions,
 }
 
 # ################################################################################################################################
@@ -207,8 +228,9 @@ class StoredEvent:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def load_event(event_id:'int') -> 'StoredEvent':
-    """ Reads one audit event by its id, along with its parsed JSON data.
+def load_event(event_id:'int', *, is_raw_payload:'bool'=False) -> 'StoredEvent':
+    """ Reads one audit event by its id, along with its parsed JSON data. With is_raw_payload,
+    the data column is the payload as it stands.
     """
     statement = select(
         event_table.c.id,
@@ -232,8 +254,12 @@ def load_event(event_id:'int') -> 'StoredEvent':
 
     event_id, cid, source, event_type, object_name, msg_id, data = row
 
-    # The data of a resubmittable event, when there is any, is always a JSON document.
-    if data:
+    # A raw body is the payload as it was received, whatever it was - XML, JSON, plain text ..
+    if is_raw_payload:
+        details = {Key_Payload: data}
+
+    # .. otherwise the data of a resubmittable event, when there is any, is always a JSON document.
+    elif data:
         try:
             details = loads(data)
         except ValueError:
@@ -243,7 +269,7 @@ def load_event(event_id:'int') -> 'StoredEvent':
 
     # A producer that stores its payload by reference keeps it in the body table
     # under the request kind - it becomes the payload the resubmit works with.
-    if 'payload' not in details:
+    if Key_Payload not in details:
 
         body_statement = select(event_body_table.c.data).where(
             event_body_table.c.event_id == event_id).where(

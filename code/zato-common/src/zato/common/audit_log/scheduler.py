@@ -30,10 +30,11 @@ from zato.common.util.api import utcnow
 
 if 0:
     from zato.common.audit_log.api import AuditLog
-    from zato.common.typing_ import intnone
+    from zato.common.typing_ import intlistnone, intnone
 
     # Dummy assignments to satisfy type checkers
     AuditLog = AuditLog
+    intlistnone = intlistnone
     intnone = intnone
 
 # ################################################################################################################################
@@ -107,10 +108,13 @@ def record_job_start(
     planned_fire_time_iso:'str',
     delay_ms:'int',
     service:'str',
+    correl_id:'str' = '',
+    parents:'intlistnone' = None,
     ) -> 'intnone':
     """ Writes the running event for a job run the server is about to execute.
     Returns the event id the completion and log writes update, or None when the audit log
     is turned off, in which case those writes no-op like any other source's would.
+    A run repeated from the audit log passes the repeated run's cid as correl_id and its event id in parents.
     """
 
     # The searchable attributes every history query keys on
@@ -127,10 +131,12 @@ def record_job_start(
         AuditEvent.Job_Executed,
         job_name,
         cid=cid,
+        correl_id=correl_id,
         pub_time_iso=planned_fire_time_iso,
         endpoint=service,
         outcome=SCHEDULER.OUTCOME.RUNNING,
         attrs=attrs,
+        parents=parents,
     )
 
     # The run opens with its own system entry, the same way the run detail screen expects it.
