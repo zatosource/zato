@@ -1094,6 +1094,25 @@ def parse_extra_into_dict(lines:'str | bytes', convert_bool:'bool'=True):
 
 # ################################################################################################################################
 
+def parse_job_extra(extra:'any_') -> 'any_':
+    """ Turns a scheduler job's extra data into the payload its service receives - a JSON document
+    when it parses as one, key=value lines when they parse as such, the text as it stands otherwise.
+    """
+    out = extra
+
+    if extra:
+        try:
+            out = loads(extra)
+        except Exception:
+            try:
+                out = parse_extra_into_dict(extra)
+            except Exception:
+                out = extra
+
+    return out
+
+# ################################################################################################################################
+
 # Taken from http://plumberjack.blogspot.cz/2009/09/how-to-treat-logger-like-output-stream.html
 
 class LoggerWriter:

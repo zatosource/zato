@@ -122,6 +122,11 @@ $.fn.zato.audit_log.config = {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// Assigned by the listing page's init - reads the events again after a resubmit.
+$.fn.zato.audit_log.refreshAfterResubmit = null;
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // Only an audit log address is accepted as the way back
 $.fn.zato.audit_log.backURL = function() {
     var config = $.fn.zato.audit_log.config;
@@ -312,7 +317,8 @@ $.fn.zato.audit_log.openMessageOverlay = function(eventId, cid) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.audit_log.parseResubmitResponse = function(jqXHR, textStatus) {
+// What a resubmit answered, in the shape the action runner renders.
+$.fn.zato.audit_log.parseResubmitBody = function(jqXHR) {
     var config = $.fn.zato.audit_log.config;
     var body = jqXHR.responseText;
 
@@ -331,15 +337,11 @@ $.fn.zato.audit_log.parseResubmitResponse = function(jqXHR, textStatus) {
     }
 
     // .. the backend answers display-ready - a one-line summary for the tippy,
-    // the details for the modal and the lexer they highlight with.
+    // the details for the modal and the lexer they highlight with. The transport
+    // itself answered with 200 whatever the resubmit's outcome, so there is no
+    // status code to show.
     var parsed = JSON.parse(body);
 
-    // The new attempt and the marker on the original row appear once the table refreshes.
-    var pagination = $.fn.zato.audit_log.pagination;
-    pagination.fetch_page(pagination.current_page());
-
-    // The transport itself answered with 200 whatever the resubmit's outcome,
-    // so there is no status code to show
     return {
         is_success: parsed.is_success,
         label: parsed.message,
@@ -348,6 +350,17 @@ $.fn.zato.audit_log.parseResubmitResponse = function(jqXHR, textStatus) {
         details_lexer: parsed.details_lexer,
         status_code: 0
     };
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.audit_log.parseResubmitResponse = function(jqXHR, textStatus) {
+    var out = $.fn.zato.audit_log.parseResubmitBody(jqXHR);
+
+    // The new attempt and the marker on the original appear once the page reads its events again.
+    $.fn.zato.audit_log.refreshAfterResubmit();
+
+    return out;
 };
 
 // /////////////////////////////////////////////////////////////////////////////

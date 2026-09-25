@@ -13,16 +13,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from contextlib import contextmanager
 
+# SQLAlchemy
+from sqlalchemy import select
+
 # Zato
 from live_sql.env import database_env
-from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import event_link_table, event_table, get_audit_engine, ModuleCtx as AuditLogCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from collections.abc import Iterator
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anylist, intlist
 
     envgen = Iterator[None]
 
@@ -51,6 +54,55 @@ def audit_db_env(tmp_path:'any_') -> 'envgen':
 
     with database_env(_env_prefix, details):
         yield
+
+# ################################################################################################################################
+
+def get_events() -> 'anylist':
+    """ Everything the audit log holds, oldest first.
+    """
+    engine = get_audit_engine()
+
+    query = select(event_table)
+    query = query.order_by(event_table.c.id)
+
+    out:'anylist' = []
+
+    with engine.connect() as connection:
+        for row in connection.execute(query):
+            out.append(dict(row._mapping))
+
+    return out
+
+# ################################################################################################################################
+
+def events_of_type(events:'anylist', event_type:'str') -> 'anylist':
+    """ The events of one type, in the order they were written.
+    """
+    out:'anylist' = []
+
+    for item in events:
+        if item['event_type'] == event_type:
+            out.append(item)
+
+    return out
+
+# ################################################################################################################################
+
+def get_parents(event_id:'int') -> 'intlist':
+    """ The ids of the events one event names as its parents.
+    """
+    engine = get_audit_engine()
+
+    query = select(event_link_table.c.parent_event_id)
+    query = query.where(event_link_table.c.child_event_id == event_id)
+
+    out:'intlist' = []
+
+    with engine.connect() as connection:
+        for row in connection.execute(query):
+            out.append(row[0])
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

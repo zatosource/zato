@@ -17,6 +17,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.audit_log.columns import _event_type_label, _object_page_url, _source_endpoint_label, \
     _source_event_label
+from zato.admin.web.views.audit_log.sources import get_resubmit_labels
 from zato.common.audit_log.file_transfer_words import file_transfer_words
 from zato.common.defaults import default_cluster_id
 
@@ -45,8 +46,13 @@ def index(req:'HttpRequest') -> 'TemplateResponse':
     words = file_transfer_words()
     file_transfer_words_json = json.dumps(words)
 
+    # Which event types of which sources can be sent again.
+    resubmit_labels = get_resubmit_labels()
+    resubmit_labels_json = json.dumps(resubmit_labels)
+
     return TemplateResponse(req, 'zato/message-flow/index.html', {
         'cluster_id': default_cluster_id,
+        'resubmit_labels_json': resubmit_labels_json,
         'source_labels_json': json.dumps(_source_event_label),
         'object_links_json': json.dumps(_object_page_url),
         'endpoint_labels_json': json.dumps(_source_endpoint_label),

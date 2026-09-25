@@ -37,7 +37,17 @@ drawing.roleChipWidthOf = function(lines) {
 drawing.nodeWidth = function(node) {
     var config = drawing.config;
 
-    var width = config.bodyPadLeft + 2 + Math.round(node.channel.length * config.titleCharWidth) + config.bodyPadLeft;
+    var titleWidth = config.bodyPadLeft + 2 + Math.round(node.channel.length * config.titleCharWidth);
+
+    // The band holds the title and, at its right, the action chips of the
+    // card's lines, with room between the title and them
+    var actionsWidth = drawing.bandActionsWidth(node);
+
+    if (actionsWidth > 0) {
+        titleWidth += config.bandActionGap + actionsWidth;
+    }
+
+    var width = titleWidth + config.bodyPadLeft;
 
     for (var lineIndex = 0; lineIndex < node.lines.length; lineIndex++) {
         var line = node.lines[lineIndex];
@@ -70,6 +80,31 @@ drawing.nodeWidth = function(node) {
         if (lineWidth > width) {
             width = lineWidth;
         }
+    }
+
+    return width;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// How wide the action chips of a card's lines stand together at the band's
+// right, with the room between them - 0 for a card with no action on it
+drawing.bandActionsWidth = function(node) {
+    var config = drawing.config;
+    var width = 0;
+
+    for (var lineIndex = 0; lineIndex < node.lines.length; lineIndex++) {
+        var chip = node.lines[lineIndex].actionChip;
+
+        if (chip === null) {
+            continue;
+        }
+
+        if (width > 0) {
+            width += config.bandChipGap;
+        }
+
+        width += drawing.chipWidth(chip.label);
     }
 
     return width;
@@ -156,6 +191,57 @@ drawing.addEventLine = function(host, x, lineY, width, line, roleChipWidth) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The chip a line's action is pressed on, in a group of its own that names the event.
+drawing.addActionChip = function(host, x, y, line) {
+    var config = drawing.config;
+    var chip = line.actionChip;
+
+    var className = 'message-flow-action-slot';
+
+    if (chip.isLive) {
+        className += ' message-flow-action audit-log-resubmit-link';
+    }
+
+    var group = drawing.addGroup(host, className);
+    group.setAttribute('data-id', line.id);
+
+    // Taller than the band it stands in.
+    var width = drawing.chipWidth(chip.label);
+    var height = config.bandActionChipHeight;
+
+    var textX = x + width / 2;
+    var textY = y + height / 2 + config.bandActionChipTextOffset;
+
+    kit.draw.addRect(group, x, y, width, height, 'message-flow-chip-' + chip.kind, 3);
+    kit.draw.addText(group, textX, textY, chip.label,
+        'message-flow-chip-text message-flow-chip-text-' + chip.kind, 'middle');
+
+    return width;
+};
+
+// The action chips of a card's lines, in the band at its right, the first
+// line's nearest the edge - the one part of a card that is pressed rather than read
+drawing.addBandActions = function(host, x, y, width, node) {
+    var config = drawing.config;
+
+    var cursor = x + width - config.bodyPadLeft;
+    var chipY = y + config.bandActionChipTop;
+
+    for (var lineIndex = 0; lineIndex < node.lines.length; lineIndex++) {
+        var line = node.lines[lineIndex];
+
+        if (line.actionChip === null) {
+            continue;
+        }
+
+        cursor -= drawing.chipWidth(line.actionChip.label);
+        drawing.addActionChip(host, cursor, chipY, line);
+        cursor -= config.bandChipGap;
+    }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // One node - the lit card for a whole exchange: gradient face, top rim, the
 // channel across the title band, and one line per event under it
 drawing.addNode = function(host, x, y, width, node) {
@@ -199,8 +285,10 @@ drawing.addNode = function(host, x, y, width, node) {
     // The hairline of light along the top edge
     drawing.addPolyline(group, [[x + 4, y + 1], [x + width - 4, y + 1]], 'message-flow-rim');
 
-    // The band carries the channel the exchange happened on
+    // The band carries the channel the exchange happened on, and at its right
+    // whatever its lines offer to be pressed
     kit.draw.addText(group, x + config.bodyPadLeft + 2, y + 15, node.channel, 'message-flow-title', 'start');
+    drawing.addBandActions(group, x, y, width, node);
 
     // Each event of the exchange on its own line
     for (var lineIndex = 0; lineIndex < node.lines.length; lineIndex++) {
@@ -293,6 +381,9 @@ drawing.render = function(models, seedModel) {
         for (var lineModelIndex = 0; lineModelIndex < exchange.models.length; lineModelIndex++) {
             lines.push(drawing.lineOf(exchange.models[lineModelIndex]));
         }
+
+        // A card that went wrong offers to send its message again
+        drawing.markActions(lines);
 
         var footerElapsedMs = drawing.firstMsOf(exchange) - flowStartMs;
 
@@ -663,9 +754,11 @@ drawing.render = function(models, seedModel) {
 
     drawing.wireDrawing(svg);
 
-    // The drawing comes up as large as the last one was left
+    // The drawing comes up as large as the last one was left, with room on
+    // every side of it to be pulled into
     drawing.zoom.remember(width, height);
     drawing.zoom.apply();
+    drawing.giveRoom();
 };
 
 })(jQuery);

@@ -420,6 +420,11 @@ $.fn.zato.audit_log.init = function(initConfig) {
     // .. the resubmit outcome handler refreshes the table through this reference ..
     $.fn.zato.audit_log.pagination = pagination;
 
+    $.fn.zato.audit_log.refreshAfterResubmit = function() {
+        var currentPage = pagination.current_page();
+        pagination.fetch_page(currentPage);
+    };
+
     // .. every rendering of the page gets its source and object filter selects,
     // a per-source one opening with its own source and object picked ..
     $.fn.zato.audit_log.initFilterSelects(initConfig.filter_options);

@@ -58,7 +58,7 @@ from zato.common.typing_ import cast_, intnone, optional, tuple_
 from zato.common.user_config import UserConfig, UserConfigFile
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
-    parse_extra_into_dict, register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
+    parse_job_extra, register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
 from zato.common.util.channel import ensure_as2_channel_exists, ensure_as2_mdn_channel_exists, ensure_openapi_channel_exists
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
@@ -1314,15 +1314,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         logger.debug('Invoking service for job: id=%s name=%s run=%s', job_id, job_name, current_run)
 
-        extra = ctx.get('extra')
-        if extra and isinstance(extra, str):
-            try:
-                extra = json_loads(extra)
-            except Exception:
-                try:
-                    extra = parse_extra_into_dict(extra)
-                except Exception:
-                    pass
+        extra = parse_job_extra(ctx.get('extra'))
 
         # The run's record opens now, with the actual fire time being the moment this server
         # picked the message up and the delay measured against the planned fire time ..
