@@ -94,7 +94,7 @@ $.fn.zato.delivery_tab.config = {
         'nothing behind it moves until it goes through or an operator discards it.',
     helpAction: 'What a rule running every minute does with each message in the DLQ - keeps it for an operator, ' +
         'puts it back into the queue a number of times, forwards it to a pub/sub topic or discards it.',
-    helpRetries: 'How many times the rule puts a message back into the queue before leaving it in the DLQ.',
+    helpDlqRetries: 'How many times the rule puts a message back into the queue before leaving it in the DLQ.',
     helpRetryInterval: 'How long passes between two rounds of the rule for one message.',
     helpForwardTo: 'The pub/sub topic a forwarded message is published to.',
     helpKeepHeader: 'When on, a forwarded message carries its DLQ header - where it came from, why it failed ' +
@@ -288,7 +288,7 @@ $.fn.zato.delivery_tab.helpDescriptions = function() {
     out[tab.forms.inputId(config.fieldBackoffThreshold)] = config.helpBackoffThreshold;
     out[tab.forms.inputId(config.fieldBackoffMultiplier)] = config.helpBackoffMultiplier;
     out[tab.forms.inputId(config.fieldAction)] = config.helpAction;
-    out[tab.forms.inputId(config.fieldRetries)] = config.helpRetries;
+    out[tab.forms.inputId(config.fieldRetries)] = config.helpDlqRetries;
     out[tab.forms.inputId(config.fieldRetryInterval)] = config.helpRetryInterval;
     out[tab.forms.inputId(config.fieldForwardTo)] = config.helpForwardTo;
     out[tab.forms.inputId(config.fieldKeepHeader)] = config.helpKeepHeader;
@@ -296,7 +296,8 @@ $.fn.zato.delivery_tab.helpDescriptions = function() {
     return out;
 }
 
-// The how-it-works texts of the lines
+// The how-it-works texts of the lines - a field always by its create form's id,
+// since how-it-works maps an edit form's id back to that one before the lookup
 $.fn.zato.delivery_tab.descriptions = function() {
 
     var tab = $.fn.zato.delivery_tab;
@@ -304,8 +305,8 @@ $.fn.zato.delivery_tab.descriptions = function() {
     var out = {};
 
     out[tab.elementId('edit', config.retriesLine)] = config.helpRetries;
-    out[tab.fieldId(config.fieldUseQueue)] = config.helpUseQueue;
-    out[tab.fieldId(config.fieldUseDLQ)] = config.helpUseDLQ;
+    out[config.idPrefixDjango + config.fieldUseQueue] = config.helpUseQueue;
+    out[config.idPrefixDjango + config.fieldUseDLQ] = config.helpUseDLQ;
     out[tab.elementId('edit', config.actionLine)] = config.helpAction;
 
     return out;

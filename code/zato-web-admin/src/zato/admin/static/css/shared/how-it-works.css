@@ -28,14 +28,6 @@
     box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
-/* ------------------------------------------------------------ */
-/* How it works - labels with a description get a help cursor   */
-/* ------------------------------------------------------------ */
-
-label.how-it-works-label {
-    cursor: help;
-}
-
 /* Group name cells, e.g. "Pool", are clickable only while their block is expanded */
 td.how-it-works-group-label.how-it-works-group-expanded {
     cursor: help;

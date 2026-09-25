@@ -68,6 +68,7 @@
 }
 
 .posture-check-name {
+    display: block;
     font-size: 13px;
     font-weight: 600;
     color: #1a1a2e;

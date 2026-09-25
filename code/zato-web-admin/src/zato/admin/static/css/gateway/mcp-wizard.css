@@ -240,6 +240,14 @@
     transition: var(--wizard-text-off-transition);
 }
 
+/* A select reads as the answer to the words in front of it, so it follows
+   them directly instead of being pushed out to the switch column */
+.mcp-wizard-field-grid label:has(select) {
+    display: flex;
+    grid-column: 1 / -1;
+    gap: 8px;
+}
+
 /* A row whose switch is off reads a notch back, the way every other label
    naming a switch does */
 .mcp-wizard-field-grid label:has(input[type="checkbox"]:not(:checked)) {
@@ -298,26 +306,6 @@
     font-size: 12px;
     color: var(--zato-ui-text);
 }
-
-/* The PII card's switch rows live in two blocks with the multi-selects
-   between them - the open card body carries the columns and both blocks
-   read them from it, so every switch of the card shares the one column */
-#mcp-wizard-pii-body.wizard-option-body-open {
-    display: grid;
-    grid-template-columns: max-content max-content;
-    column-gap: var(--mcp-wizard-control-gap);
-    justify-content: start;
-}
-
-#mcp-wizard-pii-body > .mcp-wizard-field-grid {
-    grid-column: 1 / -1;
-    grid-template-columns: subgrid;
-}
-
-#mcp-wizard-pii-body > .mcp-wizard-pii-selects {
-    grid-column: 1 / -1;
-}
-
 /* ------------------------------------------------------------ */
 /* MCP wizard - URL allow list chips                             */
 /* ------------------------------------------------------------ */

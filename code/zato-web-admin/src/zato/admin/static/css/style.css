@@ -403,6 +403,15 @@ span.like-a {
     white-space: nowrap;
 }
 
+/* Every label in the first column stays on one line, and the column is exactly as wide
+   as its longest label. Inline widths on these cells would override it. */
+
+.form-data.fit-labels > tbody > tr > td:first-child:not([colspan]) {
+    width: 1%;
+    padding-right: 10px;
+    white-space: nowrap;
+}
+
 /* The action row spans the full width so that its contents do not determine a column width. */
 
 .form-data td.form-actions {

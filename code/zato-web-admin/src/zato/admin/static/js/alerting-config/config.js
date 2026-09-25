@@ -228,6 +228,7 @@ config.notificationFields = [
 config.typeHelp = {
     rest: 'Alert rules for REST outgoing connections - failures in a row, error rates, status codes and slow calls.',
     soap: 'Alert rules for SOAP outgoing connections - failures in a row, error rates, status codes, SOAP faults and slow calls.',
+    fhir: 'Alert rules for FHIR outgoing connections - failures in a row, error rates, status codes, operation outcomes, connection failures, slow calls, queue backlogs and messages in the DLQ.',
     sql: 'Alert rules for SQL connection pools - failures in a row, error rates and slow queries.',
     llm: 'Alert rules for LLM connections - failures in a row, error rates, status codes, truncated completions, refusals, the token budget and slow completions.',
     mcp: 'Alert rules for MCP gateways - failures in a row, error rates, invalid tool calls, rejected responses, rejected and throttled callers, repeated calls, slow tool calls, truncated responses, the response volume and the tool count.',
@@ -237,6 +238,8 @@ config.typeHelp = {
     file_transfer: 'Alert rules for SMB and SFTP connections - failures in a row, failures over time and periodic test transfers.',
     scheduler: 'Alert rules for scheduler jobs - error rates over time, overdue runs and late starts.',
     channels: 'Alert rules for channels of every kind - the share of failed requests over time.',
+    mllp_channel: 'Alert rules for HL7 MLLP channels - failures in a row, error rates, negative acknowledgments, slow acknowledgments and silent channels.',
+    mllp_outgoing: 'Alert rules for HL7 MLLP outgoing connections - failures in a row, error rates, negative acknowledgments, connection failures, slow acknowledgments, queue backlogs and messages in the DLQ.',
     common: 'Alert rules that watch the environment as a whole - expiring certificates, backlogs and silent feeds.',
     notifications: 'Where alerts go by default - the webhooks, the email connection and its addressing, and the Dashboard address the links point to. A rule naming its own target overrides these.'
 };

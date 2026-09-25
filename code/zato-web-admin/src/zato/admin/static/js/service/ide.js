@@ -105,9 +105,6 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     // Store a reference to the editor as we will be likely switching to various files
     window.zato_editor_session_map[current_fs_location] = window.zato_editor;
 
-    // Set initial data
-    $.fn.zato.ide.populate_invoker_area();
-
     // Handle browser history back/forward actions
     window.onpopstate = function(event) {
         let name = event.state.name;
@@ -194,6 +191,9 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     // This will try to load the content from LocalStorage
     $.fn.zato.ide.load_current_source_code_from_local_storage(previous_baseline);
+
+    // Set initial data, only now that the baseline exists, because this is what checks the deployment status
+    $.fn.zato.ide.populate_invoker_area();
 
     window.zato_inactivity_interval = null;
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;

@@ -198,6 +198,12 @@ $.fn.zato.alerts_tab.hidden_cells = function(item) {
 // The DOM id of one of the tab's fields on the form bound at the moment - a field
 // of the page's own form goes by its own name, an alert setting by its alert name
 $.fn.zato.alerts_tab.fieldId = function(fieldName) {
+    var out = $.fn.zato.alerts_tab.formFieldId(fieldName, $.fn.zato.alerts_tab.state.fieldPrefix);
+    return out;
+}
+
+// The id of one of the tab's fields on the form with the given prefix
+$.fn.zato.alerts_tab.formFieldId = function(fieldName, formPrefix) {
 
     var tab = $.fn.zato.alerts_tab;
     var alertPrefix = tab.settings.field_prefix;
@@ -206,7 +212,7 @@ $.fn.zato.alerts_tab.fieldId = function(fieldName) {
         alertPrefix = '';
     }
 
-    var out = tab.config.idPrefixDjango + tab.state.fieldPrefix + alertPrefix + fieldName;
+    var out = tab.config.idPrefixDjango + formPrefix + alertPrefix + fieldName;
     return out;
 }
 
@@ -380,7 +386,9 @@ $.fn.zato.alerts_tab.helpDescriptions = function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 // The how-it-works descriptions of the lines of the bound panel, keyed by the
-// id each line's label points at - the switch, the select or the edit link
+// id each line's label points at - the switch, the select or the edit link,
+// a field always by its create form's id, since how-it-works maps an edit
+// form's id back to that one before the lookup
 $.fn.zato.alerts_tab.descriptions = function() {
 
     var tab = $.fn.zato.alerts_tab;
@@ -395,7 +403,7 @@ $.fn.zato.alerts_tab.descriptions = function() {
             targetId = tab.elementId('edit', line.name);
         }
         else {
-            targetId = tab.fieldId(line.fields[0]);
+            targetId = tab.formFieldId(line.fields[0], '');
         }
 
         out[targetId] = line.how_it_works;

@@ -550,9 +550,9 @@
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "pubsub-subscription-create" %}" method="post" id="create-form">
-                    <table class="form-data">
+                    <table class="form-data fit-labels">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Enabled for</td>
+                            <td style="vertical-align:middle">Enabled for</td>
                             <td>
                                 <label for="id_is_delivery_active">Delivery</label> {{ create_form.is_delivery_active }}
                                 |
@@ -593,12 +593,12 @@
                         </tr>
 
                         <tr>
-                            <td style="text-align:left;vertical-align:middle">
+                            <td colspan="2" class="form-actions">
                                 <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
-                            </td>
-                            <td style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                <span class="form-buttons">
+                                    <input type="submit" value="OK" />
+                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                </span>
                             </td>
                         </tr>
                     </table>
@@ -610,9 +610,9 @@
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "pubsub-subscription-edit" %}" method="post" id="edit-form">
-                    <table class="form-data">
+                    <table class="form-data fit-labels">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Enabled for</td>
+                            <td style="vertical-align:middle">Enabled for</td>
                             <td>
                                 <label for="id_edit-is_delivery_active">Delivery</label> {{ edit_form.is_delivery_active }}
                                 |
@@ -634,7 +634,7 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:baseline; width:150px; height:40px;"><label for="id_delivery_type">Delivery type</label></td>
+                            <td style="vertical-align:baseline; width:150px; height:40px;"><label for="id_edit-delivery_type">Delivery type</label></td>
                             <td style="vertical-align:baseline; width:400px; height:40px;">
                                 {{ edit_form.delivery_type }}
                                 &nbsp;
@@ -652,12 +652,12 @@
                             </td>
                         </tr>
                         <tr>
-                            <td style="text-align:left;vertical-align:middle">
+                            <td colspan="2" class="form-actions">
                                 <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
-                            </td>
-                            <td style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                <span class="form-buttons">
+                                    <input type="submit" value="OK" />
+                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                </span>
                             </td>
                         </tr>
                     </table>

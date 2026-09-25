@@ -57,7 +57,7 @@ $.fn.zato.outgoing.hl7.fhir.field_descriptions = {
     'id_name': 'A unique name for this connection. Services obtain a client with self.fhir[name].',
     'id_address': 'Base URL of the FHIR server, e.g. https://fhir.example.com. ' +
         'Resource paths are appended to it.',
-    'id_username': 'Security definition the connection authenticates with, e.g. Basic Auth or OAuth. ' +
+    'id_security_id': 'Security definition the connection authenticates with, e.g. Basic Auth or OAuth. ' +
         'Pick no security for open servers.',
     'id_extra': 'Additional client options, one key=value per line. Passed as-is to the underlying FHIR client.',
     'id_is_active': 'Whether this connection can be used. Services cannot look up an inactive connection.',
