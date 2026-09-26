@@ -851,6 +851,16 @@ test-aws: ## AWS connection tests through a live Zato server against a simulated
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_aws_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-kafka-live: ## Kafka SASL PLAIN and OAUTHBEARER round trips through a live Zato server against Azure Event Hubs.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) \
+	Zato_Test_Kafka_Live=1 \
+	PYTHONPATH=$(CURDIR)/code/tests/python/zato-common/lib \
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/kafka_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_kafka_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
 test-sdk: ## Connector SDK tests through a live Zato server against a suite-owned target server.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/sdk_live/ \

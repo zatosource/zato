@@ -19,8 +19,8 @@ path = "src/bin/queue_bridge.rs"
 
 [features]
 default = ["kafka", "ibm-mq"]
-# Static libcurl for the OAUTHBEARER token endpoint.
-kafka = ["rdkafka", "rdkafka/ssl", "rdkafka/curl-static"]
+# Static libcurl for the OAUTHBEARER token endpoint, linked only by the cmake build of librdkafka.
+kafka = ["rdkafka", "rdkafka/ssl", "rdkafka/curl-static", "rdkafka/cmake-build"]
 ibm-mq = ["mqi", "libmqm-sys", "openssl"]
 
 [dependencies]

@@ -269,9 +269,10 @@ def resolve_value(key, value, decrypt_func=None, _default=object(), _secrets=SEC
     # It may be an environment variable ..
     if value.startswith('$'):
 
-        # .. but not if it's $$ which is a signal to skip this value ..
+        # .. but not if it's $$, which stands for a literal value starting with one $ ..
         if value.startswith('$$'):
-            return value
+            out = value[1:]
+            return out
 
         # .. a genuine pointer to an environment variable.
         else:
