@@ -300,7 +300,7 @@
                                     <li class="child"><a class="menu-link" href="{% url "security-spnego" %}?cluster={{ cluster_id|default:"1" }}">Kerberos</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-mtls" %}?cluster={{ cluster_id|default:"1" }}">mTLS</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-ntlm" %}?cluster={{ cluster_id|default:"1" }}">NTLM</a></li>
-                                    <li class="child"><a class="menu-link" href="/zato/ssl-config/">Let's Encrypt</a></li>
+                                    {% if 0 %}<li class="child"><a class="menu-link" href="/zato/ssl-config/">Let's Encrypt</a></li>{% endif %}
                                     <li class="child"><a class="menu-link" href="{% url "security-wss" %}?cluster={{ cluster_id|default:"1" }}">WS-Security</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-tier" %}?cluster={{ cluster_id|default:"1" }}">Quota tiers</a></li>
                                     {% if 0 %}
