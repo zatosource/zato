@@ -35,6 +35,7 @@
             'topic',
             'group_id',
             'service',
+            'security',
             '_edit',
             '_delete',
             'id',
@@ -42,7 +43,10 @@
             'ssl',
             'ssl_ca_file',
             'ssl_cert_file',
-            'ssl_key_file'
+            'ssl_key_file',
+            'security_id',
+            'sec_type',
+            'sasl_mechanism'
         ]
     }
     </script>
@@ -80,8 +84,12 @@
                         <th><a href="#">Topic</a></th>
                         <th><a href="#">Group ID</a></th>
                         <th><a href="#">Service</a></th>
+                        <th><a href="#">Security</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -102,6 +110,18 @@
                         <td>{{ item.topic }}</td>
                         <td>{{ item.group_id }}</td>
                         <td>{{ item.service }}</td>
+                        <td>
+                            {% if item.security_name %}
+                                {% if item.sec_type == 'oauth' %}
+                                <a href="/zato/security/oauth/outconn/client-credentials/?cluster={{ cluster_id }}&amp;query={{ item.security_name }}">{{ item.security_name }}</a>
+                                {% elif item.sec_type == 'basic_auth' %}
+                                <a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.security_name }}">{{ item.security_name }}</a>
+                                {% endif %}
+                                ({{ item.sasl_mechanism }})
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
                         <td><a href="javascript:$.fn.zato.channel.kafka.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.kafka.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -110,11 +130,14 @@
                         <td class='ignore'>{{ item.ssl_ca_file }}</td>
                         <td class='ignore'>{{ item.ssl_cert_file }}</td>
                         <td class='ignore'>{{ item.ssl_key_file }}</td>
+                        <td class='ignore'>{% if item.sec_type %}{{ item.sec_type }}/{{ item.security_id }}{% endif %}</td>
+                        <td class='ignore'>{{ item.sec_type }}</td>
+                        <td class='ignore'>{{ item.sasl_mechanism }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='16'>No results</td>
+                        <td colspan='20'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -154,7 +177,19 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Extra</td>
-                            <td><a href="javascript:$.fn.zato.toggle_visibility('.create-ssl-block')">SSL options</a></td>
+                            <td>
+                                <a href="javascript:$.fn.zato.toggle_visibility('.create-auth-block')">Authentication</a>
+                                |
+                                <a href="javascript:$.fn.zato.toggle_visibility('.create-ssl-block')">SSL options</a>
+                            </td>
+                        </tr>
+                        <tr class="create-auth-block hidden">
+                            <td style="vertical-align:middle"><label for="id_sasl_mechanism">SASL mechanism</label></td>
+                            <td>{{ create_form.sasl_mechanism }}</td>
+                        </tr>
+                        <tr class="create-auth-block hidden">
+                            <td style="vertical-align:middle"><label for="id_security_id">Security</label></td>
+                            <td>{{ create_form.security_id }}</td>
                         </tr>
                         <tr class="create-ssl-block hidden">
                             <td style="vertical-align:middle"><label for="id_ssl">Use SSL</label></td>
@@ -217,7 +252,19 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Extra</td>
-                            <td><a href="javascript:$.fn.zato.toggle_visibility('.edit-ssl-block')">SSL options</a></td>
+                            <td>
+                                <a href="javascript:$.fn.zato.toggle_visibility('.edit-auth-block')">Authentication</a>
+                                |
+                                <a href="javascript:$.fn.zato.toggle_visibility('.edit-ssl-block')">SSL options</a>
+                            </td>
+                        </tr>
+                        <tr class="edit-auth-block hidden">
+                            <td style="vertical-align:middle"><label for="id_edit-sasl_mechanism">SASL mechanism</label></td>
+                            <td>{{ edit_form.sasl_mechanism }}</td>
+                        </tr>
+                        <tr class="edit-auth-block hidden">
+                            <td style="vertical-align:middle"><label for="id_edit-security_id">Security</label></td>
+                            <td>{{ edit_form.security_id }}</td>
                         </tr>
                         <tr class="edit-ssl-block hidden">
                             <td style="vertical-align:middle"><label for="id_edit-ssl">Use SSL</label></td>

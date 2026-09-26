@@ -12,12 +12,30 @@ $.fn.zato.data_table.KafkaOutgoing = new Class({
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.outgoing.kafka.config = {
+    clusterId: '1',
+    noSecurityValue: 'ZATO_NONE',
+    noSecurityCell: '<span class="form_hint">---</span>',
+    securityHref: {
+        'basic_auth': '/zato/security/basic-auth/',
+        'oauth': '/zato/security/oauth/outconn/client-credentials/',
+    },
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.KafkaOutgoing;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.kafka.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'address', 'topic']);
+    $.fn.zato.live_form_updates.register('create', [
+        {object_type: 'security', target_select: '#id_security_id'}
+    ]);
+    $.fn.zato.live_form_updates.register('edit', [
+        {object_type: 'security', target_select: '#id_edit-security_id'}
+    ]);
     // Generic connection names are unique per connection type,
     // so the check is scoped to this page's own type.
     var unique_constraints = [
@@ -40,6 +58,8 @@ $.fn.zato.outgoing.kafka.field_descriptions = {
         'The client discovers the rest of the cluster from it.',
     'id_topic': 'Kafka topic the messages are published to. ' +
         'It must already exist on the broker unless auto-creation is enabled there.',
+    'id_sasl_mechanism': 'SASL mechanism the connection authenticates with.',
+    'id_security_id': 'Security definition the SASL mechanism takes its credentials from.',
     'id_ssl': 'Whether the connection uses TLS. When on, the certificate files below apply.',
     'id_ssl_ca_file': 'Path to a PEM file with the CA certificate that signed the broker\'s certificate.',
     'id_ssl_cert_file': 'Path to a PEM file with the client certificate, ' +
@@ -67,6 +87,46 @@ $.fn.zato.outgoing.kafka.edit = function(id) {
     });
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
+// The select's value is <sec_type>/<id>, its label <Type name>/<definition name>.
+$.fn.zato.outgoing.kafka.securityCell = function(item) {
+    var config = $.fn.zato.outgoing.kafka.config;
+
+    var out = {
+        cell: config.noSecurityCell,
+        securityId: '',
+        secType: '',
+    };
+
+    if(!item.security_id) {
+        return out;
+    }
+
+    if(item.security_id == config.noSecurityValue) {
+        return out;
+    }
+
+    var valueParts = item.security_id.split('/');
+    var secType = valueParts[0];
+
+    var labelParts = item.security_id_select.split('/');
+    var nameParts = labelParts.slice(1);
+    var securityName = nameParts.join('/');
+
+    var baseHref = config.securityHref[secType];
+    var query = encodeURIComponent(securityName);
+    var href = baseHref + '?cluster=' + config.clusterId + '&query=' + query;
+
+    out.cell = String.format('<a href="{0}">{1}</a> ({2})', href, securityName, item.sasl_mechanism);
+    out.securityId = item.security_id;
+    out.secType = secType;
+
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.kafka.data_table.new_row = function(item, data, include_tr) {
     var row = '';
 
@@ -76,6 +136,7 @@ $.fn.zato.outgoing.kafka.data_table.new_row = function(item, data, include_tr) {
 
     var is_active = item.is_active == true;
     var ssl = item.ssl == true;
+    var security = $.fn.zato.outgoing.kafka.securityCell(item);
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -84,6 +145,7 @@ $.fn.zato.outgoing.kafka.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.address);
     row += String.format('<td>{0}</td>', item.topic);
+    row += String.format('<td>{0}</td>', security.cell);
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.kafka.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.kafka.delete_('{0}');\">Delete</a>", item.id));
@@ -94,6 +156,9 @@ $.fn.zato.outgoing.kafka.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.ssl_ca_file);
     row += String.format("<td class='ignore'>{0}</td>", item.ssl_cert_file);
     row += String.format("<td class='ignore'>{0}</td>", item.ssl_key_file);
+    row += String.format("<td class='ignore'>{0}</td>", security.securityId);
+    row += String.format("<td class='ignore'>{0}</td>", security.secType);
+    row += String.format("<td class='ignore'>{0}</td>", item.sasl_mechanism);
 
     if(include_tr) {
         row += '</tr>';

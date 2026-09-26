@@ -124,6 +124,9 @@ _pubsub_max_retry_time = 20 # PubSub.Max_Retry_Time
 # The service that AMQP channels dispatch to while they are referenced by an AMQP-backed topic
 _pubsub_amqp_bridge_service = 'zato.pubsub.topic.on-amqp-message'
 
+# Connection config keys that are not sent to the queue bridge.
+_queue_bridge_skipped_keys = ('conn', 'parent')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1159,6 +1162,34 @@ class ConfigManager(_ConfigManagerBase):
         except Exception:
             self.logger.warning('Could not notify queue bridge about outconn %s=%s: %s', action, msg.get('name', ''), format_exc())
 
+# ################################################################################################################################
+
+    def _update_queue_bridge_security(self, security_id:'int') -> 'None':
+        """ Sends Kafka connections that use the given security definition to the bridge again.
+        """
+        kafka_types = (
+            (COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, self._notify_queue_bridge_channel),
+            (COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA, self._notify_queue_bridge_outconn),
+        )
+
+        for conn_type, notify_func in kafka_types:
+            for conn_dict in self.generic_conn_api[conn_type].values():
+
+                # Connections without a security definition have no such key.
+                if conn_dict.get('security_id') != security_id:
+                    continue
+
+                # The connection object and its parent are not sent to the bridge.
+                edit_msg = Bunch()
+                for key, value in conn_dict.items():
+                    if key in _queue_bridge_skipped_keys:
+                        continue
+                    edit_msg[key] = value
+
+                notify_func('edit', edit_msg)
+
+# ################################################################################################################################
+
     def _create_kafka_channel(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
         self._create_generic_connection(msg, *args, **kwargs)
         self._notify_queue_bridge_channel('create', msg)
@@ -1768,8 +1799,11 @@ class ConfigManager(_ConfigManagerBase):
         for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
             security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
 
-        # .. update pub/sub in-memory state if username or sec def name changed.
+        # .. update pub/sub in-memory state if username or sec def name changed ..
         self._update_pubsub_security_rename(msg)
+
+        # .. and Kafka connections that authenticate with this definition.
+        self._update_queue_bridge_security(msg.id)
 
 # ################################################################################################################################
 
@@ -1795,9 +1829,12 @@ class ConfigManager(_ConfigManagerBase):
         if msg.id:
             sec_def = self.basic_auth_get_by_id(msg.id)
 
-            # .. and update security groups.
+            # .. update security groups ..
             for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
                 security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
+
+            # .. and Kafka connections that authenticate with this definition.
+            self._update_queue_bridge_security(msg.id)
 
 # ################################################################################################################################
 
@@ -2102,9 +2139,12 @@ class ConfigManager(_ConfigManagerBase):
         # .. extract the newest information  ..
         sec_def = self.oauth_get_by_id(msg.id)
 
-        # .. and update security groups.
+        # .. update security groups ..
         for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
             security_groups_ctx.set_current_bearer_token(msg.id, sec_def)
+
+        # .. and Kafka connections that authenticate with this definition.
+        self._update_queue_bridge_security(msg.id)
 
     def on_config_event_SECURITY_OAUTH_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an OAuth security definition.
@@ -2128,9 +2168,12 @@ class ConfigManager(_ConfigManagerBase):
         if msg.id:
             sec_def = self.oauth_get_by_id(msg.id)
 
-            # .. and update security groups.
+            # .. update security groups ..
             for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
                 security_groups_ctx.set_current_bearer_token(msg.id, sec_def)
+
+            # .. and Kafka connections that authenticate with this definition.
+            self._update_queue_bridge_security(msg.id)
 
 # ################################################################################################################################
 

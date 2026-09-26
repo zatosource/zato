@@ -186,7 +186,8 @@ _object_order['outgoing_amqp'] = 'name', 'is_active', 'address', 'username', 'co
 _object_order['channel_azure_service_bus']  = _object_order['channel_amqp']
 _object_order['outgoing_azure_service_bus'] = _object_order['outgoing_amqp']
 
-_object_order['channel_kafka'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service',
+_object_order['channel_kafka'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service', \
+    'security', 'sasl_mechanism',
 
 # The connections a gateway exposes as tools - each allow list is a YAML list.
 _mcp_connection_list_fields = tuple(f'{key}:list' for key in MCP.Connection_List_Keys)
@@ -205,7 +206,7 @@ _object_order['rule_engine_api']  = 'name', 'is_active', 'url_path', 'rulesets:l
 _object_order['outgoing_graphql'] = 'name', 'is_active', 'address', 'security', 'default_query_timeout',
 _object_order['outgoing_grpc']    = 'name', 'is_active', 'address', 'security', 'is_tls', 'tls_ca_certs_file', \
     'proto_path', 'stub_module', 'stub_class', 'ping_timeout', 'max_send_message_size', 'max_recv_message_size',
-_object_order['outgoing_kafka']   = 'name', 'is_active', 'address', 'topic',
+_object_order['outgoing_kafka']   = 'name', 'is_active', 'address', 'topic', 'security', 'sasl_mechanism',
 
 _object_order['channel_mllp']  = ('name',) + Channel_Enmasse_Names + ('alerts:dict',)
 _object_order['outgoing_mllp'] = ('name', 'address') + Outgoing_Names + ('alerts:dict',)

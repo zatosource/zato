@@ -21,10 +21,12 @@ from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
-from zato.common.api import GENERIC
+from zato.cli.enmasse.importers.security import SecurityImporter
+from zato.common.api import GENERIC, SEC_DEF_TYPE
 from zato.common.odb.model import GenericConn
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
+from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,6 +51,7 @@ class TestEnmasseChannelKafkaFromYAML(TestCase):
         self.temp_file.close()
 
         self.importer = EnmasseYAMLImporter()
+        self.security_importer = SecurityImporter(self.importer)
         self.kafka_importer = ChannelKafkaImporter(self.importer)
 
         self.yaml_config = cast_('stranydict', None)
@@ -70,6 +73,10 @@ class TestEnmasseChannelKafkaFromYAML(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
+            # Security definitions the connections refer to.
+            _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
+            self.session.commit()
+
 # ################################################################################################################################
 
     def test_channel_kafka_creation(self):
@@ -87,6 +94,46 @@ class TestEnmasseChannelKafkaFromYAML(TestCase):
         ).one()
         self.assertEqual(conn.address, 'localhost:9092')
         self.assertTrue(conn.is_active)
+
+# ################################################################################################################################
+
+    def test_channel_kafka_security(self) -> 'None':
+        self._setup_test_environment()
+
+        kafka_defs = self.yaml_config['channel_kafka']
+        _ = self.kafka_importer.sync_definitions(kafka_defs, self.session)
+        self.session.commit()
+
+        conn = self.session.query(GenericConn).filter_by(
+            name='enmasse.kafka.channel.2',
+            type_=GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA,
+        ).one()
+        opaque = parse_instance_opaque_attr(conn)
+
+        sec_def = self.importer.sec_defs['enmasse.basic_auth.1']
+
+        self.assertEqual(opaque['security_id'], sec_def['id'])
+        self.assertEqual(opaque['security_name'], 'enmasse.basic_auth.1')
+        self.assertEqual(opaque['auth_type'], SEC_DEF_TYPE.BASIC_AUTH)
+        self.assertEqual(opaque['sasl_mechanism'], 'SCRAM-SHA-512')
+        self.assertNotIn('security', opaque)
+
+# ################################################################################################################################
+
+    def test_channel_kafka_security_mismatch(self) -> 'None':
+        self._setup_test_environment()
+
+        kafka_def = {
+            'name': 'enmasse.kafka.channel.mismatch',
+            'address': 'localhost:9092',
+            'security': 'enmasse.bearer_token.1',
+            'sasl_mechanism': 'PLAIN',
+        }
+
+        with self.assertRaises(Exception) as ctx:
+            self.kafka_importer.resolve_references(kafka_def)
+
+        self.assertIn('requires a Basic Auth security definition, not Bearer token', str(ctx.exception))
 
 # ################################################################################################################################
 
@@ -143,6 +190,7 @@ class TestEnmasseOutgoingKafkaFromYAML(TestCase):
         self.temp_file.close()
 
         self.importer = EnmasseYAMLImporter()
+        self.security_importer = SecurityImporter(self.importer)
         self.kafka_importer = OutgoingKafkaImporter(self.importer)
 
         self.yaml_config = cast_('stranydict', None)
@@ -164,6 +212,10 @@ class TestEnmasseOutgoingKafkaFromYAML(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
+            # Security definitions the connections refer to.
+            _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
+            self.session.commit()
+
 # ################################################################################################################################
 
     def test_outgoing_kafka_creation(self):
@@ -181,6 +233,45 @@ class TestEnmasseOutgoingKafkaFromYAML(TestCase):
         ).one()
         self.assertEqual(conn.address, 'localhost:9092')
         self.assertTrue(conn.is_active)
+
+# ################################################################################################################################
+
+    def test_outgoing_kafka_security(self) -> 'None':
+        self._setup_test_environment()
+
+        kafka_defs = self.yaml_config['outgoing_kafka']
+        _ = self.kafka_importer.sync_definitions(kafka_defs, self.session)
+        self.session.commit()
+
+        conn = self.session.query(GenericConn).filter_by(
+            name='enmasse.kafka.outgoing.2',
+            type_=GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA,
+        ).one()
+        opaque = parse_instance_opaque_attr(conn)
+
+        sec_def = self.importer.sec_defs['enmasse.bearer_token.1']
+
+        self.assertEqual(opaque['security_id'], sec_def['id'])
+        self.assertEqual(opaque['security_name'], 'enmasse.bearer_token.1')
+        self.assertEqual(opaque['auth_type'], SEC_DEF_TYPE.OAUTH)
+        self.assertEqual(opaque['sasl_mechanism'], 'OAUTHBEARER')
+        self.assertNotIn('security', opaque)
+
+# ################################################################################################################################
+
+    def test_outgoing_kafka_security_without_mechanism(self) -> 'None':
+        self._setup_test_environment()
+
+        kafka_def = {
+            'name': 'enmasse.kafka.outgoing.no.mechanism',
+            'address': 'localhost:9092',
+            'security': 'enmasse.basic_auth.1',
+        }
+
+        with self.assertRaises(Exception) as ctx:
+            self.kafka_importer.resolve_references(kafka_def)
+
+        self.assertIn('but no SASL mechanism', str(ctx.exception))
 
 # ################################################################################################################################
 

@@ -36,7 +36,7 @@ from zato.common.api import API_Key, AS4, DATA_FORMAT, EnvFile, EnvVariable, GEN
     On_Prem_Gateway, PubSub, SCHEDULER, SEC_DEF_TYPE, SERVER_STARTUP, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
-from zato.common.bearer_token import BearerTokenManager
+from zato.common.bearer_token import BearerTokenManager, normalize_scopes
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB, SCHEDULER as SCHEDULER_MSG
 from zato.common.const import SECRETS
 from zato.common.ext_db.api import get_ext_db_session, is_ext_db_configured, is_ext_object_id, needs_ext_db
@@ -147,6 +147,43 @@ _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 
 # How often, at most, a still-failing Redis stream listener logs a reminder (in seconds).
 _listener_error_log_interval = 60.0
+
+# The OAuth scope sent to the token endpoint when the definition has none.
+_default_kafka_oauth_scope = ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _enrich_kafka_basic_auth(config_manager:'ConfigManager', config:'anydict', security_id:'int') -> 'None':
+    """ Fills in the SASL username and password from a Basic Auth definition.
+    """
+    sec_def = config_manager.basic_auth_get_by_id(security_id)
+    config['username'] = sec_def['username']
+    config['password'] = sec_def['password']
+
+# ################################################################################################################################
+
+def _enrich_kafka_oauth(config_manager:'ConfigManager', config:'anydict', security_id:'int') -> 'None':
+    """ Fills in the OAuth client credentials and token endpoint from a Bearer token definition.
+    """
+    sec_def = config_manager.oauth_get_by_id(security_id)
+
+    if scopes := sec_def.get('scopes'):
+        scopes = normalize_scopes(scopes)
+    else:
+        scopes = _default_kafka_oauth_scope
+
+    config['oauth_token_url'] = sec_def['auth_server_url']
+    config['oauth_client_id'] = sec_def['username']
+    config['oauth_client_secret'] = sec_def['password']
+    config['oauth_scope'] = scopes
+
+# ################################################################################################################################
+
+_kafka_enrich_by_auth_type = {
+    SEC_DEF_TYPE.BASIC_AUTH: _enrich_kafka_basic_auth,
+    SEC_DEF_TYPE.OAUTH: _enrich_kafka_oauth,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1501,7 +1538,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     def _enrich_queue_bridge_config(self, config:'anydict') -> 'None':
-        """ Decrypts the connection's secret, if any, into the password field the bridge expects.
+        """ Resolves the connection's secret and its security definition into the credential fields the bridge expects.
         """
         if secret := config.get('secret'):
 
@@ -1510,6 +1547,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 secret = self.decrypt(secret)
 
             config['password'] = secret
+
+        # Connections without a security definition have no such key.
+        security_id = config.get('security_id')
+        if not security_id:
+            return
+
+        auth_type = config['auth_type']
+        enrich_func = _kafka_enrich_by_auth_type[auth_type]
+        enrich_func(self.config_manager, config, security_id)
 
 # ################################################################################################################################
 

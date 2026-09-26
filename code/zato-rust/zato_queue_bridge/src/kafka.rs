@@ -1,8 +1,6 @@
 //! Kafka-specific consumer and producer wrappers for the standalone Zato queue bridge.
 //!
-//! Wraps `rdkafka` types and handles SSL/TLS configuration using the same
-//! property names as the standard Kafka client (`ssl.ca.location`,
-//! `ssl.certificate.location`, `ssl.key.location`).
+//! Wraps `rdkafka` types and applies TLS and SASL properties to the client configuration.
 
 #![cfg(feature = "kafka")]
 
@@ -17,26 +15,145 @@ use tokio_util::sync::CancellationToken;
 
 use crate::bridge::{BridgeShared, ChannelConfig, OutgoingConfig, RecvEvent};
 
-/// Applies SSL/TLS properties to an rdkafka `ClientConfig`.
-fn apply_ssl_config(
-    client_config: &mut ClientConfig,
+/// The sasl.mechanism value for PLAIN.
+const MECHANISM_PLAIN: &str = "PLAIN";
+
+/// The sasl.mechanism value for SCRAM-SHA-256.
+const MECHANISM_SCRAM_SHA_256: &str = "SCRAM-SHA-256";
+
+/// The sasl.mechanism value for SCRAM-SHA-512.
+const MECHANISM_SCRAM_SHA_512: &str = "SCRAM-SHA-512";
+
+/// The sasl.mechanism value for OAUTHBEARER.
+const MECHANISM_OAUTHBEARER: &str = "OAUTHBEARER";
+
+/// Connection security settings shared by Kafka channels and outgoing connections.
+struct SecurityConfig<'config> {
+    /// Whether the broker connection is wrapped in TLS.
     ssl: bool,
-    ssl_ca_file: Option<&str>,
-    ssl_cert_file: Option<&str>,
-    ssl_key_file: Option<&str>,
-) {
-    if !ssl {
+
+    /// Path to the CA certificate the broker's certificate is verified against.
+    ssl_ca_file: Option<&'config str>,
+
+    /// Path to the client certificate for mutual TLS.
+    ssl_cert_file: Option<&'config str>,
+
+    /// Path to the client private key for mutual TLS.
+    ssl_key_file: Option<&'config str>,
+
+    /// SASL mechanism name, empty when the broker does not use SASL.
+    sasl_mechanism: &'config str,
+
+    /// SASL username for the PLAIN and SCRAM mechanisms.
+    username: &'config str,
+
+    /// SASL password for the PLAIN and SCRAM mechanisms.
+    password: &'config str,
+
+    /// Token endpoint for the OAUTHBEARER mechanism.
+    oauth_token_url: &'config str,
+
+    /// OAuth client ID for the OAUTHBEARER mechanism.
+    oauth_client_id: &'config str,
+
+    /// OAuth client secret for the OAUTHBEARER mechanism.
+    oauth_client_secret: &'config str,
+
+    /// OAuth scopes for the OAUTHBEARER mechanism.
+    oauth_scope: &'config str,
+}
+
+impl<'config> From<&'config ChannelConfig> for SecurityConfig<'config> {
+    fn from(config: &'config ChannelConfig) -> Self {
+        Self {
+            ssl: config.ssl,
+            ssl_ca_file: config.ssl_ca_file.as_deref(),
+            ssl_cert_file: config.ssl_cert_file.as_deref(),
+            ssl_key_file: config.ssl_key_file.as_deref(),
+            sasl_mechanism: &config.sasl_mechanism,
+            username: &config.username,
+            password: &config.password,
+            oauth_token_url: &config.oauth_token_url,
+            oauth_client_id: &config.oauth_client_id,
+            oauth_client_secret: &config.oauth_client_secret,
+            oauth_scope: &config.oauth_scope,
+        }
+    }
+}
+
+impl<'config> From<&'config OutgoingConfig> for SecurityConfig<'config> {
+    fn from(config: &'config OutgoingConfig) -> Self {
+        Self {
+            ssl: config.ssl,
+            ssl_ca_file: config.ssl_ca_file.as_deref(),
+            ssl_cert_file: config.ssl_cert_file.as_deref(),
+            ssl_key_file: config.ssl_key_file.as_deref(),
+            sasl_mechanism: &config.sasl_mechanism,
+            username: &config.username,
+            password: &config.password,
+            oauth_token_url: &config.oauth_token_url,
+            oauth_client_id: &config.oauth_client_id,
+            oauth_client_secret: &config.oauth_client_secret,
+            oauth_scope: &config.oauth_scope,
+        }
+    }
+}
+
+/// Applies TLS and SASL properties to an rdkafka `ClientConfig`.
+fn apply_security_config(client_config: &mut ClientConfig, security: &SecurityConfig<'_>) {
+    let has_sasl = !security.sasl_mechanism.is_empty();
+
+    // Plaintext without SASL is the librdkafka default.
+    let protocol = match (security.ssl, has_sasl) {
+        (false, false) => None,
+        (true, false) => Some("ssl"),
+        (false, true) => Some("sasl_plaintext"),
+        (true, true) => Some("sasl_ssl"),
+    };
+
+    if let Some(protocol) = protocol {
+        client_config.set("security.protocol", protocol);
+    }
+
+    if security.ssl {
+        if let Some(ca_path) = security.ssl_ca_file {
+            client_config.set("ssl.ca.location", ca_path);
+        }
+        if let Some(cert_path) = security.ssl_cert_file {
+            client_config.set("ssl.certificate.location", cert_path);
+        }
+        if let Some(key_path) = security.ssl_key_file {
+            client_config.set("ssl.key.location", key_path);
+        }
+    }
+
+    if !has_sasl {
         return;
     }
-    client_config.set("security.protocol", "ssl");
-    if let Some(ca_path) = ssl_ca_file {
-        client_config.set("ssl.ca.location", ca_path);
-    }
-    if let Some(cert_path) = ssl_cert_file {
-        client_config.set("ssl.certificate.location", cert_path);
-    }
-    if let Some(key_path) = ssl_key_file {
-        client_config.set("ssl.key.location", key_path);
+
+    client_config.set("sasl.mechanism", security.sasl_mechanism);
+
+    match security.sasl_mechanism {
+        MECHANISM_PLAIN | MECHANISM_SCRAM_SHA_256 | MECHANISM_SCRAM_SHA_512 => {
+            client_config.set("sasl.username", security.username);
+            client_config.set("sasl.password", security.password);
+        }
+        MECHANISM_OAUTHBEARER => {
+            // The oidc method has librdkafka fetch the token itself.
+            client_config.set("sasl.oauthbearer.method", "oidc");
+            client_config.set("sasl.oauthbearer.token.endpoint.url", security.oauth_token_url);
+            client_config.set("sasl.oauthbearer.client.id", security.oauth_client_id);
+            client_config.set("sasl.oauthbearer.client.secret", security.oauth_client_secret);
+
+            // An empty scope is not sent.
+            if !security.oauth_scope.is_empty() {
+                client_config.set("sasl.oauthbearer.scope", security.oauth_scope);
+            }
+        }
+        other => {
+            // Any other mechanism is rejected by librdkafka when the client is created.
+            tracing::warn!("Kafka SASL mechanism `{other}` is not one the bridge configures credentials for");
+        }
     }
 }
 
@@ -69,13 +186,7 @@ pub async fn consume_loop(
             .set("reconnect.backoff.max.ms", "10000")
             .set("enable.partition.eof", "false");
 
-        apply_ssl_config(
-            &mut client_config,
-            config.ssl,
-            config.ssl_ca_file.as_deref(),
-            config.ssl_cert_file.as_deref(),
-            config.ssl_key_file.as_deref(),
-        );
+        apply_security_config(&mut client_config, &SecurityConfig::from(config));
 
         let consumer: StreamConsumer = match client_config.create() {
             Ok(consumer) => consumer,
@@ -152,13 +263,7 @@ pub async fn publish_message(config: &OutgoingConfig, payload: &[u8]) -> Result<
     let mut client_config = ClientConfig::new();
     client_config.set("bootstrap.servers", &config.address);
 
-    apply_ssl_config(
-        &mut client_config,
-        config.ssl,
-        config.ssl_ca_file.as_deref(),
-        config.ssl_cert_file.as_deref(),
-        config.ssl_key_file.as_deref(),
-    );
+    apply_security_config(&mut client_config, &SecurityConfig::from(config));
 
     let producer: FutureProducer = client_config
         .create()
@@ -181,13 +286,7 @@ pub async fn ping_broker(config: &OutgoingConfig) -> Result<(), String> {
     let mut client_config = ClientConfig::new();
     client_config.set("bootstrap.servers", &config.address);
 
-    apply_ssl_config(
-        &mut client_config,
-        config.ssl,
-        config.ssl_ca_file.as_deref(),
-        config.ssl_cert_file.as_deref(),
-        config.ssl_key_file.as_deref(),
-    );
+    apply_security_config(&mut client_config, &SecurityConfig::from(config));
 
     let producer: FutureProducer = client_config
         .create()

@@ -23,8 +23,9 @@ from zato.common.defaults import http_plain_server_port
 
 if 0:
     from zato.common.ext.imbox import Imbox
-    from zato.common.typing_ import any_, stranydict, strnone
+    from zato.common.typing_ import any_, iterator_, stranydict, strnone
     Imbox = Imbox
+    iterator_ = iterator_
     stranydict = stranydict
     strnone = strnone
 
@@ -506,6 +507,31 @@ class NameId:
 
     def __repr__(self):
         return '<{} at {}; name={}; id={}>'.format(self.__class__.__name__, hex(id(self)), self.name, self.id)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class KAFKA:
+    """ Kafka-specific constants.
+    """
+    class SASL_MECHANISM:
+        """ SASL mechanisms a Kafka connection can authenticate with.
+        """
+        PLAIN = NameId('PLAIN', 'PLAIN')
+        SCRAM_SHA_256 = NameId('SCRAM-SHA-256', 'SCRAM-SHA-256')
+        SCRAM_SHA_512 = NameId('SCRAM-SHA-512', 'SCRAM-SHA-512')
+        OAUTHBEARER = NameId('OAUTHBEARER', 'OAUTHBEARER')
+
+        def __iter__(self) -> 'iterator_':
+            return iter((self.PLAIN, self.SCRAM_SHA_256, self.SCRAM_SHA_512, self.OAUTHBEARER))
+
+    # The security definition type each mechanism takes its credentials from.
+    Mechanism_Sec_Def_Type = {
+        SASL_MECHANISM.PLAIN.id: SEC_DEF_TYPE.BASIC_AUTH,
+        SASL_MECHANISM.SCRAM_SHA_256.id: SEC_DEF_TYPE.BASIC_AUTH,
+        SASL_MECHANISM.SCRAM_SHA_512.id: SEC_DEF_TYPE.BASIC_AUTH,
+        SASL_MECHANISM.OAUTHBEARER.id: SEC_DEF_TYPE.OAUTH,
+    }
 
 # ################################################################################################################################
 # ################################################################################################################################

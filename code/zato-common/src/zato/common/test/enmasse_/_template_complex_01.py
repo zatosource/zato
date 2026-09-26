@@ -405,6 +405,8 @@ channel_kafka:
     topic: enmasse-test-topic-2
     group_id: enmasse-test-group-2
     service: enmasse.kafka.test.service.2
+    security: enmasse.basic_auth.1
+    sasl_mechanism: SCRAM-SHA-512
     ssl: true
     ssl_ca_file: /path/to/ca.pem
     ssl_cert_file: /path/to/cert.pem
@@ -510,6 +512,8 @@ outgoing_kafka:
     is_active: true
     address: broker2:9093
     topic: enmasse-test-out-topic-2
+    security: enmasse.bearer_token.1
+    sasl_mechanism: OAUTHBEARER
     ssl: true
     ssl_ca_file: /path/to/ca.pem
 
