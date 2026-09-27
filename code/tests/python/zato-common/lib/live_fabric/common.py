@@ -61,7 +61,7 @@ class ModuleCtx:
     Alert_Event_Type = 'stock_below_reorder'
 
     # Zato objects
-    Connection_Name        = 'My Fabric'
+    Connection_Name        = 'Zato Fabric'
     Events_Token_Name      = 'Fabric Events Token'
     Events_REST_Token_Name = 'Fabric Events REST Token'
     Eventhouse_Token_Name  = 'Fabric Eventhouse Token'
