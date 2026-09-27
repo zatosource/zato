@@ -1978,12 +1978,19 @@ class MicrosoftFabric:
         Pool_Size = 20
         Scope = 'https://api.fabric.microsoft.com/.default'
         Spark_Session_Timeout = 600
+        SQL_Login_Timeout = 30
+        SQL_Pool_Size = 5
+        SQL_Port = 1433
+        SQL_Schema = 'dbo'
         Table_Chunk_Rows = 100000
         Table_Files_Prefix = 'Files/zato'
 
     class Operation_Status:
         Failed = 'Failed'
         Succeeded = 'Succeeded'
+
+    class Sync_Status:
+        Failure = 'Failure'
 
     class Spark_State:
         Available = 'available'

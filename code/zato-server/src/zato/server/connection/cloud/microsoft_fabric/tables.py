@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 # Zato
 from zato.common.api import MicrosoftFabric
 from zato.common.typing_ import cast_
-from zato.server.connection.cloud.microsoft_fabric.base import MicrosoftFabricBase
+from zato.server.connection.cloud.microsoft_fabric.sql import MicrosoftFabricSQL
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,7 +30,7 @@ _default = MicrosoftFabric.Default
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MicrosoftFabricTables(MicrosoftFabricBase):
+class MicrosoftFabricTables(MicrosoftFabricSQL):
     """ Lakehouse tables - listing them, loading files into them and writing rows directly.
     """
 
@@ -145,8 +145,11 @@ class MicrosoftFabricTables(MicrosoftFabricBase):
         location = self.load_table(workspace_id, lakehouse_id, table_name, relative_path,
             mode=mode, path_type='Folder', recursive=True)
 
-        # .. and wait until the load completes.
+        # .. wait until the load completes ..
         out = self.wait_for_operation(location)
+
+        # .. and make sure the SQL analytics endpoint sees the rows before the caller queries them.
+        _ = self.refresh_sql_endpoint(workspace_id, lakehouse_id, [table_name])
 
         return out
 

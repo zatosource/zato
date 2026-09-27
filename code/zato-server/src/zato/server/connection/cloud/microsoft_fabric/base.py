@@ -9,10 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from http.client import ACCEPTED, CREATED, NO_CONTENT, OK, UNAUTHORIZED
 from logging import getLogger
+from threading import Lock
 from time import monotonic, sleep, time
 
 # Requests
 import requests
+
+# typing-extensions
+from typing_extensions import TypeAlias
 
 # Zato
 from zato.common.api import MicrosoftFabric
@@ -26,13 +30,17 @@ from zato.common.typing_ import cast_, tuple_
 
 if 0:
     from requests import Response
-    from zato.common.typing_ import anydict, anydictnone, bytesnone, stranydict, strnone, strstrdict
+    from zato.common.typing_ import anydict, anydictnone, bytesnone, stranydict, strnone
+    from zato.server.connection.cloud.microsoft_fabric.sql import SQLEndpoint, SQLPool
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # A bearer token together with the time when it expires, as seconds since the Unix epoch.
 token_info = tuple_[str, float]
+
+sqlendpointdict:TypeAlias = 'dict[str, SQLEndpoint]'
+sqlpooldict:TypeAlias     = 'dict[str, SQLPool]'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -121,8 +129,11 @@ class MicrosoftFabricBase:
         # When the current OneLake token expires, as seconds since the Unix epoch.
         self.onelake_token_expires_at = 0.0
 
-        # One shared Spark session per lakehouse, keyed by workspace ID and lakehouse ID.
-        self._spark_sessions:'strstrdict' = {}
+        # The SQL analytics endpoint of each lakehouse queried so far and a pool of connections to it,
+        # both keyed by workspace ID and lakehouse ID. The lock guards the building of a pool.
+        self._sql_endpoints:'sqlendpointdict' = {}
+        self._sql_pools:'sqlpooldict' = {}
+        self._sql_lock = Lock()
 
         # The audit log every call is recorded in - the wrapper attaches it after construction
         self.zato_audit_log = None
@@ -465,10 +476,11 @@ class MicrosoftFabricBase:
 
 # ################################################################################################################################
 
-    def onelake_delete(self, workspace_id:'str', file_path:'str') -> 'None':
-        """ Deletes a file from a workspace's OneLake filesystem.
+    def onelake_delete(self, workspace_id:'str', file_path:'str', recursive:'bool'=False) -> 'None':
+        """ Deletes a file from a workspace's OneLake filesystem, or a directory with everything in it when recursive is True.
         """
-        _ = self._invoke_onelake('DELETE', f'/{workspace_id}/{file_path}')
+        params = {'recursive': 'true'} if recursive else None
+        _ = self._invoke_onelake('DELETE', f'/{workspace_id}/{file_path}', params=params)
 
 # ################################################################################################################################
 # ################################################################################################################################

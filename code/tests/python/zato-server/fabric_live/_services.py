@@ -27,6 +27,9 @@ _received:'strlist' = []
 # What a call that succeeded reports as its error
 _no_error = ''
 
+# Whether a OneLake delete removes a directory with everything in it
+_default_recursive = False
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -501,9 +504,13 @@ class FabricTestOneLakeDelete(Service):
         conn_name = self.request.raw_request['conn_name']
         workspace_id = self.request.raw_request['workspace_id']
         file_path = self.request.raw_request['file_path']
+        recursive = self.request.raw_request.get('recursive')
+
+        if recursive is None:
+            recursive = _default_recursive
 
         conn = self.microsoft.fabric[conn_name]
-        conn.onelake_delete(workspace_id, file_path)
+        conn.onelake_delete(workspace_id, file_path, recursive)
 
         self.response.payload = json.dumps({'ok': True})
 
@@ -578,6 +585,86 @@ class FabricTestListTables(Service):
         result = conn.list_tables(workspace_id, lakehouse_id)
 
         self.response.payload = json.dumps({'tables': result})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FabricTestQuery(Service):
+    """ Runs a T-SQL query against a lakehouse's SQL analytics endpoint.
+    """
+    name = 'test.fabric.query'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        workspace_id = self.request.raw_request['workspace_id']
+        lakehouse_id = self.request.raw_request['lakehouse_id']
+        sql = self.request.raw_request['sql']
+        params = self.request.raw_request.get('params')
+
+        conn = self.microsoft.fabric[conn_name]
+        rows = conn.query(workspace_id, lakehouse_id, sql, params)
+
+        # Dates and decimals travel back as strings.
+        self.response.payload = json.dumps({'rows': rows}, default=str)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FabricTestWriteTable(Service):
+    """ Writes rows to a lakehouse table.
+    """
+    name = 'test.fabric.write-table'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        workspace_id = self.request.raw_request['workspace_id']
+        lakehouse_id = self.request.raw_request['lakehouse_id']
+        table_name = self.request.raw_request['table_name']
+        rows = self.request.raw_request['rows']
+
+        conn = self.microsoft.fabric[conn_name]
+        result = conn.write_table(workspace_id, lakehouse_id, table_name, rows)
+
+        self.response.payload = json.dumps(result)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FabricTestRefreshSQLEndpoint(Service):
+    """ Refreshes the SQL analytics endpoint's view of a lakehouse's tables.
+    """
+    name = 'test.fabric.refresh-sql-endpoint'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        workspace_id = self.request.raw_request['workspace_id']
+        lakehouse_id = self.request.raw_request['lakehouse_id']
+        table_names = self.request.raw_request.get('table_names')
+
+        conn = self.microsoft.fabric[conn_name]
+        result = conn.refresh_sql_endpoint(workspace_id, lakehouse_id, table_names)
+
+        self.response.payload = json.dumps(result)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FabricTestDisposeSQLPools(Service):
+    """ Closes the connections a connection holds to SQL analytics endpoints.
+    """
+    name = 'test.fabric.dispose-sql-pools'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+
+        conn = self.microsoft.fabric[conn_name]
+        conn.dispose_sql_pools()
+
+        self.response.payload = json.dumps({'ok': True})
 
 # ################################################################################################################################
 # ################################################################################################################################
