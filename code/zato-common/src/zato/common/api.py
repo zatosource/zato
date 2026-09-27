@@ -1982,6 +1982,7 @@ class MicrosoftFabric:
         SQL_Pool_Size = 5
         SQL_Port = 1433
         SQL_Schema = 'dbo'
+        SQL_Scope = 'https://database.windows.net/.default'
         Table_Chunk_Rows = 100000
         Table_Files_Prefix = 'Files/zato'
 

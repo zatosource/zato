@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from http.client import ACCEPTED
 from logging import getLogger
 from queue import Empty, LifoQueue
+from struct import pack
 from threading import BoundedSemaphore
 from time import monotonic
 from traceback import format_exc
@@ -20,6 +21,7 @@ from gevent import get_hub
 
 # mssql-python
 import mssql_python
+from mssql_python.constants import ConstantsDDBC
 
 # typing-extensions
 from typing_extensions import TypeAlias
@@ -45,6 +47,9 @@ logger = getLogger(__name__)
 
 _default = MicrosoftFabric.Default
 _sync_status = MicrosoftFabric.Sync_Status
+
+# The pre-connect attribute the driver reads a bearer token from
+_access_token_attribute = ConstantsDDBC.SQL_COPT_SS_ACCESS_TOKEN.value
 
 # The query and the values of its markers, in the order the markers appear in it
 _qmark_query = tuple_[str, anylist]
@@ -83,6 +88,18 @@ def _to_qmark_query(query:'str', params:'strdictnone') -> '_qmark_query':
     return out
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _to_token_struct(token:'str') -> 'bytes':
+    """ Lays a bearer token out the way the driver's access token attribute expects it -
+    a four-byte little-endian length followed by the token in UTF-16-LE.
+    """
+    token_bytes = token.encode('utf-16-le')
+    token_length = len(token_bytes)
+
+    out = pack(f'<I{token_length}s', token_length, token_bytes)
+    return out
+
 # ################################################################################################################################
 
 def _run_in_thread(func:'callable_', *args:'any_') -> 'any_':
@@ -155,10 +172,20 @@ class SQLPool:
     """ A small pool of connections to one SQL analytics endpoint. Each query checks a connection out
     and back in, a connection that failed is closed instead of returned.
     """
-    def __init__(self, host:'str', connection_string:'str', size:'int', login_timeout:'int') -> 'None':
+    def __init__(
+        self,
+        host:'str',
+        connection_string:'str',
+        get_token:'callable_',
+        size:'int',
+        login_timeout:'int',
+        ) -> 'None':
         self.host = host
         self.connection_string = connection_string
         self.login_timeout = login_timeout
+
+        # Returns the bearer token each new connection logs in with
+        self.get_token = get_token
 
         # Connections nobody is using right now
         self._idle:'connection_queue' = LifoQueue()
@@ -169,9 +196,15 @@ class SQLPool:
 # ################################################################################################################################
 
     def _new_connection(self) -> 'Connection':
-        """ Opens a new connection to the endpoint.
+        """ Opens a new connection to the endpoint, logging in with a token obtained here rather than by the driver.
         """
-        attrs_before:'login_attributes' = {mssql_python.SQL_ATTR_LOGIN_TIMEOUT: self.login_timeout}
+        token = self.get_token()
+        token_struct = _to_token_struct(token)
+
+        attrs_before:'login_attributes' = {
+            mssql_python.SQL_ATTR_LOGIN_TIMEOUT: self.login_timeout,
+            _access_token_attribute: token_struct,
+        }
 
         out = _run_in_thread(self._connect, attrs_before)
         return out
@@ -278,18 +311,11 @@ class MicrosoftFabricSQL(MicrosoftFabricBase):
 # ################################################################################################################################
 
     def _get_sql_connection_string(self, endpoint:'SQLEndpoint') -> 'str':
-        """ The connection string of an endpoint.
+        """ The connection string of an endpoint - the credentials travel as a token, separately.
         """
-
-        # A closing brace inside a braced value is written twice.
-        secret = self.client_secret.replace('}', '}}')
-
         out = (
             f'Server={endpoint.host},{_default.SQL_Port};'
             f'Database={{{endpoint.database}}};'
-            'Authentication=ActiveDirectoryServicePrincipal;'
-            f'UID={self.client_id};'
-            f'PWD={{{secret}}};'
             'Encrypt=yes;'
         )
         return out
@@ -312,7 +338,8 @@ class MicrosoftFabricSQL(MicrosoftFabricBase):
             endpoint = self._get_sql_endpoint(workspace_id, lakehouse_id)
             connection_string = self._get_sql_connection_string(endpoint)
 
-            pool = SQLPool(endpoint.host, connection_string, _default.SQL_Pool_Size, _default.SQL_Login_Timeout)
+            pool = SQLPool(endpoint.host, connection_string, self._get_sql_token,
+                _default.SQL_Pool_Size, _default.SQL_Login_Timeout)
             self._sql_pools[pool_key] = pool
 
         out = pool

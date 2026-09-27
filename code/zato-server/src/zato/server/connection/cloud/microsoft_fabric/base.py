@@ -133,6 +133,13 @@ class MicrosoftFabricBase:
         # When the current OneLake token expires, as seconds since the Unix epoch.
         self.onelake_token_expires_at = 0.0
 
+        # The current OAuth2 bearer token for SQL analytics endpoints - it uses the database scope
+        # and is obtained lazily, when a connection to an endpoint is opened.
+        self.sql_token:'strnone' = None
+
+        # When the current SQL token expires, as seconds since the Unix epoch.
+        self.sql_token_expires_at = 0.0
+
         # The SQL analytics endpoint of each lakehouse queried so far and a pool of connections to it,
         # both keyed by workspace ID and lakehouse ID. The lock guards the building of a pool.
         self._sql_endpoints:'sqlendpointdict' = {}
@@ -204,6 +211,13 @@ class MicrosoftFabricBase:
 
 # ################################################################################################################################
 
+    def _acquire_sql_token(self) -> 'None':
+        """ Obtains a new OAuth2 bearer token for SQL analytics endpoints.
+        """
+        self.sql_token, self.sql_token_expires_at = self._acquire_token_for_scope(_default.SQL_Scope)
+
+# ################################################################################################################################
+
     def _ensure_token(self) -> 'None':
         """ Makes sure a valid, non-expired API token is available.
         """
@@ -233,6 +247,22 @@ class MicrosoftFabricBase:
         now = time()
         if now >= self.onelake_token_expires_at:
             self._acquire_onelake_token()
+
+# ################################################################################################################################
+
+    def _get_sql_token(self) -> 'str':
+        """ Returns a valid, non-expired SQL token, obtaining a new one when needed.
+        """
+
+        # There is no token yet, or the one there is has expired - get a new one.
+        now = time()
+        if not self.sql_token:
+            self._acquire_sql_token()
+        elif now >= self.sql_token_expires_at:
+            self._acquire_sql_token()
+
+        out = cast_('str', self.sql_token)
+        return out
 
 # ################################################################################################################################
 

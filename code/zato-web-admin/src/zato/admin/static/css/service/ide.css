@@ -15,6 +15,11 @@ body, html {
 }
 
 #main-area-container {
+    --ide-invoker-area-padding: 6px;
+    --ide-resize-grip-color: #5f6670;
+    --ide-resize-grip-resting-opacity: 0.45;
+    --ide-resize-hover-background: #eef0f2;
+    --ide-resize-hover-delay: 150ms;
     display: flex;
     height: 87vh;
 }
@@ -24,27 +29,52 @@ body, html {
     min-width: 200px;
 }
 
-#resizer {
-    width: 6px;
-    background: #e8e8e8;
-    cursor: col-resize;
-    flex-shrink: 0;
-    position: relative;
-}
+/* ------------------------------------------------------------ */
+/* Resize grips                                                  */
+/* ------------------------------------------------------------ */
 
-#resizer::before {
-    content: '⋮';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 18px;
-    color: #999;
-    line-height: 0.5;
+#resizer {
+    position: relative;
+    flex-shrink: 0;
+    width: 9px;
+    cursor: col-resize;
 }
 
 #resizer:hover {
-    background: #d8d8d8;
+    background-color: var(--ide-resize-hover-background);
+    transition: background-color 0s linear var(--ide-resize-hover-delay);
+}
+
+#resizer::before,
+.ide-request-resize-grip {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    background-image: radial-gradient(circle, var(--ide-resize-grip-color) 1.5px, transparent 1.5px);
+    opacity: var(--ide-resize-grip-resting-opacity);
+}
+
+#resizer::before {
+    top: calc(50% - 7.5px);
+    left: 3px;
+    width: 3px;
+    height: 15px;
+    background-size: 3px 5px;
+}
+
+#resizer:hover::before,
+.ide-request-resize-grip.ide-request-resize-grip-hovered {
+    opacity: 1;
+    transition: opacity 0s linear var(--ide-resize-hover-delay);
+}
+
+/* The grip fills the area's bottom padding, which is the strip between the pane and the area's border */
+.ide-request-resize-grip {
+    bottom: 0;
+    left: calc(50% - 7.5px);
+    width: 15px;
+    height: var(--ide-invoker-area-padding);
+    background-size: 5px var(--ide-invoker-area-padding);
 }
 
 #action-area-container {
@@ -285,10 +315,11 @@ td.data-input-field-name {
 /* *********************************** */
 
 .invoker-area {
+    position: relative;
+    padding: var(--ide-invoker-area-padding);
     border: 1px solid #dde1e6;
     border-radius: 6px;
     background: #f8f9fa;
-    padding: 6px;
 }
 
 /* Block display kills the inline-block baseline gap, but it must not win
