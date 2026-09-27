@@ -1499,7 +1499,8 @@ $.fn.zato.data_table.ping = function(id, link_elem) {
     $.fn.zato.action_runner.run({
         link_elem: link_elem,
         url: url,
-        details_modal_title: 'Ping response'
+        details_modal_title: 'Ping response',
+        success_hide_ms: 2000
     });
 }
 

@@ -87,9 +87,13 @@ class MicrosoftFabricBase:
             if client_secret.startswith(SECRETS.Auto_Generated_Prefix):
                 client_secret = ''
 
-        # .. and when there is no secret in the column, it lives in the opaque attributes.
+        # .. when there is no secret in the column, it lives in the opaque attributes ..
         if not client_secret:
-            client_secret = config['client_secret']
+            client_secret = config.get('client_secret')
+
+        # .. and a connection just created from the Dashboard receives its secret in a follow-up call.
+        if client_secret is None:
+            client_secret = ''
 
         self.client_secret = client_secret
 
