@@ -10,12 +10,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import sys
 
-# Where the shared harness, the simulated 365 tenant, the simulated Fabric tenant
+# Where the shared harness, the simulated 365 tenant
 # and the simulated Power Automate environment are imported from.
 _this_directory = os.path.dirname(__file__)
 _lib_directory = os.path.abspath(os.path.join(_this_directory, '..', '..', 'zato-common', 'lib'))
 _microsoft_365_lib_directory = os.path.abspath(os.path.join(_this_directory, '..', 'microsoft_cloud_live'))
-_fabric_lib_directory = os.path.abspath(os.path.join(_this_directory, '..', 'fabric_live'))
 _power_automate_lib_directory = os.path.abspath(os.path.join(_this_directory, '..', 'power_automate_live'))
 
 sys.path.insert(0, _this_directory)
@@ -24,7 +23,6 @@ sys.path.insert(0, _lib_directory)
 # The simulator directories go last - each has its own conftest.py
 # and going first would shadow this suite's conftest.
 sys.path.append(_microsoft_365_lib_directory)
-sys.path.append(_fabric_lib_directory)
 sys.path.append(_power_automate_lib_directory)
 
 # pytest
@@ -89,7 +87,7 @@ Teams_Tool_Name = 'teams.teams_main'
 # The chat the Teams test sends to - any ID works, the simulated tenant records them all.
 Teams_Chat_ID = 'chat-id-19-001'
 
-# The Fabric side - the simulated tenant of fabric_live serves it.
+# The Fabric side - the simulated tenant in this directory serves it.
 Fabric_Connection_Name = 'fabric.lake'
 Fabric_Gateway_Name = 'test.mcp.connections.fabric'
 Fabric_Gateway_Path = '/mcp/connections-fabric'

@@ -30,10 +30,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The simulated Fabric server is shared with the live server-side test suite.
-_fabric_live_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-server', 'fabric_live'))
-if _fabric_live_dir not in sys.path:
-    sys.path.insert(0, _fabric_live_dir)
+# The simulated Fabric server is shared with the MCP test suite.
+_fabric_server_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-server', 'mcp_microsoft_live'))
+if _fabric_server_dir not in sys.path:
+    sys.path.insert(0, _fabric_server_dir)
 
 from _fabric_server import start_fabric_server
 from zato.common.typing_ import cast_

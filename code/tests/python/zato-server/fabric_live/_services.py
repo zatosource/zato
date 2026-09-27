@@ -15,6 +15,154 @@ from zato.server.service import Service
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import anydict, dictlist, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Every alert the Kafka channel under test routed to the receiver since the last clear request
+_received:'strlist' = []
+
+# What a call that succeeded reports as its error
+_no_error = ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def to_rows(reply:'anydict') -> 'dictlist':
+    """ Turns the eventhouse's reply into a list of dicts keyed by column name.
+    """
+    tables = reply['Tables']
+    result = tables[0]
+
+    column_names:'strlist' = []
+    for column in result['Columns']:
+        column_names.append(column['ColumnName'])
+
+    out:'dictlist' = []
+    for values in result['Rows']:
+        pairs = zip(column_names, values)
+        row = dict(pairs)
+        out.append(row)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FabricTestEventsReceiver(Service):
+    """ The service the Kafka channel under test routes to - records every alert handed over.
+    """
+    name = 'test.fabric.events.receiver'
+
+    def handle(self) -> 'None':
+        data = self.request.raw_request.decode('utf-8')
+        _received.append(data)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FabricTestEventsInvoker(Service):
+    """ Drives the events connections under test from inside the server.
+    """
+    name = 'test.fabric.events.invoke'
+    input = 'mode', '-connection', '-event', '-database', '-query'
+
+# ################################################################################################################################
+
+    def _ping(self) -> 'anydict':
+        out = {'is_ready': True}
+        return out
+
+# ################################################################################################################################
+
+    def _send(self) -> 'anydict':
+        connection = self.request.input.connection
+
+        try:
+            self.out.kafka[connection].send(self.request.input.event)
+        except Exception as e:
+            out = {'is_ok': False, 'error': repr(e)}
+        else:
+            out = {'is_ok': True, 'error': _no_error}
+
+        return out
+
+# ################################################################################################################################
+
+    def _ping_connection(self) -> 'anydict':
+        connection = self.request.input.connection
+
+        try:
+            self.out.kafka[connection].ping()
+        except Exception as e:
+            out = {'is_ok': False, 'error': repr(e)}
+        else:
+            out = {'is_ok': True, 'error': _no_error}
+
+        return out
+
+# ################################################################################################################################
+
+    def _query(self) -> 'anydict':
+        connection = self.request.input.connection
+
+        request = {
+            'db': self.request.input.database,
+            'csl': self.request.input.query,
+        }
+
+        conn = self.rest[connection]
+        response = conn.post(self.cid, request)
+        rows = to_rows(response.data)
+
+        out = {'rows': rows}
+        return out
+
+# ################################################################################################################################
+
+    def _get_received(self) -> 'anydict':
+        out = {'received': list(_received)}
+        return out
+
+# ################################################################################################################################
+
+    def _clear_received(self) -> 'anydict':
+        _received.clear()
+
+        out = {'is_cleared': True}
+        return out
+
+# ################################################################################################################################
+
+    def handle(self) -> 'None':
+
+        mode = self.request.input.mode
+
+        if handler := _mode_handlers.get(mode):
+            out = handler(self)
+        else:
+            out = {'error': f'Unknown mode `{mode}`'}
+
+        self.response.payload = json.dumps(out)
+        self.response.content_type = 'application/json'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_mode_handlers = {
+    'ping':            FabricTestEventsInvoker._ping,
+    'send':            FabricTestEventsInvoker._send,
+    'ping-connection': FabricTestEventsInvoker._ping_connection,
+    'query':           FabricTestEventsInvoker._query,
+    'get-received':    FabricTestEventsInvoker._get_received,
+    'clear-received':  FabricTestEventsInvoker._clear_received,
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class FabricTestListWorkspaces(Service):
     """ Lists all the workspaces through a named Fabric connection.
     """
@@ -46,42 +194,6 @@ class FabricTestGetWorkspace(Service):
         result = conn.get_workspace(workspace_id)
 
         self.response.payload = json.dumps(result)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FabricTestCreateWorkspace(Service):
-    """ Creates a new workspace.
-    """
-    name = 'test.fabric.create-workspace'
-
-    def handle(self) -> 'None':
-
-        conn_name = self.request.raw_request['conn_name']
-        workspace_name = self.request.raw_request['workspace_name']
-
-        conn = self.microsoft.fabric[conn_name]
-        result = conn.create_workspace(workspace_name)
-
-        self.response.payload = json.dumps(result)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FabricTestDeleteWorkspace(Service):
-    """ Deletes a workspace.
-    """
-    name = 'test.fabric.delete-workspace'
-
-    def handle(self) -> 'None':
-
-        conn_name = self.request.raw_request['conn_name']
-        workspace_id = self.request.raw_request['workspace_id']
-
-        conn = self.microsoft.fabric[conn_name]
-        conn.delete_workspace(workspace_id)
-
-        self.response.payload = json.dumps({'ok': True})
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -434,6 +546,23 @@ class FabricTestPing(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class FabricTestInvalidateToken(Service):
+    """ Replaces the API token a connection holds with one Fabric rejects.
+    """
+    name = 'test.fabric.invalidate-token'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+
+        conn = self.microsoft.fabric[conn_name]
+        conn.token = 'invalid'
+
+        self.response.payload = json.dumps({'ok': True})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class FabricTestListTables(Service):
     """ Lists the tables of a lakehouse.
     """
@@ -449,70 +578,6 @@ class FabricTestListTables(Service):
         result = conn.list_tables(workspace_id, lakehouse_id)
 
         self.response.payload = json.dumps({'tables': result})
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FabricTestLoadTable(Service):
-    """ Loads a OneLake file into a lakehouse table and waits until the load completes.
-    """
-    name = 'test.fabric.load-table'
-
-    def handle(self) -> 'None':
-
-        conn_name = self.request.raw_request['conn_name']
-        workspace_id = self.request.raw_request['workspace_id']
-        lakehouse_id = self.request.raw_request['lakehouse_id']
-        table_name = self.request.raw_request['table_name']
-        relative_path = self.request.raw_request['relative_path']
-
-        conn = self.microsoft.fabric[conn_name]
-
-        location = conn.load_table(workspace_id, lakehouse_id, table_name, relative_path)
-        operation = conn.wait_for_operation(location)
-
-        self.response.payload = json.dumps(operation)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FabricTestWriteTable(Service):
-    """ Writes a list of rows to a lakehouse table.
-    """
-    name = 'test.fabric.write-table'
-
-    def handle(self) -> 'None':
-
-        conn_name = self.request.raw_request['conn_name']
-        workspace_id = self.request.raw_request['workspace_id']
-        lakehouse_id = self.request.raw_request['lakehouse_id']
-        table_name = self.request.raw_request['table_name']
-        rows = self.request.raw_request['rows']
-
-        conn = self.microsoft.fabric[conn_name]
-        operation = conn.write_table(workspace_id, lakehouse_id, table_name, rows)
-
-        self.response.payload = json.dumps(operation)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FabricTestQuery(Service):
-    """ Runs an SQL query against a lakehouse.
-    """
-    name = 'test.fabric.query'
-
-    def handle(self) -> 'None':
-
-        conn_name = self.request.raw_request['conn_name']
-        workspace_id = self.request.raw_request['workspace_id']
-        lakehouse_id = self.request.raw_request['lakehouse_id']
-        sql = self.request.raw_request['sql']
-
-        conn = self.microsoft.fabric[conn_name]
-        rows = conn.query(workspace_id, lakehouse_id, sql)
-
-        self.response.payload = json.dumps({'rows': rows})
 
 # ################################################################################################################################
 # ################################################################################################################################

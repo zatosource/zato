@@ -18,6 +18,9 @@
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
+	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
+	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
+	fabric-reading-events fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
 	test-all test test-all-reset test-clean-test-all test-perf \
 	health-ruff health-clippy \
@@ -859,6 +862,68 @@ test-kafka-live: ## Kafka SASL PLAIN and OAUTHBEARER round trips through a live 
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/kafka_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_kafka_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+# ############################################################################
+# Microsoft Fabric
+# ############################################################################
+
+FABRIC_LIVE = PYTHONPATH=$(CURDIR)/code/tests/python/zato-common/lib $(ZATO_PY) -m live_fabric
+
+fabric-tutorial: ## Fabric capacity, app registration, workspace Clinic Analytics, lakehouse Operations, enmasse.yaml and fabric.ini.
+	$(FABRIC_LIVE) tutorial
+
+fabric-loading-tables: ## Fabric shared part and the sample tables of the Operations lakehouse.
+	$(FABRIC_LIVE) loading-tables
+
+fabric-lookup-tables: ## Fabric shared part and the sample tables of the Operations lakehouse.
+	$(FABRIC_LIVE) lookup-tables
+
+fabric-looking-up-data: ## Fabric shared part and the sample tables of the Operations lakehouse.
+	$(FABRIC_LIVE) looking-up-data
+
+fabric-api-on-fabric-data: ## Fabric shared part and the sample tables of the Operations lakehouse.
+	$(FABRIC_LIVE) api-on-fabric-data
+
+fabric-scheduled-reports: ## Fabric shared part and the sample tables of the Operations lakehouse.
+	$(FABRIC_LIVE) scheduled-reports
+
+fabric-files: ## Fabric shared part, the sample tables and the Files/incoming and Files/exports folders.
+	$(FABRIC_LIVE) files
+
+fabric-sending-events: ## Fabric shared part, eventhouse Operations Events and eventstream occupancy-events with its keys.
+	$(FABRIC_LIVE) sending-events
+
+fabric-receiving-events: ## Fabric shared part, eventhouse Operations Events and eventstream occupancy-events with its keys.
+	$(FABRIC_LIVE) receiving-events
+
+fabric-reading-events: ## Fabric shared part, eventhouse Operations Events and eventstream occupancy-events with its keys.
+	$(FABRIC_LIVE) reading-events
+
+fabric-notebook-results: ## Fabric shared part, the sample tables, notebook Reminder candidates and pipeline Reminders.
+	$(FABRIC_LIVE) notebook-results
+
+fabric-pipelines-and-reports: ## Fabric shared part, the sample tables, pipeline Nightly occupancy, semantic model and report Occupancy.
+	$(FABRIC_LIVE) pipelines-and-reports
+
+fabric-local-systems: ## Fabric shared part, the sample tables and the Copy pipeline Appointments from clinic.
+	$(FABRIC_LIVE) local-systems
+
+fabric-cleanup: ## Deletes the Fabric workspace with everything in it, the app registrations and ~/env/fabric-live/, suspends the capacity.
+	$(FABRIC_LIVE) cleanup
+
+Fabric_Chapters = fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data fabric-api-on-fabric-data \
+	fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events fabric-reading-events \
+	fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems
+
+test-fabric-live: $(Fabric_Chapters) ## Microsoft Fabric tests through a live Zato server against the real Clinic Analytics workspace.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) \
+	Zato_Test_Fabric_Live=1 \
+	PYTHONPATH=$(CURDIR)/code/tests/python/zato-common/lib \
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/fabric_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_fabric_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-sdk: ## Connector SDK tests through a live Zato server against a suite-owned target server.
