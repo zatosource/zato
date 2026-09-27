@@ -1,0 +1,23 @@
+/* The overlay behind the SBOM is laid out exactly as the textarea in front of it,
+   with a transparent border standing in for the textarea's own. Neither wraps lines,
+   since the textarea's scrollbar would make it wrap at a different place than the overlay.
+   The alignment and weight of .info-value around it are what the textarea's own form
+   styles reset, so the overlay resets them too. */
+.textarea-settings-container .highlight-backdrop {
+    padding: 12px;
+    border: 1px solid transparent;
+    border-radius: 0;
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: normal;
+    line-height: 1.5;
+    text-align: left;
+    white-space: pre;
+    overflow-wrap: normal;
+}
+
+.textarea-settings-container textarea.highlight-source {
+    padding: 12px;
+    white-space: pre;
+    overflow-wrap: normal;
+}

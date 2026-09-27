@@ -295,7 +295,9 @@ $.fn.zato.http_soap.init_how_it_works = function(action) {
     else if($.fn.zato.http_soap.is_rest_channel()) {
 
         // The Alerts tab's lines are not table rows, so the walk covers them as well
-        descriptions = $.fn.zato.alerts_tab.descriptions();
+        descriptions = $.extend({},
+            $.fn.zato.http_soap.field_descriptions,
+            $.fn.zato.alerts_tab.descriptions());
         fieldSelector = 'table.form-data tr, .decision-line';
     }
     else {

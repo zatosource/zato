@@ -106,6 +106,23 @@ def refresh(req:'any_') -> 'JsonResponse':
 
 # ################################################################################################################################
 
+@method_allowed('GET')
+def public_endpoint(req:'any_') -> 'JsonResponse':
+    """ Answers the one request the page makes in the background after it loaded, because checking
+    the public IP address and its DNS name means reaching out to the internet.
+    """
+    response = req.zato.client.invoke(Lets_Encrypt.Service.Get_Public_Endpoint, {})
+    public_endpoint = response.data.public_endpoint
+
+    out = {
+        'public_ip': public_endpoint['public_ip'],
+        'public_dns_name': public_endpoint['public_dns_name'],
+    }
+
+    return JsonResponse(out)
+
+# ################################################################################################################################
+
 @method_allowed('POST')
 def set_lets_encrypt(req:'any_') -> 'any_':
     is_enabled = req.POST['is_enabled'] == 'true'

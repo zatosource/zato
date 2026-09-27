@@ -12,13 +12,14 @@ from copy import deepcopy
 from uuid import uuid4
 
 # Zato
-from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, HTTP_SOAP, SchedulerLink, SEC_DEF_TYPE, \
-    Sec_Def_Type_Name, ZATO_NONE
+from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, HTTP_SOAP, KAFKA, \
+    SchedulerLink, SEC_DEF_TYPE, Sec_Def_Type_Name, ZATO_NONE
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import conn_type_to_alert_type, storage_name as alert_storage_name
 from zato.common.audit_log.common import AuditEvent
 from zato.common.broker_message import GENERIC
 from zato.common.const import SECRETS
+from zato.common.exception import BadRequest
 from zato.common.hl7.fhir.fields import Outgoing_Int_Names as FHIR_Outgoing_Int_Names
 from zato.common.hl7.mllp.fields import Channel_Int_Names as MLLP_Channel_Int_Names, \
     Outgoing_Int_Names as MLLP_Outgoing_Int_Names
@@ -76,9 +77,40 @@ _health_check_link_types = {
 
 # ################################################################################################################################
 
+def on_kafka_create_edit(service:'Service', data:'Bunch', model:'any_', old_name:'any_') -> 'None':
+    """ Checks that a Kafka connection's SASL mechanism and its security definition go together.
+    """
+    sasl_mechanism = data.get('sasl_mechanism')
+    security_id = data.get('security_id')
+
+    if not sasl_mechanism:
+        if security_id:
+            raise BadRequest(service.cid, 'A Kafka security definition requires a SASL mechanism')
+        return
+
+    if not security_id:
+        raise BadRequest(service.cid, f'Kafka SASL mechanism `{sasl_mechanism}` requires a security definition')
+
+    if sasl_mechanism not in KAFKA.Mechanism_Sec_Def_Type:
+        raise BadRequest(service.cid, f'Unsupported Kafka SASL mechanism -> `{sasl_mechanism}`')
+
+    expected_auth_type = KAFKA.Mechanism_Sec_Def_Type[sasl_mechanism]
+    auth_type = data['auth_type']
+
+    if auth_type != expected_auth_type:
+        expected_name = Sec_Def_Type_Name[expected_auth_type]
+        actual_name = Sec_Def_Type_Name[auth_type]
+        msg = f'Kafka SASL mechanism `{sasl_mechanism}` requires a {expected_name} security definition, ' + \
+            f'not {actual_name}'
+        raise BadRequest(service.cid, msg)
+
+# ################################################################################################################################
+
 hook = {
+    COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA: on_kafka_create_edit,
     COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: on_mcp_gateway_create_edit,
     COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE: on_rule_engine_api_create_edit,
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA: on_kafka_create_edit,
 }
 
 # ################################################################################################################################
@@ -334,6 +366,11 @@ class _CreateEdit(_BaseService):
 
         # Break down security definitions into components
         security_id = data.get('security_id') or ''
+
+        # ZATO_NONE means no security definition was selected.
+        if security_id == ZATO_NONE:
+            security_id = ''
+            del data['security_id']
 
         # Some Dashboard views, e.g. HL7 MLLP channels and FHIR outgoing connections, send the ID
         # as a plain integer with no type prefix, in which case there are no components to break down.

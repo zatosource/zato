@@ -21,21 +21,21 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=GRPC.Default.Address)
-    security_id = forms.ChoiceField(widget=forms.Select())
+    security_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
 
     is_tls = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     tls_ca_certs_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), required=False)
 
     proto_path = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), required=False)
-    stub_module = forms.CharField(widget=forms.TextInput(attrs={'style':'width:47%'}), required=False)
-    stub_class = forms.CharField(widget=forms.TextInput(attrs={'style':'width:47%'}), required=False)
+    stub_module = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), required=False)
+    stub_class = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), required=False)
 
     ping_timeout = forms.CharField(
-        widget=forms.TextInput(attrs={'style':'width:10%'}), initial=GRPC.Default.Ping_Timeout, required=False)
+        widget=forms.TextInput(attrs={'style':'width:15%'}), initial=GRPC.Default.Ping_Timeout, required=False)
     max_send_message_size = forms.CharField(
-        widget=forms.TextInput(attrs={'style':'width:20%'}), initial=GRPC.Default.Max_Message_Size, required=False)
+        widget=forms.TextInput(attrs={'style':'width:30%'}), initial=GRPC.Default.Max_Message_Size, required=False)
     max_recv_message_size = forms.CharField(
-        widget=forms.TextInput(attrs={'style':'width:20%'}), initial=GRPC.Default.Max_Message_Size, required=False)
+        widget=forms.TextInput(attrs={'style':'width:30%'}), initial=GRPC.Default.Max_Message_Size, required=False)
 
     def __init__(self, req, security_list, prefix=None):
         super(CreateForm, self).__init__(prefix=prefix)

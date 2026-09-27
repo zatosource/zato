@@ -187,103 +187,88 @@
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "out-grpc-create" %}" method="post" id="create-form">
-                    <table class="form-data">
+                    <table class="form-data fit-labels">
                         <tr>
-                            <td style="vertical-align:middle;width:19%">
-                                <label for="id_name">
-                                Name
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_name">Name</label></td>
                             <td>{{ create_form.name }}</td>
                         </tr>
+
                         <tr>
+                            <td></td>
                             <td>
                                 <label for="id_is_active">
-                                Active
+                                    Active
+                                    {{ create_form.is_active }}
+                                </label>
+                                |
+                                <label for="id_is_tls">
+                                    TLS
+                                    {{ create_form.is_tls }}
                                 </label>
                             </td>
-                            <td>{{ create_form.is_active }}</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_address">
-                                Address
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_address">Address</label></td>
                             <td>{{ create_form.address }}</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_security_id">
-                                Security
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_security_id">Security</label></td>
                             <td>{{ create_form.security_id }}</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_is_tls">
-                                Use TLS
-                                </label>
-                            </td>
-                            <td>{{ create_form.is_tls }}</td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <label for="id_tls_ca_certs_file">
-                                CA certs file
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_tls_ca_certs_file">CA certs file</label></td>
                             <td>{{ create_form.tls_ca_certs_file }}</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_proto_path">
-                                Proto file path
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_proto_path">Proto file path</label></td>
                             <td>{{ create_form.proto_path }}</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_stub_module">
-                                Stub module
-                                </label>
-                            </td>
-                            <td>
-                                {{ create_form.stub_module }}
-                                <label for="id_stub_class">Class</label>
-                                {{ create_form.stub_class }}
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_stub_module">Stub module</label></td>
+                            <td>{{ create_form.stub_module }}</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_ping_timeout">
-                                Ping timeout
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_stub_class">Stub class</label></td>
+                            <td>{{ create_form.stub_class }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="id_ping_timeout">Ping timeout</label></td>
                             <td>
                                 {{ create_form.ping_timeout }}
                                 <span class="form_hint">in seconds</span>
                             </td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_max_send_message_size">
-                                Max message sizes
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_max_send_message_size">Max send size</label></td>
                             <td>
                                 {{ create_form.max_send_message_size }}
-                                {{ create_form.max_recv_message_size }}
-                                <span class="form_hint">send / receive, in bytes</span>
+                                <span class="form_hint">in bytes</span>
                             </td>
                         </tr>
+
                         <tr>
-                            <td colspan="2" style="text-align:right">
-                                <span class="how-it-works-badge" id="create-how-it-works" style="float:left">How does it work?</span>
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            <td style="vertical-align:middle"><label for="id_max_recv_message_size">Max receive size</label></td>
+                            <td>
+                                {{ create_form.max_recv_message_size }}
+                                <span class="form_hint">in bytes</span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" class="form-actions">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                                <span class="form-buttons">
+                                    <input type="submit" value="OK" />
+                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                </span>
                             </td>
                         </tr>
                     </table>
@@ -295,103 +280,88 @@
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "out-grpc-edit" %}" method="post" id="edit-form">
-                    <table class="form-data">
+                    <table class="form-data fit-labels">
                         <tr>
-                            <td style="vertical-align:middle;width:19%">
-                                <label for="id_edit-name">
-                                Name
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_edit-name">Name</label></td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
+
                         <tr>
+                            <td></td>
                             <td>
                                 <label for="id_edit-is_active">
-                                Active
+                                    Active
+                                    {{ edit_form.is_active }}
+                                </label>
+                                |
+                                <label for="id_edit-is_tls">
+                                    TLS
+                                    {{ edit_form.is_tls }}
                                 </label>
                             </td>
-                            <td>{{ edit_form.is_active }}</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_edit-address">
-                                Address
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_edit-address">Address</label></td>
                             <td>{{ edit_form.address }}</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_edit-security_id">
-                                Security
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_edit-security_id">Security</label></td>
                             <td>{{ edit_form.security_id }}</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_edit-is_tls">
-                                Use TLS
-                                </label>
-                            </td>
-                            <td>{{ edit_form.is_tls }}</td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <label for="id_edit-tls_ca_certs_file">
-                                CA certs file
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_edit-tls_ca_certs_file">CA certs file</label></td>
                             <td>{{ edit_form.tls_ca_certs_file }}</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_edit-proto_path">
-                                Proto file path
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_edit-proto_path">Proto file path</label></td>
                             <td>{{ edit_form.proto_path }}</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_edit-stub_module">
-                                Stub module
-                                </label>
-                            </td>
-                            <td>
-                                {{ edit_form.stub_module }}
-                                <label for="id_edit-stub_class">Class</label>
-                                {{ edit_form.stub_class }}
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_edit-stub_module">Stub module</label></td>
+                            <td>{{ edit_form.stub_module }}</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_edit-ping_timeout">
-                                Ping timeout
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_edit-stub_class">Stub class</label></td>
+                            <td>{{ edit_form.stub_class }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="id_edit-ping_timeout">Ping timeout</label></td>
                             <td>
                                 {{ edit_form.ping_timeout }}
                                 <span class="form_hint">in seconds</span>
                             </td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <label for="id_edit-max_send_message_size">
-                                Max message sizes
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle"><label for="id_edit-max_send_message_size">Max send size</label></td>
                             <td>
                                 {{ edit_form.max_send_message_size }}
-                                {{ edit_form.max_recv_message_size }}
-                                <span class="form_hint">send / receive, in bytes</span>
+                                <span class="form_hint">in bytes</span>
                             </td>
                         </tr>
+
                         <tr>
-                            <td colspan="2" style="text-align:right">
-                                <span class="how-it-works-badge" id="edit-how-it-works" style="float:left">How does it work?</span>
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            <td style="vertical-align:middle"><label for="id_edit-max_recv_message_size">Max receive size</label></td>
+                            <td>
+                                {{ edit_form.max_recv_message_size }}
+                                <span class="form_hint">in bytes</span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" class="form-actions">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                                <span class="form-buttons">
+                                    <input type="submit" value="OK" />
+                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                </span>
                             </td>
                         </tr>
                     </table>

@@ -22,6 +22,7 @@ from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
+from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -49,6 +50,7 @@ class TestEnmasseChannelKafkaExport(TestCase):
 
         self.importer = EnmasseYAMLImporter()
         self.exporter = EnmasseYAMLExporter()
+        self.security_importer = SecurityImporter(self.importer)
         self.kafka_importer = ChannelKafkaImporter(self.importer)
 
         self.yaml_config = cast_('stranydict', None)
@@ -69,6 +71,10 @@ class TestEnmasseChannelKafkaExport(TestCase):
             self.session = get_session_from_server_dir(self.server_path)
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
+
+            # Security definitions the connections refer to.
+            _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
+            self.session.commit()
 
 # ################################################################################################################################
 
@@ -96,6 +102,12 @@ class TestEnmasseChannelKafkaExport(TestCase):
             if 'address' in yaml_def:
                 self.assertEqual(exported_def['address'], yaml_def['address'])
 
+        # Only the second connection carries a security definition.
+        self.assertEqual(exported_by_name['enmasse.kafka.channel.2']['security'], 'enmasse.basic_auth.1')
+        self.assertEqual(exported_by_name['enmasse.kafka.channel.2']['sasl_mechanism'], 'SCRAM-SHA-512')
+        self.assertNotIn('security', exported_by_name['enmasse.kafka.channel.1'])
+        self.assertNotIn('sasl_mechanism', exported_by_name['enmasse.kafka.channel.1'])
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -113,6 +125,7 @@ class TestEnmasseOutgoingKafkaExport(TestCase):
 
         self.importer = EnmasseYAMLImporter()
         self.exporter = EnmasseYAMLExporter()
+        self.security_importer = SecurityImporter(self.importer)
         self.kafka_importer = OutgoingKafkaImporter(self.importer)
 
         self.yaml_config = cast_('stranydict', None)
@@ -133,6 +146,10 @@ class TestEnmasseOutgoingKafkaExport(TestCase):
             self.session = get_session_from_server_dir(self.server_path)
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
+
+            # Security definitions the connections refer to.
+            _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
+            self.session.commit()
 
 # ################################################################################################################################
 
@@ -159,6 +176,12 @@ class TestEnmasseOutgoingKafkaExport(TestCase):
             self.assertEqual(exported_def['name'], yaml_def['name'])
             if 'address' in yaml_def:
                 self.assertEqual(exported_def['address'], yaml_def['address'])
+
+        # Only the second connection carries a security definition.
+        self.assertEqual(exported_by_name['enmasse.kafka.outgoing.2']['security'], 'enmasse.bearer_token.1')
+        self.assertEqual(exported_by_name['enmasse.kafka.outgoing.2']['sasl_mechanism'], 'OAUTHBEARER')
+        self.assertNotIn('security', exported_by_name['enmasse.kafka.outgoing.1'])
+        self.assertNotIn('sasl_mechanism', exported_by_name['enmasse.kafka.outgoing.1'])
 
 # ################################################################################################################################
 # ################################################################################################################################

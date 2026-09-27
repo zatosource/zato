@@ -131,10 +131,10 @@
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "service-edit" %}" method="post" id="edit-form">
-                    <table class="form-data">
+                    <table class="form-data fit-labels">
 
                         <tr>
-                            <td style="vertical-align:middle;width:14%">Options</td>
+                            <td style="vertical-align:middle">Options</td>
                             <td>
                             <label for="{{ edit_form.is_active.id_for_label }}">
                             Active
@@ -149,12 +149,12 @@
                         </tr>
 
                         <tr>
-                            <td style="text-align:left;vertical-align:middle">
+                            <td colspan="2" class="form-actions">
                                 <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
-                            </td>
-                            <td style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                <span class="form-buttons">
+                                    <input type="submit" value="OK" />
+                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                </span>
                             </td>
                         </tr>
                     </table>

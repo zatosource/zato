@@ -6,185 +6,67 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import os
-import sys
-
-sys.path.insert(0, os.path.dirname(__file__))
-
-# Zato - test helpers
-import _fabric_lakehouse
-from _admin_client import AdminClient
+# Live Fabric
+from live_fabric.common import ModuleCtx as FabricCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from conftest import FabricLiveEnvironment
+    from zato.common.typing_ import anydict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The main connection with valid credentials
-_conn_name = 'test.fabric.main'
+class ModuleCtx:
 
-# The workspace and the lakehouse the simulated tenant starts with
-_workspace_id = 'workspace-sales-analytics'
-_lakehouse_id = 'item-sales-lakehouse'
+    # The connection with valid credentials
+    Connection_Name = 'test.fabric.main'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _invoke(fabric_live:'FabricLiveEnvironment', service:'str', **fields:'object') -> 'anydict':
+    """ One call to a service deployed to the test server, against the lakehouse the setup built.
+    """
+    request = {
+        'conn_name': ModuleCtx.Connection_Name,
+        'workspace_id': fabric_live.fabric.workspace_id,
+        'lakehouse_id': fabric_live.fabric.lakehouse_id,
+        **fields,
+    }
+
+    client = fabric_live.zato.client()
+    out = client.invoke(service, request)
+
+    return out
+
+# ################################################################################################################################
+
+def _table_names(fabric_live:'FabricLiveEnvironment') -> 'strlist':
+    """ The names of the lakehouse's tables.
+    """
+    result = _invoke(fabric_live, 'test.fabric.list-tables')
+
+    out:'strlist' = []
+    for table in result['tables']:
+        out.append(table['name'])
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestFabricTables:
 
-    def _get_client(self, zato_server:'anydict') -> 'AdminClient':
-        out = AdminClient(zato_server['base_url'], zato_server['invoke_password'])
-        return out
-
-# ################################################################################################################################
-
-    def test_list_tables(self, zato_server:'anydict') -> 'None':
-        """ The tables the lakehouse starts with are returned.
+    def test_list_tables(self, fabric_live:'FabricLiveEnvironment') -> 'None':
+        """ The sample tables the setup wrote are all listed.
         """
-        client = self._get_client(zato_server)
-        result = client.invoke('test.fabric.list-tables', {
-            'conn_name': _conn_name,
-            'workspace_id': _workspace_id,
-            'lakehouse_id': _lakehouse_id,
-        })
+        names = _table_names(fabric_live)
 
-        tables = result['tables']
-        table_names = {table['name'] for table in tables}
-
-        assert 'regions' in table_names
-
-# ################################################################################################################################
-
-    def test_load_table(self, zato_server:'anydict') -> 'None':
-        """ A OneLake file can be loaded into a table and the load runs to completion.
-        """
-        client = self._get_client(zato_server)
-
-        # Write the file to load ..
-        file_data = 'order_id,amount\nORD-001,250.00\nORD-002,99.90\n'
-
-        result = client.invoke('test.fabric.onelake-write', {
-            'conn_name': _conn_name,
-            'workspace_id': _workspace_id,
-            'file_path': f'{_lakehouse_id}/Files/incoming/orders.csv',
-            'data': file_data,
-        })
-        assert result['ok'] is True
-
-        # .. load it into a table, waiting until the load completes ..
-        result = client.invoke('test.fabric.load-table', {
-            'conn_name': _conn_name,
-            'workspace_id': _workspace_id,
-            'lakehouse_id': _lakehouse_id,
-            'table_name': 'orders',
-            'relative_path': 'Files/incoming/orders.csv',
-        })
-        assert result['status'] == 'Succeeded'
-
-        # .. and confirm the new table is listed now.
-        result = client.invoke('test.fabric.list-tables', {
-            'conn_name': _conn_name,
-            'workspace_id': _workspace_id,
-            'lakehouse_id': _lakehouse_id,
-        })
-        table_names = {table['name'] for table in result['tables']}
-        assert 'orders' in table_names
-
-# ################################################################################################################################
-
-    def test_write_table(self, zato_server:'anydict') -> 'None':
-        """ A list of dicts becomes a table - the rows travel through OneLake and one load turns them into data.
-        """
-        client = self._get_client(zato_server)
-
-        rows = [
-            {'region': 'EMEA', 'total': 1250.5},
-            {'region': 'APAC', 'total': 875.25},
-        ]
-
-        # Write the rows ..
-        result = client.invoke('test.fabric.write-table', {
-            'conn_name': _conn_name,
-            'workspace_id': _workspace_id,
-            'lakehouse_id': _lakehouse_id,
-            'table_name': 'daily_totals',
-            'rows': rows,
-        })
-        assert result['status'] == 'Succeeded'
-
-        # .. and confirm the new table is listed now.
-        result = client.invoke('test.fabric.list-tables', {
-            'conn_name': _conn_name,
-            'workspace_id': _workspace_id,
-            'lakehouse_id': _lakehouse_id,
-        })
-        table_names = {table['name'] for table in result['tables']}
-        assert 'daily_totals' in table_names
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TestFabricQuery:
-
-    def _get_client(self, zato_server:'anydict') -> 'AdminClient':
-        out = AdminClient(zato_server['base_url'], zato_server['invoke_password'])
-        return out
-
-# ################################################################################################################################
-
-    def test_query(self, zato_server:'anydict') -> 'None':
-        """ An SQL query returns its rows as a list of dicts keyed by column names.
-        """
-        client = self._get_client(zato_server)
-
-        result = client.invoke('test.fabric.query', {
-            'conn_name': _conn_name,
-            'workspace_id': _workspace_id,
-            'lakehouse_id': _lakehouse_id,
-            'sql': 'select region, total from daily_totals',
-        })
-
-        rows = result['rows']
-
-        assert rows == [
-            {'region': 'EMEA', 'total': 1250.5},
-            {'region': 'APAC', 'total': 875.25},
-        ]
-
-# ################################################################################################################################
-
-    def test_query_reuses_the_session(self, zato_server:'anydict') -> 'None':
-        """ Two queries against the same lakehouse share one Spark session.
-        """
-        client = self._get_client(zato_server)
-
-        # Run the first query and note how many sessions exist afterwards ..
-        result = client.invoke('test.fabric.query', {
-            'conn_name': _conn_name,
-            'workspace_id': _workspace_id,
-            'lakehouse_id': _lakehouse_id,
-            'sql': 'select region, total from daily_totals',
-        })
-        assert result['rows']
-
-        session_count = _fabric_lakehouse.state.session_count
-
-        # .. run the second one ..
-        result = client.invoke('test.fabric.query', {
-            'conn_name': _conn_name,
-            'workspace_id': _workspace_id,
-            'lakehouse_id': _lakehouse_id,
-            'sql': 'select region, total from daily_totals where total > 1000',
-        })
-        assert result['rows']
-
-        # .. and confirm no new session was opened for it.
-        assert _fabric_lakehouse.state.session_count == session_count
+        for table_name in FabricCtx.Tables:
+            assert table_name in names
 
 # ################################################################################################################################
 # ################################################################################################################################

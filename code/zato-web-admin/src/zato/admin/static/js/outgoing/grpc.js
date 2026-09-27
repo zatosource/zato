@@ -48,10 +48,11 @@ $.fn.zato.outgoing.grpc.field_descriptions = {
     'id_is_tls': 'Whether to connect over TLS. Uncheck only for servers that require plaintext.',
     'id_tls_ca_certs_file': 'Path to a PEM file with CA certificates to verify the server\'s certificate against.',
     'id_proto_path': 'Path to a .proto file on the server. Client code is generated out of it automatically.',
-    'id_stub_module': 'Alternatively, the Python module with your own pre-generated stub, ' +
-        'e.g. billing_pb2_grpc, and optionally the stub class in it.',
+    'id_stub_module': 'Alternatively, the Python module with your own pre-generated stub, e.g. billing_pb2_grpc.',
+    'id_stub_class': 'The stub class to use, e.g. BillingStub. Needed only when the code has more than one service.',
     'id_ping_timeout': 'How many seconds to wait for the server when pinging the connection.',
-    'id_max_send_message_size': 'The biggest message that can be sent or received, in bytes.',
+    'id_max_send_message_size': 'The biggest message that can be sent, in bytes.',
+    'id_max_recv_message_size': 'The biggest message that can be received, in bytes.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

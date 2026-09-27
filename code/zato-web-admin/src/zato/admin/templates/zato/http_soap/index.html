@@ -669,9 +669,9 @@
                     <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-main" role="tabpanel">
                     {% endif %}
 
-                    <table class="form-data">
+                    <table class="form-data fit-labels">
                         <tr>
-                            <td style="vertical-align:middle;width:19%"><label for="id_name">Name</label></td>
+                            <td style="vertical-align:middle"><label for="id_name">Name</label></td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
@@ -909,16 +909,14 @@
                         {% if connection != 'outgoing' or transport != 'plain_http' %}
                         {% if not has_alerts_tab %}
                         <tr>
-                            {% if transport == 'soap' %}
-                            <td style="text-align:left;vertical-align:middle">
+                            <td colspan="2" class="form-actions">
+                                {% if transport == 'soap' %}
                                 <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
-                            </td>
-                            <td style="text-align:right">
-                            {% else %}
-                            <td colspan="2" style="text-align:right">
-                            {% endif %}
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                {% endif %}
+                                <span class="form-buttons">
+                                    <input type="submit" value="OK" />
+                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                </span>
                             </td>
 
                         </tr>
@@ -933,12 +931,12 @@
 
                     <table class="form-data">
                         <tr>
-                            <td style="text-align:left;vertical-align:middle">
+                            <td colspan="2" class="form-actions">
                                 <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
-                            </td>
-                            <td style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                <span class="form-buttons">
+                                    <input type="submit" value="OK" />
+                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                </span>
                             </td>
                         </tr>
                     </table>
@@ -972,12 +970,12 @@
 
                     <table class="form-data">
                         <tr>
-                            <td style="text-align:left;vertical-align:middle">
+                            <td colspan="2" class="form-actions">
                                 <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
-                            </td>
-                            <td style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                <span class="form-buttons">
+                                    <input type="submit" value="OK" />
+                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                </span>
                             </td>
                         </tr>
                     </table>
@@ -1024,9 +1022,9 @@
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-main" role="tabpanel">
                     {% endif %}
 
-                    <table class="form-data">
+                    <table class="form-data fit-labels">
                         <tr>
-                            <td style="vertical-align:middle;width:20%"><label for="id_edit-name">Name</label></td>
+                            <td style="vertical-align:middle"><label for="id_edit-name">Name</label></td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
 
@@ -1262,16 +1260,14 @@
                         {% if connection != 'outgoing' or transport != 'plain_http' %}
                         {% if not has_alerts_tab %}
                         <tr>
-                            {% if transport == 'soap' %}
-                            <td style="text-align:left;vertical-align:middle">
+                            <td colspan="2" class="form-actions">
+                                {% if transport == 'soap' %}
                                 <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
-                            </td>
-                            <td style="text-align:right">
-                            {% else %}
-                            <td colspan="2" style="text-align:right">
-                            {% endif %}
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                {% endif %}
+                                <span class="form-buttons">
+                                    <input type="submit" value="OK" />
+                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                </span>
                             </td>
                         </tr>
                         {% endif %}
@@ -1285,12 +1281,12 @@
 
                     <table class="form-data">
                         <tr>
-                            <td style="text-align:left;vertical-align:middle">
+                            <td colspan="2" class="form-actions">
                                 <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
-                            </td>
-                            <td style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                <span class="form-buttons">
+                                    <input type="submit" value="OK" />
+                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                </span>
                             </td>
                         </tr>
                     </table>
@@ -1324,12 +1320,12 @@
 
                     <table class="form-data">
                         <tr>
-                            <td style="text-align:left;vertical-align:middle">
+                            <td colspan="2" class="form-actions">
                                 <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
-                            </td>
-                            <td style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                <span class="form-buttons">
+                                    <input type="submit" value="OK" />
+                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                                </span>
                             </td>
                         </tr>
                     </table>

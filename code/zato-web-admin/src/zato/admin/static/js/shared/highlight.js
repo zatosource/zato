@@ -56,7 +56,11 @@ $.fn.zato.highlight.config = {
 
     // What a Jinja tag holds - a string literal, a number standing on its own, a
     // keyword of the template language, and a name of what the template is given
-    jinja_token_pattern: /('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")|(?<![\w.])(-?\d+(?:\.\d+)?)(?![\w])|\b(if|elif|else|endif|for|endfor|in|not|and|or|is|set|include|extends|import|block|endblock|macro|endmacro|with|endwith|raw|endraw|true|false|none|True|False|None)\b|([A-Za-z_][\w.]*)/g
+    jinja_token_pattern: /('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")|(?<![\w.])(-?\d+(?:\.\d+)?)(?![\w])|\b(if|elif|else|endif|for|endfor|in|not|and|or|is|set|include|extends|import|block|endblock|macro|endmacro|with|endwith|raw|endraw|true|false|none|True|False|None)\b|([A-Za-z_][\w.]*)/g,
+
+    // The JSON tokens - a string with an optional key colon, a number,
+    // a keyword or a piece of punctuation
+    json_token_pattern: /("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false|null)\b|([{}\[\],:])/g
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -460,6 +464,44 @@ $.fn.zato.highlight.rules_value_to_html = function(text) {
     };
 
     var out = highlight.replace_tokens(text, highlight.config.rules_token_pattern, wrap_match);
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+// The JSON format
+// ////////////////////////////////////////////////////////////////////////
+
+// A whole JSON document - keys, strings, numbers, keywords and punctuation.
+$.fn.zato.highlight.json_to_html = function(text) {
+
+    var highlight = $.fn.zato.highlight;
+
+    var wrap_match = function(match) {
+
+        // A string right before a colon is a key ..
+        if(match[1]) {
+
+            if(match[2]) {
+                return highlight.wrap('highlight-key', match[1]) + highlight.wrap('highlight-punctuation', match[2]);
+            }
+
+            return highlight.wrap('highlight-string', match[1]);
+        }
+
+        // .. then numbers and keywords ..
+        if(match[3]) {
+            return highlight.wrap('highlight-number', match[3]);
+        }
+
+        if(match[4]) {
+            return highlight.wrap('highlight-keyword', match[4]);
+        }
+
+        // .. and what remains is punctuation.
+        return highlight.wrap('highlight-punctuation', match[5]);
+    };
+
+    var out = highlight.replace_tokens(text, highlight.config.json_token_pattern, wrap_match);
     return out;
 };
 

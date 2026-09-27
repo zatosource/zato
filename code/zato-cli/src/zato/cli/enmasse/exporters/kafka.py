@@ -30,23 +30,27 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
+# The key the importer reads the security definition's name from.
+_security_name_field = 'security_name'
+_security_export_key = 'security'
+
 CHANNEL_OPTIONAL_FIELDS = [
-    'topic', 'group_id', 'service', 'ssl',
+    'topic', 'group_id', 'service', 'sasl_mechanism', 'ssl',
     'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file',
 ]
 
 CHANNEL_OPAQUE_FIELDS = [
-    'topic', 'group_id', 'service', 'ssl',
+    'topic', 'group_id', 'service', 'sasl_mechanism', 'ssl',
     'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file',
 ]
 
 OUTGOING_OPTIONAL_FIELDS = [
-    'topic', 'ssl',
+    'topic', 'sasl_mechanism', 'ssl',
     'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file',
 ]
 
 OUTGOING_OPAQUE_FIELDS = [
-    'topic', 'ssl',
+    'topic', 'sasl_mechanism', 'ssl',
     'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file',
 ]
 
@@ -91,6 +95,9 @@ class ChannelKafkaExporter:
             for field in CHANNEL_OPTIONAL_FIELDS:
                 if value := row.get(field):
                     item[field] = value
+
+            if security_name := row.get(_security_name_field):
+                item[_security_export_key] = security_name
 
             exported.append(item)
 
@@ -138,6 +145,9 @@ class OutgoingKafkaExporter:
             for field in OUTGOING_OPTIONAL_FIELDS:
                 if value := row.get(field):
                     item[field] = value
+
+            if security_name := row.get(_security_name_field):
+                item[_security_export_key] = security_name
 
             exported.append(item)
 

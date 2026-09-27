@@ -7,329 +7,262 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import atexit
-import logging
 import os
-import re
 import shutil
 import socket
 import subprocess
-import sys
 import tempfile
-import threading
 import time
-from http.client import OK
-from urllib.error import URLError
-from urllib.request import Request, urlopen
+from pathlib import Path
+from typing import NamedTuple
+
+# pytest
+import pytest
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.process_util import kill_process_tree
 
-sys.path.insert(0, os.path.dirname(__file__))
+# Live environment
+from live_environment.parts import Parts, skip_or_fail, tear_down
+from live_environment.quickstart import find_free_port, Host, ZatoEnvironment
 
-# PyPI
-import pytest
+# Live Fabric
+from live_fabric.common import ModuleCtx as FabricCtx
+from live_fabric.state import describe, missing_requirements
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict
+    from live_fabric.state import FabricEnvironment
+    from zato.common.test.client import AdminClient
+    from zato.common.typing_ import iterator_, strlist, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.fabric_live.conftest')
+popen_ = subprocess.Popen[bytes]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_zato_base = os.environ['ZATO_TEST_BASE_DIR']
-_zato_bin  = os.path.join(_zato_base, 'code', 'bin', 'zato')
+class ModuleCtx:
 
-_template_path = os.path.join(os.path.dirname(__file__), '_enmasse_template.yaml')
-_services_path = os.path.join(os.path.dirname(__file__), '_services.py')
+    # The connection with valid credentials
+    Connection_Name = 'test.fabric.main'
 
-_process_kill_timeout = 5
-_server_wait_timeout  = 120
-_quickstart_timeout   = 180
-_ping_poll_interval   = 0.5
+    # The connection whose client secret the token endpoint rejects
+    Bad_Credentials_Connection_Name = 'test.fabric.bad-credentials'
+
+    # The bridge binary, relative to the repository root the tests are run from
+    Bridge_Binary = Path(os.environ['ZATO_TEST_BASE_DIR']) / 'code' / 'bin' / '_zato_queue_bridge'
+
+    # The services the tests drive and the connections they use
+    Services_File = Path(__file__).parent / '_services.py'
+    Template_File = Path(__file__).parent / '_enmasse_template.yaml'
+
+    # How long a freshly started Redis has to open its port
+    Redis_Wait_Timeout  = 30
+    Redis_Poll_Interval = 0.2
+    Connect_Timeout     = 1
+
+    # The variable name both the server and the bridge read the Redis port from
+    Bridge_Redis_Port_Variable = 'Zato_Queue_Bridge_Redis_Port'
+
+    # The service whose answer tells the deployed services are in place
+    Ping_Service = 'test.fabric.ping'
+
+    # How long the deployed services have to appear
+    Deploy_Timeout       = 60
+    Deploy_Poll_Interval = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _SessionState:
-    """ Holds all mutable session state.
+class FabricLiveEnvironment(NamedTuple):
+    """ Everything a test case needs - the server to invoke and the Fabric environment to reach.
+    """
+    zato: 'ZatoEnvironment'
+    fabric: 'FabricEnvironment'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ProcessPart:
+    """ One started process, stopped along with everything it spawned.
     """
 
-    def __init__(self) -> 'None':
-        self.server_process:'subprocess.Popen[bytes] | None' = None
-        self.quickstart_directory:'str | None' = None
-        self.fabric_server:'any_' = None
+    def __init__(self, process:'popen_') -> 'None':
+        self.process = process
 
 # ################################################################################################################################
 
-    def kill_server(self) -> 'None':
-        """ Terminates the server subprocess if it is still running.
-        """
-        if self.server_process:
-            if self.server_process.poll() is None:
-                self.server_process.kill()
-                _ = self.server_process.wait(timeout=_process_kill_timeout)
-                logger.info('Killed server process')
-
-        self.server_process = None
-        _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
-
-# ################################################################################################################################
-
-    def cleanup(self) -> 'None':
-        """ Full teardown.
-        """
-        if self.quickstart_directory:
-            server_log_path = os.path.join(self.quickstart_directory, 'server1', 'logs', 'server.log')
-            if os.path.exists(server_log_path):
-                _ = shutil.copy(server_log_path, '/tmp/server-logs-fabric-live.txt')
-
-        self.kill_server()
-
-        if self.fabric_server:
-            self.fabric_server.shutdown()
-            self.fabric_server = None
-
-        if self.quickstart_directory:
-            shutil.rmtree(self.quickstart_directory, ignore_errors=True)
-
-        self.quickstart_directory = None
+    def stop(self) -> 'None':
+        kill_process_tree(self.process)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_state = _SessionState()
-_ = atexit.register(_state.cleanup)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _find_free_port() -> 'int':
-    """ Returns a free TCP port on localhost.
+def _wait_for_tcp_port(port:'int') -> 'None':
+    """ Polls a TCP port until it accepts connections, or raises after the timeout.
     """
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
-        tcp_socket.bind(('127.0.0.1', 0))
-        out = tcp_socket.getsockname()[1]
-        return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _wait_for_server(host:'str', port:'int', timeout:'int'=_server_wait_timeout) -> 'None':
-    """ Polls /zato/ping until 200 or timeout.
-    """
-    ping_url = f'http://{host}:{port}/zato/ping'
-    start_time = time.monotonic()
-    deadline = start_time + timeout
-    attempt_number = 0
+    now = time.monotonic()
+    deadline = now + ModuleCtx.Redis_Wait_Timeout
+    address = (Host, port)
 
     while time.monotonic() < deadline:
-        attempt_number += 1
-        elapsed = time.monotonic() - start_time
-
         try:
-            request = Request(ping_url, method='GET')
-            with urlopen(request, timeout=_process_kill_timeout) as response:
-                if response.status == OK:
-                    logger.info('Ping OK after %.1fs (attempt %d)', elapsed, attempt_number)
-                    return
+            with socket.create_connection(address, timeout=ModuleCtx.Connect_Timeout):
+                return
+        except OSError:
+            time.sleep(ModuleCtx.Redis_Poll_Interval)
 
-        except (ConnectionRefusedError, OSError, URLError):
-            logger.debug('Ping attempt %d at %.1fs: not ready', attempt_number, elapsed)
-
-        time.sleep(_ping_poll_interval)
-
-    raise RuntimeError(f'Server at {host}:{port} did not respond within {timeout}s')
+    raise Exception(f'Port {port} did not accept connections within {ModuleCtx.Redis_Wait_Timeout}s')
 
 # ################################################################################################################################
-# ################################################################################################################################
 
-def _render_template(placeholders:'anydict') -> 'str':
-    """ Reads the enmasse YAML template and replaces all {{placeholder}} tokens.
+def _start_redis(port:'int') -> 'popen_':
+    """ Starts a throwaway Redis with no persistence in its own session.
     """
-    with open(_template_path, 'r') as template_file:
-        out = template_file.read()
-
-    for key, value in placeholders.items():
-        token = '{{' + key + '}}'
-        out = out.replace(token, str(value))
+    command = ['redis-server', '--port', str(port), '--save', '', '--appendonly', 'no']
+    out = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    _wait_for_tcp_port(port)
 
     return out
 
 # ################################################################################################################################
-# ################################################################################################################################
 
-def _start_server(server_directory:'str', server_port:'int', broker_port:'int') -> 'float':
-    """ Starts the Zato server and waits for it to be ready. Returns the popen timestamp.
+def _start_bridge(env:'strstrdict') -> 'popen_':
+    """ Starts the queue bridge binary pointed at the test Redis.
     """
-    server_env = os.environ.copy()
-    server_env['Zato_Config_Bind_Port'] = str(server_port)
-    server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
-    _ = server_env.pop('COVERAGE_PROCESS_START', None)
+    command = [str(ModuleCtx.Bridge_Binary)]
 
-    _state.server_process = subprocess.Popen(
-        [_zato_bin, 'start', server_directory, '--fg'],
-        env=server_env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
-
-    popen_time = time.monotonic()
-
-    def _stream_output() -> 'None':
-        stdout = _state.server_process.stdout # type: ignore[union-attr]
-        readline = stdout.readline # pyright: ignore[reportOptionalMemberAccess]
-        for line in iter(readline, b''):
-            text = line.decode('utf-8', errors='replace').rstrip()
-            elapsed = time.monotonic() - popen_time
-            logger.debug('[SERVER %6.1fs] %s', elapsed, text)
-
-    stdout_thread = threading.Thread(target=_stream_output, daemon=True)
-    stdout_thread.start()
-
-    host = '127.0.0.1'
-    _wait_for_server(host, server_port)
-    logger.info('Server ready: %.1fs', time.monotonic() - popen_time)
-
-    return popen_time
+    out = subprocess.Popen(command, env=env, start_new_session=True)
+    return out
 
 # ################################################################################################################################
-# ################################################################################################################################
 
-@pytest.fixture(scope='session', autouse=True)
-def zato_server() -> 'any_':
-    """ Session-scoped fixture that spins up a simulated Fabric tenant
-    and a Zato server with Fabric connections.
+def _local_requirements() -> 'strlist':
+    """ What this machine lacks besides the Fabric side.
     """
-    from _fabric_server import start_fabric_server
+    out:'strlist' = []
 
-    # Kill any leftover Zato servers ..
-    _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
-    time.sleep(2)
+    if not shutil.which('redis-server'):
+        out.append('redis-server is not installed')
 
-    start_time = time.monotonic()
+    if not ModuleCtx.Bridge_Binary.exists():
+        out.append(f'Bridge binary {ModuleCtx.Bridge_Binary} is missing')
 
-    # Generate credentials ..
-    tenant_id = 'test-tenant-' + CryptoManager.generate_hex_string()
-    client_id = 'test-client-' + CryptoManager.generate_hex_string()
-    client_secret = 'test.secret.' + CryptoManager.generate_hex_string()
+    return out
+
+# ################################################################################################################################
+
+def _render_template(fabric:'FabricEnvironment') -> 'str':
+    """ The connections under test, with the real credentials and one wrong secret.
+    """
+    template = ModuleCtx.Template_File.read_text()
+
     invalid_client_secret = 'test.invalid.secret.' + CryptoManager.generate_hex_string()
-    invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
 
-    # Start the simulated Fabric tenant ..
-    fabric_port = _find_free_port()
-    fabric_server, _ignored_thread = start_fabric_server(fabric_port, tenant_id, client_id, client_secret)
-    _state.fabric_server = fabric_server
-
-    logger.info('Fabric test server started on port %d', fabric_port)
-
-    # Render the enmasse template ..
-    placeholders = {
-        'fabric_port': fabric_port,
-        'tenant_id': tenant_id,
-        'client_id': client_id,
-        'client_secret': client_secret,
-        'invalid_client_secret': invalid_client_secret,
-    }
-
-    # Create quickstart ..
-    _state.quickstart_directory = tempfile.mkdtemp(prefix='zato_fabric_live_qs_')
-
-    quickstart_env = os.environ.copy()
-    _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
-
-    quickstart_command = [
-        _zato_bin, 'quickstart', 'create', _state.quickstart_directory,
-        '--force',
-        '--password', invoke_password,
-        '--servers', '1',
-        '--server-api-client-for-scheduler-password', invoke_password,
-        '--no-scheduler',
-    ]
-
-    result = subprocess.run(
-        quickstart_command, capture_output=True, text=True, check=False,
-        timeout=_quickstart_timeout, env=quickstart_env)
-
-    if result.returncode != 0:
-        raise RuntimeError(f'quickstart create failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
-
-    quickstart_time = time.monotonic()
-    logger.info('Quickstart create: %.1fs', quickstart_time - start_time)
-
-    server_directory = os.path.join(_state.quickstart_directory, 'server1')
-
-    # Render and import enmasse ..
-    rendered_yaml = _render_template(placeholders)
-    rendered_path = os.path.join(_state.quickstart_directory, 'enmasse.yaml')
-
-    with open(rendered_path, 'w') as rendered_file:
-        _ = rendered_file.write(rendered_yaml)
-
-    enmasse_env = os.environ.copy()
-    enmasse_env['Zato_Needs_Config_Reload'] = 'False'
-
-    enmasse_result = subprocess.run(
-        [_zato_bin, 'enmasse', '--import', '--input', rendered_path, server_directory],
-        capture_output=True, text=True, check=False,
-        timeout=_quickstart_timeout, env=enmasse_env)
-
-    if enmasse_result.returncode != 0:
-        raise RuntimeError(f'enmasse import failed:\nstdout: {enmasse_result.stdout}\nstderr: {enmasse_result.stderr}')
-
-    enmasse_time = time.monotonic()
-    logger.info('Enmasse import: %.1fs', enmasse_time - quickstart_time)
-
-    # Hot-deploy the test services ..
-    pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
-    _ = shutil.copy2(_services_path, os.path.join(pickup_directory, 'fabric_test_services.py'))
-
-    # Patch server.conf so CLI commands use the dynamic port ..
-    server_conf_path = os.path.join(server_directory, 'config', 'repo', 'server.conf')
-
-    with open(server_conf_path, 'r') as server_conf_file:
-        server_conf_content = server_conf_file.read()
-
-    server_port = _find_free_port()
-
-    server_conf_content = re.sub(
-        r'^(bind\s*=\s*)\S+',
-        f'\\g<1>0.0.0.0:{server_port}',
-        server_conf_content,
-        flags=re.MULTILINE,
+    out = template.format(
+        connection_name=ModuleCtx.Connection_Name,
+        bad_credentials_connection_name=ModuleCtx.Bad_Credentials_Connection_Name,
+        tenant_id=fabric.tenant_id,
+        client_id=fabric.client_id,
+        client_secret=fabric.client_secret,
+        invalid_client_secret=invalid_client_secret,
     )
 
-    with open(server_conf_path, 'w') as server_conf_file:
-        _ = server_conf_file.write(server_conf_content)
+    return out
 
-    # Start the server ..
-    broker_port = _find_free_port()
-    _ = _start_server(server_directory, server_port, broker_port)
+# ################################################################################################################################
 
-    logger.info('Total setup: %.1fs', time.monotonic() - start_time)
+def _wait_until_deployed(client:'AdminClient') -> 'None':
+    """ Waits for the hot-deployed services to answer.
+    """
+    now = time.monotonic()
+    deadline = now + ModuleCtx.Deploy_Timeout
+    request = {'conn_name': ModuleCtx.Connection_Name}
 
-    host = '127.0.0.1'
+    while time.monotonic() < deadline:
+        try:
+            _ = client.invoke(ModuleCtx.Ping_Service, request)
+        except Exception:
+            time.sleep(ModuleCtx.Deploy_Poll_Interval)
+        else:
+            return
 
-    yield {
-        'host': host,
-        'port': server_port,
-        'invoke_password': invoke_password,
-        'base_url': f'http://{host}:{server_port}',
-        'fabric_port': fabric_port,
-        'tenant_id': tenant_id,
-        'client_id': client_id,
-        'client_secret': client_secret,
-        'server_directory': server_directory,
-    }
+    raise Exception(f'The test services did not deploy within {ModuleCtx.Deploy_Timeout}s')
 
-    _state.cleanup()
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def fabric_live() -> 'iterator_':
+    """ One Redis, one queue bridge and one Zato server for the whole session.
+    """
+    # Skip or fail when anything the suite needs is missing ..
+    missing_fabric = missing_requirements()
+    missing_local = _local_requirements()
+    missing = missing_fabric + missing_local
+    skip_or_fail(missing, FabricCtx.Required_Variable)
+
+    parts = Parts()
+
+    try:
+        # .. read what the setup recorded ..
+        fabric = describe()
+
+        # .. start Redis ..
+        redis_port = find_free_port()
+        redis_port_text = str(redis_port)
+        redis_process = _start_redis(redis_port)
+        redis_part = ProcessPart(redis_process)
+        parts.add('redis-server', redis_part.stop)
+
+        # .. start the bridge pointed at it ..
+        bridge_env = dict(os.environ)
+        bridge_env[ModuleCtx.Bridge_Redis_Port_Variable] = redis_port_text
+        bridge_process = _start_bridge(bridge_env)
+        bridge_part = ProcessPart(bridge_process)
+        parts.add('queue bridge', bridge_part.stop)
+
+        # .. start the server pointed at the same Redis ..
+        directory = tempfile.mkdtemp(prefix='zato_fabric_live_')
+        zato = ZatoEnvironment(directory, password_prefix='test.fabric')
+        parts.add('zato environment', zato.stop)
+        zato.create()
+
+        extra_environment = {ModuleCtx.Bridge_Redis_Port_Variable: redis_port_text}
+        zato.start(extra_environment)
+
+        # .. import the connections under test ..
+        _ = zato.import_yaml('fabric_live.yaml', _render_template(fabric))
+
+        # .. deploy the services the tests drive ..
+        file_name = ModuleCtx.Services_File.name
+        source = ModuleCtx.Services_File.read_text()
+        zato.deploy(file_name, source)
+
+        # .. hand everything to the tests ..
+        out = FabricLiveEnvironment(zato=zato, fabric=fabric)
+        yield out
+
+    # .. and stop whatever was started.
+    finally:
+        tear_down(parts)
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def deployed_client(fabric_live:'FabricLiveEnvironment') -> 'AdminClient':
+    """ A client of the test server, handed over once the deployed services answer.
+    """
+    out = fabric_live.zato.client()
+    _wait_until_deployed(out)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

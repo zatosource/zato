@@ -102,12 +102,27 @@ pub struct ChannelConfig {
     /// Queue to consume from (IBM MQ only).
     #[serde(default, deserialize_with = "deserialize_nullable_string")]
     pub queue: String,
-    /// Username for authenticated connections (IBM MQ only).
+    /// Username for IBM MQ, or for the PLAIN and SCRAM mechanisms of Kafka.
     #[serde(default, deserialize_with = "deserialize_nullable_string")]
     pub username: String,
-    /// Password matching the username (IBM MQ only).
+    /// Password matching the username.
     #[serde(default, deserialize_with = "deserialize_nullable_string")]
     pub password: String,
+    /// SASL mechanism name, empty when the broker does not use SASL (Kafka only).
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
+    pub sasl_mechanism: String,
+    /// Token endpoint the OAUTHBEARER mechanism fetches its tokens from (Kafka only).
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
+    pub oauth_token_url: String,
+    /// OAuth client ID sent to the token endpoint (Kafka only).
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
+    pub oauth_client_id: String,
+    /// OAuth client secret sent to the token endpoint (Kafka only).
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
+    pub oauth_client_secret: String,
+    /// Space-separated OAuth scopes requested from the token endpoint (Kafka only).
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
+    pub oauth_scope: String,
     /// Whether to strip the MQRFH2 header from message payloads (IBM MQ only).
     #[serde(default, deserialize_with = "deserialize_nullable_bool")]
     pub remove_jms_headers: bool,
@@ -147,12 +162,27 @@ pub struct OutgoingConfig {
     /// Queue to publish to (IBM MQ only).
     #[serde(default, deserialize_with = "deserialize_nullable_string")]
     pub queue: String,
-    /// Username for authenticated connections (IBM MQ only).
+    /// Username for IBM MQ, or for the PLAIN and SCRAM mechanisms of Kafka.
     #[serde(default, deserialize_with = "deserialize_nullable_string")]
     pub username: String,
-    /// Password matching the username (IBM MQ only).
+    /// Password matching the username.
     #[serde(default, deserialize_with = "deserialize_nullable_string")]
     pub password: String,
+    /// SASL mechanism name, empty when the broker does not use SASL (Kafka only).
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
+    pub sasl_mechanism: String,
+    /// Token endpoint the OAUTHBEARER mechanism fetches its tokens from (Kafka only).
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
+    pub oauth_token_url: String,
+    /// OAuth client ID sent to the token endpoint (Kafka only).
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
+    pub oauth_client_id: String,
+    /// OAuth client secret sent to the token endpoint (Kafka only).
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
+    pub oauth_client_secret: String,
+    /// Space-separated OAuth scopes requested from the token endpoint (Kafka only).
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
+    pub oauth_scope: String,
     /// TLS cipher specification, e.g. `ANY_TLS12_OR_HIGHER` (IBM MQ only).
     #[serde(default, deserialize_with = "deserialize_nullable_string")]
     pub cipher_spec: String,

@@ -4,8 +4,7 @@
 // On click, enters help mode: walks through form fields one by one,
 // showing a descriptive tooltip for each. Arrow keys navigate,
 // Esc deactivates help mode (does not close the form).
-// Clicking a label switches to that field's tooltip - for toggles without
-// flipping them, and their tooltips sit above so the slider stays visible.
+// Label clicks are left entirely to the browser.
 // Clicking outside the form deactivates help mode.
 
 (function($) {
@@ -70,58 +69,7 @@ $.fn.zato.how_it_works.init = function(config) {
         }
     });
 
-    // .. mark labels that have descriptions so they get the help cursor ..
-    $.fn.zato.how_it_works._markLabels(config);
-
-    // .. clicking a marked label shows that field's tooltip,
-    // .. activating help mode first if it is not active yet ..
     var container = document.getElementById(config.divId.replace('#', ''));
-    $(container).off('click.how_it_works_label').on('click.how_it_works_label', 'label.how-it-works-label', function(event) {
-        event.stopPropagation();
-
-        // .. controls and links nested inside a wrapping label bubble their
-        // .. clicks here, only clicks on the label text itself should activate
-        // .. help mode - closest also covers clicks landing on option elements
-        // .. inside a select ..
-        if (event.target.closest('input, select, textarea, a')) {
-            return;
-        }
-
-        var fieldId = $(this).attr('for');
-        var howItWorks = $.fn.zato.how_it_works;
-
-        // .. a label click is for reading, so it never works the control it
-        // .. describes - the browser forwards a label click to a checkbox as
-        // .. a flip and to a button as a press, and both are suppressed here,
-        // .. leaving the control itself the one place that acts ..
-        var control = document.getElementById(fieldId);
-        if (control) {
-            if (control.type === 'checkbox' || control.tagName === 'BUTTON') {
-                event.preventDefault();
-            }
-        }
-
-        // .. if help mode is active for another dialog, leave it first ..
-        if (howItWorks._state && howItWorks._state.container !== container) {
-            howItWorks._deactivate();
-        }
-
-        // .. activate help mode on this badge if nothing is active yet ..
-        if (!howItWorks._state) {
-            howItWorks._activate(badge);
-        }
-
-        // .. jump to the clicked field ..
-        var state = howItWorks._state;
-        if (state) {
-            // .. the clicked label may sit in a block expanded after activation ..
-            howItWorks._refreshFields(state);
-            var fieldIndex = howItWorks._findFieldIndex(state, fieldId);
-            if (fieldIndex >= 0) {
-                howItWorks._showFieldTooltip(state, fieldIndex);
-            }
-        }
-    });
 
     // .. mark group header cells, e.g. "Pool" next to a Toggle options link ..
     $.fn.zato.how_it_works._markGroupLabels(config);
@@ -180,26 +128,6 @@ $.fn.zato.how_it_works.init = function(config) {
     // .. set up inline per-row badges if configured ..
     if (config.inlineBadge) {
         $.fn.zato.how_it_works._setupInlineBadges(config, badge);
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.how_it_works._markLabels = function(config) {
-
-    var container = document.getElementById(config.divId.replace('#', ''));
-    var descriptions = config.descriptions;
-    var labels = container.querySelectorAll('label[for]');
-
-    for (var labelIndex = 0; labelIndex < labels.length; labelIndex++) {
-        var label = labels[labelIndex];
-        var fieldId = label.getAttribute('for');
-        var lookupId = fieldId.replace('id_edit-', 'id_');
-
-        // .. only labels with a description get the help cursor ..
-        if (descriptions[lookupId]) {
-            label.classList.add('how-it-works-label');
-        }
     }
 };
 
@@ -407,8 +335,6 @@ $.fn.zato.how_it_works._activate = function(badge) {
     state._keydownTarget = isJqueryDialog ? dialog : document;
     state._keydownTarget.addEventListener('keydown', state._keydownHandler, true);
 
-    // .. label clicks are handled by the persistent handler bound in init ..
-
     // .. bind click on selects to switch field ..
     $(container).on('mousedown.how_it_works_select', 'select', function(event) {
         var fieldId = this.id;
@@ -610,11 +536,13 @@ $.fn.zato.how_it_works._onTabSwitch = function(state) {
 
 $.fn.zato.how_it_works._getActiveTabName = function(container) {
 
-    var buttons = container.querySelectorAll('.dashboard-tab-button');
+    // .. a tab is told apart by its visible panel, not by its button - decision
+    // .. line segments inside a panel carry the same active tab class ..
+    var panels = container.querySelectorAll('.dashboard-tab-panel');
 
-    for (var buttonIndex = 0; buttonIndex < buttons.length; buttonIndex++) {
-        if (buttons[buttonIndex].classList.contains('active')) {
-            return buttons[buttonIndex].textContent.trim();
+    for (var panelIndex = 0; panelIndex < panels.length; panelIndex++) {
+        if (!panels[panelIndex].hidden) {
+            return panels[panelIndex].id;
         }
     }
 
@@ -664,7 +592,6 @@ $.fn.zato.how_it_works._deactivate = function() {
     // .. unbind ..
     state._keydownTarget.removeEventListener('keydown', state._keydownHandler, true);
     state.container.removeEventListener('focusin', state._focusinHandler, true);
-    // .. the label click handler stays bound, it is persistent from init ..
     $(document).off('mousedown.how_it_works_outside');
     $(state.container).off('mousedown.how_it_works_select');
 
@@ -839,28 +766,15 @@ $.fn.zato.how_it_works._collectFields = function(container, config) {
     var descriptions = config.descriptions || {};
     var fields = [];
 
-    // .. find the active tab panel ..
-    var panels = container.querySelectorAll('.dashboard-tab-panel');
-    var activePanel = null;
-
-    for (var panelIndex = 0; panelIndex < panels.length; panelIndex++) {
-        if (!panels[panelIndex].hidden) {
-            activePanel = panels[panelIndex];
-            break;
-        }
-    }
-
-    if (!activePanel) {
-        activePanel = container;
-    }
-
-    // .. walk each row in the form table or custom container ..
+    // .. walk each row in the form table or custom container - the whole container,
+    // .. since some forms keep rows outside their tab panels, e.g. a table below them ..
     var rowSelector = config.fieldSelector || 'table.form-data tr';
-    var rows = activePanel.querySelectorAll(rowSelector);
+    var rows = container.querySelectorAll(rowSelector);
 
     for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
 
-        // .. skip rows that are currently hidden, e.g. fields shown only for some selections ..
+        // .. skip rows that are currently hidden, e.g. fields shown only for some selections
+        // .. or fields of a tab other than the active one ..
         if (rows[rowIndex].offsetParent === null) {
             continue;
         }
@@ -872,6 +786,13 @@ $.fn.zato.how_it_works._collectFields = function(container, config) {
         for (var labelIndex = 0; labelIndex < labels.length; labelIndex++) {
 
             var label = labels[labelIndex];
+
+            // .. a label belongs to its innermost row only, so a row nesting other rows,
+            // .. or a whole tab panel, neither repeats their labels nor reaches hidden ones ..
+            if (label.closest(rowSelector) !== rows[rowIndex]) {
+                continue;
+            }
+
             var fieldId = label.getAttribute('for');
             var lookupId = fieldId.replace('id_edit-', 'id_');
             var description = descriptions[lookupId];

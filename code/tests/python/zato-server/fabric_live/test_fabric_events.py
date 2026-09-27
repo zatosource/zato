@@ -1,0 +1,216 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+import time
+from datetime import datetime, timezone
+
+# pytest
+import pytest
+
+# Zato
+from zato.common.crypto.api import CryptoManager
+
+# Live Fabric
+from live_fabric.common import ModuleCtx as FabricCtx
+from live_fabric.render import events_objects
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from conftest import FabricLiveEnvironment
+    from zato.common.test.client import AdminClient
+    from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleCtx:
+
+    # The service the tests drive from the outside
+    Invoke_Service = 'test.fabric.events.invoke'
+
+    # The service the alerts channel routes to
+    Receiver_Service = 'test.fabric.events.receiver'
+
+    # How long a freshly imported connection has to reach the eventstream
+    Propagation_Timeout       = 300
+    Propagation_Poll_Interval = 3
+
+    # How long an event has to come back through the alerts channel
+    Delivery_Timeout       = 180
+    Delivery_Poll_Interval = 2
+
+    # How long an event has to show up in the eventhouse
+    Ingestion_Timeout       = 600
+    Ingestion_Poll_Interval = 10
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _invoke(client:'AdminClient', mode:'str', **fields:'object') -> 'anydict':
+    """ One call to the invoker service deployed to the test server.
+    """
+    request = {'mode': mode, **fields}
+
+    out = client.invoke(ModuleCtx.Invoke_Service, request)
+    return out
+
+# ################################################################################################################################
+
+def _wait_until_pingable(client:'AdminClient') -> 'None':
+    """ Retries the ping until the outgoing connection reaches the eventstream, or fails with the last error.
+    """
+    now = time.monotonic()
+    timeout = ModuleCtx.Propagation_Timeout
+    deadline = now + timeout
+    last_error = ''
+
+    while time.monotonic() < deadline:
+        response = _invoke(client, 'ping-connection', connection=FabricCtx.Events_Outgoing_Name)
+
+        if response['is_ok']:
+            return
+
+        last_error = response['error']
+        time.sleep(ModuleCtx.Propagation_Poll_Interval)
+
+    msg = f'Connection {FabricCtx.Events_Outgoing_Name} could not be pinged within {timeout}s, last error: {last_error}'
+    raise Exception(msg)
+
+# ################################################################################################################################
+
+def _send(client:'AdminClient', event:'anydict') -> 'None':
+    """ Sends one event through the outgoing connection.
+    """
+    response = _invoke(client, 'send', connection=FabricCtx.Events_Outgoing_Name, event=event)
+
+    if not response['is_ok']:
+        error = response['error']
+        raise Exception(f'Connection {FabricCtx.Events_Outgoing_Name} rejected the event: {error}')
+
+# ################################################################################################################################
+
+def _wait_until_received(client:'AdminClient', marker:'str') -> 'None':
+    """ Waits for the marker to come back through the alerts channel into the receiver service.
+    """
+    now = time.monotonic()
+    timeout = ModuleCtx.Delivery_Timeout
+    deadline = now + timeout
+
+    while time.monotonic() < deadline:
+        response = _invoke(client, 'get-received')
+
+        for received in response['received']:
+            if marker in received:
+                return
+
+        time.sleep(ModuleCtx.Delivery_Poll_Interval)
+
+    msg = f'Channel {FabricCtx.Alerts_Channel_Name} did not deliver marker {marker} within {timeout}s'
+    raise Exception(msg)
+
+# ################################################################################################################################
+
+def _wait_until_ingested(client:'AdminClient', database:'str', marker:'str') -> 'anydict':
+    """ Waits for the event carrying the marker to be readable from the eventhouse and returns its row.
+    """
+    now = time.monotonic()
+    timeout = ModuleCtx.Ingestion_Timeout
+    deadline = now + timeout
+
+    query = f'{FabricCtx.Events_Table} | where admission_id == "{marker}"'
+
+    while time.monotonic() < deadline:
+        response = _invoke(client, 'query',
+            connection=FabricCtx.Eventhouse_REST_Name, database=database, query=query)
+
+        rows = response['rows']
+        if rows:
+            out = rows[0]
+            return out
+
+        time.sleep(ModuleCtx.Ingestion_Poll_Interval)
+
+    raise Exception(f'Event {marker} did not reach table {FabricCtx.Events_Table} within {timeout}s')
+
+# ################################################################################################################################
+
+def _now() -> 'str':
+    """ The current moment, as the eventhouse's datetime column expects it.
+    """
+    now = datetime.now(timezone.utc)
+
+    out = now.strftime('%Y-%m-%dT%H:%M:%SZ')
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def events_client(fabric_live:'FabricLiveEnvironment', deployed_client:'AdminClient') -> 'AdminClient':
+    """ Imports the events objects with the alerts channel routed to the receiver service, waits for the connection.
+    """
+    lines = events_objects(fabric_live.fabric.state, alerts_service=ModuleCtx.Receiver_Service)
+    yaml = '\n'.join(lines)
+    _ = fabric_live.zato.import_yaml('fabric_live_events.yaml', yaml)
+
+    _wait_until_pingable(deployed_client)
+
+    return deployed_client
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def test_admission_event_reaches_the_eventhouse(
+    fabric_live:'FabricLiveEnvironment',
+    events_client:'AdminClient',
+    ) -> 'None':
+    """ An admission event sent through the outgoing connection ends up in the Events table.
+    """
+    marker = 'ADM-TEST-' + CryptoManager.generate_hex_string()
+
+    event = {
+        'event_type': 'admission',
+        'location': 'Riverside',
+        'occurred_at': _now(),
+        'admission_id': marker,
+    }
+
+    _send(events_client, event)
+
+    database = fabric_live.fabric.state['kql_database_name']
+    row = _wait_until_ingested(events_client, database, marker)
+
+    assert row['event_type'] == 'admission'
+    assert row['location'] == 'Riverside'
+
+# ################################################################################################################################
+
+def test_stock_alert_comes_back_through_the_channel(events_client:'AdminClient') -> 'None':
+    """ A stock event below the reorder level is filtered by the eventstream into the alerts channel.
+    """
+    marker = 'ITM-TEST-' + CryptoManager.generate_hex_string()
+
+    _ = _invoke(events_client, 'clear-received')
+
+    event = {
+        'event_type': FabricCtx.Alert_Event_Type,
+        'location': 'Oak Hill',
+        'occurred_at': _now(),
+        'item_id': marker,
+        'quantity': 12,
+        'reorder_level': 40,
+    }
+
+    _send(events_client, event)
+    _wait_until_received(events_client, marker)
+
+# ################################################################################################################################
+# ################################################################################################################################

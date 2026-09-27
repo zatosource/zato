@@ -69,6 +69,11 @@ class GetList(AdminService):
             for item in data:
                 item.extra = item.extra.decode('utf8') if isinstance(item.extra, bytes) else item.extra
                 item.engine_display_name = get_sql_engine_display_name(item.engine, self.server.fs_sql_config)
+
+                # A connection created before the audit level existed has none in its opaque column, which means off
+                if 'audit_log' not in item:
+                    item.audit_log = SQL_Audit_Off
+
             self.response.payload[:] = data
 
 class Create(AdminService, _SQLService):

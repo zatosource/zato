@@ -49,6 +49,9 @@ class SSLPaths:
     # The outcome of the most recent checks.
     status: 'str'
 
+    # The step of enabling Let's Encrypt that runs now or ran last.
+    progress: 'str'
+
     # Held by whichever process runs the ACME client, so that no two of them listen on the same port at once.
     lock: 'str'
 
@@ -74,6 +77,7 @@ def get_paths(environ:'strstrdict') -> 'SSLPaths':
     out.lego_pem = os.path.join(data_dir, 'certificates', Lets_Encrypt.Cert_Name + '.pem')
     out.settings = os.path.join(data_dir, Lets_Encrypt.File.Settings)
     out.status = os.path.join(data_dir, Lets_Encrypt.File.Status)
+    out.progress = os.path.join(data_dir, Lets_Encrypt.File.Progress)
     out.lock = os.path.join(data_dir, Lets_Encrypt.File.Lock)
 
     return out

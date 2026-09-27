@@ -753,6 +753,27 @@ class KafkaInvoker:
         raise Exception('Kafka send to `{}` timed out'.format(self._conn_name))
 
 # ################################################################################################################################
+
+    def ping(self) -> 'None':
+        """ Fetches broker metadata through the connection.
+        """
+        reply:'anydict' = self._queue_bridge.ping(self._conn_name)
+        status = reply['status']
+
+        # The ping went through ..
+        if status == 'ok':
+            return
+
+        # .. the bridge reported an error ..
+        elif status == 'error':
+            error = reply['data']
+            raise Exception(f'Kafka ping of `{self._conn_name}` failed: {error}')
+
+        # .. the bridge did not answer in time.
+        else:
+            raise Exception(f'Kafka ping of `{self._conn_name}` timed out')
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class KafkaFacade:

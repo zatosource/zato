@@ -24,10 +24,6 @@ $.fn.zato.alerting.field_descriptions = {
         'Letters, digits and underscores only, shown across the monitoring screens.',
     'id_is_active': 'Whether the rule runs and can raise alerts.',
     'id_docs': 'What this rule is for, in your own words. Shown next to the rule in the listing.',
-    'id_edit-name': 'A unique name for this rule. ' +
-        'Letters, digits and underscores only, shown across the monitoring screens.',
-    'id_edit-is_active': 'Whether the rule runs and can raise alerts.',
-    'id_edit-docs': 'What this rule is for, in your own words. Shown next to the rule in the listing.',
 };
 
 // ////////////////////////////////////////////////////////////////////////

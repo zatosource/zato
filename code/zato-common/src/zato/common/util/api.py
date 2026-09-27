@@ -593,37 +593,38 @@ def get_body_payload(body):
 def payload_from_request(json_parser, cid, request, data_format, transport, channel_item=None):
     """ Converts a raw request to a payload suitable for usage with I/O.
     """
-    if request is not None:
 
-        #
-        # JSON and dicts
-        #
+    # No request at all is the same as an empty one, so services always see '' and never None
+    if request is None:
+        request = ''
 
-        if data_format in _data_format_json_like:
+    #
+    # JSON and dicts
+    #
 
-            if not request:
-                return ''
+    if data_format in _data_format_json_like:
 
-            if isinstance(request, basestring) and data_format == _data_format_json:
+        if not request:
+            return ''
+
+        if isinstance(request, basestring) and data_format == _data_format_json:
+            try:
+                request_bytes = request if isinstance(request, bytes) else request.encode('utf8')
                 try:
-                    request_bytes = request if isinstance(request, bytes) else request.encode('utf8')
-                    try:
-                        payload = json_parser.parse(request_bytes)
-                    except ValueError:
-                        payload = request_bytes
-                    if hasattr(payload, 'as_dict'):
-                        payload = payload.as_dict()
+                    payload = json_parser.parse(request_bytes)
                 except ValueError:
-                    logger.warning('Could not parse request as JSON:`%s`, (%s), e:`%s`', request, type(request), format_exc())
-                    raise
-            else:
-                payload = request
-
-        #
-        # Other data formats
-        #
+                    payload = request_bytes
+                if hasattr(payload, 'as_dict'):
+                    payload = payload.as_dict()
+            except ValueError:
+                logger.warning('Could not parse request as JSON:`%s`, (%s), e:`%s`', request, type(request), format_exc())
+                raise
         else:
             payload = request
+
+    #
+    # Other data formats
+    #
     else:
         payload = request
 
