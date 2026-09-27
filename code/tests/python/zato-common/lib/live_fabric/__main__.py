@@ -28,7 +28,7 @@ logger = getLogger(__name__)
 
 # The modules each chapter needs
 _chapters = {
-    'tutorial':              (),
+    'tutorial':              (tables,),
     'loading-tables':        (tables,),
     'lookup-tables':         (tables,),
     'looking-up-data':       (tables,),

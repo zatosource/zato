@@ -870,7 +870,7 @@ test-kafka-live: ## Kafka SASL PLAIN and OAUTHBEARER round trips through a live 
 
 FABRIC_LIVE = PYTHONPATH=$(CURDIR)/code/tests/python/zato-common/lib $(ZATO_PY) -m live_fabric
 
-fabric-tutorial: ## Fabric capacity, app registration, workspace Clinic Analytics, lakehouse Operations, enmasse.yaml and fabric.ini.
+fabric-tutorial: ## Fabric capacity, app registration, workspace Clinic Analytics, lakehouse Operations with the sample tables, enmasse.yaml and fabric.ini.
 	$(FABRIC_LIVE) tutorial
 
 fabric-loading-tables: ## Fabric shared part and the sample tables of the Operations lakehouse.
