@@ -475,7 +475,7 @@ class FabricTestOneLakeRead(Service):
 # ################################################################################################################################
 
 class FabricTestOneLakeWrite(Service):
-    """ Writes a file to a workspace's OneLake filesystem.
+    """ Writes a file to a workspace's OneLake filesystem - the data is text or a list of dicts.
     """
     name = 'test.fabric.onelake-write'
 
@@ -487,7 +487,7 @@ class FabricTestOneLakeWrite(Service):
         data = self.request.raw_request['data']
 
         conn = self.microsoft.fabric[conn_name]
-        conn.onelake_write(workspace_id, file_path, data.encode('utf-8'))
+        conn.onelake_write(workspace_id, file_path, data)
 
         self.response.payload = json.dumps({'ok': True})
 

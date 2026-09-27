@@ -370,6 +370,35 @@ class TestFabricOneLake:
             _ = _invoke(fabric_live, 'test.fabric.onelake-read', workspace_id=workspace_id, file_path=file_path)
 
 # ################################################################################################################################
+
+    def test_onelake_write_rows(self, fabric_live:'FabricLiveEnvironment') -> 'None':
+        """ A list of dicts given to onelake_write lands in the file as CSV with a header.
+        """
+        workspace_id = fabric_live.fabric.workspace_id
+        lakehouse_id = fabric_live.fabric.lakehouse_id
+        suffix = CryptoManager.generate_hex_string()
+
+        file_path = f'{lakehouse_id}/{ModuleCtx.Export_File_Prefix}{suffix}.csv'
+        rows = [
+            {'date': '2026-07-10', 'total': '18250.75'},
+            {'date': '2026-07-11', 'total': '17900.00'},
+        ]
+
+        # Write the rows ..
+        result = _invoke(fabric_live, 'test.fabric.onelake-write',
+            workspace_id=workspace_id, file_path=file_path, data=rows)
+        assert result['ok'] is True
+
+        # .. read the file back as CSV ..
+        try:
+            result = _invoke(fabric_live, 'test.fabric.onelake-read', workspace_id=workspace_id, file_path=file_path)
+            assert result['data'] == 'date,total\r\n2026-07-10,18250.75\r\n2026-07-11,17900.00\r\n'
+
+        # .. and clean up whatever happened.
+        finally:
+            _ = _invoke(fabric_live, 'test.fabric.onelake-delete', workspace_id=workspace_id, file_path=file_path)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestFabricInvoke:

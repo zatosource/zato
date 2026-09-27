@@ -7,13 +7,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import csv
-import io
 from datetime import datetime, timezone
 
 # Zato
 from zato.common.api import MicrosoftFabric
 from zato.common.typing_ import cast_
+from zato.server.connection.cloud.microsoft_fabric.base import rows_to_csv
 from zato.server.connection.cloud.microsoft_fabric.sql import MicrosoftFabricSQL
 
 # ################################################################################################################################
@@ -109,10 +108,6 @@ class MicrosoftFabricTables(MicrosoftFabricSQL):
         and a single load operation turns them into the table's data. Returns the completed operation.
         """
 
-        # All the rows share the columns of the first one.
-        first_row = rows[0]
-        field_names = list(first_row)
-
         # Each call writes to its own directory, named after the current time.
         now = datetime.now(timezone.utc)
         timestamp = now.strftime('%Y%m%d%H%M%S%f')
@@ -128,13 +123,7 @@ class MicrosoftFabricTables(MicrosoftFabricSQL):
             chunk = rows[chunk_start:chunk_end]
 
             # .. serialize this chunk to CSV ..
-            buffer = io.StringIO()
-            writer = csv.DictWriter(buffer, fieldnames=field_names)
-            writer.writeheader()
-            writer.writerows(chunk)
-
-            text = buffer.getvalue()
-            data = text.encode('utf-8')
+            data = rows_to_csv(chunk)
 
             # .. and place it in the lakehouse's files section.
             file_path = f'{lakehouse_id}/{relative_path}/part-{file_index:05}.csv'

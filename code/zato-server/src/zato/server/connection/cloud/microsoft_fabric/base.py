@@ -7,6 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import csv
+import io
 from http.client import ACCEPTED, CREATED, NO_CONTENT, OK, UNAUTHORIZED
 from logging import getLogger
 from threading import Lock
@@ -30,7 +32,7 @@ from zato.common.typing_ import cast_, tuple_
 
 if 0:
     from requests import Response
-    from zato.common.typing_ import anydict, anydictnone, bytesnone, stranydict, strnone
+    from zato.common.typing_ import anydict, anydictnone, bytesnone, dictlist, stranydict, strnone
     from zato.server.connection.cloud.microsoft_fabric.sql import SQLEndpoint, SQLPool
 
 # ################################################################################################################################
@@ -41,6 +43,9 @@ token_info = tuple_[str, float]
 
 sqlendpointdict:TypeAlias = 'dict[str, SQLEndpoint]'
 sqlpooldict:TypeAlias     = 'dict[str, SQLPool]'
+
+# What a file's contents may be given as - raw bytes, text or a list of dicts that becomes CSV.
+file_data:TypeAlias = 'bytes | str | dictlist'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,6 +70,38 @@ _success_codes = {
     'PUT':    {OK, CREATED, ACCEPTED, NO_CONTENT},
     'DELETE': {OK, ACCEPTED, NO_CONTENT},
 }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def rows_to_csv(rows:'dictlist') -> 'bytes':
+    """ Serializes a list of dicts to UTF-8 CSV with a header, the columns being the keys of the first row.
+    """
+    first_row = rows[0]
+    field_names = list(first_row)
+
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=field_names)
+    writer.writeheader()
+    writer.writerows(rows)
+
+    text = buffer.getvalue()
+    out = text.encode('utf-8')
+    return out
+
+# ################################################################################################################################
+
+def to_file_data(data:'file_data') -> 'bytes':
+    """ Turns what a caller gave as a file's contents into the bytes that go over the wire.
+    """
+    if isinstance(data, bytes):
+        out = data
+    elif isinstance(data, str):
+        out = data.encode('utf-8')
+    else:
+        out = rows_to_csv(data)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -492,11 +529,15 @@ class MicrosoftFabricBase:
 
 # ################################################################################################################################
 
-    def onelake_write(self, workspace_id:'str', file_path:'str', data:'bytes') -> 'None':
+    def onelake_write(self, workspace_id:'str', file_path:'str', data:'file_data') -> 'None':
         """ Writes a file to a workspace's OneLake filesystem, creating it or overwriting it.
+        The contents can be bytes, text or a list of dicts, which is written out as CSV.
         """
 
-        # First, create the file itself ..
+        # Whatever we were given, the wire carries bytes ..
+        data = to_file_data(data)
+
+        # .. first, create the file itself ..
         _ = self._invoke_onelake('PUT', f'/{workspace_id}/{file_path}', params={'resource': 'file'})
 
         # .. append the data to it ..
