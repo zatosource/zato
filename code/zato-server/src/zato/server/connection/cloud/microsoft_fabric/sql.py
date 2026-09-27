@@ -15,6 +15,9 @@ from threading import BoundedSemaphore
 from time import monotonic
 from traceback import format_exc
 
+# gevent
+from gevent import get_hub
+
 # mssql-python
 import mssql_python
 
@@ -24,7 +27,7 @@ from typing_extensions import TypeAlias
 # Zato
 from zato.common.api import MicrosoftFabric
 from zato.common.mssql_direct import _marker_pattern, _validate_params
-from zato.common.typing_ import anylist, cast_, tuple_
+from zato.common.typing_ import any_, anylist, cast_, tuple_
 from zato.server.connection.cloud.microsoft_fabric.base import MicrosoftFabricBase
 
 # ################################################################################################################################
@@ -32,7 +35,7 @@ from zato.server.connection.cloud.microsoft_fabric.base import MicrosoftFabricBa
 
 if 0:
     from mssql_python import Connection
-    from zato.common.typing_ import any_, anydict, dictlist, stranydict, strdictnone, strlist, strlistnone
+    from zato.common.typing_ import anydict, callable_, dictlist, stranydict, strdictnone, strlist, strlistnone
     stranydict = stranydict
 
 # ################################################################################################################################
@@ -45,6 +48,9 @@ _sync_status = MicrosoftFabric.Sync_Status
 
 # The query and the values of its markers, in the order the markers appear in it
 _qmark_query = tuple_[str, anylist]
+
+# What a call in a thread came back with - its result or the exception it raised
+_thread_result = tuple_[any_, 'Exception | None']
 
 connection_queue:TypeAlias = 'LifoQueue[Connection]'
 login_attributes:TypeAlias = 'dict[int, int | str | bytes]'
@@ -74,6 +80,61 @@ def _to_qmark_query(query:'str', params:'strdictnone') -> '_qmark_query':
     query = _marker_pattern.sub(replace, query)
 
     out = (query, values)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _run_in_thread(func:'callable_', *args:'any_') -> 'any_':
+    """ Runs a call of the driver in a real thread - the driver is compiled code, so other greenlets
+    would not run for the duration of the call otherwise. An exception the call raises is raised here,
+    in the calling greenlet, and nowhere else.
+    """
+    threadpool = get_hub().threadpool
+
+    def call() -> '_thread_result':
+        try:
+            out = (func(*args), None)
+        except Exception as e:
+            out = (None, e)
+
+        return out
+
+    result, error = threadpool.apply(call)
+
+    if error:
+        raise error
+
+    out = result
+    return out
+
+# ################################################################################################################################
+
+def _fetch_rows(conn:'Connection', sql:'str', values:'anylist') -> 'dictlist':
+    """ Runs one statement on a connection and returns its rows as dicts.
+    """
+    out:'dictlist' = []
+
+    cursor = conn.cursor()
+
+    try:
+        _ = cursor.execute(sql, values)
+
+        # A statement without rows, e.g. a view definition, has no description.
+        if cursor.description:
+
+            column_names:'strlist' = []
+            for column in cursor.description:
+                column_names.append(column[0])
+
+            for row in cursor.fetchall():
+                pairs = zip(column_names, row)
+                item = dict(pairs)
+                out.append(item)
+
+    finally:
+        cursor.close()
+
     return out
 
 # ################################################################################################################################
@@ -112,6 +173,14 @@ class SQLPool:
         """
         attrs_before:'login_attributes' = {mssql_python.SQL_ATTR_LOGIN_TIMEOUT: self.login_timeout}
 
+        out = _run_in_thread(self._connect, attrs_before)
+        return out
+
+# ################################################################################################################################
+
+    def _connect(self, attrs_before:'login_attributes') -> 'Connection':
+        """ The driver's own connect call.
+        """
         out = mssql_python.connect(self.connection_string, autocommit=True, attrs_before=attrs_before)
         return out
 
@@ -254,31 +323,10 @@ class MicrosoftFabricSQL(MicrosoftFabricBase):
     def _run_sql(self, pool:'SQLPool', sql:'str', values:'anylist') -> 'dictlist':
         """ Runs one statement on a pooled connection and returns its rows as dicts.
         """
-        out:'dictlist' = []
-
         conn = pool.checkout(_default.SQL_Login_Timeout)
 
         try:
-            cursor = conn.cursor()
-
-            try:
-                _ = cursor.execute(sql, values)
-
-                # A statement without rows, e.g. a view definition, has no description.
-                if cursor.description:
-
-                    column_names:'strlist' = []
-                    for column in cursor.description:
-                        column_names.append(column[0])
-
-                    for row in cursor.fetchall():
-                        pairs = zip(column_names, row)
-                        item = dict(pairs)
-                        out.append(item)
-
-            finally:
-                cursor.close()
-
+            out = _run_in_thread(_fetch_rows, conn, sql, values)
         except Exception:
             pool.discard(conn)
             raise
