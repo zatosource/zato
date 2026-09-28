@@ -115,7 +115,7 @@ class SchedulerFacade:
         """
 
         # This is reusable
-        now = self.server.time_util.utcnow(needs_format=False)
+        now = self.server.time_util.utcnow(format=False)
 
         # We are given a start date on input ..
         if start_date:

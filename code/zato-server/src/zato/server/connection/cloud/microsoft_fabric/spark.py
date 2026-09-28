@@ -18,7 +18,7 @@ from zato.server.connection.cloud.microsoft_fabric.tables import MicrosoftFabric
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, dictlist
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,14 +27,11 @@ _default = MicrosoftFabric.Default
 _spark_state = MicrosoftFabric.Spark_State
 _output_status = MicrosoftFabric.Spark_Output_Status
 
-# The MIME key the query results of a Spark statement are stored under.
-_result_mime_type = 'application/json'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 class MicrosoftFabricSpark(MicrosoftFabricTables):
-    """ Spark sessions of a lakehouse and SQL queries running on them.
+    """ Spark sessions of a lakehouse and the code that runs on them.
     """
 
     def _get_sessions_path(self, workspace_id:'str', lakehouse_id:'str') -> 'str':
@@ -146,84 +143,11 @@ class MicrosoftFabricSpark(MicrosoftFabricTables):
 
 # ################################################################################################################################
 
-    def query(self, workspace_id:'str', lakehouse_id:'str', sql:'str') -> 'dictlist':
-        """ Runs an SQL query against a lakehouse and returns its rows as a list of dicts.
+    def close_spark_session(self, workspace_id:'str', lakehouse_id:'str', session_id:'str') -> 'None':
+        """ Closes a Spark session opened with open_spark_session.
         """
-
-        # Run the query on the lakehouse's shared session ..
-        session_id = self._get_spark_session(workspace_id, lakehouse_id)
-        output = self.run_spark(workspace_id, lakehouse_id, session_id, sql, kind='sql')
-
-        # .. the result travels as a schema and a list of rows ..
-        output_data = output['data']
-        payload = output_data[_result_mime_type]
-
-        # .. the column names come from the schema ..
-        schema = payload['schema']
-        fields = schema['fields']
-
-        column_names = []
-        for field in fields:
-            column_names.append(field['name'])
-
-        # .. and each row becomes a dict keyed by those names.
-        out:'dictlist' = []
-
-        for row in payload['data']:
-            item = {}
-            for column_name, value in zip(column_names, row):
-                item[column_name] = value
-            out.append(item)
-
-        return out
-
-# ################################################################################################################################
-
-    def _get_spark_session(self, workspace_id:'str', lakehouse_id:'str') -> 'str':
-        """ Returns the ID of the lakehouse's shared Spark session, opening a new one
-        if there is none yet or the current one is no longer usable.
-        """
-        session_key = f'{workspace_id}/{lakehouse_id}'
-
-        # If a session exists already, confirm it is still usable ..
-        if session_id := self._spark_sessions.get(session_key):
-
-            sessions_path = self._get_sessions_path(workspace_id, lakehouse_id)
-
-            try:
-                session = self.get(f'{sessions_path}/{session_id}')
-            except Exception:
-                # The session is gone, e.g. it expired server-side, so a new one is needed.
-                del self._spark_sessions[session_key]
-            else:
-                session = cast_('anydict', session)
-                state = session['state']
-
-                # A session that has not failed can still run statements.
-                if state not in (_spark_state.Dead, _spark_state.Error, _spark_state.Killed):
-                    out = session_id
-                    return out
-
-                # This one is no longer usable.
-                del self._spark_sessions[session_key]
-
-        # .. no usable session exists at this point, so open a new one.
-        session_id = self.open_spark_session(workspace_id, lakehouse_id)
-        self._spark_sessions[session_key] = session_id
-
-        out = session_id
-        return out
-
-# ################################################################################################################################
-
-    def close_spark_session(self, workspace_id:'str', lakehouse_id:'str') -> 'None':
-        """ Closes the lakehouse's shared Spark session, if one is open.
-        """
-        session_key = f'{workspace_id}/{lakehouse_id}'
-
-        if session_id := self._spark_sessions.pop(session_key, None):
-            sessions_path = self._get_sessions_path(workspace_id, lakehouse_id)
-            _ = self.delete(f'{sessions_path}/{session_id}')
+        sessions_path = self._get_sessions_path(workspace_id, lakehouse_id)
+        _ = self.delete(f'{sessions_path}/{session_id}')
 
 # ################################################################################################################################
 # ################################################################################################################################

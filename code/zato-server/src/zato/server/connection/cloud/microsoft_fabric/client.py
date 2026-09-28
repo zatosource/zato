@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
-from traceback import format_exc
 
 # Zato
 from zato.common.typing_ import cast_
@@ -206,16 +205,11 @@ class MicrosoftFabricClient(MicrosoftFabricSpark):
 # ################################################################################################################################
 
     def zato_delete_impl(self, reason:'str'='') -> 'None':
-        """ Closes the Spark sessions and the underlying HTTP session when the connection is deleted.
+        """ Closes the SQL endpoint connections and the underlying HTTP session when the connection is deleted.
         """
 
-        # Close each Spark session that is still open ..
-        for session_key in list(self._spark_sessions):
-            workspace_id, lakehouse_id = session_key.split('/', 1)
-            try:
-                self.close_spark_session(workspace_id, lakehouse_id)
-            except Exception:
-                logger.warning('Could not close a Spark session (%s) -> %s', self.name, format_exc())
+        # Close the pooled connections to the SQL analytics endpoints ..
+        self.dispose_sql_pools()
 
         # .. and close the HTTP session itself.
         self.session.close()

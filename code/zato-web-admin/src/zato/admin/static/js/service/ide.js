@@ -247,9 +247,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
         let resizeIndicator = document.createElement('div');
         resizeIndicator.id = 'data-request-resize-indicator';
-        resizeIndicator.textContent = '⋯';
-        resizeIndicator.style.cssText = 'position: absolute; left: 50%; transform: translate(-50%, -50%); font-size: 18px; color: #999; pointer-events: none; padding: 0 5px; z-index: 10; line-height: 1;';
-        invokerArea.style.position = 'relative';
+        resizeIndicator.className = 'ide-request-resize-grip';
         invokerArea.appendChild(resizeIndicator);
 
         let dataRequestPretty = document.getElementById('data-request-pretty');
@@ -264,14 +262,6 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
             return dataRequestPretty;
         }
 
-        function updateIndicatorPosition() {
-            let rect = getVisiblePaneElement().getBoundingClientRect();
-            let areaRect = invokerArea.getBoundingClientRect();
-            let top = rect.bottom - areaRect.top + 2;
-            resizeIndicator.style.top = top + 'px';
-        }
-        updateIndicatorPosition();
-
         let isResizingTextarea = false;
         let startY = 0;
         let startHeight = 0;
@@ -285,17 +275,17 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
             if (mouseY >= bottomEdge - 6 && mouseY <= bottomEdge + 10) {
                 invokerArea.style.cursor = 'ns-resize';
-                resizeIndicator.style.color = '#666';
+                resizeIndicator.classList.add('ide-request-resize-grip-hovered');
             } else {
                 invokerArea.style.cursor = '';
-                resizeIndicator.style.color = '#999';
+                resizeIndicator.classList.remove('ide-request-resize-grip-hovered');
             }
         });
 
         invokerArea.addEventListener('mouseleave', function() {
             if (!isResizingTextarea) {
                 invokerArea.style.cursor = '';
-                resizeIndicator.style.color = '#999';
+                resizeIndicator.classList.remove('ide-request-resize-grip-hovered');
             }
         });
 
@@ -330,8 +320,6 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
                 // on screen, so the drag persists and reflows on its own
                 store.set('zato.data-request-height', newHeight + 'px');
                 resizeDataResponse();
-
-                updateIndicatorPosition();
             }
         });
 

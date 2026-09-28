@@ -7,12 +7,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import csv
+import io
 from http.client import ACCEPTED, CREATED, NO_CONTENT, OK, UNAUTHORIZED
 from logging import getLogger
+from threading import Lock
 from time import monotonic, sleep, time
 
 # Requests
 import requests
+
+# typing-extensions
+from typing_extensions import TypeAlias
 
 # Zato
 from zato.common.api import MicrosoftFabric
@@ -26,13 +32,20 @@ from zato.common.typing_ import cast_, tuple_
 
 if 0:
     from requests import Response
-    from zato.common.typing_ import anydict, anydictnone, bytesnone, stranydict, strnone, strstrdict
+    from zato.common.typing_ import anydict, anydictnone, bytesnone, dictlist, stranydict, strnone
+    from zato.server.connection.cloud.microsoft_fabric.sql import SQLEndpoint, SQLPool
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # A bearer token together with the time when it expires, as seconds since the Unix epoch.
 token_info = tuple_[str, float]
+
+sqlendpointdict:TypeAlias = 'dict[str, SQLEndpoint]'
+sqlpooldict:TypeAlias     = 'dict[str, SQLPool]'
+
+# What a file's contents may be given as - raw bytes, text or a list of dicts that becomes CSV.
+file_data:TypeAlias = 'bytes | str | dictlist'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,6 +74,38 @@ _success_codes = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+def rows_to_csv(rows:'dictlist') -> 'bytes':
+    """ Serializes a list of dicts to UTF-8 CSV with a header, the columns being the keys of the first row.
+    """
+    first_row = rows[0]
+    field_names = list(first_row)
+
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=field_names)
+    writer.writeheader()
+    writer.writerows(rows)
+
+    text = buffer.getvalue()
+    out = text.encode('utf-8')
+    return out
+
+# ################################################################################################################################
+
+def to_file_data(data:'file_data') -> 'bytes':
+    """ Turns what a caller gave as a file's contents into the bytes that go over the wire.
+    """
+    if isinstance(data, bytes):
+        out = data
+    elif isinstance(data, str):
+        out = data.encode('utf-8')
+    else:
+        out = rows_to_csv(data)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class MicrosoftFabricBase:
     """ The Fabric client's plumbing - tokens, HTTP requests, long-running operations and the OneLake data plane.
     """
@@ -79,9 +124,13 @@ class MicrosoftFabricBase:
             if client_secret.startswith(SECRETS.Auto_Generated_Prefix):
                 client_secret = ''
 
-        # .. and when there is no secret in the column, it lives in the opaque attributes.
+        # .. when there is no secret in the column, it lives in the opaque attributes ..
         if not client_secret:
-            client_secret = config['client_secret']
+            client_secret = config.get('client_secret')
+
+        # .. and a connection just created from the Dashboard receives its secret in a follow-up call.
+        if client_secret is None:
+            client_secret = ''
 
         self.client_secret = client_secret
 
@@ -121,8 +170,18 @@ class MicrosoftFabricBase:
         # When the current OneLake token expires, as seconds since the Unix epoch.
         self.onelake_token_expires_at = 0.0
 
-        # One shared Spark session per lakehouse, keyed by workspace ID and lakehouse ID.
-        self._spark_sessions:'strstrdict' = {}
+        # The current OAuth2 bearer token for SQL analytics endpoints - it uses the database scope
+        # and is obtained lazily, when a connection to an endpoint is opened.
+        self.sql_token:'strnone' = None
+
+        # When the current SQL token expires, as seconds since the Unix epoch.
+        self.sql_token_expires_at = 0.0
+
+        # The SQL analytics endpoint of each lakehouse queried so far and a pool of connections to it,
+        # both keyed by workspace ID and lakehouse ID. The lock guards the building of a pool.
+        self._sql_endpoints:'sqlendpointdict' = {}
+        self._sql_pools:'sqlpooldict' = {}
+        self._sql_lock = Lock()
 
         # The audit log every call is recorded in - the wrapper attaches it after construction
         self.zato_audit_log = None
@@ -189,6 +248,13 @@ class MicrosoftFabricBase:
 
 # ################################################################################################################################
 
+    def _acquire_sql_token(self) -> 'None':
+        """ Obtains a new OAuth2 bearer token for SQL analytics endpoints.
+        """
+        self.sql_token, self.sql_token_expires_at = self._acquire_token_for_scope(_default.SQL_Scope)
+
+# ################################################################################################################################
+
     def _ensure_token(self) -> 'None':
         """ Makes sure a valid, non-expired API token is available.
         """
@@ -218,6 +284,22 @@ class MicrosoftFabricBase:
         now = time()
         if now >= self.onelake_token_expires_at:
             self._acquire_onelake_token()
+
+# ################################################################################################################################
+
+    def _get_sql_token(self) -> 'str':
+        """ Returns a valid, non-expired SQL token, obtaining a new one when needed.
+        """
+
+        # There is no token yet, or the one there is has expired - get a new one.
+        now = time()
+        if not self.sql_token:
+            self._acquire_sql_token()
+        elif now >= self.sql_token_expires_at:
+            self._acquire_sql_token()
+
+        out = cast_('str', self.sql_token)
+        return out
 
 # ################################################################################################################################
 
@@ -447,11 +529,15 @@ class MicrosoftFabricBase:
 
 # ################################################################################################################################
 
-    def onelake_write(self, workspace_id:'str', file_path:'str', data:'bytes') -> 'None':
+    def onelake_write(self, workspace_id:'str', file_path:'str', data:'file_data') -> 'None':
         """ Writes a file to a workspace's OneLake filesystem, creating it or overwriting it.
+        The contents can be bytes, text or a list of dicts, which is written out as CSV.
         """
 
-        # First, create the file itself ..
+        # Whatever we were given, the wire carries bytes ..
+        data = to_file_data(data)
+
+        # .. first, create the file itself ..
         _ = self._invoke_onelake('PUT', f'/{workspace_id}/{file_path}', params={'resource': 'file'})
 
         # .. append the data to it ..
@@ -465,10 +551,11 @@ class MicrosoftFabricBase:
 
 # ################################################################################################################################
 
-    def onelake_delete(self, workspace_id:'str', file_path:'str') -> 'None':
-        """ Deletes a file from a workspace's OneLake filesystem.
+    def onelake_delete(self, workspace_id:'str', file_path:'str', recursive:'bool'=False) -> 'None':
+        """ Deletes a file from a workspace's OneLake filesystem, or a directory with everything in it when recursive is True.
         """
-        _ = self._invoke_onelake('DELETE', f'/{workspace_id}/{file_path}')
+        params = {'recursive': 'true'} if recursive else None
+        _ = self._invoke_onelake('DELETE', f'/{workspace_id}/{file_path}', params=params)
 
 # ################################################################################################################################
 # ################################################################################################################################

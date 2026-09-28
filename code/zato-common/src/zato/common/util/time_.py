@@ -106,11 +106,13 @@ class TimeUtil:
     """ A thin layer around Arrow's date/time handling library customized for our needs.
     Default format is always taken from ISO 8601 (so it's sorted lexicographically)
     and default timezone is always UTC.
+
+    Each method's 'format' is the format string of the text to return, or False to return the Arrow object itself.
     """
 
 # ################################################################################################################################
 
-    def now(self, format=ModuleCtx.Date_Time_Format, tz=local_tz_zone, needs_format=True, delta=None) -> 'str | datetime':
+    def now(self, format:'str | bool'=ModuleCtx.Date_Time_Format, tz=local_tz_zone, delta=None) -> 'str | datetime':
         """ Returns now in a specified timezone.
         """
         now = arrow.now(tz=tz)
@@ -118,68 +120,68 @@ class TimeUtil:
         if delta:
             now = now + delta
 
-        if needs_format:
+        if isinstance(format, str):
             return now.format(format)
 
         return now # type: ignore
 
 # ################################################################################################################################
 
-    def _time_from(self, value, delta, format, needs_format):
+    def _time_from(self, value:'any_', delta:'dict', format:'str | bool'):
 
         value = arrow.get(value)
         value_from = value + timedelta(**delta)
 
-        if needs_format:
+        if isinstance(format, str):
             return value_from.format(format)
         else:
             return value_from
 
 # ################################################################################################################################
 
-    def one_day_from(self, date, format=ModuleCtx.Date_Format, needs_format=True):
+    def one_day_from(self, date, format:'str | bool'=ModuleCtx.Date_Format):
         delta = {'days': 1}
-        return self._time_from(date, delta, format, needs_format)
+        return self._time_from(date, delta, format)
 
 # ################################################################################################################################
 
-    def one_hour_from(self, date, format=ModuleCtx.Date_Format, needs_format=True):
+    def one_hour_from(self, date, format:'str | bool'=ModuleCtx.Date_Format):
         delta = {'minutes': 60}
-        return self._time_from(date, delta, format, needs_format)
+        return self._time_from(date, delta, format)
 
 # ################################################################################################################################
 
-    def one_minute_from(self, date, format=ModuleCtx.Date_Format, needs_format=True):
+    def one_minute_from(self, date, format:'str | bool'=ModuleCtx.Date_Format):
         delta = {'minutes': 1}
-        return self._time_from(date, delta, format, needs_format)
+        return self._time_from(date, delta, format)
 
 # ################################################################################################################################
 
-    def yesterday(self, format=ModuleCtx.Date_Time_Format, tz=local_tz_zone, needs_format=True):
-        return self.now(format, tz, needs_format, delta=timedelta(days=-1))
+    def yesterday(self, format:'str | bool'=ModuleCtx.Date_Time_Format, tz=local_tz_zone):
+        return self.now(format, tz, delta=timedelta(days=-1))
 
 # ################################################################################################################################
 
-    def tomorrow(self, format=ModuleCtx.Date_Time_Format, tz=local_tz_zone, needs_format=True):
-        return self.now(format, tz, needs_format, delta=timedelta(days=1))
+    def tomorrow(self, format:'str | bool'=ModuleCtx.Date_Time_Format, tz=local_tz_zone):
+        return self.now(format, tz, delta=timedelta(days=1))
 
 # ################################################################################################################################
 
-    def utcnow(self, format=ModuleCtx.Date_Time_Format, needs_format=True) -> 'any_':
+    def utcnow(self, format:'str | bool'=ModuleCtx.Date_Time_Format) -> 'any_':
         """ Returns now in UTC formatted as given in 'format'.
         """
-        return self.now(format, 'UTC', needs_format)
+        return self.now(format, 'UTC')
 
 # ################################################################################################################################
 
-    def utcnow_as_float(self, format=ModuleCtx.Date_Time_Format, needs_format=True) -> 'any_':
+    def utcnow_as_float(self) -> 'any_':
         """ Returns now in UTC as a float number.
         """
-        return self.utcnow(needs_format=False).float_timestamp
+        return self.utcnow(format=False).float_timestamp
 
 # ################################################################################################################################
 
-    def today(self, format=ModuleCtx.Date_Format, tz=local_tz_zone, needs_format=True):
+    def today(self, format:'str | bool'=ModuleCtx.Date_Format, tz=local_tz_zone):
         """ Returns current day in a given timezone.
         """
         now = arrow.now(tz=tz)
@@ -188,20 +190,20 @@ class TimeUtil:
         if tz != 'UTC':
             today = today.to(tz)
 
-        if needs_format:
+        if isinstance(format, str):
             return today.format(format)
         else:
             return today
 
 # ################################################################################################################################
 
-    def isonow(self, tz=local_tz_zone, needs_format=True, _format=ModuleCtx.Timestamp_Format):
-        return self.now(_format, tz, needs_format)
+    def isonow(self, tz=local_tz_zone, format:'str | bool'=ModuleCtx.Timestamp_Format):
+        return self.now(format, tz)
 
 # ################################################################################################################################
 
-    def isoutcnow(self, needs_format=True, _format=ModuleCtx.Timestamp_Format):
-        return self.now(_format, 'UTC', needs_format)
+    def isoutcnow(self, format:'str | bool'=ModuleCtx.Timestamp_Format):
+        return self.now(format, 'UTC')
 
 # ################################################################################################################################
 

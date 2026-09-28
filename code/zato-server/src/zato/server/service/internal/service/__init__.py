@@ -522,7 +522,7 @@ class ServiceInvoker(Service):
     def handle(self, _internal=('zato', 'pub.zato')): # type: ignore
 
         # We track response time for all invocations
-        start_time = self.time.utcnow(needs_format=False)
+        start_time = self.time.utcnow(format=False)
 
         # ODBService name is given in URL path
         service_name = self.request.http.params.service_name
@@ -598,7 +598,7 @@ class ServiceInvoker(Service):
             self.response.headers.update(zato_response_headers_container)
 
             # Compute and attach response time headers
-            elapsed = self.time.utcnow(needs_format=False) - start_time
+            elapsed = self.time.utcnow(format=False) - start_time
             total_ms = elapsed.total_seconds() * 1000
 
             if total_ms < 1:
