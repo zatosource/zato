@@ -1969,6 +1969,8 @@ class MicrosoftFabric:
 
     class Default:
         Address = 'https://api.fabric.microsoft.com/v1'
+        Job_Poll_Interval = 10.0
+        Job_Timeout = 1800
         Livy_API_Version = '2023-12-01'
         Login_URL = 'https://login.microsoftonline.com'
         OneLake_Address = 'https://onelake.dfs.fabric.microsoft.com'
@@ -1989,6 +1991,11 @@ class MicrosoftFabric:
     class Operation_Status:
         Failed = 'Failed'
         Succeeded = 'Succeeded'
+
+    class Job_Status:
+        Completed = 'Completed'
+        In_Progress = 'InProgress'
+        Not_Started = 'NotStarted'
 
     class Sync_Status:
         Failure = 'Failure'

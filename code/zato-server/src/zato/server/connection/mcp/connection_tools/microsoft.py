@@ -236,7 +236,7 @@ def teams_invoke(cid:'str', item:'any_', arguments:'stranydict') -> 'any_':
 _fabric_methods = [
     'list_workspaces', 'get_workspace', 'create_workspace', 'delete_workspace',
     'list_items', 'get_item', 'create_item', 'update_item', 'delete_item',
-    'run_job', 'get_job', 'cancel_job',
+    'run_job', 'get_job', 'cancel_job', 'wait_for_job',
     'list_shortcuts', 'create_shortcut', 'delete_shortcut',
     'list_capacities',
     'list_tables', 'load_table', 'write_table', 'wait_for_operation',

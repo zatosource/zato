@@ -8,8 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from time import monotonic, sleep
 
 # Zato
+from zato.common.api import MicrosoftFabric
 from zato.common.typing_ import cast_
 from zato.server.connection.cloud.microsoft_fabric.spark import MicrosoftFabricSpark
 
@@ -23,6 +25,12 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+_default = MicrosoftFabric.Default
+_job_status = MicrosoftFabric.Job_Status
+
+# A job with one of these statuses is still going, any other status means it has ended.
+_job_running = {_job_status.Not_Started, _job_status.In_Progress}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -164,6 +172,43 @@ class MicrosoftFabricClient(MicrosoftFabricSpark):
         """ Cancels a job instance of an item.
         """
         _ = self.post(f'/workspaces/{workspace_id}/items/{item_id}/jobs/instances/{job_id}/cancel')
+
+# ################################################################################################################################
+
+    def wait_for_job(
+        self,
+        workspace_id:'str',
+        item_id:'str',
+        job_id:'str',
+        timeout:'int'=_default.Job_Timeout,
+        interval:'float'=_default.Job_Poll_Interval,
+        ) -> 'anydict':
+        """ Waits until a job instance ends and returns its final state, e.g. after run_job started a notebook.
+        """
+        deadline = monotonic() + timeout
+
+        while True:
+
+            # Check where the job stands now ..
+            job = self.get_job(workspace_id, item_id, job_id)
+            status = job['status']
+
+            # .. a completed job goes back to the caller ..
+            if status == _job_status.Completed:
+                out = job
+                return out
+
+            # .. one that ended in any other way, e.g. failed or cancelled, ends with an exception ..
+            if status not in _job_running:
+                raise Exception(f'Fabric job ended with {status} ({self.name}) -> {job}')
+
+            # .. give up if the job did not end in time ..
+            now = monotonic()
+            if now >= deadline:
+                raise Exception(f'Fabric job timed out after {timeout}s ({self.name}) -> {job_id}')
+
+            # .. otherwise, wait before the next check.
+            sleep(interval)
 
 # ################################################################################################################################
 

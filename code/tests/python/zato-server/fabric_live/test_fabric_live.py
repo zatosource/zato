@@ -40,6 +40,9 @@ class ModuleCtx:
     # A file the tests write and remove under Files/exports/
     Export_File_Prefix = 'Files/exports/zato-test-'
 
+    # How long to wait for a cancelled job to report that it has ended
+    Job_Wait_Seconds = 120
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -230,6 +233,31 @@ class TestFabricJobs:
         result = _invoke(fabric_live, 'test.fabric.cancel-job',
             workspace_id=workspace_id, item_id=notebook_id, job_id=job_id)
         assert result['ok'] is True
+
+# ################################################################################################################################
+
+    def test_wait_for_job(self, fabric_live:'FabricLiveEnvironment') -> 'None':
+        """ Waiting for a job that was cancelled ends with an error naming the status it ended with.
+        """
+        workspace_id = fabric_live.fabric.workspace_id
+        notebook_id = fabric_live.fabric.state['reminder_notebook_id']
+
+        # Start a job and cancel it right away ..
+        result = _invoke(fabric_live, 'test.fabric.run-job',
+            workspace_id=workspace_id, item_id=notebook_id, job_type='RunNotebook')
+        job_id = result['job_id']
+
+        _ = _invoke(fabric_live, 'test.fabric.cancel-job',
+            workspace_id=workspace_id, item_id=notebook_id, job_id=job_id)
+
+        # .. waiting for it ends once Fabric reports that it is no longer running ..
+        result = _invoke(fabric_live, 'test.fabric.wait-for-job',
+            workspace_id=workspace_id, item_id=notebook_id, job_id=job_id, timeout=ModuleCtx.Job_Wait_Seconds)
+
+        # .. and the error carries the job's final status, which is not one of the running ones.
+        assert 'Fabric job ended with' in result['error']
+        assert 'InProgress' not in result['error']
+        assert 'NotStarted' not in result['error']
 
 # ################################################################################################################################
 # ################################################################################################################################
