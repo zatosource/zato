@@ -1969,6 +1969,8 @@ class MicrosoftFabric:
 
     class Default:
         Address = 'https://api.fabric.microsoft.com/v1'
+        Eventhouse_Query_Path = '/v1/rest/query'
+        Eventhouse_Scope = 'https://kusto.kusto.windows.net/.default'
         Job_Poll_Interval = 10.0
         Job_Timeout = 1800
         Livy_API_Version = '2023-12-01'

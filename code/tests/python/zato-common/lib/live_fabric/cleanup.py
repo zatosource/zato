@@ -27,8 +27,8 @@ logger = getLogger(__name__)
 # The capacity state cleanup leaves behind
 _state_paused = 'Paused'
 
-# Every app registration the chapters create
-_app_names = (ModuleCtx.App_Name, ModuleCtx.Events_REST_App_Name, ModuleCtx.Eventhouse_App_Name)
+# Every app registration the chapters create, plus the eventhouse one earlier builds created
+_app_names = (ModuleCtx.App_Name, ModuleCtx.Events_REST_App_Name, 'Zato Fabric Eventhouse')
 
 # ################################################################################################################################
 # ################################################################################################################################

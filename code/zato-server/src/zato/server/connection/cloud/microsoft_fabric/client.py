@@ -13,7 +13,7 @@ from time import monotonic, sleep
 # Zato
 from zato.common.api import MicrosoftFabric
 from zato.common.typing_ import cast_
-from zato.server.connection.cloud.microsoft_fabric.spark import MicrosoftFabricSpark
+from zato.server.connection.cloud.microsoft_fabric.kql import MicrosoftFabricKQL
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,7 +35,7 @@ _job_running = {_job_status.Not_Started, _job_status.In_Progress}
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MicrosoftFabricClient(MicrosoftFabricSpark):
+class MicrosoftFabricClient(MicrosoftFabricKQL):
     """ Client for Microsoft Fabric APIs, using the OAuth2 client credentials grant.
     """
 

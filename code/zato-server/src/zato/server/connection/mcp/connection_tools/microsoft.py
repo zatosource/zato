@@ -240,7 +240,7 @@ _fabric_methods = [
     'list_shortcuts', 'create_shortcut', 'delete_shortcut',
     'list_capacities',
     'list_tables', 'load_table', 'write_table', 'wait_for_operation',
-    'query', 'refresh_sql_endpoint',
+    'query', 'refresh_sql_endpoint', 'query_events',
     'onelake_list', 'onelake_read', 'onelake_write', 'onelake_delete',
 ]
 

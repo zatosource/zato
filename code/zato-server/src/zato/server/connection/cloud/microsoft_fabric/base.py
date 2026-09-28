@@ -33,6 +33,7 @@ from zato.common.typing_ import cast_, tuple_
 if 0:
     from requests import Response
     from zato.common.typing_ import anydict, anydictnone, bytesnone, dictlist, stranydict, strnone
+    from zato.server.connection.cloud.microsoft_fabric.kql import Eventhouse
     from zato.server.connection.cloud.microsoft_fabric.sql import SQLEndpoint, SQLPool
 
 # ################################################################################################################################
@@ -41,6 +42,7 @@ if 0:
 # A bearer token together with the time when it expires, as seconds since the Unix epoch.
 token_info = tuple_[str, float]
 
+eventhousedict:TypeAlias  = 'dict[str, Eventhouse]'
 sqlendpointdict:TypeAlias = 'dict[str, SQLEndpoint]'
 sqlpooldict:TypeAlias     = 'dict[str, SQLPool]'
 
@@ -177,11 +179,23 @@ class MicrosoftFabricBase:
         # When the current SQL token expires, as seconds since the Unix epoch.
         self.sql_token_expires_at = 0.0
 
+        # The current OAuth2 bearer token for eventhouses - it uses the Kusto scope
+        # and is obtained lazily, when the first KQL query runs.
+        self.eventhouse_token:'strnone' = None
+
+        # When the current eventhouse token expires, as seconds since the Unix epoch.
+        self.eventhouse_token_expires_at = 0.0
+
         # The SQL analytics endpoint of each lakehouse queried so far and a pool of connections to it,
         # both keyed by workspace ID and lakehouse ID. The lock guards the building of a pool.
         self._sql_endpoints:'sqlendpointdict' = {}
         self._sql_pools:'sqlpooldict' = {}
         self._sql_lock = Lock()
+
+        # The query URI and default database of each eventhouse queried so far, keyed by workspace ID
+        # and eventhouse ID. The lock guards the first lookup.
+        self._eventhouses:'eventhousedict' = {}
+        self._eventhouse_lock = Lock()
 
         # The audit log every call is recorded in - the wrapper attaches it after construction
         self.zato_audit_log = None
@@ -255,6 +269,13 @@ class MicrosoftFabricBase:
 
 # ################################################################################################################################
 
+    def _acquire_eventhouse_token(self) -> 'None':
+        """ Obtains a new OAuth2 bearer token for eventhouses.
+        """
+        self.eventhouse_token, self.eventhouse_token_expires_at = self._acquire_token_for_scope(_default.Eventhouse_Scope)
+
+# ################################################################################################################################
+
     def _ensure_token(self) -> 'None':
         """ Makes sure a valid, non-expired API token is available.
         """
@@ -299,6 +320,22 @@ class MicrosoftFabricBase:
             self._acquire_sql_token()
 
         out = cast_('str', self.sql_token)
+        return out
+
+# ################################################################################################################################
+
+    def _get_eventhouse_token(self) -> 'str':
+        """ Returns a valid, non-expired eventhouse token, obtaining a new one when needed.
+        """
+
+        # There is no token yet, or the one there is has expired - get a new one.
+        now = time()
+        if not self.eventhouse_token:
+            self._acquire_eventhouse_token()
+        elif now >= self.eventhouse_token_expires_at:
+            self._acquire_eventhouse_token()
+
+        out = cast_('str', self.eventhouse_token)
         return out
 
 # ################################################################################################################################

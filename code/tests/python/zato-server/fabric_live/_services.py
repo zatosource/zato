@@ -16,7 +16,7 @@ from zato.server.service import Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, dictlist, strlist
+    from zato.common.typing_ import anydict, dictlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,27 +29,6 @@ _no_error = ''
 
 # Whether a OneLake delete removes a directory with everything in it
 _default_recursive = False
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def to_rows(reply:'anydict') -> 'dictlist':
-    """ Turns the eventhouse's reply into a list of dicts keyed by column name.
-    """
-    tables = reply['Tables']
-    result = tables[0]
-
-    column_names:'strlist' = []
-    for column in result['Columns']:
-        column_names.append(column['ColumnName'])
-
-    out:'dictlist' = []
-    for values in result['Rows']:
-        pairs = zip(column_names, values)
-        row = dict(pairs)
-        out.append(row)
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,7 +61,7 @@ class FabricTestEventsInvoker(Service):
     """ Drives the events connections under test from inside the server.
     """
     name = 'test.fabric.events.invoke'
-    input = 'mode', '-connection', '-event', '-database', '-query'
+    input = 'mode', '-connection', '-event', '-workspace_id', '-eventhouse_id', '-database', '-query'
 
 # ################################################################################################################################
 
@@ -122,17 +101,19 @@ class FabricTestEventsInvoker(Service):
 
     def _query(self) -> 'anydict':
         connection = self.request.input.connection
+        workspace_id = self.request.input.workspace_id
+        eventhouse_id = self.request.input.eventhouse_id
+        database = self.request.input.database or ''
+        query = self.request.input.query
 
-        request = {
-            'db': self.request.input.database,
-            'csl': self.request.input.query,
-        }
+        conn = self.microsoft.fabric[connection]
 
-        conn = self.rest[connection]
-        response = conn.post(self.cid, request)
-        rows = to_rows(response.data)
-
-        out = {'rows': rows}
+        try:
+            rows = conn.query_events(workspace_id, eventhouse_id, query, database)
+        except Exception as e:
+            out = {'rows': [], 'error': str(e)}
+        else:
+            out = {'rows': rows, 'error': _no_error}
         return out
 
 # ################################################################################################################################
