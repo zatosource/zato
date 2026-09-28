@@ -58,6 +58,9 @@ class Enmasse(ZatoCommand):
         # Get server path from the command line arguments
         server_path = args.path
 
+        # Exit with a clear message instead of failing deep inside the crypto setup if this is not a server
+        self.ensure_path_is_a_server(server_path)
+
         # Store cluster ID for exporters and importers
         ModuleCtx.Cluster_ID = self.get_cluster_id(args)
 

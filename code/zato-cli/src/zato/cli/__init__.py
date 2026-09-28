@@ -839,7 +839,7 @@ class ZatoCommand:
         from zato.common.util.api import get_config
 
         repo_location = os.path.join(path, 'config', 'repo')
-        secrets_conf = get_config(repo_location, 'secrets.conf', needs_user_config=False)
+        secrets_conf = get_config(repo_location, 'secrets.conf', needs_user_config=False, log_exception=False)
 
         # This file must exist, otherwise it's not a path to a server
         if not secrets_conf:
