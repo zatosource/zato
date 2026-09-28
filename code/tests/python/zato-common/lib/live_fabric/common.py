@@ -21,11 +21,9 @@ class ModuleCtx:
     # App registrations
     App_Name             = 'Zato Fabric'
     Events_REST_App_Name = 'Zato Fabric Events REST'
-    Eventhouse_App_Name  = 'Zato Fabric Eventhouse'
 
-    # State key prefixes of the second and third registration
+    # State key prefix of the events REST registration
     Events_REST_Prefix = 'events_rest_'
-    Eventhouse_Prefix  = 'eventhouse_'
 
     # State files
     State_Dir    = os.path.expanduser('~/env/fabric-live')
@@ -64,13 +62,11 @@ class ModuleCtx:
     Connection_Name        = 'Zato Fabric'
     Events_Token_Name      = 'Fabric Events Token'
     Events_REST_Token_Name = 'Fabric Events REST Token'
-    Eventhouse_Token_Name  = 'Fabric Eventhouse Token'
     Events_Key_Name        = 'Fabric Events Key'
     Events_Outgoing_Name   = 'Fabric Events'
     Events_REST_Name       = 'Fabric Events REST'
     Alerts_Channel_Name    = 'Fabric Alerts'
     Alerts_Service_Name    = 'stock.notify-purchasing'
-    Eventhouse_REST_Name   = 'Operations Events'
 
     # The PLAIN username of a connection string
     Plain_Username = '$$ConnectionString'
@@ -79,7 +75,6 @@ class ModuleCtx:
     Token_URL_Template    = 'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token'
     Events_Scope_Template = 'https://{namespace}/.default'
     Events_REST_Scope     = 'https://eventhubs.azure.net/.default'
-    Kusto_Scope           = 'https://kusto.kusto.windows.net/.default'
 
     # The Kafka port of an Event Hubs namespace
     Kafka_Port = 9093

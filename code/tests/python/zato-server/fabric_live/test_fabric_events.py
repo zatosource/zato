@@ -39,6 +39,9 @@ class ModuleCtx:
     # The service the alerts channel routes to
     Receiver_Service = 'test.fabric.events.receiver'
 
+    # The Fabric connection deployed to the test server, the one the eventhouse queries go through
+    Connection_Name = 'test.fabric.main'
+
     # How long a freshly imported connection has to reach the eventstream
     Propagation_Timeout       = 300
     Propagation_Poll_Interval = 3
@@ -97,8 +100,8 @@ def _send(client:'AdminClient', event:'anydict') -> 'None':
 
 # ################################################################################################################################
 
-def _wait_until_received(client:'AdminClient', marker:'str') -> 'None':
-    """ Waits for the marker to come back through the alerts channel into the receiver service.
+def _wait_until_received(client:'AdminClient', marker:'str') -> 'anydict':
+    """ Waits for the alert with this marker to come back through the alerts channel into the receiver service.
     """
     now = time.monotonic()
     timeout = ModuleCtx.Delivery_Timeout
@@ -108,8 +111,8 @@ def _wait_until_received(client:'AdminClient', marker:'str') -> 'None':
         response = _invoke(client, 'get-received')
 
         for received in response['received']:
-            if marker in received:
-                return
+            if received['item_id'] == marker:
+                return received
 
         time.sleep(ModuleCtx.Delivery_Poll_Interval)
 
@@ -118,7 +121,21 @@ def _wait_until_received(client:'AdminClient', marker:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _wait_until_ingested(client:'AdminClient', database:'str', marker:'str') -> 'anydict':
+def _query(client:'AdminClient', state:'anydict', query:'str', database:'str'='') -> 'anydict':
+    """ Runs a KQL query against the eventhouse through the Fabric connection.
+    """
+    out = _invoke(client, 'query',
+        connection=ModuleCtx.Connection_Name,
+        workspace_id=state['workspace_id'],
+        eventhouse_id=state['eventhouse_id'],
+        database=database,
+        query=query)
+
+    return out
+
+# ################################################################################################################################
+
+def _wait_until_ingested(client:'AdminClient', state:'anydict', marker:'str') -> 'anydict':
     """ Waits for the event carrying the marker to be readable from the eventhouse and returns its row.
     """
     now = time.monotonic()
@@ -128,8 +145,12 @@ def _wait_until_ingested(client:'AdminClient', database:'str', marker:'str') -> 
     query = f'{FabricCtx.Events_Table} | where admission_id == "{marker}"'
 
     while time.monotonic() < deadline:
-        response = _invoke(client, 'query',
-            connection=FabricCtx.Eventhouse_REST_Name, database=database, query=query)
+
+        # No database is named - the eventhouse's default one is resolved by the connection
+        response = _query(client, state, query)
+
+        if response['error']:
+            raise Exception(f'Query against {FabricCtx.Eventhouse_Name} failed: {response["error"]}')
 
         rows = response['rows']
         if rows:
@@ -185,11 +206,42 @@ def test_admission_event_reaches_the_eventhouse(
 
     _send(events_client, event)
 
-    database = fabric_live.fabric.state['kql_database_name']
-    row = _wait_until_ingested(events_client, database, marker)
+    row = _wait_until_ingested(events_client, fabric_live.fabric.state, marker)
 
     assert row['event_type'] == 'admission'
     assert row['location'] == 'Riverside'
+
+# ################################################################################################################################
+
+def test_query_events_with_database(
+    fabric_live:'FabricLiveEnvironment',
+    events_client:'AdminClient',
+    ) -> 'None':
+    """ A query names the KQL database explicitly and gets its rows back.
+    """
+    state = fabric_live.fabric.state
+    query = f'{FabricCtx.Events_Table} | count'
+
+    response = _query(events_client, state, query, database=state['kql_database_name'])
+
+    assert response['error'] == ''
+
+    rows = response['rows']
+    assert len(rows) == 1
+    assert 'Count' in rows[0]
+
+# ################################################################################################################################
+
+def test_query_events_bad_query(
+    fabric_live:'FabricLiveEnvironment',
+    events_client:'AdminClient',
+    ) -> 'None':
+    """ A query against a table that does not exist is reported as a KQL error.
+    """
+    response = _query(events_client, fabric_live.fabric.state, 'NoSuchTable | count')
+
+    assert response['rows'] == []
+    assert 'Fabric KQL error' in response['error']
 
 # ################################################################################################################################
 
@@ -210,7 +262,12 @@ def test_stock_alert_comes_back_through_the_channel(events_client:'AdminClient')
     }
 
     _send(events_client, event)
-    _wait_until_received(events_client, marker)
+    alert = _wait_until_received(events_client, marker)
+
+    # The receiver read these from self.request.input, so the channel delivered the event as parsed JSON.
+    assert alert['location'] == 'Oak Hill'
+    assert alert['quantity'] == 12
+    assert alert['reorder_level'] == 40
 
 # ################################################################################################################################
 # ################################################################################################################################

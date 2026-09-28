@@ -26,7 +26,7 @@ if 0:
 logger = getLogger(__name__)
 
 # The state keys written to fabric.ini
-_ini_keys = ('workspace_id', 'lakehouse_id', 'reminder_notebook_id', 'nightly_pipeline_id', 'occupancy_dataset_id')
+_ini_keys = ('workspace_id', 'lakehouse_id', 'eventhouse_id', 'reminder_notebook_id', 'nightly_pipeline_id', 'occupancy_dataset_id')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,7 +91,6 @@ def events_objects(state:'anydict', alerts_service:'str'=ModuleCtx.Alerts_Servic
     rest_path = f'/{events_topic}/messages'
     connection_string = state['events_connection_string']
     alerts_topic = state['alerts_topic']
-    query_uri = state['query_uri']
 
     # A leading $ names an environment variable in enmasse and is written as $$.
     consumer_group = state['alerts_consumer_group']
@@ -101,7 +100,6 @@ def events_objects(state:'anydict', alerts_service:'str'=ModuleCtx.Alerts_Servic
     out = ['security:']
     out.extend(bearer_token(ModuleCtx.Events_Token_Name, state, events_scope))
     out.extend(bearer_token(ModuleCtx.Events_REST_Token_Name, state, ModuleCtx.Events_REST_Scope, ModuleCtx.Events_REST_Prefix))
-    out.extend(bearer_token(ModuleCtx.Eventhouse_Token_Name, state, ModuleCtx.Kusto_Scope, ModuleCtx.Eventhouse_Prefix))
     out.extend([
         f'  - name: {quoted(ModuleCtx.Events_Key_Name)}',
         '    type: basic_auth',
@@ -133,11 +131,6 @@ def events_objects(state:'anydict', alerts_service:'str'=ModuleCtx.Alerts_Servic
         f'    url_path: {quoted(rest_path)}',
         '    data_format: json',
         f'    security: {quoted(ModuleCtx.Events_REST_Token_Name)}',
-        f'  - name: {quoted(ModuleCtx.Eventhouse_REST_Name)}',
-        f'    host: {quoted(query_uri)}',
-        '    url_path: /v1/rest/query',
-        '    data_format: json',
-        f'    security: {quoted(ModuleCtx.Eventhouse_Token_Name)}',
         '',
     ])
 

@@ -11,6 +11,7 @@ from http.client import OK
 from logging import getLogger
 
 # Zato
+from zato.common.api import MicrosoftFabric
 from zato.common.typing_ import cast_
 
 # Live Fabric
@@ -29,10 +30,9 @@ if 0:
 
 logger = getLogger(__name__)
 
-# The app registrations of the REST and eventhouse tokens, with their state key prefixes
+# The app registration of the events REST token, with its state key prefix
 _token_apps = (
     (ModuleCtx.Events_REST_App_Name, ModuleCtx.Events_REST_Prefix),
-    (ModuleCtx.Eventhouse_App_Name, ModuleCtx.Eventhouse_Prefix),
 )
 
 # The workspace role that lets a principal send events and query the eventhouse
@@ -61,7 +61,7 @@ _event_columns = (
 def kusto_command(client:'MicrosoftFabricClient', query_uri:'str', database:'str', command:'str') -> 'None':
     """ Runs one management command against the eventhouse.
     """
-    token, _ = client._acquire_token_for_scope(ModuleCtx.Kusto_Scope)
+    token, _ = client._acquire_token_for_scope(MicrosoftFabric.Default.Eventhouse_Scope)
 
     headers = {
         'Authorization': f'Bearer {token}',
@@ -309,7 +309,7 @@ def ensure_eventstream(client:'MicrosoftFabricClient', state:'anydict') -> 'None
 # ################################################################################################################################
 
 def ensure_token_identities(client:'MicrosoftFabricClient', state:'anydict') -> 'None':
-    """ The app registrations behind the REST and eventhouse tokens, each a contributor of the workspace.
+    """ The app registration behind the events REST token, a contributor of the workspace.
     """
     workspace_id = state['workspace_id']
 
