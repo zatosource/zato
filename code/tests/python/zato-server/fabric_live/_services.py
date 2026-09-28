@@ -358,6 +358,31 @@ class FabricTestCancelJob(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class FabricTestWaitForJob(Service):
+    """ Waits until a job instance ends, returning its final state or the error it ended with.
+    """
+    name = 'test.fabric.wait-for-job'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        workspace_id = self.request.raw_request['workspace_id']
+        item_id = self.request.raw_request['item_id']
+        job_id = self.request.raw_request['job_id']
+        timeout = self.request.raw_request['timeout']
+
+        conn = self.microsoft.fabric[conn_name]
+
+        try:
+            result = conn.wait_for_job(workspace_id, item_id, job_id, timeout=timeout)
+        except Exception as e:
+            self.response.payload = json.dumps({'error': str(e)})
+        else:
+            self.response.payload = json.dumps(result)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class FabricTestListShortcuts(Service):
     """ Lists OneLake shortcuts of an item.
     """
