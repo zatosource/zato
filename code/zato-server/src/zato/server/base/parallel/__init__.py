@@ -1530,9 +1530,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _invoke_queue_service(self, service_name:'str', data:'any_', headers:'anydict') -> 'any_':
         """ Invoked by the recv listener greenlet when a message is received
         from an external queue (Kafka, IBM MQ, etc.) via the queue bridge binary.
+        A JSON message is parsed into self.request.input, any other message is passed through as bytes.
         """
         request_ctx = {'zato.request.headers': headers}
-        response = self.invoke(service_name, data, request_ctx=request_ctx)
+        response = self.invoke(service_name, data, data_format=DATA_FORMAT.JSON, request_ctx=request_ctx)
         return response
 
 # ################################################################################################################################
