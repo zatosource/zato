@@ -22,7 +22,7 @@ if 0:
 # ################################################################################################################################
 
 # Every alert the Kafka channel under test routed to the receiver since the last clear request
-_received:'strlist' = []
+_received:'dictlist' = []
 
 # What a call that succeeded reports as its error
 _no_error = ''
@@ -60,8 +60,20 @@ class FabricTestEventsReceiver(Service):
     name = 'test.fabric.events.receiver'
 
     def handle(self) -> 'None':
-        data = self.request.raw_request.decode('utf-8')
-        _received.append(data)
+
+        # The eventstream sends a batch, a JSON list of events, which the server parsed into the input ..
+        for event in self.request.input:
+
+            # .. so the fields of each one are read as dict keys ..
+            alert = {
+                'item_id': event['item_id'],
+                'location': event['location'],
+                'quantity': event['quantity'],
+                'reorder_level': event['reorder_level'],
+            }
+
+            # .. and recorded for the test to pick up.
+            _received.append(alert)
 
 # ################################################################################################################################
 # ################################################################################################################################

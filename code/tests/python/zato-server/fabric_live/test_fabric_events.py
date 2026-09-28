@@ -97,8 +97,8 @@ def _send(client:'AdminClient', event:'anydict') -> 'None':
 
 # ################################################################################################################################
 
-def _wait_until_received(client:'AdminClient', marker:'str') -> 'None':
-    """ Waits for the marker to come back through the alerts channel into the receiver service.
+def _wait_until_received(client:'AdminClient', marker:'str') -> 'anydict':
+    """ Waits for the alert with this marker to come back through the alerts channel into the receiver service.
     """
     now = time.monotonic()
     timeout = ModuleCtx.Delivery_Timeout
@@ -108,8 +108,8 @@ def _wait_until_received(client:'AdminClient', marker:'str') -> 'None':
         response = _invoke(client, 'get-received')
 
         for received in response['received']:
-            if marker in received:
-                return
+            if received['item_id'] == marker:
+                return received
 
         time.sleep(ModuleCtx.Delivery_Poll_Interval)
 
@@ -210,7 +210,12 @@ def test_stock_alert_comes_back_through_the_channel(events_client:'AdminClient')
     }
 
     _send(events_client, event)
-    _wait_until_received(events_client, marker)
+    alert = _wait_until_received(events_client, marker)
+
+    # The receiver read these from self.request.input, so the channel delivered the event as parsed JSON.
+    assert alert['location'] == 'Oak Hill'
+    assert alert['quantity'] == 12
+    assert alert['reorder_level'] == 40
 
 # ################################################################################################################################
 # ################################################################################################################################
