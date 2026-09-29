@@ -19,7 +19,7 @@ from http.client import OK
 from threading import Event, Thread
 
 # Zato
-from zato_deploy.common import Config, Container, Line_Kind, Path, Port, Stage_ID, StageFailed, Status, strlist, strnone
+from zato_deploy.common import clean_terminal_line, Config, Container, Line_Kind, Path, Port, Stage_ID, StageFailed, Status, strlist, strnone
 from zato_deploy.state import Component, component_list, Progress
 
 # ################################################################################################################################
@@ -141,6 +141,7 @@ def _clean_line(line:'str') -> 'str':
     """ Returns a line of the container's output without its colours and without the timestamp the page shows anyway.
     """
     line = _Colour_Pattern.sub('', line)
+    line = clean_terminal_line(line)
     line = _Timestamp_Pattern.sub('', line)
 
     out = line.strip()

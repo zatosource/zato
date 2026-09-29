@@ -96,11 +96,11 @@ def main() -> 'None':
             server = start_server(progress, pem_path)
             add_redirect()
 
-            # .. Docker puts its own rules in front of the redirect, which each time goes back to the top ..
-            install_docker(progress)
-            keep_redirect_first()
-
+            # .. Docker's data goes to the local disk before Docker exists ..
             prepare_storage(progress)
+
+            # .. and Docker puts its own rules in front of the redirect, which each time goes back to the top ..
+            install_docker(progress)
             keep_redirect_first()
 
             pull_image(progress, config.image)

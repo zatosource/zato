@@ -11,7 +11,7 @@ import os
 import subprocess
 
 # Zato
-from zato_deploy.common import StageFailed, strlist, strstrdict
+from zato_deploy.common import clean_terminal_line, StageFailed, strlist, strstrdict
 from zato_deploy.state import Progress
 
 # ################################################################################################################################
@@ -32,7 +32,7 @@ def run_logged(progress:'Progress', command:'strlist', extra_env:'strstrdict | N
     # Each line is logged the moment it appears ..
     if process.stdout:
         for line in process.stdout:
-            line = line.rstrip()
+            line = clean_terminal_line(line)
             if line:
                 progress.log(line)
                 last_line = line

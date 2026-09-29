@@ -8,12 +8,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import shutil
 import subprocess
 import time
 
 # Zato
-from zato_deploy.common import Path, Stage_ID, StageFailed, strnone
+from zato_deploy.common import Line_Kind, Path, Stage_ID, StageFailed, strnone
 from zato_deploy.docker_api import is_docker_answering
 from zato_deploy.process import run_logged
 from zato_deploy.state import Progress
@@ -31,7 +30,7 @@ _Docker_Start_Timeout = 120
 # What lsblk calls the local NVMe disk of VM sizes that have one.
 _NVMe_Model = 'direct disk'
 
-# The directories that move onto the local NVMe disk.
+# The directories that are kept on the local NVMe disk.
 _Docker_Data_Dirs = ['docker', 'containerd']
 
 # ################################################################################################################################
@@ -87,8 +86,9 @@ def _find_nvme_device() -> 'strnone':
 # ################################################################################################################################
 
 def prepare_storage(progress:'Progress') -> 'None':
-    """ Moves Docker and containerd onto the local NVMe disk if the VM size has one,
+    """ Puts the data of Docker and containerd on the local NVMe disk if the VM size has one,
     because the OS disk is throttled to a fraction of the throughput that extracting the image needs.
+    This runs before Docker is installed, so Docker creates its data there from the start.
     """
     progress.advance_to(Stage_ID.Storage)
 
@@ -108,20 +108,15 @@ def prepare_storage(progress:'Progress') -> 'None':
     os.makedirs(Path.NVMe_Mount, exist_ok=True)
     run_logged(progress, ['mount', device, Path.NVMe_Mount])
 
-    # .. Docker stops while its data moves ..
-    run_logged(progress, ['systemctl', 'stop', 'docker', 'docker.socket', 'containerd'])
-
+    # .. and each data directory is a view of a directory on that disk.
     for name in _Docker_Data_Dirs:
         source = os.path.join('/var/lib', name)
         target = os.path.join(Path.NVMe_Mount, name)
-        _ = shutil.move(source, target)
-        os.symlink(target, source)
+        os.makedirs(source, exist_ok=True)
+        os.makedirs(target, exist_ok=True)
+        run_logged(progress, ['mount', '--bind', target, source])
 
-    progress.log(f'Docker data moved to {Path.NVMe_Mount}')
-
-    # .. and it starts again from the new place.
-    run_logged(progress, ['systemctl', 'start', 'containerd', 'docker'])
-    _wait_for_docker(progress)
+    progress.log(f'Docker data is on {device}', Line_Kind.OK)
 
 # ################################################################################################################################
 # ################################################################################################################################

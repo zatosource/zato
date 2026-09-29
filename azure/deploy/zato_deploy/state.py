@@ -323,8 +323,8 @@ def build_stages(image:'str') -> 'stage_list':
     """
     out = [
         Stage(Stage_ID.Certificate,  'Getting a Let\'s Encrypt certificate', 14,  'lego'),
-        Stage(Stage_ID.Docker,       'Installing Docker',                    38,  'apt-get install docker.io'),
         Stage(Stage_ID.Storage,      'Preparing local storage',              9,   'zato-deploy'),
+        Stage(Stage_ID.Docker,       'Installing Docker',                    38,  'apt-get install docker.io'),
         Stage(Stage_ID.Download,     'Downloading Zato',                     150, f'docker pull {image}'),
         Stage(Stage_ID.Requirements, 'Installing requirements',              18,  'docker logs zato'),
         Stage(Stage_ID.Environment,  'Creating the environment',             26,  'docker logs zato'),

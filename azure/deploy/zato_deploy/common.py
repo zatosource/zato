@@ -122,6 +122,38 @@ class Config:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def clean_terminal_line(line:'str') -> 'str':
+    """ Returns a line as a terminal would end up showing it, since progress counters redraw themselves
+    in place with carriage returns and backspaces.
+    """
+    # Only what comes after the last carriage return stays on screen ..
+    _, _, line = line.rpartition('\r')
+
+    characters:'strlist' = []
+
+    for character in line:
+
+        # .. each backspace takes back the character before it ..
+        if character == '\b':
+            if characters:
+                _ = characters.pop()
+            continue
+
+        # .. and of the other control characters, only tabs are kept.
+        if character == '\t':
+            characters.append(character)
+            continue
+
+        if character.isprintable():
+            characters.append(character)
+
+    out = ''.join(characters)
+    out = out.rstrip()
+
+    return out
+
+# ################################################################################################################################
+
 def read_env_file(path:'str') -> 'strstrdict':
     """ Returns the key=value lines of a file, each value taken literally up to the end of its line.
     """
