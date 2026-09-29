@@ -707,10 +707,11 @@ test-enmasse: ## Enmasse tests - every importer, every exporter, the round trips
 		$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_secret_rotation_live.py' -v
 
 test-cli: ## CLI tests.
+	$(Zato_Log_Reset)
 	$(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-cli/test_odb_sqlite_default.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_cli_odb \
-		$(FAIL_FAST) $(PYTEST_ARGS)
-	$(MAKE) -C $(CURDIR)/code/zato-cli test
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	$(MAKE) -C $(CURDIR)/code/zato-cli test $(Zato_Log)
 
 test-mcp: ## Every MCP test - the offline suites, the browser lifecycle, a real LLM and the local container.
 	$(Zato_Log_Reset)
