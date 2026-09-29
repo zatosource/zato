@@ -62,6 +62,7 @@ class Path:
     Self_Signed_Key  = '/var/lib/zato-deploy/self-signed.key'
     Self_Signed_PEM  = '/var/lib/zato-deploy/self-signed.pem'
     Serial_Console   = '/dev/ttyS0'
+    Serving_Marker   = '/run/zato-deploy/serving'
     Docker_Socket    = '/var/run/docker.sock'
     NVMe_Device      = '/dev/disk/azure/local/by-index/1'
     NVMe_Mount       = '/mnt/nvme'

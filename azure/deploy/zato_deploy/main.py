@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
 import signal
 import sys
 import time
@@ -44,6 +45,18 @@ _Container_Timeout = 1800
 
 def _handle_sigterm(signal_number:'int', frame:'FrameType | None') -> 'None':
     raise SystemExit(0)
+
+# ################################################################################################################################
+
+def _mark_serving() -> 'None':
+    """ Tells the template that the page answers on the Dashboard's port. The template's deployment,
+    and with it the Dashboard's address in its outputs, finishes only once this file exists.
+    """
+    directory = os.path.dirname(Path.Serving_Marker)
+    os.makedirs(directory, exist_ok=True)
+
+    with open(Path.Serving_Marker, 'w'):
+        pass
 
 # ################################################################################################################################
 
@@ -96,6 +109,7 @@ def main() -> 'None':
             pem_path = obtain_certificate(progress, config)
             server = start_server(progress, pem_path)
             add_redirect()
+            _mark_serving()
 
             # .. Docker's data goes to the local disk before Docker exists ..
             prepare_storage(progress)

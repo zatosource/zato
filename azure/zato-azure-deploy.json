@@ -116,6 +116,7 @@
       }
     },
     "image": "zatosource/zato-4.1",
+    "servingMarker": "/run/zato-deploy/serving",
     "deployFilesUrl": "https://raw.githubusercontent.com/zatosource/zato/refs/heads/main/azure/deploy",
     "cloudInit": "[concat('#cloud-config\nwrite_files:\n  - path: /etc/zato-deploy/deploy.env\n    permissions: \"0600\"\n    content: |\n      fqdn=', variables('fqdn'), '\n      admin_username=', parameters('adminUsername'), '\n      image=', variables('image'), '\n  - path: /etc/zato-deploy/container.env\n    permissions: \"0600\"\n    content: |\n      Zato_Password=', parameters('zatoPassword'), '\n      Zato_Use_Lets_Encrypt=True\n      Zato_SSL_Subject_Alt_Name=subjectAltName=DNS:', variables('fqdn'), '\n      Zato_Dashboard_CSRF_Trusted_Origins=https://', variables('fqdn'), ':8184\n  - path: /usr/local/bin/zato-deploy-download.sh\n    permissions: \"0755\"\n    content: |\n      #!/bin/bash\n      # Downloads the program that deploys the container and shows its progress on port 8184.\n      set -e\n      base_url=', variables('deployFilesUrl'), '\n      target_dir=/opt/zato-deploy\n      mkdir -p \"$target_dir\"\n      curl -fsSL --retry 10 --retry-all-errors -o \"$target_dir/files.txt\" \"$base_url/files.txt\"\n      while read -r name; do\n        if [ -n \"$name\" ]; then\n          curl -fsSL --retry 10 --retry-all-errors --create-dirs -o \"$target_dir/$name\" \"$base_url/$name\"\n        fi\n      done < \"$target_dir/files.txt\"\nruncmd:\n  - echo \"Zato - downloading the deployment program\" > /dev/ttyS0\n  - /usr/local/bin/zato-deploy-download.sh\n  - systemd-run --unit=zato-deploy --working-directory=/opt/zato-deploy /usr/bin/python3 -m zato_deploy\n')]"
   },
@@ -269,6 +270,24 @@
               "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
             }
           ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2024-07-01",
+      "name": "[concat(parameters('vmName'), '/zato-deploy-page')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Azure.Extensions",
+        "type": "CustomScript",
+        "typeHandlerVersion": "2.1",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "commandToExecute": "[concat('timeout 900 sh -c ''until [ -e ', variables('servingMarker'), ' ]; do sleep 1; done''')]"
         }
       }
     }
