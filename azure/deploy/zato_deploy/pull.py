@@ -15,7 +15,7 @@ from http.client import OK
 from urllib.parse import urlencode
 
 # Zato
-from zato_deploy.common import anydict, floatnone, Stage_ID, StageFailed
+from zato_deploy.common import anydict, floatnone, Stage_ID, StageFailed, strnone
 from zato_deploy.docker_api import DockerConnection
 from zato_deploy.state import Download, Progress, Stage
 
@@ -25,8 +25,8 @@ from zato_deploy.state import Download, Progress, Stage
 _Unit           = 'MB'
 _Bytes_Per_Unit = 1_000_000
 
-# How much of the stage the download takes, the rest being the extraction.
-_Download_Share = 0.85
+# How much of the stage the download takes, the rest being the extraction, which takes longer than the download on Azure.
+_Download_Share = 0.4
 
 # The download rate is averaged over this many seconds.
 _Rate_Window = 3.0
@@ -34,10 +34,16 @@ _Rate_Window = 3.0
 # The stage is updated at most this often, however many messages Docker sends.
 _Update_Interval = 0.25
 
+# How often the log says that a layer is still being extracted.
+_Extract_Log_Interval = 5
+
 # How long to wait for the next message from Docker.
 _Read_Timeout = 600
 
 _Default_Tag = 'latest'
+
+# The unit that Docker gives the progress of an extraction in, which is the seconds it has taken so far.
+_Seconds_Unit = 's'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,6 +52,7 @@ class _Layer_Status:
     Downloading       = 'Downloading'
     Verifying         = 'Verifying Checksum'
     Download_Complete = 'Download complete'
+    Extracting        = 'Extracting'
     Pull_Complete     = 'Pull complete'
     Already_Exists    = 'Already exists'
 
@@ -54,11 +61,13 @@ class _Layer_Status:
 
 @dataclass(init=False)
 class Layer:
-    current:       int
-    total:         int
-    is_downloaded: bool
-    is_extracted:  bool
-    last_status:   str
+    current:         int
+    total:           int
+    is_downloaded:   bool
+    is_extracted:    bool
+    last_status:     str
+    extract_seconds: int
+    logged_seconds:  int
 
 # ################################################################################################################################
 
@@ -79,6 +88,8 @@ class PullTracker:
 
         self.layers:  'strlayerdict' = {}
         self.samples: 'rate_samples' = deque()
+
+        self.extracting:'Layer | None' = None
 
 # ################################################################################################################################
 
@@ -113,30 +124,50 @@ class PullTracker:
 
 # ################################################################################################################################
 
+    def get_layer(self, layer_id:'str') -> 'Layer':
+
+        if layer := self.layers.get(layer_id):
+            return layer
+
+        out = Layer()
+        out.current         = 0
+        out.total           = 0
+        out.is_downloaded   = False
+        out.is_extracted    = False
+        out.last_status     = ''
+        out.extract_seconds = 0
+        out.logged_seconds  = 0
+
+        self.layers[layer_id] = out
+        return out
+
+# ################################################################################################################################
+
     def update_layer(self, layer_id:'str', status:'str', message:'anydict') -> 'None':
 
-        if not (layer := self.layers.get(layer_id)):
-            layer = Layer()
-            layer.current       = 0
-            layer.total         = 0
-            layer.is_downloaded = False
-            layer.is_extracted  = False
-            layer.last_status   = ''
-            self.layers[layer_id] = layer
+        layer = self.get_layer(layer_id)
+        detail:'anydict' = message.get('progressDetail') or {}
 
         # Docker reports the size of a layer before it starts downloading it ..
-        if detail := message.get('progressDetail'):
-            if total := detail.get('total'):
-                if status == _Layer_Status.Downloading:
-                    layer.total = total
-                    layer.current = detail['current']
-                elif not layer.is_downloaded:
-                    layer.total = total
+        if total := detail.get('total'):
+            if status == _Layer_Status.Downloading:
+                layer.total = total
+                layer.current = detail['current']
+            elif not layer.is_downloaded:
+                layer.total = total
 
         # .. and says when it has it all ..
         if status in (_Layer_Status.Verifying, _Layer_Status.Download_Complete):
             layer.is_downloaded = True
             layer.current = layer.total
+
+        # .. then how many seconds it has been extracting it for, since its size on disk is not known up front ..
+        elif status == _Layer_Status.Extracting:
+            layer.is_downloaded = True
+            layer.current = layer.total
+            self.extracting = layer
+            if detail.get('units') == _Seconds_Unit:
+                layer.extract_seconds = detail['current']
 
         # .. and when it is extracted ..
         elif status == _Layer_Status.Pull_Complete:
@@ -151,10 +182,36 @@ class PullTracker:
             layer.current = 0
             layer.total   = 0
 
-        # Each new status of a layer is logged once, not each time its progress changes.
+        self.log_layer(layer_id, layer, status)
+
+# ################################################################################################################################
+
+    def log_layer(self, layer_id:'str', layer:'Layer', status:'str') -> 'None':
+        """ Logs each new status of a layer once, and every few seconds that it is still being extracted.
+        """
+        size = layer.total / _Bytes_Per_Unit
+
         if status != layer.last_status:
-            self.progress.log(f'{layer_id}: {status}')
             layer.last_status = status
+
+            if status == _Layer_Status.Extracting:
+                self.progress.log(f'{layer_id}: Extracting {size:.1f} {_Unit}')
+
+            elif status == _Layer_Status.Pull_Complete:
+                if layer.extract_seconds:
+                    self.progress.log(f'{layer_id}: Pull complete, extracted in {layer.extract_seconds}s')
+                else:
+                    self.progress.log(f'{layer_id}: Pull complete')
+
+            else:
+                self.progress.log(f'{layer_id}: {status}')
+
+            return
+
+        if status == _Layer_Status.Extracting:
+            if layer.extract_seconds - layer.logged_seconds >= _Extract_Log_Interval:
+                layer.logged_seconds = layer.extract_seconds
+                self.progress.log(f'{layer_id}: Extracting {size:.1f} {_Unit}, {layer.extract_seconds}s')
 
 # ################################################################################################################################
 
@@ -180,10 +237,29 @@ class PullTracker:
 
 # ################################################################################################################################
 
+    def get_extract_detail(self, extracted_count:'int', layer_count:'int') -> 'strnone':
+        """ Returns which layer is being extracted and for how long, or None if none is.
+        """
+        layer = self.extracting
+
+        if not layer:
+            return None
+
+        if layer.is_extracted:
+            return None
+
+        layer_number = min(extracted_count + 1, layer_count)
+
+        out = f'Extracting {layer_number} / {layer_count}, {layer.extract_seconds}s'
+        return out
+
+# ################################################################################################################################
+
     def update_stage(self, now:'float') -> 'None':
 
         current = 0
         total = 0
+        extracted_bytes = 0
         extracted_count = 0
         is_all_downloaded = True
 
@@ -191,6 +267,7 @@ class PullTracker:
             current += layer.current
             total   += layer.total
             if layer.is_extracted:
+                extracted_bytes += layer.total
                 extracted_count += 1
             if not layer.is_downloaded:
                 is_all_downloaded = False
@@ -206,9 +283,10 @@ class PullTracker:
         if is_all_downloaded:
             rate = None
 
-        # .. after which the download counts for most of the stage, and the extraction for the rest ..
+        # .. after which the download and the extraction each count for their share of the stage,
+        # .. the extraction by the size of the layers extracted so far ..
         download_fraction = current / total
-        extract_fraction = extracted_count / layer_count
+        extract_fraction = extracted_bytes / total
         fraction = download_fraction * _Download_Share + extract_fraction * (1 - _Download_Share)
 
         download = Download()
@@ -217,12 +295,8 @@ class PullTracker:
         download.unit    = _Unit
         download.rate    = None if rate is None else rate / _Bytes_Per_Unit
 
-        # .. and once everything is downloaded, what remains is extracting the layers one by one.
-        if is_all_downloaded:
-            layer_number = min(extracted_count + 1, layer_count)
-            detail = f'Extracting {layer_number} / {layer_count}'
-        else:
-            detail = None
+        # .. and the layer being extracted shows how long it has taken so far.
+        detail = self.get_extract_detail(extracted_count, layer_count)
 
         with self.progress.lock:
             self.stage.download = download

@@ -71,7 +71,7 @@ body {
 /* Everything is sized in rem, and the root size grows with whichever of the width or height of the screen is the tighter fit,
    so that narrow screens keep the base size and wide ones scale the whole page up. */
 html {
-    font-size: clamp(16px, min(0.45vw + 9.5px, 1.1vh + 6px), 24px);
+    font-size: clamp(16px, min(0.7vw + 6.5px, 1.6vh + 2.5px), 30px);
 }
 
 body {
@@ -653,8 +653,30 @@ body[data-state="failed"] .deploy-log-live {
     color: var(--deploy-text-muted);
     mask-image: linear-gradient(to bottom, transparent, #000 2.75rem);
     -webkit-mask-image: linear-gradient(to bottom, transparent, #000 2.75rem);
-    scrollbar-width: auto;
-    scrollbar-color: var(--deploy-border-strong) transparent;
+}
+
+.deploy-log-lines::-webkit-scrollbar {
+    width: 1.25rem;
+}
+
+.deploy-log-lines::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.deploy-log-lines::-webkit-scrollbar-thumb {
+    background: var(--deploy-border-strong);
+}
+
+.deploy-log-lines::-webkit-scrollbar-thumb:hover {
+    background: var(--deploy-text-faint);
+}
+
+/* Browsers without these selectors can only choose between their own two widths. */
+@supports not selector(::-webkit-scrollbar) {
+    .deploy-log-lines {
+        scrollbar-width: auto;
+        scrollbar-color: var(--deploy-text-faint) transparent;
+    }
 }
 
 .deploy-log-line {
@@ -854,7 +876,7 @@ zatoDeploy.config = {
     redirectSteps: 3,
     redirectStepMs: 700,
     copiedLabel: 'Copied to clipboard',
-    copiedShownMs: 600,
+    copiedShownMs: 1200,
     copiedPlacement: 'left',
     copiedOffset: [0, 10],
     tooltipTheme: 'zato-deploy',
@@ -865,6 +887,7 @@ zatoDeploy.state = {
     phase: 'running',
     stagesBuilt: false,
     lastLogId: 0,
+    isLogFollowed: true,
     logLines: [],
     title: '',
     timer: null,
@@ -897,6 +920,10 @@ zatoDeploy.init = function() {
 
     elements.progressReady.textContent = zatoDeploy.config.readyLabel;
     elements.logCopy.addEventListener('click', zatoDeploy.copyLog);
+    elements.logLines.addEventListener('scroll', zatoDeploy.onLogScroll);
+
+    // The log panel changes its size as the rest of the page fills in and as fonts load.
+    new ResizeObserver(zatoDeploy.followLog).observe(elements.logLines);
 
     elements.hostName.textContent = window.location.hostname;
 
@@ -1451,8 +1478,6 @@ zatoDeploy.renderLog = function(log) {
         return;
     }
 
-    var distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-    var isFollowing = distanceFromBottom < config.logScrollStickiness;
     var isAnimated = lines.length <= config.logLinesAnimated;
 
     for(var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
@@ -1490,11 +1515,31 @@ zatoDeploy.renderLog = function(log) {
         container.firstElementChild.remove();
     }
 
-    if(isFollowing) {
+    zatoDeploy.followLog();
+    state.lastLogId = lines[lines.length - 1].id;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Only the user's own scrolling decides whether the log follows its last line,
+// a scroll back to the bottom resumes it, and changes in the layout never stop it.
+zatoDeploy.onLogScroll = function() {
+
+    var container = zatoDeploy.elements.logLines;
+    var distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+
+    zatoDeploy.state.isLogFollowed = distanceFromBottom < zatoDeploy.config.logScrollStickiness;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.followLog = function() {
+
+    var container = zatoDeploy.elements.logLines;
+
+    if(zatoDeploy.state.isLogFollowed) {
         container.scrollTop = container.scrollHeight;
     }
-
-    state.lastLogId = lines[lines.length - 1].id;
 };
 
 // ////////////////////////////////////////////////////////////////////////
