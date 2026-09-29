@@ -462,7 +462,7 @@ class _HL7FHIRConnection(FHIRAuditMixin, SyncFHIRClient):
         try:
             self._do_raise_for_status(response)
         except Exception as e:
-            e.zato_response = response
+            e.zato_response = response # pyright: ignore[reportAttributeAccessIssue]
             raise
 
 # ################################################################################################################################

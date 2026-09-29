@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Zato</title>
+<style>
+
+/* ------------------------------------------------------------ */
+/* Deploy - fonts and tokens                                     */
+/* ------------------------------------------------------------ */
+
+@font-face {
+    font-family: ZatoMainFontLight;
+    src: url("/zato-deploy/fonts/Jost-Light.ttf");
+    font-display: swap;
+}
+
+@font-face {
+    font-family: ZatoMainFont;
+    src: url("/zato-deploy/fonts/Jost-Regular.ttf");
+    font-display: swap;
+}
+
+@font-face {
+    font-family: ZatoMainFontMedium;
+    src: url("/zato-deploy/fonts/Jost-Medium.ttf");
+    font-display: swap;
+}
+
+:root {
+    --deploy-bg: #0a0e1a;
+    --deploy-bg-panel: rgba(13, 17, 23, 0.82);
+    --deploy-bg-raised: #111827;
+    --deploy-bg-raised-hover: #1e293b;
+    --deploy-border: rgba(255, 255, 255, 0.06);
+    --deploy-border-strong: rgba(255, 255, 255, 0.12);
+    --deploy-accent: #3b82f6;
+    --deploy-accent-light: #60a5fa;
+    --deploy-accent-cyan: #06b6d4;
+    --deploy-accent-soft: rgba(59, 130, 246, 0.08);
+    --deploy-accent-soft-strong: rgba(96, 165, 250, 0.18);
+    --deploy-green: #6fae84;
+    --deploy-green-glow: rgba(111, 174, 132, 0.35);
+    --deploy-red: #ef4444;
+    --deploy-red-soft: rgba(239, 68, 68, 0.08);
+    --deploy-text: #f1f5f9;
+    --deploy-text-muted: #94a3b8;
+    --deploy-text-faint: #64748b;
+    --deploy-track: rgba(255, 255, 255, 0.07);
+    --deploy-grid-line: rgba(255, 255, 255, 0.025);
+    --deploy-font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+    --deploy-page-padding: 3rem;
+    --deploy-ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+    --deploy-hover-delay: 120ms;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+}
+
+/* Everything is sized in rem, and the root size grows with whichever of the width or height of the screen is the tighter fit,
+   so that narrow screens keep the base size and wide ones scale the whole page up. */
+html {
+    font-size: clamp(16px, min(0.7vw + 6.5px, 1.6vh + 2.5px), 30px);
+}
+
+body {
+    font-family: ZatoMainFont, sans-serif;
+    color: var(--deploy-text);
+    background:
+        radial-gradient(900px circle at 88% -12%, rgba(59, 130, 246, 0.11), transparent 60%),
+        radial-gradient(720px circle at -8% 112%, rgba(111, 174, 132, 0.07), transparent 60%),
+        var(--deploy-bg);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ------------------------------------------------------------ */
+/* Deploy - shell, backdrop and header                           */
+/* ------------------------------------------------------------ */
+
+.deploy-backdrop {
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(var(--deploy-grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--deploy-grid-line) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at 50% 28%, #000 18%, transparent 72%);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 28%, #000 18%, transparent 72%);
+    pointer-events: none;
+}
+
+.deploy-shell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 38.75rem;
+}
+
+.deploy-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.125rem var(--deploy-page-padding);
+    border-bottom: 1px solid var(--deploy-border);
+}
+
+.deploy-header-brand {
+    display: flex;
+    gap: 1.625rem;
+    align-items: center;
+    height: 1.5rem;
+}
+
+.deploy-header-logo {
+    display: block;
+    flex: none;
+    width: 4.1581rem;
+    height: 1.5rem;
+    color: var(--deploy-text);
+}
+
+.deploy-header-brand-separator {
+    position: relative;
+    top: 0.125rem;
+    flex: none;
+    width: 1px;
+    height: 1.5rem;
+    background: var(--deploy-border-strong);
+}
+
+.deploy-header-logo-azure {
+    position: relative;
+    top: 0.125rem;
+    display: block;
+    flex: none;
+    width: 1.5919rem;
+    height: 1.5rem;
+    margin-left: -0.375rem;
+}
+
+.deploy-header-host {
+    font-family: var(--deploy-font-mono);
+    font-size: 0.8125rem;
+    color: var(--deploy-text-faint);
+}
+
+.deploy-header-host-port {
+    color: var(--deploy-accent-light);
+}
+
+/* ------------------------------------------------------------ */
+/* Deploy - main layout                                          */
+/* ------------------------------------------------------------ */
+
+.deploy-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 5rem;
+    align-items: start;
+    width: 100%;
+    max-width: 77.5rem;
+    margin: 0 auto;
+    padding: 2rem var(--deploy-page-padding) 1.5rem;
+}
+
+.deploy-status {
+    padding-top: 0.375rem;
+}
+
+@keyframes deploy-pulse {
+    50% {
+        opacity: 0.35;
+        transform: scale(0.55);
+    }
+}
+
+/* ------------------------------------------------------------ */
+/* Deploy - status column                                        */
+/* ------------------------------------------------------------ */
+
+.deploy-status-step {
+    display: flex;
+    gap: 0.625rem;
+    margin-bottom: 1.125rem;
+    font-family: var(--deploy-font-mono);
+    font-size: 0.875rem;
+    color: var(--deploy-accent-light);
+}
+
+.deploy-status-step-separator,
+.deploy-status-step-total {
+    color: var(--deploy-text-faint);
+}
+
+body[data-state="ready"] .deploy-status-step {
+    color: var(--deploy-green);
+}
+
+body[data-state="failed"] .deploy-status-step {
+    color: var(--deploy-red);
+}
+
+.deploy-status-title {
+    min-height: 1.1em;
+    margin: 0 0 1.125rem;
+    font-family: ZatoMainFontLight, sans-serif;
+    font-size: 3rem;
+    font-weight: normal;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.025em;
+    color: var(--deploy-text);
+}
+
+.deploy-status-detail {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.375rem;
+    min-height: 1.375rem;
+    font-family: var(--deploy-font-mono);
+    font-size: 0.8438rem;
+    color: var(--deploy-text-muted);
+}
+
+.deploy-status-detail-item[data-kind="error"] {
+    color: var(--deploy-red);
+}
+
+.deploy-status-detail-item[data-kind="command"] {
+    padding: 0 0.5rem;
+    color: var(--deploy-text);
+    background: var(--deploy-bg-raised);
+}
+/* ------------------------------------------------------------ */
+/* Deploy - progress                                             */
+/* ------------------------------------------------------------ */
+
+.deploy-progress {
+    display: flex;
+    gap: 0.1875rem;
+    height: 0.25rem;
+    margin-top: 2.5rem;
+}
+
+.deploy-progress-segment {
+    position: relative;
+    min-width: 0.625rem;
+    overflow: hidden;
+    background: var(--deploy-track);
+}
+
+.deploy-progress-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    background: var(--deploy-accent);
+    transition: width 0.5s var(--deploy-ease-out), background-color 0.5s ease;
+}
+
+.deploy-progress-segment[data-status="active"] .deploy-progress-fill {
+    background: linear-gradient(90deg, var(--deploy-accent), var(--deploy-accent-cyan));
+}
+
+.deploy-progress-segment[data-status="active"] .deploy-progress-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    animation: deploy-shimmer 1.4s linear infinite;
+}
+
+.deploy-progress-segment[data-status="failed"] .deploy-progress-fill {
+    background: var(--deploy-red);
+}
+
+.deploy-progress-ready {
+    display: none;
+    margin-top: 1.875rem;
+    font-family: var(--deploy-font-mono);
+    font-size: 0.875rem;
+    line-height: 0.875rem;
+    color: var(--deploy-green);
+}
+
+body[data-state="ready"] .deploy-progress {
+    display: none;
+}
+
+body[data-state="ready"] .deploy-progress-ready {
+    display: block;
+}
+
+@keyframes deploy-shimmer {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(100%);
+    }
+}
+
+.deploy-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.875rem;
+    font-family: var(--deploy-font-mono);
+    font-size: 0.8125rem;
+    color: var(--deploy-text-faint);
+}
+
+.deploy-progress-percent {
+    color: var(--deploy-text);
+}
+
+body[data-state="ready"] .deploy-progress-percent {
+    color: var(--deploy-green);
+}
+
+body[data-state="ready"] .deploy-progress-elapsed {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Deploy - stages                                               */
+/* ------------------------------------------------------------ */
+
+.deploy-stages {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--deploy-border);
+    background: var(--deploy-bg-panel);
+}
+
+.deploy-stage {
+    display: grid;
+    grid-template-columns: 1rem 1.5rem minmax(0, 1fr) auto;
+    gap: 0.875rem;
+    align-items: center;
+    padding: 0.625rem 1.125rem;
+    border-bottom: 1px solid var(--deploy-border);
+    font-size: 0.9688rem;
+    color: var(--deploy-text-faint);
+    transition: color 0.4s ease, background-color 0.4s ease;
+}
+
+.deploy-stage:last-child {
+    border-bottom: none;
+}
+
+.deploy-stage[data-status="done"] {
+    color: var(--deploy-text-muted);
+}
+
+.deploy-stage[data-status="active"] {
+    color: var(--deploy-text);
+    background: linear-gradient(90deg, var(--deploy-accent-soft), transparent 75%);
+}
+
+.deploy-stage[data-status="failed"] {
+    color: var(--deploy-text);
+    background: linear-gradient(90deg, var(--deploy-red-soft), transparent 75%);
+}
+
+.deploy-stage-index,
+.deploy-stage-time {
+    font-family: var(--deploy-font-mono);
+    font-size: 0.7812rem;
+    color: var(--deploy-text-faint);
+}
+
+.deploy-stage[data-status="active"] .deploy-stage-index {
+    color: var(--deploy-accent-light);
+}
+
+.deploy-stage[data-status="failed"] .deploy-stage-index {
+    color: var(--deploy-red);
+}
+
+.deploy-stage-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.deploy-stage-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+}
+
+.deploy-stage-spinner {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke-width: 5;
+}
+
+.deploy-stage-spinner-track {
+    stroke: var(--deploy-border-strong);
+    transition: stroke 0.4s ease;
+}
+
+.deploy-stage-spinner-arc {
+    stroke: var(--deploy-accent-light);
+    stroke-linecap: butt;
+    stroke-dasharray: 1 150;
+    opacity: 0;
+}
+
+.deploy-stage[data-status="active"] .deploy-stage-spinner,
+.deploy-component[data-status="active"] .deploy-stage-spinner {
+    animation: deploy-spinner-rotate 1.4s linear infinite;
+}
+
+.deploy-stage[data-status="active"] .deploy-stage-spinner-track,
+.deploy-component[data-status="active"] .deploy-stage-spinner-track {
+    stroke: var(--deploy-accent-soft-strong);
+}
+
+.deploy-stage[data-status="active"] .deploy-stage-spinner-arc,
+.deploy-component[data-status="active"] .deploy-stage-spinner-arc {
+    opacity: 1;
+    animation: deploy-spinner-dash 1.4s ease-in-out infinite;
+}
+
+.deploy-stage[data-status="done"] .deploy-stage-spinner,
+.deploy-stage[data-status="failed"] .deploy-stage-spinner,
+.deploy-component[data-status="done"] .deploy-stage-spinner,
+.deploy-component[data-status="failed"] .deploy-stage-spinner {
+    display: none;
+}
+
+@keyframes deploy-spinner-rotate {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes deploy-spinner-dash {
+    0% {
+        stroke-dasharray: 1 150;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 90 150;
+        stroke-dashoffset: -35;
+    }
+    100% {
+        stroke-dasharray: 90 150;
+        stroke-dashoffset: -124;
+    }
+}
+
+.deploy-stage-marker-icon {
+    display: none;
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+}
+
+.deploy-stage-marker-done {
+    stroke: var(--deploy-green);
+}
+
+.deploy-stage-marker-failed {
+    stroke: var(--deploy-red);
+}
+
+.deploy-stage[data-status="done"] .deploy-stage-marker-done,
+.deploy-stage[data-status="failed"] .deploy-stage-marker-failed,
+.deploy-component[data-status="done"] .deploy-stage-marker-done,
+.deploy-component[data-status="failed"] .deploy-stage-marker-failed {
+    display: block;
+}
+
+/* ------------------------------------------------------------ */
+/* Deploy - components started by a stage                        */
+/* ------------------------------------------------------------ */
+
+.deploy-stage[data-has-components="true"] {
+    border-bottom: none;
+}
+
+.deploy-components {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.4375rem 1.5rem;
+    padding: 0 1.125rem 0.75rem 5.375rem;
+    border-bottom: 1px solid var(--deploy-border);
+    transition: background-color 0.4s ease;
+}
+
+.deploy-components[data-status="active"] {
+    background: linear-gradient(90deg, var(--deploy-accent-soft), transparent 75%);
+}
+
+.deploy-components[data-status="failed"] {
+    background: linear-gradient(90deg, var(--deploy-red-soft), transparent 75%);
+}
+
+.deploy-component {
+    display: flex;
+    gap: 0.625rem;
+    align-items: center;
+    min-width: 0;
+    font-size: 0.8438rem;
+    color: var(--deploy-text-faint);
+    transition: color 0.4s ease;
+}
+
+.deploy-component[data-status="done"] {
+    color: var(--deploy-text-muted);
+}
+
+.deploy-component[data-status="active"],
+.deploy-component[data-status="failed"] {
+    color: var(--deploy-text);
+}
+
+.deploy-component .deploy-stage-marker,
+.deploy-component .deploy-stage-spinner,
+.deploy-component .deploy-stage-marker-icon {
+    width: 0.75rem;
+    height: 0.75rem;
+}
+
+.deploy-component-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------------------ */
+/* Deploy - log                                                  */
+/* ------------------------------------------------------------ */
+
+.deploy-log {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 100%;
+    max-width: 77.5rem;
+    min-height: 0;
+    margin: 0 auto;
+    padding: 0 var(--deploy-page-padding) 1.75rem;
+}
+
+.deploy-log-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 6.875rem;
+    border: 1px solid var(--deploy-border);
+    background: var(--deploy-bg-panel);
+}
+
+.deploy-log-header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem 0.5rem 1.125rem;
+    border-bottom: 1px solid var(--deploy-border);
+    font-family: var(--deploy-font-mono);
+    font-size: 0.75rem;
+    color: var(--deploy-text-faint);
+}
+
+.deploy-log-live {
+    width: 0.375rem;
+    height: 0.375rem;
+    background: var(--deploy-green);
+    box-shadow: 0 0 0.5rem var(--deploy-green-glow);
+    animation: deploy-pulse 1.5s ease-in-out infinite;
+}
+
+body[data-state="failed"] .deploy-log-live {
+    background: var(--deploy-red);
+    box-shadow: none;
+    animation: none;
+}
+
+.deploy-log-copy {
+    margin-left: auto;
+    padding: 0.1875rem 0.625rem;
+    border: 1px solid var(--deploy-border-strong);
+    font: inherit;
+    color: var(--deploy-text-muted);
+    background: transparent;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.deploy-log-copy:hover {
+    border-color: var(--deploy-accent);
+    color: var(--deploy-text);
+    background: var(--deploy-accent-soft);
+    transition-delay: var(--deploy-hover-delay);
+}
+
+.deploy-log-copy:active {
+    background: var(--deploy-accent-soft-strong);
+    transition-delay: 0s;
+}
+
+.tippy-box[data-theme~="zato-deploy"] {
+    border: 1px solid var(--deploy-border-strong);
+    border-radius: 0;
+    font-family: var(--deploy-font-mono);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--deploy-text);
+    background: var(--deploy-bg-raised-hover);
+}
+
+.tippy-box[data-theme~="zato-deploy"] > .tippy-arrow {
+    color: var(--deploy-bg-raised-hover);
+}
+
+.tippy-box[data-theme~="zato-deploy"] > .tippy-content {
+    padding: 0.375rem 0.625rem;
+}
+
+.deploy-log-lines {
+    flex: 1;
+    min-height: 0;
+    padding: 0.75rem 1.125rem;
+    overflow-y: auto;
+    font-family: var(--deploy-font-mono);
+    font-size: 0.7812rem;
+    line-height: 1.7;
+    color: var(--deploy-text-muted);
+    mask-image: linear-gradient(to bottom, transparent, #000 2.75rem);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 2.75rem);
+}
+
+.deploy-log-lines::-webkit-scrollbar {
+    width: 1.25rem;
+}
+
+.deploy-log-lines::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.deploy-log-lines::-webkit-scrollbar-thumb {
+    background: var(--deploy-border-strong);
+}
+
+.deploy-log-lines::-webkit-scrollbar-thumb:hover {
+    background: var(--deploy-text-faint);
+}
+
+/* Browsers without these selectors can only choose between their own two widths. */
+@supports not selector(::-webkit-scrollbar) {
+    .deploy-log-lines {
+        scrollbar-width: auto;
+        scrollbar-color: var(--deploy-text-faint) transparent;
+    }
+}
+
+.deploy-log-line {
+    display: flex;
+    gap: 1rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.deploy-log-line-time {
+    flex: none;
+    color: var(--deploy-text-faint);
+    opacity: 0.7;
+}
+
+.deploy-log-line:last-child .deploy-log-line-text {
+    color: var(--deploy-text);
+}
+
+.deploy-log-line[data-kind="ok"] .deploy-log-line-text {
+    color: var(--deploy-green);
+}
+
+.deploy-log-line[data-kind="error"] .deploy-log-line-text {
+    color: var(--deploy-red);
+}
+
+/* ------------------------------------------------------------ */
+/* Deploy - narrow screens and reduced motion                    */
+/* ------------------------------------------------------------ */
+
+@media (max-width: 920px) {
+    :root {
+        --deploy-page-padding: 1.375rem;
+    }
+
+    .deploy-main {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 3rem;
+        padding-top: 2.75rem;
+    }
+
+    .deploy-status-title {
+        font-size: 2.25rem;
+    }
+
+    .deploy-header-host {
+        display: none;
+    }
+}
+
+@media (max-height: 820px) {
+    .deploy-header {
+        padding-top: 0.875rem;
+        padding-bottom: 0.875rem;
+    }
+
+    .deploy-main {
+        padding-top: 1.375rem;
+        padding-bottom: 1.125rem;
+    }
+
+    .deploy-stage {
+        padding-top: 0.4375rem;
+        padding-bottom: 0.4375rem;
+        font-size: 0.9375rem;
+    }
+
+    .deploy-components {
+        gap: 0.3125rem 1.5rem;
+        padding-bottom: 0.5625rem;
+    }
+
+    .deploy-status-title {
+        font-size: 2.5rem;
+    }
+
+    .deploy-progress {
+        margin-top: 1.75rem;
+    }
+
+    .deploy-progress-ready {
+        margin-top: 1.125rem;
+    }
+
+    .deploy-log {
+        padding-bottom: 1.125rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .deploy-stage-spinner,
+    .deploy-stage-spinner-arc,
+    .deploy-progress-fill::after,
+    .deploy-log-live {
+        animation-duration: 6s;
+    }
+}
+
+</style>
+</head>
+<body data-state="running">
+
+<div class="deploy-backdrop"></div>
+
+<div class="deploy-shell" id="deploy-shell">
+
+    <header class="deploy-header">
+        <div class="deploy-header-brand">
+            <svg class="deploy-header-logo" width="66.53" height="24" viewBox="21.989 21.891 194.653 70.217" aria-label="Zato" role="img">
+                <path fill="currentColor" d="M33.19967,82.56968c-0.2948,1.17999,0.29559,1.86891,1.27852,1.86891h19.17773l-2.26223,5.01553c-0.49186,0.98293-1.47558,1.96664-3.73702,1.96664H21.98863l20.25919-60.08865c0.19627-0.88519-0.19706-1.67184-1.37704-1.67184h-7.96589c-2.26223,0-3.34369-1.08145-3.83555-1.96664c-0.2948-0.59039-1.47478-3.34369-2.26144-5.11406h26.7495L33.19967,82.56968z"/>
+                <path fill="currentColor" d="M108.52673,91.42076h-7.76883l-6.19631-47.40202l-6.19552,47.40202h-7.76883l10.42439-68.84119h3.83555c2.95036,0,3.44142,1.86891,3.73701,3.73702L108.52673,91.42076z"/>
+                <path fill="currentColor" d="M163.10957,27.69363c-0.39333,0.88519-1.47479,1.86811-3.73701,1.86811h-5.5074c-0.98293,0-1.67184,0.78745-1.76958,1.67184v60.18718h-5.01633c-1.67184,0-1.96664-0.98372-1.96664-1.47478V29.56174h-9.93253v-4.81847c0-1.17998,0.98293-2.1637,2.1637-2.1637h28.12656L163.10957,27.69363z"/>
+                <path fill="currentColor" d="M208.08524,21.89144c4.72073,0.19627,8.55629,4.03181,8.55629,8.75255v52.81088c-0.09853,4.72073-3.83556,8.45775-8.55629,8.65401h-5.40886c-4.81926,0-8.75255-3.93328-8.85107-8.65401V30.64399c0-4.81927,3.93329-8.75255,8.85107-8.75255H208.08524z M205.72527,85.91337c2.06519,0,3.73701-1.67184,3.73701-3.83554V31.92251c0-2.1637-1.67183-3.83555-3.73701-3.83555h-1.08224c-2.06517,0.09853-3.73701,1.77037-3.73701,3.83555v50.15532c0,2.06517,1.67184,3.73701,3.73701,3.83554H205.72527z"/>
+            </svg>
+            <span class="deploy-header-brand-separator"></span>
+            <svg class="deploy-header-logo-azure" width="25.47" height="24" viewBox="4.004 6.543 87.993 82.913" aria-label="Azure" role="img">
+                <defs>
+                    <linearGradient id="deploy-azure-gradient-left" x1="-1032.172" x2="-1059.213" y1="145.312" y2="65.426" gradientTransform="matrix(1 0 0 -1 1075 158)" gradientUnits="userSpaceOnUse">
+                        <stop offset="0" stop-color="#114a8b"/>
+                        <stop offset="1" stop-color="#0669bc"/>
+                    </linearGradient>
+                    <linearGradient id="deploy-azure-gradient-shadow" x1="-1023.725" x2="-1029.98" y1="108.083" y2="105.968" gradientTransform="matrix(1 0 0 -1 1075 158)" gradientUnits="userSpaceOnUse">
+                        <stop offset="0" stop-opacity=".3"/>
+                        <stop offset=".071" stop-opacity=".2"/>
+                        <stop offset=".321" stop-opacity=".1"/>
+                        <stop offset=".623" stop-opacity=".05"/>
+                        <stop offset="1" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="deploy-azure-gradient-right" x1="-1027.165" x2="-997.482" y1="147.642" y2="68.561" gradientTransform="matrix(1 0 0 -1 1075 158)" gradientUnits="userSpaceOnUse">
+                        <stop offset="0" stop-color="#3ccbf4"/>
+                        <stop offset="1" stop-color="#2892df"/>
+                    </linearGradient>
+                </defs>
+                <path fill="url(#deploy-azure-gradient-left)" d="M33.338 6.544h26.038l-27.03 80.087a4.152 4.152 0 0 1-3.933 2.824H8.149a4.145 4.145 0 0 1-3.928-5.47L29.404 9.368a4.152 4.152 0 0 1 3.934-2.825z"/>
+                <path fill="#0078d4" d="M71.175 60.261h-41.29a1.911 1.911 0 0 0-1.305 3.309l26.532 24.764a4.171 4.171 0 0 0 2.846 1.121h23.38z"/>
+                <path fill="url(#deploy-azure-gradient-shadow)" d="M33.338 6.544a4.118 4.118 0 0 0-3.943 2.879L4.252 83.917a4.14 4.14 0 0 0 3.908 5.538h20.787a4.443 4.443 0 0 0 3.41-2.9l5.014-14.777 17.910 16.705a4.237 4.237 0 0 0 2.666.972H81.24L71.024 60.261l-29.781.007L59.47 6.544z"/>
+                <path fill="url(#deploy-azure-gradient-right)" d="M66.595 9.364a4.145 4.145 0 0 0-3.928-2.82H33.648a4.146 4.146 0 0 1 3.928 2.82l25.184 74.62a4.146 4.146 0 0 1-3.928 5.472h29.02a4.146 4.146 0 0 0 3.927-5.472z"/>
+            </svg>
+        </div>
+        <div class="deploy-header-host"><span id="deploy-host-name"></span><span class="deploy-header-host-port">:8184</span></div>
+    </header>
+
+    <main class="deploy-main">
+
+        <section class="deploy-status">
+            <div class="deploy-status-step">
+                <span id="deploy-step-current">1</span>
+                <span class="deploy-status-step-separator">/</span>
+                <span class="deploy-status-step-total" id="deploy-step-total">1</span>
+            </div>
+            <h1 class="deploy-status-title" id="deploy-title" aria-live="polite"></h1>
+            <div class="deploy-status-detail" id="deploy-detail"></div>
+            <div class="deploy-progress" id="deploy-progress"></div>
+            <div class="deploy-progress-ready" id="deploy-progress-ready"></div>
+            <div class="deploy-progress-meta">
+                <span class="deploy-progress-percent" id="deploy-percent">0%</span>
+                <span class="deploy-progress-elapsed" id="deploy-elapsed">00:00</span>
+            </div>
+        </section>
+
+        <ol class="deploy-stages" id="deploy-stages"></ol>
+
+    </main>
+
+    <section class="deploy-log">
+        <div class="deploy-log-panel">
+            <div class="deploy-log-header">
+                <span class="deploy-log-live"></span>
+                <span id="deploy-log-source"></span>
+                <button class="deploy-log-copy" id="deploy-log-copy" type="button">Copy</button>
+            </div>
+            <div class="deploy-log-lines" id="deploy-log-lines"></div>
+        </div>
+    </section>
+
+</div>
+
+<script src="/zato-deploy/vendor/tippy/popperjs.core.js"></script>
+<script src="/zato-deploy/vendor/tippy/tippy.js"></script>
+<script>
+
+var zatoDeploy = {};
+
+zatoDeploy.config = {
+    progressUrl: '/zato-deploy/progress.json',
+    dashboardPath: '/',
+    pollIntervalMs: 1000,
+    handoffPollIntervalMs: 200,
+    estimateCap: 0.92,
+    logLinesKept: 120,
+    logLinesAnimated: 3,
+    logScrollStickiness: 40,
+    titleFailed: 'Deployment failed',
+    redirectLabel: 'Redirecting to Zato in ',
+    readyLabel: 'Environment ready',
+    redirectSteps: 3,
+    redirectStepMs: 700,
+    fadeOutMs: 600,
+    copiedLabel: 'Copied to clipboard',
+    copiedShownMs: 1200,
+    copiedPlacement: 'left',
+    copiedOffset: [0, 10],
+    tooltipTheme: 'zato-deploy',
+    svgNamespace: 'http://www.w3.org/2000/svg',
+};
+
+zatoDeploy.state = {
+    phase: 'running',
+    stagesBuilt: false,
+    lastLogId: 0,
+    isLogFollowed: true,
+    logLines: [],
+    title: '',
+    timer: null,
+};
+
+zatoDeploy.elements = {};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.init = function() {
+
+    var elements = zatoDeploy.elements;
+
+    elements.hostName = document.getElementById('deploy-host-name');
+    elements.stepCurrent = document.getElementById('deploy-step-current');
+    elements.stepTotal = document.getElementById('deploy-step-total');
+    elements.title = document.getElementById('deploy-title');
+    elements.detail = document.getElementById('deploy-detail');
+    elements.progress = document.getElementById('deploy-progress');
+    elements.progressReady = document.getElementById('deploy-progress-ready');
+    elements.percent = document.getElementById('deploy-percent');
+    elements.elapsed = document.getElementById('deploy-elapsed');
+    elements.stages = document.getElementById('deploy-stages');
+    elements.logSource = document.getElementById('deploy-log-source');
+    elements.logLines = document.getElementById('deploy-log-lines');
+    elements.logCopy = document.getElementById('deploy-log-copy');
+    elements.stageRows = [];
+    elements.progressFills = [];
+    elements.progressSegments = [];
+
+    elements.progressReady.textContent = zatoDeploy.config.readyLabel;
+    elements.logCopy.addEventListener('click', zatoDeploy.copyLog);
+    elements.logLines.addEventListener('scroll', zatoDeploy.onLogScroll);
+
+    // The log panel changes its size as the rest of the page fills in and as fonts load.
+    new ResizeObserver(zatoDeploy.followLog).observe(elements.logLines);
+
+    elements.hostName.textContent = window.location.hostname;
+
+    zatoDeploy.poll();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.poll = function() {
+    zatoDeploy.fetchProgress().then(function(snapshot) {
+        if(snapshot === null) {
+            zatoDeploy.redirect();
+            return;
+        }
+        zatoDeploy.render(snapshot);
+        zatoDeploy.scheduleNext();
+    }, function() {
+        zatoDeploy.scheduleNext();
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.scheduleNext = function() {
+
+    var config = zatoDeploy.config;
+    var phase = zatoDeploy.state.phase;
+
+    if(phase === 'failed') {
+        return;
+    }
+
+    if(phase === 'ready') {
+        zatoDeploy.showRedirectStep(config.redirectSteps);
+        return;
+    }
+
+    zatoDeploy.state.timer = setTimeout(zatoDeploy.poll, config.pollIntervalMs);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The Dashboard answers in place of the progress once the deployment is over, which resolves to null.
+zatoDeploy.fetchProgress = function() {
+
+    var url = zatoDeploy.config.progressUrl + '?after=' + zatoDeploy.state.lastLogId;
+
+    return fetch(url, {cache: 'no-store'}).then(function(response) {
+        if(!zatoDeploy.isProgressResponse(response)) {
+            return null;
+        }
+        return response.json();
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.isProgressResponse = function(response) {
+
+    if(!response.ok) {
+        return false;
+    }
+
+    if(response.redirected) {
+        return false;
+    }
+
+    var contentType = response.headers.get('content-type');
+
+    if(contentType === null) {
+        return false;
+    }
+
+    return contentType.indexOf('application/json') === 0;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.pollHandoff = function() {
+
+    var config = zatoDeploy.config;
+
+    zatoDeploy.isDashboardAnswering().then(function(isDashboard) {
+        if(isDashboard) {
+            zatoDeploy.redirect();
+            return;
+        }
+        zatoDeploy.state.timer = setTimeout(zatoDeploy.pollHandoff, config.handoffPollIntervalMs);
+    }, function() {
+        zatoDeploy.state.timer = setTimeout(zatoDeploy.pollHandoff, config.handoffPollIntervalMs);
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Once the deployment server exits, the same address answers with the Dashboard,
+// which never returns this JSON, so any other answer means the handoff took place.
+zatoDeploy.isDashboardAnswering = function() {
+    return fetch(zatoDeploy.config.progressUrl, {cache: 'no-store'}).then(function(response) {
+        return !zatoDeploy.isProgressResponse(response);
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Each step reads as a second on screen, but the whole countdown is shorter than it says.
+zatoDeploy.showRedirectStep = function(stepsLeft) {
+
+    var config = zatoDeploy.config;
+
+    // The Dashboard has taken over the port by now, so the check at the end succeeds at once.
+    if(stepsLeft === 0) {
+        zatoDeploy.pollHandoff();
+        return;
+    }
+
+    zatoDeploy.setDetails([]);
+    zatoDeploy.setTitle(config.redirectLabel + stepsLeft + 's', true);
+
+    zatoDeploy.state.timer = setTimeout(function() {
+        zatoDeploy.showRedirectStep(stepsLeft - 1);
+    }, config.redirectStepMs);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.redirect = function() {
+
+    var config = zatoDeploy.config;
+    var frames = [{opacity: 1}, {opacity: 0}];
+    var options = {duration: config.fadeOutMs, easing: 'ease-in', fill: 'forwards'};
+
+    document.querySelector('.deploy-backdrop').animate(frames, options);
+    var fade = document.getElementById('deploy-shell').animate(frames, options);
+
+    fade.finished.then(function() {
+        window.location.replace(config.dashboardPath);
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.render = function(snapshot) {
+
+    if(!zatoDeploy.state.stagesBuilt) {
+        zatoDeploy.buildStages(snapshot.stages);
+    }
+
+    zatoDeploy.updatePhase(snapshot);
+
+    var current = zatoDeploy.getCurrentStage(snapshot);
+
+    zatoDeploy.renderStatus(snapshot, current);
+    zatoDeploy.renderStages(snapshot);
+    zatoDeploy.renderProgress(snapshot);
+    zatoDeploy.renderLog(snapshot.log);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.updatePhase = function(snapshot) {
+
+    var phase = 'running';
+
+    if(snapshot.failure !== null) {
+        phase = 'failed';
+    }
+    else if(snapshot.is_ready) {
+        phase = 'ready';
+    }
+
+    zatoDeploy.state.phase = phase;
+    document.body.setAttribute('data-state', phase);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.getCurrentStage = function(snapshot) {
+
+    var stages = snapshot.stages;
+
+    for(var stageIndex = 0; stageIndex < stages.length; stageIndex++) {
+        var status = stages[stageIndex].status;
+        if(status === 'active' || status === 'failed') {
+            return {stage: stages[stageIndex], index: stageIndex};
+        }
+    }
+
+    if(snapshot.is_ready) {
+        return {stage: stages[stages.length - 1], index: stages.length - 1};
+    }
+
+    return {stage: stages[0], index: 0};
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.buildStages = function(stages) {
+
+    var elements = zatoDeploy.elements;
+
+    for(var stageIndex = 0; stageIndex < stages.length; stageIndex++) {
+
+        var stage = stages[stageIndex];
+
+        // Build the row in the stage list ..
+        var row = document.createElement('li');
+        row.className = 'deploy-stage';
+        row.setAttribute('data-status', stage.status);
+
+        var marker = zatoDeploy.createMarker();
+
+        var index = document.createElement('span');
+        index.className = 'deploy-stage-index';
+        index.textContent = zatoDeploy.padNumber(stageIndex + 1);
+
+        var name = document.createElement('span');
+        name.className = 'deploy-stage-name';
+        name.textContent = stage.name;
+
+        var time = document.createElement('span');
+        time.className = 'deploy-stage-time';
+
+        row.appendChild(marker);
+        row.appendChild(index);
+        row.appendChild(name);
+        row.appendChild(time);
+        elements.stages.appendChild(row);
+
+        // .. the components the stage starts, if it starts any ..
+        var components = null;
+
+        if(stage.components !== null) {
+            row.setAttribute('data-has-components', 'true');
+            components = zatoDeploy.buildComponents(stage.components);
+            elements.stages.appendChild(components.container);
+        }
+
+        elements.stageRows.push({row: row, time: time, components: components});
+
+        // .. and its segment in the progress bar, as wide as the share of time the stage is expected to take.
+        var segment = document.createElement('div');
+        segment.className = 'deploy-progress-segment';
+        segment.style.flexGrow = stage.weight;
+
+        var fill = document.createElement('div');
+        fill.className = 'deploy-progress-fill';
+
+        segment.appendChild(fill);
+        elements.progress.appendChild(segment);
+        elements.progressSegments.push(segment);
+        elements.progressFills.push(fill);
+    }
+
+    elements.stepTotal.textContent = stages.length;
+    zatoDeploy.state.stagesBuilt = true;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.buildComponents = function(components) {
+
+    var container = document.createElement('li');
+    container.className = 'deploy-components';
+
+    var items = [];
+
+    for(var componentIndex = 0; componentIndex < components.length; componentIndex++) {
+
+        var item = document.createElement('div');
+        item.className = 'deploy-component';
+        item.setAttribute('data-status', components[componentIndex].status);
+
+        var name = document.createElement('span');
+        name.className = 'deploy-component-name';
+        name.textContent = components[componentIndex].name;
+
+        item.appendChild(zatoDeploy.createMarker());
+        item.appendChild(name);
+        container.appendChild(item);
+        items.push(item);
+    }
+
+    return {container: container, items: items};
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.createMarker = function() {
+
+    var marker = document.createElement('span');
+    marker.className = 'deploy-stage-marker';
+
+    marker.appendChild(zatoDeploy.createSpinner());
+    marker.appendChild(zatoDeploy.createIcon('deploy-stage-marker-done', 'polyline', 'points', '4 12.5 9.5 18 20 6.5'));
+    marker.appendChild(zatoDeploy.createIcon('deploy-stage-marker-failed', 'path', 'd', 'M6 6 L18 18 M18 6 L6 18'));
+
+    return marker;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.createSpinner = function() {
+
+    var namespace = zatoDeploy.config.svgNamespace;
+
+    var spinner = document.createElementNS(namespace, 'svg');
+    spinner.setAttribute('class', 'deploy-stage-spinner');
+    spinner.setAttribute('viewBox', '0 0 50 50');
+
+    var track = document.createElementNS(namespace, 'circle');
+    track.setAttribute('class', 'deploy-stage-spinner-track');
+    track.setAttribute('cx', '25');
+    track.setAttribute('cy', '25');
+    track.setAttribute('r', '20');
+
+    var arc = document.createElementNS(namespace, 'circle');
+    arc.setAttribute('class', 'deploy-stage-spinner-arc');
+    arc.setAttribute('cx', '25');
+    arc.setAttribute('cy', '25');
+    arc.setAttribute('r', '20');
+
+    spinner.appendChild(track);
+    spinner.appendChild(arc);
+    return spinner;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.createIcon = function(className, shapeName, attributeName, attributeValue) {
+
+    var namespace = zatoDeploy.config.svgNamespace;
+
+    var icon = document.createElementNS(namespace, 'svg');
+    icon.setAttribute('class', 'deploy-stage-marker-icon ' + className);
+    icon.setAttribute('viewBox', '0 0 24 24');
+
+    var shape = document.createElementNS(namespace, shapeName);
+    shape.setAttribute(attributeName, attributeValue);
+
+    icon.appendChild(shape);
+    return icon;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.renderStatus = function(snapshot, current) {
+
+    var elements = zatoDeploy.elements;
+    var config = zatoDeploy.config;
+    var phase = zatoDeploy.state.phase;
+    var total = snapshot.stages.length;
+    var stepNumber = current.index + 1;
+    var title = current.stage.name;
+    var details = [];
+
+    if(phase === 'failed') {
+        title = config.titleFailed;
+        details.push({text: snapshot.failure.message, kind: 'error'});
+        details.push({text: snapshot.ssh_command, kind: 'command'});
+    }
+    else if(phase === 'ready') {
+        title = config.redirectLabel + config.redirectSteps + 's';
+    }
+    else {
+        details = zatoDeploy.getStageDetails(current.stage, snapshot.now);
+    }
+
+    elements.stepCurrent.textContent = stepNumber;
+    zatoDeploy.setTitle(title);
+    zatoDeploy.setDetails(details);
+
+    document.title = stepNumber + ' / ' + total + ' - ' + title;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.getStageDetails = function(stage, now) {
+
+    var out = [];
+    var progress = stage.progress;
+
+    if(stage.components !== null) {
+        out.push({text: zatoDeploy.countDone(stage.components) + ' / ' + stage.components.length, kind: null});
+    }
+
+    if(progress === null) {
+        out.push({text: zatoDeploy.formatDuration(now - stage.started), kind: null});
+    }
+    else {
+        out.push({text: progress.current.toFixed(1) + ' / ' + progress.total.toFixed(1) + ' ' + progress.unit, kind: null});
+        if(progress.rate !== null) {
+            out.push({text: progress.rate.toFixed(1) + ' ' + progress.unit + '/s', kind: null});
+        }
+    }
+
+    if(stage.detail !== null) {
+        out.push({text: stage.detail, kind: null});
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.countDone = function(items) {
+
+    var out = 0;
+
+    for(var itemIndex = 0; itemIndex < items.length; itemIndex++) {
+        if(items[itemIndex].status === 'done') {
+            out += 1;
+        }
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.setTitle = function(title, isStill) {
+
+    if(title === zatoDeploy.state.title) {
+        return;
+    }
+
+    var element = zatoDeploy.elements.title;
+
+    element.textContent = title;
+    zatoDeploy.state.title = title;
+
+    if(isStill) {
+        return;
+    }
+
+    element.animate([
+        {opacity: 0, transform: 'translateY(10px)'},
+        {opacity: 1, transform: 'none'}
+    ], {duration: 420, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)'});
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.setDetails = function(details) {
+
+    var container = zatoDeploy.elements.detail;
+    container.replaceChildren();
+
+    for(var detailIndex = 0; detailIndex < details.length; detailIndex++) {
+        var detail = details[detailIndex];
+        var item = document.createElement('span');
+        item.className = 'deploy-status-detail-item';
+        item.textContent = detail.text;
+        if(detail.kind !== null) {
+            item.setAttribute('data-kind', detail.kind);
+        }
+        container.appendChild(item);
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.renderStages = function(snapshot) {
+
+    var rows = zatoDeploy.elements.stageRows;
+
+    for(var stageIndex = 0; stageIndex < snapshot.stages.length; stageIndex++) {
+
+        var stage = snapshot.stages[stageIndex];
+        var entry = rows[stageIndex];
+        var timeText = '';
+
+        if(stage.status === 'done' || stage.status === 'failed') {
+            timeText = zatoDeploy.formatDuration(stage.finished - stage.started);
+        }
+        else if(stage.status === 'active') {
+            timeText = zatoDeploy.formatDuration(snapshot.now - stage.started);
+        }
+
+        entry.row.setAttribute('data-status', stage.status);
+        entry.time.textContent = timeText;
+
+        if(entry.components !== null) {
+
+            // Components that never started leave the list once the container is ready.
+            if(entry.components.items.length !== stage.components.length) {
+                var rebuilt = zatoDeploy.buildComponents(stage.components);
+                entry.components.container.replaceWith(rebuilt.container);
+                entry.components = rebuilt;
+            }
+
+            entry.components.container.setAttribute('data-status', stage.status);
+            for(var componentIndex = 0; componentIndex < stage.components.length; componentIndex++) {
+                entry.components.items[componentIndex].setAttribute('data-status', stage.components[componentIndex].status);
+            }
+        }
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.getStageFraction = function(stage, now) {
+
+    if(stage.status === 'done') {
+        return 1;
+    }
+
+    if(stage.status === 'pending') {
+        return 0;
+    }
+
+    if(stage.fraction !== null) {
+        return stage.fraction;
+    }
+
+    var end = stage.status === 'failed' ? stage.finished : now;
+    return Math.min((end - stage.started) / stage.weight, zatoDeploy.config.estimateCap);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.renderProgress = function(snapshot) {
+
+    var elements = zatoDeploy.elements;
+    var stages = snapshot.stages;
+    var totalWeight = 0;
+    var doneWeight = 0;
+
+    for(var stageIndex = 0; stageIndex < stages.length; stageIndex++) {
+
+        var stage = stages[stageIndex];
+        var fraction = zatoDeploy.getStageFraction(stage, snapshot.now);
+
+        totalWeight += stage.weight;
+        doneWeight += stage.weight * fraction;
+
+        elements.progressSegments[stageIndex].setAttribute('data-status', stage.status);
+        elements.progressFills[stageIndex].style.width = (fraction * 100) + '%';
+    }
+
+    var percent = snapshot.is_ready ? 100 : Math.floor(doneWeight / totalWeight * 100);
+    var lastStage = stages[stages.length - 1];
+    var end = snapshot.is_ready ? lastStage.finished : snapshot.now;
+
+    elements.percent.textContent = percent + '%';
+    elements.elapsed.textContent = zatoDeploy.formatClock(end - snapshot.started);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.renderLog = function(log) {
+
+    var config = zatoDeploy.config;
+    var state = zatoDeploy.state;
+    var container = zatoDeploy.elements.logLines;
+    var lines = log.lines;
+
+    zatoDeploy.elements.logSource.textContent = log.source;
+
+    // Each poll returns only the lines after the last one already shown.
+    if(lines.length === 0) {
+        return;
+    }
+
+    var isAnimated = lines.length <= config.logLinesAnimated;
+
+    for(var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+
+        var line = lines[lineIndex];
+        state.logLines.push(line);
+
+        var row = document.createElement('div');
+        row.className = 'deploy-log-line';
+        if(line.kind !== null) {
+            row.setAttribute('data-kind', line.kind);
+        }
+
+        var time = document.createElement('span');
+        time.className = 'deploy-log-line-time';
+        time.textContent = zatoDeploy.formatTime(line.time);
+
+        var text = document.createElement('span');
+        text.className = 'deploy-log-line-text';
+        text.textContent = line.text;
+
+        row.appendChild(time);
+        row.appendChild(text);
+        container.appendChild(row);
+
+        if(isAnimated) {
+            row.animate([
+                {opacity: 0, transform: 'translateY(6px)'},
+                {opacity: 1, transform: 'none'}
+            ], {duration: 300, easing: 'ease-out'});
+        }
+    }
+
+    while(container.childElementCount > config.logLinesKept) {
+        container.firstElementChild.remove();
+    }
+
+    zatoDeploy.followLog();
+    state.lastLogId = lines[lines.length - 1].id;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Only the user's own scrolling decides whether the log follows its last line,
+// a scroll back to the bottom resumes it, and changes in the layout never stop it.
+zatoDeploy.onLogScroll = function() {
+
+    var container = zatoDeploy.elements.logLines;
+    var distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+
+    zatoDeploy.state.isLogFollowed = distanceFromBottom < zatoDeploy.config.logScrollStickiness;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.followLog = function() {
+
+    var container = zatoDeploy.elements.logLines;
+
+    if(zatoDeploy.state.isLogFollowed) {
+        container.scrollTop = container.scrollHeight;
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.copyLog = function() {
+
+    var lines = zatoDeploy.state.logLines;
+    var text = [];
+
+    for(var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        text.push(zatoDeploy.formatTime(lines[lineIndex].time) + '  ' + lines[lineIndex].text);
+    }
+
+    navigator.clipboard.writeText(text.join('\n')).then(zatoDeploy.confirmCopied);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.confirmCopied = function() {
+
+    var config = zatoDeploy.config;
+    var button = zatoDeploy.elements.logCopy;
+
+    // One element holds one tooltip at a time, and the one from a moment ago may still be on screen.
+    if(button._tippy) {
+        button._tippy.destroy();
+    }
+
+    var tooltip = tippy(button, {
+        content: config.copiedLabel,
+        placement: config.copiedPlacement,
+        offset: config.copiedOffset,
+        theme: config.tooltipTheme,
+        trigger: 'manual',
+        arrow: true,
+        appendTo: document.body
+    });
+
+    tooltip.show();
+
+    setTimeout(function() {
+        tooltip.destroy();
+    }, config.copiedShownMs);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.padNumber = function(value) {
+    return value < 10 ? '0' + value : '' + value;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.formatDuration = function(seconds) {
+    var whole = Math.max(0, Math.floor(seconds));
+    return Math.floor(whole / 60) + ':' + zatoDeploy.padNumber(whole % 60);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.formatClock = function(seconds) {
+    var whole = Math.max(0, Math.floor(seconds));
+    return zatoDeploy.padNumber(Math.floor(whole / 60)) + ':' + zatoDeploy.padNumber(whole % 60);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.formatTime = function(epochSeconds) {
+    var date = new Date(epochSeconds * 1000);
+    var padNumber = zatoDeploy.padNumber;
+    return padNumber(date.getHours()) + ':' + padNumber(date.getMinutes()) + ':' + padNumber(date.getSeconds());
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoDeploy.init();
+
+</script>
+</body>
+</html>

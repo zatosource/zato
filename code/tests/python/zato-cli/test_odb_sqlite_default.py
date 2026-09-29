@@ -139,6 +139,7 @@ class TestODBSQLiteDefault(TestCase):
         from zato.common.util.config import get_config_object, update_config_file
         config = cast_('any_', get_config_object(repo_location, 'server.conf'))
         config['main']['port'] = str(cls.port)
+        config['main']['bind'] = f'127.0.0.1:{cls.port}'
         update_config_file(config, repo_location, 'server.conf')
 
         broker_port = _find_free_port()

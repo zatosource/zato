@@ -197,6 +197,7 @@ class _ConnectionsStub:
 
     def __init__(self) -> 'None':
         self.rest = None
+        self.soap = None
         self.mllp = None
         self.fhir = None
         self.email = self._EMail(self._Item(new_smtp_connection()))
