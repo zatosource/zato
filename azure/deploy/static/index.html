@@ -875,6 +875,7 @@ zatoDeploy.config = {
     readyLabel: 'Environment ready',
     redirectSteps: 3,
     redirectStepMs: 700,
+    fadeOutMs: 600,
     copiedLabel: 'Copied to clipboard',
     copiedShownMs: 1200,
     copiedPlacement: 'left',
@@ -1051,7 +1052,17 @@ zatoDeploy.showRedirectStep = function(stepsLeft) {
 // ////////////////////////////////////////////////////////////////////////
 
 zatoDeploy.redirect = function() {
-    window.location.replace(zatoDeploy.config.dashboardPath);
+
+    var config = zatoDeploy.config;
+    var frames = [{opacity: 1}, {opacity: 0}];
+    var options = {duration: config.fadeOutMs, easing: 'ease-in', fill: 'forwards'};
+
+    document.querySelector('.deploy-backdrop').animate(frames, options);
+    var fade = document.getElementById('deploy-shell').animate(frames, options);
+
+    fade.finished.then(function() {
+        window.location.replace(config.dashboardPath);
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
