@@ -647,7 +647,7 @@ body[data-state="failed"] .deploy-log-live {
     color: var(--deploy-text-muted);
     mask-image: linear-gradient(to bottom, transparent, #000 44px);
     -webkit-mask-image: linear-gradient(to bottom, transparent, #000 44px);
-    scrollbar-width: thin;
+    scrollbar-width: auto;
     scrollbar-color: var(--deploy-border-strong) transparent;
 }
 
@@ -837,14 +837,13 @@ zatoDeploy.config = {
     progressUrl: '/zato-deploy/progress.json',
     dashboardPath: '/',
     pollIntervalMs: 1000,
-    handoffPollIntervalMs: 700,
+    handoffPollIntervalMs: 200,
     estimateCap: 0.92,
     logLinesKept: 120,
     logLinesAnimated: 3,
     logScrollStickiness: 40,
     titleFailed: 'Deployment failed',
     redirectLabel: 'Redirecting to Zato in ',
-    redirectingLabel: 'Redirecting to Zato',
     readyLabel: 'Environment ready',
     redirectSteps: 3,
     redirectStepMs: 700,
@@ -1002,8 +1001,8 @@ zatoDeploy.showRedirectStep = function(stepsLeft) {
 
     var config = zatoDeploy.config;
 
+    // The Dashboard has taken over the port by now, so the check at the end succeeds at once.
     if(stepsLeft === 0) {
-        zatoDeploy.setTitle(config.redirectingLabel, true);
         zatoDeploy.pollHandoff();
         return;
     }

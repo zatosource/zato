@@ -32,8 +32,9 @@ logger = getLogger('zato_deploy')
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How long the page stays after the environment is ready, so that each open page learns about it before the Dashboard takes over.
-_Grace_Period = 8
+# How long the page stays after the environment is ready. Each open page polls once a second, so all of them
+# learn about it within this time, and the countdown of 2.1 seconds that each then shows ends after the Dashboard took over.
+_Grace_Period = 1.2
 
 # How long the container may take from its start until all of its components run.
 _Container_Timeout = 1800
