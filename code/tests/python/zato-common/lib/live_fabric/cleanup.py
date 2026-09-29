@@ -85,8 +85,9 @@ def run() -> 'strlist':
 
     azure.suspend_capacity()
 
+    # A capacity deleted outside the builder has no state to check
     capacity_state = azure.capacity_state()
-    if capacity_state != _state_paused:
+    if capacity_state and capacity_state != _state_paused:
         raise Exception(f'Capacity {ModuleCtx.Capacity_Name} is {capacity_state}, not {_state_paused}')
 
     out = [f'Workspace {ModuleCtx.Workspace_Name} is gone']
@@ -95,7 +96,11 @@ def run() -> 'strlist':
         out.append(f'App registration {name} is gone')
 
     out.append(f'{ModuleCtx.State_Dir} is gone')
-    out.append(f'Capacity {ModuleCtx.Capacity_Name} is {_state_paused}')
+
+    if capacity_state:
+        out.append(f'Capacity {ModuleCtx.Capacity_Name} is {_state_paused}')
+    else:
+        out.append(f'Capacity {ModuleCtx.Capacity_Name} does not exist')
 
     return out
 
