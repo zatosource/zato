@@ -30,6 +30,9 @@ logger = getLogger(__name__)
 _state_active = 'Active'
 _state_paused = 'Paused'
 
+# What az says when the capacity was deleted outside the builder
+_not_found = 'ResourceNotFound'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -98,21 +101,31 @@ def signed_in_user_id() -> 'str':
 # ################################################################################################################################
 
 def capacity_show() -> 'any_':
-    """ The capacity as az sees it.
+    """ The capacity as az sees it, or None if it does not exist.
     """
-    out = _run_az(
-        'fabric', 'capacity', 'show',
-        '--resource-group', ModuleCtx.Resource_Group,
-        '--capacity-name', ModuleCtx.Capacity_Name,
-    )
+    try:
+        out = _run_az(
+            'fabric', 'capacity', 'show',
+            '--resource-group', ModuleCtx.Resource_Group,
+            '--capacity-name', ModuleCtx.Capacity_Name,
+        )
+    except Exception as e:
+        if _not_found in str(e):
+            logger.info(f'Capacity {ModuleCtx.Capacity_Name} does not exist')
+            return None
+        raise
+
     return out
 
 # ################################################################################################################################
 
 def capacity_state() -> 'str':
-    """ Active, Paused or one of the states in between.
+    """ Active, Paused, one of the states in between, or an empty string if the capacity does not exist.
     """
     capacity = capacity_show()
+
+    if not capacity:
+        return ''
 
     out = capacity['state']
     return out
@@ -123,6 +136,9 @@ def resume_capacity() -> 'None':
     """ Makes sure the capacity is running - the call returns once it is.
     """
     state = capacity_state()
+
+    if not state:
+        raise Exception(f'Capacity {ModuleCtx.Capacity_Name} does not exist in resource group {ModuleCtx.Resource_Group}')
 
     if state == _state_active:
         logger.info(f'Capacity {ModuleCtx.Capacity_Name} is active')
@@ -145,6 +161,9 @@ def suspend_capacity() -> 'None':
     """ Makes sure the capacity is paused - the call returns once it is.
     """
     state = capacity_state()
+
+    if not state:
+        return
 
     if state == _state_paused:
         logger.info(f'Capacity {ModuleCtx.Capacity_Name} is paused')
@@ -182,6 +201,10 @@ def existing_capacity_admins() -> 'strlist':
     """ The capacity's administrators, without the ones that were deleted since they were added.
     """
     capacity = capacity_show()
+
+    if not capacity:
+        return []
+
     administration = capacity['administration']
     members:'strlist' = administration['members']
 
