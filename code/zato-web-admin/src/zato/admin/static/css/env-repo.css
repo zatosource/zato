@@ -1,12 +1,21 @@
+.settings-sidebar {
+    flex: 0 0 360px;
+    width: 360px;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
 .env-repo-long-value {
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 6px;
-    max-width: 420px;
+    min-width: 0;
+    max-width: 360px;
 }
 
 .env-repo-long-value span:first-child {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -22,7 +31,9 @@
     padding: 0px 3px;
     margin-left: 10px;
     box-sizing: border-box;
-    width: 180px;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 180px;
 }
 
 .env-repo-login:focus {
@@ -39,9 +50,15 @@
 
 .env-repo-step {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
     font-size: 13px;
+    min-width: 0;
+}
+
+.env-repo-link {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .env-repo-step-number {
@@ -74,6 +91,13 @@
     padding: 12px;
     background: var(--background-light);
     font-size: 13px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.env-repo-log > * {
+    min-width: 0;
+    max-width: 100%;
 }
 
 .env-repo-log-header {
@@ -86,6 +110,7 @@
 .env-repo-log-time {
     color: #333;
     font-weight: 600;
+    overflow-wrap: anywhere;
 }
 
 .env-repo-log-state {
@@ -106,9 +131,12 @@
 
 .env-repo-log-message {
     color: #333;
+    overflow-wrap: anywhere;
 }
 
 .env-repo-log-lines {
+    box-sizing: border-box;
+    width: 100%;
     margin: 6px 0 0 0;
     padding: 8px;
     max-height: 260px;
