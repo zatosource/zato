@@ -294,12 +294,14 @@
 }
 
 /* The hint may run past its own column - it paints over whatever stands
-   next so it stays readable, and only ever on a hover */
+   next so it stays readable, and only ever on a hover, while clicks pass
+   through it to the cell underneath */
 .alert-rules-param .zato-soft-hint {
     position: relative;
     z-index: 1;
     background: var(--alert-rules-row-bg);
     margin-left: 0;
+    pointer-events: none;
 }
 
 /* A value that does not apply to the type - a quiet placeholder

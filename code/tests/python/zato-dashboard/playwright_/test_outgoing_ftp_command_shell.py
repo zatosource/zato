@@ -51,6 +51,9 @@ _Command_Timeout = 60000
 # The FTP reply code for a file that is unavailable
 _FTP_Reply_File_Unavailable = '550'
 
+# What the server logs, along with the traceback, for a command that fails on purpose
+_Command_Error_Log_Pattern = 'FTP shell command error'
+
 # Console messages that every dashboard page produces and that say nothing about this page
 _Console_Noise_Patterns = [
     'favicon.ico',
@@ -318,6 +321,7 @@ class TestOutgoingFTPCommandShell:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_Command_Error_Log_Pattern)
     def test_stderr_on_failure(self, ftp_shell:'anydict') -> 'None':
         """ A command that cannot succeed reports on stderr, and the page brings that pane forward.
         """
@@ -385,6 +389,7 @@ class TestOutgoingFTPCommandShell:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_Command_Error_Log_Pattern)
     def test_no_console_errors_and_no_http_500(self, ftp_shell:'anydict') -> 'None':
         """ Running commands produces neither console errors nor server errors.
         """
@@ -436,6 +441,7 @@ class TestOutgoingFTPCommandShell:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_Command_Error_Log_Pattern)
     def test_connection_error_shows_message_not_traceback(self, ftp_shell:'anydict') -> 'None':
         """ A connection that cannot be established reports the error message alone, without a traceback.
         """

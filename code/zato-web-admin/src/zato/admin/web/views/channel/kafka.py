@@ -49,7 +49,7 @@ class Index(_Index):
     output_repeated = True
 
     def on_before_append_item(self, item:'any_') -> 'any_':
-        item.sec_type = item.auth_type
+        item.sec_type = item.get('auth_type')
         return item
 
 # ################################################################################################################################

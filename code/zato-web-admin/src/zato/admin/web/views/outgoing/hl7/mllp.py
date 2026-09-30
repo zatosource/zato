@@ -58,7 +58,7 @@ _alert_type = alert_type_mllp_outgoing
 _alert_field_names = alerts_tab.get_storage_field_names(_alert_type)
 
 # .. the retry fields, the queue switch and the DLQ config, stored in the connection's opaque attributes ..
-_delivery_field_names = tuple(delivery_tab.field_defaults)
+_delivery_field_names = tuple(delivery_tab.retry_field_defaults) + tuple(delivery_tab.field_defaults)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,6 +96,7 @@ class Index(_Index):
 
         # The retry fields, the queue switch and the DLQ config are opaque attributes - a connection that predates
         # them carries no values, so the defaults show, with each duration split into a count and a unit
+        delivery_tab.fill_retry_row(item)
         delivery_tab.fill_row(item, item)
         delivery_tab.split_unit_fields(item)
 
@@ -148,6 +149,7 @@ class _CreateEdit(CreateEdit):
 
         # The retry fields, the queue switch and the DLQ config arrive as text and are stored typed,
         # with each duration's count and unit joined into seconds
+        delivery_tab.type_retry_fields(input_dict)
         input_dict.update(delivery_tab.get_message_fields(self.req.POST, self.form_prefix))
         delivery_tab.join_unit_fields(self.req.POST, self.form_prefix, input_dict)
 
@@ -233,6 +235,7 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     # A duration is stored as seconds and edited as a count with a unit, and a connection that predates
     # the retry, queue and DLQ fields opens with their defaults
     alerts_tab.split_unit_fields(_alert_type, item_dict)
+    delivery_tab.fill_retry_row(item_dict)
     delivery_tab.fill_row(item_dict, item_dict)
     delivery_tab.split_unit_fields(item_dict)
     populate_form_initial(form, item_dict)

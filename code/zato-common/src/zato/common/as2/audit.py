@@ -220,6 +220,11 @@ def record_send_result(
     if payloads is None:
         payloads = []
 
+    if result.is_ok:
+        sent_outcome = AuditOutcome.OK
+    else:
+        sent_outcome = AuditOutcome.Error
+
     values = {
         'mic': result.mic,
         'async_mdn_url': async_mdn_url,
@@ -231,6 +236,7 @@ def record_send_result(
         'payloads': payloads,
         'delivery_kind': delivery_kind,
         'http_status': result.http_status,
+        'outcome': sent_outcome,
     }
 
     reconciler.record_message_sent(as2_from, as2_to, result.message_id, **values)

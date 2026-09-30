@@ -56,8 +56,8 @@ _Default_Outcome_Codes = 'exception, transient, timeout, throttled, lock-error, 
 _Created_Outcome_Codes = 'exception, not-found'
 _Created_Outcome_Threshold = '5'
 
-# Where the tabs of the dialogs stand - Config first, Alerts right after it
-_Tab_Order = ['config', 'alerts']
+# Where the tabs of the dialogs stand - Config first, Alerts right after it, Delivery last
+_Tab_Order = ['config', 'alerts', 'delivery']
 
 # The lines of the tab in the order they are read - the outcomes right after the status codes
 _Line_Order_Around_Outcomes = ['status_codes', 'operation_outcomes', 'connection_failures']

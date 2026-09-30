@@ -2500,16 +2500,19 @@ class ConfigManager(_ConfigManagerBase):
         is_plain_http = msg['transport'] == URL_TYPE.PLAIN_HTTP
         is_rename = bool(old_name) and old_name != msg['name']
 
-        # Which kind of outgoing connection this is, for its queue and its DLQ
-        outgoing_type = http_soap_outgoing_types[msg['transport']]
+        # Only REST and SOAP connections have a queue and a DLQ - an AS4 one has neither
+        has_queue = msg['transport'] in http_soap_outgoing_types
+        is_queue_rename = has_queue and is_rename
 
         # A renamed connection has its topic moved to the new name, and both that and the config
         # this method replaces happen with the queue held still - nothing is published to the connection
         # and no round of its delivery is in flight in between, because both resolve their topics from
         # what the config says the connection is called.
-        if is_rename:
+        if is_queue_rename:
+            outgoing_type = http_soap_outgoing_types[msg['transport']]
             hold = self.hold_outgoing_queue(outgoing_type, msg['id'])
         else:
+            outgoing_type = ''
             hold = nullcontext()
 
         with hold:
@@ -2534,7 +2537,7 @@ class ConfigManager(_ConfigManagerBase):
 
             # .. and whatever was queued for this connection now waits under its new topic,
             # .. which is a move from the name the old configuration was deleted under.
-            if is_rename:
+            if is_queue_rename:
                 self.rename_outgoing_subscription(outgoing_type, msg['id'], del_name, msg['name'])
 
         # An MCP gateway that exposes this connection as a tool rebuilds its registry now
@@ -2547,9 +2550,11 @@ class ConfigManager(_ConfigManagerBase):
         """
         self._delete_config_close_wrapper_http_soap(msg['name'], msg['transport'], logger.error)
 
-        # A deleted connection takes its queue with it, along with whatever that queue still held
-        outgoing_type = http_soap_outgoing_types[msg['transport']]
-        self.delete_outgoing_subscription(outgoing_type, msg['id'], msg['name'])
+        # A deleted connection takes its queue with it, along with whatever that queue still held,
+        # which an AS4 connection never has.
+        if msg['transport'] in http_soap_outgoing_types:
+            outgoing_type = http_soap_outgoing_types[msg['transport']]
+            self.delete_outgoing_subscription(outgoing_type, msg['id'], msg['name'])
 
         # An MCP gateway that exposed this connection as a tool rebuilds its registry now
         mcp_group = 'rest' if msg['transport'] == URL_TYPE.PLAIN_HTTP else 'soap'

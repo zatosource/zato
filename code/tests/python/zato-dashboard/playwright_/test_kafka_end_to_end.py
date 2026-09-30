@@ -166,7 +166,7 @@ def _wait_for_received(page:'Page', base_url:'str', marker:'str') -> 'anydict':
         response = invoke_service_in_ide(page, {'mode': 'get-received'})
 
         for message in response['received']:
-            if marker in message['input']:
+            if message['input']['marker'] == marker:
                 return message
 
         time.sleep(_Propagation_Poll_Interval)
@@ -233,8 +233,8 @@ class TestKafkaEndToEnd:
         # The receiver recorded the message through both request attributes.
         message = _wait_for_received(page, base_url, marker)
 
-        assert json.loads(message['input']) == {'marker': marker, 'source': 'dashboard-end-to-end'}
-        assert message['raw_request'] == message['input']
+        assert message['input'] == {'marker': marker, 'source': 'dashboard-end-to-end'}
+        assert json.loads(message['raw_request']) == message['input']
 
         # Clean up.
         delete_kafka_outconn(page, outconn_id)

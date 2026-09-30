@@ -54,10 +54,11 @@ _Cell_Pool_Size = 15
 _Cell_Content_Type = 16
 _Cell_Audit_Log = 17
 _Cell_Usage = 18
-_Cell_Edit = 19
-_Cell_Delete = 20
-_Cell_Ping = 21
-_Cell_Invoke = 22
+_Cell_Delivery = 19
+_Cell_Edit = 20
+_Cell_Delete = 21
+_Cell_Ping = 22
+_Cell_Invoke = 23
 
 # Defaults the create form arrives with
 _Default_Ping_Method = 'HEAD'
@@ -147,6 +148,7 @@ class TestRESTOutconnCRUD:
         assert cells[_Cell_Url_Path] == url_path, f'Expected url_path "{url_path}", got: "{cells[_Cell_Url_Path]}"'
         assert cells[_Cell_Security] == 'Click to add', f'Expected no security definition, got: "{cells[_Cell_Security]}"'
         assert cells[_Cell_Usage] == 'Usage', f'Expected the usage link, got: "{cells[_Cell_Usage]}"'
+        assert cells[_Cell_Delivery] == 'Delivery queue', f'Expected the delivery queue link, got: "{cells[_Cell_Delivery]}"'
         assert cells[_Cell_Edit] == 'Edit', f'Expected the edit link, got: "{cells[_Cell_Edit]}"'
         assert cells[_Cell_Delete] == 'Delete', f'Expected the delete link, got: "{cells[_Cell_Delete]}"'
         assert cells[_Cell_Ping] == 'Ping', f'Expected the ping link, got: "{cells[_Cell_Ping]}"'

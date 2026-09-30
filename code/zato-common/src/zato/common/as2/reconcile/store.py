@@ -65,6 +65,7 @@ class MDNReconciler:
         payloads:'anylistnone' = None,
         delivery_kind:'str' = DeliveryKind.Original,
         http_status:'int' = 0,
+        outcome:'str' = AuditOutcome.OK,
         ) -> 'None':
         """ Records that a message left for the partner - the send half of the reconciliation pair.
         The MIC computed at send time and the URL an asynchronous MDN is expected on travel
@@ -96,7 +97,7 @@ class MDNReconciler:
             ReconcileAttr.HTTP_Status: http_status,
         }
 
-        values = {'cid': cid, 'msg_id': message_id, 'correl_id': correl_id, 'data': data, 'attrs': attrs}
+        values = {'cid': cid, 'msg_id': message_id, 'correl_id': correl_id, 'outcome': outcome, 'data': data, 'attrs': attrs}
 
         self.audit_log.insert(AuditSource.AS2, AuditEvent.Message_Sent, pair, **values)
 
