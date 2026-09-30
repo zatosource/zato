@@ -222,7 +222,8 @@ CSP_STYLE_SRC   = ["'self'"]
 CSP_FONT_SRC   = ["'self'", "data:"]
 CSP_SCRIPT_SRC  = ["'self'", "'unsafe-inline'", "'unsafe-eval'"]
 CSP_CONNECT_SRC = ["'self'"]
-CSP_FORM_ACTION = ["'self'"]
+# GitHub is where the form that creates the dashboard's GitHub App is posted to.
+CSP_FORM_ACTION = ["'self'", "https://github.com"]
 CSP_STYLE_SRC_ATTR = ["'self'", "'unsafe-inline'"]
 CSP_STYLE_SRC_ELEM = ["'self'", "'unsafe-inline'"]
 # Empty on purpose - templates still render nonce attributes but the nonce is not added to any directive yet.

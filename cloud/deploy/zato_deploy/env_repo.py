@@ -16,7 +16,7 @@ from logging import getLogger
 # Zato
 from zato_deploy.common import anydict, Blueprint, Env_Repo_Action, Env_Repo_State, Link_File, load_env_repo_config, Path, \
     Restart_Reason, strlist, Systemd_Unit, write_env_file
-from zato_deploy.git import is_ssh_url, run_git
+from zato_deploy.git import is_repo_url, run_git
 from zato_deploy.process import run_command
 from zato_deploy.run_log import setup_logging
 
@@ -124,8 +124,8 @@ def _read_request(path:'str') -> 'anydict':
     if out['action'] not in _Actions:
         raise RequestError(f'Unknown action: {out["action"]}')
 
-    if not is_ssh_url(out['env_repo_url']):
-        raise RequestError('Repository address must look like git@github.com:owner/name.git')
+    if not is_repo_url(out['env_repo_url']):
+        raise RequestError('Repository address must look like https://github.com/owner/name.git')
 
     return out
 
@@ -153,16 +153,16 @@ def _add_output_lines(status:'Status', text:'str') -> 'None':
 # ################################################################################################################################
 
 def _list_branches(status:'Status') -> 'None':
-    """ Runs git ls-remote with the deploy key and keeps the branches it lists.
+    """ Runs git ls-remote with the App's token or the deploy key and keeps the branches it lists.
     """
     status.write(Env_Repo_State.Checking, f'Connecting to {status.url}')
 
-    result = run_git(['ls-remote', '--heads', status.url], is_verbose=True)
+    result = run_git(['ls-remote', '--heads', status.url], is_verbose=True, url=status.url)
 
     _add_output_lines(status, result.stderr)
 
     if result.exit_code != 0:
-        raise RequestError(f'GitHub did not accept the deploy key for {status.url}, exit code {result.exit_code}')
+        raise RequestError(f'GitHub refused access to {status.url}, exit code {result.exit_code}')
 
     # Each line is a commit, a tab and refs/heads/<branch>.
     for line in result.stdout.splitlines():
@@ -281,7 +281,7 @@ def sync() -> 'None':
     config = load_env_repo_config(Path.Env_Repo_Config)
     repo_dir = os.path.realpath(Path.Env_Repo_Link)
 
-    fetch = run_git(['fetch', 'origin', config.branch], cwd=repo_dir)
+    fetch = run_git(['fetch', 'origin', config.branch], cwd=repo_dir, url=config.url)
 
     if fetch.exit_code != 0:
         logger.info('Sync skipped, fetch of %s failed with exit code %d', config.branch, fetch.exit_code)

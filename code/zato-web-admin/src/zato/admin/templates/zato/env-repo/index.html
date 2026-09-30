@@ -27,14 +27,15 @@
     {{ page_config.title }}
 </h2>
 
-<form id="repo-form" method="get" action="" autocomplete="on">
+<form id="repo-form" method="get" action="" autocomplete="on" data-app-state="{{ app_state }}" data-install-url="{{ app_install_url }}">
 <table class="rate-limiting-form">
     <tr>
         <td class="rate-limiting-form-label">
             <label for="repo-url">{{ page_config.address_label }}</label>
         </td>
         <td>
-            <input type="text" id="repo-url" name="github-repository" class="env-repo-input" value="{{ current_url }}" placeholder="GitHub repository, e.g. https://github.com/owner/{{ new_repo_name }}" autocomplete="on" spellcheck="false" data-current-url="{{ current_url }}" data-current-branch="{{ current_branch }}" />
+            <input type="text" id="repo-url" name="github-repository" class="env-repo-input" value="{{ current_url }}" placeholder="GitHub repository, e.g. https://github.com/owner/{{ new_repo_name }}" autocomplete="on" spellcheck="false" data-current-url="{{ current_url }}" data-current-branch="{{ current_branch }}" list="repo-list" />
+            <datalist id="repo-list"></datalist>
         </td>
     </tr>
     <tr>
@@ -66,6 +67,10 @@
             data-allow-label="{{ page_config.allow_label }}" />
     </span>
 </div>
+</form>
+
+<form id="github-app-form" method="post" action="{{ manifest_action }}" class="hidden">
+    <input type="hidden" name="manifest" value="{{ manifest }}" />
 </form>
 
 <div class="env-repo-progress" id="progress-log"></div>

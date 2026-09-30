@@ -15,6 +15,7 @@ from threading import Thread
 
 # Zato
 from zato.common.env_repo import Env_Repo, get_link_dir, write_json
+from zato.common.github_app import get_git_auth_for_url, GitHubAppError
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,7 +132,15 @@ def _list_branches(status:'Status') -> 'strstrdict':
     """
     status.write(Env_Repo.State_Checking, f'Connecting to {status.url}')
 
-    command = ['git', 'ls-remote', '--heads', status.url]
+    # An HTTPS address is read with the App's token, an SSH one with the deploy key.
+    try:
+        auth = get_git_auth_for_url(get_link_dir(), status.url)
+    except GitHubAppError as exception:
+        raise RequestError(exception.message)
+
+    command = ['git']
+    command.extend(auth)
+    command.extend(['ls-remote', '--heads', status.url])
 
     # Only the dashboard's own key is offered, and neither git nor ssh may prompt for anything.
     env = dict(os.environ)

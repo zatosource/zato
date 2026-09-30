@@ -1743,6 +1743,12 @@ urlpatterns += [
         login_required(env_repo.env_repo_view.switch), name='env-repo-switch'),
     url(r'^zato/env-repo/disconnect$',
         login_required(env_repo.env_repo_view.disconnect), name='env-repo-disconnect'),
+    url(r'^zato/env-repo/github-app/setup$',
+        login_required(env_repo.env_repo_view.github_app_setup), name='env-repo-github-app-setup'),
+    url(r'^zato/env-repo/github-app/installed$',
+        login_required(env_repo.env_repo_view.github_app_installed), name='env-repo-github-app-installed'),
+    url(r'^zato/env-repo/github-app/repos$',
+        login_required(env_repo.env_repo_view.github_app_repos), name='env-repo-github-app-repos'),
 
     # Monitoring - Grafana Cloud
 

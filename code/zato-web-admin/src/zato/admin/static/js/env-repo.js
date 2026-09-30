@@ -1,8 +1,10 @@
 $.fn.zato.envRepo = {};
 
-// One button on the right. Connect checks the address with GitHub and lists the branches, and once they are listed,
-// Connect again switches the environment over to the branch chosen. When GitHub refuses, the button reads Allow access
-// and opens GitHub's deploy key page with our key filled in, then waits until GitHub accepts it.
+// One button on the right. Connect with no address creates this dashboard's GitHub App and installs it, which is
+// two pages on GitHub, then the repositories the App may read fill the address field. Connect with an address checks it
+// with GitHub and lists the branches, and once they are listed, Connect again switches the environment over to the branch
+// chosen. When GitHub refuses, the button reads Allow access and opens the App's page to add the repository on, or without
+// an App, GitHub's deploy key page, then waits until GitHub lets us in.
 
 $.fn.zato.envRepo.config = {
     apiPrefix: '/zato/env-repo/',
@@ -27,10 +29,16 @@ $.fn.zato.envRepo.config = {
     copiedMessage: 'Copied to clipboard',
     copiedShownDelay: 950,
     progressTheme: 'dark',
+    appStateNone: 'none',
+    appStateCreated: 'created',
+    appStateInstalled: 'installed',
+    addressKey: 'zato.envRepo.address',
 };
 
 $.fn.zato.envRepo.state = {
     mode: 'connect',
+    appState: 'none',
+    installUrl: '',
     requestTime: null,
     pollTimer: null,
     pollDeadline: null,
@@ -60,6 +68,8 @@ $.fn.zato.envRepo.init = function() {
     });
 
     state.isConnected = $('#disconnect-button').data('is-connected') === 1;
+    state.appState = $('#repo-form').data('app-state');
+    state.installUrl = $('#repo-form').data('install-url');
     $('#branch-placeholder').html($.fn.zato.empty_value);
 
     $('#create-button').on('click', $.fn.zato.envRepo.handleCreate);
@@ -82,10 +92,75 @@ $.fn.zato.envRepo.init = function() {
 
     $.fn.zato.envRepo.updateSide();
 
-    // A page that opens with an address already filled in connects on its own.
+    // What GitHub's pages send the browser back with is read once and taken off the address bar.
+    const params = new URLSearchParams(window.location.search);
+    const isInstalledNow = params.get('installed') === '1';
+    const error = params.get('error');
+
+    if(params.has('installed') || params.has('error')) {
+        window.history.replaceState(null, '', window.location.pathname);
+    }
+
+    if(error) {
+        $.fn.zato.envRepo.showStatus(error, false);
+    }
+
+    // Back from GitHub with the App installed, the address typed before leaving is back in the field.
+    if(isInstalledNow && !$('#repo-url').val().trim()) {
+        $('#repo-url').val(window.sessionStorage.getItem(config.addressKey) || '');
+        window.sessionStorage.removeItem(config.addressKey);
+    }
+
+    // A page that opens with an address already filled in connects on its own, unless the App has to be created
+    // first, which is not started without a click, and one with an App installed but no address finds out which
+    // repositories the App may read.
+    if(state.appState !== config.appStateInstalled) {
+        return;
+    }
+
     if($('#repo-url').val().trim()) {
         $.fn.zato.envRepo.handleConnect();
     }
+    else {
+        $.fn.zato.envRepo.loadRepos(isInstalledNow);
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The repositories the App may read go to the field's list, and one alone goes to the field itself. Right after the
+// installation that one is connected without further ado, and several are left for the user to pick from.
+$.fn.zato.envRepo.loadRepos = function(shouldConnect) {
+
+    const list = $('#repo-list');
+
+    $.fn.zato.envRepo.fetchRepos(function(repos) {
+
+        list.empty();
+
+        repos.forEach(function(fullName) {
+            list.append($('<option></option>').attr('value', 'https://github.com/' + fullName));
+        });
+
+        if($('#repo-url').val().trim()) {
+            return;
+        }
+
+        if(repos.length === 1) {
+            $('#repo-url').val('https://github.com/' + repos[0]);
+            $.fn.zato.envRepo.updateSide();
+
+            if(shouldConnect) {
+                $.fn.zato.envRepo.handleConnect();
+            }
+        }
+        else if(shouldConnect) {
+            $('#repo-url').focus();
+        }
+
+    }, function(errorMessage) {
+        $.fn.zato.envRepo.showStatus(errorMessage, false);
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -315,7 +390,25 @@ $.fn.zato.envRepo.handleSubmit = function() {
 
 $.fn.zato.envRepo.handleConnect = function() {
 
+    const config = $.fn.zato.envRepo.config;
     const state = $.fn.zato.envRepo.state;
+
+    // No App yet - the App comes first, GitHub sends the browser back here once it is created, and if it is created
+    // but not installed yet, its install page is where the browser goes. The address typed, if any, waits for the return.
+    if(state.appState !== config.appStateInstalled) {
+
+        window.sessionStorage.setItem(config.addressKey, $('#repo-url').val().trim());
+
+        if(state.appState === config.appStateNone) {
+            document.getElementById('github-app-form').submit();
+        }
+        else {
+            window.location.href = state.installUrl;
+        }
+
+        return;
+    }
+
     const address = $.fn.zato.envRepo.getValidAddress();
 
     if(address === null) {
@@ -392,8 +485,8 @@ $.fn.zato.envRepo.onConnected = function(status) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Shows the key to copy, opens GitHub's deploy key page in a new tab for it to be added on,
-// and keeps checking until the key lets us in.
+// Opens GitHub's page in a new tab for the repository to be added on - the App's installation page with an App,
+// the deploy key page with the key to copy without one - and keeps checking until GitHub lets us in.
 $.fn.zato.envRepo.handleAllow = function() {
 
     const config = $.fn.zato.envRepo.config;
@@ -409,15 +502,24 @@ $.fn.zato.envRepo.handleAllow = function() {
     state.repo = $.fn.zato.envRepo.parseAddress(address);
     state.keyDeadline = Date.now() + config.keyWaitTimeout;
 
+    const hasApp = state.appState === config.appStateInstalled;
+    const url = hasApp ? state.installUrl : $.fn.zato.envRepo.getKeyUrl(state.repo);
+
     // The tab opens here, within the click, or the browser would block it.
-    window.open($.fn.zato.envRepo.getKeyUrl(state.repo), '_blank', 'noopener');
+    window.open(url, '_blank', 'noopener');
 
     $('#action-button').prop('disabled', true);
-    $.fn.zato.envRepo.startLog(state.repo, 'Waiting for GitHub to accept the key for ' + state.repo.full_name);
 
-    if($('#public-key').text().trim()) {
-        $('#deploy-key-link').attr('href', $.fn.zato.envRepo.getKeyUrl(state.repo));
-        $('#key-help').removeClass('hidden');
+    if(hasApp) {
+        $.fn.zato.envRepo.startLog(state.repo, 'Waiting for GitHub to allow access to ' + state.repo.full_name);
+    }
+    else {
+        $.fn.zato.envRepo.startLog(state.repo, 'Waiting for GitHub to accept the key for ' + state.repo.full_name);
+
+        if($('#public-key').text().trim()) {
+            $('#deploy-key-link').attr('href', url);
+            $('#key-help').removeClass('hidden');
+        }
     }
 
     $.fn.zato.envRepo.retryCheck();
@@ -442,7 +544,7 @@ $.fn.zato.envRepo.retryCheck = function() {
 
         if(Date.now() > state.keyDeadline) {
             state.isQuiet = false;
-            $.fn.zato.envRepo.appendLine('GitHub has not accepted the key', 'error');
+            $.fn.zato.envRepo.appendLine('GitHub has not allowed access to ' + state.repo.full_name, 'error');
             $.fn.zato.envRepo.appendStatus(status);
             state.log.setState('failed');
             $.fn.zato.envRepo.setMode('allow');

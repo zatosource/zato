@@ -13,6 +13,7 @@ from json import dumps, loads
 from logging import getLogger
 
 # Zato
+from zato.common.github_app import get_repo_git_url
 from zato.common.typing_ import anydict, anydictnone, strnone
 
 # ################################################################################################################################
@@ -91,6 +92,11 @@ class Repo_Name:
     @property
     def https_url(self) -> 'str':
         out = Env_Repo.Repo_HTTPS_URL.format(owner=self.owner, name=self.name)
+        return out
+
+    @property
+    def git_url(self) -> 'str':
+        out = get_repo_git_url(self.owner, self.name)
         return out
 
 # ################################################################################################################################

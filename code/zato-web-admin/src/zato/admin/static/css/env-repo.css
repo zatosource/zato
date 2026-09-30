@@ -201,3 +201,7 @@ table.rate-limiting-form input[type="text"].env-repo-error {
     align-items: center;
     min-height: 20px;
 }
+
+#github-app-form.hidden {
+    display: none;
+}

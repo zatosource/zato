@@ -124,3 +124,26 @@ $.fn.zato.envRepo.fetchStatus = function(onStatus) {
         }
     });
 };
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The repositories that the GitHub App may read, as owner/name.
+$.fn.zato.envRepo.fetchRepos = function(onRepos, onError) {
+
+    $.ajax({
+        url: $.fn.zato.envRepo.config.apiPrefix + 'github-app/repos',
+        type: 'GET',
+        success: function(response) {
+            onRepos(response.repos || []);
+        },
+        error: function(xhr) {
+            let errorMessage = 'The repositories could not be listed';
+            try {
+                const response = JSON.parse(xhr.responseText);
+                errorMessage = response.error || errorMessage;
+            } catch(e) {
+            }
+            onError(errorMessage);
+        }
+    });
+};

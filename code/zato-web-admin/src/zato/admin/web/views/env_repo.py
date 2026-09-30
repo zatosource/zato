@@ -9,7 +9,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import re
+from json import dumps
 from logging import getLogger
+from secrets import token_hex
+from urllib.parse import urlencode
+
+# Django
+from django.http import HttpResponseRedirect
+from django.template.response import TemplateResponse
+from django.urls import reverse
 
 # Zato
 from zato.admin.web.env_repo_local import ensure_key, handle_request as handle_request_locally
@@ -19,6 +27,8 @@ from zato.admin.web.views.settings.config import env_repo_page_config
 from zato.admin.web.views.settings.utils import json_response
 from zato.common.env_repo import Env_Repo, get_link_dir, get_new_repo_url, is_host_mode, parse_repo_name, read_current, \
     read_public_key, read_status, set_local_dir, write_request
+from zato.common.github_app import build_manifest, convert_code, get_app_name, get_install_url, get_installation_token, \
+    GitHub_App, GitHubAppError, is_installed, list_repositories, read_app, save_app, save_installation
 from zato.common.util.updates import Updater, UpdaterConfig
 
 # ################################################################################################################################
@@ -26,7 +36,7 @@ from zato.common.util.updates import Updater, UpdaterConfig
 
 if 0:
     from django.http import HttpRequest, HttpResponse, QueryDict
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import anydict, anydictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,6 +53,14 @@ updater = Updater(updater_config)
 
 _Branch_Pattern = re.compile(r'^[A-Za-z0-9_./-]+$')
 
+# The session key with the value that GitHub must send back with the code.
+_Session_State = 'env_repo_github_app_state'
+
+# What the App's state on this dashboard reads as in the page.
+_App_None      = 'none'
+_App_Created   = 'created'
+_App_Installed = 'installed'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -51,6 +69,31 @@ def _get_param(query:'QueryDict', name:'str') -> 'str':
     value = query.get(name, '')
 
     out = str(value).strip()
+    return out
+
+# ################################################################################################################################
+
+def _redirect_to_index(**params:'str') -> 'HttpResponseRedirect':
+
+    url = reverse('env-repo')
+
+    if params:
+        url = url + '?' + urlencode(params)
+
+    out = HttpResponseRedirect(url)
+    return out
+
+# ################################################################################################################################
+
+def _get_app_state(app:'anydictnone') -> 'str':
+
+    if not app:
+        out = _App_None
+    elif is_installed(app):
+        out = _App_Installed
+    else:
+        out = _App_Created
+
     return out
 
 # ################################################################################################################################
@@ -97,6 +140,115 @@ class EnvRepoView(SettingsBaseView):
 
 # ################################################################################################################################
 
+    def _add_app_context(self, req:'HttpRequest', context:'anydict') -> 'None':
+        """ Adds what the page needs to create the GitHub App, or to send the browser to install it.
+        """
+        app = read_app(get_link_dir())
+
+        # The value GitHub sends back with the code, it is in the session so the setup view can compare the two.
+        state = token_hex(16)
+        session = getattr(req, 'session')
+        session[_Session_State] = state
+
+        # The addresses GitHub sends the browser back to are the ones the browser reached this page with, so they work
+        # from wherever the browser is, localhost or behind NAT included.
+        redirect_url = req.build_absolute_uri(reverse('env-repo-github-app-setup'))
+        setup_url    = req.build_absolute_uri(reverse('env-repo-github-app-installed'))
+
+        manifest = build_manifest(get_app_name(token_hex(3)), redirect_url, setup_url)
+
+        context['app_state']       = _get_app_state(app)
+        context['app_install_url'] = get_install_url(app) if app else ''
+        context['manifest_action'] = f'{GitHub_App.Create_URL}?state={state}'
+        context['manifest']        = dumps(manifest)
+
+# ################################################################################################################################
+
+    @method_allowed('GET')
+    def index(self, req:'HttpRequest') -> 'HttpResponse':
+
+        context = self.get_index_context()
+        self._add_app_context(req, context)
+
+        return TemplateResponse(req, self.template_name, context)
+
+# ################################################################################################################################
+
+    @method_allowed('GET')
+    def github_app_setup(self, req:'HttpRequest') -> 'HttpResponse':
+        """ Where GitHub sends the browser once the App is created - the code is exchanged for the App's credentials
+        and the browser goes on to GitHub's page to install the App.
+        """
+        _set_local_dir()
+
+        code  = _get_param(req.GET, 'code')
+        state = _get_param(req.GET, 'state')
+
+        if not code:
+            return _redirect_to_index(error='GitHub did not send the code for the new App')
+
+        session = getattr(req, 'session')
+
+        if not state or state != session.get(_Session_State):
+            return _redirect_to_index(error='The App was not created from this page, start over')
+
+        del session[_Session_State]
+
+        try:
+            data = convert_code(code)
+            app = save_app(get_link_dir(), data)
+        except GitHubAppError as exception:
+            logger.warning('GitHub App not created: %s', exception.message)
+            return _redirect_to_index(error=exception.message)
+        except OSError as exception:
+            logger.warning('GitHub App not saved to %s: %s', get_link_dir(), exception)
+            return _redirect_to_index(error=f'The App could not be saved: {exception}')
+
+        return HttpResponseRedirect(get_install_url(app))
+
+# ################################################################################################################################
+
+    @method_allowed('GET')
+    def github_app_installed(self, req:'HttpRequest') -> 'HttpResponse':
+        """ Where GitHub sends the browser once the App is installed, or its repositories change.
+        """
+        _set_local_dir()
+
+        installation_id = _get_param(req.GET, 'installation_id')
+        app = read_app(get_link_dir())
+
+        if not app:
+            return _redirect_to_index(error='The App was not created from this page, start over')
+
+        if not installation_id.isdigit():
+            return _redirect_to_index(error='GitHub did not say which installation this is')
+
+        try:
+            _ = save_installation(get_link_dir(), app, int(installation_id))
+        except GitHubAppError as exception:
+            logger.warning('GitHub App installation %s not accepted: %s', installation_id, exception.message)
+            return _redirect_to_index(error=exception.message)
+
+        return _redirect_to_index(installed='1')
+
+# ################################################################################################################################
+
+    @method_allowed('GET')
+    def github_app_repos(self, req:'HttpRequest') -> 'HttpResponse':
+        """ Returns the repositories that the App may read.
+        """
+        _set_local_dir()
+
+        try:
+            token = get_installation_token(get_link_dir())
+            repos = list_repositories(token)
+        except GitHubAppError as exception:
+            return json_response({'error': exception.message}, success=False)
+
+        return json_response({'repos': repos})
+
+# ################################################################################################################################
+
     @method_allowed('GET')
     def get_status(self, req:'HttpRequest') -> 'HttpResponse':
 
@@ -125,18 +277,24 @@ class EnvRepoView(SettingsBaseView):
         if action == Env_Repo.Action_Switch and not _Branch_Pattern.match(branch):
             return json_response({'error': 'Branch name is not valid'}, success=False)
 
+        # The App reads over HTTPS with its token, without one the deploy key reads over SSH.
+        if is_installed(read_app(get_link_dir())):
+            url = repo.git_url
+        else:
+            url = repo.ssh_url
+
         try:
             if is_host_mode():
-                write_request(action, repo.ssh_url, branch)
+                write_request(action, url, branch)
             else:
-                handle_request_locally(action, repo.ssh_url, branch)
+                handle_request_locally(action, url, branch)
         except OSError as exception:
             logger.warning('Request not written to %s: %s', get_link_dir(), exception)
             return json_response({'error': f'Request could not be written: {exception}'}, success=False)
 
         data = {
             'full_name': repo.full_name,
-            'url':       repo.ssh_url,
+            'url':       url,
             'https_url': repo.https_url,
         }
 
