@@ -203,7 +203,7 @@
                         {% comment %} 5 {% endcomment %}
                         <td class='ignore'>{{ item.extra|default:"" }}</td>
 
-                        <td class='ignore'>{{ item.security_id|default:"" }}</td>
+                        <td class='ignore'>{{ item.security_id|default:"ZATO_NONE" }}</td>
                         <td class='ignore'>{{ item.is_audit_log_active }}</td>
 
                         {% comment %} 7 - the health check {% endcomment %}

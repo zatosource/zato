@@ -24,17 +24,15 @@ _received = []
 
 class KafkaReceiver(Service):
     """ The routing target of Kafka channels under test - records every message the channel
-    hands over, keeping both self.request.input and self.request.raw_request so the tests
-    can confirm the payload arrives through both attributes.
+    hands over, keeping both self.request.input, parsed from JSON, and self.request.raw_request,
+    so the tests can confirm the payload arrives through both attributes.
     """
 
     name = 'test.kafka.receiver'
 
     def handle(self):
 
-        input_data = self.request.input
-        if isinstance(input_data, bytes):
-            input_data = input_data.decode('utf-8')
+        input_data = dict(self.request.input.items())
 
         raw_data = self.request.raw_request
         if isinstance(raw_data, bytes):

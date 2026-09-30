@@ -15,7 +15,9 @@ from uuid import uuid4
 from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, HTTP_SOAP, KAFKA, \
     SchedulerLink, SEC_DEF_TYPE, Sec_Def_Type_Name, ZATO_NONE
 from zato.common.alerting import config_map
-from zato.common.alerting.object_config import conn_type_to_alert_type, storage_name as alert_storage_name
+from zato.common.alerting.object_config import conn_type_to_alert_type, get_field_kinds as get_alert_field_kinds, \
+    storage_name as alert_storage_name
+from zato.common.alerting.validate_numbers import Number_Kinds as Alert_Number_Kinds
 from zato.common.audit_log.common import AuditEvent
 from zato.common.broker_message import GENERIC
 from zato.common.const import SECRETS
@@ -242,6 +244,15 @@ for _alert_text_field_name in (config_map.Status_Codes_Field_Name, config_map.Fa
     config_map.Outcome_Codes_Field_Name, config_map.Ack_Codes_Field_Name, config_map.Silence_Slots_Field_Name):
     skip_simple_type.add(alert_storage_name(_alert_text_field_name))
 
+# The alert settings that are numbers - a threshold of 1 is a count, which the simple-type parser
+# would otherwise turn into a boolean.
+alert_number_keys:'set[str]' = set()
+
+for _alert_type in set(conn_type_to_alert_type.values()):
+    for _alert_field_name, _alert_field_kind in get_alert_field_kinds(_alert_type).items():
+        if _alert_field_kind in Alert_Number_Kinds:
+            alert_number_keys.add(alert_storage_name(_alert_field_name))
+
 # ################################################################################################################################
 
 # Values of these generic attributes should be converted to ints. The HL7 MLLP channel's and
@@ -312,7 +323,7 @@ class _CreateEdit(_BaseService):
 
             if key not in data:
                 if key not in skip_keys:
-                    value = parse_simple_type(value)
+                    value = parse_simple_type(value, convert_bool=key not in alert_number_keys)
                     value = self._io.eval_(key, value, self.server.encrypt)
 
             if key in secret_keys:

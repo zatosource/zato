@@ -12,12 +12,13 @@ import re
 from logging import getLogger
 
 # Zato
+from zato.admin.web.env_repo_local import handle_request as handle_request_locally
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.settings.base import SettingsBaseView
 from zato.admin.web.views.settings.config import env_repo_page_config
 from zato.admin.web.views.settings.utils import json_response
-from zato.common.env_repo import Env_Repo, get_deploy_key_url, get_new_repo_url, get_repo_ssh_url, is_available, \
-    read_current, read_public_key, read_status, write_request
+from zato.common.env_repo import Env_Repo, get_deploy_key_url, get_link_dir, get_new_repo_url, get_repo_ssh_url, \
+    is_host_mode, read_current, read_public_key, read_status, set_local_dir, write_request
 from zato.common.util.updates import Updater, UpdaterConfig
 
 # ################################################################################################################################
@@ -40,7 +41,6 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 updater_config = UpdaterConfig(current_dir=current_dir)
 updater = Updater(updater_config)
 
-# The same shape that the host accepts, so a mistake is caught before the request leaves the container.
 _URL_Pattern = re.compile(r'^git@github\.com:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\.git$')
 _Login_Pattern = re.compile(r'^[A-Za-z0-9-]+$')
 _Branch_Pattern = re.compile(r'^[A-Za-z0-9_./-]+$')
@@ -56,6 +56,17 @@ def _get_param(query:'QueryDict', name:'str') -> 'str':
     return out
 
 # ################################################################################################################################
+
+def _set_local_dir() -> 'None':
+    """ Points the link directory at a directory under the dashboard's base directory.
+    """
+    # config_dir is set at startup, after this module is imported.
+    from zato.admin import settings as admin_settings
+
+    path = os.path.join(admin_settings.config_dir, Env_Repo.Local_Dir_Name)
+    set_local_dir(path)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class EnvRepoView(SettingsBaseView):
@@ -67,10 +78,10 @@ class EnvRepoView(SettingsBaseView):
 
     def get_index_context(self) -> 'anydict':
 
+        _set_local_dir()
         current = read_current() or {}
 
         context = super().get_index_context()
-        context['is_available'] = is_available()
         context['public_key'] = read_public_key()
         context['current_url'] = current.get('url', '')
         context['current_branch'] = current.get('branch', '')
@@ -85,6 +96,8 @@ class EnvRepoView(SettingsBaseView):
     @method_allowed('GET')
     def get_status(self, req:'HttpRequest') -> 'HttpResponse':
 
+        _set_local_dir()
+
         data = {
             'status':  read_status(),
             'current': read_current(),
@@ -96,7 +109,7 @@ class EnvRepoView(SettingsBaseView):
 
     @method_allowed('GET')
     def get_links(self, req:'HttpRequest') -> 'HttpResponse':
-        """ Returns the GitHub pages that create a repository from the template and add the deploy key to it.
+        """ Returns the GitHub URLs for creating the repository and adding the deploy key.
         """
         login = _get_param(req.GET, 'login')
 
@@ -113,7 +126,10 @@ class EnvRepoView(SettingsBaseView):
 
 # ################################################################################################################################
 
-    def _write_request(self, req:'HttpRequest', action:'str') -> 'HttpResponse':
+    def _handle_request(self, req:'HttpRequest', action:'str') -> 'HttpResponse':
+        """ Writes the request for the host if there is one, otherwise handles it in this process.
+        """
+        _set_local_dir()
 
         url = _get_param(req.POST, 'url')
         branch = _get_param(req.POST, 'branch')
@@ -125,9 +141,12 @@ class EnvRepoView(SettingsBaseView):
             return json_response({'error': 'Branch name is not valid'}, success=False)
 
         try:
-            write_request(action, url, branch)
+            if is_host_mode():
+                write_request(action, url, branch)
+            else:
+                handle_request_locally(action, url, branch)
         except OSError as exception:
-            logger.warning('Request not written to %s: %s', Env_Repo.Link_Dir, exception)
+            logger.warning('Request not written to %s: %s', get_link_dir(), exception)
             return json_response({'error': f'Request could not be written: {exception}'}, success=False)
 
         return json_response({})
@@ -136,13 +155,13 @@ class EnvRepoView(SettingsBaseView):
 
     @method_allowed('POST')
     def check(self, req:'HttpRequest') -> 'HttpResponse':
-        return self._write_request(req, Env_Repo.Action_Check)
+        return self._handle_request(req, Env_Repo.Action_Check)
 
 # ################################################################################################################################
 
     @method_allowed('POST')
     def switch(self, req:'HttpRequest') -> 'HttpResponse':
-        return self._write_request(req, Env_Repo.Action_Switch)
+        return self._handle_request(req, Env_Repo.Action_Switch)
 
 # ################################################################################################################################
 # ################################################################################################################################

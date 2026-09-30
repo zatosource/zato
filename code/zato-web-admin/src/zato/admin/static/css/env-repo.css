@@ -121,7 +121,8 @@
     background: var(--primary-dark);
 }
 
-.env-repo-log-state.ok {
+.env-repo-log-state.ok,
+.env-repo-log-state.switched {
     background: #067f39;
 }
 

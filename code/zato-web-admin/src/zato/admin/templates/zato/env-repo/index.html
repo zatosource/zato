@@ -38,10 +38,14 @@
         <div class="info-row">
             <div class="info-label">{{ page_config.public_key_label }}</div>
             <div class="info-value env-repo-long-value">
+                {% if public_key %}
                 <span id="public-key" title="{{ public_key }}">{{ public_key }}</span>
                 <span class="copy-icon" data-copy="public-key" title="Copy to clipboard">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
                 </span>
+                {% else %}
+                <span id="public-key" title="Not available without the deployment program">Not available</span>
+                {% endif %}
             </div>
         </div>
         <div class="info-row">

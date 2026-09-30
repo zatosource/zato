@@ -26,6 +26,14 @@ $.fn.zato.outgoing.hl7.fhir.config = {
 $(document).ready(function() {
     $.fn.zato.alerts_tab.init({config_id: 'out-fhir-alerts-tab-config'});
 
+    $.fn.zato.live_form_updates.register('create', [
+        {object_type: 'security', target_select: '#id_security_id'}
+    ].concat($.fn.zato.alerts_tab.live_configs('')));
+
+    $.fn.zato.live_form_updates.register('edit', [
+        {object_type: 'security', target_select: '#id_edit-security_id'}
+    ].concat($.fn.zato.alerts_tab.live_configs('edit-')));
+
     // The Delivery tab's popover is set up once for both popups
     $.fn.zato.delivery_tab.init();
 
@@ -205,17 +213,5 @@ $.fn.zato.outgoing.hl7.fhir.delete_ = function(id) {
         'Are you sure you want to delete HL7 FHIR connection `{0}`?',
         true);
 }
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Live form updates registration
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.live_form_updates.register('create', [
-    {object_type: 'security', target_select: '#id_security_id'}
-].concat($.fn.zato.alerts_tab.live_configs('')));
-
-$.fn.zato.live_form_updates.register('edit', [
-    {object_type: 'security', target_select: '#id_edit-security_id'}
-].concat($.fn.zato.alerts_tab.live_configs('edit-')));
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

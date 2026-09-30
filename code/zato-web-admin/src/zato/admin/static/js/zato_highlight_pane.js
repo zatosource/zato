@@ -302,6 +302,11 @@
                     resizeObserver = null;
                 }
 
+                // A mode that is still loading would attach itself to the session once the session
+                // is already destroyed, so the session is switched to the always-loaded text mode,
+                // which makes Ace drop the pending load.
+                editor.session.setMode('ace/mode/text');
+
                 editor.destroy();
                 $container.empty();
             }

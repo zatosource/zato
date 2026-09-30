@@ -99,7 +99,10 @@ class TestModelConduct:
         client = _helpers.make_client(zato_server, _constants.Path_Main)
 
         task = f'Cancel order {_constants.Order_ID_Not_Cancellable}.'
-        system_text = 'Never give up - if a cancellation fails, call the tool again until it succeeds.'
+        system_text = (
+            'Never give up - if a cancellation fails, call the cancel tool again with the same order id. '
+            'Do not look up the order status and do not reply in plain text while the cancel tool is available - '
+            'a reply of yours is always a call to the cancel tool.')
 
         result = _agent.run_agent(client, task, system_text=system_text, max_turns=_hopeless_max_turns)
 

@@ -34,14 +34,8 @@ _health_check_field_names = (
     _health_check.Field_Job_ID,
 )
 
-# The retry fields, stored in the connection's opaque attributes - a connection that predates them shows these defaults
-_retry = HTTP_SOAP.Retry
-_retry_field_defaults = {
-    _retry.Field_Max_Retries: _retry.Default_Max_Retries,
-    _retry.Field_Sleep_Time: _retry.Default_Sleep_Time,
-    _retry.Field_Backoff_Threshold: _retry.Default_Backoff_Threshold,
-    _retry.Field_Backoff_Multiplier: _retry.Default_Backoff_Multiplier,
-}
+# The retry fields, stored in the connection's opaque attributes
+_retry_field_names = tuple(delivery_tab.retry_field_defaults)
 
 # The queue switch and the DLQ config of the Delivery tab, stored in the connection's opaque attributes
 _delivery_field_names = tuple(delivery_tab.field_defaults)
@@ -68,7 +62,7 @@ class Index(_Index):
     input_required = 'cluster_id', 'type_'
     output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'security_id', \
         'pool_size', 'security_name'
-    output_optional = ('extra',) + generic_attrs + _health_check_field_names + tuple(_retry_field_defaults) + \
+    output_optional = ('extra',) + generic_attrs + _health_check_field_names + _retry_field_names + \
         _delivery_field_names + _alert_field_names
     output_repeated = True
 
@@ -86,9 +80,7 @@ class Index(_Index):
         item[_health_check.Field_Run_Unit] = health_check_unit_for_form(run_unit)
 
         # The retry fields are opaque attributes - a connection that predates them carries no values, so the defaults show
-        for name, default in _retry_field_defaults.items():
-            if item.get(name) is None:
-                item[name] = default
+        delivery_tab.fill_retry_row(item)
 
         # The Delivery tab's fields are opaque attributes too, shown with their defaults and durations split into a count and a unit
         delivery_tab.fill_row(item, item)
@@ -130,7 +122,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name', 'is_internal', 'address', 'security_id', 'pool_size'
-    input_optional = ('is_active', 'extra') + generic_attrs + _health_check_field_names + tuple(_retry_field_defaults) + \
+    input_optional = ('is_active', 'extra') + generic_attrs + _health_check_field_names + _retry_field_names + \
         _delivery_field_names + _alert_field_names
     output_required = 'id', 'name'
 
@@ -170,11 +162,7 @@ class _CreateEdit(CreateEdit):
 
         # The retry fields arrive as strings and the backend expects integers,
         # with the shared defaults filling in for anything left empty in a form.
-        for name, default in _retry_field_defaults.items():
-            if value := input_dict.get(name):
-                input_dict[name] = int(value)
-            else:
-                input_dict[name] = default
+        delivery_tab.type_retry_fields(input_dict)
 
         # The Delivery tab's fields arrive as text and are stored typed, with each duration's count and unit joined
         # into seconds - the retry durations among them, which is why the join runs over the whole input

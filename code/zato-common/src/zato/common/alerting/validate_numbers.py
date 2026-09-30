@@ -28,7 +28,7 @@ if 0:
 # ################################################################################################################################
 
 # The kinds whose value is a number - a toggle is a boolean, a text is a string and the slots are a list
-_number_kinds = (
+Number_Kinds = (
     config_map.Kind_Number,
     config_map.Kind_Duration,
     config_map.Kind_Seconds,
@@ -51,7 +51,7 @@ def validate_number_settings(alert_type:'str', values:'anydict') -> 'None':
         if name not in kinds:
             continue
 
-        if kinds[name] not in _number_kinds:
+        if kinds[name] not in Number_Kinds:
             continue
 
         # A boolean is a number to Python and to no one else

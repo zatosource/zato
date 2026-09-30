@@ -49,7 +49,12 @@ class Index(_Index):
     output_repeated = True
 
     def on_before_append_item(self, item:'any_') -> 'any_':
-        item.sec_type = item.auth_type
+
+        # The server gives a channel its auth type along with its security definition,
+        # so a channel without SASL has neither and its row shows no security.
+        if 'security_id' in item:
+            item.sec_type = item.auth_type
+
         return item
 
 # ################################################################################################################################

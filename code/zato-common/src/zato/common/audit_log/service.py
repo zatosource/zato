@@ -60,8 +60,9 @@ def to_body_text(value:'any_') -> 'str':
     elif isinstance(value, str):
         out = value
 
+    # A binary body, e.g. an MTOM attachment, keeps what cannot be decoded as replacement characters.
     elif isinstance(value, bytes):
-        out = value.decode('utf8')
+        out = value.decode('utf8', errors='replace')
 
     # An output payload or a stream serializes itself.
     elif hasattr(value, 'getvalue'):

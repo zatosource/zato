@@ -25,19 +25,26 @@ logger = getLogger(__name__)
 class Env_Repo:
     """ The directory that the host shares with the container, and the files in it.
     """
-    Link_Dir   = '/opt/zato/host-link'
-    Public_Key = 'id_ed25519.pub'
-    Request    = 'request.json'
-    Status     = 'status.json'
-    Current    = 'current.json'
+    Host_Link_Dir  = '/opt/zato/host-link'
+    Local_Dir_Name = 'env-repo'
+    Public_Key     = 'id_ed25519.pub'
+    Request        = 'request.json'
+    Status         = 'status.json'
+    Current        = 'current.json'
 
     Action_Check  = 'check'
     Action_Switch = 'switch'
 
+    State_Checking  = 'checking'
+    State_OK        = 'ok'
+    State_Switching = 'switching'
+    State_Switched  = 'switched'
+    State_Error     = 'error'
+
     Blueprint_Owner = 'zatosource'
     Blueprint_Name  = 'zato-project-blueprint'
 
-    # The name of the repository that GitHub creates from the template for the user.
+    # The name of the repository created from the template
     New_Repo_Name = 'zato-environment'
 
     New_Repo_URL = 'https://github.com/new?template_owner={owner}&template_name={name}&owner={login}&name={new_name}&visibility=private'
@@ -47,17 +54,55 @@ class Env_Repo:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_path(name:'str') -> 'str':
-    out = os.path.join(Env_Repo.Link_Dir, name)
+# The link directory when there is no host, set by the dashboard
+_local_dir = ''
+
+# ################################################################################################################################
+
+def set_local_dir(path:'str') -> 'None':
+    global _local_dir
+    _local_dir = path
+
+# ################################################################################################################################
+
+def is_host_mode() -> 'bool':
+    """ Returns whether the host's link directory exists.
+    """
+    out = os.path.isdir(Env_Repo.Host_Link_Dir)
     return out
 
 # ################################################################################################################################
 
-def is_available() -> 'bool':
-    """ Returns whether this container runs on a host with the deployment program, which is what makes the screen useful.
-    """
-    out = os.path.isdir(Env_Repo.Link_Dir)
+def get_link_dir() -> 'str':
+
+    if is_host_mode():
+        out = Env_Repo.Host_Link_Dir
+    else:
+        out = _local_dir
+
     return out
+
+# ################################################################################################################################
+
+def _get_path(name:'str') -> 'str':
+    out = os.path.join(get_link_dir(), name)
+    return out
+
+# ################################################################################################################################
+
+def write_json(name:'str', data:'anydict') -> 'None':
+    """ Writes a JSON file in the link directory through a temporary file and a rename.
+    """
+    link_dir = get_link_dir()
+    os.makedirs(link_dir, exist_ok=True)
+
+    path = os.path.join(link_dir, name)
+    temp_path = path + '.tmp'
+
+    with open(temp_path, 'w') as output_file:
+        _ = output_file.write(dumps(data))
+
+    os.replace(temp_path, path)
 
 # ################################################################################################################################
 
@@ -85,7 +130,7 @@ def _read_json(name:'str') -> 'anydictnone':
     try:
         out = loads(text)
     except ValueError:
-        logger.warning('File %s in %s is not JSON', name, Env_Repo.Link_Dir)
+        logger.warning('File %s in %s is not JSON', name, get_link_dir())
         out = None
 
     return out
@@ -114,7 +159,7 @@ def read_status() -> 'anydictnone':
 # ################################################################################################################################
 
 def write_request(action:'str', url:'str', branch:'str') -> 'None':
-    """ Leaves a request for the host, which acts on it the moment the file appears.
+    """ Writes request.json for the host.
     """
     data:'anydict' = {
         'action':          action,
@@ -122,15 +167,9 @@ def write_request(action:'str', url:'str', branch:'str') -> 'None':
         'env_repo_branch': branch,
     }
 
-    path = _get_path(Env_Repo.Request)
-    temp_path = path + '.tmp'
+    write_json(Env_Repo.Request, data)
 
-    with open(temp_path, 'w') as output_file:
-        _ = output_file.write(dumps(data))
-
-    os.replace(temp_path, path)
-
-    logger.info('Request written to %s: action=%s url=%s branch=%s', path, action, url, branch)
+    logger.info('Request written to %s: action=%s url=%s branch=%s', get_link_dir(), action, url, branch)
 
 # ################################################################################################################################
 

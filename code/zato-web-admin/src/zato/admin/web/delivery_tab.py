@@ -105,6 +105,14 @@ field_defaults = Delivery_Field_Defaults
 bool_fields = Delivery_Bool_Fields
 int_fields = Delivery_Int_Fields
 
+# The retry fields of a generic connection, stored in its opaque attributes - a connection that predates them shows these defaults
+retry_field_defaults = {
+    _retry.Field_Max_Retries: _retry.Default_Max_Retries,
+    _retry.Field_Sleep_Time: _retry.Default_Sleep_Time,
+    _retry.Field_Backoff_Threshold: _retry.Default_Backoff_Threshold,
+    _retry.Field_Backoff_Multiplier: _retry.Default_Backoff_Multiplier,
+}
+
 # The hidden columns of a list page's row the tab's fields travel in, in this order - the list page's templates,
 # its JS config and the row builder all read this one list
 Delivery_Field_Names = (
@@ -196,6 +204,27 @@ def get_message_fields(params:'any_', prefix:'str'='') -> 'stranydict':
                 out[name] = value
 
     return out
+
+# ################################################################################################################################
+
+def type_retry_fields(input_dict:'stranydict') -> 'None':
+    """ Turns the retry fields of a generic connection's form into the integers the backend expects, in place,
+    with the defaults filling in for anything left empty.
+    """
+    for name, default in retry_field_defaults.items():
+        if value := input_dict.get(name):
+            input_dict[name] = int(value)
+        else:
+            input_dict[name] = default
+
+# ################################################################################################################################
+
+def fill_retry_row(item:'any_') -> 'None':
+    """ Fills in the retry fields a listed generic connection does not carry yet with their defaults, in place.
+    """
+    for name, default in retry_field_defaults.items():
+        if item.get(name) is None:
+            item[name] = default
 
 # ################################################################################################################################
 

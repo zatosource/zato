@@ -301,7 +301,7 @@ def _fill_run_every(page:'Page', value:'str') -> 'None':
 
     page.fill('#file-transfer-wizard-tippy-run_every', value)
 
-    page.click('.wizard-tippy-buttons button:has-text("OK")')
+    page.click('.micro-form-buttons button:has-text("OK")')
     _ = page.wait_for_selector('#file-transfer-wizard-tippy-run_every', state='detached', timeout=_Dialog_Timeout)
 
 # ################################################################################################################################
