@@ -47,8 +47,12 @@ class Index(_Index):
 # ################################################################################################################################
 
     def on_before_append_item(self, item):
-        if item.auth_type:
+
+        # The server gives a connection its auth type along with its security definition,
+        # so a connection without one has neither and its row shows no security.
+        if 'security_id' in item:
             item.sec_type = item.auth_type
+
         return item
 
     def handle(self):
